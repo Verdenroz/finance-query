@@ -1,9 +1,9 @@
-from constants import headers
+from src.constants import headers
 from decimal import Decimal
 from bs4 import BeautifulSoup
 from fastapi.responses import JSONResponse
 import requests
-import models
+from src import schemas
 
 
 async def scrape_indices():
@@ -25,11 +25,11 @@ async def scrape_indices():
                 # Extract table data from each row
                 cells = row.find_all('td')
                 if len(cells) > 5:  # Ensure there are enough cells
-                    index_data = models.Index(
+                    index_data = schemas.Index(
                         name=cells[1].text,
                         value=Decimal(cells[2].text.replace(',', '')),  # Convert string to Decimal
                         change=cells[5].text,
-                        percentChange=cells[6].text,
+                        percent_change=cells[6].text,
                     )
                     indices.append(index_data)
             return indices
