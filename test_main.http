@@ -1,0 +1,18 @@
+# Test your FastAPI endpoints
+
+GET http://127.0.0.1:8000/v1/indices
+Accept: application/json
+
+###
+
+GET http://127.0.0.1:8000/v1/actives
+Accept: application/json
+
+###
+
+GET 127.0.0.1:8000/v1/gainers
+Accept: application/json
+
+###
+GET 127.0.0.1:8000/v1/losers
+Accept: application/json
