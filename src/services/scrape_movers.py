@@ -1,11 +1,11 @@
-from aiohttp import ClientSession, TCPConnector
 import asyncio
+import re
+from aiohttp import ClientSession, TCPConnector
 from bs4 import BeautifulSoup, SoupStrainer
 from decimal import Decimal
 from fastapi.responses import JSONResponse
-from src import schemas
-from src.constants import headers
-import re
+from ..constants import headers
+from ..schemas.marketmover import MarketMover
 
 # Compile a regular expression pattern that matches a number, optionally followed by a decimal point and more numbers
 number_pattern = re.compile(r'\d+\.?\d*')
@@ -33,7 +33,7 @@ async def create_market_mover(mover):
     else:
         percent_change = '-' + percent_change
 
-    mover_data = schemas.MarketMover(
+    mover_data = MarketMover(
         symbol=symbol,
         name=name,
         price=price,

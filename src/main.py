@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from mangum import Mangum
-from src.routes.indices import router as indices_router
-from src.routes.movers import router as movers_router
+from .routes.indices import router as indices_router
+from .routes.movers import router as movers_router
 
 app = FastAPI()
 

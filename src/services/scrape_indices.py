@@ -1,11 +1,11 @@
+import asyncio
 import re
 from aiohttp import ClientSession, TCPConnector
 from bs4 import BeautifulSoup, SoupStrainer
-from src.constants import headers
 from decimal import Decimal
 from fastapi.responses import JSONResponse
-from src import schemas
-import asyncio
+from ..constants import headers
+from ..schemas.index import Index
 
 # Compile regular expressions
 re_decimal = re.compile(r'\d+')
@@ -27,7 +27,7 @@ async def parse_html(html):
         for row in rows:
             cells = row.find_all('td')
             if len(cells) > 5:
-                index_data = schemas.Index(
+                index_data = Index(
                     name=cells[1].text,
                     value=Decimal(re_decimal.search(cells[2].text).group()),
                     change=cells[5].text,

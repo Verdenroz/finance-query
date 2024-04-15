@@ -1,20 +1,7 @@
 from pydantic import BaseModel, Field
 from decimal import Decimal
-
-
-class Stock(BaseModel):
-    symbol: str = Field(..., example="AAPL", description="Stock symbol")
-    name: str = Field(..., example="Apple Inc.", description="Company name")
-    price: Decimal = Field(..., example=145.00, description="Last traded price of the stock")
-    change: str = Field(..., example="+1.00", description="Change in the stock price")
-    percent_change: str = Field(..., example="+0.69%", description="Percentage change in the stock price")
-
-
-class News(BaseModel):
-    title: str = Field(..., example="New iPhone released!", description="Title of the news article")
-    link: str = Field(..., example="https://www.example.com", description="Link to the news article")
-    source: str = Field(..., example="CNN", description="Source of the news article")
-    time: str = Field(..., example="1 day ago", description="Time relative to current time when the news was published")
+from .stocks import Stock
+from .news import News
 
 
 class Quote(BaseModel):
@@ -51,18 +38,3 @@ class Quote(BaseModel):
                                  {"title": "New iPhone released!", "link": "https://www.example.com", "source": "CNN",
                                   "time": "1 day ago"}],
                              description="List of news articles")
-
-
-class Index(BaseModel):
-    name: str = Field(..., example="S&P 500", description="Name of the index")
-    value: Decimal = Field(..., example=4300.00, description="Current value of the index")
-    change: str = Field(..., example="+10.00", description="Change in the index value")
-    percent_change: str = Field(..., example="+0.23%", description="Percentage change in the index value")
-
-
-class MarketMover(BaseModel):
-    symbol: str = Field(..., example="AAPL", description="Stock symbol")
-    name: str = Field(..., example="Apple Inc.", description="Company name")
-    price: Decimal = Field(..., example=145.00, description="Last traded price of the stock")
-    change: str = Field(..., example="+1.00", description="Change in the stock price")
-    percent_change: str = Field(..., example="+0.69%", description="Percentage change in the stock price")

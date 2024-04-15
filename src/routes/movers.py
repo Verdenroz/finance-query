@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 from typing_extensions import List
-from src.services.scrape_movers import scrape_actives, scrape_gainers, scrape_losers
-from src import schemas
+from ..schemas.marketmover import MarketMover
+from ..services.scrape_movers import scrape_actives, scrape_gainers, scrape_losers
 
 router = APIRouter()
 
@@ -11,7 +11,7 @@ router = APIRouter()
             summary="Returns most active stocks",
             description="Get the stocks or funds with the highest trading volume during the current trading session "
                         "Invalid API keys are limited to 5 requests per minute.",
-            response_model=List[schemas.MarketMover],
+            response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 async def get_actives():
     return await scrape_actives()
@@ -21,7 +21,7 @@ async def get_actives():
             summary="Returns stocks with the highest price increase",
             description="The top gaining stocks or funds during the current trading session. "
                         "Invalid API keys are limited to 5 requests per minute.",
-            response_model=List[schemas.MarketMover],
+            response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 async def get_gainers():
     return await scrape_gainers()
@@ -31,7 +31,7 @@ async def get_gainers():
             summary="Returns stocks with the highest price decrease",
             description="The top losing stocks or funds during the current trading session. "
                         "Invalid API keys are limited to 5 requests per minute.",
-            response_model=List[schemas.MarketMover],
+            response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 async def get_gainers():
     return await scrape_losers()
