@@ -6,10 +6,10 @@ from .routes.quotes import router as quotes_router
 
 app = FastAPI()
 
+app.include_router(quotes_router)
+
 app.include_router(indices_router)
 
 app.include_router(movers_router)
-
-app.include_router(quotes_router)
 
 handler = Mangum(app)

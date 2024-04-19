@@ -1,16 +1,18 @@
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
+
+import requests
 from decimal import Decimal
+from typing import List
+
+from aiohttp import ClientSession
+from bs4 import BeautifulSoup, SoupStrainer
 from fastapi.responses import JSONResponse
+
 from ..constants import headers
 from ..schemas.news import News
 from ..schemas.quote import Quote
 from ..schemas.stock import Stock
-from bs4 import BeautifulSoup
-from typing import List
-import requests
-import re
-
-# Compile a regular expression pattern that matches a number, optionally followed by a decimal point and more numbers
-number_pattern = re.compile(r'\d+\.?\d*')
 
 
 async def extract_sector_and_industry(soup: BeautifulSoup):
@@ -61,6 +63,8 @@ async def scrape_news_for_quote(symbol: str):
 
         news_item = News(title=title, link=link, source=source, img=img, time=time)
         news_list.append(news_item)
+        if len(news_list) == 5:
+            break
 
     return news_list
 
@@ -74,7 +78,7 @@ async def scrape_similar_stocks(soup: BeautifulSoup, symbol: str) -> List[Stock]
         if not symbol_element:
             continue
         div_symbol = symbol_element.text
-        if div_symbol == symbol:
+        if div_symbol.lower() == symbol.lower():
             continue
 
         name_element = div.find("div", class_="longName svelte-15b2o7n")
@@ -103,6 +107,8 @@ async def scrape_similar_stocks(soup: BeautifulSoup, symbol: str) -> List[Stock]
 
         stock = Stock(symbol=div_symbol, name=name, price=price, change=change, percent_change=percent_change)
         stocks.append(stock)
+        if len(stocks) == 5:
+            break
     return stocks
 
 
@@ -111,17 +117,20 @@ async def scrape_quote(symbol: str):
     response = requests.get(url, headers=headers)
     if response.status_code == 404:
         return JSONResponse(status_code=404, content={"detail": "Symbol not found"})
-    soup = BeautifulSoup(response.text, 'lxml')
-    symbolName = soup.find('h1', class_='svelte-ufs8hf').text
-    name = symbolName.split(' (')[0]
-    symbol = symbolName.split(' (')[1].replace(')', '')
-    priceNumbers = soup.find('div', class_='container svelte-mgkamr').text
-    price = priceNumbers.split(' ')[0]
-    change = priceNumbers.split(' ')[1]
-    percent_change = priceNumbers.split(' ')[2].replace('(', '').strip('(').strip(')')
 
-    # Find all list items
-    list_items = soup.find_all("li", class_="svelte-tx3nkj")
+    parse_only = SoupStrainer(['h1', 'div'])
+    soup = BeautifulSoup(response.text, 'lxml', parse_only=parse_only)
+
+    symbol_name_element = soup.select_one('h1.svelte-ufs8hf')
+    price_numbers_element = soup.select_one('div.container.svelte-mgkamr')
+
+    name = symbol_name_element.text.split('(')[0].strip()
+    price_numbers = price_numbers_element.text
+    price = price_numbers.split(' ')[0]
+    change = price_numbers.split(' ')[1]
+    percent_change = price_numbers.split(' ')[2].replace('(', '').strip('(').strip(')')
+
+    list_items = soup.select('li.svelte-tx3nkj')
 
     data = {}
 
@@ -132,24 +141,21 @@ async def scrape_quote(symbol: str):
 
     open_price = Decimal(data.get("Open"))
     market_cap = data.get("Market Cap (intraday)")
-    beta = Decimal(data.get("Beta (5Y Monthly)"))
+    beta = Decimal(data.get("Beta (5Y Monthly)")) if data.get("Beta (5Y Monthly)").replace('.', '', 1).isdigit() else None
     pe = Decimal(data.get("PE Ratio (TTM)"))
     eps = Decimal(data.get("EPS (TTM)"))
     earnings_date = data.get("Earnings Date")
     ex_dividend = data.get("Ex-Dividend Date")
 
-    # Extract high and low from "Day's Range"
     days_range = data.get("Day's Range")
     if not days_range:
         return JSONResponse(status_code=500, content={"detail": "Error parsing days range"})
     low, high = [Decimal(x) for x in days_range.split(' - ')]
 
-    # Extract year_high and year_low from "52 Week Range"
     fifty_two_week_range = data.get("52 Week Range")
     year_low, year_high = [Decimal(x) for x in fifty_two_week_range.split(' - ')] if fifty_two_week_range else (
         None, None)
 
-    # Convert volume and avg_volume to integers
     volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
     avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
 
@@ -160,33 +166,8 @@ async def scrape_quote(symbol: str):
 
     stocks = await scrape_similar_stocks(soup, symbol)
 
-    # print(f"Creating Quote with:\n"
-    #       f"Symbol: {symbol}\n"
-    #       f"Name: {name}\n"
-    #       f"Price: {price}\n"
-    #       f"Change: {change}\n"
-    #       f"Percent Change: {percent_change}\n"
-    #       f"Open: {open}\n"
-    #       f"High: {high}\n"
-    #       f"Low: {low}\n"
-    #       f"Year High: {year_high}\n"
-    #       f"Year Low: {year_low}\n"
-    #       f"Volume: {volume}\n"
-    #       f"Avg Volume: {avg_volume}\n"
-    #       f"Market Cap: {market_cap}\n"
-    #       f"Beta: {beta}\n"
-    #       f"PE: {pe}\n"
-    #       f"EPS: {eps}\n"
-    #       f"Earnings Date: {earnings_date}\n"
-    #       f"Ex Dividend: {ex_dividend}\n"
-    #       f"About: {about}\n"
-    #       f"Sector: {sector}\n"
-    #       f"Industry: {industry}\n"
-    #       f"News: {news}\n"
-    #       f"Similar Stocks: {stocks}")
-
-    quote = Quote(
-        symbol=symbol,
+    return Quote(
+        symbol=symbol.upper(),
         name=name,
         price=Decimal(price),
         change=change,
@@ -211,4 +192,7 @@ async def scrape_quote(symbol: str):
         similar_stocks=stocks
     )
 
-    return quote
+
+async def scrape_quotes(symbols: List[str]):
+    quotes = await asyncio.gather(*(scrape_quote(symbol) for symbol in symbols))
+    return [quote for quote in quotes if not isinstance(quote, Exception)]
