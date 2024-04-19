@@ -22,7 +22,7 @@ class Quote(BaseModel):
     volume: int = Field(..., example=1000000, description="Volume of the stock")
     avg_volume: int = Field(..., example=2000000, description="Average volume of the stock")
     market_cap: str = Field(..., example="2.5T", description="Market capitalization of the stock")
-    beta: Decimal = Field(..., example=1.23, description="Beta of the stock")
+    beta: Optional[Decimal] = Field(None, example=1.23, description="Beta of the stock")
     pe: Optional[Decimal] = Field(None, example=30.00, description="Price to earnings ratio of the stock")
     eps: Optional[Decimal] = Field(None, example=4.50, description="Earnings per share of the stock")
     dividend: Optional[Decimal] = Field(None, example=0.82, description="Dividend yield of the stock")
