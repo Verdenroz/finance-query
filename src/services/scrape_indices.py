@@ -1,14 +1,10 @@
 import asyncio
-import re
 from aiohttp import ClientSession, TCPConnector
 from bs4 import BeautifulSoup, SoupStrainer
 from decimal import Decimal
 from fastapi.responses import JSONResponse
 from ..constants import headers
 from ..schemas.index import Index
-
-# Compile regular expressions
-re_decimal = re.compile(r'\d+')
 
 
 async def fetch_and_parse(session, url, semaphore):
@@ -29,7 +25,7 @@ async def parse_html(html):
             if len(cells) > 5:
                 index_data = Index(
                     name=cells[1].text,
-                    value=Decimal(re_decimal.search(cells[2].text).group()),
+                    value=Decimal(cells[2].text.replace(',', '')),
                     change=cells[5].text,
                     percent_change=cells[6].text,
                 )
