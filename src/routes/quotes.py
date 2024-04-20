@@ -12,6 +12,7 @@ router = APIRouter()
             summary="Returns quote data of multiple stocks",
             description="Get relevant stock information for multiple stocks. Invalid API keys are limited to 5 requests per "
                         "minute.",
+            response_model=List[Quote],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbols parameter is required"}})
 async def get_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):

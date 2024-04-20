@@ -1,18 +1,27 @@
 import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-import requests
 from decimal import Decimal
 from typing import List
 
 from aiohttp import ClientSession
 from bs4 import BeautifulSoup, SoupStrainer
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse
+from httpx import AsyncClient
 
 from ..constants import headers
 from ..schemas.news import News
 from ..schemas.quote import Quote
 from ..schemas.stock import Stock
+
+
+async def fetch(url: str, client: AsyncClient):
+    response = await client.get(url, headers=headers)
+    return response.text
+
+
+async def fetch_with_aiohttp(url: str, client: ClientSession):
+    async with client.get(url, headers=headers) as response:
+        return await response.text()
 
 
 async def extract_sector_and_industry(soup: BeautifulSoup):
@@ -33,12 +42,11 @@ async def extract_sector_and_industry(soup: BeautifulSoup):
     return sector, industry
 
 
-async def scrape_news_for_quote(symbol: str):
-    link = 'https://stockanalysis.com/stocks/' + symbol
-    response = requests.get(link, headers=headers)
-    if response.status_code == 404:
-        return JSONResponse(status_code=404, content={"detail": "Symbol not found"})
-    soup = BeautifulSoup(response.text, 'lxml')
+async def scrape_news_for_quote(symbol: str, session: ClientSession):
+    url = 'https://stockanalysis.com/stocks/' + symbol
+    html = await fetch_with_aiohttp(url, session)
+
+    soup = BeautifulSoup(html, 'lxml')
 
     news = soup.find_all('div', class_='gap-4 border-gray-300 bg-white p-4 shadow last:pb-1 last:shadow-none '
                                        'dark:border-dark-600 dark:bg-dark-800 sm:border-b sm:px-0 sm:shadow-none '
@@ -112,16 +120,22 @@ async def scrape_similar_stocks(soup: BeautifulSoup, symbol: str) -> List[Stock]
     return stocks
 
 
-async def scrape_quote(symbol: str):
+def get_decimal(data, key):
+    value = data.get(key)
+    return Decimal(value) if value and value.replace('.', '', 1).isdigit() else None
+
+
+# Scrape the quote for a single stock
+async def scrape_quote(symbol: str, client: AsyncClient, session: ClientSession):
     url = 'https://finance.yahoo.com/quote/' + symbol
-    response = requests.get(url, headers=headers)
-    if response.status_code == 404:
-        return JSONResponse(status_code=404, content={"detail": "Symbol not found"})
+    html = await fetch(url, client)
 
     parse_only = SoupStrainer(['h1', 'div'])
-    soup = BeautifulSoup(response.text, 'lxml', parse_only=parse_only)
+    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
     symbol_name_element = soup.select_one('h1.svelte-ufs8hf')
+    if not symbol_name_element:
+        raise HTTPException(status_code=404, detail="Symbol not found")
     price_numbers_element = soup.select_one('div.container.svelte-mgkamr')
 
     name = symbol_name_element.text.split('(')[0].strip()
@@ -141,9 +155,9 @@ async def scrape_quote(symbol: str):
 
     open_price = Decimal(data.get("Open"))
     market_cap = data.get("Market Cap (intraday)")
-    beta = Decimal(data.get("Beta (5Y Monthly)")) if data.get("Beta (5Y Monthly)").replace('.', '', 1).isdigit() else None
-    pe = Decimal(data.get("PE Ratio (TTM)"))
-    eps = Decimal(data.get("EPS (TTM)"))
+    beta = get_decimal(data, "Beta (5Y Monthly)")
+    pe = get_decimal(data, "PE Ratio (TTM)")
+    eps = get_decimal(data, "EPS (TTM)")
     earnings_date = data.get("Earnings Date")
     ex_dividend = data.get("Ex-Dividend Date")
 
@@ -160,11 +174,14 @@ async def scrape_quote(symbol: str):
     avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
 
     about = soup.find('p', class_='svelte-1xu2f9r').text
-    sector, industry = await extract_sector_and_industry(soup)
 
-    news = await scrape_news_for_quote(symbol)
+    sector_and_industry_future = asyncio.create_task(extract_sector_and_industry(soup))
+    news_future = asyncio.create_task(scrape_news_for_quote(symbol, session))
+    similar_stocks_future = asyncio.create_task(scrape_similar_stocks(soup, symbol))
 
-    stocks = await scrape_similar_stocks(soup, symbol)
+    sector, industry = await sector_and_industry_future
+    news = await news_future
+    similar_stocks = await similar_stocks_future
 
     return Quote(
         symbol=symbol.upper(),
@@ -189,10 +206,11 @@ async def scrape_quote(symbol: str):
         industry=industry,
         about=about,
         news=news,
-        similar_stocks=stocks
+        similar_stocks=similar_stocks
     )
 
 
 async def scrape_quotes(symbols: List[str]):
-    quotes = await asyncio.gather(*(scrape_quote(symbol) for symbol in symbols))
-    return [quote for quote in quotes if not isinstance(quote, Exception)]
+    async with AsyncClient(http2=True) as client, ClientSession() as session:
+        quotes = await asyncio.gather(*(scrape_quote(symbol, client, session) for symbol in symbols))
+        return [quote for quote in quotes if not isinstance(quote, Exception)]
