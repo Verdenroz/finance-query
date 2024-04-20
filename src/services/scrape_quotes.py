@@ -136,13 +136,21 @@ async def scrape_quote(symbol: str, client: AsyncClient, session: ClientSession)
     symbol_name_element = soup.select_one('h1.svelte-ufs8hf')
     if not symbol_name_element:
         raise HTTPException(status_code=404, detail="Symbol not found")
-    price_numbers_element = soup.select_one('div.container.svelte-mgkamr')
 
     name = symbol_name_element.text.split('(')[0].strip()
-    price_numbers = price_numbers_element.text
-    price = price_numbers.split(' ')[0]
-    change = price_numbers.split(' ')[1]
-    percent_change = price_numbers.split(' ')[2].replace('(', '').strip('(').strip(')')
+
+    # Regular hours price
+    regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
+    regular_change = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]), 2)
+    regular_percent_change = round(
+        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
+
+    # After hours price
+    post_price_element = soup.find("fin-streamer", {"data-testid": "qsp-post-price"})
+    if not post_price_element:
+        post_price = None
+    else:
+        post_price = round(Decimal(post_price_element["data-value"]), 2)
 
     list_items = soup.select('li.svelte-tx3nkj')
 
@@ -161,20 +169,25 @@ async def scrape_quote(symbol: str, client: AsyncClient, session: ClientSession)
     earnings_date = data.get("Earnings Date")
     ex_dividend = data.get("Ex-Dividend Date")
 
+    # Day's range
     days_range = data.get("Day's Range")
     if not days_range:
         return JSONResponse(status_code=500, content={"detail": "Error parsing days range"})
     low, high = [Decimal(x) for x in days_range.split(' - ')]
 
+    # 52-week range
     fifty_two_week_range = data.get("52 Week Range")
     year_low, year_high = [Decimal(x) for x in fifty_two_week_range.split(' - ')] if fifty_two_week_range else (
         None, None)
 
+    # Volume
     volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
     avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
 
+    # About the company
     about = soup.find('p', class_='svelte-1xu2f9r').text
 
+    # Scrape sector, industry, news and similar stocks concurrently
     sector_and_industry_future = asyncio.create_task(extract_sector_and_industry(soup))
     news_future = asyncio.create_task(scrape_news_for_quote(symbol, session))
     similar_stocks_future = asyncio.create_task(scrape_similar_stocks(soup, symbol))
@@ -186,9 +199,10 @@ async def scrape_quote(symbol: str, client: AsyncClient, session: ClientSession)
     return Quote(
         symbol=symbol.upper(),
         name=name,
-        price=Decimal(price),
-        change=change,
-        percent_change=percent_change,
+        price=regular_price,
+        after_hours_price=post_price,
+        change=regular_change,
+        percent_change=regular_percent_change,
         open=open_price,
         high=high,
         low=low,
