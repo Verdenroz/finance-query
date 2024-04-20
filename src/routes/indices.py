@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 from typing_extensions import List
-from ..services.scrape_indices import scrape_indices
-from ..schemas.index import Index
+from src.schemas import Index
+from src.services import scrape_indices
 
 router = APIRouter()
 

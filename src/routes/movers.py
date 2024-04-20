@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 from typing_extensions import List
-from ..schemas.marketmover import MarketMover
-from ..services.scrape_movers import scrape_actives, scrape_gainers, scrape_losers
+from src.schemas import MarketMover
+from src.services import scrape_actives, scrape_gainers, scrape_losers
 
 router = APIRouter()
 

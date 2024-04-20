@@ -1,17 +1,16 @@
 from fastapi import APIRouter, Security, HTTPException, Query
 from fastapi.security import APIKeyHeader
 from typing_extensions import List
-
-from ..schemas.quote import Quote
-from ..services.scrape_quotes import scrape_quotes
+from src.schemas import Quote, Stock
+from src.services import scrape_quotes, scrape_simple_quote
 
 router = APIRouter()
 
 
 @router.get("/v1/quotes/",
             summary="Returns quote data of multiple stocks",
-            description="Get relevant stock information for multiple stocks. Invalid API keys are limited to 5 requests per "
-                        "minute.",
+            description="Get relevant stock information for multiple stocks. "
+                        "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[Quote],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbols parameter is required"}})

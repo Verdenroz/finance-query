@@ -9,9 +9,7 @@ from fastapi.responses import JSONResponse
 from httpx import AsyncClient
 
 from ..constants import headers
-from ..schemas.news import News
-from ..schemas.quote import Quote
-from ..schemas.stock import Stock
+from src.schemas import Quote, Stock, News
 
 
 async def fetch(url: str, client: AsyncClient):
