@@ -123,7 +123,7 @@ def get_decimal(data, key):
     return Decimal(value) if value and value.replace('.', '', 1).isdigit() else None
 
 
-# Scrape the quote for a single stock
+# Scrape the quote for a single stock as a Quote object
 async def scrape_quote(symbol: str, client: AsyncClient, session: ClientSession):
     url = 'https://finance.yahoo.com/quote/' + symbol
     html = await fetch(url, client)
@@ -225,4 +225,39 @@ async def scrape_quote(symbol: str, client: AsyncClient, session: ClientSession)
 async def scrape_quotes(symbols: List[str]):
     async with AsyncClient(http2=True) as client, ClientSession() as session:
         quotes = await asyncio.gather(*(scrape_quote(symbol, client, session) for symbol in symbols))
+        return [quote for quote in quotes if not isinstance(quote, Exception)]
+
+
+# Scrapes a single quote as a Stock object
+async def scrape_simple_quote(symbol: str, client: AsyncClient):
+    url = 'https://finance.yahoo.com/quote/' + symbol
+    html = await fetch(url, client)
+
+    parse_only = SoupStrainer(['h1', 'fin-streamer'])
+    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
+
+    symbol_name_element = soup.select_one('h1.svelte-ufs8hf')
+    if not symbol_name_element:
+        raise HTTPException(status_code=404, detail="Symbol not found")
+
+    name = symbol_name_element.text.split('(')[0].strip()
+
+    # Regular hours price
+    regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
+    regular_change = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]), 2)
+    regular_percent_change = round(Decimal(soup.find("fin-streamer",
+                                                     {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
+
+    return Stock(
+        symbol=symbol.upper(),
+        name=name,
+        price=regular_price,
+        change=regular_change,
+        percent_change=regular_percent_change
+    )
+
+
+async def scrape_simple_quotes(symbols: List[str]):
+    async with AsyncClient(http2=True) as client:
+        quotes = await asyncio.gather(*(scrape_simple_quote(symbol, client) for symbol in symbols))
         return [quote for quote in quotes if not isinstance(quote, Exception)]
