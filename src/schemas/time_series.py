@@ -22,3 +22,8 @@ class TimeSeries(BaseModel):
             "volume": 1000000
         }
     }, description="Dates with historical data for the stock")
+
+    def to_dict(self):
+        return {
+            'history': {k: v.dict() for k, v in self.history.items()}
+        }

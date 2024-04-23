@@ -1,5 +1,7 @@
 from selenium.common import NoSuchElementException
 from datetime import datetime
+
+from src.schemas import TimeSeries
 from src.utils import TimePeriod, Interval
 
 from selenium import webdriver
@@ -24,9 +26,9 @@ def select_time_period(driver, time_period):
     # Click the dialog to make the buttons visible
     dialog = driver.find_element(By.CSS_SELECTOR, 'button.tertiary-btn.fin-size-small.menuBtn.rounded.svelte-1ndj15j')
     dialog.click()
-    # Find the button with the appropriate value and click it
-    button = driver.find_element(By.CSS_SELECTOR, f'button.tertiary-btn.fin-size-small.tw-w-full.tw-justify-center.rounded.svelte-1ndj15j[value="{time_period_values[time_period]}"]')
-    button.click()
+    # Wait until the button with the appropriate value is present and then click it
+    WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR,
+                                                                    f'button.tertiary-btn.fin-size-small.tw-w-full.tw-justify-center.rounded.svelte-1ndj15j[value="{time_period_values[time_period]}"]'))).click()
 
 
 def select_interval(driver, interval):
@@ -37,11 +39,12 @@ def select_interval(driver, interval):
         Interval.MONTHLY: '1mo'
     }
     # Click the dialog to make the items visible
-    dialog = driver.find_element(By.CSS_SELECTOR, 'button.tertiary-btn.fin-size-small.menuBtn.tw-justify-center.rounded.rightAlign.svelte-1ndj15j')
+    dialog = driver.find_element(By.CSS_SELECTOR,
+                                 'button.tertiary-btn.fin-size-small.menuBtn.tw-justify-center.rounded.rightAlign.svelte-1ndj15j')
     dialog.click()
-    # Find the item with the appropriate data-value and click it
-    item = driver.find_element(By.CSS_SELECTOR, f'div.itm[data-value="{interval_values[interval]}"]')
-    item.click()
+    # Wait until the item with the appropriate data-value is present and then click it
+    WebDriverWait(driver, 10).until(
+        EC.presence_of_element_located((By.CSS_SELECTOR, f'div.itm[data-value="{interval_values[interval]}"]'))).click()
 
 
 def scrape_historical(symbol: str, time: TimePeriod, interval: Interval):
@@ -49,9 +52,15 @@ def scrape_historical(symbol: str, time: TimePeriod, interval: Interval):
     webdriver_service = Service(ChromeDriverManager().install())
     options = Options()
     options.add_argument("--headless")  # Ensure GUI is off for Docker
-    driver = webdriver.Chrome(service=webdriver_service, options=options)
 
+    # Disable images
+    chrome_prefs = {"profile.managed_default_content_settings.images": 2}
+    options.add_experimental_option("prefs", chrome_prefs)
+
+    driver = webdriver.Chrome(service=webdriver_service, options=options)
+    import time as t
     try:
+        start = t.time()
         driver.get(f'https://finance.yahoo.com/quote/{symbol}/history')
 
         # Select the time period and interval
@@ -60,7 +69,8 @@ def scrape_historical(symbol: str, time: TimePeriod, interval: Interval):
 
         # Wait for the data to load and then scrape it
         WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.CSS_SELECTOR, 'table.svelte-ewueuo')))
-
+        middle = t.time()
+        print(f"Time taken to load data: {middle - start} seconds")
         data = {}
         row_index = 0
         while True:
@@ -68,10 +78,16 @@ def scrape_historical(symbol: str, time: TimePeriod, interval: Interval):
                 row = driver.find_element(By.CSS_SELECTOR, f'table.svelte-ewueuo tbody tr:nth-child({row_index + 1})')
                 cells = row.find_elements(By.TAG_NAME, 'td')
                 date = cells[0].text
+                try:
+                    open_price = float(cells[1].text)
+                except ValueError:
+                    # If cells[1] cannot be converted to a float, skip to the next row
+                    row_index += 1
+                    continue
                 if date == '':
                     date = datetime.now().strftime("%b %d, %Y")
                 data[date] = {
-                    'open': float(cells[1].text),
+                    'open': open_price,
                     'high': float(cells[2].text),
                     'low': float(cells[3].text),
                     'adj_close': float(cells[5].text),
@@ -81,7 +97,8 @@ def scrape_historical(symbol: str, time: TimePeriod, interval: Interval):
             except NoSuchElementException:
                 # No more rows
                 break
-
-        return data
+        end = t.time()
+        print(f"Time taken to scrape data: {end - start} seconds")
+        return TimeSeries(history=data)
     finally:
         driver.quit()
