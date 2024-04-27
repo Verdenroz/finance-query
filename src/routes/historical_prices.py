@@ -2,8 +2,9 @@ from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 
 from src.schemas import TimeSeries
-from src.utils import TimePeriod, Interval, cache
-from src.services import scrape_historical
+from src.schemas.time_series import TimePeriod, Interval
+from src.utils import cache
+from src.services import get_historical
 
 router = APIRouter()
 
@@ -26,4 +27,4 @@ async def get_time_series(
              TimePeriod.ONE_MONTH]):
         raise HTTPException(status_code=400, detail="If interval is 15m or 30m, time period must be 1mo, 5d, or 1d")
 
-    return await scrape_historical(symbol, time, interval)
+    return await get_historical(symbol, time, interval)

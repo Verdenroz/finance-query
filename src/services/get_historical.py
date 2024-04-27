@@ -6,7 +6,7 @@ from src.schemas import HistoricalData, TimeSeries
 from src.schemas.time_series import Interval, TimePeriod
 
 
-async def scrape_historical(symbol: str, time: TimePeriod, interval: Interval):
+async def get_historical(symbol: str, time: TimePeriod, interval: Interval):
     stock = yf.Ticker(symbol)
     data = stock.history(period=time.value, interval=interval.value, rounding=True)
 
@@ -28,12 +28,11 @@ async def scrape_historical(symbol: str, time: TimePeriod, interval: Interval):
 
     for date, data in data_dict.items():
         data_dict[date] = HistoricalData(
-            open=Decimal(data['Open']),
-            high=Decimal(data['High']),
-            low=Decimal(data['Low']),
-            adj_close=Decimal(data['Close']),
+            open=round(Decimal(data['Open']), 2),
+            high=round(Decimal(data['High']), 2),
+            low=round(Decimal(data['Low']), 2),
+            adj_close=round(Decimal(data['Close']), 2),
             volume=int(data['Volume'])
         )
 
-    # Return a TimeSeries object
     return TimeSeries(history=data_dict)
