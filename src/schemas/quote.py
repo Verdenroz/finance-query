@@ -34,11 +34,3 @@ class Quote(BaseModel):
                        example="Apple Inc. designs, manufactures, and markets smartphones, personal computers, "
                                "tablets, wearables, and accessories worldwide.",
                        description="About the company")
-    similar_stocks: list[Stock] = Field(...,
-                                        example=[{"symbol": "MSFT", "name": "Microsoft Corporation", "price": 300.00}],
-                                        description="List of similar stocks")
-    news: list[News] = Field(...,
-                             example=[
-                                 {"title": "New iPhone released!", "link": "https://www.example.com", "source": "CNN",
-                                  "time": "1 day ago"}],
-                             description="List of news articles")
