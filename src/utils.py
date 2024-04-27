@@ -8,7 +8,7 @@ import pytz
 import redis
 from dotenv import load_dotenv
 
-from src.schemas import TimeSeries, HistoricalData, Quote, Stock
+from src.schemas import TimeSeries, Quote, Stock, MarketMover, News, Index
 
 load_dotenv()
 
@@ -65,9 +65,9 @@ def cache(expire, check_market=False):
                 if isinstance(result, TimeSeries):
                     r.set(key, orjson.dumps(result.dict()), ex=expire)
                 else:
-                    if isinstance(result, list) and result and isinstance(result[0], (Stock, Quote)):
+                    if isinstance(result, list) and result and isinstance(result[0], (Stock, Quote, MarketMover, Index, News)):
                         result_list = [item.dict() for item in result]
-                    elif isinstance(result, (Stock, Quote)):
+                    elif isinstance(result, (Stock, Quote, Index, MarketMover)):
                         result_list = result.dict()
                     else:
                         result_list = result

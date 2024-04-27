@@ -7,3 +7,12 @@ class News(BaseModel):
     source: str = Field(..., example="CNN", description="Source of the news article")
     img: str = Field(..., example="https://www.example.com/image.jpg", description="Image of the news article")
     time: str = Field(..., example="1 day ago", description="Time relative to current time when the news was published")
+
+    def dict(self, *args, **kwargs):
+        return {
+            "title": self.title,
+            "link": self.link,
+            "source": self.source,
+            "img": self.img,
+            "time": self.time
+        }

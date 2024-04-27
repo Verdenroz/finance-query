@@ -34,3 +34,31 @@ class Quote(BaseModel):
                        example="Apple Inc. designs, manufactures, and markets smartphones, personal computers, "
                                "tablets, wearables, and accessories worldwide.",
                        description="About the company")
+
+
+    def dict(self, *args, **kwargs):
+        return {
+            "symbol": self.symbol,
+            "name": self.name,
+            "price": str(self.price),
+            "after_hours_price": str(self.after_hours_price) if self.after_hours_price else None,
+            "change": self.change,
+            "percent_change": self.percent_change,
+            "open": str(self.open),
+            "high": str(self.high),
+            "low": str(self.low),
+            "year_high": str(self.year_high),
+            "year_low": str(self.year_low),
+            "volume": self.volume,
+            "avg_volume": self.avg_volume,
+            "market_cap": self.market_cap,
+            "beta": str(self.beta) if self.beta else None,
+            "pe": str(self.pe) if self.pe else None,
+            "eps": str(self.eps) if self.eps else None,
+            "dividend": str(self.dividend) if self.dividend else None,
+            "ex_dividend": self.ex_dividend,
+            "earnings_date": self.earnings_date,
+            "sector": self.sector,
+            "industry": self.industry,
+            "about": self.about,
+        }

@@ -3,6 +3,7 @@ from fastapi.security import APIKeyHeader
 from typing_extensions import List
 from src.schemas import MarketMover
 from src.services import scrape_actives, scrape_gainers, scrape_losers
+from src.utils import cache
 
 router = APIRouter()
 
@@ -13,6 +14,7 @@ router = APIRouter()
                         "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
+@cache(expire=60, check_market=True)
 async def get_actives():
     return await scrape_actives()
 
@@ -23,6 +25,7 @@ async def get_actives():
                         "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
+@cache(expire=60, check_market=True)
 async def get_gainers():
     return await scrape_gainers()
 
@@ -33,5 +36,6 @@ async def get_gainers():
                         "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-async def get_gainers():
+@cache(expire=60, check_market=True)
+async def get_losers():
     return await scrape_losers()
