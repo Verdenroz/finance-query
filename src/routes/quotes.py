@@ -3,6 +3,7 @@ from fastapi.security import APIKeyHeader
 from typing_extensions import List
 from src.schemas import Quote, Stock
 from src.services import scrape_quotes, scrape_simple_quotes
+from src.utils import cache
 
 router = APIRouter()
 
@@ -14,6 +15,7 @@ router = APIRouter()
             response_model=List[Quote],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbols parameter is required"}})
+@cache(60, check_market=True)
 async def get_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
     if not symbols:
         raise HTTPException(status_code=400, detail="Symbols parameter is required")
@@ -28,6 +30,7 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
             response_model=List[Stock],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbol parameter is required"}})
+@cache(60, check_market=True)
 async def get_simple_quote(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
     if not symbols:
         raise HTTPException(status_code=400, detail="Symbol parameter is required")

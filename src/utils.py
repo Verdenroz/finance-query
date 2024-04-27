@@ -2,39 +2,17 @@ import functools
 import hashlib
 import json
 import os
+from datetime import datetime
 from decimal import Decimal
-from enum import Enum
 
+import pytz
 import redis
 from dotenv import load_dotenv
 
-from src.schemas import TimeSeries, HistoricalData
+from src.schemas import TimeSeries, HistoricalData, Quote, Stock
+from src.schemas.time_series import TimePeriod, Interval
 
 load_dotenv()
-
-
-class TimePeriod(Enum):
-    DAY = "1d"
-    FIVE_DAYS = "5d"
-    ONE_MONTH = "1mo"
-    THREE_MONTHS = "3mo"
-    SIX_MONTHS = "6mo"
-    YTD = "YTD"
-    YEAR = "1Y"
-    FIVE_YEARS = "5Y"
-    TEN_YEARS = "10Y"
-    MAX = "max"
-
-
-class Interval(Enum):
-    FIFTEEN_MINUTES = "15m"
-    THIRTY_MINUTES = "30m"
-    ONE_HOUR = "1h"
-    DAILY = "1d"
-    WEEKLY = "1wk"
-    MONTHLY = "1mo"
-    QUARTERLY = "3mo"
-
 
 r = redis.Redis(
     host=os.getenv("REDIS_HOST"),
@@ -46,10 +24,20 @@ r = redis.Redis(
 )
 
 
-class TimeSeriesEncoder(json.JSONEncoder):
+def is_market_open() -> bool:
+    now = datetime.now(pytz.timezone('US/Eastern'))
+    open_time = datetime.now(pytz.timezone('US/Eastern')).replace(hour=9, minute=30, second=0)
+    close_time = datetime.now(pytz.timezone('US/Eastern')).replace(hour=16, minute=0, second=0)
+    # Check if current time is within market hours and it's a weekday
+    return open_time <= now <= close_time and 0 <= now.weekday() < 5
+
+
+class Encoder(json.JSONEncoder):
     def default(self, obj):
         if isinstance(obj, TimeSeries):
             return {'history': obj.history}
+        elif isinstance(obj, Quote) or isinstance(obj, Stock):
+            return obj.dict()
         elif isinstance(obj, Decimal):
             return str(obj)
         elif isinstance(obj, TimePeriod):
@@ -59,7 +47,7 @@ class TimeSeriesEncoder(json.JSONEncoder):
         return super().default(obj)
 
 
-def cache(expire):
+def cache(expire, check_market=False):
     """
     This decorator caches the result of the function it decorates.
 
@@ -70,6 +58,7 @@ def cache(expire):
     If the cache key does not exist, the function is called and Redis stores the result.
 
     :param expire: The expiration time for the cache key
+    :param check_market: Whether to check if the market is open before caching
     :return: The result of the function or the cached value
     """
 
@@ -77,11 +66,10 @@ def cache(expire):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # Generate a unique key for the function and its arguments
-            key = f"{func.__name__}:{hashlib.sha256(json.dumps((args, kwargs), cls=TimeSeriesEncoder).encode()).hexdigest()}"
+            key = f"{func.__name__}:{hashlib.sha256(json.dumps((args, kwargs), cls=Encoder).encode()).hexdigest()}"
 
             # Check if the key exists in the Redis cache
             if (result := r.get(key)) is not None:
-                # If the key exists, retrieve the cached value and return it
                 result_dict = json.loads(result)
                 if 'history' in result_dict:
                     result_dict['history'] = {
@@ -93,18 +81,21 @@ def cache(expire):
                             volume=int(v['volume'])
                         ) for k, v in result_dict['history'].items()
                     }
-                return TimeSeries(**result_dict)
+                    return TimeSeries(**result_dict)
+                elif 'price' in result_dict and 'change' in result_dict:
+                    return Stock(**result_dict)
+                elif 'price' in result_dict and 'after_hours_price' in result_dict:
+                    return Quote(**result_dict)
 
-            # If the key does not exist, call the function
+            # Call the function if no key exists in the Redis cache
             result = await func(*args, **kwargs)
 
-            # Convert the TimeSeries object into a dictionary before storing it in the Redis cache
             result_dict = result.to_dict() if isinstance(result, TimeSeries) else result
 
-            # Store the result in the Redis cache with an expiration time
-            r.set(key, json.dumps(result_dict, cls=TimeSeriesEncoder), ex=expire)
+            # Cache the result in the Redis cache if the market is closed or check_market is False
+            if not check_market or (check_market and not is_market_open()):
+                r.set(key, json.dumps(result_dict, cls=Encoder), ex=expire)
 
-            # Return the result
             return result
 
         return wrapper

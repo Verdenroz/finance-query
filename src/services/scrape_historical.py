@@ -1,10 +1,9 @@
 import pandas as pd
 import yfinance as yf
 
-from src.utils import TimePeriod, Interval
-
 from decimal import Decimal
 from src.schemas import HistoricalData, TimeSeries
+from src.schemas.time_series import Interval, TimePeriod
 
 
 async def scrape_historical(symbol: str, time: TimePeriod, interval: Interval):
