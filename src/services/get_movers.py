@@ -3,6 +3,8 @@ import re
 from aiohttp import ClientSession, TCPConnector
 from bs4 import BeautifulSoup, SoupStrainer
 from decimal import Decimal
+
+from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 from ..constants import headers
 from ..schemas.marketmover import MarketMover
@@ -19,25 +21,23 @@ async def create_market_mover(mover):
     price_match = number_pattern.search(price_text)
     price = Decimal(price_match.group()) if price_match else None
 
-    change_text = mover.find('div', class_='SEGxAb').text
-    change_match = number_pattern.search(change_text)
-    change = change_match.group() if change_match else None
+    change_text = mover.find('div', class_='SEGxAb').text.replace('$', '')
 
     percent_change_text = mover.find('div', class_='JwB6zf').text
-    percent_change_match = number_pattern.search(percent_change_text)
-    percent_change = percent_change_match.group() if percent_change_match else None
 
     # Prepend '+' or '-' to percentChange based on whether change is positive or negative
-    if change and change[0] != '-':
-        percent_change = '+' + percent_change
+    if '+' in change_text:
+        percent_change = '+' + percent_change_text
+    elif '-' in change_text:
+        percent_change = '-' + percent_change_text
     else:
-        percent_change = '-' + percent_change
+        percent_change = percent_change_text
 
     mover_data = MarketMover(
         symbol=symbol,
         name=name,
         price=price,
-        change=change,
+        change=change_text,
         percent_change=percent_change,
     )
     return mover_data
@@ -62,7 +62,7 @@ async def scrape_movers(url):
             movers = await fetch_and_parse_movers(session, url, semaphore)
             return movers
     except Exception as e:
-        return JSONResponse(status_code=500, content={"message": str(e)})
+        raise HTTPException(status_code=500, detail={"message": str(e)})
 
 
 async def scrape_actives():
