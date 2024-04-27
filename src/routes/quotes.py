@@ -19,7 +19,7 @@ router = APIRouter()
 async def get_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
     if not symbols:
         raise HTTPException(status_code=400, detail="Symbols parameter is required")
-    symbols = list(set(symbols.upper().split(',')))
+    symbols = list(set(symbols.upper().replace(' ', '').split(',', )))
     return await scrape_quotes(symbols)
 
 
@@ -34,5 +34,5 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
 async def get_simple_quote(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
     if not symbols:
         raise HTTPException(status_code=400, detail="Symbol parameter is required")
-    symbols = list(set(symbols.upper().split(',')))
+    symbols = list(set(symbols.upper().replace(' ', '').split(',')))
     return await scrape_simple_quotes(symbols)
