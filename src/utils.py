@@ -1,12 +1,11 @@
+import functools
+import hashlib
+import json
 import os
 from decimal import Decimal
 from enum import Enum
 
-import json
 import redis
-import hashlib
-import functools
-
 from dotenv import load_dotenv
 
 from src.schemas import TimeSeries, HistoricalData
@@ -15,18 +14,26 @@ load_dotenv()
 
 
 class TimePeriod(Enum):
-    THREE_MONTHS = "3M"
-    SIX_MONTHS = "6M"
+    DAY = "1d"
+    FIVE_DAYS = "5d"
+    ONE_MONTH = "1mo"
+    THREE_MONTHS = "3mo"
+    SIX_MONTHS = "6mo"
     YTD = "YTD"
     YEAR = "1Y"
     FIVE_YEARS = "5Y"
+    TEN_YEARS = "10Y"
     MAX = "max"
 
 
 class Interval(Enum):
-    DAILY = "daily"
-    WEEKLY = "weekly"
-    MONTHLY = "monthly"
+    FIFTEEN_MINUTES = "15m"
+    THIRTY_MINUTES = "30m"
+    ONE_HOUR = "1h"
+    DAILY = "1d"
+    WEEKLY = "1wk"
+    MONTHLY = "1mo"
+    QUARTERLY = "3mo"
 
 
 r = redis.Redis(
@@ -65,6 +72,7 @@ def cache(expire):
     :param expire: The expiration time for the cache key
     :return: The result of the function or the cached value
     """
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
