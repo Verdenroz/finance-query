@@ -5,7 +5,6 @@ from bs4 import BeautifulSoup, SoupStrainer
 from decimal import Decimal
 
 from fastapi import HTTPException
-from fastapi.responses import JSONResponse
 from ..constants import headers
 from ..schemas.marketmover import MarketMover
 

@@ -14,7 +14,7 @@ router = APIRouter()
                         "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=60, check_market=True)
+@cache(expire=15, after_market_expire=3600)
 async def get_actives():
     return await scrape_actives()
 
@@ -25,7 +25,7 @@ async def get_actives():
                         "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=60, check_market=True)
+@cache(expire=15, after_market_expire=3600)
 async def get_gainers():
     return await scrape_gainers()
 
@@ -36,6 +36,6 @@ async def get_gainers():
                         "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=60, check_market=True)
+@cache(expire=15, after_market_expire=3600)
 async def get_losers():
     return await scrape_losers()

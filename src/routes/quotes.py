@@ -15,7 +15,7 @@ router = APIRouter()
             response_model=List[Quote],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbols parameter is required"}})
-@cache(60, check_market=True)
+@cache(30, after_market_expire=600)
 async def get_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
     if not symbols:
         raise HTTPException(status_code=400, detail="Symbols parameter is required")
@@ -30,7 +30,7 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
             response_model=List[Stock],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbol parameter is required"}})
-@cache(60, check_market=True)
+@cache(30, after_market_expire=600)
 async def get_simple_quote(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
     if not symbols:
         raise HTTPException(status_code=400, detail="Symbol parameter is required")

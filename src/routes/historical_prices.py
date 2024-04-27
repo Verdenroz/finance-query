@@ -14,7 +14,7 @@ router = APIRouter()
             response_model=TimeSeries,
             description="Get the latest US indices data. Invalid API keys are limited to 5 requests per minute.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=1800)
+@cache(expire=60, after_market_expire=600)
 async def get_time_series(
         symbol: str = Query(..., description="The symbol of the stock to get historical data for."),
         time: TimePeriod = Query(..., description="The time period for the historical data."),

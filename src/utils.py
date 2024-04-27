@@ -29,7 +29,7 @@ def is_market_open() -> bool:
     return open_time <= now <= close_time and 0 <= now.weekday() < 5
 
 
-def cache(expire, check_market=False):
+def cache(expire, after_market_expire=None):
     """
         This decorator caches the result of the function it decorates.
 
@@ -40,7 +40,7 @@ def cache(expire, check_market=False):
         If the cache key does not exist, the function is called and Redis stores the result.
 
         :param expire: The expiration time for the cache key
-        :param check_market: Whether to check if the market is open before caching
+        :param after_market_expire: The expiration time for the cache key after the market closes
         :return: The result of the function or the cached value
         """
     def decorator(func):
@@ -60,21 +60,27 @@ def cache(expire, check_market=False):
 
             result = await func(*args, **kwargs)
 
-            #Cache the result if the market is closed or if the function is not checking the market
-            if not check_market or (check_market and not is_market_open()):
-                if isinstance(result, TimeSeries):
-                    r.set(key, orjson.dumps(result.dict()), ex=expire)
-                else:
-                    if isinstance(result, list) and result and isinstance(result[0], (Stock, Quote, MarketMover, Index, News)):
-                        result_list = [item.dict() for item in result]
-                    elif isinstance(result, (Stock, Quote, Index, MarketMover)):
-                        result_list = result.dict()
-                    else:
-                        result_list = result
+            #Set the expiration time based on the market hours
+            if after_market_expire is not None and not is_market_open():
+                expire_time = after_market_expire
+            else:
+                expire_time = expire
 
-                    for item in result_list:
-                        r.rpush(key, orjson.dumps(item))
-                    r.expire(key, expire)
+            #Cache the result in Redis
+            if isinstance(result, TimeSeries):
+                r.set(key, orjson.dumps(result.dict()), ex=expire_time)
+            else:
+                if isinstance(result, list) and result and isinstance(result[0],
+                                                                      (Stock, Quote, MarketMover, Index, News)):
+                    result_list = [item.dict() for item in result]
+                elif isinstance(result, (Stock, Quote, Index, MarketMover)):
+                    result_list = result.dict()
+                else:
+                    result_list = result
+
+                for item in result_list:
+                    r.rpush(key, orjson.dumps(item))
+                r.expire(key, expire_time)
 
             return result
 
