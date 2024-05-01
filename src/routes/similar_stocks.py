@@ -9,8 +9,8 @@ router = APIRouter()
 
 
 @router.get("/v1/similar-stocks/",
-            summary="Returns summary quote data of a single stock",
-            description="Get relevant stock information for a single stock. "
+            summary="Returns similar stocks of a queried single stock",
+            description="Get relevant stock information for similar stocks."
                         "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[Stock],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
