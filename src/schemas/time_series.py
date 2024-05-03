@@ -35,27 +35,18 @@ class HistoricalData(BaseModel):
     low: Decimal = Field(..., example=145.00, description="Lowest price")
     adj_close: Decimal = Field(..., example=145.00, description="Adjusted closing price")
     volume: int = Field(..., example=1000000, description="Volume traded")
-    def dict(self, *args, **kwargs):
-        return {
-            "open": str(self.open),
-            "high": str(self.high),
-            "low": str(self.low),
-            "adj_close": str(self.adj_close),
-            "volume": self.volume,
-        }
+
 
 class TimeSeries(BaseModel):
-    history: Dict[str, HistoricalData] = Field(..., example={
-        "2021-07-09": {
-            "open": 145.00,
-            "high": 145.00,
-            "low": 145.00,
-            "adj_close": 145.00,
-            "volume": 1000000
-        }
-    }, description="Dates with historical data for the stock")
-
-    def to_dict(self):
-        return {
-            'History': {k: v.dict() for k, v in self.history.items()}
-        }
+    history: Dict[str, HistoricalData] = Field(
+        ...,
+        serialization_alias="Historical Data",
+        example={
+            "2021-07-09": {
+                "open": 145.00,
+                "high": 145.00,
+                "low": 145.00,
+                "adj_close": 145.00,
+                "volume": 1000000
+            }
+        }, description="Dates with historical data for the stock")

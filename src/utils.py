@@ -43,35 +43,37 @@ def cache(expire, after_market_expire=None):
         :param after_market_expire: The expiration time for the cache key after the market closes
         :return: The result of the function or the cached value
         """
+
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((args, kwargs))).hexdigest()}"
 
             if r.exists(key):
-                if 'get_time_series' in key:
+                if r.type(key) == b'string':
                     result = orjson.loads(r.get(key))
-                else:
+                elif r.type(key) == b'list':
                     result_list = []
                     for item in r.lrange(key, 0, -1):
                         result_list.append(orjson.loads(item))
                     result = result_list
+
                 return result
 
             result = await func(*args, **kwargs)
 
-            #Set the expiration time based on the market hours
+            # Set the expiration time based on the market hours
             if after_market_expire is not None and not is_market_open():
                 expire_time = after_market_expire
             else:
                 expire_time = expire
 
-            #Cache the result in Redis
+            # Cache the result in Redis
             if isinstance(result, TimeSeries):
-                r.set(key, orjson.dumps(result.dict()), ex=expire_time)
+                r.set(key, result.json(), ex=expire_time)
             else:
-                if isinstance(result, list) and result and isinstance(result[0],
-                                                                      (Stock, Quote, MarketMover, Index, News)):
+                if (isinstance(result, list) and result
+                        and isinstance(result[0], (Stock, Quote, MarketMover, Index, News))):
                     result_list = [item.dict() for item in result]
                 elif isinstance(result, (Stock, Quote, Index, MarketMover)):
                     result_list = result.dict()
