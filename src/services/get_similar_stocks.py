@@ -8,17 +8,9 @@ from typing_extensions import List
 from src.constants import headers
 from src.schemas import Stock
 
-
-async def scrape_similar_stocks(symbol: str) -> List[Stock]:
-    url = 'https://finance.yahoo.com/quote/' + symbol
-    with Session() as session:
-        html = session.get(url, headers=headers).text
-    soup = BeautifulSoup(html, 'lxml')
-
-    similar_stocks = soup.find_all("div", class_="main-div svelte-15b2o7n", limit=6)
+def parse_stocks(stocks_divs, symbol):
     stocks = []
-
-    for div in similar_stocks:
+    for div in stocks_divs:
         symbol_element = div.find("span")
         if not symbol_element:
             continue
@@ -46,55 +38,29 @@ async def scrape_similar_stocks(symbol: str) -> List[Stock]:
         change = price / (1 + Decimal(percent_change.strip('%')) / 100) - price
         change = round(change, 2)
         if percent_change.startswith('-'):
-            change = -change
+            change_str = '-' + str(abs(change))
         else:
-            change = +change
+            change_str = '+' + str(change)
 
-        stock = Stock(symbol=div_symbol, name=name, price=price, change=change, percent_change=percent_change)
+        stock = Stock(symbol=div_symbol, name=name, price=price, change=change_str, percent_change=percent_change)
         stocks.append(stock)
         if len(stocks) == 5:
             break
+    return stocks
+
+async def scrape_similar_stocks(symbol: str) -> List[Stock]:
+    url = 'https://finance.yahoo.com/quote/' + symbol
+    with Session() as session:
+        html = session.get(url, headers=headers).text
+    soup = BeautifulSoup(html, 'lxml')
+
+    similar_stocks = soup.find_all("div", class_="main-div svelte-15b2o7n", limit=6)
+    stocks = parse_stocks(similar_stocks, symbol)
 
     # If similar_stocks is empty, try to scrape ETF data
     if not stocks:
         etf_stocks = soup.find_all("div", class_="ticker-container svelte-1pws7a4 enforceMaxWidth", limit=6)
-
-        for div in etf_stocks:
-            symbol_element = div.find("span", class_="symbol svelte-1rvxuc5")
-            if not symbol_element:
-                continue
-            div_symbol = symbol_element.text
-            if div_symbol.lower() == symbol.lower():
-                continue
-
-            name_element = div.find("span", class_="tw-text-sm svelte-1rvxuc5 longName")
-            if not name_element:
-                continue
-            name = name_element.text
-
-            price_element = div.find("strong")
-            if not price_element:
-                continue
-            price_text = price_element.text.replace(',', '')
-            price = Decimal(price_text)
-
-            change_element = (div.find("span", class_="txt-positive svelte-1pws7a4") or
-                              div.find("span", class_="txt-negative svelte-1pws7a4"))
-            if not change_element:
-                continue
-            percent_change = change_element.text
-
-            change = price / (1 + Decimal(percent_change.strip('%')) / 100) - price
-            change = round(change, 2)
-            if percent_change.startswith('-'):
-                change = -change
-            else:
-                change = +change
-
-            stock = Stock(symbol=div_symbol, name=name, price=price, change=change, percent_change=percent_change)
-            stocks.append(stock)
-            if len(stocks) == 5:
-                break
+        stocks = parse_stocks(etf_stocks, symbol)
 
     # If stocks is empty, the symbol is probably invalid
     if len(stocks) == 0:
