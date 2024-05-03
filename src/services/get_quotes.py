@@ -51,11 +51,17 @@ async def scrape_quote(symbol: str, client: AsyncClient):
 
     name = symbol_name_element.text.split('(')[0].strip()
 
-    # Regular hours price
     regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
-    regular_change = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]), 2)
-    regular_percent_change = round(
+    regular_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]),
+                                 2)
+    regular_percent_change_value = round(
         Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
+
+    # Add + or - sign and % for percent_change
+    regular_change = '+' + str(regular_change_value) if regular_change_value >= 0 else str(regular_change_value)
+    regular_percent_change = '+' + str(
+        regular_percent_change_value) + '%' if regular_percent_change_value >= 0 else str(
+        regular_percent_change_value) + '%'
 
     # After hours price
     post_price_element = soup.find("fin-streamer", {"data-testid": "qsp-post-price"})
@@ -150,11 +156,17 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient):
 
     name = symbol_name_element.text.split('(')[0].strip()
 
-    # Regular hours price
     regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
-    regular_change = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]), 2)
-    regular_percent_change = round(Decimal(soup.find("fin-streamer",
-                                                     {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
+    regular_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]),
+                                 2)
+    regular_percent_change_value = round(
+        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
+
+    # Add + or - sign and % for percent_change
+    regular_change = '+' + str(regular_change_value) if regular_change_value >= 0 else str(regular_change_value)
+    regular_percent_change = '+' + str(
+        regular_percent_change_value) + '%' if regular_percent_change_value >= 0 else str(
+        regular_percent_change_value) + '%'
 
     return Stock(
         symbol=symbol.upper(),
