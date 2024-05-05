@@ -16,3 +16,43 @@ Accept: application/json
 ###
 GET 127.0.0.1:8000/v1/losers
 Accept: application/json
+
+
+###
+http://127.0.0.1:8000/v1/news
+Accept: application/json
+
+
+###
+http://127.0.0.1:8000/v1/quote?symbol=AMZN
+Accept: application/json
+
+
+###
+http://127.0.0.1:8000/v1/simple-quotes/?symbols=AMZN
+Accept: application/json
+
+
+###
+http://127.0.0.1:8000/v1/similar-stocks/?symbol=AMZN
+Accept: application/json
+
+
+###
+http://127.0.0.1:8000/v1/historical/?symbol=AMZN&time=YTD&interval=1d
+Accept: application/json
+
+
+###
+http://127.0.0.1:8000/v1/sma/?symbol=AMZN&period=10
+Accept: application/json
+
+
+###
+http://127.0.0.1:8000/v1/ema/?symbol=AMZN&period=10
+Accept: application/json
+
+
+###
+http://127.0.0.1:8000/v1/wma/?symbol=AMZN&period=10
+Accept: application/json
