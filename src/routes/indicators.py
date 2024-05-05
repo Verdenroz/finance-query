@@ -31,7 +31,7 @@ IndicatorResponse = Union[
 #     return analysis.dict(exclude_none=True)
 
 
-@router.get("/v1/sma",
+@router.get("/sma",
             summary="Returns the Simple Moving Average for a stock",
             response_model=Analysis,
             description="Get the Simple Moving Average for a stock. Invalid API keys are limited to 5 requests per "
@@ -46,7 +46,7 @@ async def get_sma_analysis(
     return sma.dict(exclude_none=True)
 
 
-@router.get("/v1/ema",
+@router.get("/ema",
             summary="Returns the Exponential Moving Average for a stock",
             response_model=Analysis,
             description="Get the Exponential Moving Average for a stock. Invalid API keys are limited to 5 requests per"
@@ -62,7 +62,7 @@ async def get_ema_analysis(
 
 
 
-@router.get("/v1/wma",
+@router.get("/wma",
             summary="Returns the Weighted Moving Average for a stock",
             response_model=Analysis,
             description="Get the Weighted Moving Average for a stock. Invalid API keys are limited to 5 requests per"

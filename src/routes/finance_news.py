@@ -9,7 +9,7 @@ from src.utils import cache
 router = APIRouter()
 
 
-@router.get("/v1/news/",
+@router.get("/news",
             summary="Returns news for a single stock or general market news",
             description="Get relevant stock news for a single stock or general market news."
                         "Invalid API keys are limited to 5 requests per minute.",

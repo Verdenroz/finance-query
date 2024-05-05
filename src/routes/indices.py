@@ -8,7 +8,7 @@ from src.utils import cache
 router = APIRouter()
 
 
-@router.get("/v1/indices",
+@router.get("/indices",
             summary="Returns US indices",
             description="Get the latest US indices data. Invalid API keys are limited to 5 requests per minute.",
             response_model=List[Index],

@@ -9,7 +9,7 @@ from src.services import get_historical
 router = APIRouter()
 
 
-@router.get("/v1/historical",
+@router.get("/historical",
             summary="Returns historical data for a stock",
             response_model=TimeSeries,
             description="Get the latest US indices data. Invalid API keys are limited to 5 requests per minute.",

@@ -8,7 +8,7 @@ from src.utils import cache
 router = APIRouter()
 
 
-@router.get("/v1/similar-stocks/",
+@router.get("/similar-stocks/",
             summary="Returns similar stocks of a queried single stock",
             description="Get relevant stock information for similar stocks."
                         "Invalid API keys are limited to 5 requests per minute.",
