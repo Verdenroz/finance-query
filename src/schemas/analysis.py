@@ -3,7 +3,7 @@ from decimal import Decimal
 from enum import Enum
 
 from pydantic import Field, BaseModel
-from typing_extensions import Dict, Union
+from typing_extensions import Dict, Union, Optional
 
 
 class Indicator(Enum):
@@ -20,9 +20,8 @@ class Indicator(Enum):
     AROON = 'aroon'
     ADX = 'adx'
     MACD = 'macd'
-    SUPER_TREND = 'super-trend'
+    SUPER_TREND = 'supertrend'
     ICHIMOKU = 'ichimoku'
-
 
 
 class SMAData(BaseModel):
@@ -70,16 +69,6 @@ class SRSIData(BaseModel):
     )
 
 
-class MACDData(BaseModel):
-    name: str = "MACD"
-    value: Decimal = Field(
-        ..., example=30.00, description="Moving Average Convergence Divergence value", serialization_alias="MACD"
-    )
-    signal: Decimal = Field(
-        ..., example=30.00, description="MACD Signal value", serialization_alias="Signal"
-    )
-
-
 class STOCHData(BaseModel):
     name: str = "STOCH"
     k: Decimal = Field(
@@ -90,13 +79,6 @@ class STOCHData(BaseModel):
     )
 
 
-class ADXData(BaseModel):
-    name: str = "ADX"
-    value: Decimal = Field(
-        ..., example=30.00, description="Average Directional Index value", serialization_alias="ADX"
-    )
-
-
 class CCIData(BaseModel):
     name: str = "CCI"
     value: Decimal = Field(
@@ -104,12 +86,29 @@ class CCIData(BaseModel):
     )
 
 
+class MACDData(BaseModel):
+    name: str = "MACD"
+    value: Decimal = Field(
+        ..., example=30.00, description="Moving Average Convergence Divergence value", serialization_alias="MACD"
+    )
+    signal: Decimal = Field(
+        ..., example=30.00, description="MACD Signal value", serialization_alias="Signal"
+    )
+
+
+class ADXData(BaseModel):
+    name: str = "ADX"
+    value: Decimal = Field(
+        ..., example=30.00, description="Average Directional Index value", serialization_alias="ADX"
+    )
+
+
 class AROONData(BaseModel):
     name: str = "AROON"
-    arron_up: Decimal = Field(
+    aroon_up: Decimal = Field(
         ..., example=30.00, description="Aroon Up value", serialization_alias="Aroon Up"
     )
-    arron_down: Decimal = Field(
+    aroon_down: Decimal = Field(
         ..., example=30.00, description="Aroon Down value", serialization_alias="Aroon Down"
     )
 
@@ -131,33 +130,26 @@ class OBVData(BaseModel):
 
 class SuperTrendData(BaseModel):
     name: str = "Super Trend"
-    value: Decimal = Field(
-        ..., example=30.00, description="Super Trend value", serialization_alias="Super Trend"
-    )
-    upper_band: Decimal = Field(
-        ..., example=30.00, description="Super Trend Upper Band value", serialization_alias="Upper Band"
-    )
-    lower_band: Decimal = Field(
-        ..., example=30.00, description="Super Trend Lower Band value", serialization_alias="Lower Band"
-    )
+    value: Decimal = Field(..., example=30.00, description="Super Trend value", serialization_alias="Super Trend")
+    trend: str = Field(..., example="UP", description="Trend direction", serialization_alias="Trend")
 
 
 class IchimokuData(BaseModel):
     name: str = "Ichimoku"
-    tenkan_sen: Decimal = Field(
-        ..., example=30.00, description="Tenkan-sen value", serialization_alias="Conversion Line"
+    tenkan_sen: Optional[Decimal] = Field(
+        None, example=30.00, description="Tenkan-sen value", serialization_alias="Conversion Line"
     )
-    kijun_sen: Decimal = Field(
-        ..., example=30.00, description="Kijun-sen value", serialization_alias="Base Line"
+    kijun_sen: Optional[Decimal] = Field(
+        None, example=30.00, description="Kijun-sen value", serialization_alias="Base Line"
     )
-    senkou_span_a: Decimal = Field(
-        ..., example=30.00, description="Senkou Span A value", serialization_alias="Leading Span A"
+    senkou_span_a: Optional[Decimal] = Field(
+        None, example=30.00, description="Senkou Span A value", serialization_alias="Leading Span A"
     )
-    senkou_span_b: Decimal = Field(
-        ..., example=30.00, description="Senkou Span B value", serialization_alias="Leading Span B"
+    senkou_span_b: Optional[Decimal] = Field(
+        None, example=30.00, description="Senkou Span B value", serialization_alias="Leading Span B"
     )
-    chikou_span: Decimal = Field(
-        ..., example=30.00, description="Chikou Span value", serialization_alias="Lagging Span"
+    chikou_span: Optional[Decimal] = Field(
+        None, example=30.00, description="Chikou Span value", serialization_alias="Lagging Span"
     )
 
 

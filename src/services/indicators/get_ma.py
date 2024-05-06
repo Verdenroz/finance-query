@@ -33,9 +33,9 @@ async def get_wma(symbol: str, period: int = 14):
     return Analysis(indicators=indicator_data)
 
 
-async def get_vwap(symbol: str, period: int = 14):
+async def get_vwap(symbol: str):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.SIX_MONTHS, interval=Interval.DAILY)
-    results = indicators.get_vwap(quotes, period).remove_warmup_periods()
+    results = indicators.get_vwap(quotes, start=None).remove_warmup_periods()
     indicator_data = {result.date.date(): VWAPData(value=round(result.vwap, 2)) for result in results
                       if result.vwap is not None}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
