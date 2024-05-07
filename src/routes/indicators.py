@@ -75,16 +75,15 @@ async def get_technical_analysis(
         "senkou_offset": senkou_offset,
         "chikou_offset": chikou_offset
     }
-    try:
-        # Filter out None values
-        params = {k: v for k, v in params.items() if v is not None}
-        print(params)
+    # Filter out None values
+    params = {k: v for k, v in params.items() if v is not None}
+    print(params)
 
-        analysis = await IndicatorFunctions[function](**params)
-        return analysis.dict(exclude_none=True, by_alias=True)
-    except TypeError as e:
-        param_name = str(e).split("'")[1]
-        raise HTTPException(status_code=400,
-                            detail=f"Invalid parameter: {param_name} for the {function.name} function.")
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    analysis = await IndicatorFunctions[function](**params)
+    return analysis.dict(exclude_none=True, by_alias=True)
+# except TypeError as e:
+#     param_name = str(e).split("'")[1]
+#     raise HTTPException(status_code=400,
+#                         detail=f"Invalid parameter: {param_name} for the {function.name} function.")
+# except Exception as e:
+#     raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")

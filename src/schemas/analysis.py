@@ -142,15 +142,16 @@ class IchimokuData(BaseModel):
     kijun_sen: Optional[Decimal] = Field(
         None, example=30.00, description="Kijun-sen value", serialization_alias="Base Line"
     )
+    chikou_span: Optional[Decimal] = Field(
+        None, example=30.00, description="Chikou Span value", serialization_alias="Lagging Span"
+    )
     senkou_span_a: Optional[Decimal] = Field(
         None, example=30.00, description="Senkou Span A value", serialization_alias="Leading Span A"
     )
     senkou_span_b: Optional[Decimal] = Field(
         None, example=30.00, description="Senkou Span B value", serialization_alias="Leading Span B"
     )
-    chikou_span: Optional[Decimal] = Field(
-        None, example=30.00, description="Chikou Span value", serialization_alias="Lagging Span"
-    )
+
 
 
 IndicatorData = Union[

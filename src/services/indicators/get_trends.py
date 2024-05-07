@@ -57,7 +57,7 @@ async def get_obv(symbol: str, sma_periods: int = None):
 
 
 async def get_super_trend(symbol: str, period: int = 14, multiplier: int = 3):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.SIX_MONTHS, interval=Interval.DAILY)
+    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=Interval.DAILY)
     results = indicators.get_super_trend(quotes, lookback_periods=period, multiplier=multiplier)
     for r in results:
         print(r.date, r.super_trend, r.upper_band, r.lower_band)
@@ -70,28 +70,45 @@ async def get_super_trend(symbol: str, period: int = 14, multiplier: int = 3):
     return Analysis(indicators=indicator_data)
 
 
-async def get_ichimoku(symbol: str, tenkan_period: int = 9, kijun_period: int = 26, senkou_period: int = 52,
-                       senkou_offset: int = 26, chikou_offset: int = 26):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.SIX_MONTHS, interval=Interval.DAILY)
+async def get_ichimoku(symbol: str, tenkan_period: int = 9, kijun_period: int = 26, senkou_period: int = 52):
+    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=Interval.DAILY)
     results = indicators.get_ichimoku(
         quotes,
         tenkan_periods=tenkan_period,
         kijun_periods=kijun_period,
         senkou_b_periods=senkou_period,
-        senkou_offset=senkou_offset, chikou_offset=chikou_offset
     )
-    for r in results:
-        print(r.date, r.tenkan_sen, r.kijun_sen, r.senkou_span_a, r.senkou_span_b, r.chikou_span)
+    # Shift senkou spans and chikou span by 1 to match TradingView's Ichimoku Cloud
+    senkou_span_a_shifted = [result.senkou_span_a for result in results[1:]] + [None]
+    senkou_span_b_shifted = [result.senkou_span_b for result in results[1:]] + [None]
+    chikou_span_shifted = [None] + [result.chikou_span for result in results[:-1]]
+
+    # Update the results with the shifted values
+    for i, result in enumerate(results):
+        if i == len(results) - 1:  # If this is the last result
+            # Calculate senkou_span_a and senkou_span_b manually
+            recent_quotes = quotes[:52]
+            highest_high = max(quote.high for quote in recent_quotes)
+            lowest_low = min(quote.low for quote in recent_quotes)
+            result.senkou_span_a = (result.tenkan_sen + result.kijun_sen) / 2
+            result.senkou_span_b = (highest_high + lowest_low) / 2
+        else:
+            if senkou_span_a_shifted[i] is not None:
+                result.senkou_span_a = float(senkou_span_a_shifted[i])
+            if senkou_span_b_shifted[i] is not None:
+                result.senkou_span_b = float(senkou_span_b_shifted[i])
+        if chikou_span_shifted[i] is not None:
+            result.chikou_span = float(chikou_span_shifted[i])
+
     indicator_data = {
         result.date.date(): IchimokuData(
             tenkan_sen=round(result.tenkan_sen, 2) if result.tenkan_sen is not None else None,
             kijun_sen=round(result.kijun_sen, 2) if result.kijun_sen is not None else None,
+            chikou_span=round(result.chikou_span, 2) if result.chikou_span is not None else None,
             senkou_span_a=round(result.senkou_span_a, 2) if result.senkou_span_a is not None else None,
             senkou_span_b=round(result.senkou_span_b, 2) if result.senkou_span_b is not None else None,
-            chikou_span=round(result.chikou_span, 2) if result.chikou_span is not None else None
         )
         for result in results
     }
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    print(indicator_data)
     return Analysis(indicators=indicator_data)
