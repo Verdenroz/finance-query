@@ -37,6 +37,7 @@ IndicatorFunctions = {
 
 @router.get("/indicators",
             summary="Returns technical indicators for a stock",
+            response_model=Analysis,
             description="Get requested technical indicators for a stock. Invalid API keys are limited to 5 requests "
                         "per minute.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
@@ -80,7 +81,9 @@ async def get_technical_analysis(
     print(params)
 
     analysis = await IndicatorFunctions[function](**params)
-    return analysis.dict(exclude_none=True, by_alias=True)
+    return analysis.model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+
+
 # except TypeError as e:
 #     param_name = str(e).split("'")[1]
 #     raise HTTPException(status_code=400,

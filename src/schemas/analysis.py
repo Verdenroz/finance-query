@@ -2,8 +2,8 @@ from datetime import date
 from decimal import Decimal
 from enum import Enum
 
-from pydantic import Field, BaseModel
-from typing_extensions import Dict, Union, Optional
+from pydantic import Field, BaseModel, AliasChoices, SerializeAsAny
+from typing_extensions import Dict, Optional
 
 
 class Indicator(Enum):
@@ -23,43 +23,45 @@ class Indicator(Enum):
     SUPER_TREND = 'supertrend'
     ICHIMOKU = 'ichimoku'
 
+class IndicatorData(BaseModel):
+    name: str
 
-class SMAData(BaseModel):
+class SMAData(IndicatorData):
     name: str = "SMA"
     value: Decimal = Field(
         ..., example=30.00, description="Simple Moving Average value", serialization_alias="SMA"
     )
 
 
-class EMAData(BaseModel):
+class EMAData(IndicatorData):
     name: str = "EMA"
     value: Decimal = Field(
         ..., example=30.00, description="Exponential Moving Average value", serialization_alias="EMA"
     )
 
 
-class WMAData(BaseModel):
+class WMAData(IndicatorData):
     name: str = "WMA"
     value: Decimal = Field(
         ..., example=30.00, description="Weighted Moving Average value", serialization_alias="WMA"
     )
 
 
-class VWAPData(BaseModel):
+class VWAPData(IndicatorData):
     name: str = "VWAP"
     value: Decimal = Field(
         ..., example=30.00, description="Volume Weighted Average Price value", serialization_alias="VWAP"
     )
 
 
-class RSIData(BaseModel):
+class RSIData(IndicatorData):
     name: str = "RSI"
     value: Decimal = Field(
         ..., example=30.00, description="Relative Strength Index value", serialization_alias="RSI"
     )
 
 
-class SRSIData(BaseModel):
+class SRSIData(IndicatorData):
     name: str = "SRSI"
     k: Decimal = Field(
         ..., example=30.00, description="Stochastic RSI value", serialization_alias="%K"
@@ -69,7 +71,7 @@ class SRSIData(BaseModel):
     )
 
 
-class STOCHData(BaseModel):
+class STOCHData(IndicatorData):
     name: str = "STOCH"
     k: Decimal = Field(
         ..., example=30.00, description="Stochastic Oscillator %K value", serialization_alias="%K"
@@ -79,14 +81,14 @@ class STOCHData(BaseModel):
     )
 
 
-class CCIData(BaseModel):
+class CCIData(IndicatorData):
     name: str = "CCI"
     value: Decimal = Field(
         ..., example=30.00, description="Commodity Channel Index value", serialization_alias="CCI"
     )
 
 
-class MACDData(BaseModel):
+class MACDData(IndicatorData):
     name: str = "MACD"
     value: Decimal = Field(
         ..., example=30.00, description="Moving Average Convergence Divergence value", serialization_alias="MACD"
@@ -96,14 +98,14 @@ class MACDData(BaseModel):
     )
 
 
-class ADXData(BaseModel):
+class ADXData(IndicatorData):
     name: str = "ADX"
     value: Decimal = Field(
         ..., example=30.00, description="Average Directional Index value", serialization_alias="ADX"
     )
 
 
-class AROONData(BaseModel):
+class AROONData(IndicatorData):
     name: str = "AROON"
     aroon_up: Decimal = Field(
         ..., example=30.00, description="Aroon Up value", serialization_alias="Aroon Up"
@@ -113,7 +115,7 @@ class AROONData(BaseModel):
     )
 
 
-class BBANDSData(BaseModel):
+class BBANDSData(IndicatorData):
     name: str = "BBANDS"
     upper_band: Decimal = Field(
         ..., example=30.00, description="Upper Bollinger Band value", serialization_alias="Upper Band"
@@ -123,18 +125,18 @@ class BBANDSData(BaseModel):
     )
 
 
-class OBVData(BaseModel):
+class OBVData(IndicatorData):
     name: str = "OBV"
     value: Decimal = Field(..., example=30.00, description="On Balance Volume value", serialization_alias="OBV")
 
 
-class SuperTrendData(BaseModel):
+class SuperTrendData(IndicatorData):
     name: str = "Super Trend"
     value: Decimal = Field(..., example=30.00, description="Super Trend value", serialization_alias="Super Trend")
     trend: str = Field(..., example="UP", description="Trend direction", serialization_alias="Trend")
 
 
-class IchimokuData(BaseModel):
+class IchimokuData(IndicatorData):
     name: str = "Ichimoku"
     tenkan_sen: Optional[Decimal] = Field(
         None, example=30.00, description="Tenkan-sen value", serialization_alias="Conversion Line"
@@ -153,17 +155,11 @@ class IchimokuData(BaseModel):
     )
 
 
-
-IndicatorData = Union[
-    SMAData, EMAData, WMAData, VWAPData, RSIData, SRSIData, MACDData, STOCHData, ADXData,
-    CCIData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData
-]
-
-
 class Analysis(BaseModel):
-    indicators: Dict[date, IndicatorData] = Field(
+    indicators: Dict[date, SerializeAsAny[IndicatorData]] = Field(
         ...,
         serialization_alias="Technical Analysis",
+        validation_alias=AliasChoices("Technical Analysis", "indicators"),
         example={
             "2021-07-09": {
                 "name: str": "SMA",
