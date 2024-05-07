@@ -44,6 +44,7 @@ IndicatorFunctions = {
 async def get_technical_analysis(
         function: Indicator = Query(..., description="The technical indicator to get."),
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
+        interval: Optional[Interval] = Query(Interval.DAILY, description="The interval to get historical data for."),
         period: Optional[int] = Query(None, description="The look-back period for the technical indicators."),
         stoch_period: Optional[int] = Query(None, description="The stochastic look-back period for STOCH and SRSI."),
         signal_period: Optional[int] = Query(None, description="The signal period for MACD, STOCH, and SRSI."),
@@ -61,6 +62,7 @@ async def get_technical_analysis(
 ):
     params = {
         "symbol": symbol,
+        "interval": interval,
         "period": period,
         "stoch_period": stoch_period,
         "signal_period": signal_period,
