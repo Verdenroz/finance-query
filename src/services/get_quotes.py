@@ -45,7 +45,7 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     parse_only = SoupStrainer(['h1', 'div'])
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-    symbol_name_element = soup.select_one('h1.svelte-ufs8hf')
+    symbol_name_element = soup.select_one('h1.svelte-3a2v0c')
     if not symbol_name_element:
         raise HTTPException(status_code=404, detail="Symbol not found")
 
@@ -150,7 +150,7 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient):
     parse_only = SoupStrainer(['h1', 'fin-streamer'])
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-    symbol_name_element = soup.select_one('h1.svelte-ufs8hf')
+    symbol_name_element = soup.select_one('h1.svelte-3a2v0c')
     if not symbol_name_element:
         raise HTTPException(status_code=404, detail="Symbol not found")
 
@@ -178,6 +178,7 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient):
 
 
 async def scrape_simple_quotes(symbols: List[str]):
+    print("Scraping simple quotes")
     async with AsyncClient(http2=True) as client:
         quotes = await asyncio.gather(*(scrape_simple_quote(symbol, client) for symbol in symbols))
         return [quote for quote in quotes if not isinstance(quote, Exception)]
