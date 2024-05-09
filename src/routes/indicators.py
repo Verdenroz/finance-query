@@ -1,13 +1,12 @@
 from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
-from typing_extensions import Union, Optional
+from typing_extensions import Optional
 
-from src.schemas.analysis import (
-    Indicator, SMAData, EMAData, WMAData, VWAPData, RSIData, SRSIData, MACDData, STOCHData,
-    ADXData, CCIData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData, Analysis
-)
-from src.services.indicators import (get_sma, get_ema, get_wma, get_vwap, get_rsi, get_srsi, get_stoch, get_cci,
+from src.schemas.analysis import Indicator, Analysis
+from src.schemas.time_series import Interval
+from src.services.indicators import (get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci,
                                      get_macd, get_adx, get_aroon, get_bbands, get_obv, get_super_trend, get_ichimoku)
+from src.services.indicators.get_summary_analysis import get_summary_analysis
 
 router = APIRouter()
 
@@ -36,7 +35,7 @@ IndicatorFunctions = {
             description="Get requested technical indicators for a stock. Invalid API keys are limited to 5 requests "
                         "per minute.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-async def get_technical_analysis(
+async def get_technical_indicators(
         function: Indicator = Query(..., description="The technical indicator to get."),
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Optional[Interval] = Query(Interval.DAILY, description="The interval to get historical data for."),
@@ -87,3 +86,20 @@ async def get_technical_analysis(
 #                         detail=f"Invalid parameter: {param_name} for the {function.name} function.")
 # except Exception as e:
 #     raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
+@router.get("/analysis",
+            summary="Returns technical indicators for a stock",
+            description="Get requested technical indicators for a stock. Invalid API keys are limited to 5 requests "
+                        "per minute.",
+            dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
+async def get_technical_analysis(
+        symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
+        interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
+        indicators: str = Query(None, description="The technical indicators to get."),
+):
+    if not symbol:
+        raise HTTPException(status_code=400, detail="Symbol parameter is required")
+
+    indicators_list = [Indicator(indicator.strip()) for indicator in indicators.split(',')]
+    summary_analysis = await get_summary_analysis(symbol, interval, indicators_list)
+    return summary_analysis.dict(exclude_none=True, by_alias=True)
