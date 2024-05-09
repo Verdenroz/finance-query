@@ -1,6 +1,6 @@
 from typing_extensions import OrderedDict
 
-from src.schemas.analysis import SMAData, Analysis, EMAData, WMAData, VWAPData
+from src.schemas.analysis import SMAData, Analysis, EMAData, WMAData, VWMAData
 from src.schemas.time_series import TimePeriod, Interval
 from src.services.get_historical import get_historical_quotes
 from stock_indicators import indicators
@@ -25,7 +25,7 @@ async def get_ema(symbol: str, interval: Interval, period: int = 10):
 
 
 async def get_wma(symbol: str, interval: Interval, period: int = 10):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.SIX_MONTHS, interval=interval)
+    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_wma(quotes, period).remove_warmup_periods()
     indicator_data = {result.date.date(): WMAData(value=round(result.wma, 2)) for result in results if
                       result.wma is not None}
@@ -33,10 +33,10 @@ async def get_wma(symbol: str, interval: Interval, period: int = 10):
     return Analysis(indicators=indicator_data)
 
 
-async def get_vwap(symbol: str, interval: Interval):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.SIX_MONTHS, interval=interval)
-    results = indicators.get_vwap(quotes, start=None).remove_warmup_periods()
-    indicator_data = {result.date.date(): VWAPData(value=round(result.vwap, 2)) for result in results
-                      if result.vwap is not None}
+async def get_vwma(symbol: str, interval: Interval, period: int = 20):
+    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    results = indicators.get_vwma(quotes, period).remove_warmup_periods()
+    indicator_data = {result.date.date(): VWMAData(value=round(result.vwma, 2)) for result in results
+                      if result.vwma is not None}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(indicators=indicator_data)

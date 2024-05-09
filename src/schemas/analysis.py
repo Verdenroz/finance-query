@@ -10,7 +10,7 @@ class Indicator(Enum):
     SMA = 'sma'
     EMA = 'ema'
     WMA = 'wma'
-    VWAP = 'vwap'
+    VWMA = 'vwma'
     RSI = 'rsi'
     SRSI = 'srsi'
     STOCH = 'stoch'
@@ -47,10 +47,10 @@ class WMAData(IndicatorData):
     )
 
 
-class VWAPData(IndicatorData):
-    name: str = "VWAP"
+class VWMAData(IndicatorData):
+    name: str = "VWMA"
     value: Decimal = Field(
-        ..., example=30.00, description="Volume Weighted Average Price value", serialization_alias="VWAP"
+        ..., example=30.00, description="Volume Weighted Moving Average value", serialization_alias="VWAP"
     )
 
 

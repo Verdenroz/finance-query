@@ -11,16 +11,11 @@ from src.services.indicators import (get_sma, get_ema, get_wma, get_vwap, get_rs
 
 router = APIRouter()
 
-IndicatorResponse = Union[
-    SMAData, EMAData, WMAData, VWAPData, RSIData, SRSIData, MACDData, STOCHData, ADXData,
-    CCIData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData
-]
-
 IndicatorFunctions = {
     Indicator.SMA: get_sma,
     Indicator.EMA: get_ema,
     Indicator.WMA: get_wma,
-    Indicator.VWAP: get_vwap,
+    Indicator.VWMA: get_vwma,
     Indicator.RSI: get_rsi,
     Indicator.SRSI: get_srsi,
     Indicator.STOCH: get_stoch,
