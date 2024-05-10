@@ -7,6 +7,7 @@ from src.schemas.time_series import Interval
 from src.services.indicators import (get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci,
                                      get_macd, get_adx, get_aroon, get_bbands, get_obv, get_super_trend, get_ichimoku)
 from src.services.indicators.get_summary_analysis import get_summary_analysis
+from src.utils import cache
 
 router = APIRouter()
 
@@ -35,6 +36,7 @@ IndicatorFunctions = {
             description="Get requested technical indicators for a stock. Invalid API keys are limited to 5 requests "
                         "per minute.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
+@cache(expire=60, after_market_expire=600)
 async def get_technical_indicators(
         function: Indicator = Query(..., description="The technical indicator to get."),
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
@@ -92,6 +94,7 @@ async def get_technical_indicators(
             description="Get requested technical indicators for a stock. Invalid API keys are limited to 5 requests "
                         "per minute.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
+@cache(expire=60, after_market_expire=600)
 async def get_technical_analysis(
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),

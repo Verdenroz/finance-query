@@ -2,7 +2,7 @@ from stock_indicators import indicators
 from typing_extensions import OrderedDict
 
 from src.schemas.analysis import (MACDData, Analysis, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData,
-                                  IchimokuData)
+                                  IchimokuData, Indicator)
 from src.schemas.time_series import TimePeriod, Interval
 from src.services.get_historical import get_historical_quotes
 
@@ -16,7 +16,7 @@ async def get_macd(symbol: str, interval: Interval, fast_period: int = 12, slow_
     indicator_data = {result.date.date(): MACDData(value=result.macd, signal=result.signal) for
                       result in results if result.macd is not None and result.signal is not None}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(indicators=indicator_data)
+    return Analysis(type=Indicator.MACD, indicators=indicator_data)
 
 
 async def get_adx(symbol: str, interval: Interval, period: int = 14):
@@ -25,7 +25,7 @@ async def get_adx(symbol: str, interval: Interval, period: int = 14):
     indicator_data = {result.date.date(): ADXData(value=round(result.adx, 2)) for result in results if
                       result.adx is not None}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(indicators=indicator_data)
+    return Analysis(type=Indicator.ADX, indicators=indicator_data)
 
 
 async def get_aroon(symbol: str, interval: Interval, period: int = 25):
@@ -35,7 +35,7 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25):
         result.date.date(): AROONData(aroon_up=round(result.aroon_up, 2), aroon_down=round(result.aroon_down, 2)) for
         result in results if result.aroon_up is not None and result.aroon_down is not None}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(indicators=indicator_data)
+    return Analysis(type=Indicator.AROON, indicators=indicator_data)
 
 
 async def get_bbands(symbol: str, interval: Interval, period: int = 20, std_dev: int = 2):
@@ -45,7 +45,7 @@ async def get_bbands(symbol: str, interval: Interval, period: int = 20, std_dev:
         result.date.date(): BBANDSData(upper_band=round(result.upper_band, 2), lower_band=round(result.lower_band, 2))
         for result in results if result.upper_band is not None and result.lower_band is not None}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(indicators=indicator_data)
+    return Analysis(type=Indicator.BBANDS, indicators=indicator_data)
 
 
 async def get_obv(symbol: str, interval: Interval, sma_periods: int = None):
@@ -54,7 +54,7 @@ async def get_obv(symbol: str, interval: Interval, sma_periods: int = None):
     indicator_data = {result.date.date(): OBVData(value=round(result.obv, 2)) for result in results if
                       result.obv is not None}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(indicators=indicator_data)
+    return Analysis(type=Indicator.OBV, indicators=indicator_data)
 
 
 async def get_super_trend(symbol: str, interval: Interval, period: int = 14, multiplier: int = 3):
@@ -66,7 +66,7 @@ async def get_super_trend(symbol: str, interval: Interval, period: int = 14, mul
                                            )
         for result in results if result.super_trend is not None}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(indicators=indicator_data)
+    return Analysis(type=Indicator.SUPER_TREND, indicators=indicator_data)
 
 
 async def get_ichimoku(symbol: str, interval: Interval, tenkan_period: int = 9, kijun_period: int = 26,
@@ -111,4 +111,4 @@ async def get_ichimoku(symbol: str, interval: Interval, tenkan_period: int = 9, 
         for result in results
     }
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(indicators=indicator_data)
+    return Analysis(type=Indicator.ICHIMOKU, indicators=indicator_data)

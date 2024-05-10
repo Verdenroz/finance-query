@@ -7,64 +7,88 @@ from typing_extensions import Dict, Optional
 
 
 class Indicator(Enum):
-    SMA = 'sma'
-    EMA = 'ema'
-    WMA = 'wma'
-    VWMA = 'vwma'
-    RSI = 'rsi'
-    SRSI = 'srsi'
-    STOCH = 'stoch'
-    CCI = 'cci'
-    OBV = 'obv'
-    BBANDS = 'bbands'
-    AROON = 'aroon'
-    ADX = 'adx'
-    MACD = 'macd'
-    SUPER_TREND = 'supertrend'
-    ICHIMOKU = 'ichimoku'
+    SMA = 'SMA'
+    EMA = 'EMA'
+    WMA = 'WMA'
+    VWMA = 'VWMA'
+    RSI = 'RSI'
+    SRSI = 'SRSI'
+    STOCH = 'STOCH'
+    CCI = 'CCI'
+    OBV = 'OBV'
+    BBANDS = 'BBANDS'
+    AROON = 'AROON'
+    ADX = 'ADX'
+    MACD = 'MACD'
+    SUPER_TREND = 'SUPERTREND'
+    ICHIMOKU = 'ICHIMOKU'
 
 
 class IndicatorData(BaseModel):
-    name: str
+    pass
 
 
 class SMAData(IndicatorData):
-    name: str = "SMA"
     value: Decimal = Field(
         ..., example=30.00, description="Simple Moving Average value", serialization_alias="SMA"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "SMA": str(self.value)
+        }
+
 
 class EMAData(IndicatorData):
-    name: str = "EMA"
     value: Decimal = Field(
         ..., example=30.00, description="Exponential Moving Average value", serialization_alias="EMA"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "EMA": str(self.value)
+        }
+
 
 class WMAData(IndicatorData):
-    name: str = "WMA"
     value: Decimal = Field(
         ..., example=30.00, description="Weighted Moving Average value", serialization_alias="WMA"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "WMA": str(self.value)
+        }
+
 
 class VWMAData(IndicatorData):
-    name: str = "VWMA"
     value: Decimal = Field(
-        ..., example=30.00, description="Volume Weighted Moving Average value", serialization_alias="VWAP"
+        ..., example=30.00, description="Volume Weighted Moving Average value", serialization_alias="VWMA"
     )
+
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "VWMA": str(self.value)
+        }
 
 
 class RSIData(IndicatorData):
-    name: str = "RSI"
     value: Decimal = Field(
         ..., example=30.00, description="Relative Strength Index value", serialization_alias="RSI"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "RSI": str(self.value)
+        }
+
 
 class SRSIData(IndicatorData):
-    name: str = "SRSI"
     k: Decimal = Field(
         ..., example=30.00, description="Stochastic RSI value", serialization_alias="%K"
     )
@@ -72,9 +96,15 @@ class SRSIData(IndicatorData):
         ..., example=30.00, description="Stochastic RSI Signal value", serialization_alias="%D"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "%K": str(self.k),
+            "%D": str(self.d)
+        }
+
 
 class STOCHData(IndicatorData):
-    name: str = "STOCH"
     k: Decimal = Field(
         ..., example=30.00, description="Stochastic Oscillator %K value", serialization_alias="%K"
     )
@@ -82,16 +112,27 @@ class STOCHData(IndicatorData):
         ..., example=30.00, description="Stochastic Oscillator %D value", serialization_alias="%D"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "%K": str(self.k),
+            "%D": str(self.d)
+        }
+
 
 class CCIData(IndicatorData):
-    name: str = "CCI"
     value: Decimal = Field(
         ..., example=30.00, description="Commodity Channel Index value", serialization_alias="CCI"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "CCI": str(self.value)
+        }
+
 
 class MACDData(IndicatorData):
-    name: str = "MACD"
     value: Decimal = Field(
         ..., example=30.00, description="Moving Average Convergence Divergence value", serialization_alias="MACD"
     )
@@ -99,16 +140,27 @@ class MACDData(IndicatorData):
         ..., example=30.00, description="MACD Signal value", serialization_alias="Signal"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "MACD": str(self.value),
+            "Signal": str(self.signal)
+        }
+
 
 class ADXData(IndicatorData):
-    name: str = "ADX"
     value: Decimal = Field(
         ..., example=30.00, description="Average Directional Index value", serialization_alias="ADX"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "ADX": str(self.value)
+        }
+
 
 class AROONData(IndicatorData):
-    name: str = "AROON"
     aroon_up: Decimal = Field(
         ..., example=30.00, description="Aroon Up value", serialization_alias="Aroon Up"
     )
@@ -116,9 +168,15 @@ class AROONData(IndicatorData):
         ..., example=30.00, description="Aroon Down value", serialization_alias="Aroon Down"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "Aroon Up": str(self.aroon_up),
+            "Aroon Down": str(self.aroon_down)
+        }
+
 
 class BBANDSData(IndicatorData):
-    name: str = "BBANDS"
     upper_band: Decimal = Field(
         ..., example=30.00, description="Upper Bollinger Band value", serialization_alias="Upper Band"
     )
@@ -126,20 +184,37 @@ class BBANDSData(IndicatorData):
         ..., example=30.00, description="Lower Bollinger Band value", serialization_alias="Lower Band"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "Upper Band": str(self.upper_band),
+            "Lower Band": str(self.lower_band)
+        }
+
 
 class OBVData(IndicatorData):
-    name: str = "OBV"
     value: Decimal = Field(..., example=30.00, description="On Balance Volume value", serialization_alias="OBV")
+
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "OBV": str(self.value)
+        }
 
 
 class SuperTrendData(IndicatorData):
-    name: str = "Super Trend"
     value: Decimal = Field(..., example=30.00, description="Super Trend value", serialization_alias="Super Trend")
     trend: str = Field(..., example="UP", description="Trend direction", serialization_alias="Trend")
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "Super Trend": str(self.value),
+            "Trend": self.trend
+        }
+
 
 class IchimokuData(IndicatorData):
-    name: str = "Ichimoku"
     tenkan_sen: Optional[Decimal] = Field(
         None, example=30.00, description="Tenkan-sen value", serialization_alias="Conversion Line"
     )
@@ -156,19 +231,38 @@ class IchimokuData(IndicatorData):
         None, example=30.00, description="Senkou Span B value", serialization_alias="Leading Span B"
     )
 
+    def to_dict(self):
+        return {
+            "type": self.type,
+            "Conversion Line": str(self.tenkan_sen),
+            "Base Line": str(self.kijun_sen),
+            "Lagging Span": str(self.chikou_span),
+            "Leading Span A": str(self.senkou_span_a),
+            "Leading Span B": str(self.senkou_span_b)
+        }
+
 
 class Analysis(BaseModel):
+    type: Indicator = Field(..., example="SMA", description="The type of technical indicator")
     indicators: Dict[date, SerializeAsAny[IndicatorData]] = Field(
         ...,
         serialization_alias="Technical Analysis",
         validation_alias=AliasChoices("Technical Analysis", "indicators"),
         example={
             "2021-07-09": {
-                "name: str": "SMA",
                 "value": 30.00,
             }
         },
         description="Dates with indicators for the stock")
+
+    def model_dump(self, *args, **kwargs):
+        base_dict = super().model_dump(*args, **kwargs)
+        # Convert date keys to strings
+        if 'Technical Analysis' in base_dict:
+            base_dict['Technical Analysis'] = {str(k): v for k, v in base_dict['Technical Analysis'].items()}
+        elif 'indicators' in base_dict:
+            base_dict['indicators'] = {str(k): v for k, v in base_dict['indicators'].items()}
+        return base_dict
 
 
 class SummaryAnalysis(BaseModel):

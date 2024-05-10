@@ -1,14 +1,18 @@
+import decimal
 import functools
 import hashlib
 import os
-from datetime import datetime
+from datetime import datetime, date
 
 import orjson
 import pytz
 import redis
 from dotenv import load_dotenv
+from pydantic import BaseModel
 
 from src.schemas import TimeSeries, Quote, Stock, MarketMover, News, Index
+from src.schemas.analysis import Analysis, SMAData, Indicator, EMAData, WMAData, VWMAData, RSIData, \
+    SRSIData, STOCHData, CCIData, MACDData, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData
 
 load_dotenv()
 
@@ -27,6 +31,35 @@ def is_market_open() -> bool:
     close_time = datetime.now(pytz.timezone('US/Eastern')).replace(hour=16, minute=0, second=0)
     # Check if current time is within market hours and it's a weekday
     return open_time <= now <= close_time and 0 <= now.weekday() < 5
+
+
+def handle_data(obj):
+    if isinstance(obj, decimal.Decimal):
+        return float(obj)
+    elif isinstance(obj, BaseModel):
+        return obj.dict()
+    elif hasattr(obj, 'to_dict'):
+        return obj.to_dict()
+    raise TypeError
+
+
+indicators = {
+    "SMA": SMAData,
+    "EMA": EMAData,
+    "WMA": WMAData,
+    "VWMA": VWMAData,
+    "RSI": RSIData,
+    "SRSI": SRSIData,
+    "STOCH": STOCHData,
+    "CCI": CCIData,
+    "MACD": MACDData,
+    "ADX": ADXData,
+    "AROON": AROONData,
+    "BBANDS": BBANDSData,
+    "OBV": OBVData,
+    "SUPERTREND": SuperTrendData,
+    "ICHIMOKU": IchimokuData
+}
 
 
 def cache(expire, after_market_expire=None):
@@ -58,6 +91,17 @@ def cache(expire, after_market_expire=None):
                         result_list.append(orjson.loads(item))
                     result = result_list
 
+                # Create instances of indicator classes for Technical Analysis
+                if 'Technical Analysis' in result:
+                    indicator_data = {}
+                    indicator_name = result['type']
+                    for key, value in result['Technical Analysis'].items():
+                        if indicator_name in indicators:
+                            indicator_value = indicators[indicator_name](**value)
+                            indicator_data[date.fromisoformat(key)] = indicator_value
+                    return Analysis(type=Indicator(indicator_name), indicators=indicator_data).model_dump(
+                        exclude_none=True, by_alias=True,
+                        serialize_as_any=True)
                 return result
 
             result = await func(*args, **kwargs)
@@ -69,7 +113,9 @@ def cache(expire, after_market_expire=None):
                 expire_time = expire
 
             # Cache the result in Redis
-            if isinstance(result, TimeSeries):
+            if isinstance(result, dict):
+                r.set(key, orjson.dumps(result, default=handle_data), ex=expire_time)
+            elif isinstance(result, TimeSeries):
                 r.set(key, result.json(), ex=expire_time)
             else:
                 if (isinstance(result, list) and result
