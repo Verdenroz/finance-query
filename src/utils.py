@@ -1,5 +1,6 @@
 import decimal
 import functools
+import gzip
 import hashlib
 import os
 from datetime import datetime, date
@@ -84,11 +85,13 @@ def cache(expire, after_market_expire=None):
 
             if r.exists(key):
                 if r.type(key) == b'string':
-                    result = orjson.loads(r.get(key))
+                    data = gzip.decompress(r.get(key))
+                    result = orjson.loads(data)
                 elif r.type(key) == b'list':
                     result_list = []
                     for item in r.lrange(key, 0, -1):
-                        result_list.append(orjson.loads(item))
+                        data = gzip.decompress(item)
+                        result_list.append(orjson.loads(data))
                     result = result_list
 
                 # Create instances of indicator classes for Technical Analysis
@@ -114,9 +117,10 @@ def cache(expire, after_market_expire=None):
 
             # Cache the result in Redis
             if isinstance(result, dict):
-                r.set(key, orjson.dumps(result, default=handle_data), ex=expire_time)
+                data = gzip.compress(orjson.dumps(result, default=handle_data))
+                r.set(key, data, ex=expire_time)
             elif isinstance(result, TimeSeries):
-                r.set(key, result.json(), ex=expire_time)
+                r.set(key, gzip.compress(result.json().encode()), ex=expire_time)
             else:
                 if (isinstance(result, list) and result
                         and isinstance(result[0], (Stock, Quote, MarketMover, Index, News))):
@@ -127,7 +131,7 @@ def cache(expire, after_market_expire=None):
                     result_list = result
 
                 for item in result_list:
-                    r.rpush(key, orjson.dumps(item))
+                    r.rpush(key, gzip.compress(orjson.dumps(item)))
                 r.expire(key, expire_time)
 
             return result
