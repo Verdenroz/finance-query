@@ -268,15 +268,15 @@ class Analysis(BaseModel):
 class SummaryAnalysis(BaseModel):
     symbol: str = Field(..., example="AAPL", description="Stock symbol")
 
-    sma_10: Optional[Decimal] = Field(None, description="10-day Simple Moving Average", serialization_alias="SMA(10)")
+    sma_10: Optional[float] = Field(None, description="10-day Simple Moving Average", serialization_alias="SMA(10)")
 
-    sma_20: Optional[Decimal] = Field(None, description="20-day Simple Moving Average", serialization_alias="SMA(20)")
+    sma_20: Optional[float] = Field(None, description="20-day Simple Moving Average", serialization_alias="SMA(20)")
 
-    sma_50: Optional[Decimal] = Field(None, description="50-day Simple Moving Average", serialization_alias="SMA(50)")
-    sma_100: Optional[Decimal] = Field(None, description="100-day Simple Moving Average",
+    sma_50: Optional[float] = Field(None, description="50-day Simple Moving Average", serialization_alias="SMA(50)")
+    sma_100: Optional[float] = Field(None, description="100-day Simple Moving Average",
                                        serialization_alias="SMA(100)")
 
-    sma_200: Optional[Decimal] = Field(None, description="200-day Simple Moving Average",
+    sma_200: Optional[float] = Field(None, description="200-day Simple Moving Average",
                                        serialization_alias="SMA(200)")
 
     ema_10: Optional[float] = Field(None, description="10-day Exponential Moving Average",
@@ -325,10 +325,10 @@ class SummaryAnalysis(BaseModel):
 
     obv: Optional[float] = Field(None, description="On Balance Volume", serialization_alias="OBV")
 
-    aroon_25: Optional[dict] = Field(None, description="25-day Aroon Indicator", serialization_alias="Aroon(25)")
+    aroon_25: Optional[AROONData] = Field(None, description="25-day Aroon Indicator", serialization_alias="Aroon(25)")
 
-    bbands_20_2: Optional[dict] = Field(None, description="Bollinger Bands", serialization_alias="BBANDS(20,2)")
+    bbands_20_2: Optional[BBANDSData] = Field(None, description="Bollinger Bands", serialization_alias="BBANDS(20,2)")
 
-    supertrend: Optional[dict] = Field(None, description="Super Trend", serialization_alias="Super Trend")
+    supertrend: Optional[SuperTrendData] = Field(None, description="Super Trend", serialization_alias="Super Trend")
 
-    ichimoku: Optional[dict] = Field(None, description="Ichimoku Cloud", serialization_alias="Ichimoku Cloud")
+    ichimoku: Optional[IchimokuData] = Field(None, description="Ichimoku Cloud", serialization_alias="Ichimoku Cloud")

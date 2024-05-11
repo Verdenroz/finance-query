@@ -83,28 +83,28 @@ async def get_summary_adx(quotes, period=14):
     return round(get_adx(quotes, period)[-1].adx, 2)
 
 
+async def get_summary_obv(quotes, period=20):
+    return round(get_obv(quotes, sma_periods=period)[-1].obv, 2)
+
+
 async def get_summary_aroon(quotes, period=25):
     aroon = get_aroon(quotes, lookback_periods=period)[-1]
     upper_band = aroon.aroon_up
     lower_band = aroon.aroon_down
-    return AROONData(aroon_up=round(upper_band, 2), aroon_down=round(lower_band, 2)).model_dump(exclude={"name"})
+    return AROONData(aroon_up=round(upper_band, 2), aroon_down=round(lower_band, 2))
 
 
 async def get_summary_bbands(quotes, period=20, std_dev=2):
     bbands = get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev)[-1]
     upper_band = bbands.upper_band
     lower_band = bbands.lower_band
-    return BBANDSData(upper_band=round(upper_band, 2), lower_band=round(lower_band, 2)).model_dump(exclude={"name"})
-
-
-async def get_summary_obv(quotes, period=20):
-    return round(get_obv(quotes, sma_periods=period)[-1].obv, 2)
+    return BBANDSData(upper_band=round(upper_band, 2), lower_band=round(lower_band, 2))
 
 
 async def get_summary_super_trend(quotes, period=14, multiplier=3):
     super_trend = get_super_trend(quotes, lookback_periods=period, multiplier=multiplier)[-1]
     trend = "DOWN" if super_trend.upper_band else "UP"
-    return SuperTrendData(value=round(super_trend.super_trend, 2), trend=trend).model_dump(exclude={"name"})
+    return SuperTrendData(value=round(super_trend.super_trend, 2), trend=trend)
 
 
 async def get_summary_ichimoku(quotes):
@@ -114,8 +114,7 @@ async def get_summary_ichimoku(quotes):
     senkou_span_a = ichimoku.senkou_span_a
     senkou_span_b = ichimoku.senkou_span_b
     return IchimokuData(tenkan_sen=round(tenkan_sen, 2), kijun_sen=round(kijun_sen, 2),
-                        senkou_span_a=round(senkou_span_a, 2), senkou_span_b=round(senkou_span_b, 2)).model_dump(
-        exclude={"name"})
+                        senkou_span_a=round(senkou_span_a, 2), senkou_span_b=round(senkou_span_b, 2))
 
 
 async def get_summary_analysis(symbol: str, interval: Interval):
