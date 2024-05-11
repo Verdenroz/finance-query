@@ -1,7 +1,7 @@
 import asyncio
 
 from stock_indicators.indicators import get_ema, get_wma, get_vwma, get_rsi, get_stoch_rsi, get_stoch, \
-    get_cci, get_macd, get_adx, get_aroon, get_bollinger_bands, get_obv, get_super_trend, get_ichimoku
+    get_cci, get_macd, get_adx, get_aroon, get_bollinger_bands, get_obv, get_super_trend, get_ichimoku, get_sma
 from typing_extensions import List
 
 from src.schemas.analysis import SummaryAnalysis, Indicator, AROONData, BBANDSData, SuperTrendData, IchimokuData
@@ -18,12 +18,10 @@ async def get_summary_sma(quotes, periods, sma=None):
 
     period = periods[0]
     remaining_periods = periods[1:]
-    recent_quotes = quotes[:period]
-    closing_prices = [quote.close for quote in recent_quotes]
-    sma_value = sum(closing_prices) / period
-    sma.append(round(sma_value, 2))
+    sma_value = get_sma(quotes, period)[-1].sma
+    sma.append(round(sma_value, 2)) if sma_value else sma.append(None)
 
-    return await get_summary_sma(recent_quotes, remaining_periods, sma)
+    return await get_summary_sma(quotes, remaining_periods, sma)
 
 
 async def get_summary_ema(quotes, periods, ema=None):
@@ -36,7 +34,7 @@ async def get_summary_ema(quotes, periods, ema=None):
     period = periods[0]
     remaining_periods = periods[1:]
     ema_value = get_ema(quotes, period)[-1].ema
-    ema.append(round(ema_value, 2))
+    ema.append(round(ema_value, 2)) if ema_value else ema.append(None)
     return await get_summary_ema(quotes, remaining_periods, ema)
 
 
@@ -50,7 +48,7 @@ async def get_summary_wma(quotes, periods, wma=None):
     period = periods[0]
     remaining_periods = periods[1:]
     wma_value = get_wma(quotes, period)[-1].wma
-    wma.append(round(wma_value, 2))
+    wma.append(round(wma_value, 2)) if wma_value else wma.append(None)
     return await get_summary_wma(quotes, remaining_periods, wma)
 
 
@@ -120,9 +118,15 @@ async def get_summary_ichimoku(quotes):
         exclude={"name"})
 
 
-async def get_summary_analysis(symbol: str, interval: Interval, functions: List[Indicator]):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
-    summary = SummaryAnalysis(symbol=symbol)
+async def get_summary_analysis(symbol: str, interval: Interval):
+    if interval == Interval.FIFTEEN_MINUTES or interval == Interval.THIRTY_MINUTES:
+        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.ONE_MONTH, interval=interval)
+    elif interval == Interval.ONE_HOUR:
+        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.YEAR, interval=interval)
+    else:
+        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    print(quotes)
+    summary = SummaryAnalysis(symbol=symbol.upper())
     tasks = [
         get_summary_sma(quotes, [200, 100, 50, 20, 10]),
         get_summary_ema(quotes, [200, 100, 50, 20, 10]),

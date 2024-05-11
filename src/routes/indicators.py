@@ -76,18 +76,18 @@ async def get_technical_indicators(
     }
     # Filter out None values
     params = {k: v for k, v in params.items() if v is not None}
-    print(params)
 
-    analysis = await IndicatorFunctions[function](**params)
-    return analysis.model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    try:
+        analysis = await IndicatorFunctions[function](**params)
+        return analysis.model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
+    except TypeError as e:
+        param_name = str(e).split("'")[1]
+        raise HTTPException(status_code=400,
+                            detail=f"Invalid parameter: {param_name} for the {function.name} function.")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
-# except TypeError as e:
-#     param_name = str(e).split("'")[1]
-#     raise HTTPException(status_code=400,
-#                         detail=f"Invalid parameter: {param_name} for the {function.name} function.")
-# except Exception as e:
-#     raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
 
 @router.get("/analysis",
             summary="Returns technical indicators for a stock",
@@ -98,11 +98,9 @@ async def get_technical_indicators(
 async def get_technical_analysis(
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
-        indicators: str = Query(None, description="The technical indicators to get."),
 ):
     if not symbol:
         raise HTTPException(status_code=400, detail="Symbol parameter is required")
 
-    indicators_list = [Indicator(indicator.strip()) for indicator in indicators.split(',')]
-    summary_analysis = await get_summary_analysis(symbol, interval, indicators_list)
-    return summary_analysis.dict(exclude_none=True, by_alias=True)
+    summary_analysis = await get_summary_analysis(symbol, interval)
+    return summary_analysis.dict(by_alias=True)
