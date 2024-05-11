@@ -16,20 +16,25 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval):
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
         data = stock.history(period=time.value, interval=interval.value, adj_ohlc=True)
-        data = data.sort_index(ascending=False)
 
-        if not isinstance(data.index.get_level_values('date'), pd.DatetimeIndex):
-            data.index = data.index.set_levels(pd.to_datetime(data.index.get_level_values('date'), utc=True),
-                                               level='date')
-
-        # Convert the 'date' level of the DataFrame's index to string
         if interval in [Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES,
-                        Interval.ONE_HOUR] and time == TimePeriod.DAY:
-            data.index = data.index.set_levels(data.index.get_level_values('date').strftime('%I:%M %p'), level='date')
-        elif interval in [Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES, Interval.ONE_HOUR]:
-            data.index = data.index.set_levels(data.index.get_level_values('date').strftime('%Y-%m-%d %I:%M %p'),
-                                               level='date')
+                        Interval.ONE_HOUR]:
+            # Reset the index
+            data.reset_index(inplace=True)
+
+            # Convert the 'date' column to datetime
+            data['date'] = pd.to_datetime(data['date'])
+
+            # Sort the DataFrame by the 'date' column in ascending order
+            data.sort_values(by='date', ascending=False, inplace=True)
+
+            # Set the index back to ['symbol', 'date']
+            data.set_index(['symbol', 'date'], inplace=True)
         else:
+            data = data.sort_index(ascending=False)
+            if not isinstance(data.index.get_level_values('date'), pd.DatetimeIndex):
+                data.index = data.index.set_levels(pd.to_datetime(data.index.get_level_values('date'), utc=True),
+                                                   level='date')
             data.index = data.index.set_levels(data.index.get_level_values('date').date.astype(str), level='date')
 
         # Convert the DataFrame to a dictionary

@@ -27,4 +27,9 @@ async def get_time_series(
              TimePeriod.ONE_MONTH]):
         raise HTTPException(status_code=400, detail="If interval is 15m or 30m, time period must be 1mo, 5d, or 1d")
 
+    if interval == Interval.ONE_HOUR and time not in [TimePeriod.DAY, TimePeriod.FIVE_DAYS, TimePeriod.ONE_MONTH,
+                                                      TimePeriod.THREE_MONTHS, TimePeriod.SIX_MONTHS, TimePeriod.YTD,
+                                                      TimePeriod.YEAR]:
+        raise HTTPException(status_code=400, detail="If interval is 1h, time period must be 1Y or less")
+
     return await get_historical(symbol, time, interval)
