@@ -11,7 +11,7 @@ import redis
 from dotenv import load_dotenv
 from pydantic import BaseModel
 
-from src.schemas import TimeSeries, Quote, Stock, MarketMover, News, Index
+from src.schemas import TimeSeries, Quote, Stock, MarketMover, News, Index, Sector
 from src.schemas.analysis import Analysis, SMAData, Indicator, EMAData, WMAData, VWMAData, RSIData, \
     SRSIData, STOCHData, CCIData, MACDData, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData
 
@@ -123,10 +123,8 @@ def cache(expire, after_market_expire=None):
                 r.set(key, gzip.compress(result.json().encode()), ex=expire_time)
             else:
                 if (isinstance(result, list) and result
-                        and isinstance(result[0], (Stock, Quote, MarketMover, Index, News))):
+                        and isinstance(result[0], (Stock, Quote, MarketMover, Index, News, Sector))):
                     result_list = [item.dict() for item in result]
-                elif isinstance(result, (Stock, Quote, Index, MarketMover)):
-                    result_list = result.dict()
                 else:
                     result_list = result
 
