@@ -4,3 +4,4 @@ from .news import News
 from .stock import Stock
 from .quote import Quote
 from .time_series import TimeSeries, HistoricalData
+from .search_result import SearchResult

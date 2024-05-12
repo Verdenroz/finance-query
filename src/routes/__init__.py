@@ -5,3 +5,4 @@ from .movers import router as movers_router
 from .similar_stocks import router as similar_stocks_router
 from .finance_news import router as finance_news_router
 from .indicators import router as indicators_router
+from .search import router as search_router
