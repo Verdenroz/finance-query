@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "master" ]
 
+env:
+  AWS_REGION: us-east-2
+
 jobs:
 
   build:
