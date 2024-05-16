@@ -40,7 +40,7 @@ async def get_sectors():
         'Communication Services': 'https://finance.yahoo.com/sectors/communication-services/'
     }
 
-    async with AsyncClient(http2=True) as client:
+    async with AsyncClient(http2=True, max_redirects=5) as client:
         tasks = []
         for sector, url in urls.items():
             tasks.append((sector, client.get(url, headers=headers)))
@@ -51,5 +51,4 @@ async def get_sectors():
         html = response.text
         sector_data = await parse_sector(html, sector)
         sectors.append(sector_data)
-
     return sectors

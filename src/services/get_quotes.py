@@ -137,7 +137,7 @@ async def scrape_quote(symbol: str, client: AsyncClient):
 
 
 async def scrape_quotes(symbols: List[str]):
-    async with AsyncClient(http2=True) as client:
+    async with AsyncClient(http2=True, max_redirects=5) as client:
         tasks = [scrape_quote(symbol, client) for symbol in symbols]
         quotes = await asyncio.gather(*tasks)
     return quotes
@@ -178,7 +178,6 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient):
 
 
 async def scrape_simple_quotes(symbols: List[str]):
-    print("Scraping simple quotes")
-    async with AsyncClient(http2=True) as client:
+    async with AsyncClient(http2=True, max_redirects=5) as client:
         quotes = await asyncio.gather(*(scrape_simple_quote(symbol, client) for symbol in symbols))
         return [quote for quote in quotes if not isinstance(quote, Exception)]

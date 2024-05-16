@@ -8,7 +8,7 @@ from src.utils import cache
 router = APIRouter()
 
 
-@router.get("/quotes/",
+@router.get("/quotes",
             summary="Returns quote data of multiple stocks",
             description="Get relevant stock information for multiple stocks. "
                         "Invalid API keys are limited to 5 requests per minute.",
@@ -23,7 +23,7 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
     return await scrape_quotes(symbols)
 
 
-@router.get("/simple-quotes/",
+@router.get("/simple-quotes",
             summary="Returns summary quote data of a single stock",
             description="Get relevant stock information for a single stock. "
                         "Invalid API keys are limited to 5 requests per minute.",
