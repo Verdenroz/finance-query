@@ -8,21 +8,18 @@ from datetime import datetime, date
 import orjson
 import pytz
 import redis
-from dotenv import load_dotenv
 from pydantic import BaseModel
 
 from src.schemas import TimeSeries, Quote, Stock, MarketMover, News, Index, Sector
 from src.schemas.analysis import Analysis, SMAData, Indicator, EMAData, WMAData, VWMAData, RSIData, \
     SRSIData, STOCHData, CCIData, MACDData, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData
 
-load_dotenv()
-
 r = redis.Redis(
-    host=os.getenv("REDIS_HOST"),
-    port=os.getenv("REDIS_PORT"),
+    host=os.environ['REDIS_HOST'],
+    port=os.environ['REDIS_PORT'],
     db=0,
-    username=os.getenv("REDIS_USERNAME"),
-    password=os.getenv("REDIS_PASSWORD"),
+    username=os.environ['REDIS_USERNAME'],
+    password=os.environ['REDIS_PASSWORD'],
 )
 
 

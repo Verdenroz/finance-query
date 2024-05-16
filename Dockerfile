@@ -23,8 +23,6 @@ RUN curl -SL --output dotnet.tar.gz https://dotnetcli.azureedge.net/dotnet/Runti
 # Copy requirements.txt
 COPY requirements.txt .
 
-COPY .env .
-
 # Install Python packages
 RUN pip install -r requirements.txt
 

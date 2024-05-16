@@ -2,12 +2,9 @@ import os
 from enum import Enum
 
 from algoliasearch.search_client import SearchClient
-from dotenv import load_dotenv
 from typing_extensions import Optional
 
 from src.schemas import SearchResult
-
-load_dotenv()
 
 
 class Type(Enum):
@@ -17,7 +14,7 @@ class Type(Enum):
 
 
 async def get_search(query: str, type: Optional[Type] = None):
-    client = SearchClient.create(os.getenv("ALGOLIA_APP_ID"), os.getenv("ALGOLIA_KEY"))
+    client = SearchClient.create(os.environ['ALGOLIA_APP_ID'], os.environ['ALGOLIA_KEY'])
     index = client.init_index("stocks")
 
     # Search parameters
