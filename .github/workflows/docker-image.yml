@@ -46,5 +46,5 @@ jobs:
 
       - name: Update Lambda function
         run: |
-          aws lambda update-function-code --function-name FinanceQuery --image-uri $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          aws lambda update-function-code --function-name FinanceQuery --image-uri ${{ env.image }} --region ${{ env.AWS_REGION }}
 
