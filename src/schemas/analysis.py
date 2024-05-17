@@ -305,29 +305,29 @@ class SummaryAnalysis(BaseModel):
     wma_200: Optional[float] = Field(None, description="200-day Weighted Moving Average",
                                      serialization_alias="WMA(200)")
 
-    vwma_20: Optional[float] = Field(None, description="20-day Volume Weighted Moving Average",
-                                     serialization_alias="VWAP(20)")
+    vwma: Optional[float] = Field(None, description="20-day Volume Weighted Moving Average",
+                                     serialization_alias="VWMA(20)")
 
-    rsi_14: Optional[float] = Field(None, description="14-day Relative Strength Index", serialization_alias="RSI(14)")
+    rsi: Optional[float] = Field(None, description="14-day Relative Strength Index", serialization_alias="RSI(14)")
 
-    srsi_14: Optional[float] = Field(None, description="14-day Stochastic RSI", serialization_alias="SRSI(14)")
+    srsi: Optional[float] = Field(None, description="14-day Stochastic RSI", serialization_alias="SRSI(14)")
 
-    cci_20: Optional[float] = Field(None, description="20-day Commodity Channel Index", serialization_alias="CCI(20)")
+    cci: Optional[float] = Field(None, description="20-day Commodity Channel Index", serialization_alias="CCI(20)")
 
-    adx_14: Optional[float] = Field(None, description="14-day Average Directional Index",
+    adx: Optional[float] = Field(None, description="14-day Average Directional Index",
                                     serialization_alias="ADX(14)")
 
-    macd_12_26: Optional[float] = Field(None, description="Moving Average Convergence Divergence",
+    macd: Optional[float] = Field(None, description="Moving Average Convergence Divergence",
                                         serialization_alias="MACD(12,26)")
 
-    stoch_3_3_14_14: Optional[float] = Field(None, description="Stochastic Oscillator",
+    stoch: Optional[float] = Field(None, description="Stochastic Oscillator",
                                              serialization_alias="STOCH(3,3,14,14)")
 
     obv: Optional[float] = Field(None, description="On Balance Volume", serialization_alias="OBV")
 
-    aroon_25: Optional[AROONData] = Field(None, description="25-day Aroon Indicator", serialization_alias="Aroon(25)")
+    aroon: Optional[AROONData] = Field(None, description="25-day Aroon Indicator", serialization_alias="Aroon(25)")
 
-    bbands_20_2: Optional[BBANDSData] = Field(None, description="Bollinger Bands", serialization_alias="BBANDS(20,2)")
+    bbands: Optional[BBANDSData] = Field(None, description="Bollinger Bands", serialization_alias="BBANDS(20,2)")
 
     supertrend: Optional[SuperTrendData] = Field(None, description="Super Trend", serialization_alias="Super Trend")
 

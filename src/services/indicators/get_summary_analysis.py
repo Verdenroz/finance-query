@@ -2,9 +2,8 @@ import asyncio
 
 from stock_indicators.indicators import get_ema, get_wma, get_vwma, get_rsi, get_stoch_rsi, get_stoch, \
     get_cci, get_macd, get_adx, get_aroon, get_bollinger_bands, get_obv, get_super_trend, get_ichimoku, get_sma
-from typing_extensions import List
 
-from src.schemas.analysis import SummaryAnalysis, Indicator, AROONData, BBANDSData, SuperTrendData, IchimokuData
+from src.schemas.analysis import SummaryAnalysis, AROONData, BBANDSData, SuperTrendData, IchimokuData
 from src.schemas.time_series import Interval, TimePeriod
 from src.services.get_historical import get_historical_quotes
 
@@ -18,10 +17,11 @@ async def get_summary_sma(quotes, periods, sma=None):
 
     period = periods[0]
     remaining_periods = periods[1:]
+    remaining_quotes = quotes[:int(len(quotes) / 2)]
     sma_value = get_sma(quotes, period)[-1].sma
     sma.append(round(sma_value, 2)) if sma_value else sma.append(None)
 
-    return await get_summary_sma(quotes, remaining_periods, sma)
+    return await get_summary_sma(remaining_quotes, remaining_periods, sma)
 
 
 async def get_summary_ema(quotes, periods, ema=None):
@@ -33,9 +33,10 @@ async def get_summary_ema(quotes, periods, ema=None):
 
     period = periods[0]
     remaining_periods = periods[1:]
+    remaining_quotes = quotes[:int(len(quotes) / 2)]
     ema_value = get_ema(quotes, period)[-1].ema
     ema.append(round(ema_value, 2)) if ema_value else ema.append(None)
-    return await get_summary_ema(quotes, remaining_periods, ema)
+    return await get_summary_ema(remaining_quotes, remaining_periods, ema)
 
 
 async def get_summary_wma(quotes, periods, wma=None):
@@ -47,9 +48,10 @@ async def get_summary_wma(quotes, periods, wma=None):
 
     period = periods[0]
     remaining_periods = periods[1:]
+    remaining_quotes = quotes[:int(len(quotes) / 2)]
     wma_value = get_wma(quotes, period)[-1].wma
     wma.append(round(wma_value, 2)) if wma_value else wma.append(None)
-    return await get_summary_wma(quotes, remaining_periods, wma)
+    return await get_summary_wma(remaining_quotes, remaining_periods, wma)
 
 
 async def get_summary_vwma(quotes, period=20):
@@ -95,7 +97,8 @@ async def get_summary_aroon(quotes, period=25):
 
 
 async def get_summary_bbands(quotes, period=20, std_dev=2):
-    bbands = get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev)[-1]
+    bbands = get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev).remove_warmup_periods()[
+        -1]
     upper_band = bbands.upper_band
     lower_band = bbands.lower_band
     return BBANDSData(upper_band=round(upper_band, 2), lower_band=round(lower_band, 2))
@@ -124,29 +127,27 @@ async def get_summary_analysis(symbol: str, interval: Interval):
         quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.YEAR, interval=interval)
     else:
         quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
-    print(quotes)
     summary = SummaryAnalysis(symbol=symbol.upper())
     tasks = [
-        get_summary_sma(quotes, [200, 100, 50, 20, 10]),
-        get_summary_ema(quotes, [200, 100, 50, 20, 10]),
-        get_summary_wma(quotes, [200, 100, 50, 20, 10]),
-        get_summary_vwma(quotes, 20),
-        get_summary_rsi(quotes, 14),
-        get_summary_srsi(quotes, 14),
-        get_summary_stoch(quotes, 14),
-        get_summary_cci(quotes, 20),
-        get_summary_macd(quotes, 12, 26, 9),
-        get_summary_adx(quotes, 14),
+        get_summary_sma(quotes[:200], [200, 100, 50, 20, 10]),
+        get_summary_ema(quotes[:750], [200, 100, 50, 20, 10]),
+        get_summary_wma(quotes[:200], [200, 100, 50, 20, 10]),
+        get_summary_vwma(quotes[:25], 20),
+        get_summary_rsi(quotes[:100], 14),
+        get_summary_srsi(quotes[:100], 14),
+        get_summary_stoch(quotes[:16], 14),
+        get_summary_cci(quotes[:20], 20),
+        get_summary_macd(quotes[:75], 12, 26, 9),
+        get_summary_adx(quotes[:100], 14),
         get_summary_obv(quotes, 20),
-        get_summary_aroon(quotes, 25),
-        get_summary_bbands(quotes, 20, 2),
-        get_summary_super_trend(quotes, 14, 3),
-        get_summary_ichimoku(quotes),
+        get_summary_aroon(quotes[:30], 25),
+        get_summary_bbands(quotes[:20], 20, 2),
+        get_summary_super_trend(quotes[:92], 14, 3),
+        get_summary_ichimoku(quotes[:78]),
     ]
-
     # Run the tasks concurrently and unpack the results
-    sma, ema, wma, vwma, rsi, srsi, stoch, cci, macd, adx, obv, aroon, bbands, super_trend, ichimoku = await asyncio.gather(
-        *tasks)
+    sma, ema, wma, vwma, rsi, srsi, stoch, cci, macd, adx, obv, aroon, bbands, super_trend, ichimoku = await (
+        asyncio.gather(*tasks))
 
     summary.sma_10 = sma[4]
     summary.sma_20 = sma[3]
@@ -163,16 +164,16 @@ async def get_summary_analysis(symbol: str, interval: Interval):
     summary.wma_50 = wma[2]
     summary.wma_100 = wma[1]
     summary.wma_200 = wma[0]
-    summary.vwma_20 = vwma
-    summary.rsi_14 = rsi
-    summary.srsi_14 = srsi
-    summary.stoch_3_3_14_14 = stoch
-    summary.cci_20 = cci
-    summary.macd_12_26 = macd
-    summary.adx_14 = adx
+    summary.vwma = vwma
+    summary.rsi = rsi
+    summary.srsi = srsi
+    summary.stoch = stoch
+    summary.cci = cci
+    summary.macd = macd
+    summary.adx = adx
     summary.obv = obv
-    summary.aroon_25 = aroon
-    summary.bbands_20_2 = bbands
+    summary.aroon = aroon
+    summary.bbands = bbands
     summary.supertrend = super_trend
     summary.ichimoku = ichimoku
 

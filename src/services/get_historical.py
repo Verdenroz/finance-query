@@ -7,6 +7,7 @@ from requests.exceptions import RetryError
 from stock_indicators.indicators.common.quote import Quote
 from typing_extensions import List
 from yahooquery import Ticker
+from async_lru import alru_cache
 
 from src.schemas import HistoricalData, TimeSeries
 from src.schemas.time_series import Interval, TimePeriod
@@ -60,6 +61,7 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval):
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
+@alru_cache(maxsize=512)
 async def get_historical_quotes(symbol: str, timePeriod: TimePeriod, interval: Interval) -> List[Quote]:
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
