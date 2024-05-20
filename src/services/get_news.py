@@ -16,8 +16,7 @@ async def parse_news(html: str) -> List[News]:
     soup = BeautifulSoup(html, 'lxml', parse_only=SoupStrainer('div'))
     news = soup.find_all('div', class_='gap-4 border-gray-300 bg-white p-4 shadow last:pb-1 last:shadow-none '
                                        'dark:border-dark-600 dark:bg-dark-800 sm:border-b sm:px-0 sm:shadow-none '
-                                       'sm:last:border-b-0 lg:gap-5 sm:grid sm:grid-cols-news sm:py-6',
-                         limit=10)
+                                       'sm:last:border-b-0 lg:gap-5 sm:grid sm:grid-cols-news sm:py-6')
 
     news_list = []
     for new in news:
