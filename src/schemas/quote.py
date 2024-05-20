@@ -34,6 +34,7 @@ class Quote(BaseModel):
                        example="Apple Inc. designs, manufactures, and markets smartphones, personal computers, "
                                "tablets, wearables, and accessories worldwide.",
                        description="About the company")
+    logo: Optional[str] = Field(None, example="https://logo.clearbit.com/apple.com", description="Company logo")
 
 
     def dict(self, *args, **kwargs):
@@ -61,4 +62,5 @@ class Quote(BaseModel):
             "sector": self.sector,
             "industry": self.industry,
             "about": self.about,
+            "logo": self.logo
         }

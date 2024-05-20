@@ -2,6 +2,7 @@ import asyncio
 from decimal import Decimal
 from typing import List
 
+import requests
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 from httpx import AsyncClient
@@ -31,6 +32,14 @@ async def extract_sector_and_industry(soup: BeautifulSoup):
             industry = a_text.strip()
 
     return sector, industry
+
+
+async def get_logo(url: str):
+    response = requests.get(f"https://logo.clearbit.com/{url}")
+    if response.status_code == 200:
+        return response.url
+    else:
+        return None
 
 
 def get_decimal(data, key):
@@ -104,11 +113,15 @@ async def scrape_quote(symbol: str, client: AsyncClient):
 
     # About the company
     about = soup.find('p', class_='svelte-1xu2f9r').text
+    # Logo
+    logo_element = soup.find('a', class_='subtle-link fin-size-medium svelte-wdkn18')
+    logo_url = logo_element['href'] if logo_element else None
 
-    # Scrape sector, industry, news and similar stocks concurrently
+    # Scrape sector, industry, and logo concurrently
     sector_and_industry_future = asyncio.create_task(extract_sector_and_industry(soup))
+    logo_future = asyncio.create_task(get_logo(logo_url))
 
-    sector, industry = await sector_and_industry_future
+    (sector, industry), logo = await asyncio.gather(sector_and_industry_future, logo_future)
 
     return Quote(
         symbol=symbol.upper(),
@@ -133,6 +146,7 @@ async def scrape_quote(symbol: str, client: AsyncClient):
         sector=sector,
         industry=industry,
         about=about,
+        logo=logo
     )
 
 
