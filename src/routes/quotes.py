@@ -13,6 +13,7 @@ router = APIRouter()
             description="Get relevant stock information for multiple stocks. "
                         "Invalid API keys are limited to 5 requests per minute.",
             response_model=List[Quote],
+            response_model_exclude_none=True,
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbols parameter is required"}})
 @cache(30, after_market_expire=600)

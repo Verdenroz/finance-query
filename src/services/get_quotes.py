@@ -94,7 +94,14 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     pe = get_decimal(data, "PE Ratio (TTM)")
     eps = get_decimal(data, "EPS (TTM)")
     earnings_date = data.get("Earnings Date")
-    ex_dividend = data.get("Ex-Dividend Date")
+    forward_dividend_yield = data.get("Forward Dividend & Yield")
+    dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield \
+        else (None, None) if not any(char.isdigit() for char in forward_dividend_yield) \
+        else forward_dividend_yield.replace("(", "").replace(")","").split()
+    ex_dividend = None if data.get("Ex-Dividend Date") == "--" else data.get("Ex-Dividend Date")
+    net_assets = data.get("Net Assets")
+    nav = data.get("NAV")
+    expense_ratio = data.get("Expense Ratio (net)")
 
     # Day's range
     days_range = data.get("Day's Range")
@@ -122,7 +129,6 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     logo_future = asyncio.create_task(get_logo(logo_url))
 
     (sector, industry), logo = await asyncio.gather(sector_and_industry_future, logo_future)
-
     return Quote(
         symbol=symbol.upper(),
         name=name,
@@ -142,7 +148,12 @@ async def scrape_quote(symbol: str, client: AsyncClient):
         pe=pe,
         eps=eps,
         earnings_date=earnings_date,
-        ex_dividend_date=ex_dividend,
+        dividend=dividend,
+        dividend_yield=yield_percent,
+        ex_dividend=ex_dividend,
+        net_assets=net_assets,
+        nav=nav,
+        expense_ratio=expense_ratio,
         sector=sector,
         industry=industry,
         about=about,

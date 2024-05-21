@@ -1,10 +1,7 @@
-from pydantic import BaseModel, Field
 from decimal import Decimal
 
+from pydantic import BaseModel, Field
 from typing_extensions import Optional
-
-from .stock import Stock
-from .news import News
 
 
 class Quote(BaseModel):
@@ -26,7 +23,11 @@ class Quote(BaseModel):
     pe: Optional[Decimal] = Field(None, example=30.00, description="Price to earnings ratio of the stock")
     eps: Optional[Decimal] = Field(None, example=4.50, description="Earnings per share of the stock")
     dividend: Optional[Decimal] = Field(None, example=0.82, description="Dividend yield of the stock")
+    dividend_yield: Optional[str] = Field(None, example="1.3%", description="Dividend yield of the stock", serialization_alias="yield")
     ex_dividend: Optional[str] = Field(None, example="Feb 5, 2024", description="Ex-dividend date of the stock")
+    net_assets: Optional[str] = Field(None, example="10.5B", description="Net assets of the stock")
+    nav: Optional[str] = Field(None, example="100.00", description="Net asset value of the stock")
+    expense_ratio: Optional[str] = Field(None, example="0.05%", description="Expense ratio of the stock")
     earnings_date: Optional[str] = Field(None, example="Apr 23, 2024", description="Next earnings date of the stock")
     sector: Optional[str] = Field(None, example="Technology", description="Sector of the company")
     industry: Optional[str] = Field(None, example="Consumer Electronics", description="Industry of the company")
@@ -36,31 +37,6 @@ class Quote(BaseModel):
                        description="About the company")
     logo: Optional[str] = Field(None, example="https://logo.clearbit.com/apple.com", description="Company logo")
 
-
     def dict(self, *args, **kwargs):
-        return {
-            "symbol": self.symbol,
-            "name": self.name,
-            "price": str(self.price),
-            "after_hours_price": str(self.after_hours_price) if self.after_hours_price else None,
-            "change": self.change,
-            "percent_change": self.percent_change,
-            "open": str(self.open),
-            "high": str(self.high),
-            "low": str(self.low),
-            "year_high": str(self.year_high),
-            "year_low": str(self.year_low),
-            "volume": self.volume,
-            "avg_volume": self.avg_volume,
-            "market_cap": self.market_cap,
-            "beta": str(self.beta) if self.beta else None,
-            "pe": str(self.pe) if self.pe else None,
-            "eps": str(self.eps) if self.eps else None,
-            "dividend": str(self.dividend) if self.dividend else None,
-            "ex_dividend": self.ex_dividend,
-            "earnings_date": self.earnings_date,
-            "sector": self.sector,
-            "industry": self.industry,
-            "about": self.about,
-            "logo": self.logo
-        }
+        base_dict = super().dict(*args, **kwargs, exclude_none=True)
+        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in base_dict.items() if v is not None}
