@@ -8,6 +8,7 @@ from typing_extensions import List
 from src.constants import headers
 from src.schemas import SimpleQuote
 
+
 def parse_stocks(stocks_divs, symbol):
     stocks = []
     for div in stocks_divs:
@@ -48,15 +49,16 @@ def parse_stocks(stocks_divs, symbol):
             break
     return stocks
 
+
 def parse_etfs(etf_divs):
     etfs = []
     for div in etf_divs:
-        symbol_element = div.find("span", class_="symbol svelte-1rvxuc5")
+        symbol_element = div.find("span", class_="symbol svelte-1ts22zv")
         if not symbol_element:
             continue
         symbol = symbol_element.text
 
-        name_element = div.find("span", class_="tw-text-sm svelte-1rvxuc5 longName")
+        name_element = div.find("span", class_="tw-text-sm svelte-1ts22zv longName")
         if not name_element:
             continue
         name = name_element.text
@@ -67,7 +69,8 @@ def parse_etfs(etf_divs):
         price_text = price_element.text.replace(',', '')
         price = Decimal(price_text)
 
-        change_element = div.find("span", class_="txt-negative svelte-1pws7a4") or div.find("span", class_="txt-positive svelte-1pws7a4")
+        change_element = (div.find("span", class_="txt-negative svelte-1pws7a4")
+                          or div.find("span", class_="txt-positive svelte-1pws7a4"))
         if not change_element:
             continue
         percent_change = change_element.text
