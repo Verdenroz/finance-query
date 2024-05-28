@@ -17,11 +17,11 @@ async def parse_sector(html: str, sector: str) -> Sector:
         data.append(sign + perf_div.text)
     return Sector(
         sector=sector,
-        day_return=data[0],
-        ytd_return=data[1],
-        year_return=data[2],
-        three_year_return=data[3],
-        five_year_return=data[4]
+        day_return=data[0].strip(),
+        ytd_return=data[1].strip(),
+        year_return=data[2].strip(),
+        three_year_return=data[3].strip(),
+        five_year_return=data[4].strip()
     )
 
 
