@@ -24,7 +24,7 @@ Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/quote?symbol=AMZN
+http://127.0.0.1:8000/v1/quotes?symbols=AMZN
 Accept: application/json
 
 
@@ -44,15 +44,10 @@ Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/sma/?symbol=AMZN&period=10
+http://127.0.0.1:8000/v1/indicators/?function=RSI&symbol=AMZN
 Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/ema/?symbol=AMZN&period=10
-Accept: application/json
-
-
-###
-http://127.0.0.1:8000/v1/wma/?symbol=AMZN&period=10
+http://127.0.0.1:8000/v1/analysis/?symbol=AMZN&time=YTD&interval=1d
 Accept: application/json
