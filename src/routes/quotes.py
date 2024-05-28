@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Security, HTTPException, Query
 from fastapi.security import APIKeyHeader
 from typing_extensions import List
-from src.schemas import Quote, Stock
+from src.schemas import Quote, SimpleQuote
 from src.services import scrape_quotes, scrape_simple_quotes
 from src.utils import cache
 
@@ -28,7 +28,7 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
             summary="Returns summary quote data of a single stock",
             description="Get relevant stock information for a single stock. "
                         "Invalid API keys are limited to 5 requests per minute.",
-            response_model=List[Stock],
+            response_model=List[SimpleQuote],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbol parameter is required"}})
 @cache(30, after_market_expire=600)

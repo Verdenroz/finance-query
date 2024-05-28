@@ -7,7 +7,7 @@ from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 from httpx import AsyncClient
 
-from src.schemas import Quote, Stock
+from src.schemas import Quote, SimpleQuote
 from ..constants import headers
 
 
@@ -193,7 +193,7 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient):
         regular_percent_change_value) + '%' if regular_percent_change_value >= 0 else str(
         regular_percent_change_value) + '%'
 
-    return Stock(
+    return SimpleQuote(
         symbol=symbol.upper(),
         name=name,
         price=regular_price,

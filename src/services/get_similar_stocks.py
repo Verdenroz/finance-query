@@ -6,7 +6,7 @@ from requests import Session
 from typing_extensions import List
 
 from src.constants import headers
-from src.schemas import Stock
+from src.schemas import SimpleQuote
 
 def parse_stocks(stocks_divs, symbol):
     stocks = []
@@ -42,7 +42,7 @@ def parse_stocks(stocks_divs, symbol):
         else:
             change_str = '+' + str(change)
 
-        stock = Stock(symbol=div_symbol, name=name, price=price, change=change_str, percent_change=percent_change)
+        stock = SimpleQuote(symbol=div_symbol, name=name, price=price, change=change_str, percent_change=percent_change)
         stocks.append(stock)
         if len(stocks) == 5:
             break
@@ -79,12 +79,12 @@ def parse_etfs(etf_divs):
         else:
             change_str = '+' + str(change)
 
-        etf = Stock(symbol=symbol, name=name, price=price, change=change_str, percent_change=percent_change)
+        etf = SimpleQuote(symbol=symbol, name=name, price=price, change=change_str, percent_change=percent_change)
         etfs.append(etf)
     return etfs
 
 
-async def scrape_similar_stocks(symbol: str) -> List[Stock]:
+async def scrape_similar_stocks(symbol: str) -> List[SimpleQuote]:
     url = 'https://finance.yahoo.com/quote/' + symbol
     with Session() as session:
         html = session.get(url, headers=headers).text

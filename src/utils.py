@@ -10,7 +10,7 @@ import pytz
 import redis
 from pydantic import BaseModel
 
-from src.schemas import TimeSeries, Quote, Stock, MarketMover, News, Index, Sector
+from src.schemas import TimeSeries, Quote, SimpleQuote, MarketMover, News, Index, Sector
 from src.schemas.analysis import Analysis, SMAData, Indicator, EMAData, WMAData, VWMAData, RSIData, \
     SRSIData, STOCHData, CCIData, MACDData, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData
 
@@ -120,7 +120,7 @@ def cache(expire, after_market_expire=None):
                 r.set(key, gzip.compress(result.json().encode()), ex=expire_time)
             else:
                 if (isinstance(result, list) and result
-                        and isinstance(result[0], (Stock, Quote, MarketMover, Index, News, Sector))):
+                        and isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, Sector))):
                     result_list = [item.dict() for item in result]
                 else:
                     result_list = result
