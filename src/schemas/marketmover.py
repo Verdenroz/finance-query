@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
 from decimal import Decimal
 
 
@@ -8,13 +8,10 @@ class MarketMover(BaseModel):
     price: Decimal = Field(..., example=145.00, description="Last traded price of the stock")
     change: str = Field(..., example="+1.00", description="Change in the stock price")
     percent_change: str = Field(..., example="+0.69%", description="Percentage change in the stock price",
-                                serialization_alias="percentChange")
+                                serialization_alias="percentChange",
+                                validation_alias=AliasChoices("percentChange", "percent_change"))
 
     def dict(self, *args, **kwargs):
-        return {
-            "symbol": self.symbol,
-            "name": self.name,
-            "price": str(self.price),
-            "change": self.change,
-            "percent_change": self.percent_change
-        }
+        base_dict = super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
+        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in base_dict.items() if v is not None}
+

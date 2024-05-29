@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
 from decimal import Decimal
 
 
@@ -7,12 +7,9 @@ class Index(BaseModel):
     value: Decimal = Field(..., example=4300.00, description="Current value of the index")
     change: str = Field(..., example="+10.00", description="Change in the index value")
     percent_change: str = Field(..., example="+0.23%", description="Percentage change in the index value",
-                                serialization_alias="percentChange")
+                                serialization_alias="percentChange",
+                                validation_alias=AliasChoices("percentChange", "percent_change"))
 
     def dict(self, *args, **kwargs):
-        return {
-            "name": self.name,
-            "value": str(self.value),
-            "change": self.change,
-            "percent_change": self.percent_change
-        }
+        base_dict = super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
+        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in base_dict.items() if v is not None}

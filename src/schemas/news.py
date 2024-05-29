@@ -9,10 +9,5 @@ class News(BaseModel):
     time: str = Field(..., example="1 day ago", description="Time relative to current time when the news was published")
 
     def dict(self, *args, **kwargs):
-        return {
-            "title": self.title,
-            "link": self.link,
-            "source": self.source,
-            "img": self.img,
-            "time": self.time
-        }
+        base_dict = super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
+        return {k: v for k, v in base_dict.items() if v is not None}

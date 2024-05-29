@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, AliasChoices
 from decimal import Decimal
 
 from typing_extensions import Dict
@@ -42,6 +42,7 @@ class TimeSeries(BaseModel):
     history: Dict[str, HistoricalData] = Field(
         ...,
         serialization_alias="Historical Data",
+        validation_alias=AliasChoices("Historical Data", "history"),
         example={
             "2021-07-09": {
                 "open": 145.00,

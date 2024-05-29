@@ -19,35 +19,45 @@ Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/news
+GET http://127.0.0.1:8000/v1/news
 Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/quotes?symbols=AMZN
+GET http://127.0.0.1:8000/v1/quotes?symbols=AMZN
 Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/simple-quotes/?symbols=AMZN
+GET http://127.0.0.1:8000/v1/simple-quotes/?symbols=AMZN
 Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/similar-stocks/?symbol=AMZN
+GET http://127.0.0.1:8000/v1/similar-stocks/?symbol=AMZN
 Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/historical/?symbol=AMZN&time=YTD&interval=1d
+GET http://127.0.0.1:8000/v1/sectors
 Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/indicators/?function=RSI&symbol=AMZN
+GET http://127.0.0.1:8000/v1/search?query=AMZN
 Accept: application/json
 
 
 ###
-http://127.0.0.1:8000/v1/analysis/?symbol=AMZN&time=YTD&interval=1d
+GET http://127.0.0.1:8000/v1/historical/?symbol=AMZN&time=YTD&interval=1d
+Accept: application/json
+
+
+###
+GET http://127.0.0.1:8000/v1/indicators/?function=RSI&symbol=AMZN
+Accept: application/json
+
+
+###
+GET http://127.0.0.1:8000/v1/analysis/?symbol=AMZN&time=YTD&interval=1d
 Accept: application/json
