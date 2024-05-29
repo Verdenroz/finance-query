@@ -41,7 +41,7 @@ def parse_stocks(stocks_divs, symbol):
         if percent_change.startswith('-'):
             change_str = '-' + str(abs(change))
         else:
-            change_str = '+' + str(change)
+            change_str = '+' + str(abs(change))
 
         stock = SimpleQuote(symbol=div_symbol, name=name, price=price, change=change_str, percent_change=percent_change)
         stocks.append(stock)
@@ -80,7 +80,7 @@ def parse_etfs(etf_divs):
         if percent_change.startswith('-'):
             change_str = '-' + str(abs(change))
         else:
-            change_str = '+' + str(change)
+            change_str = '+' + str(change) if not str(change).startswith('+') else str(change)
 
         etf = SimpleQuote(symbol=symbol, name=name, price=price, change=change_str, percent_change=percent_change)
         etfs.append(etf)
