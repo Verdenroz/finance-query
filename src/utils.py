@@ -9,6 +9,7 @@ import orjson
 import pytz
 import redis
 from pydantic import BaseModel
+from fastapi import Response
 
 from src.schemas import TimeSeries, Quote, SimpleQuote, MarketMover, News, Index, Sector
 from src.schemas.analysis import Analysis, SMAData, Indicator, EMAData, WMAData, VWMAData, RSIData, \
@@ -78,7 +79,11 @@ def cache(expire, after_market_expire=None):
     def decorator(func):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
-            key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((args, kwargs))).hexdigest()}"
+            # Filter out the Response object from args and kwargs
+            filtered_args = [arg for arg in args if not isinstance(arg, Response)]
+            filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, Response)}
+
+            key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}"
 
             if r.exists(key):
                 if r.type(key) == b'string':

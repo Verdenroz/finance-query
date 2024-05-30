@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, Query, HTTPException
+from fastapi import APIRouter, Security, Query, HTTPException, Response
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
@@ -33,14 +33,17 @@ IndicatorFunctions = {
 @router.get("/indicators",
             summary="Returns technical indicators for a stock",
             response_model=Analysis,
-            description="Get requested technical indicators for a stock. Invalid API keys are limited to 5 requests "
-                        "per minute.",
+            description="Get requested technical indicators for a stock.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 @cache(expire=60, after_market_expire=600)
 async def get_technical_indicators(
+        response: Response,
         function: Indicator = Query(..., description="The technical indicator to get."),
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
-        interval: Optional[Interval] = Query(Interval.DAILY, description="The interval to get historical data for."),
+        interval: Optional[Interval] = Query(
+            Interval.DAILY,
+            description="The interval to get historical data for. Available values: 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo.")
+        ,
         period: Optional[int] = Query(None, description="The look-back period for the technical indicators."),
         stoch_period: Optional[int] = Query(None, description="The stochastic look-back period for STOCH and SRSI."),
         signal_period: Optional[int] = Query(None, description="The signal period for MACD, STOCH, and SRSI."),
@@ -56,6 +59,7 @@ async def get_technical_indicators(
         senkou_offset: Optional[int] = Query(None, description="The offset for the Senkou span in Ichimoku."),
         chikou_offset: Optional[int] = Query(None, description="The offset for the Chikou span in Ichimoku.")
 ):
+    response.headers["Access-Control-Allow-Origin"] = "*"
     params = {
         "symbol": symbol,
         "interval": interval,
@@ -91,16 +95,18 @@ async def get_technical_indicators(
 
 @router.get("/analysis",
             summary="Returns technical indicators for a stock",
-            description="Get requested technical indicators for a stock. Invalid API keys are limited to 5 requests "
+            description="Get requested technical indicators for a stock."
                         "per minute.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 @cache(expire=60, after_market_expire=600)
 async def get_technical_analysis(
+        response: Response,
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
 ):
     if not symbol:
         raise HTTPException(status_code=400, detail="Symbol parameter is required")
 
+    response.headers["Access-Control-Allow-Origin"] = "*"
     summary_analysis = await get_summary_analysis(symbol, interval)
     return summary_analysis.dict(by_alias=True)

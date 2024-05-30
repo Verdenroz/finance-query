@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, Query, HTTPException
+from fastapi import APIRouter, Security, Query, HTTPException, Response
 from fastapi.security import APIKeyHeader
 
 from src.schemas import TimeSeries
@@ -12,14 +12,16 @@ router = APIRouter()
 @router.get("/historical",
             summary="Returns historical data for a stock",
             response_model=TimeSeries,
-            description="Get the latest US indices data. Invalid API keys are limited to 5 requests per minute.",
+            description="Get the latest US indices data.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 @cache(expire=60, after_market_expire=600)
 async def get_time_series(
+        response: Response,
         symbol: str = Query(..., description="The symbol of the stock to get historical data for."),
         time: TimePeriod = Query(..., description="The time period for the historical data."),
         interval: Interval = Query(..., description="The interval for the historical data.")
 ):
+    response.headers["Access-Control-Allow-Origin"] = "*"
     # Validate the combination of time period and interval
     if (interval in [Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES] and time not in
             [TimePeriod.DAY,
