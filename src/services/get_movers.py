@@ -8,8 +8,9 @@ from fastapi import HTTPException
 from ..constants import headers
 from ..schemas.marketmover import MarketMover
 
-# Compile a regular expression pattern that matches a number, optionally followed by a decimal point and more numbers
-number_pattern = re.compile(r'\d+\.?\d*')
+# Compile a regular expression pattern that matches a number,
+# optionally followed by a decimal point and more numbers, and commas
+number_pattern = re.compile(r'\d+[\d,]*\.?\d*')
 
 
 async def create_market_mover(mover):
@@ -17,7 +18,7 @@ async def create_market_mover(mover):
     name = mover.find('div', class_='ZvmM7').text
 
     price_text = mover.find('div', class_='YMlKec').text
-    price_match = number_pattern.search(price_text)
+    price_match = number_pattern.search(price_text.replace(',', ''))
     price = Decimal(price_match.group()) if price_match else None
 
     change_text = mover.find('div', class_='SEGxAb').text.replace('$', '')

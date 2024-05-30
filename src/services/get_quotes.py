@@ -44,11 +44,14 @@ async def get_logo(url: str):
 
 def get_decimal(data, key):
     value = data.get(key)
-    return Decimal(value) if value and value.replace('.', '', 1).isdigit() else None
+    dec_value = Decimal(value) if value and value.replace('.', '', 1).isdigit() else None
+    if dec_value is None:
+        raise HTTPException(status_code=500, detail=f"Error parsing {key}")
+    return dec_value
 
 
 async def scrape_quote(symbol: str, client: AsyncClient):
-    url = 'https://finance.yahoo.com/quote/' + symbol
+    url = 'https://finance.yahoo.com/quote/' + symbol + "/"
     html = await fetch(url, client)
 
     parse_only = SoupStrainer(['h1', 'div'])
@@ -61,10 +64,8 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     name = symbol_name_element.text.split('(')[0].strip()
 
     regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
-    regular_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]),
-                                 2)
-    regular_percent_change_value = round(
-        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
+    regular_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]), 2)
+    regular_percent_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
 
     # Add + or - sign and % for percent_change
     regular_change = '+' + str(regular_change_value) if regular_change_value >= 0 else str(regular_change_value)
@@ -88,7 +89,7 @@ async def scrape_quote(symbol: str, client: AsyncClient):
         value = item.find("span", class_="value").text.strip()
         data[label] = value
 
-    open_price = Decimal(data.get("Open"))
+    open_price = Decimal(data.get("Open").replace(',', ''))
     market_cap = data.get("Market Cap (intraday)")
     beta = get_decimal(data, "Beta (5Y Monthly)")
     pe = get_decimal(data, "PE Ratio (TTM)")
@@ -97,7 +98,7 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     forward_dividend_yield = data.get("Forward Dividend & Yield")
     dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield \
         else (None, None) if not any(char.isdigit() for char in forward_dividend_yield) \
-        else forward_dividend_yield.replace("(", "").replace(")","").split()
+        else forward_dividend_yield.replace("(", "").replace(")", "").split()
     ex_dividend = None if data.get("Ex-Dividend Date") == "--" else data.get("Ex-Dividend Date")
     net_assets = data.get("Net Assets")
     nav = data.get("NAV")
@@ -107,12 +108,12 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     days_range = data.get("Day's Range")
     if not days_range:
         raise HTTPException(status_code=500, detail="Error parsing days range")
-    low, high = [Decimal(x) for x in days_range.split(' - ')]
+    low, high = [Decimal(x.replace(',', '')) for x in days_range.split(' - ')]
 
     # 52-week range
     fifty_two_week_range = data.get("52 Week Range")
-    year_low, year_high = [Decimal(x) for x in fifty_two_week_range.split(' - ')] if fifty_two_week_range else (
-        None, None)
+    year_low, year_high = [Decimal(x.replace(',', '')) for x in fifty_two_week_range.split(' - ')] \
+        if fifty_two_week_range else (None, None)
 
     # Volume
     volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
@@ -169,7 +170,7 @@ async def scrape_quotes(symbols: List[str]):
 
 
 async def scrape_simple_quote(symbol: str, client: AsyncClient):
-    url = 'https://finance.yahoo.com/quote/' + symbol
+    url = 'https://finance.yahoo.com/quote/' + symbol + "/"
     html = await fetch(url, client)
 
     parse_only = SoupStrainer(['h1', 'fin-streamer'])
