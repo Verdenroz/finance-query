@@ -56,8 +56,6 @@ async def get_technical_indicators(
         tenkan_period: Optional[int] = Query(None, description="The look-back period for the Tenkan line in Ichimoku."),
         kijun_period: Optional[int] = Query(None, description="The look-back period for the Kijun line in Ichimoku."),
         senkou_period: Optional[int] = Query(None, description="The look-back period for the Senkou span in Ichimoku."),
-        senkou_offset: Optional[int] = Query(None, description="The offset for the Senkou span in Ichimoku."),
-        chikou_offset: Optional[int] = Query(None, description="The offset for the Chikou span in Ichimoku.")
 ):
     response.headers["Access-Control-Allow-Origin"] = "*"
     params = {
@@ -75,8 +73,6 @@ async def get_technical_indicators(
         "tenkan_period": tenkan_period,
         "kijun_period": kijun_period,
         "senkou_period": senkou_period,
-        "senkou_offset": senkou_offset,
-        "chikou_offset": chikou_offset
     }
     # Filter out None values
     params = {k: v for k, v in params.items() if v is not None}
