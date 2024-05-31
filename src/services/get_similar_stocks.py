@@ -7,6 +7,7 @@ from typing_extensions import List
 
 from src.constants import headers
 from src.schemas import SimpleQuote
+from src.utils import cache
 
 
 def parse_stocks(stocks_divs, symbol):
@@ -87,6 +88,7 @@ def parse_etfs(etf_divs):
     return etfs
 
 
+@cache(600)
 async def scrape_similar_stocks(symbol: str) -> List[SimpleQuote]:
     url = 'https://finance.yahoo.com/quote/' + symbol
     with Session() as session:

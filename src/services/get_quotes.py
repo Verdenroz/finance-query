@@ -9,6 +9,7 @@ from httpx import AsyncClient
 
 from src.schemas import Quote, SimpleQuote
 from ..constants import headers
+from ..utils import cache
 
 
 async def fetch(url: str, client: AsyncClient):
@@ -64,8 +65,10 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     name = symbol_name_element.text.split('(')[0].strip()
 
     regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
-    regular_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]), 2)
-    regular_percent_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
+    regular_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]),
+                                 2)
+    regular_percent_change_value = round(
+        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
 
     # Add + or - sign and % for percent_change
     regular_change = '+' + str(regular_change_value) if regular_change_value >= 0 else str(regular_change_value)
@@ -162,6 +165,7 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     )
 
 
+@cache(30, after_market_expire=600)
 async def scrape_quotes(symbols: List[str]):
     async with AsyncClient(http2=True, max_redirects=5) as client:
         tasks = [scrape_quote(symbol, client) for symbol in symbols]
@@ -203,6 +207,7 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient):
     )
 
 
+@cache(30, after_market_expire=600)
 async def scrape_simple_quotes(symbols: List[str]):
     async with AsyncClient(http2=True, max_redirects=5) as client:
         quotes = await asyncio.gather(*(scrape_simple_quote(symbol, client) for symbol in symbols))

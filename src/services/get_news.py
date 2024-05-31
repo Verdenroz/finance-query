@@ -5,6 +5,7 @@ from typing_extensions import List
 
 from src.constants import headers
 from src.schemas import News
+from src.utils import cache
 
 
 async def fetch_with_aiohttp(url: str, client: ClientSession):
@@ -42,6 +43,7 @@ async def parse_news(html: str) -> List[News]:
     return news_list
 
 
+@cache(900)
 async def scrape_news_for_quote(symbol: str) -> List[News]:
     urls = [
         'https://stockanalysis.com/stocks/' + symbol,
@@ -62,6 +64,7 @@ async def scrape_news_for_quote(symbol: str) -> List[News]:
     return news_list
 
 
+@cache(900)
 async def scrape_general_news():
     url = 'https://stockanalysis.com/news/'
     async with ClientSession() as session:

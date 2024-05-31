@@ -1,10 +1,13 @@
 import asyncio
+from decimal import Decimal
+
 from aiohttp import ClientSession, TCPConnector
 from bs4 import BeautifulSoup, SoupStrainer
-from decimal import Decimal
 from fastapi.responses import JSONResponse
+
 from ..constants import headers
 from ..schemas.index import Index
+from ..utils import cache
 
 
 async def fetch_and_parse(session, url, semaphore):
@@ -33,6 +36,7 @@ async def parse_html(html):
     return indices
 
 
+@cache(expire=15, after_market_expire=3600)
 async def scrape_indices():
     urls = ['https://www.investing.com/indices/americas-indices']
     semaphore = asyncio.Semaphore(25)  # Limit to 10 concurrent requests

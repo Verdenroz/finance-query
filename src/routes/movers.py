@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Security, Response
 from fastapi.security import APIKeyHeader
 from typing_extensions import List
+
 from src.schemas import MarketMover
 from src.services import scrape_actives, scrape_gainers, scrape_losers
-from src.utils import cache
 
 router = APIRouter()
 
@@ -13,11 +13,9 @@ router = APIRouter()
             description="Get the stocks or funds with the highest trading volume during the current trading session",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=15, after_market_expire=3600)
 async def get_actives(response: Response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     return await scrape_actives()
-
 
 
 @router.get("/gainers",
@@ -25,7 +23,6 @@ async def get_actives(response: Response):
             description="The top gaining stocks or funds during the current trading session.",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=15, after_market_expire=3600)
 async def get_gainers(response: Response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     return await scrape_gainers()
@@ -36,7 +33,6 @@ async def get_gainers(response: Response):
             description="The top losing stocks or funds during the current trading session.",
             response_model=List[MarketMover],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=15, after_market_expire=3600)
 async def get_losers(response: Response):
     response.headers["Access-Control-Allow-Origin"] = "*"
     return await scrape_losers()

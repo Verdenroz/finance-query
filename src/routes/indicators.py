@@ -7,7 +7,6 @@ from src.schemas.time_series import Interval
 from src.services.indicators import (get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci,
                                      get_macd, get_adx, get_aroon, get_bbands, get_obv, get_super_trend, get_ichimoku)
 from src.services.indicators.get_summary_analysis import get_summary_analysis
-from src.utils import cache
 
 router = APIRouter()
 
@@ -35,7 +34,6 @@ IndicatorFunctions = {
             response_model=Analysis,
             description="Get requested technical indicators for a stock.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=60, after_market_expire=600)
 async def get_technical_indicators(
         response: Response,
         function: Indicator = Query(..., description="The technical indicator to get."),
@@ -78,8 +76,7 @@ async def get_technical_indicators(
     params = {k: v for k, v in params.items() if v is not None}
 
     try:
-        analysis = await IndicatorFunctions[function](**params)
-        return analysis.model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+        return await IndicatorFunctions[function](**params)
 
     except TypeError as e:
         param_name = str(e).split("'")[1]
@@ -94,7 +91,6 @@ async def get_technical_indicators(
             description="Get requested technical indicators for a stock."
                         "per minute.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=60, after_market_expire=600)
 async def get_technical_analysis(
         response: Response,
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
@@ -104,5 +100,4 @@ async def get_technical_analysis(
         raise HTTPException(status_code=400, detail="Symbol parameter is required")
 
     response.headers["Access-Control-Allow-Origin"] = "*"
-    summary_analysis = await get_summary_analysis(symbol, interval)
-    return summary_analysis.dict(by_alias=True)
+    return await get_summary_analysis(symbol, interval)

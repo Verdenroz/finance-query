@@ -4,7 +4,6 @@ from typing_extensions import List, Optional
 
 from src.schemas import News
 from src.services import scrape_news_for_quote, scrape_general_news
-from src.utils import cache
 
 router = APIRouter()
 
@@ -15,7 +14,6 @@ router = APIRouter()
             response_model=List[News],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbol parameter is required"}})
-@cache(900)
 async def get_news(
         response: Response,
         symbol: Optional[str] = Query(

@@ -3,7 +3,6 @@ from fastapi.security import APIKeyHeader
 
 from src.schemas import TimeSeries
 from src.schemas.time_series import TimePeriod, Interval
-from src.utils import cache
 from src.services import get_historical
 
 router = APIRouter()
@@ -14,7 +13,6 @@ router = APIRouter()
             response_model=TimeSeries,
             description="Get the latest US indices data.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-@cache(expire=60, after_market_expire=600)
 async def get_time_series(
         response: Response,
         symbol: str = Query(..., description="The symbol of the stock to get historical data for."),

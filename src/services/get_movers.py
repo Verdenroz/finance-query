@@ -1,12 +1,14 @@
 import asyncio
 import re
-from aiohttp import ClientSession, TCPConnector
-from bs4 import BeautifulSoup, SoupStrainer
 from decimal import Decimal
 
+from aiohttp import ClientSession, TCPConnector
+from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
+
 from ..constants import headers
 from ..schemas.marketmover import MarketMover
+from ..utils import cache
 
 # Compile a regular expression pattern that matches a number,
 # optionally followed by a decimal point and more numbers, and commas
@@ -65,16 +67,19 @@ async def scrape_movers(url):
         raise HTTPException(status_code=500, detail={"message": str(e)})
 
 
+@cache(expire=15, after_market_expire=3600)
 async def scrape_actives():
     url = 'https://www.google.com/finance/markets/most-active'
     return await scrape_movers(url)
 
 
+@cache(expire=15, after_market_expire=3600)
 async def scrape_gainers():
     url = 'https://www.google.com/finance/markets/gainers'
     return await scrape_movers(url)
 
 
+@cache(expire=15, after_market_expire=3600)
 async def scrape_losers():
     url = 'https://www.google.com/finance/markets/losers'
     return await scrape_movers(url)

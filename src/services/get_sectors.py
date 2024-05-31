@@ -5,6 +5,7 @@ from httpx import AsyncClient
 
 from src.constants import headers
 from src.schemas import Sector
+from src.utils import cache
 
 
 async def parse_sector(html: str, sector: str) -> Sector:
@@ -25,6 +26,7 @@ async def parse_sector(html: str, sector: str) -> Sector:
     )
 
 
+@cache(expire=300, after_market_expire=3600)
 async def get_sectors():
     urls = {
         'Technology': 'https://finance.yahoo.com/sectors/technology/',
