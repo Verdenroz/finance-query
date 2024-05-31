@@ -15,7 +15,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Get quotes
 
-```http
+```
   GET /v1/quotes
 ```
 
@@ -25,7 +25,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Get simplified quotes
 
-```http
+```
   GET /v1/simple-quotes
 ```
 
@@ -35,7 +35,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Get historical data for a stock
 
-```http
+```
   GET /v1/historical
 ```
 
@@ -47,7 +47,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Get technical indicators
 
-```http
+```
   GET /v1/indicators
 ```
 ***I would not recommend changing the optional params unless you know what you are doing***
@@ -72,7 +72,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Get summary technical analysis
 
-```http
+```
   GET /v1/analysis
 ```
 
@@ -83,7 +83,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Get similar stocks
 
-```http
+```
   GET /v1/similar-stocks
 ```
 
@@ -93,7 +93,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Get news
 
-```http
+```
   GET /v1/news
 ```
 
@@ -103,7 +103,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Search
 
-```http
+```
   GET /v1/search
 ```
 
@@ -114,31 +114,31 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 
 #### Get U.S. market indices
 
-```http
+```
   GET /v1/indices
 ```
 
 #### Get active stocks
 
-```http
+```
   GET /v1/actives
 ```
 
 #### Get losing stocks
 
-```http
+```
   GET /v1/losers
 ```
 
 #### Get gaining stocks
 
-```http
+```
   GET /v1/gainers
 ```
 
 #### Get sector performance
 
-```http
+```
   GET /v1/sectors
 ```
 
@@ -198,5 +198,5 @@ If something is not working or if you have any suggestions, contact me at harvey
 
 ## License
 
-[MIT](https://choosealicense.com/licenses/mit/)
+[MIT](https://opensource.org/license/MIT)
 
