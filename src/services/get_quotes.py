@@ -47,7 +47,7 @@ def get_decimal(data, key):
     value = data.get(key)
     dec_value = Decimal(value) if value and value.replace('.', '', 1).isdigit() else None
     if dec_value is None:
-        raise HTTPException(status_code=500, detail=f"Error parsing {key}")
+        return None
     return dec_value
 
 
