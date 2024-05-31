@@ -71,9 +71,9 @@ async def scrape_quote(symbol: str, client: AsyncClient):
         Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
 
     # Add + or - sign and % for percent_change
-    regular_change = '+' + str(regular_change_value) if regular_change_value >= 0 else str(regular_change_value)
+    regular_change = '+' + str(regular_change_value) if regular_change_value > 0 else str(regular_change_value)
     regular_percent_change = '+' + str(
-        regular_percent_change_value) + '%' if regular_percent_change_value >= 0 else str(
+        regular_percent_change_value) + '%' if regular_percent_change_value > 0 else str(
         regular_percent_change_value) + '%'
 
     # After hours price
