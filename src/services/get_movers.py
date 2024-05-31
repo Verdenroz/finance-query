@@ -21,7 +21,7 @@ async def create_market_mover(mover):
 
     price_text = mover.find('div', class_='YMlKec').text
     price_match = number_pattern.search(price_text.replace(',', ''))
-    price = Decimal(price_match.group()) if price_match else None
+    price = round(Decimal(price_match.group()), 2) if price_match else None
 
     change_text = mover.find('div', class_='SEGxAb').text.replace('$', '')
 
