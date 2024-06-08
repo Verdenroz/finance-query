@@ -30,17 +30,36 @@ class Interval(Enum):
 
 
 class HistoricalData(BaseModel):
-    open: Decimal = Field(..., example=145.00, description="Opening price")
-    high: Decimal = Field(..., example=145.00, description="Highest price")
-    low: Decimal = Field(..., example=145.00, description="Lowest price")
-    adj_close: Decimal = Field(..., example=145.00, description="Adjusted closing price",
-                               serialization_alias="adjClose")
-    volume: int = Field(..., example=1000000, description="Volume traded")
+    open: Decimal = Field(
+        default=...,
+        example=145.00,
+        description="Opening price"
+    )
+    high: Decimal = Field(
+        default=...,
+        example=145.00,
+        description="Highest price"
+    )
+    low: Decimal = Field(
+        default=...,
+        example=145.00,
+        description="Lowest price"
+    )
+    adj_close: Decimal = Field(
+        default=...,
+        example=145.00,
+        description="Adjusted closing price",
+        serialization_alias="adjClose")
+    volume: int = Field(
+        default=...,
+        example=1000000,
+        description="Volume traded"
+    )
 
 
 class TimeSeries(BaseModel):
     history: Dict[str, HistoricalData] = Field(
-        ...,
+        default=...,
         serialization_alias="Historical Data",
         validation_alias=AliasChoices("Historical Data", "history"),
         example={
@@ -51,4 +70,5 @@ class TimeSeries(BaseModel):
                 "adjClose": 145.00,
                 "volume": 1000000
             }
-        }, description="Dates with historical data for the stock")
+        }, description="Dates with historical data for the stock"
+    )
