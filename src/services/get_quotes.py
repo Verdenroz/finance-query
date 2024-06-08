@@ -55,7 +55,7 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     url = 'https://finance.yahoo.com/quote/' + symbol + "/"
     html = await fetch(url, client)
 
-    parse_only = SoupStrainer(['h1', 'div'])
+    parse_only = SoupStrainer(['h1', 'div', 'card'])
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
     symbol_name_element = soup.select_one('h1.svelte-3a2v0c')
@@ -133,6 +133,21 @@ async def scrape_quote(symbol: str, client: AsyncClient):
     logo_future = asyncio.create_task(get_logo(logo_url))
 
     (sector, industry), logo = await asyncio.gather(sector_and_industry_future, logo_future)
+
+    # Scrape performance:
+    returns = soup.find_all('section', 'card small svelte-1v51y3z bdr sticky')
+    data = []
+    for changes in returns:
+        perf_div = changes.find('div', class_=['perf positive svelte-12wncuy', 'perf negative svelte-12wncuy'])
+        if perf_div:
+            sign = '+' if 'positive' in perf_div['class'] else '-'
+            data.append(sign + perf_div.text.strip())
+
+    ytd_return = data[0] if len(data) > 0 else None
+    year_return = data[1] if len(data) > 1 else None
+    three_year_return = data[2] if len(data) > 2 else None
+    five_year_return = data[3] if len(data) > 3 else None
+
     return Quote(
         symbol=symbol.upper(),
         name=name,
@@ -161,6 +176,10 @@ async def scrape_quote(symbol: str, client: AsyncClient):
         sector=sector,
         industry=industry,
         about=about,
+        ytd_return=ytd_return,
+        year_return=year_return,
+        three_year_return=three_year_return,
+        five_year_return=five_year_return,
         logo=logo
     )
 
