@@ -3,7 +3,7 @@ import asyncio
 from stock_indicators.indicators import get_ema, get_wma, get_vwma, get_rsi, get_stoch_rsi, get_stoch, \
     get_cci, get_macd, get_adx, get_aroon, get_bollinger_bands, get_obv, get_super_trend, get_ichimoku, get_sma
 
-from src.schemas.analysis import SummaryAnalysis, AROONData, BBANDSData, SuperTrendData, IchimokuData
+from src.schemas.analysis import SummaryAnalysis, AROONData, BBANDSData, SuperTrendData, IchimokuData, MACDData
 from src.schemas.time_series import Interval, TimePeriod
 from src.services.get_historical import get_historical_quotes
 from src.utils import cache
@@ -93,8 +93,9 @@ async def get_summary_cci(quotes, period=20):
 
 async def get_summary_macd(quotes, fast_period=12, slow_period=26, signal_period=9):
     macd = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[-1].macd
+    signal = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[-1].signal
     if macd:
-        return round(macd, 2)
+        return MACDData(value=round(macd, 2), signal=round(signal, 2))
     return None
 
 

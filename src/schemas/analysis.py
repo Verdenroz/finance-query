@@ -376,7 +376,7 @@ class SummaryAnalysis(BaseModel):
         description="14-day Average Directional Index",
         serialization_alias="ADX(14)"
     )
-    macd: Optional[float] = Field(
+    macd: Optional[MACDData] = Field(
         default=None,
         description="Moving Average Convergence Divergence",
         serialization_alias="MACD(12,26)"
