@@ -1,7 +1,7 @@
 import asyncio
 
 from stock_indicators.indicators import get_ema, get_wma, get_vwma, get_rsi, get_stoch_rsi, get_stoch, \
-    get_cci, get_macd, get_adx, get_aroon, get_bollinger_bands, get_obv, get_super_trend, get_ichimoku, get_sma
+    get_cci, get_macd, get_adx, get_aroon, get_bollinger_bands, get_super_trend, get_ichimoku, get_sma
 
 from src.schemas.analysis import SummaryAnalysis, AROONData, BBANDSData, SuperTrendData, IchimokuData, MACDData
 from src.schemas.time_series import Interval, TimePeriod
@@ -93,7 +93,8 @@ async def get_summary_cci(quotes, period=20):
 
 async def get_summary_macd(quotes, fast_period=12, slow_period=26, signal_period=9):
     macd = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[-1].macd
-    signal = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[-1].signal
+    signal = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[
+        -1].signal
     if macd:
         return MACDData(value=round(macd, 2), signal=round(signal, 2))
     return None
@@ -103,13 +104,6 @@ async def get_summary_adx(quotes, period=14):
     adx = get_adx(quotes, period)[-1].adx
     if adx:
         return round(adx, 2)
-    return None
-
-
-async def get_summary_obv(quotes, period=20):
-    obv = get_obv(quotes, sma_periods=period)[-1].obv
-    if obv:
-        return round(obv, 2)
     return None
 
 
@@ -150,7 +144,8 @@ async def get_summary_ichimoku(quotes):
     senkou_span_b = ichimoku.senkou_span_b
     if tenkan_sen or kijun_sen or senkou_span_a or senkou_span_b:
         return IchimokuData(tenkan_sen=round(tenkan_sen, 2), kijun_sen=round(kijun_sen, 2),
-                        senkou_span_a=round(senkou_span_a, 2), senkou_span_b=round(senkou_span_b, 2))
+                            senkou_span_a=round(senkou_span_a, 2), senkou_span_b=round(senkou_span_b, 2))
+
 
 @cache(expire=60, after_market_expire=600)
 async def get_summary_analysis(symbol: str, interval: Interval):
@@ -172,14 +167,13 @@ async def get_summary_analysis(symbol: str, interval: Interval):
         get_summary_cci(quotes[:20], 20),
         get_summary_macd(quotes[:75], 12, 26, 9),
         get_summary_adx(quotes[:100], 14),
-        get_summary_obv(quotes, 20),
         get_summary_aroon(quotes[:30], 25),
         get_summary_bbands(quotes[:20], 20, 2),
         get_summary_super_trend(quotes[:92], 14, 3),
         get_summary_ichimoku(quotes[:78]),
     ]
     # Run the tasks concurrently and unpack the results
-    sma, ema, wma, vwma, rsi, srsi, stoch, cci, macd, adx, obv, aroon, bbands, super_trend, ichimoku = await (
+    sma, ema, wma, vwma, rsi, srsi, stoch, cci, macd, adx, aroon, bbands, super_trend, ichimoku = await (
         asyncio.gather(*tasks))
 
     summary.sma_10 = sma[4]
@@ -204,7 +198,6 @@ async def get_summary_analysis(symbol: str, interval: Interval):
     summary.cci = cci
     summary.macd = macd
     summary.adx = adx
-    summary.obv = obv
     summary.aroon = aroon
     summary.bbands = bbands
     summary.supertrend = super_trend

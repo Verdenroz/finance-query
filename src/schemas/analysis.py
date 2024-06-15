@@ -384,12 +384,7 @@ class SummaryAnalysis(BaseModel):
     stoch: Optional[float] = Field(
         default=None,
         description="Stochastic Oscillator",
-        serialization_alias="STOCH(3,3,14,14)"
-    )
-    obv: Optional[float] = Field(
-        default=None,
-        description="On Balance Volume",
-        serialization_alias="OBV"
+        serialization_alias="STOCH %K(3,3,14,14)"
     )
     aroon: Optional[AROONData] = Field(
         default=None,
