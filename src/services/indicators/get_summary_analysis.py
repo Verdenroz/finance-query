@@ -127,7 +127,7 @@ async def get_summary_bbands(quotes, period=20, std_dev=2):
     return None
 
 
-async def get_summary_super_trend(quotes, period=14, multiplier=3):
+async def get_summary_super_trend(quotes, period=10, multiplier=3):
     super_trend = get_super_trend(quotes, lookback_periods=period, multiplier=multiplier)[-1]
     if not super_trend:
         return None

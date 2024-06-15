@@ -59,7 +59,7 @@ async def get_obv(symbol: str, interval: Interval, sma_periods: int = None):
     return Analysis(type=Indicator.OBV, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 @cache(expire=60, after_market_expire=600)
-async def get_super_trend(symbol: str, interval: Interval, period: int = 14, multiplier: int = 3):
+async def get_super_trend(symbol: str, interval: Interval, period: int = 10, multiplier: int = 3):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_super_trend(quotes, lookback_periods=period, multiplier=multiplier)
     indicator_data = {
