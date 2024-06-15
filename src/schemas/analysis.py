@@ -364,7 +364,7 @@ class SummaryAnalysis(BaseModel):
     srsi: Optional[float] = Field(
         default=None,
         description="14-day Stochastic RSI",
-        serialization_alias="SRSI(14)"
+        serialization_alias="SRSI(3,3,14,14)"
     )
     cci: Optional[float] = Field(
         default=None,
@@ -384,7 +384,7 @@ class SummaryAnalysis(BaseModel):
     stoch: Optional[float] = Field(
         default=None,
         description="Stochastic Oscillator",
-        serialization_alias="STOCH %K(3,3,14,14)"
+        serialization_alias="STOCH %K(14,3,3)"
     )
     aroon: Optional[AROONData] = Field(
         default=None,
