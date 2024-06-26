@@ -10,7 +10,7 @@ from src.utils import cache
 
 async def parse_sector(html: str, sector: str) -> Sector:
     soup = BeautifulSoup(html, 'lxml', parse_only=SoupStrainer('section'))
-    returns = soup.find_all('section', 'card small svelte-1v51y3z bdr sticky')
+    returns = soup.find_all('section', 'card small svelte-13ievhf bdr sticky')
     data = []
     for changes in returns:
         perf_div = changes.find('div', class_=['perf positive svelte-12wncuy', 'perf negative svelte-12wncuy'])
