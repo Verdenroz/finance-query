@@ -255,7 +255,7 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
     (sector, industry), logo = await asyncio.gather(sector_and_industry_future, logo_future)
 
     # Scrape performance:
-    returns = soup.find_all('section', 'card small svelte-1v51y3z bdr sticky')
+    returns = soup.find_all('section', 'card small svelte-13ievhf bdr sticky')
     data = []
     for changes in returns:
         perf_div = changes.find('div', class_=['perf positive svelte-12wncuy', 'perf negative svelte-12wncuy'])
