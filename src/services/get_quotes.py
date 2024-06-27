@@ -212,7 +212,7 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
         value = item.find("span", class_="value").text.strip()
         data[label] = value
 
-    open_price = Decimal(data.get("Open").replace(',', ''))
+    open_price = Decimal(data.get("Open").replace(',', '')) if data.get("Open") else None
     market_cap = data.get("Market Cap (intraday)")
     beta = get_decimal(data, "Beta (5Y Monthly)")
     pe = get_decimal(data, "PE Ratio (TTM)")
@@ -229,24 +229,34 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
 
     # Day's range
     days_range = data.get("Day's Range")
-    if not days_range:
-        raise HTTPException(status_code=500, detail="Error parsing days range")
-    low, high = [Decimal(x.replace(',', '')) for x in days_range.split(' - ')]
+    low, high = None, None
+    if days_range:
+        low, high = [Decimal(x.replace(',', '')) for x in days_range.split(' - ')]
 
     # 52-week range
     fifty_two_week_range = data.get("52 Week Range")
-    year_low, year_high = [Decimal(x.replace(',', '')) for x in fifty_two_week_range.split(' - ')] \
-        if fifty_two_week_range else (None, None)
+    year_low, year_high = None, None
+    if fifty_two_week_range:
+        year_low, year_high = [Decimal(x.replace(',', '')) for x in fifty_two_week_range.split(' - ')]
 
     # Volume
-    volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
-    avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
+    volume = data.get("Volume")
+    avg_volume = data.get("Avg. Volume")
 
     # About the company
     about = soup.find('p', class_='svelte-1xu2f9r').text
     # Logo
     logo_element = soup.find('a', class_='subtle-link fin-size-medium svelte-wdkn18')
     logo_url = logo_element['href'] if logo_element else None
+
+    # Funds
+    category = data.get("Category")
+    last_cap = data.get("Last Cap Gain")
+    morningstar_rating = data.get("Morningstar Rating").split()[0] if data.get("Morningstar Rating") else None
+    morningstar_risk = data.get("Morningstar Risk Rating")
+    holdings_turnover = data.get("Holdings Turnover")
+    last_dividend = data.get("Last Dividend")
+    inception_date = data.get("Inception Date")
 
     # Scrape sector, industry, and logo concurrently
     sector_and_industry_future = asyncio.create_task(extract_sector_and_industry(soup))
@@ -286,6 +296,13 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
         beta=beta,
         pe=pe,
         eps=eps,
+        category=category,
+        morningstar_rating=morningstar_rating,
+        morningstar_risk_rating=morningstar_risk,
+        last_capital_gain=last_cap,
+        last_dividend=last_dividend,
+        holdings_turnover=holdings_turnover,
+        inception_date=inception_date,
         earnings_date=earnings_date,
         dividend=dividend,
         dividend_yield=yield_percent,

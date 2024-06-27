@@ -39,42 +39,42 @@ class Quote(BaseModel):
         serialization_alias="percentChange",
         validation_alias=AliasChoices("percentChange", "percent_change")
     )
-    open: Decimal = Field(
-        default=...,
+    open: Optional[Decimal] = Field(
+        default=None,
         example=144.00,
         description="Opening price of the stock"
     )
-    high: Decimal = Field(
-        default=...,
+    high: Optional[Decimal] = Field(
+        default=None,
         example=146.00,
         description="Highest day price of the stock"
     )
-    low: Decimal = Field(
-        default=...,
+    low: Optional[Decimal] = Field(
+        default=None,
         example=143.00,
         description="Lowest day price of the stock"
     )
-    year_high: Decimal = Field(
-        default=...,
+    year_high: Optional[Decimal] = Field(
+        default=None,
         example=150.00,
         description="52-week high price of the stock",
         serialization_alias="yearHigh",
         validation_alias=AliasChoices("yearHigh", "year_high")
     )
-    year_low: Decimal = Field(
-        default=...,
+    year_low: Optional[Decimal] = Field(
+        default=None,
         example=100.00,
         description="52-week low price of the stock",
         serialization_alias="yearLow",
         validation_alias=AliasChoices("yearLow", "year_low")
     )
-    volume: int = Field(
-        default=...,
-        example=1000000,
+    volume: Optional[str] = Field(
+        default=None,
+        example="1000000",
         description="Volume of the stock")
-    avg_volume: int = Field(
-        default=...,
-        example=2000000,
+    avg_volume: Optional[str] = Field(
+        default=None,
+        example="2000000",
         description="Average volume of the stock",
         serialization_alias="avgVolume",
         validation_alias=AliasChoices("avgVolume", "avg_volume")
@@ -138,12 +138,59 @@ class Quote(BaseModel):
         serialization_alias="expenseRatio",
         validation_alias=AliasChoices("expenseRatio", "expense_ratio")
     )
+    category: Optional[str] = Field(
+        default=None,
+        example="Large Growth",
+        description="Category of the fund"
+    )
+    last_capital_gain: Optional[str] = Field(
+        default=None,
+        example="10.00",
+        description="Last capital gain of the fund",
+        serialization_alias="lastCapitalGain",
+        validation_alias=AliasChoices("lastCapitalGain", "last_capital_gain")
+    )
+    morningstar_rating: Optional[str] = Field(
+        default=None,
+        example="★★",
+        description="Morningstar rating of the fund",
+        serialization_alias="morningstarRating",
+        validation_alias=AliasChoices("morningstarRating", "morningstar_rating")
+    )
+    morningstar_risk_rating: Optional[str] = Field(
+        default=None,
+        example="Low",
+        description="Morningstar risk rating of the fund",
+        serialization_alias="morningstarRiskRating",
+        validation_alias=AliasChoices("morningstarRiskRating", "morningstar_risk_rating")
+    )
+    holdings_turnover: Optional[str] = Field(
+        default=None,
+        example="5.00%",
+        description="Holdings turnover of the fund",
+        serialization_alias="holdingsTurnover",
+        validation_alias=AliasChoices("holdingsTurnover", "holdings_turnover")
+    )
     earnings_date: Optional[str] = Field(
         default=None,
         example="Apr 23, 2024",
         description="Next earnings date of the stock",
         serialization_alias="earningsDate",
         validation_alias=AliasChoices("earningsDate", "earnings_date")
+    )
+    last_dividend: Optional[str] = Field(
+        default=None,
+        example="0.82",
+        description="Last dividend of the fund",
+        serialization_alias="lastDividend",
+        validation_alias=AliasChoices("lastDividend", "last_dividend")
+    )
+    inception_date: Optional[str] = Field(
+        default=None,
+        example="Jan 1, 2020",
+        description="Inception date of the fund",
+        serialization_alias="inceptionDate",
+        validation_alias=AliasChoices("inceptionDate", "inception_date")
     )
     sector: Optional[str] = Field(
         default=None,
