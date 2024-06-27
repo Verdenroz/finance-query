@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime
 from decimal import Decimal
 from typing import List
 
@@ -6,6 +7,7 @@ import requests
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 from httpx import AsyncClient
+from yahooquery import Ticker
 
 from src.schemas import Quote, SimpleQuote
 from ..constants import headers
@@ -13,26 +15,11 @@ from ..utils import cache
 
 
 async def fetch(url: str, client: AsyncClient):
+    """
+    Fetches the HTML content of a given URL
+    """
     response = await client.get(url, headers=headers)
     return response.text
-
-
-async def extract_sector_and_industry(soup: BeautifulSoup):
-    info_sections = soup.find_all("div", class_="infoSection svelte-1xu2f9r")
-
-    sector = None
-    industry = None
-
-    for section in info_sections:
-        h3_text = section.find("h3").text
-        a_element = section.find("a")
-        a_text = a_element.text if a_element else None
-        if h3_text == "Sector":
-            sector = a_text.strip()
-        elif h3_text == "Industry":
-            industry = a_text.strip()
-
-    return sector, industry
 
 
 async def get_logo(url: str):
@@ -43,15 +30,148 @@ async def get_logo(url: str):
         return None
 
 
-def get_decimal(data, key):
-    value = data.get(key)
-    dec_value = Decimal(value) if value and value.replace('.', '', 1).isdigit() else None
-    if dec_value is None:
-        return None
-    return dec_value
+async def get_quote_from_yahooquery(symbol: str) -> Quote:
+    """
+    Get quote data from Yahoo Finance using yahooquery in case the scraping fails
+    :param symbol: Stock symbol
+
+    :raises: HTTPException if ticker is not found
+    """
+    ticker = Ticker(symbol)
+    quote = ticker.quotes
+    profile = ticker.asset_profile
+    ticker_calendar = ticker.calendar_events
+    if not quote or symbol not in quote:
+        raise HTTPException(status_code=404, detail="Symbol not found")
+    name = quote[symbol]['longName']
+    regular_price = quote[symbol]['regularMarketPrice']
+    regular_change = quote[symbol]['regularMarketChange']
+    regular_percent_change = quote[symbol]['regularMarketChangePercent']
+    post_price = quote[symbol]['postMarketPrice'] if 'postMarketPrice' in quote[symbol] else None
+    open_price = quote[symbol]['regularMarketOpen']
+    high = quote[symbol]['regularMarketDayHigh']
+    low = quote[symbol]['regularMarketDayLow']
+    year_high = quote[symbol]['fiftyTwoWeekHigh']
+    year_low = quote[symbol]['fiftyTwoWeekLow']
+    volume = quote[symbol]['regularMarketVolume']
+    avg_volume = quote[symbol]['averageDailyVolume10Day']
+    market_cap = quote[symbol]['marketCap'] if 'marketCap' in quote[symbol] else None
+    pe = quote[symbol]['trailingPE'] if 'trailingPE' in quote[symbol] else None
+    eps = quote[symbol]['trailingEps'] if 'trailingEps' in quote[symbol] else None
+    earnings_date = ticker_calendar[symbol]['earnings']['earningsDate'] if 'earnings' in ticker_calendar[
+        symbol] and 'earningsDate' in ticker_calendar[symbol]['earnings'] else None
+    dividend = quote[symbol]['dividendRate'] if 'dividendRate' in quote[symbol] else None
+    yield_percent = quote[symbol]['dividendYield'] if 'dividendYield' in quote[symbol] else None
+    ex_dividend = ticker_calendar[symbol]['exDividendDate'] if 'exDividendDate' in ticker_calendar[symbol] else None
+    net_assets = quote[symbol]['netAssets'] if 'netAssets' in quote[symbol] else None
+    expense_ratio = quote[symbol]['annualReportExpenseRatio'] if 'annualReportExpenseRatio' in quote[symbol] else None
+    sector = profile[symbol]['sector'] if 'sector' in profile[symbol] else None
+    industry = profile[symbol]['industry'] if 'industry' in profile[symbol] else None
+    about = profile[symbol]['longBusinessSummary'] if 'longBusinessSummary' in profile[symbol] else None
+    website = profile[symbol]['website'] if 'website' in profile[symbol] else None
+    logo = await get_logo(website) if website else None
+
+    def format_value(value: float) -> str:
+        # Convert the value to millions and round it to one decimal place
+        value_in_millions = round(value / 1_000_000, 1)
+        value_in_billions = round(value / 1_000_000_000, 1)
+        value_in_trillions = round(value / 1_000_000_000_000, 1)
+
+        # Check the size of the value and use the appropriate suffix
+        if value_in_trillions >= 1:
+            return f"{value_in_trillions}T"
+        elif value_in_billions >= 1:
+            return f"{value_in_billions}B"
+        else:
+            return f"{value_in_millions}M"
+
+    def format_date(date_string: str) -> str:
+        # Try to parse the date string with time
+        try:
+            date = datetime.strptime(date_string, "%Y-%m-%d %H:%M:%S")
+        except ValueError:
+            # If it fails, try to parse the date string without time
+            date = datetime.strptime(date_string, "%Y-%m-%d")
+
+        # Format the datetime object into the desired string format
+        return date.strftime("%b %d, %Y")
+
+    # Convert float values to string
+    regular_change = str(round(regular_change, 2)) if regular_change else None
+    regular_percent_change = str(round(regular_percent_change, 2)) + "%" if regular_percent_change else None
+    pe = round(pe, 2) if pe else None
+    yield_percent = str(yield_percent) + "%" if yield_percent else None
+    net_assets = format_value(net_assets) if net_assets else None
+    market_cap = format_value(market_cap) if market_cap else None
+    ex_dividend = format_date(ex_dividend) if ex_dividend else None
+    if earnings_date:
+        # Split the date and time, format the date, and join them back
+        formatted_dates = [format_date(date.split(' ')[0]) for date in earnings_date]
+        earnings_date = ' - '.join(formatted_dates)
+
+    return Quote(
+        symbol=symbol.upper(),
+        name=name,
+        price=regular_price,
+        after_hours_price=post_price,
+        change=regular_change,
+        percent_change=regular_percent_change,
+        open=open_price,
+        high=high,
+        low=low,
+        year_high=year_high,
+        year_low=year_low,
+        volume=volume,
+        avg_volume=avg_volume,
+        market_cap=market_cap,
+        pe=pe,
+        eps=eps,
+        earnings_date=earnings_date,
+        dividend=dividend,
+        dividend_yield=yield_percent,
+        ex_dividend=ex_dividend,
+        net_assets=net_assets,
+        expense_ratio=expense_ratio,
+        sector=sector,
+        industry=industry,
+        about=about,
+        logo=logo
+    )
 
 
-async def scrape_quote(symbol: str, client: AsyncClient):
+async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
+    """
+    Asynchronously scrapes a quote from a given symbol and returns a Quote object.
+    :param symbol: Stock symbol
+    :param client: HTTP client
+
+    :raises: HTTPException if there is an error scraping and unable to get quote from yahooquery
+    """
+
+    def get_decimal(number, key):
+        num = number.get(key)
+        dec_value = Decimal(num) if num and num.replace('.', '', 1).isdigit() else None
+        if dec_value is None:
+            return None
+        return dec_value
+
+    async def extract_sector_and_industry(sector_soup: BeautifulSoup):
+        info_sections = sector_soup.find_all("div", class_="infoSection svelte-1xu2f9r")
+
+        curr_sector = None
+        curr_industry = None
+
+        for section in info_sections:
+            h3_text = section.find("h3").text
+            a_element = section.find("a")
+            a_text = a_element.text if a_element else None
+            if h3_text == "Sector":
+                curr_sector = a_text.strip()
+            elif h3_text == "Industry":
+                curr_industry = a_text.strip()
+
+        return curr_sector, curr_industry
+
     url = 'https://finance.yahoo.com/quote/' + symbol + "/"
     html = await fetch(url, client)
 
@@ -60,7 +180,7 @@ async def scrape_quote(symbol: str, client: AsyncClient):
 
     symbol_name_element = soup.select_one('h1.svelte-3a2v0c')
     if not symbol_name_element:
-        raise HTTPException(status_code=404, detail="Symbol not found")
+        return await get_quote_from_yahooquery(symbol)
 
     name = symbol_name_element.text.split('(')[0].strip()
 
@@ -192,7 +312,37 @@ async def scrape_quotes(symbols: List[str]):
     return quotes
 
 
-async def scrape_simple_quote(symbol: str, client: AsyncClient):
+async def get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
+    """
+    Get simple quote data from Yahoo Finance using yahooquery in case the scraping fails
+    :param symbol: The stock symbol
+
+    :raises: HTTPException if ticker is not found
+    """
+    ticker = Ticker(symbol)
+    quote = ticker.quotes
+    if not quote or symbol not in quote:
+        raise HTTPException(status_code=404, detail="Symbol not found")
+    name = quote[symbol]['longName']
+    regular_price = quote[symbol]['regularMarketPrice']
+    regular_change = quote[symbol]['regularMarketChange']
+    regular_percent_change = quote[symbol]['regularMarketChangePercent']
+
+    return SimpleQuote(
+        symbol=symbol.upper(),
+        name=name,
+        price=regular_price,
+        change=regular_change,
+        percent_change=regular_percent_change
+    )
+
+
+async def scrape_simple_quote(symbol: str, client: AsyncClient) -> SimpleQuote:
+    """
+    Asynchronously scrapes a simple quote from a given symbol and returns a SimpleQuote object.
+    :param symbol: The stock symbol
+    :param client: The HTTP client
+    """
     url = 'https://finance.yahoo.com/quote/' + symbol + "/"
     html = await fetch(url, client)
 
@@ -201,7 +351,7 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient):
 
     symbol_name_element = soup.select_one('h1.svelte-3a2v0c')
     if not symbol_name_element:
-        raise HTTPException(status_code=404, detail="Symbol not found")
+        return await get_simple_quote_from_yahooquery(symbol)
 
     name = symbol_name_element.text.split('(')[0].strip()
 
