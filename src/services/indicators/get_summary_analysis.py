@@ -95,7 +95,7 @@ async def get_summary_macd(quotes, fast_period=12, slow_period=26, signal_period
     macd = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[-1].macd
     signal = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[
         -1].signal
-    if macd:
+    if macd and signal:
         return MACDData(value=round(macd, 2), signal=round(signal, 2))
     return None
 
@@ -142,7 +142,7 @@ async def get_summary_ichimoku(quotes):
     kijun_sen = ichimoku.kijun_sen
     senkou_span_a = ichimoku.senkou_span_a
     senkou_span_b = ichimoku.senkou_span_b
-    if tenkan_sen or kijun_sen or senkou_span_a or senkou_span_b:
+    if tenkan_sen and kijun_sen and senkou_span_a and senkou_span_b:
         return IchimokuData(tenkan_sen=round(tenkan_sen, 2), kijun_sen=round(kijun_sen, 2),
                             senkou_span_a=round(senkou_span_a, 2), senkou_span_b=round(senkou_span_b, 2))
 
