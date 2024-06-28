@@ -101,7 +101,7 @@ class Quote(BaseModel):
         example=4.50,
         description="Earnings per share of the stock"
     )
-    dividend: Optional[Decimal] = Field(
+    dividend: Optional[str] = Field(
         default=None,
         example=0.82,
         description="Dividend yield of the stock"
