@@ -1,7 +1,10 @@
 import asyncio
+from typing import List
 
 from bs4 import BeautifulSoup, SoupStrainer
+from fastapi import HTTPException
 from httpx import AsyncClient
+from yahooquery import Ticker
 
 from src.constants import headers
 from src.schemas import Sector
@@ -26,22 +29,23 @@ async def parse_sector(html: str, sector: str) -> Sector:
     )
 
 
-@cache(expire=300, after_market_expire=3600)
-async def get_sectors():
-    urls = {
-        'Technology': 'https://finance.yahoo.com/sectors/technology/',
-        'Healthcare': 'https://finance.yahoo.com/sectors/healthcare/',
-        'Financial Services': 'https://finance.yahoo.com/sectors/financial-services/',
-        'Consumer Cyclical': 'https://finance.yahoo.com/sectors/consumer-cyclical/',
-        'Industrials': 'https://finance.yahoo.com/sectors/industrials/',
-        'Consumer Defensive': 'https://finance.yahoo.com/sectors/consumer-defensive/',
-        'Energy': 'https://finance.yahoo.com/sectors/energy/',
-        'Real Estate': 'https://finance.yahoo.com/sectors/real-estate/',
-        'Utilities': 'https://finance.yahoo.com/sectors/utilities/',
-        'Basic Materials': 'https://finance.yahoo.com/sectors/basic-materials/',
-        'Communication Services': 'https://finance.yahoo.com/sectors/communication-services/'
-    }
+urls = {
+    'Technology': 'https://finance.yahoo.com/sectors/technology/',
+    'Healthcare': 'https://finance.yahoo.com/sectors/healthcare/',
+    'Financial Services': 'https://finance.yahoo.com/sectors/financial-services/',
+    'Consumer Cyclical': 'https://finance.yahoo.com/sectors/consumer-cyclical/',
+    'Industrials': 'https://finance.yahoo.com/sectors/industrials/',
+    'Consumer Defensive': 'https://finance.yahoo.com/sectors/consumer-defensive/',
+    'Energy': 'https://finance.yahoo.com/sectors/energy/',
+    'Real Estate': 'https://finance.yahoo.com/sectors/real-estate/',
+    'Utilities': 'https://finance.yahoo.com/sectors/utilities/',
+    'Basic Materials': 'https://finance.yahoo.com/sectors/basic-materials/',
+    'Communication Services': 'https://finance.yahoo.com/sectors/communication-services/'
+}
 
+
+@cache(expire=300, after_market_expire=3600)
+async def get_sectors() -> List[Sector]:
     async with AsyncClient(http2=True, max_redirects=5) as client:
         tasks = []
         for sector, url in urls.items():
@@ -54,3 +58,20 @@ async def get_sectors():
         sector_data = await parse_sector(html, sector)
         sectors.append(sector_data)
     return sectors
+
+
+@cache(expire=60, after_market_expire=600)
+async def get_sector_for_symbol(symbol: str) -> List[Sector]:
+    ticker = Ticker(symbol)
+    profile = ticker.asset_profile
+    sector = profile[symbol]['sector'] if 'sector' in profile[symbol] else None
+    if not sector:
+        raise HTTPException(status_code=404, detail=f"Sector for {symbol} not found.")
+
+    url = urls[sector]
+    async with AsyncClient(http2=True, max_redirects=5) as client:
+        response = await client.get(url, headers=headers)
+        html = response.text
+
+    sector = await parse_sector(html, sector)
+    return [sector]
