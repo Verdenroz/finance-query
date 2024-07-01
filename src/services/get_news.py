@@ -59,7 +59,7 @@ async def scrape_news_for_quote(symbol: str) -> List[News]:
                 break
         # If no news was found, raise an error
         else:
-            raise HTTPException(status_code=500, detail="Error fetching news")
+            raise HTTPException(status_code=404, detail="Error fetching news")
 
     return news_list
 
@@ -72,6 +72,6 @@ async def scrape_general_news():
         news_list = await parse_news(html)
         # If no news was found, raise an error
         if not news_list:
-            raise HTTPException(status_code=500, detail="Error fetching news")
+            raise HTTPException(status_code=404, detail="Error fetching news")
 
     return news_list
