@@ -142,6 +142,10 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
   GET /v1/sectors
 ```
 
+| Query Parameter | Type     | Description                       |
+| :-------- | :------- | :-------------------------------- |
+| `symbol`  | `string` | **Optional**. Specify symbol to find specific sector performance belonging to the symbol |
+
 
 
 ## Usage/Examples
