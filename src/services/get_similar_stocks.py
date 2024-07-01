@@ -46,20 +46,19 @@ def parse_stocks(stocks_divs, symbol):
 
         stock = SimpleQuote(symbol=div_symbol, name=name, price=price, change=change_str, percent_change=percent_change)
         stocks.append(stock)
-        if len(stocks) == 5:
-            break
+
     return stocks
 
 
 def parse_etfs(etf_divs):
     etfs = []
     for div in etf_divs:
-        symbol_element = div.find("span", class_="symbol svelte-1ts22zv")
+        symbol_element = div.find("span", class_="symbol svelte-1nwjuc")
         if not symbol_element:
             continue
         symbol = symbol_element.text
 
-        name_element = div.find("span", class_="tw-text-sm svelte-1ts22zv longName")
+        name_element = div.find("span", class_="tw-text-sm svelte-1nwjuc longName")
         if not name_element:
             continue
         name = name_element.text
@@ -95,15 +94,15 @@ async def scrape_similar_stocks(symbol: str) -> List[SimpleQuote]:
         html = session.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
 
-    similar_stocks = soup.find_all("div", class_="main-div svelte-15b2o7n", limit=6)
+    similar_stocks = soup.find_all("div", class_="main-div svelte-15b2o7n")
     stocks = parse_stocks(similar_stocks, symbol)
 
     # If similar_stocks is empty, try to scrape ETF data
     if not stocks:
-        etf_stocks = soup.find_all("div", class_="ticker-container svelte-1pws7a4 enforceMaxWidth", limit=6)
+        etf_stocks = soup.find_all("div", class_="ticker-container svelte-1pws7a4 enforceMaxWidth")
         stocks = parse_etfs(etf_stocks)
 
     # If stocks is empty, the symbol is probably invalid
-    if len(stocks) == 0:
+    if not stocks:
         raise HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
     return stocks
