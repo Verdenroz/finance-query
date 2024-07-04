@@ -12,7 +12,9 @@ router = APIRouter()
             summary="Returns historical data for a stock",
             response_model=TimeSeries,
             description="Get the latest US indices data.",
-            dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
+            dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
+            response_model_exclude_none=True
+            )
 async def get_time_series(
         response: Response,
         symbol: str = Query(..., description="The symbol of the stock to get historical data for."),
@@ -21,15 +23,13 @@ async def get_time_series(
 ):
     response.headers["Access-Control-Allow-Origin"] = "*"
     # Validate the combination of time period and interval
-    if (interval in [Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES] and time not in
-            [TimePeriod.DAY,
-             TimePeriod.FIVE_DAYS,
-             TimePeriod.ONE_MONTH]):
-        raise HTTPException(status_code=400, detail="If interval is 15m or 30m, time period must be 1mo, 5d, or 1d")
+    if (interval in [Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES] and
+            time not in [TimePeriod.DAY, TimePeriod.FIVE_DAYS, TimePeriod.SEVEN_DAYS, TimePeriod.ONE_MONTH]):
+        raise HTTPException(status_code=400, detail="If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less")
 
-    if interval == Interval.ONE_HOUR and time not in [TimePeriod.DAY, TimePeriod.FIVE_DAYS, TimePeriod.ONE_MONTH,
-                                                      TimePeriod.THREE_MONTHS, TimePeriod.SIX_MONTHS, TimePeriod.YTD,
-                                                      TimePeriod.YEAR]:
+    if interval == Interval.ONE_HOUR and time not in [TimePeriod.DAY, TimePeriod.FIVE_DAYS, TimePeriod.SEVEN_DAYS,
+                                                      TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS, TimePeriod.SIX_MONTHS,
+                                                      TimePeriod.YTD, TimePeriod.YEAR]:
         raise HTTPException(status_code=400, detail="If interval is 1h, time period must be 1Y or less")
 
     return await get_historical(symbol, time, interval)

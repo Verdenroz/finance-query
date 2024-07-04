@@ -18,10 +18,10 @@ from src.utils import cache
 async def get_historical(symbol: str, time: TimePeriod, interval: Interval):
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
-        data = stock.history(period=time.value, interval=interval.value, adj_ohlc=True)
+        data = stock.history(period=time.value, interval=interval.value)
 
-        if interval in [Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES,
-                        Interval.ONE_HOUR]:
+        if interval in [Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES,
+                        Interval.THIRTY_MINUTES, Interval.ONE_HOUR]:
             # Reset the index
             data.reset_index(inplace=True)
 
@@ -51,7 +51,8 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval):
                 open=round(Decimal(row['open']), 2),
                 high=round(Decimal(row['high']), 2),
                 low=round(Decimal(row['low']), 2),
-                adj_close=round(Decimal(row['close']), 2),
+                close=round(Decimal(row['close']), 2),
+                adj_close=round(Decimal(row['adjclose']), 2) if 'adjclose' in data.columns else None,
                 volume=int(row['volume'])
             )
         return TimeSeries(history=data_dict)
@@ -67,7 +68,7 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval):
 async def get_historical_quotes(symbol: str, timePeriod: TimePeriod, interval: Interval) -> List[Quote]:
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
-        data = stock.history(period=timePeriod.value, interval=interval.value, adj_ohlc=True)
+        data = stock.history(period=timePeriod.value, interval=interval.value)
         data = data.sort_index(ascending=False)
         quotes = []
         for _, row in data.iterrows():

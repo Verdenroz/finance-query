@@ -38,12 +38,13 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 ```
   GET /v1/historical
 ```
+***Minutes intervals are available up to 1mo    -   1h interval available up to 1Y***
 
-| Query Parameter | Type     | Description                       |
-| :-------- | :------- | :-------------------------------- |
-| `symbol`  | `string` | **Required**. The symbol of the stock |
-| `time` | `string` | **Required**. Time period: (1d, 5d, 1mo, 3mo, 6mo, YTD, 1Y, 5Y, 10Y, max) |
-| `interval`  |`string` | **Required**. Interval: between data points (15m, 30m, 1h, 1d, 1wk, 1mo, 3mo) |
+| Query Parameter | Type     | Description                                                                           |
+| :-------- | :------- |:--------------------------------------------------------------------------------------|
+| `symbol`  | `string` | **Required**. The symbol of the stock                                                 |
+| `time` | `string` | **Required**. Time period: (1d, 5d, 7d, 1mo, 3mo, 6mo, YTD, 1Y, 5Y, 10Y, max)         |
+| `interval`  |`string` | **Required**. Interval: between data points (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo) |
 
 #### Get technical indicators
 

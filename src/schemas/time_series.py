@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import Optional
 
 from pydantic import BaseModel, Field, AliasChoices
 from decimal import Decimal
@@ -9,6 +10,7 @@ from typing_extensions import Dict
 class TimePeriod(Enum):
     DAY = "1d"
     FIVE_DAYS = "5d"
+    SEVEN_DAYS = "7d"
     ONE_MONTH = "1mo"
     THREE_MONTHS = "3mo"
     SIX_MONTHS = "6mo"
@@ -20,6 +22,8 @@ class TimePeriod(Enum):
 
 
 class Interval(Enum):
+    ONE_MINUTE = "1m"
+    FIVE_MINUTES = "5m"
     FIFTEEN_MINUTES = "15m"
     THIRTY_MINUTES = "30m"
     ONE_HOUR = "1h"
@@ -45,8 +49,13 @@ class HistoricalData(BaseModel):
         example=145.00,
         description="Lowest price"
     )
-    adj_close: Decimal = Field(
+    close: Decimal = Field(
         default=...,
+        example=145.00,
+        description="Closing price",
+    )
+    adj_close: Optional[Decimal] = Field(
+        default=None,
         example=145.00,
         description="Adjusted closing price",
         serialization_alias="adjClose")
