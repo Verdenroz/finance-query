@@ -30,7 +30,7 @@ class IndicatorData(BaseModel):
 
 class SMAData(IndicatorData):
     value: Decimal = Field(
-        ..., example=30.00, description="Simple Moving Average value", serialization_alias="SMA"
+        ..., examples=[30.00], description="Simple Moving Average value", serialization_alias="SMA"
     )
 
     def to_dict(self):
@@ -42,7 +42,7 @@ class SMAData(IndicatorData):
 
 class EMAData(IndicatorData):
     value: Decimal = Field(
-        ..., example=30.00, description="Exponential Moving Average value", serialization_alias="EMA"
+        ..., examples=[30.00], description="Exponential Moving Average value", serialization_alias="EMA"
     )
 
     def to_dict(self):
@@ -54,7 +54,7 @@ class EMAData(IndicatorData):
 
 class WMAData(IndicatorData):
     value: Decimal = Field(
-        ..., example=30.00, description="Weighted Moving Average value", serialization_alias="WMA"
+        ..., examples=[30.00], description="Weighted Moving Average value", serialization_alias="WMA"
     )
 
     def to_dict(self):
@@ -66,7 +66,7 @@ class WMAData(IndicatorData):
 
 class VWMAData(IndicatorData):
     value: Decimal = Field(
-        ..., example=30.00, description="Volume Weighted Moving Average value", serialization_alias="VWMA"
+        ..., examples=[30.00], description="Volume Weighted Moving Average value", serialization_alias="VWMA"
     )
 
     def to_dict(self):
@@ -78,7 +78,7 @@ class VWMAData(IndicatorData):
 
 class RSIData(IndicatorData):
     value: Decimal = Field(
-        ..., example=30.00, description="Relative Strength Index value", serialization_alias="RSI"
+        ..., examples=[30.00], description="Relative Strength Index value", serialization_alias="RSI"
     )
 
     def to_dict(self):
@@ -90,10 +90,10 @@ class RSIData(IndicatorData):
 
 class SRSIData(IndicatorData):
     k: Decimal = Field(
-        ..., example=30.00, description="Stochastic RSI value", serialization_alias="%K"
+        ..., examples=[30.00], description="Stochastic RSI value", serialization_alias="%K"
     )
     d: Decimal = Field(
-        ..., example=30.00, description="Stochastic RSI Signal value", serialization_alias="%D"
+        ..., examples=[30.00], description="Stochastic RSI Signal value", serialization_alias="%D"
     )
 
     def to_dict(self):
@@ -106,10 +106,10 @@ class SRSIData(IndicatorData):
 
 class STOCHData(IndicatorData):
     k: Decimal = Field(
-        ..., example=30.00, description="Stochastic Oscillator %K value", serialization_alias="%K"
+        ..., examples=[30.00], description="Stochastic Oscillator %K value", serialization_alias="%K"
     )
     d: Decimal = Field(
-        ..., example=30.00, description="Stochastic Oscillator %D value", serialization_alias="%D"
+        ..., examples=[30.00], description="Stochastic Oscillator %D value", serialization_alias="%D"
     )
 
     def to_dict(self):
@@ -122,7 +122,7 @@ class STOCHData(IndicatorData):
 
 class CCIData(IndicatorData):
     value: Decimal = Field(
-        ..., example=30.00, description="Commodity Channel Index value", serialization_alias="CCI"
+        ..., examples=[30.00], description="Commodity Channel Index value", serialization_alias="CCI"
     )
 
     def to_dict(self):
@@ -134,10 +134,10 @@ class CCIData(IndicatorData):
 
 class MACDData(IndicatorData):
     value: Decimal = Field(
-        ..., example=30.00, description="Moving Average Convergence Divergence value", serialization_alias="MACD"
+        ..., examples=[30.00], description="Moving Average Convergence Divergence value", serialization_alias="MACD"
     )
     signal: Decimal = Field(
-        ..., example=30.00, description="MACD Signal value", serialization_alias="Signal"
+        ..., examples=[30.00], description="MACD Signal value", serialization_alias="Signal"
     )
 
     def to_dict(self):
@@ -150,7 +150,7 @@ class MACDData(IndicatorData):
 
 class ADXData(IndicatorData):
     value: Decimal = Field(
-        ..., example=30.00, description="Average Directional Index value", serialization_alias="ADX"
+        ..., examples=[30.00], description="Average Directional Index value", serialization_alias="ADX"
     )
 
     def to_dict(self):
@@ -162,10 +162,10 @@ class ADXData(IndicatorData):
 
 class AROONData(IndicatorData):
     aroon_up: Decimal = Field(
-        ..., example=30.00, description="Aroon Up value", serialization_alias="Aroon Up"
+        ..., examples=[30.00], description="Aroon Up value", serialization_alias="Aroon Up"
     )
     aroon_down: Decimal = Field(
-        ..., example=30.00, description="Aroon Down value", serialization_alias="Aroon Down"
+        ..., examples=[30.00], description="Aroon Down value", serialization_alias="Aroon Down"
     )
 
     def to_dict(self):
@@ -178,10 +178,10 @@ class AROONData(IndicatorData):
 
 class BBANDSData(IndicatorData):
     upper_band: Decimal = Field(
-        ..., example=30.00, description="Upper Bollinger Band value", serialization_alias="Upper Band"
+        ..., examples=[30.00], description="Upper Bollinger Band value", serialization_alias="Upper Band"
     )
     lower_band: Decimal = Field(
-        ..., example=30.00, description="Lower Bollinger Band value", serialization_alias="Lower Band"
+        ..., examples=[30.00], description="Lower Bollinger Band value", serialization_alias="Lower Band"
     )
 
     def to_dict(self):
@@ -193,7 +193,7 @@ class BBANDSData(IndicatorData):
 
 
 class OBVData(IndicatorData):
-    value: Decimal = Field(..., example=30.00, description="On Balance Volume value", serialization_alias="OBV")
+    value: Decimal = Field(..., examples=[30.00], description="On Balance Volume value", serialization_alias="OBV")
 
     def to_dict(self):
         return {
@@ -203,8 +203,8 @@ class OBVData(IndicatorData):
 
 
 class SuperTrendData(IndicatorData):
-    value: Decimal = Field(..., example=30.00, description="Super Trend value", serialization_alias="Super Trend")
-    trend: str = Field(..., example="UP", description="Trend direction", serialization_alias="Trend")
+    value: Decimal = Field(..., examples=[30.00], description="Super Trend value", serialization_alias="Super Trend")
+    trend: str = Field(..., examples=["UP"], description="Trend direction", serialization_alias="Trend")
 
     def to_dict(self):
         return {
@@ -216,19 +216,19 @@ class SuperTrendData(IndicatorData):
 
 class IchimokuData(IndicatorData):
     tenkan_sen: Optional[Decimal] = Field(
-        None, example=30.00, description="Tenkan-sen value", serialization_alias="Conversion Line"
+        None, examples=[30.00], description="Tenkan-sen value", serialization_alias="Conversion Line"
     )
     kijun_sen: Optional[Decimal] = Field(
-        None, example=30.00, description="Kijun-sen value", serialization_alias="Base Line"
+        None, examples=[30.00], description="Kijun-sen value", serialization_alias="Base Line"
     )
     chikou_span: Optional[Decimal] = Field(
-        None, example=30.00, description="Chikou Span value", serialization_alias="Lagging Span"
+        None, examples=[30.00], description="Chikou Span value", serialization_alias="Lagging Span"
     )
     senkou_span_a: Optional[Decimal] = Field(
-        None, example=30.00, description="Senkou Span A value", serialization_alias="Leading Span A"
+        None, examples=[30.00], description="Senkou Span A value", serialization_alias="Leading Span A"
     )
     senkou_span_b: Optional[Decimal] = Field(
-        None, example=30.00, description="Senkou Span B value", serialization_alias="Leading Span B"
+        None, examples=[30.00], description="Senkou Span B value", serialization_alias="Leading Span B"
     )
 
     def to_dict(self):
@@ -245,18 +245,18 @@ class IchimokuData(IndicatorData):
 class Analysis(BaseModel):
     type: Indicator = Field(
         default=...,
-        example="SMA",
+        examples=["SMA"],
         description="The type of technical indicator"
     )
     indicators: Dict[date, SerializeAsAny[IndicatorData]] = Field(
         default=...,
         serialization_alias="Technical Analysis",
         validation_alias=AliasChoices("Technical Analysis", "indicators"),
-        example={
+        examples=[{
             "2021-07-09": {
                 "value": 30.00,
             }
-        },
+        }],
         description="Dates with indicators for the stock"
     )
 
@@ -273,7 +273,6 @@ class Analysis(BaseModel):
 class SummaryAnalysis(BaseModel):
     symbol: str = Field(
         default=...,
-        example="AAPL",
         description="Stock symbol"
     )
     sma_10: Optional[float] = Field(
