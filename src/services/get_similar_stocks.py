@@ -20,19 +20,19 @@ def parse_stocks(stocks_divs, symbol):
         if div_symbol.lower() == symbol.lower():
             continue
 
-        name_element = div.find("div", class_="longName svelte-15b2o7n")
+        name_element = div.find("div", class_="longName yf-15b2o7n")
         if not name_element:
             continue
         name = name_element.text
 
-        price_element = div.find("span", class_="price svelte-15b2o7n")
+        price_element = div.find("span", class_="price yf-15b2o7n")
         if not price_element:
             continue
         price_text = price_element.text.replace(',', '')
         price = Decimal(price_text)
 
-        change_element = (div.find("span", class_="positive svelte-15b2o7n") or
-                          div.find("span", class_="negative svelte-15b2o7n"))
+        change_element = (div.find("span", class_="positive yf-15b2o7n") or
+                          div.find("span", class_="negative yf-15b2o7n"))
         if not change_element:
             continue
         percent_change = change_element.text
@@ -53,12 +53,12 @@ def parse_stocks(stocks_divs, symbol):
 def parse_etfs(etf_divs):
     etfs = []
     for div in etf_divs:
-        symbol_element = div.find("span", class_="symbol svelte-1nwjuc")
+        symbol_element = div.find("span", class_="symbol yf-18x7c3e")
         if not symbol_element:
             continue
         symbol = symbol_element.text
 
-        name_element = div.find("span", class_="tw-text-sm svelte-1nwjuc longName")
+        name_element = div.find("span", class_="tw-text-sm yf-18x7c3e longName")
         if not name_element:
             continue
         name = name_element.text
@@ -69,8 +69,8 @@ def parse_etfs(etf_divs):
         price_text = price_element.text.replace(',', '')
         price = Decimal(price_text)
 
-        change_element = (div.find("span", class_="txt-negative svelte-1pws7a4")
-                          or div.find("span", class_="txt-positive svelte-1pws7a4"))
+        change_element = (div.find("span", class_="txt-negative yf-1pws7a4")
+                          or div.find("span", class_="txt-positive yf-1pws7a4"))
         if not change_element:
             continue
         percent_change = change_element.text
@@ -94,12 +94,12 @@ async def scrape_similar_stocks(symbol: str) -> List[SimpleQuote]:
         html = session.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
 
-    similar_stocks = soup.find_all("div", class_="main-div svelte-15b2o7n")
+    similar_stocks = soup.find_all("div", class_="main-div yf-15b2o7n")
     stocks = parse_stocks(similar_stocks, symbol)
 
     # If similar_stocks is empty, try to scrape ETF data
     if not stocks:
-        etf_stocks = soup.find_all("div", class_="ticker-container svelte-1pws7a4 enforceMaxWidth")
+        etf_stocks = soup.find_all("div", class_="ticker-container yf-1pws7a4 enforceMaxWidth")
         stocks = parse_etfs(etf_stocks)
 
     # If stocks is empty, the symbol is probably invalid
