@@ -156,7 +156,7 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
         return dec_value
 
     async def extract_sector_and_industry(sector_soup: BeautifulSoup):
-        info_sections = sector_soup.find_all("div", class_="infoSection svelte-1xu2f9r")
+        info_sections = sector_soup.find_all("div", class_="infoSection yf-1xu2f9r")
 
         curr_sector = None
         curr_industry = None
@@ -366,7 +366,7 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient) -> SimpleQuote:
     parse_only = SoupStrainer(['h1', 'fin-streamer'])
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-    symbol_name_element = soup.select_one('h1.svelte-3a2v0c')
+    symbol_name_element = soup.select_one('h1.yf-3a2v0c')
     if not symbol_name_element:
         return await get_simple_quote_from_yahooquery(symbol)
 
