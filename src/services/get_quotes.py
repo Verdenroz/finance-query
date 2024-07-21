@@ -178,7 +178,7 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
     parse_only = SoupStrainer(['h1', 'div', 'card'])
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-    symbol_name_element = soup.select_one('h1.svelte-3a2v0c')
+    symbol_name_element = soup.select_one('h1.yf-3a2v0c')
     if not symbol_name_element:
         return await get_quote_from_yahooquery(symbol)
 
@@ -203,7 +203,7 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
     else:
         post_price = round(Decimal(post_price_element["data-value"]), 2)
 
-    list_items = soup.select('li.svelte-tx3nkj')
+    list_items = soup.select('li.yf-tx3nkj')
 
     data = {}
 
@@ -244,9 +244,9 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
     avg_volume = data.get("Avg. Volume")
 
     # About the company
-    about = soup.find('p', class_='svelte-1xu2f9r').text
+    about = soup.find('p', class_='yf-1xu2f9r').text
     # Logo
-    logo_element = soup.find('a', class_='subtle-link fin-size-medium svelte-wdkn18')
+    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-13p9sh2')
     logo_url = logo_element['href'] if logo_element else None
 
     # Funds
@@ -265,10 +265,10 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
     (sector, industry), logo = await asyncio.gather(sector_and_industry_future, logo_future)
 
     # Scrape performance:
-    returns = soup.find_all('section', 'card small svelte-13ievhf bdr sticky')
+    returns = soup.find_all('section', 'card small yf-13ievhf bdr sticky')
     data = []
     for changes in returns:
-        perf_div = changes.find('div', class_=['perf positive svelte-12wncuy', 'perf negative svelte-12wncuy'])
+        perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
         if perf_div:
             sign = '+' if 'positive' in perf_div['class'] else '-'
             data.append(sign + perf_div.text.strip())
