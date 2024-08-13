@@ -43,32 +43,33 @@ async def get_quote_from_yahooquery(symbol: str) -> Quote:
     ticker_calendar = ticker.calendar_events
     if not quote or symbol not in quote:
         raise HTTPException(status_code=404, detail="Symbol not found")
+
     name = quote[symbol]['longName']
     regular_price = quote[symbol]['regularMarketPrice']
-    regular_change = quote[symbol]['regularMarketChange']
-    regular_percent_change = quote[symbol]['regularMarketChangePercent']
-    post_price = quote[symbol]['postMarketPrice'] if 'postMarketPrice' in quote[symbol] else None
-    open_price = quote[symbol]['regularMarketOpen']
-    high = quote[symbol]['regularMarketDayHigh']
-    low = quote[symbol]['regularMarketDayLow']
-    year_high = quote[symbol]['fiftyTwoWeekHigh']
-    year_low = quote[symbol]['fiftyTwoWeekLow']
-    volume = quote[symbol]['regularMarketVolume']
-    avg_volume = quote[symbol]['averageDailyVolume10Day']
-    market_cap = quote[symbol]['marketCap'] if 'marketCap' in quote[symbol] else None
-    pe = quote[symbol]['trailingPE'] if 'trailingPE' in quote[symbol] else None
-    eps = quote[symbol]['trailingEps'] if 'trailingEps' in quote[symbol] else None
+    regular_change = f"{quote[symbol]['regularMarketChange']:.2f}"
+    regular_percent_change = f"{quote[symbol]['regularMarketChangePercent']:.2f}%"
+    post_price = quote[symbol].get('postMarketPrice', None)
+    open_price = quote[symbol].get('regularMarketOpen', None)
+    high = quote[symbol].get('regularMarketDayHigh', None)
+    low = quote[symbol].get('regularMarketDayLow', None)
+    year_high = quote[symbol].get('fiftyTwoWeekHigh', None)
+    year_low = quote[symbol].get('fiftyTwoWeekLow', None)
+    volume = quote[symbol].get('regularMarketVolume', None)
+    avg_volume = quote[symbol].get('averageDailyVolume10Day', None)
+    market_cap = quote[symbol].get('marketCap', None)
+    pe = quote[symbol].get('trailingPE', None)
+    eps = quote[symbol].get('trailingEps', None)
     earnings_date = ticker_calendar[symbol]['earnings']['earningsDate'] if 'earnings' in ticker_calendar[
         symbol] and 'earningsDate' in ticker_calendar[symbol]['earnings'] else None
-    dividend = quote[symbol]['dividendRate'] if 'dividendRate' in quote[symbol] else None
-    yield_percent = quote[symbol]['dividendYield'] if 'dividendYield' in quote[symbol] else None
+    dividend = str(quote[symbol].get('dividendRate', None))
+    yield_percent = quote[symbol].get('dividendYield', None)
     ex_dividend = ticker_calendar[symbol]['exDividendDate'] if 'exDividendDate' in ticker_calendar[symbol] else None
-    net_assets = quote[symbol]['netAssets'] if 'netAssets' in quote[symbol] else None
-    expense_ratio = quote[symbol]['annualReportExpenseRatio'] if 'annualReportExpenseRatio' in quote[symbol] else None
-    sector = profile[symbol]['sector'] if 'sector' in profile[symbol] else None
-    industry = profile[symbol]['industry'] if 'industry' in profile[symbol] else None
-    about = profile[symbol]['longBusinessSummary'] if 'longBusinessSummary' in profile[symbol] else None
-    website = profile[symbol]['website'] if 'website' in profile[symbol] else None
+    net_assets = quote[symbol].get('netAssets', None)
+    expense_ratio = quote[symbol].get('annualReportExpenseRatio', None)
+    sector = profile[symbol].get('sector', None)
+    industry = profile[symbol].get('industry', None)
+    about = profile[symbol].get('longBusinessSummary', None)
+    website = profile[symbol].get('website', None)
     logo = await get_logo(website) if website else None
 
     def format_value(value: float) -> str:
@@ -97,8 +98,6 @@ async def get_quote_from_yahooquery(symbol: str) -> Quote:
         return date.strftime("%b %d, %Y")
 
     # Convert float values to string
-    regular_change = str(round(regular_change, 2)) if regular_change else None
-    regular_percent_change = str(round(regular_percent_change, 2)) + "%" if regular_percent_change else None
     pe = round(pe, 2) if pe else None
     yield_percent = str(yield_percent) + "%" if yield_percent else None
     net_assets = format_value(net_assets) if net_assets else None
@@ -190,11 +189,9 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
     regular_percent_change_value = round(
         Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
 
-    # Add + or - sign and % for percent_change
-    regular_change = '+' + str(regular_change_value) if regular_change_value > 0 else str(regular_change_value)
-    regular_percent_change = '+' + str(
-        regular_percent_change_value) + '%' if regular_percent_change_value > 0 else str(
-        regular_percent_change_value) + '%'
+    # Add + or - sign and % for percent_change using f-strings
+    regular_change = f"{regular_change_value:+.2f}"
+    regular_percent_change = f"{regular_percent_change_value:+.2f}%"
 
     # After hours price
     post_price_element = soup.find("fin-streamer", {"data-testid": "qsp-post-price"})
@@ -240,8 +237,8 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
         year_low, year_high = [Decimal(x.replace(',', '')) for x in fifty_two_week_range.split(' - ')]
 
     # Volume
-    volume = data.get("Volume")
-    avg_volume = data.get("Avg. Volume")
+    volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
+    avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
 
     # About the company
     about = soup.find('p', class_='yf-1xu2f9r').text
@@ -342,8 +339,8 @@ async def get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
         raise HTTPException(status_code=404, detail="Symbol not found")
     name = quote[symbol]['longName']
     regular_price = quote[symbol]['regularMarketPrice']
-    regular_change = quote[symbol]['regularMarketChange']
-    regular_percent_change = quote[symbol]['regularMarketChangePercent']
+    regular_change = f"{quote[symbol]['regularMarketChange']:.2f}"
+    regular_percent_change = f"{quote[symbol]['regularMarketChangePercent']:.2f}%"
 
     return SimpleQuote(
         symbol=symbol.upper(),
@@ -363,7 +360,7 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient) -> SimpleQuote:
     url = 'https://finance.yahoo.com/quote/' + symbol + "/"
     html = await fetch(url, client)
 
-    parse_only = SoupStrainer(['h1', 'fin-streamer'])
+    parse_only = SoupStrainer(['h1', 'fin-streamer', 'a'])
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
     symbol_name_element = soup.select_one('h1.yf-3a2v0c')
@@ -384,12 +381,17 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient) -> SimpleQuote:
         regular_percent_change_value) + '%' if regular_percent_change_value >= 0 else str(
         regular_percent_change_value) + '%'
 
+    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-13p9sh2')
+    logo_url = logo_element['href'] if logo_element else None
+    logo = await get_logo(logo_url)
+
     return SimpleQuote(
         symbol=symbol.upper(),
         name=name,
         price=regular_price,
         change=regular_change,
-        percent_change=regular_percent_change
+        percent_change=regular_percent_change,
+        logo=logo
     )
 
 

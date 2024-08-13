@@ -1,5 +1,4 @@
 from decimal import Decimal
-from typing import Union
 
 from pydantic import BaseModel, Field, AliasChoices
 from typing_extensions import Optional
@@ -28,12 +27,12 @@ class Quote(BaseModel):
         serialization_alias="afterHoursPrice",
         validation_alias=AliasChoices("afterHoursPrice", "after_hours_price")
     )
-    change: Union[Decimal, str] = Field(
+    change: str = Field(
         default=...,
         examples=["+1.00"],
         description="Change in the stock price"
     )
-    percent_change: Union[Decimal, str] = Field(
+    percent_change: str = Field(
         default=...,
         examples=["+0.69%"],
         description="Percentage change in the stock price",
@@ -69,13 +68,13 @@ class Quote(BaseModel):
         serialization_alias="yearLow",
         validation_alias=AliasChoices("yearLow", "year_low")
     )
-    volume: Optional[Union[int, str]] = Field(
+    volume: Optional[int] = Field(
         default=None,
-        examples=["1000000"],
+        examples=[1000000],
         description="Volume of the stock")
-    avg_volume: Optional[Union[int, str]] = Field(
+    avg_volume: Optional[int] = Field(
         default=None,
-        examples=["2000000"],
+        examples=[2000000],
         description="Average volume of the stock",
         serialization_alias="avgVolume",
         validation_alias=AliasChoices("avgVolume", "avg_volume")
@@ -102,7 +101,7 @@ class Quote(BaseModel):
         examples=[4.50],
         description="Earnings per share of the stock"
     )
-    dividend: Optional[Union[Decimal, str]] = Field(
+    dividend: Optional[str] = Field(
         default=None,
         examples=[0.82],
         description="Dividend yield of the stock"
@@ -179,7 +178,7 @@ class Quote(BaseModel):
         serialization_alias="earningsDate",
         validation_alias=AliasChoices("earningsDate", "earnings_date")
     )
-    last_dividend: Optional[Union[Decimal, str]] = Field(
+    last_dividend: Optional[str] = Field(
         default=None,
         examples=["0.82"],
         description="Last dividend of the fund",
