@@ -13,6 +13,7 @@ router = APIRouter()
             description="Get relevant stock news for a single stock or general market news.",
             response_model=List[News],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
+            tags=["News"],
             responses={400: {"description": "Symbol parameter is required"}})
 async def get_news(
         response: Response,

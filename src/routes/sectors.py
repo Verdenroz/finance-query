@@ -13,6 +13,7 @@ router = APIRouter()
             summary="Get all sectors",
             description="Get all sectors available in the stock market",
             response_description="Summary of all sectors",
+            tags=["Sectors"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             )
 async def sector(

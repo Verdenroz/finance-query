@@ -12,6 +12,7 @@ router = APIRouter()
             summary="Returns US indices",
             description="Get the latest US indices data.",
             response_model=List[Index],
+            tags=["Indices"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 async def get_indices(response: Response):
     response.headers["Access-Control-Allow-Origin"] = "*"

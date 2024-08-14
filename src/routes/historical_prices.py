@@ -13,6 +13,7 @@ router = APIRouter()
             response_model=TimeSeries,
             description="Get the latest US indices data.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
+            tags=["Historical Data"],
             response_model_exclude_none=True
             )
 async def get_time_series(

@@ -33,6 +33,7 @@ IndicatorFunctions = {
             summary="Returns technical indicators for a stock",
             response_model=Analysis,
             description="Get requested technical indicators for a stock.",
+            tags=["Technical Indicators"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 async def get_technical_indicators(
         response: Response,
@@ -90,6 +91,7 @@ async def get_technical_indicators(
             summary="Returns technical indicators for a stock",
             description="Get requested technical indicators for a stock."
                         "per minute.",
+            tags=["Analysis"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 async def get_technical_analysis(
         response: Response,

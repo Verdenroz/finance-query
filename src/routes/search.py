@@ -14,6 +14,7 @@ router = APIRouter()
             description="Search for a stock by name or symbol.",
             response_model=List[SearchResult],
             response_description="List of search results",
+            tags=["Search"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Query parameter is required"}})
 async def search(response: Response, query: str, type: Optional[Type] = None):

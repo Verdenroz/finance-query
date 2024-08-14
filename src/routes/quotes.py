@@ -13,6 +13,7 @@ router = APIRouter()
             description="Get relevant stock information for multiple stocks.",
             response_model=List[Quote],
             response_model_exclude_none=True,
+            tags=["Quotes"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbols parameter is required"}})
 async def get_quotes(
@@ -30,6 +31,7 @@ async def get_quotes(
             summary="Returns summary quote data of a single stock",
             description="Get relevant stock information for a single stock.",
             response_model=List[SimpleQuote],
+            tags=["Quotes"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbol parameter is required"}})
 async def get_simple_quote(
