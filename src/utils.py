@@ -11,9 +11,10 @@ import redis
 from pydantic import BaseModel
 from fastapi import Response
 
-from src.schemas import TimeSeries, Quote, SimpleQuote, MarketMover, News, Index, Sector
+from src.schemas import TimeSeries, Quote, SimpleQuote, MarketMover, News, Index, MarketSector
 from src.schemas.analysis import Analysis, SMAData, Indicator, EMAData, WMAData, VWMAData, RSIData, \
     SRSIData, STOCHData, CCIData, MACDData, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData
+from src.schemas.sector import MarketSectorDetails
 
 r = redis.Redis(
     host=os.environ['REDIS_HOST'],
@@ -36,7 +37,7 @@ def handle_data(obj):
     if isinstance(obj, decimal.Decimal):
         return float(obj)
     elif isinstance(obj, BaseModel):
-        return obj.dict()
+        return obj.model_dump()
     elif hasattr(obj, 'to_dict'):
         return obj.to_dict()
     raise TypeError
@@ -121,11 +122,11 @@ def cache(expire, after_market_expire=None):
             if isinstance(result, dict):
                 data = gzip.compress(orjson.dumps(result, default=handle_data))
                 r.set(key, data, ex=expire_time)
-            elif isinstance(result, TimeSeries):
-                r.set(key, gzip.compress(result.json().encode()), ex=expire_time)
+            elif isinstance(result, (TimeSeries, MarketSectorDetails)):
+                r.set(key, gzip.compress(result.model_dump_json().encode()), ex=expire_time)
             else:
                 if (isinstance(result, list) and result
-                        and isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, Sector))):
+                        and isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, MarketSector))):
                     result_list = [item.dict() for item in result]
                 else:
                     result_list = result

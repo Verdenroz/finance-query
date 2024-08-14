@@ -1,7 +1,26 @@
+from enum import Enum
+from typing import List
+
 from pydantic import BaseModel, Field
 
+from src.schemas import SimpleQuote
 
-class Sector(BaseModel):
+
+class Sector(Enum):
+    BASIC_MATERIALS = "Basic Materials"
+    COMMUNICATION = "Communication Services"
+    CONSUMER_CYCLICAL = "Consumer Cyclical"
+    CONSUMER_DEFENSIVE = "Consumer Defensive"
+    ENERGY = "Energy"
+    FINANCIAL_SERVICES = "Financial Services"
+    HEALTHCARE = "Healthcare"
+    INDUSTRIALS = "Industrials"
+    REAL_ESTATE = "Real Estate"
+    TECHNOLOGY = "Technology"
+    UTILITIES = "Utilities"
+
+
+class MarketSector(BaseModel):
     sector: str = Field(
         default=...,
         title="Sector name",
@@ -31,6 +50,43 @@ class Sector(BaseModel):
         default=...,
         title="Five year return",
         serialization_alias="fiveYearReturn"
+    )
+
+    def dict(self, *args, **kwargs):
+        base_dict = super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
+        return {k: v for k, v in base_dict.items() if v is not None}
+
+
+class MarketSectorDetails(MarketSector):
+    market_cap: str = Field(
+        default=...,
+        title="Market capitalization",
+        serialization_alias="marketCap"
+    )
+    market_weight: str = Field(
+        default=...,
+        title="Market weight",
+        serialization_alias="marketWeight"
+    ),
+    industries: int = Field(
+        default=...,
+        title="Number of industries",
+        serialization_alias="industries"
+    )
+    companies: int = Field(
+        default=...,
+        title="Number of companies",
+        serialization_alias="companies"
+    )
+    top_industries: List[str] = Field(
+        default=...,
+        title="Top industries in the sector",
+        serialization_alias="topIndustries"
+    )
+    top_companies: List[SimpleQuote] = Field(
+        default=...,
+        title="Top companies in the sector",
+        serialization_alias="topCompanies"
     )
 
     def dict(self, *args, **kwargs):
