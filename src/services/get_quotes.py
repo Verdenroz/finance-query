@@ -318,11 +318,12 @@ async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
     )
 
 
-@cache(30, after_market_expire=600)
-async def scrape_quotes(symbols: List[str]):
+@cache(10, after_market_expire=60)
+async def scrape_quotes(symbols: List[str]) -> List[Quote]:
     async with AsyncClient(http2=True, max_redirects=5) as client:
         tasks = [scrape_quote(symbol, client) for symbol in symbols]
-        quotes = await asyncio.gather(*tasks)
+        results = await asyncio.gather(*tasks)
+        quotes: List[Quote] = list(results)
     return quotes
 
 
@@ -395,7 +396,7 @@ async def scrape_simple_quote(symbol: str, client: AsyncClient) -> SimpleQuote:
     )
 
 
-@cache(30, after_market_expire=600)
+@cache(10, after_market_expire=60)
 async def scrape_simple_quotes(symbols: List[str]):
     async with AsyncClient(http2=True, max_redirects=5) as client:
         quotes = await asyncio.gather(*(scrape_simple_quote(symbol, client) for symbol in symbols))

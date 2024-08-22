@@ -43,7 +43,7 @@ async def parse_news(html: str) -> List[News]:
     return news_list
 
 
-@cache(900)
+@cache(300)
 async def scrape_news_for_quote(symbol: str) -> List[News]:
     urls = [
         'https://stockanalysis.com/stocks/' + symbol,
