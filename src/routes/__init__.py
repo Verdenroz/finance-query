@@ -7,3 +7,4 @@ from .finance_news import router as finance_news_router
 from .indicators import router as indicators_router
 from .search import router as search_router
 from .sectors import router as sectors_router
+from .sockets import router as sockets_router

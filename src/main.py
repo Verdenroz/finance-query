@@ -26,11 +26,11 @@ from mangum import Mangum
 
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_stocks_router, finance_news_router, indicators_router, search_router,
-                        sectors_router)
+                        sectors_router, sockets_router)
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.1.0",
+    version="1.2.0",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."
@@ -69,5 +69,7 @@ app.include_router(finance_news_router, prefix="/v1")
 app.include_router(search_router, prefix="/v1")
 
 app.include_router(sectors_router, prefix="/v1")
+
+app.include_router(sockets_router)
 
 handler = Mangum(app)
