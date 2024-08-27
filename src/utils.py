@@ -7,7 +7,8 @@ from datetime import datetime, date
 
 import orjson
 import pytz
-import redis
+from dotenv import load_dotenv
+from redis import asyncio as aioredis
 from pydantic import BaseModel
 from fastapi import Response
 
@@ -16,10 +17,11 @@ from src.schemas.analysis import Analysis, SMAData, Indicator, EMAData, WMAData,
     SRSIData, STOCHData, CCIData, MACDData, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData
 from src.schemas.sector import MarketSectorDetails
 
-r = redis.Redis(
+load_dotenv()
+
+r = aioredis.Redis(
     host=os.environ['REDIS_HOST'],
-    port=os.environ['REDIS_PORT'],
-    db=0,
+    port=int(os.environ['REDIS_PORT']),
     username=os.environ['REDIS_USERNAME'],
     password=os.environ['REDIS_PASSWORD'],
 )
@@ -86,13 +88,13 @@ def cache(expire, after_market_expire=None):
 
             key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}"
 
-            if r.exists(key):
-                if r.type(key) == b'string':
-                    data = gzip.decompress(r.get(key))
+            if await r.exists(key):
+                if await r.type(key) == b'string':
+                    data = gzip.decompress(await r.get(key))
                     result = orjson.loads(data)
-                elif r.type(key) == b'list':
+                elif await r.type(key) == b'list':
                     result_list = []
-                    for item in r.lrange(key, 0, -1):
+                    for item in await r.lrange(key, 0, -1):
                         data = gzip.decompress(item)
                         result_list.append(orjson.loads(data))
                     result = result_list
@@ -121,9 +123,9 @@ def cache(expire, after_market_expire=None):
             # Cache the result in Redis
             if isinstance(result, dict):
                 data = gzip.compress(orjson.dumps(result, default=handle_data))
-                r.set(key, data, ex=expire_time)
+                await r.set(key, data, ex=expire_time)
             elif isinstance(result, (TimeSeries, MarketSectorDetails)):
-                r.set(key, gzip.compress(result.model_dump_json().encode()), ex=expire_time)
+                await r.set(key, gzip.compress(result.model_dump_json().encode()), ex=expire_time)
             else:
                 if (isinstance(result, list) and result
                         and isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, MarketSector))):
@@ -132,8 +134,8 @@ def cache(expire, after_market_expire=None):
                     result_list = result
 
                 for item in result_list:
-                    r.rpush(key, gzip.compress(orjson.dumps(item)))
-                r.expire(key, expire_time)
+                    await r.rpush(key, gzip.compress(orjson.dumps(item)))
+                await r.expire(key, expire_time)
 
             return result
 
