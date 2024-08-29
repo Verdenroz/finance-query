@@ -4,8 +4,9 @@ from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
+from src.schemas import SimpleQuote
 from src.services import scrape_quotes, scrape_similar_stocks, scrape_actives, \
-    scrape_news_for_quote, scrape_losers, scrape_gainers
+    scrape_news_for_quote, scrape_losers, scrape_gainers, scrape_simple_quotes
 from src.services.get_sectors import get_sector_for_symbol, get_sectors
 
 router = APIRouter()
@@ -53,17 +54,38 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
 
 @router.websocket("/ws/quotes")
 async def websocket_quotes(websocket: WebSocket):
+    connection_manager = RedisConnectionManager()
     await websocket.accept()
+    channels = "quotes"  # Default channel name, but will be overwritten by client
+
     try:
-        data = await websocket.receive_text()
-        symbols = list(set(data.upper().replace('"', '').split(',')))
         while True:
-            quotes = await scrape_simple_quotes(symbols)
-            quotes = [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
-            await websocket.send_json(quotes)
-            await asyncio.sleep(5)
+            channel = await websocket.receive_text()
+
+            if websocket not in connection_manager.active_connections.get(channel, []):
+                await connection_manager.connect(websocket, channel)
+
+            symbols = list(set(channel.split(",")))
+            print(symbols)
+
+            result = await scrape_simple_quotes(symbols)
+            formatted_result = [
+                {
+                    "symbol": quote.symbol,
+                    "name": quote.name,
+                    "price": str(quote.price),
+                    "change": quote.change,
+                    "percent_change": quote.percent_change,
+                    "logo": quote.logo
+                } if isinstance(quote, SimpleQuote) else quote
+                for quote in result
+            ]
+            print(formatted_result)
+            await connection_manager.publish(formatted_result, channel)
+
     except WebSocketDisconnect:
-        await websocket.close()
+        for channel in channels:
+            await connection_manager.disconnect(websocket, channel)
 
 
 @router.websocket("/ws/market")

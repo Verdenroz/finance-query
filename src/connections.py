@@ -15,6 +15,7 @@ class RedisConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, List[WebSocket]] = {}
         self.pubsub = r.pubsub()
+        self.task = None
 
     async def connect(self, websocket: WebSocket, channel: str):
         """
@@ -28,7 +29,7 @@ class RedisConnectionManager:
 
         self.active_connections[channel].append(websocket)
 
-        asyncio.create_task(self._listen_to_channel(channel))
+        self.task = asyncio.create_task(self._listen_to_channel(channel))
 
     async def disconnect(self, websocket: WebSocket, channel: str):
         """
@@ -49,11 +50,15 @@ class RedisConnectionManager:
         :return:
         """
         await self.pubsub.subscribe(channel)
-        while True:
-            message = await self.pubsub.get_message()
-            if message and message['type'] == 'message':
-                data = orjson.loads(message['data'])
-                await self._broadcast(channel, data)
+        try:
+            while True:
+                message = await self.pubsub.get_message()
+                if message and message['type'] == 'message':
+                    data = orjson.loads(message['data'])
+                    await self._broadcast(channel, data)
+        except RuntimeError:
+            # When channel name changes, RuntimeError is raised
+            self.task.cancel()
 
     async def _broadcast(self, channel: str, message: dict):
         """
@@ -73,7 +78,7 @@ class RedisConnectionManager:
                 await self.disconnect(client, channel)
 
     @staticmethod
-    async def publish(message: dict, channel: str):
+    async def publish(message: dict | list, channel: str):
         """
         Publishes a message to a Redis channel.
         :param message: the json message to publish
