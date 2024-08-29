@@ -8,6 +8,7 @@ from datetime import datetime, date
 import orjson
 import pytz
 from dotenv import load_dotenv
+from httpx import AsyncClient
 from redis import asyncio as aioredis
 from pydantic import BaseModel
 from fastapi import Response
@@ -83,8 +84,9 @@ def cache(expire, after_market_expire=None):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # Filter out the Response object from args and kwargs
-            filtered_args = [arg for arg in args if not isinstance(arg, Response)]
-            filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, Response)}
+            filtered_args = [arg for arg in args if not isinstance(arg, Response) and not isinstance(arg, AsyncClient)]
+            filtered_kwargs = {k: v for k, v in kwargs.items() if
+                               not isinstance(v, Response) and not isinstance(k, AsyncClient)}
 
             key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}"
 
@@ -124,8 +126,13 @@ def cache(expire, after_market_expire=None):
             if isinstance(result, dict):
                 data = gzip.compress(orjson.dumps(result, default=handle_data))
                 await r.set(key, data, ex=expire_time)
+
             elif isinstance(result, (TimeSeries, MarketSectorDetails)):
                 await r.set(key, gzip.compress(result.model_dump_json().encode()), ex=expire_time)
+
+            elif isinstance(result, (SimpleQuote, Quote, MarketMover, Index, News, MarketSector)):
+                await r.set(key, gzip.compress(result.model_dump_json().encode()), ex=expire_time)
+
             else:
                 if (isinstance(result, list) and result
                         and isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, MarketSector))):
