@@ -53,12 +53,12 @@ def parse_stocks(stocks_divs, symbol):
 def parse_etfs(etf_divs):
     etfs = []
     for div in etf_divs:
-        symbol_element = div.find("span", class_="symbol yf-18x7c3e")
+        symbol_element = div.find("span", class_="symbol yf-ravs5v")
         if not symbol_element:
             continue
         symbol = symbol_element.text
 
-        name_element = div.find("span", class_="tw-text-sm yf-18x7c3e longName")
+        name_element = div.find("span", class_="tw-text-sm yf-ravs5v longName")
         if not name_element:
             continue
         name = name_element.text
@@ -87,19 +87,19 @@ def parse_etfs(etf_divs):
     return etfs
 
 
-@cache(600)
-async def scrape_similar_stocks(symbol: str) -> List[SimpleQuote]:
+@cache(expire=15, after_market_expire=600)
+async def scrape_similar_stocks(symbol: str, limit: int) -> List[SimpleQuote]:
     url = 'https://finance.yahoo.com/quote/' + symbol
     with Session() as session:
         html = session.get(url, headers=headers).text
     soup = BeautifulSoup(html, 'lxml')
 
-    similar_stocks = soup.find_all("div", class_="main-div yf-15b2o7n")
+    similar_stocks = soup.find_all("div", class_="main-div yf-15b2o7n", limit=limit)
     stocks = parse_stocks(similar_stocks, symbol)
 
     # If similar_stocks is empty, try to scrape ETF data
     if not stocks:
-        etf_stocks = soup.find_all("div", class_="ticker-container yf-1pws7a4 enforceMaxWidth")
+        etf_stocks = soup.find_all("div", class_="ticker-container yf-1pws7a4 enforceMaxWidth", limit=limit)
         stocks = parse_etfs(etf_stocks)
 
     # If stocks is empty, the symbol is probably invalid

@@ -17,8 +17,10 @@ router = APIRouter()
             responses={400: {"description": "Symbol parameter is required"}})
 async def get_similar_stocks(
         response: Response,
-        symbol: str = Query(..., title="Symbol", description="Stock to find similar stocks around")):
+        symbol: str = Query(..., title="Symbol", description="Stock to find similar stocks around"),
+        limit: int = Query(default=10, title="Limit", description="Number of similar stocks to return")
+):
     if not symbol:
         raise HTTPException(status_code=400, detail="Symbol parameter is required")
     response.headers["Access-Control-Allow-Origin"] = "*"
-    return await scrape_similar_stocks(symbol)
+    return await scrape_similar_stocks(symbol, limit)
