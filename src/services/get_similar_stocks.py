@@ -88,7 +88,7 @@ def parse_etfs(etf_divs):
 
 
 @cache(expire=15, after_market_expire=600)
-async def scrape_similar_stocks(symbol: str, limit: int) -> List[SimpleQuote]:
+async def scrape_similar_stocks(symbol: str, limit: int = 10) -> List[SimpleQuote]:
     url = 'https://finance.yahoo.com/quote/' + symbol
     with Session() as session:
         html = session.get(url, headers=headers).text
