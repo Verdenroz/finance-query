@@ -51,36 +51,28 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
 async def websocket_quotes(websocket: WebSocket):
     connection_manager = RedisConnectionManager()
     await websocket.accept()
-    channels = "quotes"  # Default channel name, but will be overwritten by client
 
-    try:
-        while True:
-            channel = await websocket.receive_text()
+    channel = await websocket.receive_text()
+    symbols = list(set(channel.split(",")))
 
-            if websocket not in connection_manager.active_connections.get(channel, []):
-                await connection_manager.connect(websocket, channel)
+    if websocket not in connection_manager.active_connections.get(channel, []):
+        await connection_manager.connect(websocket, channel)
 
-            symbols = list(set(channel.split(",")))
-            print(symbols)
-
-            result = await scrape_simple_quotes(symbols)
-            formatted_result = [
-                {
-                    "symbol": quote.symbol,
-                    "name": quote.name,
-                    "price": str(quote.price),
-                    "change": quote.change,
-                    "percent_change": quote.percent_change,
-                    "logo": quote.logo
-                } if isinstance(quote, SimpleQuote) else quote
-                for quote in result
-            ]
-            print(formatted_result)
-            await connection_manager.publish(formatted_result, channel)
-
-    except WebSocketDisconnect:
-        for channel in channels:
-            await connection_manager.disconnect(websocket, channel)
+    while True:
+        result = await scrape_simple_quotes(symbols)
+        formatted_result = [
+            {
+                "symbol": quote.symbol,
+                "name": quote.name,
+                "price": str(quote.price),
+                "change": quote.change,
+                "percent_change": quote.percent_change,
+                "logo": quote.logo
+            } if isinstance(quote, SimpleQuote) else quote
+            for quote in result
+        ]
+        await connection_manager.publish(formatted_result, channel)
+        await asyncio.sleep(10)
 
 
 @router.websocket("/ws/market")
@@ -88,36 +80,32 @@ async def websocket_market(websocket: WebSocket):
     connection_manager: RedisConnectionManager = RedisConnectionManager()
 
     await websocket.accept()
-    channel = "market"  # Expected channel name, but can be anything from client
+    channel = "market"
 
-    try:
-        while True:
-            channel = await websocket.receive_text()  # Raises WebSocketDisconnect if client disconnects
+    if websocket not in connection_manager.active_connections.get(channel, []):
+        await connection_manager.connect(websocket, channel)
 
-            if websocket not in connection_manager.active_connections.get(channel, []):
-                await connection_manager.connect(websocket, channel)
+    while True:
+        actives_task = scrape_actives()
+        gainers_task = scrape_gainers()
+        losers_task = scrape_losers()
+        sectors_task = get_sectors()
 
-            actives_task = scrape_actives()
-            gainers_task = scrape_gainers()
-            losers_task = scrape_losers()
-            sectors_task = get_sectors()
+        actives, gainers, losers, sectors = await asyncio.gather(
+            actives_task, gainers_task, losers_task, sectors_task
+        )
 
-            actives, gainers, losers, sectors = await asyncio.gather(
-                actives_task, gainers_task, losers_task, sectors_task
-            )
+        actives = [active if isinstance(active, dict) else active.dict() for active in actives]
+        gainers = [gainer if isinstance(gainer, dict) else gainer.dict() for gainer in gainers]
+        losers = [loser if isinstance(loser, dict) else loser.dict() for loser in losers]
+        sectors = [sector if isinstance(sector, dict) else sector.dict() for sector in sectors]
 
-            actives = [active if isinstance(active, dict) else active.dict() for active in actives]
-            gainers = [gainer if isinstance(gainer, dict) else gainer.dict() for gainer in gainers]
-            losers = [loser if isinstance(loser, dict) else loser.dict() for loser in losers]
-            sectors = [sector if isinstance(sector, dict) else sector.dict() for sector in sectors]
+        result = {
+            "actives": actives,
+            "gainers": gainers,
+            "losers": losers,
+            "sectors": sectors
+        }
 
-            result = {
-                "actives": actives,
-                "gainers": gainers,
-                "losers": losers,
-                "sectors": sectors
-            }
-
-            await connection_manager.publish(result, channel)
-    except WebSocketDisconnect:
-        await connection_manager.disconnect(websocket, channel)
+        await connection_manager.publish(result, channel)
+        await asyncio.sleep(10)
