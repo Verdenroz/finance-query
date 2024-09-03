@@ -134,7 +134,7 @@ async def get_sectors() -> List[MarketSector]:
 
 
 @cache(expire=60, after_market_expire=600)
-async def get_sector_for_symbol(symbol: str) -> List[MarketSector]:
+async def get_sector_for_symbol(symbol: str) -> MarketSector:
     ticker = Ticker(symbol)
     profile = ticker.asset_profile
     sector = profile[symbol]['sector'] if 'sector' in profile[symbol] else None
@@ -147,7 +147,7 @@ async def get_sector_for_symbol(symbol: str) -> List[MarketSector]:
         html = response.text
 
     sector = await parse_sector(html, sector)
-    return [sector]
+    return sector
 
 
 @cache(expire=300, after_market_expire=3600)

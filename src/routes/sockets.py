@@ -34,11 +34,11 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
 
         quotes = [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
         similar_stocks = [similar if isinstance(similar, dict) else similar.dict() for similar in similar_stocks]
-        sector_performance = [sector if isinstance(sector, dict) else sector.dict() for sector in sector_performance]
+        sector_performance = sector_performance if isinstance(sector_performance, dict) else sector_performance.dict()
         news = [headline if isinstance(headline, dict) else headline.dict() for headline in news]
 
         result = {
-            "quote": quotes,
+            "quote": quotes[0],
             "similar": similar_stocks,
             "performance": sector_performance,
             "news": news
