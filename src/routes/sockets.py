@@ -1,7 +1,7 @@
 import asyncio
 
 from fastapi import APIRouter
-from starlette.websockets import WebSocket, WebSocketDisconnect
+from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager
 from src.schemas import SimpleQuote
