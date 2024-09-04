@@ -1,7 +1,7 @@
 import asyncio
 
 from fastapi import APIRouter
-from starlette.websockets import WebSocket
+from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
 from src.schemas import SimpleQuote
@@ -12,39 +12,47 @@ from src.services.get_sectors import get_sector_for_symbol, get_sectors
 router = APIRouter()
 
 
-@router.websocket("/profile/{symbol}/ws")
+@router.websocket("/profile/{symbol}")
 async def websocket_profile(websocket: WebSocket, symbol: str):
     connection_manager = RedisConnectionManager()
     await websocket.accept()
-
     channel = f"profile:{symbol}"
 
+    async def fetch_data():
+        while True:
+            quotes_task = scrape_quotes([symbol])
+            similar_stocks_task = scrape_similar_stocks(symbol)
+            sector_performance_task = get_sector_for_symbol(symbol)
+            news_task = scrape_news_for_quote(symbol)
+
+            quotes, similar_stocks, sector_performance, news = await asyncio.gather(
+                quotes_task, similar_stocks_task, sector_performance_task, news_task
+            )
+
+            quotes = [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
+            similar_stocks = [similar if isinstance(similar, dict) else similar.dict() for similar in similar_stocks]
+            sector_performance = sector_performance if isinstance(sector_performance, dict) else sector_performance.dict()
+            news = [headline if isinstance(headline, dict) else headline.dict() for headline in news]
+
+            result = {
+                "quote": quotes[0],
+                "similar": similar_stocks,
+                "performance": sector_performance,
+                "news": news
+            }
+            await connection_manager.publish(result, channel)
+            await asyncio.sleep(10)
+
     if websocket not in connection_manager.active_connections.get(channel, []):
-        await connection_manager.connect(websocket, channel)
+        await connection_manager.connect(websocket, channel, fetch_data)
 
-    while True:
-        quotes_task = scrape_quotes([symbol])
-        similar_stocks_task = scrape_similar_stocks(symbol)
-        sector_performance_task = get_sector_for_symbol(symbol)
-        news_task = scrape_news_for_quote(symbol)
+    # Keep the connection alive
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        await connection_manager.disconnect(websocket, channel)
 
-        quotes, similar_stocks, sector_performance, news = await asyncio.gather(
-            quotes_task, similar_stocks_task, sector_performance_task, news_task
-        )
-
-        quotes = [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
-        similar_stocks = [similar if isinstance(similar, dict) else similar.dict() for similar in similar_stocks]
-        sector_performance = sector_performance if isinstance(sector_performance, dict) else sector_performance.dict()
-        news = [headline if isinstance(headline, dict) else headline.dict() for headline in news]
-
-        result = {
-            "quote": quotes[0],
-            "similar": similar_stocks,
-            "performance": sector_performance,
-            "news": news
-        }
-        await connection_manager.publish(result, channel)
-        await asyncio.sleep(10)
 
 
 @router.websocket("/ws/quotes")

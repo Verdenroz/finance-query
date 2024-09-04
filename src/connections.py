@@ -15,9 +15,10 @@ class RedisConnectionManager:
     def __init__(self):
         self.active_connections: Dict[str, List[WebSocket]] = {}
         self.pubsub = r.pubsub()
-        self.task = None
+        self.listen_task = None
+        self.tasks = None
 
-    async def connect(self, websocket: WebSocket, channel: str):
+    async def connect(self, websocket: WebSocket, channel: str, tasks):
         """
         Connects a websocket to a channel and listens for messages.
         :param websocket: the client websocket connection
@@ -29,7 +30,8 @@ class RedisConnectionManager:
 
         self.active_connections[channel].append(websocket)
 
-        self.task = asyncio.create_task(self._listen_to_channel(channel))
+        self.listen_task = asyncio.create_task(self._listen_to_channel(channel))
+        self.tasks = asyncio.create_task(tasks())
 
     async def disconnect(self, websocket: WebSocket, channel: str):
         """
@@ -38,6 +40,7 @@ class RedisConnectionManager:
         :param channel: the channel to disconnect from
         :return:
         """
+        self.tasks.cancel()
         self.active_connections[channel].remove(websocket)
         if not self.active_connections[channel]:
             del self.active_connections[channel]
@@ -50,15 +53,11 @@ class RedisConnectionManager:
         :return:
         """
         await self.pubsub.subscribe(channel)
-        try:
-            while True:
-                message = await self.pubsub.get_message()
-                if message and message['type'] == 'message':
-                    data = orjson.loads(message['data'])
-                    await self._broadcast(channel, data)
-        except RuntimeError:
-            # When channel name changes, RuntimeError is raised
-            self.task.cancel()
+        while True:
+            message = await self.pubsub.get_message(ignore_subscribe_messages=True)
+            if message and message['type'] == 'message':
+                data = orjson.loads(message['data'])
+                await self._broadcast(channel, data)
 
     async def _broadcast(self, channel: str, message: dict):
         """
