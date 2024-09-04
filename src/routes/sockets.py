@@ -66,7 +66,7 @@ async def websocket_quotes(websocket: WebSocket):
                 "name": quote.name,
                 "price": str(quote.price),
                 "change": quote.change,
-                "percent_change": quote.percent_change,
+                "percentChange": quote.percent_change,
                 "logo": quote.logo
             } if isinstance(quote, SimpleQuote) else quote
             for quote in result
