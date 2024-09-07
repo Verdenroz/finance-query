@@ -30,7 +30,7 @@ from src.routes import (quotes_router, indices_router, movers_router, historical
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.3.2",
+    version="1.3.3",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."

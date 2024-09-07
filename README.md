@@ -8,9 +8,6 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 [Documentation](https://d3tidzj12m5ipv.cloudfront.net)
 
 
-
-
-
 ## API Reference
 
 #### Get quotes
@@ -113,6 +110,18 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 | `query`  | `string` | **Optional**. Search query by symbol or name |
 
 
+#### Get sector performance
+
+```
+  GET /v1/sectors
+```
+
+| Query Parameter | Type     | Description                       |
+| :-------- | :------- | :-------------------------------- |
+| `symbol`  | `string` | **Optional**. Specify symbol to find specific sector performance belonging to the symbol |
+| ` name ` | ` string`| **Optional**. The specific name of the individual sector (Technology, Consumer Cyclical etc) |
+
+
 #### Get U.S. market indices
 
 ```
@@ -137,16 +146,32 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
   GET /v1/gainers
 ```
 
-#### Get sector performance
+## Websockets Guide
+
+There are currently three implemented websocket routes: `profile`, `quotes`, and `market`. These will not be accessible through Lambda. If you are interested in deployment, I highly deploying to [Render](https://render.com/) as it will be able to host the entire FastAPI server, including the websockets. If you are testing locally, your requests will be `ws` instead of `wss`. Data is returned on a set interval every 10 seconds.
+
+**The websockets depend on Redis PubSub and will require Redis credentials in your [.env](https://github.com/Verdenroz/finance-query?tab=readme-ov-file#environment-variables)**
+
+### Quote profile 
+#### Combines `quote`, `similar stocks`, `sector for symbol`, `news for symbol`
 
 ```
-  GET /v1/sectors
+WSS /profile/{symbol}
 ```
 
-| Query Parameter | Type     | Description                       |
-| :-------- | :------- | :-------------------------------- |
-| `symbol`  | `string` | **Optional**. Specify symbol to find specific sector performance belonging to the symbol |
+### Watchlist
+#### Requires comma separated list of symbols to be sent intially, streaming simplified quotes for all provided symbols
 
+```
+WSS /quotes
+```
+
+### General market data
+#### Combines `gainers`, `losers`, `actives`, and `sectors`
+
+```
+WSS /profile/{symbol}
+```
 
 
 ## Usage/Examples
@@ -154,6 +179,8 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 The exposed endpoint to the API is https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod
 
 An x-api-key header must be added to all requests. The demo key is **FinanceQueryDemoAWSHT** (500 requests/day)
+
+Again, remember the websockets above are not available through Lambda. If you deploy to Render instead, you will be able to connect to the websockets through a request that looks like `wss://***.onrender.com`
 
 
 ## Run Locally
@@ -191,7 +218,11 @@ To run this project locally, you will need to add the following environment vari
 
 `REDIS_USERNAME`
 
-***If you do not add these environment variables or do not use algolia/redis, you can simply disable the redis cache by deleting the @cache decorator to all routes. Search will not work without algolia.***
+***If you do not add these environment variables or do not use algolia/redis, you can simply disable the redis cache by deleting the @cache decorator to all routes.***
+
+**Search will not work without Algolia.**
+
+**Websockets will not work without Redis.**
 
 
 ## Feedback
