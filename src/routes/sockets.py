@@ -6,7 +6,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from src.connections import RedisConnectionManager
 from src.schemas import SimpleQuote
 from src.services import scrape_quotes, scrape_similar_stocks, scrape_actives, \
-    scrape_news_for_quote, scrape_losers, scrape_gainers, scrape_simple_quotes
+    scrape_news_for_quote, scrape_losers, scrape_gainers, scrape_simple_quotes, scrape_indices
 from src.services.get_sectors import get_sector_for_symbol, get_sectors
 
 router = APIRouter()
@@ -104,21 +104,24 @@ async def websocket_market(websocket: WebSocket):
             actives_task = scrape_actives()
             gainers_task = scrape_gainers()
             losers_task = scrape_losers()
+            indices_task = scrape_indices()
             sectors_task = get_sectors()
 
-            actives, gainers, losers, sectors = await asyncio.gather(
-                actives_task, gainers_task, losers_task, sectors_task
+            actives, gainers, losers, indices, sectors = await asyncio.gather(
+                actives_task, gainers_task, losers_task, indices_task, sectors_task
             )
 
             actives = [active if isinstance(active, dict) else active.dict() for active in actives]
             gainers = [gainer if isinstance(gainer, dict) else gainer.dict() for gainer in gainers]
             losers = [loser if isinstance(loser, dict) else loser.dict() for loser in losers]
+            indices = [index if isinstance(index, dict) else index.dict() for index in indices]
             sectors = [sector if isinstance(sector, dict) else sector.dict() for sector in sectors]
 
             result = {
                 "actives": actives,
                 "gainers": gainers,
                 "losers": losers,
+                "indices": indices,
                 "sectors": sectors
             }
 
