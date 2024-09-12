@@ -1,7 +1,7 @@
 import asyncio
-from typing import Dict, List
 
 from orjson import orjson
+from redis.client import PubSub
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.utils import r
@@ -13,25 +13,29 @@ class RedisConnectionManager:
     """
 
     def __init__(self):
-        self.active_connections: Dict[str, List[WebSocket]] = {}
-        self.pubsub = r.pubsub()
-        self.listen_task = None
-        self.tasks = None
+        self.active_connections: dict[str, list[WebSocket]] = {}
+        self.pubsub: dict[str, PubSub] = {}
+        self.listen_tasks: dict[str, asyncio.Task] = {}
+        self.tasks: dict[str, asyncio.Task] = {}
 
-    async def connect(self, websocket: WebSocket, channel: str, tasks):
+    async def connect(self, websocket: WebSocket, channel: str, task: callable):
         """
         Connects a websocket to a channel and listens for messages.
         :param websocket: the client websocket connection
         :param channel: the channel to subscribe to
+        :param task: the continuous function to fetch data and publish to the channel
         :return:
         """
         if channel not in self.active_connections:
             self.active_connections[channel] = []
+            self.pubsub[channel] = r.pubsub()
 
         self.active_connections[channel].append(websocket)
 
-        self.listen_task = asyncio.create_task(self._listen_to_channel(channel))
-        self.tasks = asyncio.create_task(tasks())
+        if channel not in self.listen_tasks:
+            self.listen_tasks[channel] = asyncio.create_task(self._listen_to_channel(channel))
+        if channel not in self.tasks:
+            self.tasks[channel] = asyncio.create_task(task())
 
     async def disconnect(self, websocket: WebSocket, channel: str):
         """
@@ -40,11 +44,19 @@ class RedisConnectionManager:
         :param channel: the channel to disconnect from
         :return:
         """
-        self.tasks.cancel()
         self.active_connections[channel].remove(websocket)
         if not self.active_connections[channel]:
             del self.active_connections[channel]
-            await self.pubsub.unsubscribe(channel)
+
+            self.listen_tasks[channel].cancel()
+            del self.listen_tasks[channel]
+
+            self.tasks[channel].cancel()
+            del self.tasks[channel]
+
+            await self.pubsub[channel].unsubscribe(channel)
+            await self.pubsub[channel].close()
+            del self.pubsub[channel]
 
     async def _listen_to_channel(self, channel: str):
         """
@@ -52,12 +64,14 @@ class RedisConnectionManager:
         :param channel: the channel to subscribe to with Redis PubSub
         :return:
         """
-        await self.pubsub.subscribe(channel)
+        await self.pubsub[channel].subscribe(channel)
         while True:
-            message = await self.pubsub.get_message(ignore_subscribe_messages=True)
+            message = await self.pubsub[channel].get_message(ignore_subscribe_messages=True)
             if message and message['type'] == 'message':
-                data = orjson.loads(message['data'])
-                await self._broadcast(channel, data)
+                message_channel = message['channel'].decode('utf-8')
+                if message_channel == channel:
+                    data = orjson.loads(message['data'])
+                    await self._broadcast(channel, data)
 
     async def _broadcast(self, channel: str, message: dict):
         """
