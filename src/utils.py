@@ -8,10 +8,10 @@ from datetime import datetime, date
 import orjson
 import pytz
 from dotenv import load_dotenv
-from httpx import AsyncClient
-from redis import asyncio as aioredis
-from pydantic import BaseModel
 from fastapi import Response
+from httpx import AsyncClient
+from pydantic import BaseModel
+from redis import asyncio as aioredis
 
 from src.schemas import TimeSeries, Quote, SimpleQuote, MarketMover, News, Index, MarketSector
 from src.schemas.analysis import Analysis, SMAData, Indicator, EMAData, WMAData, VWMAData, RSIData, \
@@ -21,10 +21,15 @@ from src.schemas.sector import MarketSectorDetails
 load_dotenv()
 
 r = aioredis.Redis(
-    host=os.environ['REDIS_HOST'],
-    port=int(os.environ['REDIS_PORT']),
-    username=os.environ['REDIS_USERNAME'],
-    password=os.environ['REDIS_PASSWORD'],
+    connection_pool=aioredis.ConnectionPool(
+        host=os.environ['REDIS_HOST'],
+        port=int(os.environ['REDIS_PORT']),
+        username=os.environ['REDIS_USERNAME'],
+        password=os.environ['REDIS_PASSWORD'],
+        max_connections=10000
+    ),
+    auto_close_connection_pool=True,
+    single_connection_client=True,
 )
 
 
