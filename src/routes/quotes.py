@@ -15,13 +15,9 @@ router = APIRouter()
             tags=["Quotes"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbols parameter is required"}})
-async def get_quotes(
-        response: Response,
-        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
-):
+async def get_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
     if not symbols:
         raise HTTPException(status_code=400, detail="Symbols parameter is required")
-    response.headers["Access-Control-Allow-Origin"] = "*"
     symbols = list(set(symbols.upper().replace(' ', '').split(',', )))
     quotes = await scrape_quotes(symbols)
 

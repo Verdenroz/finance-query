@@ -22,6 +22,7 @@
 
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
@@ -51,6 +52,15 @@ app = FastAPI(
         "identifier": "MIT",
     }
 )
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allows all origins (needed for Android app but should be restricted for web apps)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allows all methods
+    allow_headers=["*"],  # Allows all headers
+)
+
 
 app.include_router(quotes_router, prefix="/v1")
 
