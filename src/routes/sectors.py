@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, Response, Query
+from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
@@ -17,7 +17,6 @@ router = APIRouter()
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             )
 async def sector(
-        response: Response,
         symbol: Optional[str] = Query(
             None,
             description="Optional symbol to get info for. If not provided, all sectors are returned with summary "
@@ -28,7 +27,6 @@ async def sector(
                         "summary information"
         )
 ):
-    response.headers["Access-Control-Allow-Origin"] = "*"
     if symbol and not name:
         return await get_sector_for_symbol(symbol)
 

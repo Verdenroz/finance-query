@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, Query, HTTPException, Response
+from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
@@ -36,7 +36,6 @@ IndicatorFunctions = {
             tags=["Technical Indicators"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 async def get_technical_indicators(
-        response: Response,
         function: Indicator = Query(..., description="The technical indicator to get."),
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Optional[Interval] = Query(
@@ -56,7 +55,6 @@ async def get_technical_indicators(
         kijun_period: Optional[int] = Query(None, description="The look-back period for the Kijun line in Ichimoku."),
         senkou_period: Optional[int] = Query(None, description="The look-back period for the Senkou span in Ichimoku."),
 ):
-    response.headers["Access-Control-Allow-Origin"] = "*"
     params = {
         "symbol": symbol,
         "interval": interval,
@@ -94,12 +92,10 @@ async def get_technical_indicators(
             tags=["Analysis"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
 async def get_technical_analysis(
-        response: Response,
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
 ):
     if not symbol:
         raise HTTPException(status_code=400, detail="Symbol parameter is required")
 
-    response.headers["Access-Control-Allow-Origin"] = "*"
     return await get_summary_analysis(symbol, interval)

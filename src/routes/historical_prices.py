@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, Query, HTTPException, Response
+from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 
 from src.schemas import TimeSeries
@@ -17,19 +17,19 @@ router = APIRouter()
             response_model_exclude_none=True
             )
 async def get_time_series(
-        response: Response,
         symbol: str = Query(..., description="The symbol of the stock to get historical data for."),
         time: TimePeriod = Query(..., description="The time period for the historical data."),
         interval: Interval = Query(..., description="The interval for the historical data.")
 ):
-    response.headers["Access-Control-Allow-Origin"] = "*"
     # Validate the combination of time period and interval
     if (interval in [Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES] and
             time not in [TimePeriod.DAY, TimePeriod.FIVE_DAYS, TimePeriod.SEVEN_DAYS, TimePeriod.ONE_MONTH]):
-        raise HTTPException(status_code=400, detail="If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less")
+        raise HTTPException(status_code=400,
+                            detail="If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less")
 
     if interval == Interval.ONE_HOUR and time not in [TimePeriod.DAY, TimePeriod.FIVE_DAYS, TimePeriod.SEVEN_DAYS,
-                                                      TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS, TimePeriod.SIX_MONTHS,
+                                                      TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS,
+                                                      TimePeriod.SIX_MONTHS,
                                                       TimePeriod.YTD, TimePeriod.YEAR]:
         raise HTTPException(status_code=400, detail="If interval is 1h, time period must be 1Y or less")
 

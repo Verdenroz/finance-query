@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, Response
+from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 from typing_extensions import List
 
@@ -14,6 +14,5 @@ router = APIRouter()
             response_model=List[Index],
             tags=["Indices"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
-async def get_indices(response: Response):
-    response.headers["Access-Control-Allow-Origin"] = "*"
+async def get_indices():
     return await scrape_indices()
