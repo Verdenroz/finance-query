@@ -60,10 +60,10 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
 
     async def parse_industries(industries_soup):
         data = []
-        industries = industries_soup.find_all('tr', 'yf-152j1g3')
+        industries = industries_soup.find_all('tr', 'yf-gr13h2')
         for industry in industries[1:]:  # Skip the first row
-            industry_name_tag = industry.find('td', class_='name yf-152j1g3')
-            market_weight_tag = industry.find('span', class_='yf-152j1g3')
+            industry_name_tag = industry.find('td', class_='name yf-gr13h2')
+            market_weight_tag = industry.find('span', class_='yf-gr13h2')
             if industry_name_tag and market_weight_tag:
                 industry_name = industry_name_tag.text
                 if industry_name.startswith(f"{sector_name} - "):
