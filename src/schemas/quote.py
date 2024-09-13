@@ -242,5 +242,5 @@ class Quote(BaseModel):
     )
 
     def dict(self, *args, **kwargs):
-        base_dict = super().model_dump(*args, **kwargs, by_alias=True)
+        base_dict = super().model_dump(*args, **kwargs, by_alias=True, exclude_none=True)
         return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in base_dict.items() if v is not None}

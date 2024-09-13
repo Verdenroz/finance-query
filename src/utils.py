@@ -133,10 +133,10 @@ def cache(expire, after_market_expire=None):
                 await r.set(key, data, ex=expire_time)
 
             elif isinstance(result, (TimeSeries, MarketSectorDetails)):
-                await r.set(key, gzip.compress(result.model_dump_json().encode()), ex=expire_time)
+                await r.set(key, gzip.compress(result.model_dump_json(by_alias=True, exclude_none=True).encode()), ex=expire_time)
 
             elif isinstance(result, (SimpleQuote, Quote, MarketMover, Index, News, MarketSector)):
-                await r.set(key, gzip.compress(result.model_dump_json().encode()), ex=expire_time)
+                await r.set(key, gzip.compress(result.model_dump_json(by_alias=True, exclude_none=True).encode()), ex=expire_time)
 
             else:
                 if (isinstance(result, list) and result
