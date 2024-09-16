@@ -46,8 +46,8 @@ async def get_quote_from_yahooquery(symbol: str) -> Quote:
 
     name = quote[symbol]['longName']
     regular_price = quote[symbol]['regularMarketPrice']
-    regular_change = f"{quote[symbol]['regularMarketChange']:.2f}"
-    regular_percent_change = f"{quote[symbol]['regularMarketChangePercent']:.2f}%"
+    regular_change_value = quote[symbol]['regularMarketChange']
+    regular_percent_change_value = quote[symbol]['regularMarketChangePercent']
     post_price = quote[symbol].get('postMarketPrice', None)
     open_price = quote[symbol].get('regularMarketOpen', None)
     high = quote[symbol].get('regularMarketDayHigh', None)
@@ -96,6 +96,10 @@ async def get_quote_from_yahooquery(symbol: str) -> Quote:
 
         # Format the datetime object into the desired string format
         return date.strftime("%b %d, %Y")
+
+    # Add + or - sign and % for percent_change using f-strings
+    regular_change = f"{regular_change_value:+.2f}"
+    regular_percent_change = f"{regular_percent_change_value:+.2f}%"
 
     # Convert float values to string
     pe = round(pe, 2) if pe else None
