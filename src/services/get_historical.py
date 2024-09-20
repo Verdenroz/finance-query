@@ -9,9 +9,9 @@ from stock_indicators.indicators.common.quote import Quote
 from typing_extensions import List
 from yahooquery import Ticker
 
+from src.redis import cache
 from src.schemas import HistoricalData, TimeSeries
 from src.schemas.time_series import Interval, TimePeriod
-from src.utils import cache
 
 
 @cache(expire=60, after_market_expire=600)

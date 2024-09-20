@@ -7,10 +7,10 @@ from httpx import AsyncClient
 from yahooquery import Ticker
 
 from src.constants import headers
+from src.redis import cache
 from src.schemas import MarketSector
 from src.schemas.sector import Sector, MarketSectorDetails
 from src.services import scrape_simple_quotes
-from src.utils import cache
 
 urls = {
     Sector.TECHNOLOGY: 'https://finance.yahoo.com/sectors/technology/',

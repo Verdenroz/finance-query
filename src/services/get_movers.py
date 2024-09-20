@@ -7,8 +7,8 @@ from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 
 from ..constants import headers
+from ..redis import cache
 from ..schemas.marketmover import MarketMover
-from ..utils import cache
 
 # Compile a regular expression pattern that matches a number,
 # optionally followed by a decimal point and more numbers, and commas

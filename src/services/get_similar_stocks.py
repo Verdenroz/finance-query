@@ -6,8 +6,8 @@ from requests import Session
 from typing_extensions import List
 
 from src.constants import headers
+from src.redis import cache
 from src.schemas import SimpleQuote
-from src.utils import cache
 
 
 def parse_stocks(stocks_divs, symbol):

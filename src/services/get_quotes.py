@@ -11,7 +11,8 @@ from yahooquery import Ticker
 
 from src.schemas import Quote, SimpleQuote
 from ..constants import headers
-from ..utils import cache
+from ..proxies import proxies
+from ..redis import cache
 
 
 async def fetch(url: str, client: AsyncClient):

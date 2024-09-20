@@ -4,8 +4,9 @@ from fastapi import HTTPException
 from typing_extensions import List
 
 from src.constants import headers
+from src.proxies import aio_proxy, proxy_auth
+from src.redis import cache
 from src.schemas import News
-from src.utils import cache
 
 
 async def fetch_with_aiohttp(url: str, client: ClientSession):

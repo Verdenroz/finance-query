@@ -6,8 +6,8 @@ from bs4 import BeautifulSoup, SoupStrainer
 from fastapi.responses import JSONResponse
 
 from ..constants import headers
+from ..redis import cache
 from ..schemas.index import Index
-from ..utils import cache
 
 
 async def fetch_and_parse(session, url, semaphore):

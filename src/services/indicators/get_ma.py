@@ -1,11 +1,10 @@
+from stock_indicators import indicators
 from typing_extensions import OrderedDict
 
+from src.redis import cache
 from src.schemas.analysis import SMAData, Analysis, EMAData, WMAData, VWMAData, Indicator
 from src.schemas.time_series import TimePeriod, Interval
 from src.services.get_historical import get_historical_quotes
-from stock_indicators import indicators
-
-from src.utils import cache
 
 
 @cache(expire=60, after_market_expire=600)
