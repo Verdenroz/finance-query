@@ -3,15 +3,9 @@ from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 from typing_extensions import List
 
-from src.constants import headers
-from src.proxies import aio_proxy, proxy_auth
 from src.redis import cache
 from src.schemas import News
-
-
-async def fetch_with_aiohttp(url: str, client: ClientSession):
-    async with client.get(url, headers=headers) as response:
-        return await response.text()
+from src.utils import fetch
 
 
 async def parse_news(html: str) -> List[News]:
@@ -54,7 +48,7 @@ async def scrape_news_for_quote(symbol: str) -> List[News]:
     async with ClientSession() as session:
         # Try to fetch news from the stocks url, if it fails, try etf
         for url in urls:
-            html = await fetch_with_aiohttp(url, session)
+            html = await fetch(url, session)
             news_list = await parse_news(html)
             if news_list:
                 break
@@ -69,7 +63,7 @@ async def scrape_news_for_quote(symbol: str) -> List[News]:
 async def scrape_general_news():
     url = 'https://stockanalysis.com/news/'
     async with ClientSession() as session:
-        html = await fetch_with_aiohttp(url, session)
+        html = await fetch(url, session)
         news_list = await parse_news(html)
         # If no news was found, raise an error
         if not news_list:
