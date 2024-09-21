@@ -19,7 +19,14 @@ class SimpleQuote(BaseModel):
         default=...,
         examples=[145.00],
         description="Last traded price of the stock"
-    )
+    ),
+    after_hours_price: Optional[Decimal] = Field(
+        default=None,
+        examples=[145.50],
+        description="After hours price of the stock",
+        serialization_alias="afterHoursPrice",
+        validation_alias=AliasChoices("afterHoursPrice", "after_hours_price")
+    ),
     change: str = Field(
         default=...,
         examples=["+1.00"],

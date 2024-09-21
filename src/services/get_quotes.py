@@ -420,6 +420,7 @@ async def _get_simple_quote_from_yahooquery(symbol: str, session: ClientSession)
         raise HTTPException(status_code=404, detail="Symbol not found")
     name = quote[symbol]['longName']
     regular_price = quote[symbol]['regularMarketPrice']
+    post_price = quote[symbol].get('postMarketPrice', None)
     regular_change = f"{quote[symbol]['regularMarketChange']:.2f}"
     regular_percent_change = f"{quote[symbol]['regularMarketChangePercent']:.2f}%"
     website = profile[symbol].get('website', None)
@@ -429,6 +430,7 @@ async def _get_simple_quote_from_yahooquery(symbol: str, session: ClientSession)
         symbol=symbol.upper(),
         name=name,
         price=regular_price,
+        after_hours_price=post_price,
         change=regular_change,
         percent_change=regular_percent_change,
         logo=logo
