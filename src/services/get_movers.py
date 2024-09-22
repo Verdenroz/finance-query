@@ -1,85 +1,66 @@
-import asyncio
-import re
 from decimal import Decimal
 
-from aiohttp import ClientSession, TCPConnector
+from aiohttp import ClientSession
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 
-from ..constants import headers
 from ..redis import cache
 from ..schemas.marketmover import MarketMover
-
-# Compile a regular expression pattern that matches a number,
-# optionally followed by a decimal point and more numbers, and commas
-number_pattern = re.compile(r'\d+[\d,]*\.?\d*')
-
-
-async def create_market_mover(mover):
-    symbol = mover.find('div', class_='COaKTb').text
-    name = mover.find('div', class_='ZvmM7').text
-
-    price_text = mover.find('div', class_='YMlKec').text
-    price_match = number_pattern.search(price_text.replace(',', ''))
-    price = round(Decimal(price_match.group()), 2) if price_match else None
-
-    change_text = mover.find('div', class_='SEGxAb').text.replace('$', '')
-
-    percent_change_text = mover.find('div', class_='JwB6zf').text
-
-    # Prepend '+' or '-' to percentChange based on whether change is positive or negative
-    if '+' in change_text:
-        percent_change = '+' + percent_change_text
-    elif '-' in change_text:
-        percent_change = '-' + percent_change_text
-    else:
-        percent_change = percent_change_text
-
-    mover_data = MarketMover(
-        symbol=symbol,
-        name=name,
-        price=price,
-        change=change_text,
-        percent_change=percent_change,
-    )
-    return mover_data
-
-
-async def fetch_and_parse_movers(session, url, semaphore):
-    async with semaphore, session.get(url, headers=headers) as response:
-        html = await response.text()
-        parse_only = SoupStrainer('ul', class_='sbnBtf')
-        soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
-        movers = []
-        for mover in soup.find_all('div', class_='SxcTic'):
-            mover_data = await create_market_mover(mover)
-            movers.append(mover_data)
-        return movers
-
-
-async def scrape_movers(url):
-    semaphore = asyncio.Semaphore(25)  # Limit to 25 concurrent requests
-    try:
-        async with ClientSession(connector=TCPConnector(limit=25)) as session:
-            movers = await fetch_and_parse_movers(session, url, semaphore)
-            return movers
-    except Exception as e:
-        raise HTTPException(status_code=500, detail={"message": str(e)})
+from ..utils import fetch
 
 
 @cache(expire=15, after_market_expire=3600)
 async def scrape_actives():
-    url = 'https://www.google.com/finance/markets/most-active'
-    return await scrape_movers(url)
+    url = 'https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50'
+    return await _scrape_movers(url)
 
 
 @cache(expire=15, after_market_expire=3600)
 async def scrape_gainers():
-    url = 'https://www.google.com/finance/markets/gainers'
-    return await scrape_movers(url)
+    url = 'https://finance.yahoo.com/markets/stocks/gainers/?start=0&count=50'
+    return await _scrape_movers(url)
 
 
 @cache(expire=15, after_market_expire=3600)
 async def scrape_losers():
-    url = 'https://www.google.com/finance/markets/losers'
-    return await scrape_movers(url)
+    url = 'https://finance.yahoo.com/markets/stocks/losers/?start=0&count=50'
+    return await _scrape_movers(url)
+
+
+async def _scrape_movers(url: str) -> list[MarketMover]:
+    """
+    Scrape the most active, gainers, or losers from Yahoo Finance
+    :param url: the Yahoo Finance URL to scrape
+    :return: a list of MarketMover objects
+
+    :raises: HTTPException with status code 500 if an error occurs while scraping
+    """
+    async with ClientSession(max_field_size=20000) as session:
+        html = await fetch(url, session)
+        parse_only = SoupStrainer('tr', attrs={'class': 'row false  yf-42jv6g'})
+        soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
+        movers = []
+
+        for row in soup.find_all('tr'):
+            cells = row.find_all('td', limit=4)
+
+            symbol = cells[0].find('span', class_='symbol').text.strip()
+            name = cells[0].find('span', class_='longName').text.strip()
+            price = cells[1].find('fin-streamer', {'data-field': 'regularMarketPrice'}).text.strip()
+            change = cells[2].find('fin-streamer', {'data-field': 'regularMarketChange'}).text.strip()
+            percent_change = cells[3].find('fin-streamer', {'data-field': 'regularMarketChangePercent'}).text.strip()
+
+            mover = MarketMover(
+                symbol=symbol,
+                name=name,
+                price=Decimal(price.replace(',', '')),
+                change=change,
+                percent_change=percent_change
+            )
+            movers.append(mover)
+
+        # If no movers are found, raise an HTTPException
+        if not movers:
+            raise HTTPException(status_code=500, detail='Error scraping data from Yahoo Finance')
+
+        return movers
