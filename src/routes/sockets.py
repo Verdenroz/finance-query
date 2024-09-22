@@ -82,6 +82,7 @@ async def websocket_quotes(websocket: WebSocket):
                 "symbol": quote.symbol,
                 "name": quote.name,
                 "price": str(quote.price),
+                "afterHoursPrice": str(quote.after_hours_price),
                 "change": quote.change,
                 "percentChange": quote.percent_change,
                 "logo": quote.logo
