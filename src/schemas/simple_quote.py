@@ -19,14 +19,14 @@ class SimpleQuote(BaseModel):
         default=...,
         examples=[145.00],
         description="Last traded price of the stock"
-    ),
+    )
     after_hours_price: Optional[Decimal] = Field(
         default=None,
         examples=[145.50],
         description="After hours price of the stock",
         serialization_alias="afterHoursPrice",
         validation_alias=AliasChoices("afterHoursPrice", "after_hours_price")
-    ),
+    )
     change: str = Field(
         default=...,
         examples=["+1.00"],
@@ -37,7 +37,8 @@ class SimpleQuote(BaseModel):
         examples=["+0.69%"],
         description="Percentage change in the stock price",
         serialization_alias="percentChange",
-        validation_alias=AliasChoices("percentChange", "percent_change"))
+        validation_alias=AliasChoices("percentChange", "percent_change")
+    )
     logo: Optional[str] = Field(
         default=None,
         examples=["https://logo.clearbit.com/apple.com"],
@@ -45,5 +46,5 @@ class SimpleQuote(BaseModel):
     )
 
     def dict(self, *args, **kwargs):
-        base_dict = super().model_dump(*args, **kwargs, exclude_none=True, by_alias=True)
+        base_dict = super().model_dump(*args, **kwargs, by_alias=True, exclude_none=True)
         return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in base_dict.items() if v is not None}
