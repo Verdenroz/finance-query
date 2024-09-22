@@ -1,16 +1,40 @@
 from decimal import Decimal
 
-from bs4 import BeautifulSoup
+from aiohttp import ClientSession
+from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
-from requests import Session
 from typing_extensions import List
 
-from src.constants import headers
 from src.redis import cache
 from src.schemas import SimpleQuote
+from src.utils import fetch
 
 
-def parse_stocks(stocks_divs, symbol):
+@cache(expire=15, after_market_expire=600)
+async def scrape_similar_stocks(symbol: str, limit: int = 10) -> List[SimpleQuote]:
+    url = 'https://finance.yahoo.com/quote/' + symbol
+    async with ClientSession(max_field_size=20000) as session:
+        html = await fetch(url, session)
+
+        parse_only = SoupStrainer(['div'], attrs={'class': ['main-div yf-15b2o7n', 'carousel-top  yf-1pws7a4']})
+        soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
+
+        similar_stocks = soup.find_all("div", class_="main-div yf-15b2o7n", limit=limit)
+        similar = await parse_stocks(similar_stocks, symbol)
+
+        # If similar_stocks is empty, try to scrape ETF data
+        if not similar:
+            etf_stocks = soup.find_all("div", class_="ticker-container yf-1pws7a4 enforceMaxWidth", limit=limit)
+            similar = parse_etfs(etf_stocks)
+
+        # If similar is still empty, the symbol is probably invalid
+        if not similar:
+            raise HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
+
+        return similar
+
+
+async def parse_stocks(stocks_divs, symbol) -> List[SimpleQuote]:
     stocks = []
     for div in stocks_divs:
         symbol_element = div.find("span")
@@ -44,7 +68,13 @@ def parse_stocks(stocks_divs, symbol):
         else:
             change_str = '+' + str(abs(change))
 
-        stock = SimpleQuote(symbol=div_symbol, name=name, price=price, change=change_str, percent_change=percent_change)
+        stock = SimpleQuote(
+            symbol=div_symbol,
+            name=name,
+            price=price,
+            change=change_str,
+            percent_change=percent_change,
+        )
         stocks.append(stock)
 
     return stocks
@@ -82,27 +112,13 @@ def parse_etfs(etf_divs):
         else:
             change_str = '+' + str(abs(change))
 
-        etf = SimpleQuote(symbol=symbol, name=name, price=price, change=change_str, percent_change=percent_change)
+        etf = SimpleQuote(
+            symbol=symbol,
+            name=name,
+            price=price,
+            change=change_str,
+            percent_change=percent_change,
+        )
         etfs.append(etf)
+
     return etfs
-
-
-@cache(expire=15, after_market_expire=600)
-async def scrape_similar_stocks(symbol: str, limit: int = 10) -> List[SimpleQuote]:
-    url = 'https://finance.yahoo.com/quote/' + symbol
-    with Session() as session:
-        html = session.get(url, headers=headers).text
-    soup = BeautifulSoup(html, 'lxml')
-
-    similar_stocks = soup.find_all("div", class_="main-div yf-15b2o7n", limit=limit)
-    stocks = parse_stocks(similar_stocks, symbol)
-
-    # If similar_stocks is empty, try to scrape ETF data
-    if not stocks:
-        etf_stocks = soup.find_all("div", class_="ticker-container yf-1pws7a4 enforceMaxWidth", limit=limit)
-        stocks = parse_etfs(etf_stocks)
-
-    # If stocks is empty, the symbol is probably invalid
-    if not stocks:
-        raise HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
-    return stocks
