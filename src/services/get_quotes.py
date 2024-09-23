@@ -3,7 +3,6 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List
 
-from aiohttp import ClientSession
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 from yahooquery import Ticker
@@ -19,9 +18,8 @@ async def scrape_quotes(symbols: List[str]) -> List[Quote]:
     :param symbols: List of symbols
     :return: List of Quote objects
     """
-    async with ClientSession(max_field_size=20000) as client:
-        quotes = await asyncio.gather(*(_scrape_quote(symbol, client) for symbol in symbols))
-        return [quote for quote in quotes if not isinstance(quote, Exception)]
+    quotes = await asyncio.gather(*(_scrape_quote(symbol) for symbol in symbols))
+    return [quote for quote in quotes if not isinstance(quote, Exception)]
 
 
 async def scrape_simple_quotes(symbols: List[str]) -> List[SimpleQuote]:
@@ -30,9 +28,8 @@ async def scrape_simple_quotes(symbols: List[str]) -> List[SimpleQuote]:
     :param symbols: List of symbols
     :return: List of SimpleQuote objects
     """
-    async with ClientSession(max_field_size=20000) as client:
-        quotes = await asyncio.gather(*(_scrape_simple_quote(symbol, client) for symbol in symbols))
-        return [quote for quote in quotes if not isinstance(quote, Exception)]
+    quotes = await asyncio.gather(*(_scrape_simple_quote(symbol) for symbol in symbols))
+    return [quote for quote in quotes if not isinstance(quote, Exception)]
 
 
 async def _scrape_price_data(soup: BeautifulSoup):
@@ -108,24 +105,21 @@ async def _scrape_general_info(soup: BeautifulSoup):
             holdings_turnover, last_dividend, inception_date, about)
 
 
-async def _scrape_logo(soup: BeautifulSoup, session: ClientSession):
+async def _scrape_logo(soup: BeautifulSoup):
     """
     Scrape the logo from the soup object
-    :param soup:
-    :param session:
 
     :return: URL as a string
     """
     logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-13p9sh2')
     url = logo_element['href'] if logo_element else None
 
-    return await get_logo(url, session) if url else None
+    return await get_logo(url) if url else None
 
 
 async def _scrape_sector_industry(soup: BeautifulSoup):
     """
     Scrape the sector and industry data from the soup object
-    :param soup:
 
     :return: sector and industry as a tuple
     """
@@ -168,30 +162,29 @@ async def _scrape_performance(soup: BeautifulSoup):
 
 
 @cache(10, after_market_expire=60)
-async def _scrape_quote(symbol: str, session: ClientSession) -> Quote:
+async def _scrape_quote(symbol: str) -> Quote:
     """
     Asynchronously scrapes a quote from a given symbol and returns a Quote object.
     :param symbol: Quote symbol
-    :param session: Aiohttp ClientSession
 
     :return: [Quote] object
     """
     try:
         url = 'https://finance.yahoo.com/quote/' + symbol + "/"
-        html = await fetch(url, session)
+        html = await fetch(url)
 
         parse_only = SoupStrainer(['h1', 'section', 'li'])
         soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
         symbol_name_element = soup.select_one('h1.yf-vfa1ac')
         if not symbol_name_element:
-            return await _get_quote_from_yahooquery(symbol, session)
+            return await _get_quote_from_yahooquery(symbol)
 
         name = symbol_name_element.text.split('(')[0].strip()
 
         prices_future = asyncio.create_task(_scrape_price_data(soup))
         list_items_future = asyncio.create_task(_scrape_general_info(soup))
-        logo_future = asyncio.create_task(_scrape_logo(soup, session))
+        logo_future = asyncio.create_task(_scrape_logo(soup))
         sector_industry_future = asyncio.create_task(_scrape_sector_industry(soup))
         performance_future = asyncio.create_task(_scrape_performance(soup))
 
@@ -248,31 +241,30 @@ async def _scrape_quote(symbol: str, session: ClientSession) -> Quote:
             logo=logo
         )
     except Exception:
-        return await _get_quote_from_yahooquery(symbol, session)
+        return await _get_quote_from_yahooquery(symbol)
 
 
 @cache(10, after_market_expire=60)
-async def _scrape_simple_quote(symbol: str, session: ClientSession) -> SimpleQuote:
+async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
     """
     Asynchronously scrapes a simple quote from a given symbol and returns a SimpleQuote object.
     :param symbol: Quote symbol
-    :param session: The aiohttp ClientSession
     """
     try:
         url = 'https://finance.yahoo.com/quote/' + symbol + "/"
-        html = await fetch(url, session)
+        html = await fetch(url)
 
         parse_only = SoupStrainer(['h1', 'fin-streamer', 'a'])
         soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
         symbol_name_element = soup.select_one('h1.yf-vfa1ac')
         if not symbol_name_element:
-            return await _get_simple_quote_from_yahooquery(symbol, session)
+            return await _get_simple_quote_from_yahooquery(symbol)
 
         name = symbol_name_element.text.split('(')[0].strip()
 
         prices_future = asyncio.create_task(_scrape_price_data(soup))
-        logo_future = asyncio.create_task(_scrape_logo(soup, session))
+        logo_future = asyncio.create_task(_scrape_logo(soup))
 
         (regular_price, regular_change, regular_percent_change, post_price), logo = await asyncio.gather(
             prices_future, logo_future
@@ -288,14 +280,13 @@ async def _scrape_simple_quote(symbol: str, session: ClientSession) -> SimpleQuo
             logo=logo
         )
     except Exception:
-        return await _get_simple_quote_from_yahooquery(symbol, session)
+        return await _get_simple_quote_from_yahooquery(symbol)
 
 
-async def _get_quote_from_yahooquery(symbol: str, session: ClientSession) -> Quote:
+async def _get_quote_from_yahooquery(symbol: str) -> Quote:
     """
     Get quote data from Yahoo Finance using yahooquery in case the scraping fails
     :param symbol: Quote symbol
-    :param session: The aiohttp ClientSession
 
     :raises: HTTPException if ticker is not found
     """
@@ -332,7 +323,7 @@ async def _get_quote_from_yahooquery(symbol: str, session: ClientSession) -> Quo
     industry = profile[symbol].get('industry', None)
     about = profile[symbol].get('longBusinessSummary', None)
     website = profile[symbol].get('website', None)
-    logo = await get_logo(website, session) if website else None
+    logo = await get_logo(website) if website else None
 
     def format_value(value: float) -> str:
         # Convert the value to millions and round it to one decimal place
@@ -404,11 +395,10 @@ async def _get_quote_from_yahooquery(symbol: str, session: ClientSession) -> Quo
     )
 
 
-async def _get_simple_quote_from_yahooquery(symbol: str, session: ClientSession) -> SimpleQuote:
+async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
     """
     Get simple quote data from Yahoo Finance using yahooquery in case the scraping fails
     :param symbol: Quote symbol
-    :param session: The aiohttp ClientSession
 
     :raises: HTTPException if ticker is not found
     """
@@ -424,7 +414,7 @@ async def _get_simple_quote_from_yahooquery(symbol: str, session: ClientSession)
     regular_change = f"{quote[symbol]['regularMarketChange']:.2f}"
     regular_percent_change = f"{quote[symbol]['regularMarketChangePercent']:.2f}%"
     website = profile[symbol].get('website', None)
-    logo = await get_logo(website, session) if website else None
+    logo = await get_logo(website) if website else None
 
     return SimpleQuote(
         symbol=symbol.upper(),
