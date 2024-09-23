@@ -11,6 +11,7 @@ from src.proxy import proxy, proxy_auth
 
 load_dotenv()
 
+global_session = ClientSession(max_field_size=20000, headers=headers)
 
 def is_market_open() -> bool:
     """
@@ -26,7 +27,7 @@ def is_market_open() -> bool:
 
 async def fetch(
         url: str,
-        session: ClientSession = ClientSession(max_field_size=20000, headers=headers),
+        session: ClientSession = global_session,
         use_proxy: bool = os.getenv('USE_PROXY', 'False') == 'True') -> str:
     """
     Fetch the data from the given URL with proxy if enabled
