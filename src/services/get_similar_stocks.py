@@ -1,6 +1,5 @@
 from decimal import Decimal
 
-from aiohttp import ClientSession
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 from typing_extensions import List
@@ -13,28 +12,27 @@ from src.utils import fetch
 @cache(expire=15, after_market_expire=600)
 async def scrape_similar_stocks(symbol: str, limit: int = 10) -> List[SimpleQuote]:
     url = 'https://finance.yahoo.com/quote/' + symbol
-    async with ClientSession(max_field_size=20000) as session:
-        html = await fetch(url, session)
+    html = await fetch(url)
 
-        parse_only = SoupStrainer(['div'], attrs={'class': ['main-div yf-15b2o7n', 'carousel-top  yf-1pws7a4']})
-        soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
+    parse_only = SoupStrainer(['div'], attrs={'class': ['main-div yf-15b2o7n', 'carousel-top  yf-1pws7a4']})
+    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-        similar_stocks = soup.find_all("div", class_="main-div yf-15b2o7n", limit=limit)
-        similar = await parse_stocks(similar_stocks, symbol)
+    similar_stocks = soup.find_all("div", class_="main-div yf-15b2o7n", limit=limit)
+    similar = await _parse_stocks(similar_stocks, symbol)
 
-        # If similar_stocks is empty, try to scrape ETF data
-        if not similar:
-            etf_stocks = soup.find_all("div", class_="ticker-container yf-1pws7a4 enforceMaxWidth", limit=limit)
-            similar = parse_etfs(etf_stocks)
+    # If similar_stocks is empty, try to scrape ETF data
+    if not similar:
+        etf_stocks = soup.find_all("div", class_="ticker-container yf-1pws7a4 enforceMaxWidth", limit=limit)
+        similar = await _parse_etfs(etf_stocks)
 
-        # If similar is still empty, the symbol is probably invalid
-        if not similar:
-            raise HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
+    # If similar is still empty, the symbol is probably invalid
+    if not similar:
+        raise HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
 
-        return similar
+    return similar
 
 
-async def parse_stocks(stocks_divs, symbol) -> List[SimpleQuote]:
+async def _parse_stocks(stocks_divs, symbol) -> List[SimpleQuote]:
     stocks = []
     for div in stocks_divs:
         symbol_element = div.find("span")
@@ -80,7 +78,7 @@ async def parse_stocks(stocks_divs, symbol) -> List[SimpleQuote]:
     return stocks
 
 
-def parse_etfs(etf_divs):
+async def _parse_etfs(etf_divs):
     etfs = []
     for div in etf_divs:
         symbol_element = div.find("span", class_="symbol yf-ravs5v")
