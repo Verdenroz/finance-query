@@ -1,4 +1,3 @@
-from aiohttp import ClientSession
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 from typing_extensions import List
@@ -8,7 +7,42 @@ from src.schemas import News
 from src.utils import fetch
 
 
-async def parse_news(html: str) -> List[News]:
+@cache(300)
+async def scrape_news_for_quote(symbol: str) -> List[News]:
+    urls = [
+        'https://stockanalysis.com/stocks/' + symbol,
+        'https://stockanalysis.com/etf/' + symbol
+    ]
+
+    # Try to fetch news from the stocks url, if it fails, try etf
+    for url in urls:
+        html = await fetch(url)
+        news_list = await _parse_news(html)
+
+        # If news was found, break the loop because the symbol is a stock
+        if news_list:
+            break
+
+    # If no news was found, raise an error
+    else:
+        raise HTTPException(status_code=404, detail="Error fetching news")
+
+    return news_list
+
+
+@cache(900)
+async def scrape_general_news():
+    url = 'https://stockanalysis.com/news/'
+    html = await fetch(url)
+    news_list = await _parse_news(html)
+    # If no news was found, raise an error
+    if not news_list:
+        raise HTTPException(status_code=404, detail="Error fetching news")
+
+    return news_list
+
+
+async def _parse_news(html: str) -> List[News]:
     soup = BeautifulSoup(html, 'lxml', parse_only=SoupStrainer('div'))
     news = soup.find_all('div', class_='gap-4 border-gray-300 bg-white p-4 shadow last:pb-1 last:shadow-none '
                                        'dark:border-dark-600 dark:bg-dark-800 sm:border-b sm:px-0 sm:shadow-none '
@@ -34,39 +68,5 @@ async def parse_news(html: str) -> List[News]:
 
         news_item = News(title=title, link=link, source=source, img=img, time=time)
         news_list.append(news_item)
-
-    return news_list
-
-
-@cache(300)
-async def scrape_news_for_quote(symbol: str) -> List[News]:
-    urls = [
-        'https://stockanalysis.com/stocks/' + symbol,
-        'https://stockanalysis.com/etf/' + symbol
-    ]
-
-    async with ClientSession() as session:
-        # Try to fetch news from the stocks url, if it fails, try etf
-        for url in urls:
-            html = await fetch(url, session)
-            news_list = await parse_news(html)
-            if news_list:
-                break
-        # If no news was found, raise an error
-        else:
-            raise HTTPException(status_code=404, detail="Error fetching news")
-
-    return news_list
-
-
-@cache(900)
-async def scrape_general_news():
-    url = 'https://stockanalysis.com/news/'
-    async with ClientSession() as session:
-        html = await fetch(url, session)
-        news_list = await parse_news(html)
-        # If no news was found, raise an error
-        if not news_list:
-            raise HTTPException(status_code=404, detail="Error fetching news")
 
     return news_list
