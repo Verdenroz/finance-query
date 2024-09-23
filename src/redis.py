@@ -8,7 +8,6 @@ from datetime import date
 import orjson
 from aiohttp import ClientSession
 from dotenv import load_dotenv
-from httpx import AsyncClient
 from pydantic import BaseModel
 from redis import asyncio as aioredis
 
@@ -71,9 +70,9 @@ def cache(expire, after_market_expire=None):
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             # Filter out the Response object from args and kwargs
-            filtered_args = [arg for arg in args if not isinstance(arg, (AsyncClient, ClientSession))]
+            filtered_args = [arg for arg in args if not isinstance(arg, (ClientSession))]
             filtered_kwargs = {k: v for k, v in kwargs.items() if
-                               not isinstance(v, (AsyncClient, ClientSession))}
+                               not isinstance(v, (ClientSession))}
 
             key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}"
 
