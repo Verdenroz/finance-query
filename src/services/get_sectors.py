@@ -1,7 +1,6 @@
 import asyncio
 from typing import List
 
-from aiohttp import ClientSession
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
 from yahooquery import Ticker
@@ -15,11 +14,10 @@ from src.utils import fetch
 
 @cache(expire=300, after_market_expire=3600)
 async def get_sectors() -> List[MarketSector]:
-    async with ClientSession(max_field_size=20000) as session:
-        tasks = []
-        for sector, url in urls.items():
-            tasks.append((sector.value, fetch(url, session)))
-        responses = await asyncio.gather(*[task for _, task in tasks])
+    tasks = []
+    for sector, url in urls.items():
+        tasks.append((sector.value, fetch(url)))
+    responses = await asyncio.gather(*[task for _, task in tasks])
 
     sectors = []
     for (sector, _), html in zip(tasks, responses):
@@ -37,8 +35,7 @@ async def get_sector_for_symbol(symbol: str) -> MarketSector:
         raise HTTPException(status_code=404, detail=f"Sector for {symbol} not found.")
 
     url = urls[Sector(sector)]
-    async with ClientSession(max_field_size=20000) as session:
-        html = await fetch(url, session)
+    html = await fetch(url)
 
     sector = await parse_sector(html, sector)
     return sector
@@ -47,8 +44,7 @@ async def get_sector_for_symbol(symbol: str) -> MarketSector:
 @cache(expire=300, after_market_expire=3600)
 async def get_sector_details(sector: Sector) -> MarketSectorDetails:
     url = urls[sector]
-    async with ClientSession(max_field_size=20000) as session:
-        html = await fetch(url, session)
+    html = await fetch(url)
     sector = await parse_sector_details(html, sector.value)
 
     return sector
