@@ -1,5 +1,7 @@
+import os
 from contextlib import asynccontextmanager
 
+from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
@@ -9,11 +11,22 @@ from src.routes import (quotes_router, indices_router, movers_router, historical
                         sectors_router, sockets_router, stream_router)
 from src.session_manager import get_global_session, close_global_session
 
+load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await get_global_session()
+    session = await get_global_session()
+    async with session.get("https://api.ipify.org/") as ip_response:
+        ip = await ip_response.text()
+        api_url = "https://api.brightdata.com/zone/whitelist"
+        proxy_header_token = {
+            "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
+            "Content-Type": "application/json"
+        }
+        payload = {"ip": ip}
+        await session.post(api_url, headers=proxy_header_token, json=payload)
     yield
+    await session.delete(api_url, headers=proxy_header_token, json=payload)
     await close_global_session()
 
 app = FastAPI(
