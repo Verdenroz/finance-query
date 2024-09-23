@@ -4,7 +4,7 @@ from orjson import orjson
 from redis.client import PubSub
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.utils import r
+from src.redis import r
 
 
 class RedisConnectionManager:

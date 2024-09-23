@@ -1,24 +1,38 @@
-import asyncio
 from decimal import Decimal
 
-from aiohttp import ClientSession, TCPConnector
 from bs4 import BeautifulSoup, SoupStrainer
-from fastapi.responses import JSONResponse
+from fastapi import HTTPException
 
-from ..constants import headers
+from ..redis import cache
 from ..schemas.index import Index
-from ..utils import cache
+from ..utils import fetch
 
 
-async def fetch_and_parse(session, url, semaphore):
-    async with semaphore, session.get(url, headers=headers) as response:
-        html = await response.text()
-        return await parse_html(html)
+@cache(expire=15, after_market_expire=3600)
+async def scrape_indices() -> list[Index]:
+    """
+    Scrape the Americas indices from investing.com
+    :return: a list of Index objects
+
+    :raises: HTTPException with status code 500 if an error occurs while scraping
+    """
+    url = 'https://www.investing.com/indices/americas-indices'
+
+    try:
+        html = await fetch(url)
+        return await get_indices(html)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail={str(e)})
 
 
-async def parse_html(html):
+async def get_indices(html) -> list[Index]:
+    """
+    Parse the HTML content and return a list of Index objects
+    :param html: the HTML content
+    :return: a list of Index objects
+    """
     parse_only = SoupStrainer('table', {'id': 'indice_table_1'})
-    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)  # Use 'lxml' as the parser
+    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
     table = soup.find('table', {'id': 'indice_table_1'})
     indices = []
     if table:
@@ -34,17 +48,3 @@ async def parse_html(html):
                 )
                 indices.append(index_data)
     return indices
-
-
-@cache(expire=15, after_market_expire=3600)
-async def scrape_indices():
-    urls = ['https://www.investing.com/indices/americas-indices']
-    semaphore = asyncio.Semaphore(25)  # Limit to 10 concurrent requests
-
-    try:
-        async with ClientSession(connector=TCPConnector(limit=25)) as session:
-            tasks = [fetch_and_parse(session, url, semaphore) for url in urls]
-            all_indices = await asyncio.gather(*tasks)
-            return [index for indices in all_indices for index in indices]
-    except Exception as e:
-        return JSONResponse(status_code=500, content={"message": str(e)})

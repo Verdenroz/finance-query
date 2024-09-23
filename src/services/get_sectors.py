@@ -3,14 +3,52 @@ from typing import List
 
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
-from httpx import AsyncClient
 from yahooquery import Ticker
 
-from src.constants import headers
+from src.redis import cache
 from src.schemas import MarketSector
 from src.schemas.sector import Sector, MarketSectorDetails
 from src.services import scrape_simple_quotes
-from src.utils import cache
+from src.utils import fetch
+
+
+@cache(expire=300, after_market_expire=3600)
+async def get_sectors() -> List[MarketSector]:
+    tasks = []
+    for sector, url in urls.items():
+        tasks.append((sector.value, fetch(url)))
+    responses = await asyncio.gather(*[task for _, task in tasks])
+
+    sectors = []
+    for (sector, _), html in zip(tasks, responses):
+        sector_data = await parse_sector(html, sector)
+        sectors.append(sector_data)
+    return sectors
+
+
+@cache(expire=60, after_market_expire=600)
+async def get_sector_for_symbol(symbol: str) -> MarketSector:
+    ticker = Ticker(symbol)
+    profile = ticker.asset_profile
+    sector = profile[symbol]['sector'] if 'sector' in profile[symbol] else None
+    if not sector:
+        raise HTTPException(status_code=404, detail=f"Sector for {symbol} not found.")
+
+    url = urls[Sector(sector)]
+    html = await fetch(url)
+
+    sector = await parse_sector(html, sector)
+    return sector
+
+
+@cache(expire=300, after_market_expire=3600)
+async def get_sector_details(sector: Sector) -> MarketSectorDetails:
+    url = urls[sector]
+    html = await fetch(url)
+    sector = await parse_sector_details(html, sector.value)
+
+    return sector
+
 
 urls = {
     Sector.TECHNOLOGY: 'https://finance.yahoo.com/sectors/technology/',
@@ -28,7 +66,8 @@ urls = {
 
 
 async def parse_sector(html: str, sector: str) -> MarketSector:
-    soup = BeautifulSoup(html, 'lxml', parse_only=SoupStrainer(['section']))
+    parse_only = SoupStrainer('section', attrs={'class': 'yf-12wncuy'})
+    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
     returns = soup.find_all('section', 'card small yf-13ievhf bdr sticky')
     data = []
     for changes in returns:
@@ -115,47 +154,3 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         top_industries=industries,
         top_companies=quotes
     )
-
-
-@cache(expire=300, after_market_expire=3600)
-async def get_sectors() -> List[MarketSector]:
-    async with AsyncClient(http2=True, max_redirects=5) as client:
-        tasks = []
-        for sector, url in urls.items():
-            tasks.append((sector.value, client.get(url, headers=headers)))
-        responses = await asyncio.gather(*[task for _, task in tasks])
-
-    sectors = []
-    for (sector, _), response in zip(tasks, responses):
-        html = response.text
-        sector_data = await parse_sector(html, sector)
-        sectors.append(sector_data)
-    return sectors
-
-
-@cache(expire=60, after_market_expire=600)
-async def get_sector_for_symbol(symbol: str) -> MarketSector:
-    ticker = Ticker(symbol)
-    profile = ticker.asset_profile
-    sector = profile[symbol]['sector'] if 'sector' in profile[symbol] else None
-    if not sector:
-        raise HTTPException(status_code=404, detail=f"Sector for {symbol} not found.")
-
-    url = urls[Sector(sector)]
-    async with AsyncClient(http2=True, max_redirects=5) as client:
-        response = await client.get(url, headers=headers)
-        html = response.text
-
-    sector = await parse_sector(html, sector)
-    return sector
-
-
-@cache(expire=300, after_market_expire=3600)
-async def get_sector_details(sector: Sector) -> MarketSectorDetails:
-    url = urls[sector]
-    async with AsyncClient(http2=True, max_redirects=5) as client:
-        response = await client.get(url, headers=headers)
-        html = response.text
-    sector = await parse_sector_details(html, sector.value)
-
-    return sector

@@ -3,37 +3,290 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List
 
-import requests
 from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
-from httpx import AsyncClient
 from yahooquery import Ticker
 
 from src.schemas import Quote, SimpleQuote
-from ..constants import headers
-from ..utils import cache
+from ..redis import cache
+from ..utils import fetch, get_logo
 
 
-async def fetch(url: str, client: AsyncClient):
+async def scrape_quotes(symbols: List[str]) -> List[Quote]:
     """
-    Fetches the HTML content of a given URL
+    Asynchronously scrapes multiple quotes from a list of symbols and returns a list of Quote objects.
+    :param symbols: List of symbols
+    :return: List of Quote objects
     """
-    response = await client.get(url, headers=headers)
-    return response.text
+    quotes = await asyncio.gather(*(_scrape_quote(symbol) for symbol in symbols))
+    return [quote for quote in quotes if not isinstance(quote, Exception)]
 
 
-async def get_logo(url: str):
-    response = requests.get(f"https://logo.clearbit.com/{url}")
-    if response.status_code == 200:
-        return response.url
-    else:
-        return None
+async def scrape_simple_quotes(symbols: List[str]) -> List[SimpleQuote]:
+    """
+    Asynchronously scrapes multiple simple quotes from a list of symbols and returns a list of SimpleQuote objects.
+    :param symbols: List of symbols
+    :return: List of SimpleQuote objects
+    """
+    quotes = await asyncio.gather(*(_scrape_simple_quote(symbol) for symbol in symbols))
+    return [quote for quote in quotes if not isinstance(quote, Exception)]
 
 
-async def get_quote_from_yahooquery(symbol: str) -> Quote:
+async def _scrape_price_data(soup: BeautifulSoup):
+    """
+    Scrape the price data from the soup object and formats the data
+
+    :return: Regular price, change, percent change, and post price as a tuple
+    """
+    regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
+    regular_change_value = round(
+        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]), 2)
+    regular_percent_change_value = round(
+        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
+    regular_change = f"{regular_change_value:+.2f}"
+    regular_percent_change = f"{regular_percent_change_value:+.2f}%"
+    post_price_element = soup.find("fin-streamer", {"data-testid": "qsp-post-price"})
+    post_price = round(Decimal(post_price_element["data-value"]), 2) if post_price_element else None
+
+    return regular_price, regular_change, regular_percent_change, post_price
+
+
+async def _scrape_general_info(soup: BeautifulSoup):
+    """
+    Scrape misc. info from the soup object and formats the data
+
+    :return: A tuple of the scraped data
+    """
+    list_items = soup.select('li.yf-tx3nkj')
+    data = {}
+    for item in list_items:
+        label = item.find("span", class_="label").text.strip()
+        value = item.find("span", class_="value").text.strip()
+        data[label] = value
+
+    open_price = Decimal(data.get("Open", None).replace(',', '')) if data.get("Open") else None
+    market_cap = data.get("Market Cap (intraday)", None)
+    beta = Decimal(data.get("Beta (5Y Monthly)", None))
+    pe = Decimal(data.get("PE Ratio (TTM)"), None)
+    eps = Decimal(data.get("EPS (TTM)"), None)
+    earnings_date = data.get("Earnings Date", None)
+    forward_dividend_yield = data.get("Forward Dividend & Yield", None)
+    dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield else (None, None) if not (
+        any(char.isdigit() for char in forward_dividend_yield)) \
+        else forward_dividend_yield.replace("(", "").replace(")", "").split()
+    ex_dividend = data.get("Ex-Dividend Date") if data.get("Ex-Dividend Date") != "--" else None
+    net_assets = data.get("Net Assets", None)
+    nav = data.get("NAV", None)
+    expense_ratio = data.get("Expense Ratio (net)", None)
+
+    days_range = data.get("Day's Range", None)
+    low, high = [Decimal(x.replace(',', '')) for x in days_range.split(' - ')] if days_range else (None, None)
+
+    fifty_two_week_range = data.get("52 Week Range", None)
+    year_low, year_high = [Decimal(x.replace(',', '')) for x in
+                           fifty_two_week_range.split(' - ')] if fifty_two_week_range else (None, None)
+
+    volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
+    avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
+
+    category = data.get("Category", None)
+    last_cap = data.get("Last Cap Gain", None)
+    morningstar_rating = data.get("Morningstar Rating").split()[0] if data.get("Morningstar Rating") else None
+    morningstar_risk = data.get("Morningstar Risk Rating", None)
+    holdings_turnover = data.get("Holdings Turnover", None)
+    last_dividend = data.get("Last Dividend", None)
+    inception_date = data.get("Inception Date", None)
+
+    about = soup.find('p', class_='yf-1xu2f9r').text
+
+    return (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
+            dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
+            morningstar_rating, morningstar_risk,
+            holdings_turnover, last_dividend, inception_date, about)
+
+
+async def _scrape_logo(soup: BeautifulSoup):
+    """
+    Scrape the logo from the soup object
+
+    :return: URL as a string
+    """
+    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-13p9sh2')
+    url = logo_element['href'] if logo_element else None
+
+    return await get_logo(url) if url else None
+
+
+async def _scrape_sector_industry(soup: BeautifulSoup):
+    """
+    Scrape the sector and industry data from the soup object
+
+    :return: sector and industry as a tuple
+    """
+    info_sections = soup.find_all("div", class_="infoSection yf-1xu2f9r")
+    curr_sector = None
+    curr_industry = None
+    for section in info_sections:
+        h3_text = section.find("h3").text
+        if h3_text == "Sector":
+            a_element = section.find("a")
+            a_text = a_element.text
+            curr_sector = a_text.strip()
+        elif h3_text == "Industry":
+            a_element = section.find("a")
+            a_text = a_element.text
+            curr_industry = a_text.strip()
+
+    return curr_sector, curr_industry
+
+
+async def _scrape_performance(soup: BeautifulSoup):
+    """
+    Scrape the performance data from the soup object
+
+    :return: YTD, 1 year, 3 year, and 5 year returns as a tuple
+    """
+    returns = soup.find_all('section', 'card small yf-13ievhf bdr sticky')
+    data = []
+    for changes in returns:
+        perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
+        if perf_div:
+            sign = '+' if 'positive' in perf_div['class'] else '-'
+            data.append(sign + perf_div.text.strip())
+
+    ytd_return = data[0] if len(data) > 0 else None
+    year_return = data[1] if len(data) > 1 else None
+    three_year_return = data[2] if len(data) > 2 else None
+    five_year_return = data[3] if len(data) > 3 else None
+    return ytd_return, year_return, three_year_return, five_year_return
+
+
+@cache(10, after_market_expire=60)
+async def _scrape_quote(symbol: str) -> Quote:
+    """
+    Asynchronously scrapes a quote from a given symbol and returns a Quote object.
+    :param symbol: Quote symbol
+
+    :return: [Quote] object
+    """
+    try:
+        url = 'https://finance.yahoo.com/quote/' + symbol + "/"
+        html = await fetch(url)
+
+        parse_only = SoupStrainer(['h1', 'section', 'li'])
+        soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
+
+        symbol_name_element = soup.select_one('h1.yf-vfa1ac')
+        if not symbol_name_element:
+            return await _get_quote_from_yahooquery(symbol)
+
+        name = symbol_name_element.text.split('(')[0].strip()
+
+        prices_future = asyncio.create_task(_scrape_price_data(soup))
+        list_items_future = asyncio.create_task(_scrape_general_info(soup))
+        logo_future = asyncio.create_task(_scrape_logo(soup))
+        sector_industry_future = asyncio.create_task(_scrape_sector_industry(soup))
+        performance_future = asyncio.create_task(_scrape_performance(soup))
+
+        (
+            (regular_price, regular_change, regular_percent_change, post_price),
+            (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
+             dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
+             morningstar_rating,
+             morningstar_risk, holdings_turnover, last_dividend, inception_date, about),
+            logo, (sector, industry),
+            (ytd_return, year_return, three_year_return, five_year_return)) = await asyncio.gather(
+            prices_future, list_items_future, logo_future, sector_industry_future, performance_future
+        )
+
+        return Quote(
+            symbol=symbol.upper(),
+            name=name,
+            price=regular_price,
+            after_hours_price=post_price,
+            change=regular_change,
+            percent_change=regular_percent_change,
+            open=open_price,
+            high=high,
+            low=low,
+            year_high=year_high,
+            year_low=year_low,
+            volume=volume,
+            avg_volume=avg_volume,
+            market_cap=market_cap,
+            beta=beta,
+            pe=pe,
+            eps=eps,
+            category=category,
+            morningstar_rating=morningstar_rating,
+            morningstar_risk_rating=morningstar_risk,
+            last_capital_gain=last_cap,
+            last_dividend=last_dividend,
+            holdings_turnover=holdings_turnover,
+            inception_date=inception_date,
+            earnings_date=earnings_date,
+            dividend=dividend,
+            dividend_yield=yield_percent,
+            ex_dividend=ex_dividend,
+            net_assets=net_assets,
+            nav=nav,
+            expense_ratio=expense_ratio,
+            sector=sector,
+            industry=industry,
+            about=about,
+            ytd_return=ytd_return,
+            year_return=year_return,
+            three_year_return=three_year_return,
+            five_year_return=five_year_return,
+            logo=logo
+        )
+    except Exception:
+        return await _get_quote_from_yahooquery(symbol)
+
+
+@cache(10, after_market_expire=60)
+async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
+    """
+    Asynchronously scrapes a simple quote from a given symbol and returns a SimpleQuote object.
+    :param symbol: Quote symbol
+    """
+    try:
+        url = 'https://finance.yahoo.com/quote/' + symbol + "/"
+        html = await fetch(url)
+
+        parse_only = SoupStrainer(['h1', 'fin-streamer', 'a'])
+        soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
+
+        symbol_name_element = soup.select_one('h1.yf-vfa1ac')
+        if not symbol_name_element:
+            return await _get_simple_quote_from_yahooquery(symbol)
+
+        name = symbol_name_element.text.split('(')[0].strip()
+
+        prices_future = asyncio.create_task(_scrape_price_data(soup))
+        logo_future = asyncio.create_task(_scrape_logo(soup))
+
+        (regular_price, regular_change, regular_percent_change, post_price), logo = await asyncio.gather(
+            prices_future, logo_future
+        )
+
+        return SimpleQuote(
+            symbol=symbol.upper(),
+            name=name,
+            price=regular_price,
+            after_hours_price=post_price,
+            change=regular_change,
+            percent_change=regular_percent_change,
+            logo=logo
+        )
+    except Exception:
+        return await _get_simple_quote_from_yahooquery(symbol)
+
+
+async def _get_quote_from_yahooquery(symbol: str) -> Quote:
     """
     Get quote data from Yahoo Finance using yahooquery in case the scraping fails
-    :param symbol: Stock symbol
+    :param symbol: Quote symbol
 
     :raises: HTTPException if ticker is not found
     """
@@ -142,266 +395,33 @@ async def get_quote_from_yahooquery(symbol: str) -> Quote:
     )
 
 
-@cache(10, after_market_expire=60)
-async def scrape_quote(symbol: str, client: AsyncClient) -> Quote:
+async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
     """
-    Asynchronously scrapes a quote from a given symbol and returns a Quote object.
-    :param symbol: Stock symbol
-    :param client: HTTP client
+    Get simple quote data from Yahoo Finance using yahooquery in case the scraping fails
+    :param symbol: Quote symbol
 
-    :raises: HTTPException if there is an error scraping and unable to get quote from yahooquery
+    :raises: HTTPException if ticker is not found
     """
+    ticker = Ticker(symbol)
+    quote = ticker.quotes
+    profile = ticker.asset_profile
 
-    def get_decimal(number, key):
-        num = number.get(key)
-        dec_value = Decimal(num) if num and num.replace('.', '', 1).isdigit() else None
-        if dec_value is None:
-            return None
-        return dec_value
+    if not quote or symbol not in quote:
+        raise HTTPException(status_code=404, detail="Symbol not found")
+    name = quote[symbol]['longName']
+    regular_price = quote[symbol]['regularMarketPrice']
+    post_price = quote[symbol].get('postMarketPrice', None)
+    regular_change = f"{quote[symbol]['regularMarketChange']:.2f}"
+    regular_percent_change = f"{quote[symbol]['regularMarketChangePercent']:.2f}%"
+    website = profile[symbol].get('website', None)
+    logo = await get_logo(website) if website else None
 
-    async def extract_sector_and_industry(sector_soup: BeautifulSoup):
-        info_sections = sector_soup.find_all("div", class_="infoSection yf-1xu2f9r")
-
-        curr_sector = None
-        curr_industry = None
-
-        for section in info_sections:
-            h3_text = section.find("h3").text
-            a_element = section.find("a")
-            a_text = a_element.text if a_element else None
-            if h3_text == "Sector":
-                curr_sector = a_text.strip()
-            elif h3_text == "Industry":
-                curr_industry = a_text.strip()
-
-        return curr_sector, curr_industry
-
-    url = 'https://finance.yahoo.com/quote/' + symbol + "/"
-    html = await fetch(url, client)
-
-    parse_only = SoupStrainer(['h1', 'div', 'card'])
-    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
-
-    symbol_name_element = soup.select_one('h1.yf-vfa1ac')
-    if not symbol_name_element:
-        return await get_quote_from_yahooquery(symbol)
-
-    name = symbol_name_element.text.split('(')[0].strip()
-
-    regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
-    regular_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]),
-                                 2)
-    regular_percent_change_value = round(
-        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
-
-    # Add + or - sign and % for percent_change using f-strings
-    regular_change = f"{regular_change_value:+.2f}"
-    regular_percent_change = f"{regular_percent_change_value:+.2f}%"
-
-    # After hours price
-    post_price_element = soup.find("fin-streamer", {"data-testid": "qsp-post-price"})
-    if not post_price_element:
-        post_price = None
-    else:
-        post_price = round(Decimal(post_price_element["data-value"]), 2)
-
-    list_items = soup.select('li.yf-tx3nkj')
-
-    data = {}
-
-    for item in list_items:
-        label = item.find("span", class_="label").text.strip()
-        value = item.find("span", class_="value").text.strip()
-        data[label] = value
-
-    open_price = Decimal(data.get("Open").replace(',', '')) if data.get("Open") else None
-    market_cap = data.get("Market Cap (intraday)")
-    beta = get_decimal(data, "Beta (5Y Monthly)")
-    pe = get_decimal(data, "PE Ratio (TTM)")
-    eps = get_decimal(data, "EPS (TTM)")
-    earnings_date = data.get("Earnings Date")
-    forward_dividend_yield = data.get("Forward Dividend & Yield")
-    dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield \
-        else (None, None) if not any(char.isdigit() for char in forward_dividend_yield) \
-        else forward_dividend_yield.replace("(", "").replace(")", "").split()
-    ex_dividend = None if data.get("Ex-Dividend Date") == "--" else data.get("Ex-Dividend Date")
-    net_assets = data.get("Net Assets")
-    nav = data.get("NAV")
-    expense_ratio = data.get("Expense Ratio (net)")
-
-    # Day's range
-    days_range = data.get("Day's Range")
-    low, high = None, None
-    if days_range:
-        low, high = [Decimal(x.replace(',', '')) for x in days_range.split(' - ')]
-
-    # 52-week range
-    fifty_two_week_range = data.get("52 Week Range")
-    year_low, year_high = None, None
-    if fifty_two_week_range:
-        year_low, year_high = [Decimal(x.replace(',', '')) for x in fifty_two_week_range.split(' - ')]
-
-    # Volume
-    volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
-    avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
-
-    # About the company
-    about = soup.find('p', class_='yf-1xu2f9r').text
-    # Logo
-    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-13p9sh2')
-    logo_url = logo_element['href'] if logo_element else None
-
-    # Funds
-    category = data.get("Category")
-    last_cap = data.get("Last Cap Gain")
-    morningstar_rating = data.get("Morningstar Rating").split()[0] if data.get("Morningstar Rating") else None
-    morningstar_risk = data.get("Morningstar Risk Rating")
-    holdings_turnover = data.get("Holdings Turnover")
-    last_dividend = data.get("Last Dividend")
-    inception_date = data.get("Inception Date")
-
-    # Scrape sector, industry, and logo concurrently
-    sector_and_industry_future = asyncio.create_task(extract_sector_and_industry(soup))
-    logo_future = asyncio.create_task(get_logo(logo_url))
-
-    (sector, industry), logo = await asyncio.gather(sector_and_industry_future, logo_future)
-
-    # Scrape performance:
-    returns = soup.find_all('section', 'card small yf-13ievhf bdr sticky')
-    data = []
-    for changes in returns:
-        perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
-        if perf_div:
-            sign = '+' if 'positive' in perf_div['class'] else '-'
-            data.append(sign + perf_div.text.strip())
-
-    ytd_return = data[0] if len(data) > 0 else None
-    year_return = data[1] if len(data) > 1 else None
-    three_year_return = data[2] if len(data) > 2 else None
-    five_year_return = data[3] if len(data) > 3 else None
-
-    return Quote(
+    return SimpleQuote(
         symbol=symbol.upper(),
         name=name,
         price=regular_price,
         after_hours_price=post_price,
         change=regular_change,
         percent_change=regular_percent_change,
-        open=open_price,
-        high=high,
-        low=low,
-        year_high=year_high,
-        year_low=year_low,
-        volume=volume,
-        avg_volume=avg_volume,
-        market_cap=market_cap,
-        beta=beta,
-        pe=pe,
-        eps=eps,
-        category=category,
-        morningstar_rating=morningstar_rating,
-        morningstar_risk_rating=morningstar_risk,
-        last_capital_gain=last_cap,
-        last_dividend=last_dividend,
-        holdings_turnover=holdings_turnover,
-        inception_date=inception_date,
-        earnings_date=earnings_date,
-        dividend=dividend,
-        dividend_yield=yield_percent,
-        ex_dividend=ex_dividend,
-        net_assets=net_assets,
-        nav=nav,
-        expense_ratio=expense_ratio,
-        sector=sector,
-        industry=industry,
-        about=about,
-        ytd_return=ytd_return,
-        year_return=year_return,
-        three_year_return=three_year_return,
-        five_year_return=five_year_return,
         logo=logo
     )
-
-
-async def scrape_quotes(symbols: List[str]) -> List[Quote]:
-    async with AsyncClient(http2=True, max_redirects=5) as client:
-        tasks = [scrape_quote(symbol, client) for symbol in symbols]
-        results = await asyncio.gather(*tasks)
-        quotes: List[Quote] = list(results)
-    return quotes
-
-
-async def get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
-    """
-    Get simple quote data from Yahoo Finance using yahooquery in case the scraping fails
-    :param symbol: The stock symbol
-
-    :raises: HTTPException if ticker is not found
-    """
-    ticker = Ticker(symbol)
-    quote = ticker.quotes
-    if not quote or symbol not in quote:
-        raise HTTPException(status_code=404, detail="Symbol not found")
-    name = quote[symbol]['longName']
-    regular_price = quote[symbol]['regularMarketPrice']
-    regular_change = f"{quote[symbol]['regularMarketChange']:.2f}"
-    regular_percent_change = f"{quote[symbol]['regularMarketChangePercent']:.2f}%"
-
-    return SimpleQuote(
-        symbol=symbol.upper(),
-        name=name,
-        price=regular_price,
-        change=regular_change,
-        percent_change=regular_percent_change
-    )
-
-
-@cache(10, after_market_expire=60)
-async def scrape_simple_quote(symbol: str, client: AsyncClient) -> SimpleQuote:
-    """
-    Asynchronously scrapes a simple quote from a given symbol and returns a SimpleQuote object.
-    :param symbol: The stock symbol
-    :param client: The HTTP client
-    """
-    url = 'https://finance.yahoo.com/quote/' + symbol + "/"
-    html = await fetch(url, client)
-
-    parse_only = SoupStrainer(['h1', 'fin-streamer', 'a'])
-    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
-
-    symbol_name_element = soup.select_one('h1.yf-vfa1ac')
-    if not symbol_name_element:
-        return await get_simple_quote_from_yahooquery(symbol)
-
-    name = symbol_name_element.text.split('(')[0].strip()
-
-    regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
-    regular_change_value = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]),
-                                 2)
-    regular_percent_change_value = round(
-        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
-
-    # Add + or - sign and % for percent_change
-    regular_change = '+' + str(regular_change_value) if regular_change_value >= 0 else str(regular_change_value)
-    regular_percent_change = '+' + str(
-        regular_percent_change_value) + '%' if regular_percent_change_value >= 0 else str(
-        regular_percent_change_value) + '%'
-
-    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-13p9sh2')
-    logo_url = logo_element['href'] if logo_element else None
-    logo = await get_logo(logo_url)
-
-    return SimpleQuote(
-        symbol=symbol.upper(),
-        name=name,
-        price=regular_price,
-        change=regular_change,
-        percent_change=regular_percent_change,
-        logo=logo
-    )
-
-
-async def scrape_simple_quotes(symbols: List[str]):
-    async with AsyncClient(http2=True, max_redirects=5) as client:
-        quotes = await asyncio.gather(*(scrape_simple_quote(symbol, client) for symbol in symbols))
-        return [quote for quote in quotes if not isinstance(quote, Exception)]

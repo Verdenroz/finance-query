@@ -11,6 +11,7 @@ router = APIRouter()
             summary="Returns similar stocks of a queried single stock",
             description="Get relevant stock information for similar stocks.",
             response_model=list[SimpleQuote],
+            response_model_exclude_none=True,
             tags=["Similar Stocks"],
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             responses={400: {"description": "Symbol parameter is required"}})
