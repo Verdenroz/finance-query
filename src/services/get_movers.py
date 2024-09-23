@@ -35,7 +35,7 @@ async def _scrape_movers(url: str) -> list[MarketMover]:
     :raises: HTTPException with status code 500 if an error occurs while scraping
     """
     html = await fetch(url)
-    parse_only = SoupStrainer('tr', attrs={'class': 'row false  yf-42jv6g'})
+    parse_only = SoupStrainer('tr', attrs={'class': 'row false  yf-1dbt8wv'})
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
     movers = []
 
@@ -47,7 +47,7 @@ async def _scrape_movers(url: str) -> list[MarketMover]:
         price = cells[1].find('fin-streamer', {'data-field': 'regularMarketPrice'}).text.strip()
         change = cells[2].find('fin-streamer', {'data-field': 'regularMarketChange'}).text.strip()
         percent_change = cells[3].find('fin-streamer', {'data-field': 'regularMarketChangePercent'}).text.strip()
-
+        print(symbol, name, price, change, percent_change)
         mover = MarketMover(
             symbol=symbol,
             name=name,
