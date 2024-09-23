@@ -16,15 +16,16 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     session = await get_global_session()
-    async with session.get("https://api.ipify.org/") as ip_response:
-        ip = await ip_response.text()
-        api_url = "https://api.brightdata.com/zone/whitelist"
-        proxy_header_token = {
-            "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
-            "Content-Type": "application/json"
-        }
-        payload = {"ip": ip}
-        await session.post(api_url, headers=proxy_header_token, json=payload)
+    if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
+        async with session.get("https://api.ipify.org/") as ip_response:
+            ip = await ip_response.text()
+            api_url = "https://api.brightdata.com/zone/whitelist"
+            proxy_header_token = {
+                "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
+                "Content-Type": "application/json"
+            }
+            payload = {"ip": ip}
+            await session.post(api_url, headers=proxy_header_token, json=payload)
     yield
     await session.delete(api_url, headers=proxy_header_token, json=payload)
     await close_global_session()

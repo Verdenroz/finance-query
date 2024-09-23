@@ -205,7 +205,7 @@ Start the server
 
 ## Proxies
 
-Proxies are off by default, but they can be enabled with the correct environment variables. See the [.env template](.env.template). It is recommended that all deployed instances use proxies to avoid any potential blocking. I am currently using [BrightData](https://brightdata.com/), though you are welcome to change whatever fits you best.
+Proxies are off by default, but they can be enabled with the correct environment variables. See the [.env template](.env.template). It is recommended that all deployed instances use proxies to avoid any potential blocking. I am currently using [BrightData](https://brightdata.com/), though you are welcome to change whatever fits you best. FastAPI's lifespan events handles ip address whitelisting and session cleanup.
 
 
 ## Environment Variables
