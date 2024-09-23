@@ -71,11 +71,11 @@ async def fetch(
             return await response.text()
 
 
-async def get_logo(url: str, session: ClientSession) -> Optional[str]:
+async def get_logo(url: str, session: ClientSession = global_session) -> Optional[str]:
     """
     Get the logo of the company from the given URL
     :param url: the URL of the company
-    :param session: the aiohttp ClientSession
+    :param session: the global aiohttp ClientSession
     :return: the URL of the logo as a string
     """
     async with session.get(f"https://logo.clearbit.com/{url}") as response:
