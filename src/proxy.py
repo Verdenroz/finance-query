@@ -5,6 +5,6 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-proxy_auth = aiohttp.BasicAuth(os.environ['PROXY_USER'], os.environ['PROXY_PASSWORD'])
+proxy_auth = aiohttp.BasicAuth(os.environ.get('PROXY_USER'), os.environ.get('PROXY_PASSWORD')) if os.environ.get('PROXY_USER') and os.environ.get('PROXY_PASSWORD') else None
 
-proxy = os.environ['PROXY_URL']
+proxy = os.environ.get('PROXY_URL', None)

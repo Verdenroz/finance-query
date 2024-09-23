@@ -1,11 +1,15 @@
+import os
 from datetime import datetime
 from typing import Optional
 
 import pytz
 from aiohttp import ClientSession
+from dotenv import load_dotenv
 
 from src.constants import headers
 from src.proxy import proxy, proxy_auth
+
+load_dotenv()
 
 
 def is_market_open() -> bool:
@@ -20,15 +24,25 @@ def is_market_open() -> bool:
     return open_time <= now <= close_time and 0 <= now.weekday() < 5
 
 
-async def fetch(url: str, session: ClientSession) -> str:
+async def fetch(url: str, session: ClientSession, use_proxy: bool = os.getenv('USE_PROXY', 'False') == 'True') -> str:
     """
-    Fetch the data from the given URL
+    Fetch the data from the given URL with proxy if enabled
     :param url: the URL to fetch data from
     :param session: the aiohttp ClientSession
+    :param use_proxy: whether to use a proxy or not (requires proxy vars to be set in .env)
     :return: the html content of the page
+
+    :raises ValueError: if proxy is enabled but proxy URL and/or Proxy Auth not set in .env
     """
-    async with session.get(url, headers=headers, proxy=proxy, proxy_auth=proxy_auth) as response:
-        return await response.text()
+    if use_proxy:
+        if proxy is None or proxy_auth is None:
+            raise ValueError("Proxy URL and/or Proxy Auth not set in .env")
+
+        async with session.get(url, headers=headers, proxy=proxy, proxy_auth=proxy_auth) as response:
+            return await response.text()
+    else:
+        async with session.get(url, headers=headers) as response:
+            return await response.text()
 
 
 async def get_logo(url: str, session: ClientSession) -> Optional[str]:
