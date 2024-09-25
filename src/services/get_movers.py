@@ -47,7 +47,6 @@ async def _scrape_movers(url: str) -> list[MarketMover]:
         price = cells[1].find('fin-streamer', {'data-field': 'regularMarketPrice'}).text.strip()
         change = cells[2].find('fin-streamer', {'data-field': 'regularMarketChange'}).text.strip()
         percent_change = cells[3].find('fin-streamer', {'data-field': 'regularMarketChangePercent'}).text.strip()
-        print(symbol, name, price, change, percent_change)
         mover = MarketMover(
             symbol=symbol,
             name=name,
