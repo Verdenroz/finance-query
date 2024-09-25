@@ -6,12 +6,15 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
+from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_stocks_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router)
+from src.security import RateLimitMiddleware
 from src.session_manager import get_global_session, close_global_session
 
 load_dotenv()
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -29,6 +32,7 @@ async def lifespan(app: FastAPI):
     yield
     await session.delete(api_url, headers=proxy_header_token, json=payload)
     await close_global_session()
+    await r.close()
 
 app = FastAPI(
     title="FinanceQuery",
@@ -62,6 +66,8 @@ app.add_middleware(
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
 )
+
+app.add_middleware(RateLimitMiddleware)
 
 app.include_router(quotes_router, prefix="/v1")
 app.include_router(historical_prices_router, prefix="/v1")
