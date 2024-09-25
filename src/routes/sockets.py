@@ -5,6 +5,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
 from src.schemas import SimpleQuote
+from src.security import validate_websocket
 from src.services import scrape_quotes, scrape_similar_stocks, scrape_actives, \
     scrape_news_for_quote, scrape_losers, scrape_gainers, scrape_simple_quotes, scrape_indices, scrape_general_news
 from src.services.get_sectors import get_sector_for_symbol, get_sectors
@@ -15,6 +16,10 @@ connection_manager = RedisConnectionManager()
 
 @router.websocket("/profile/{symbol}")
 async def websocket_profile(websocket: WebSocket, symbol: str):
+    is_valid, metadata = await validate_websocket(websocket)
+    if not is_valid:
+        return
+
     await websocket.accept()
     channel = f"profile:{symbol}"
 
@@ -55,6 +60,9 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
     # Starts the connection and fetches the initial data
     if websocket not in connection_manager.active_connections.get(channel, []):
         initial_result = await get_profile()
+        if metadata:
+            metadata.update(initial_result)
+            initial_result = metadata
         await websocket.send_json(initial_result)
         await connection_manager.connect(websocket, channel, fetch_data)
 
@@ -67,6 +75,9 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
 
 @router.websocket("/quotes")
 async def websocket_quotes(websocket: WebSocket):
+    is_valid, metadata = await validate_websocket(websocket)
+    if not is_valid:
+        return
     await websocket.accept()
 
     channel = await websocket.receive_text()
@@ -100,6 +111,8 @@ async def websocket_quotes(websocket: WebSocket):
     # Starts the connection and fetches the initial data
     if websocket not in connection_manager.active_connections.get(channel, []):
         initial_result = await get_quotes()
+        if metadata:
+            initial_result.insert(0, metadata)
         await websocket.send_json(initial_result)
         await connection_manager.connect(websocket, channel, fetch_data)
 
@@ -112,6 +125,10 @@ async def websocket_quotes(websocket: WebSocket):
 
 @router.websocket("/market")
 async def websocket_market(websocket: WebSocket):
+    is_valid, metadata = await validate_websocket(websocket)
+    if not is_valid:
+        return
+
     await websocket.accept()
     channel = "market"
 
@@ -158,6 +175,9 @@ async def websocket_market(websocket: WebSocket):
     # Starts the connection and fetches the initial data
     if websocket not in connection_manager.active_connections.get(channel, []):
         initial_result = await get_market_info()
+        if metadata:
+            metadata.update(initial_result)
+            initial_result = metadata
         await websocket.send_json(initial_result)
         await connection_manager.connect(websocket, channel, fetch_data)
 

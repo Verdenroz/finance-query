@@ -3,6 +3,7 @@ import os
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
+from starlette.websockets import WebSocket
 
 from src.redis import r
 
@@ -38,6 +39,50 @@ async def enforce_rate_limit(api_key: str) -> bool:
             await r.incr(key)
 
     return True
+
+
+async def create_rate_limit_metadata(api_key: str) -> dict:
+    """
+    Create metadata for the rate limit for the websocket routes since they cannot return headers
+    :param api_key: Should be FinanceQueryDemoAWSHT, but can be any string
+
+    :return: metadata for the rate limit as a dictionary
+    """
+    key = f"rate_limit:{api_key}"
+    count = await r.get(key)
+    remaining = RATE_LIMIT - int(count) if count else RATE_LIMIT
+    reset = await r.ttl(key)
+    return {
+        "metadata": {
+            "rate limit": RATE_LIMIT,
+            "remaining requests": remaining,
+            "reset": reset
+        }
+    }
+
+
+async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
+    """
+    Validate the websocket connection and enforce rate limiting
+    :param websocket: the websocket connection
+
+    :return: a tuple containing a boolean indicating if the connection is valid and a dictionary of metadata
+    """
+    api_key = websocket.headers.get("x-api-key")
+    is_demo = api_key == DEMO_API_KEY
+
+    if not await validate_api_key(api_key):
+        await websocket.close(code=1008, reason="Not authenticated")
+        return False, {}
+
+    if is_demo:
+        if not await enforce_rate_limit(api_key):
+            await websocket.close(code=1008, reason="Rate limit exceeded")
+            return False, {}
+        metadata = await create_rate_limit_metadata(api_key)
+        return True, metadata
+
+    return True, {}
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
