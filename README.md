@@ -234,13 +234,16 @@ To run this project locally, you will need to add the following environment vari
 
 `PROXY_PASSWORD`
 
+`USE_SECURITY`
+
 `ADMIN_API_KEY`
 
-> - ***If you do not use redis, you can simply disable the redis cache by deleting the @cache decorator to all routes. Cache still be enabled with in-memory async-lru. See [@alru_cache](https://pypi.org/project/async-lru/)***
-> - ***Websockets will not work without Redis.***
+> - ***If you do not use redis, you can simply disable the redis cache by deleting the @cache decorator to all routes. Cache can still be enabled with in-memory async-lru. See [@alru_cache](https://pypi.org/project/async-lru/)***
+> - ***Websockets and Rate Limiting will not work without Redis.***
 > - ***Search endpoint will not work without Algolia.***
-> - ***Proxies are optional but recommended for deployment***
-> - ***Admin API key must be kept secret as this will have no rate limit attached.***
+> - ***Proxies are optional but recommended for deployment.***
+> - ***If security is enabled, api keys will be validated and rate limits enforced, though this depends on Redis, so it is off by default.***
+> - ***Set if admin key security is enabled. Admin API key must be kept secret as this will have no rate limit attached.***
 
 ## Feedback
 
