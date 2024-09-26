@@ -9,7 +9,7 @@ from src.redis import r
 
 DEMO_API_KEY = "FinanceQueryDemoAWSHT"
 ADMIN_API_KEY = os.getenv("ADMIN_API_KEY")
-RATE_LIMIT = 500  # requests per day
+RATE_LIMIT = 2000  # requests per day
 
 
 async def validate_api_key(api_key: str) -> bool:
