@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.4.0",
+    version="1.4.1",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."

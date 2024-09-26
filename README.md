@@ -178,7 +178,9 @@ WSS /market
 
 The exposed endpoint to the API is https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod
 
-An x-api-key header must be added to all requests. The demo key is **FinanceQueryDemoAWSHT** (500 requests/day)
+An x-api-key header must be added to all requests. The demo key is **FinanceQueryDemoAWSHT** (2000 requests/day)
+
+> If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See the [.env template](.env.template).
 
 > Again, remember the websockets above are not available through Lambda. If you deploy to Render instead, you will be able to connect to the websockets through a request that looks like `wss://***.onrender.com`
 
@@ -232,10 +234,13 @@ To run this project locally, you will need to add the following environment vari
 
 `PROXY_PASSWORD`
 
+`ADMIN_API_KEY`
+
 > - ***If you do not use redis, you can simply disable the redis cache by deleting the @cache decorator to all routes. Cache still be enabled with in-memory async-lru. See [@alru_cache](https://pypi.org/project/async-lru/)***
 > - ***Websockets will not work without Redis.***
 > - ***Search endpoint will not work without Algolia.***
 > - ***Proxies are optional but recommended for deployment***
+> - ***Admin API key must be kept secret as this will have no rate limit attached.***
 
 ## Feedback
 
