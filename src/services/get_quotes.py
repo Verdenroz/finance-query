@@ -176,7 +176,7 @@ async def _scrape_quote(symbol: str) -> Quote:
         parse_only = SoupStrainer(['h1', 'section', 'li'])
         soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-        symbol_name_element = soup.select_one('h1.yf-vfa1ac')
+        symbol_name_element = soup.select_one('h1.yf-1bx8svv')
         if not symbol_name_element:
             return await _get_quote_from_yahooquery(symbol)
 
@@ -257,7 +257,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
         parse_only = SoupStrainer(['h1', 'fin-streamer', 'a'])
         soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-        symbol_name_element = soup.select_one('h1.yf-vfa1ac')
+        symbol_name_element = soup.select_one('h1.yf-1bx8svv')
         if not symbol_name_element:
             return await _get_simple_quote_from_yahooquery(symbol)
 
