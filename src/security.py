@@ -68,6 +68,10 @@ async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
 
     :return: a tuple containing a boolean indicating if the connection is valid and a dictionary of metadata
     """
+    # Skip rate limiting if the environment variable is set
+    if not os.getenv('USE_SECURITY', 'False') == 'True':
+        return True, {}
+
     api_key = websocket.headers.get("x-api-key")
     is_demo = api_key == DEMO_API_KEY
 

@@ -67,7 +67,8 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
 )
 
-app.add_middleware(RateLimitMiddleware)
+if os.getenv('USE_SECURITY', 'False') == 'True':
+    app.add_middleware(RateLimitMiddleware)
 
 app.include_router(quotes_router, prefix="/v1")
 app.include_router(historical_prices_router, prefix="/v1")
