@@ -57,7 +57,7 @@ async def _scrape_general_info(soup: BeautifulSoup):
 
     :return: A tuple of the scraped data
     """
-    list_items = soup.select('li.yf-tx3nkj')
+    list_items = soup.select('li.yf-mrt107')
     data = {}
     for item in list_items:
         label = item.find("span", class_="label").text.strip()
@@ -97,8 +97,7 @@ async def _scrape_general_info(soup: BeautifulSoup):
     last_dividend = data.get("Last Dividend", None)
     inception_date = data.get("Inception Date", None)
 
-    about = soup.find('p', class_='yf-1xu2f9r').text
-
+    about = soup.find('p', class_='yf-6e9c7m').text
     return (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
             dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
             morningstar_rating, morningstar_risk,
@@ -111,7 +110,7 @@ async def _scrape_logo(soup: BeautifulSoup):
 
     :return: URL as a string
     """
-    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-13p9sh2')
+    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-1y0zzwu')
     url = logo_element['href'] if logo_element else None
 
     return await get_logo(url) if url else None
@@ -123,7 +122,7 @@ async def _scrape_sector_industry(soup: BeautifulSoup):
 
     :return: sector and industry as a tuple
     """
-    info_sections = soup.find_all("div", class_="infoSection yf-1xu2f9r")
+    info_sections = soup.find_all("div", class_="infoSection yf-6e9c7m")
     curr_sector = None
     curr_industry = None
     for section in info_sections:
@@ -146,7 +145,7 @@ async def _scrape_performance(soup: BeautifulSoup):
 
     :return: YTD, 1 year, 3 year, and 5 year returns as a tuple
     """
-    returns = soup.find_all('section', 'card small yf-13ievhf bdr sticky')
+    returns = soup.find_all('section', 'card small yf-xvi0tx bdr sticky')
     data = []
     for changes in returns:
         perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
@@ -176,7 +175,7 @@ async def _scrape_quote(symbol: str) -> Quote:
         parse_only = SoupStrainer(['h1', 'section', 'li'])
         soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-        symbol_name_element = soup.select_one('h1.yf-1bx8svv')
+        symbol_name_element = soup.select_one('h1.yf-xxbei9')
         if not symbol_name_element:
             return await _get_quote_from_yahooquery(symbol)
 
@@ -257,7 +256,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
         parse_only = SoupStrainer(['h1', 'fin-streamer', 'a'])
         soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
 
-        symbol_name_element = soup.select_one('h1.yf-1bx8svv')
+        symbol_name_element = soup.select_one('h1.yf-xxbei9')
         if not symbol_name_element:
             return await _get_simple_quote_from_yahooquery(symbol)
 
@@ -279,7 +278,8 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
             percent_change=regular_percent_change,
             logo=logo
         )
-    except Exception:
+    except Exception as e:
+        print(str(e))
         return await _get_simple_quote_from_yahooquery(symbol)
 
 
@@ -294,7 +294,7 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
     quote = ticker.quotes
     profile = ticker.asset_profile
     ticker_calendar = ticker.calendar_events
-    if not quote or symbol not in quote:
+    if not quote or symbol not in quote or not quote[symbol].get('longName'):
         raise HTTPException(status_code=404, detail="Symbol not found")
 
     name = quote[symbol]['longName']
@@ -406,7 +406,7 @@ async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
     quote = ticker.quotes
     profile = ticker.asset_profile
 
-    if not quote or symbol not in quote:
+    if not quote or symbol not in quote or not quote[symbol].get('longName'):
         raise HTTPException(status_code=404, detail="Symbol not found")
     name = quote[symbol]['longName']
     regular_price = quote[symbol]['regularMarketPrice']
