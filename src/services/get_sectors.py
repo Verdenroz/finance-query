@@ -68,7 +68,7 @@ urls = {
 async def parse_sector(html: str, sector: str) -> MarketSector:
     parse_only = SoupStrainer('section', attrs={'class': 'yf-12wncuy'})
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
-    returns = soup.find_all('section', 'card small yf-13ievhf bdr sticky')
+    returns = soup.find_all('section', 'card small yf-xvi0tx bdr sticky')
     data = []
     for changes in returns:
         perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
@@ -86,11 +86,11 @@ async def parse_sector(html: str, sector: str) -> MarketSector:
 
 async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetails:
     async def parse_info(info_soup):
-        return [div.text for div in info_soup.find_all('div', 'value yf-e2k9sg')]
+        return [div.text for div in info_soup.find_all('div', 'value yf-3v3d6w')]
 
     async def parse_returns(returns_soup):
         data = []
-        returns = returns_soup.find_all('section', 'card small yf-13ievhf bdr sticky')
+        returns = returns_soup.find_all('section', 'card small yf-xvi0tx bdr sticky')
         for changes in returns:
             perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
             sign = '+' if 'positive' in perf_div['class'] else '-'
@@ -113,7 +113,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         return data
 
     async def parse_companies(companies_soup):
-        company_symbols = companies_soup.find_all('span', 'symbol yf-ravs5v', limit=10)
+        company_symbols = companies_soup.find_all('span', 'symbol yf-1jpysdn', limit=10)
         return [symbol.text for symbol in company_symbols]
 
     soup = BeautifulSoup(html, 'lxml', parse_only=SoupStrainer(['div', 'section', 'tr', 'span']))
