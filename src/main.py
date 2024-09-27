@@ -36,11 +36,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.4.1",
+    version="1.4.2",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."
-                " Please use FinanceQueryDemoAWSHT as the demo API key which is limited to 500 requests/day."
+                " Please use FinanceQueryDemoAWSHT as the demo API key which is limited to 2000 requests/day."
                 " You are free to deploy your own instance of FinanceQuery to AWS and use your own API key."
                 " If you are testing locally you can use the local server and will not need a key."
     ,
