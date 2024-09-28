@@ -1,4 +1,4 @@
-name: Docker Image CI
+name: AWS Deploy
 
 on:
   push:
@@ -9,6 +9,7 @@ on:
 env:
   AWS_REGION: us-east-2
   ECR_REPOSITORY: finance
+  FUNCTION_NAME: FinanceQuery
 
 jobs:
 
@@ -46,5 +47,4 @@ jobs:
 
       - name: Update Lambda function
         run: |
-          aws lambda update-function-code --function-name FinanceQuery --image-uri ${{ env.image }} --region ${{ env.AWS_REGION }}
-
+          aws lambda update-function-code --function-name ${{ env.FUNCTION_NAME }} --image-uri ${{ env.image }} --region ${{ env.AWS_REGION }}
