@@ -176,13 +176,17 @@ WSS /market
 
 ## Usage/Examples
 
-The exposed endpoint to the API is https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod
+The exposed endpoints to the API is
+- https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod.
+- https://finance-query.onrender.com
 
-An x-api-key header must be added to all requests. The demo key is **FinanceQueryDemoAWSHT** (2000 requests/day)
+There are two workflows that will automatically deploy to render and AWS, but they will require repository secrets for `AWS_SECRET_ID`, `AWS_SECRET_KEY`, and `RENDER_DEPLOY_HOOK_URL`. Quite frankly, render is easier to work with since it enables the websockets, but will require the paid Starter Plan as this API requires extensive memory. If you are tight on cash, consider Lambda.
+
+An x-api-key header must be added to all requests. The demo key is **FinanceQueryDemoAWSHT** (2000 requests/day). 
 
 > If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See the [.env template](.env.template).
 
-> Again, remember the websockets above are not available through Lambda. If you deploy to Render instead, you will be able to connect to the websockets through a request that looks like `wss://***.onrender.com`
+> Again, remember the websockets above are not available through Lambda. If you deploy to Render instead, you will be able to connect to the websockets through a request that looks like `wss://finance-query.onrender.com/...`
 
 
 ## Run Locally
