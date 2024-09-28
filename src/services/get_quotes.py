@@ -64,12 +64,12 @@ async def _scrape_general_info(soup: BeautifulSoup):
         value = item.find("span", class_="value").text.strip()
         data[label] = value
 
-    open_price = Decimal(data.get("Open", None).replace(',', '')) if data.get("Open") else None
+    open_price = Decimal(data.get("Open").replace(',', '')) if data.get("Open") else None
     market_cap = data.get("Market Cap (intraday)", None)
-    beta = Decimal(data.get("Beta (5Y Monthly)", None))
-    pe = Decimal(data.get("PE Ratio (TTM)"), None)
-    eps = Decimal(data.get("EPS (TTM)"), None)
-    earnings_date = data.get("Earnings Date", None)
+    beta = Decimal(data.get("Beta (5Y Monthly)")) if data.get('Beta (5Y Monthly)') else None
+    pe = Decimal(data.get("PE Ratio (TTM)")) if data.get("PE Ratio (TTM)") else None
+    eps = Decimal(data.get("EPS (TTM)")) if data.get("EPS (TTM)") else None
+    earnings_date = data.get("Earnings Date")
     forward_dividend_yield = data.get("Forward Dividend & Yield", None)
     dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield else (None, None) if not (
         any(char.isdigit() for char in forward_dividend_yield)) \
