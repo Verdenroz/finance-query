@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.4.3",
+    version="1.4.4",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."
@@ -45,7 +45,8 @@ app = FastAPI(
                 " If you are testing locally you can use the local server and will not need a key."
     ,
     servers=[
-        {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "Production server"},
+        {"url": "https://finance-query.onrender.com", "description": "Render server"},
+        {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "AWS server"},
         {"url": "http://127.0.0.1:8000", "description": "Local server"}
     ],
     contact={
