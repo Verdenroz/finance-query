@@ -1,10 +1,8 @@
+from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel, Field, AliasChoices
-from decimal import Decimal
-
-from typing_extensions import Dict
 
 
 class TimePeriod(Enum):
@@ -58,7 +56,9 @@ class HistoricalData(BaseModel):
         default=None,
         examples=[145.00],
         description="Adjusted closing price",
-        serialization_alias="adjClose")
+        serialization_alias="adjClose",
+        validation_alias=AliasChoices("adjClose", "adj_close")
+    )
     volume: int = Field(
         default=...,
         examples=[1000000],
@@ -67,7 +67,7 @@ class HistoricalData(BaseModel):
 
 
 class TimeSeries(BaseModel):
-    history: Dict[str, HistoricalData] = Field(
+    history: dict[str, HistoricalData] = Field(
         default=...,
         serialization_alias="Historical Data",
         validation_alias=AliasChoices("Historical Data", "history"),

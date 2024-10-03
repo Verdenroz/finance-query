@@ -15,7 +15,7 @@ from src.schemas.time_series import Interval, TimePeriod
 
 
 @cache(expire=60, after_market_expire=600)
-async def get_historical(symbol: str, time: TimePeriod, interval: Interval):
+async def get_historical(symbol: str, time: TimePeriod, interval: Interval) -> TimeSeries:
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
         data = stock.history(period=time.value, interval=interval.value)
@@ -52,7 +52,7 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval):
                 high=round(Decimal(row['high']), 2),
                 low=round(Decimal(row['low']), 2),
                 close=round(Decimal(row['close']), 2),
-                adj_close=round(Decimal(row['adjclose']), 2) if 'adjclose' in data.columns else None,
+                adj_close=round(Decimal(row['adjclose']), 2),
                 volume=int(row['volume'])
             )
         return TimeSeries(history=data_dict)

@@ -14,7 +14,6 @@ router = APIRouter()
             description="Get the latest US indices data.",
             dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
             tags=["Historical Data"],
-            response_model_exclude_none=True
             )
 async def get_time_series(
         symbol: str = Query(..., description="The symbol of the stock to get historical data for."),
