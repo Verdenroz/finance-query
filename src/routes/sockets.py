@@ -63,9 +63,14 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
         if metadata:
             metadata.update(initial_result)
             initial_result = metadata
-        await websocket.send_json(initial_result)
+        try:
+            await websocket.send_json(initial_result)
+        except WebSocketDisconnect:
+            # If the client disconnects before the initial data is sent, return
+            return
         await connection_manager.connect(websocket, channel, fetch_data)
 
+    # Keep the connection alive
     try:
         while True:
             await websocket.receive_text()
@@ -79,48 +84,57 @@ async def websocket_quotes(websocket: WebSocket):
     if not is_valid:
         return
     await websocket.accept()
-
-    channel = await websocket.receive_text()
-    symbols = list(set(channel.split(",")))
-
-    async def get_quotes():
-        """
-        Fetches quotes for a list of symbols.
-        """
-        result = await scrape_simple_quotes(symbols)
-        return [
-            {
-                "symbol": quote.symbol,
-                "name": quote.name,
-                "price": str(quote.price),
-                "afterHoursPrice": str(quote.after_hours_price),
-                "change": quote.change,
-                "percentChange": quote.percent_change,
-                "logo": quote.logo
-            } if isinstance(quote, SimpleQuote) else quote for quote in result]
-
-    async def fetch_data():
-        """
-        Fetches quotes every 10 seconds.
-        """
-        while True:
-            result = await get_quotes()
-            await connection_manager.publish(result, channel)
-            await asyncio.sleep(10)
-
-    # Starts the connection and fetches the initial data
-    if websocket not in connection_manager.active_connections.get(channel, []):
-        initial_result = await get_quotes()
-        if metadata:
-            initial_result.insert(0, metadata)
-        await websocket.send_json(initial_result)
-        await connection_manager.connect(websocket, channel, fetch_data)
-
     try:
-        while True:
-            await websocket.receive_text()
+        channel = await websocket.receive_text()
+        symbols = list(set(channel.split(",")))
+
+        async def get_quotes():
+            """
+            Fetches quotes for a list of symbols.
+            """
+            result = await scrape_simple_quotes(symbols)
+            return [
+                {
+                    "symbol": quote.symbol,
+                    "name": quote.name,
+                    "price": str(quote.price),
+                    "afterHoursPrice": str(quote.after_hours_price),
+                    "change": quote.change,
+                    "percentChange": quote.percent_change,
+                    "logo": quote.logo
+                } if isinstance(quote, SimpleQuote) else quote for quote in result]
+
+        async def fetch_data():
+            """
+            Fetches quotes every 10 seconds.
+            """
+            while True:
+                result = await get_quotes()
+                await connection_manager.publish(result, channel)
+                await asyncio.sleep(10)
+
+        # Starts the connection and fetches the initial data
+        if websocket not in connection_manager.active_connections.get(channel, []):
+            initial_result = await get_quotes()
+            if metadata:
+                initial_result.insert(0, metadata)
+            try:
+                await websocket.send_json(initial_result)
+            except WebSocketDisconnect:
+                # If the client disconnects before the initial data is sent, return
+                return
+            await connection_manager.connect(websocket, channel, fetch_data)
+
+        # Keep the connection alive
+        try:
+            while True:
+                await websocket.receive_text()
+        except WebSocketDisconnect:
+            await connection_manager.disconnect(websocket, channel)
+
     except WebSocketDisconnect:
-        await connection_manager.disconnect(websocket, channel)
+        # If the client disconnects before the channel is received return,
+        return
 
 
 @router.websocket("/market")
@@ -168,9 +182,13 @@ async def websocket_market(websocket: WebSocket):
         Fetches market information every 10 seconds.
         """
         while True:
-            result = await get_market_info()
-            await connection_manager.publish(result, channel)
-            await asyncio.sleep(10)
+            try:
+                result = await get_market_info()
+                await connection_manager.publish(result, channel)
+                await asyncio.sleep(10)
+            except WebSocketDisconnect:
+                await connection_manager.disconnect(websocket, channel)
+                break
 
     # Starts the connection and fetches the initial data
     if websocket not in connection_manager.active_connections.get(channel, []):
@@ -178,9 +196,15 @@ async def websocket_market(websocket: WebSocket):
         if metadata:
             metadata.update(initial_result)
             initial_result = metadata
-        await websocket.send_json(initial_result)
+        try:
+            await websocket.send_json(initial_result)
+        except WebSocketDisconnect:
+            # If the client disconnects before the initial data is sent, return
+            return
+
         await connection_manager.connect(websocket, channel, fetch_data)
 
+    # Keep the connection alive
     try:
         while True:
             await websocket.receive_text()
