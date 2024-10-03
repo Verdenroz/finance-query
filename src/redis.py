@@ -1,3 +1,4 @@
+import asyncio
 import decimal
 import functools
 import gzip
@@ -64,84 +65,94 @@ def cache(expire, after_market_expire=None):
         :param after_market_expire: The expiration time for the cache key after the market closes
         :return: The result of the function or the cached value
         """
+    lock = asyncio.Lock()
+
+    async def cache_result(key, result, expire_time):
+        """
+        Caches the result in Redis based on the result type.
+        :param key: the cache key (function name and hashed arguments)
+        :param result: the response of the endpoint to cache
+        :param expire_time: the expiration time for the cache key
+        :return:
+        """
+
+        def handle_data(obj):
+            if isinstance(obj, decimal.Decimal):
+                return float(obj)
+            elif isinstance(obj, BaseModel):
+                return obj.model_dump()
+            elif hasattr(obj, 'to_dict'):
+                return obj.to_dict()
+            raise TypeError
+
+        # Cache the result in Redis
+        if isinstance(result, dict):
+            # Create instances of indicator classes for Technical Analysis
+            data = gzip.compress(orjson.dumps(result, default=handle_data))
+            await r.set(key, data, ex=expire_time)
+
+        elif isinstance(result, (SimpleQuote, Quote, MarketMover, Index, News, MarketSector, MarketSectorDetails, TimeSeries)):
+            # Caches a string to Redis
+            await r.set(key, gzip.compress(result.model_dump_json(by_alias=True, exclude_none=True).encode()),
+                        ex=expire_time)
+
+        else:
+            # Caches a list to Redis
+            result_list = result
+            if (isinstance(result, list) and result
+                    and isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, MarketSector))):
+                result_list = [item.dict() for item in result]
+            for item in result_list:
+                await r.rpush(key, gzip.compress(orjson.dumps(item)))
+
+            await r.expire(key, expire_time)
 
     def decorator(func):
-
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
-            # Filter out the Response object from args and kwargs
-            filtered_args = [arg for arg in args if not isinstance(arg, (ClientSession))]
-            filtered_kwargs = {k: v for k, v in kwargs.items() if
-                               not isinstance(v, (ClientSession))}
+            async with lock:  # Locks to prevent duplicate caches
 
-            key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}"
+                # Filter out the ClientSession object from args and kwargs
+                filtered_args = [arg for arg in args if not isinstance(arg, (ClientSession))]
+                filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, (ClientSession))}
 
-            if await r.exists(key):
-                if await r.type(key) == b'string':
-                    data = gzip.decompress(await r.get(key))
-                    result = orjson.loads(data)
-                elif await r.type(key) == b'list':
-                    result_list = []
-                    for item in await r.lrange(key, 0, -1):
-                        data = gzip.decompress(item)
-                        result_list.append(orjson.loads(data))
-                    result = result_list
+                key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}"
 
-                # Create instances of indicator classes for Technical Analysis
-                if 'Technical Analysis' in result:
-                    indicator_data = {}
-                    indicator_name = result['type']
-                    for key, value in result['Technical Analysis'].items():
-                        if indicator_name in indicators:
-                            indicator_value = indicators[indicator_name](**value)
-                            indicator_data[date.fromisoformat(key)] = indicator_value
-                    return Analysis(type=Indicator(indicator_name), indicators=indicator_data).model_dump(
-                        exclude_none=True, by_alias=True,
-                        serialize_as_any=True)
-                return result
+                if await r.exists(key):
+                    if await r.type(key) == b'string':
+                        data = gzip.decompress(await r.get(key))
+                        result = orjson.loads(data)
+                    elif await r.type(key) == b'list':
+                        result_list = []
+                        for item in await r.lrange(key, 0, -1):
+                            data = gzip.decompress(item)
+                            result_list.append(orjson.loads(data))
+                        result = result_list
 
-            result = await func(*args, **kwargs)
+                    # Create instances of indicator classes for Technical Analysis
+                    if 'Technical Analysis' in result:
+                        indicator_data = {}
+                        indicator_name = result['type']
+                        for key, value in result['Technical Analysis'].items():
+                            if indicator_name in indicators:
+                                indicator_value = indicators[indicator_name](**value)
+                                indicator_data[date.fromisoformat(key)] = indicator_value
+                        return Analysis(type=Indicator(indicator_name), indicators=indicator_data).model_dump(
+                            exclude_none=True, by_alias=True,
+                            serialize_as_any=True)
+                    return result
 
-            def handle_data(obj):
-                if isinstance(obj, decimal.Decimal):
-                    return float(obj)
-                elif isinstance(obj, BaseModel):
-                    return obj.model_dump()
-                elif hasattr(obj, 'to_dict'):
-                    return obj.to_dict()
-                raise TypeError
+                result = await func(*args, **kwargs)
 
-            # Set the expiration time based on the market hours
-            if after_market_expire is not None and not is_market_open():
-                expire_time = after_market_expire
-            else:
-                expire_time = expire
-
-            # Cache the result in Redis
-            if isinstance(result, dict):
-                data = gzip.compress(orjson.dumps(result, default=handle_data))
-                await r.set(key, data, ex=expire_time)
-
-            elif isinstance(result, (TimeSeries, MarketSectorDetails)):
-                await r.set(key, gzip.compress(result.model_dump_json(by_alias=True, exclude_none=True).encode()),
-                            ex=expire_time)
-
-            elif isinstance(result, (SimpleQuote, Quote, MarketMover, Index, News, MarketSector)):
-                await r.set(key, gzip.compress(result.model_dump_json(by_alias=True, exclude_none=True).encode()),
-                            ex=expire_time)
-
-            else:
-                if (isinstance(result, list) and result
-                        and isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, MarketSector))):
-                    result_list = [item.dict() for item in result]
+                # Set the expiration time based on the market hours
+                if after_market_expire and not is_market_open():
+                    expire_time = after_market_expire
                 else:
-                    result_list = result
+                    expire_time = expire
 
-                for item in result_list:
-                    await r.rpush(key, gzip.compress(orjson.dumps(item)))
-                await r.expire(key, expire_time)
+                await cache_result(key, result, expire_time)
 
-            return result
+                return result
 
         return wrapper
 
