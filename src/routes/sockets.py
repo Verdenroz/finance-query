@@ -22,7 +22,7 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
 
     await websocket.accept()
     channel = f"profile:{symbol}"
-
+    print(channel)
     async def get_profile():
         """
         Fetches the profile data for a symbol.
@@ -33,12 +33,13 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
         news_task = scrape_news_for_quote(symbol)
 
         quotes, similar_stocks, sector_performance, news = await asyncio.gather(
-            quotes_task, similar_stocks_task, sector_performance_task, news_task
+            quotes_task, similar_stocks_task, sector_performance_task, news_task, return_exceptions=True
         )
 
         quotes = [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
         similar_stocks = [similar if isinstance(similar, dict) else similar.dict() for similar in similar_stocks]
-        sector_performance = sector_performance if isinstance(sector_performance, dict) else sector_performance.dict()
+        sector_performance = sector_performance if isinstance(sector_performance, dict) else sector_performance.dict() \
+            if not isinstance(sector_performance, Exception) else None
         news = [headline if isinstance(headline, dict) else headline.dict() for headline in news]
 
         return {
@@ -68,6 +69,7 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
         except WebSocketDisconnect:
             # If the client disconnects before the initial data is sent, return
             return
+        print("connected")
         await connection_manager.connect(websocket, channel, fetch_data)
 
     # Keep the connection alive
