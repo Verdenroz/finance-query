@@ -52,7 +52,7 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval) -> T
                 high=round(Decimal(row['high']), 2),
                 low=round(Decimal(row['low']), 2),
                 close=round(Decimal(row['close']), 2),
-                adj_close=round(Decimal(row['adjclose']), 2),
+                adj_close=round(Decimal(row.get('adj_close', None)), 2),
                 volume=int(row['volume'])
             )
         return TimeSeries(history=data_dict)
