@@ -110,7 +110,7 @@ async def _scrape_logo(soup: BeautifulSoup):
 
     :return: URL as a string
     """
-    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-1y0zzwu')
+    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-1e4diqp')
     url = logo_element['href'] if logo_element else None
 
     return await get_logo(url) if url else None
@@ -197,7 +197,7 @@ async def _scrape_quote(symbol: str) -> Quote:
             (ytd_return, year_return, three_year_return, five_year_return)) = await asyncio.gather(
             prices_future, list_items_future, logo_future, sector_industry_future, performance_future
         )
-
+        print("Logo is", logo)
         return Quote(
             symbol=symbol.upper(),
             name=name,
