@@ -81,12 +81,12 @@ async def _parse_stocks(stocks_divs, symbol) -> List[SimpleQuote]:
 async def _parse_etfs(etf_divs):
     etfs = []
     for div in etf_divs:
-        symbol_element = div.find("span", class_="symbol yf-1jpysdn")
+        symbol_element = div.find("span", class_="symbol yf-138ga19")
         if not symbol_element:
             continue
         symbol = symbol_element.text
 
-        name_element = div.find("span", class_="tw-text-sm yf-1jpysdn longName")
+        name_element = div.find("span", class_="tw-text-sm yf-138ga19 longName")
         if not name_element:
             continue
         name = name_element.text
