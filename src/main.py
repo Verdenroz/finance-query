@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
@@ -60,9 +60,16 @@ app = FastAPI(
     lifespan=lifespan
 )
 
+@app.middleware("http")
+async def add_access_header(request: Request, call_next):
+    response = await call_next(request)
+    # Allows all origins (needed for Android app but should be restricted for web apps)
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allows all origins (needed for Android app but should be restricted for web apps)
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
