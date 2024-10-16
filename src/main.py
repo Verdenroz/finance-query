@@ -2,7 +2,7 @@ import os
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
 
@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.4.5",
+    version="1.4.6",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."
@@ -59,13 +59,6 @@ app = FastAPI(
     },
     lifespan=lifespan
 )
-
-@app.middleware("http")
-async def add_access_header(request: Request, call_next):
-    response = await call_next(request)
-    # Allows all origins (needed for Android app but should be restricted for web apps)
-    response.headers["Access-Control-Allow-Origin"] = "*"
-    return response
 
 app.add_middleware(
     CORSMiddleware,
