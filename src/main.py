@@ -45,7 +45,6 @@ app = FastAPI(
                 " If you are testing locally you can use the local server and will not need a key."
     ,
     servers=[
-        {"url": "https://finance-query.onrender.com", "description": "Render server"},
         {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "AWS server"},
         {"url": "http://127.0.0.1:8000", "description": "Local server"}
     ],
