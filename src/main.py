@@ -66,6 +66,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
 )
 
 if os.getenv('USE_SECURITY', 'False') == 'True':
