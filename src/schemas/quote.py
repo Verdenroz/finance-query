@@ -86,17 +86,17 @@ class Quote(BaseModel):
         serialization_alias="marketCap",
         validation_alias=AliasChoices("marketCap", "market_cap")
     )
-    beta: Optional[Decimal] = Field(
+    beta: Optional[str] = Field(
         default=None,
         examples=[1.23],
         description="Beta of the stock"
     )
-    pe: Optional[Decimal] = Field(
+    pe: Optional[str] = Field(
         default=None,
         examples=[30.00],
         description="Price to earnings ratio of the stock"
     )
-    eps: Optional[Decimal] = Field(
+    eps: Optional[str] = Field(
         default=None,
         examples=[4.50],
         description="Earnings per share of the stock"

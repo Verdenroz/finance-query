@@ -66,9 +66,9 @@ async def _scrape_general_info(soup: BeautifulSoup):
 
     open_price = Decimal(data.get("Open").replace(',', '')) if data.get("Open") else None
     market_cap = data.get("Market Cap (intraday)", None)
-    beta = Decimal(data.get("Beta (5Y Monthly)")) if data.get('Beta (5Y Monthly)') else None
-    pe = Decimal(data.get("PE Ratio (TTM)")) if data.get("PE Ratio (TTM)") else None
-    eps = Decimal(data.get("EPS (TTM)")) if data.get("EPS (TTM)") else None
+    beta = data.get("Beta (5Y Monthly)") if data.get('Beta (5Y Monthly)') else None
+    pe = data.get("PE Ratio (TTM)") if data.get("PE Ratio (TTM)") else None
+    eps = data.get("EPS (TTM)") if data.get("EPS (TTM)") else None
     earnings_date = data.get("Earnings Date")
     forward_dividend_yield = data.get("Forward Dividend & Yield", None)
     dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield else (None, None) if not (
@@ -197,7 +197,6 @@ async def _scrape_quote(symbol: str) -> Quote:
             (ytd_return, year_return, three_year_return, five_year_return)) = await asyncio.gather(
             prices_future, list_items_future, logo_future, sector_industry_future, performance_future
         )
-        print("Logo is", logo)
         return Quote(
             symbol=symbol.upper(),
             name=name,
@@ -364,6 +363,8 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
         # Split the date and time, format the date, and join them back
         formatted_dates = [format_date(date.split(' ')[0]) for date in earnings_date]
         earnings_date = ' - '.join(formatted_dates)
+    else:
+        earnings_date = None
 
     return Quote(
         symbol=symbol.upper(),
