@@ -289,6 +289,7 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
 
     :raises: HTTPException if ticker is not found
     """
+    print("Getting quote from yahooquery")
     ticker = Ticker(symbol)
     quote = ticker.quotes
     profile = ticker.asset_profile
@@ -354,7 +355,7 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
     regular_percent_change = f"{regular_percent_change_value:+.2f}%"
 
     # Convert float values to string
-    pe = round(pe, 2) if pe else None
+    pe = str(round(pe, 2)) if pe else None
     yield_percent = str(yield_percent) + "%" if yield_percent else None
     net_assets = format_value(net_assets) if net_assets else None
     market_cap = format_value(market_cap) if market_cap else None

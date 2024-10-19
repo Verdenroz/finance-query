@@ -93,17 +93,17 @@ class Quote(BaseModel):
     )
     pe: Optional[str] = Field(
         default=None,
-        examples=[30.00],
+        examples=["30.00"],
         description="Price to earnings ratio of the stock"
     )
     eps: Optional[str] = Field(
         default=None,
-        examples=[4.50],
+        examples=["4.50"],
         description="Earnings per share of the stock"
     )
     dividend: Optional[str] = Field(
         default=None,
-        examples=[0.82],
+        examples=["0.82"],
         description="Dividend yield of the stock"
     )
     dividend_yield: Optional[str] = Field(
