@@ -9,7 +9,7 @@ global_session: Optional[ClientSession] = None
 async def get_global_session() -> ClientSession:
     global global_session
     if global_session is None:
-        global_session = ClientSession(max_field_size=20000, headers=headers)
+        global_session = ClientSession(max_field_size=30000, headers=headers)
     return global_session
 
 async def close_global_session():
