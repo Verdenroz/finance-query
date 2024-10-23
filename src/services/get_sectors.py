@@ -68,7 +68,7 @@ urls = {
 async def parse_sector(html: str, sector: str) -> MarketSector:
     parse_only = SoupStrainer('section', attrs={'class': 'yf-12wncuy'})
     soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
-    returns = soup.find_all('section', 'card small yf-xvi0tx bdr sticky')
+    returns = soup.find_all('section', 'card small yf-1yegwxr bdr sticky noBackGround')
     data = []
     for changes in returns:
         perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
@@ -90,7 +90,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
 
     async def parse_returns(returns_soup):
         data = []
-        returns = returns_soup.find_all('section', 'card small yf-xvi0tx bdr sticky')
+        returns = returns_soup.find_all('section', 'card small yf-1yegwxr bdr sticky noBackGround')
         for changes in returns:
             perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
             sign = '+' if 'positive' in perf_div['class'] else '-'
