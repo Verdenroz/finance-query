@@ -77,35 +77,48 @@ def cache(expire, after_market_expire=None):
         """
 
         def handle_data(obj):
+            """Handle special data types for JSON serialization."""
             if isinstance(obj, decimal.Decimal):
                 return float(obj)
             elif isinstance(obj, BaseModel):
                 return obj.model_dump()
             elif hasattr(obj, 'to_dict'):
                 return obj.to_dict()
-            raise TypeError
+            raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
-        # Cache the result in Redis
-        if isinstance(result, dict):
-            # Create instances of indicator classes for Technical Analysis
-            data = gzip.compress(orjson.dumps(result, default=handle_data))
-            await r.set(key, data, ex=expire_time)
+        try:
+            async with await r.pipeline() as pipe:
+                if isinstance(result, dict):
+                    # Handle dictionary data
+                    data = gzip.compress(orjson.dumps(result, default=handle_data))
+                    await pipe.set(key, data)
+                    await pipe.expire(key, expire_time)
 
-        elif isinstance(result, (SimpleQuote, Quote, MarketMover, Index, News, MarketSector, MarketSectorDetails, TimeSeries)):
-            # Caches a string to Redis
-            await r.set(key, gzip.compress(result.model_dump_json(by_alias=True, exclude_none=True).encode()),
-                        ex=expire_time)
+                elif isinstance(result, (
+                        SimpleQuote, Quote, MarketMover, Index, News, MarketSector, MarketSectorDetails, TimeSeries)):
+                    # Handle Pydantic models
+                    data = gzip.compress(result.model_dump_json(by_alias=True, exclude_none=True).encode())
+                    await pipe.set(key, data)
+                    await pipe.expire(key, expire_time)
 
-        else:
-            # Caches a list to Redis
-            result_list = result
-            if (isinstance(result, list) and result
-                    and isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, MarketSector))):
-                result_list = [item.dict() for item in result]
-            for item in result_list:
-                await r.rpush(key, gzip.compress(orjson.dumps(item)))
+                else:
+                    # Handle lists
+                    result_list = result
+                    if (isinstance(result, list) and result and
+                            isinstance(result[0], (SimpleQuote, Quote, MarketMover, Index, News, MarketSector))):
+                        result_list = [item.dict() for item in result]
 
-            await r.expire(key, expire_time)
+                    # Delete any existing key before adding new list
+                    await pipe.delete(key)
+                    for item in result_list:
+                        await pipe.rpush(key, gzip.compress(orjson.dumps(item)))
+                    await pipe.expire(key, expire_time)
+
+                await pipe.execute()
+        except RedisError as e:
+            # Log the error and continue without caching
+            print(f"Redis caching error: {str(e)}")
+            return None
 
     def decorator(func):
         @functools.wraps(func)
