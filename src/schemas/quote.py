@@ -20,6 +20,13 @@ class Quote(BaseModel):
         examples=[145.00],
         description="Last traded price of the stock"
     )
+    pre_market_price: Optional[Decimal] = Field(
+        default=None,
+        examples=[145.50],
+        description="After hours price of the stock",
+        serialization_alias="preMarketPrice",
+        validation_alias=AliasChoices("preMarketPrice", "pre_market_price")
+    )
     after_hours_price: Optional[Decimal] = Field(
         default=None,
         examples=[145.50],

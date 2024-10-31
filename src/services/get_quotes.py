@@ -47,20 +47,23 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
     regular_change_xpath = '//*[@data-testid="qsp-price-change"]/@data-value'
     regular_percent_change_xpath = '//*[@data-testid="qsp-price-change-percent"]/@data-value'
     post_price_xpath = '//*[@data-testid="qsp-post-price"]/@data-value'
+    pre_market_price_xpath = '//*[@data-testid="qsp-pre-price"]/@data-value'
 
     # Extraction
     regular_price_elements = tree.xpath(regular_price_xpath)
     regular_change_elements = tree.xpath(regular_change_xpath)
     regular_percent_change_elements = tree.xpath(regular_percent_change_xpath)
+    pre_market_price_elements = tree.xpath(pre_market_price_xpath)
     post_price_elements = tree.xpath(post_price_xpath)
 
     # Formatting
     regular_price = round(Decimal(regular_price_elements[0]), 2) if regular_price_elements else None
     regular_change = f"{round(Decimal(regular_change_elements[0]), 2):+.2f}" if regular_change_elements else None
     regular_percent_change = f"{round(Decimal(regular_percent_change_elements[0]), 2):+.2f}%" if regular_percent_change_elements else None
+    pre_price = round(Decimal(pre_market_price_elements[0]), 2) if pre_market_price_elements else None
     post_price = round(Decimal(post_price_elements[0]), 2) if post_price_elements else None
 
-    return regular_price, regular_change, regular_percent_change, post_price
+    return regular_price, regular_change, regular_percent_change, pre_price, post_price
 
 
 async def _scrape_general_info(tree: etree.ElementTree) -> tuple:
@@ -220,7 +223,7 @@ async def _scrape_performance(tree: etree.ElementTree) -> tuple:
 
     return ytd_return, one_year_return, three_year_return, five_year_return
 
-
+@cache(10, after_market_expire=60)
 async def _scrape_quote(symbol: str) -> Quote:
     """
     Asynchronously scrapes a quote from a given symbol and returns a Quote object.
@@ -248,7 +251,7 @@ async def _scrape_quote(symbol: str) -> Quote:
 
         # Gather the async tasks in parallel
         (
-            (regular_price, regular_change, regular_percent_change, post_price),
+            (regular_price, regular_change, regular_percent_change, pre_price, post_price),
             (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
              dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
              morningstar_rating,
@@ -262,6 +265,7 @@ async def _scrape_quote(symbol: str) -> Quote:
             symbol=symbol.upper(),
             name=name,
             price=regular_price,
+            pre_market_price=pre_price,
             after_hours_price=post_price,
             change=regular_change,
             percent_change=regular_percent_change,
