@@ -207,6 +207,11 @@ class Quote(BaseModel):
                   "tablets, wearables, and accessories worldwide."],
         description="About the company"
     )
+    employees: Optional[str] = Field(
+        default=None,
+        examples=["150,000"],
+        description="Number of employees in the company"
+    )
     ytd_return: Optional[str] = Field(
         default=None,
         examples=["+10.00%"],
