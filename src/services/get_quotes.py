@@ -3,13 +3,16 @@ from datetime import datetime
 from decimal import Decimal
 from typing import List
 
-from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
+from lxml import etree
 from yahooquery import Ticker
 
 from src.schemas import Quote, SimpleQuote
 from ..redis import cache
 from ..utils import fetch, get_logo
+
+# XPath expression to verify if the symbol is valid
+name_symbol_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/div[1]/div/section/h1/text()'
 
 
 async def scrape_quotes(symbols: List[str]) -> List[Quote]:
@@ -32,38 +35,60 @@ async def scrape_simple_quotes(symbols: List[str]) -> List[SimpleQuote]:
     return [quote for quote in quotes if not isinstance(quote, Exception)]
 
 
-async def _scrape_price_data(soup: BeautifulSoup):
+async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
     """
-    Scrape the price data from the soup object and formats the data
+    Scrape the price data from the HTML content using XPath and format the data.
 
+    :param tree: The parsed HTML tree
     :return: Regular price, change, percent change, and post price as a tuple
     """
-    regular_price = round(Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price"})["data-value"]), 2)
-    regular_change_value = round(
-        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change"})["data-value"]), 2)
-    regular_percent_change_value = round(
-        Decimal(soup.find("fin-streamer", {"data-testid": "qsp-price-change-percent"})["data-value"]), 2)
-    regular_change = f"{regular_change_value:+.2f}"
-    regular_percent_change = f"{regular_percent_change_value:+.2f}%"
-    post_price_element = soup.find("fin-streamer", {"data-testid": "qsp-post-price"})
-    post_price = round(Decimal(post_price_element["data-value"]), 2) if post_price_element else None
+    # XPath expressions
+    regular_price_xpath = '//*[@data-testid="qsp-price"]/@data-value'
+    regular_change_xpath = '//*[@data-testid="qsp-price-change"]/@data-value'
+    regular_percent_change_xpath = '//*[@data-testid="qsp-price-change-percent"]/@data-value'
+    post_price_xpath = '//*[@data-testid="qsp-post-price"]/@data-value'
+
+    # Extraction
+    regular_price_elements = tree.xpath(regular_price_xpath)
+    regular_change_elements = tree.xpath(regular_change_xpath)
+    regular_percent_change_elements = tree.xpath(regular_percent_change_xpath)
+    post_price_elements = tree.xpath(post_price_xpath)
+
+    # Formatting
+    regular_price = round(Decimal(regular_price_elements[0]), 2) if regular_price_elements else None
+    regular_change = f"{round(Decimal(regular_change_elements[0]), 2):+.2f}" if regular_change_elements else None
+    regular_percent_change = f"{round(Decimal(regular_percent_change_elements[0]), 2):+.2f}%" if regular_percent_change_elements else None
+    post_price = round(Decimal(post_price_elements[0]), 2) if post_price_elements else None
 
     return regular_price, regular_change, regular_percent_change, post_price
 
 
-async def _scrape_general_info(soup: BeautifulSoup):
+async def _scrape_general_info(tree: etree.ElementTree) -> tuple:
     """
     Scrape misc. info from the soup object and formats the data
 
+    :param tree: The parsed HTML tree
     :return: A tuple of the scraped data
     """
-    list_items = soup.select('li.yf-mrt107')
+    # XPath expressions
+    ul_xpath = '/html/body/div[2]/main/section/section/section/article/div[2]/ul'
+    list_items_xpath = './/li'
+    label_xpath = './/span[contains(@class, "label")]/text()'
+    value_xpath = './/span[contains(@class, "value")]/fin-streamer/@data-value | .//span[contains(@class, "value")]/text()'
+
+    # Container ul element
+    ul_element = tree.xpath(ul_xpath)[0]
+
+    # Extraction from the ul element
+    list_items = ul_element.xpath(list_items_xpath)
     data = {}
     for item in list_items:
-        label = item.find("span", class_="label").text.strip()
-        value = item.find("span", class_="value").text.strip()
+        label = item.xpath(label_xpath)[0].strip()
+        value_elements = item.xpath(value_xpath)
+        value = value_elements[0].strip() if value_elements else None
         data[label] = value
 
+    # Formatting
     open_price = Decimal(data.get("Open").replace(',', '')) if data.get("Open") else None
     market_cap = data.get("Market Cap (intraday)", None)
     beta = data.get("Beta (5Y Monthly)") if data.get('Beta (5Y Monthly)') else None
@@ -97,70 +122,105 @@ async def _scrape_general_info(soup: BeautifulSoup):
     last_dividend = data.get("Last Dividend", None)
     inception_date = data.get("Inception Date", None)
 
-    about = soup.find('p', class_='yf-6e9c7m').text
     return (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
             dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
             morningstar_rating, morningstar_risk,
-            holdings_turnover, last_dividend, inception_date, about)
+            holdings_turnover, last_dividend, inception_date)
 
 
-async def _scrape_logo(soup: BeautifulSoup):
+async def _scrape_logo(tree: etree.ElementTree) -> str:
     """
-    Scrape the logo from the soup object
+    Scrape only the logo from the HTML tree
 
-    :return: URL as a string
+    :param tree: The parsed HTML tree
+    :return: URL to logo as a string
     """
-    logo_element = soup.find('a', class_='subtle-link fin-size-medium yf-1e4diqp')
-    url = logo_element['href'] if logo_element else None
+    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div'
+    website_xpath = './/div[contains(@class, "description")]/a[contains(@data-ylk, "business-url")]/@href'
+    container_element = tree.xpath(container_xpath)[0]
 
-    return await get_logo(url) if url else None
+    website_elements = container_element.xpath(website_xpath)
+    website = website_elements[0].strip() if website_elements else None
+
+    return await get_logo(website) if website else None
 
 
-async def _scrape_sector_industry(soup: BeautifulSoup):
+async def _scrape_company_info(tree: etree.ElementTree) -> tuple:
     """
     Scrape the sector and industry data from the soup object
 
-    :return: sector and industry as a tuple
+    :return: sector, industry, about, employees, logo as a tuple
     """
-    info_sections = soup.find_all("div", class_="infoSection yf-6e9c7m")
-    curr_sector = None
-    curr_industry = None
-    for section in info_sections:
-        h3_text = section.find("h3").text
-        if h3_text == "Sector":
-            a_element = section.find("a")
-            a_text = a_element.text
-            curr_sector = a_text.strip()
-        elif h3_text == "Industry":
-            a_element = section.find("a")
-            a_text = a_element.text
-            curr_industry = a_text.strip()
+    # XPath expressions
+    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div'
+    about_xpath = './/div[contains(@class, "description")]/p/text()'
+    website_xpath = './/div[contains(@class, "description")]/a[contains(@data-ylk, "business-url")]/@href'
+    sector_xpath = './/div[contains(@class, "infoSection")][h3[text()="Sector"]]/p/a/text()'
+    industry_xpath = './/div[contains(@class, "infoSection")][h3[text()="Industry"]]/p/a/text()'
+    employees_xpath = './/div[contains(@class, "infoSection")][h3[text()="Full Time Employees"]]/p/text()'
 
-    return curr_sector, curr_industry
+    # Extract the container element using XPath
+    container_element = tree.xpath(container_xpath)[0]
+
+    # Extract the about text using XPath
+    about_elements = container_element.xpath(about_xpath)
+    about = about_elements[0].strip() if about_elements else None
+
+    # Extract the company website link using XPath
+    website_elements = container_element.xpath(website_xpath)
+    website = website_elements[0].strip() if website_elements else None
+    logo = await get_logo(website) if website else None
+
+    # Extract the sector using XPath
+    sector_elements = container_element.xpath(sector_xpath)
+    sector = sector_elements[0].strip() if sector_elements else None
+
+    # Extract the industry using XPath
+    industry_elements = container_element.xpath(industry_xpath)
+    industry = industry_elements[0].strip() if industry_elements else None
+
+    employees_elements = container_element.xpath(employees_xpath)
+    employees = employees_elements[0].strip() if employees_elements else None
+
+    return sector, industry, about, employees, logo
 
 
-async def _scrape_performance(soup: BeautifulSoup):
+async def _scrape_performance(tree: etree.ElementTree) -> tuple:
     """
-    Scrape the performance data from the soup object
+    Scrape the performance data from the parsed HTML tree using XPath.
 
+    :param tree: Parsed HTML tree
     :return: YTD, 1 year, 3 year, and 5 year returns as a tuple
     """
-    returns = soup.find_all('section', 'card small yf-xvi0tx bdr sticky')
-    data = []
-    for changes in returns:
-        perf_div = changes.find('div', class_=['perf positive yf-12wncuy', 'perf negative yf-12wncuy'])
-        if perf_div:
-            sign = '+' if 'positive' in perf_div['class'] else '-'
-            data.append(sign + perf_div.text.strip())
+    # XPath expressions
+    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[5]'
+    ytd_return_xpath = './/section[1]//div[contains(@class, "perf")]/text()'
+    one_year_return_xpath = './/section[2]//div[contains(@class, "perf")]/text()'
+    three_year_return_xpath = './/section[3]//div[contains(@class, "perf")]/text()'
+    five_year_return_xpath = './/section[4]//div[contains(@class, "perf")]/text()'
 
-    ytd_return = data[0] if len(data) > 0 else None
-    year_return = data[1] if len(data) > 1 else None
-    three_year_return = data[2] if len(data) > 2 else None
-    five_year_return = data[3] if len(data) > 3 else None
-    return ytd_return, year_return, three_year_return, five_year_return
+    # Container element
+    container_element = tree.xpath(container_xpath)[0]
+
+    # Extract the YTD return
+    ytd_return_elements = container_element.xpath(ytd_return_xpath)
+    ytd_return = ytd_return_elements[0].strip() if ytd_return_elements else None
+
+    # Extract the 1-Year return
+    one_year_return_elements = container_element.xpath(one_year_return_xpath)
+    one_year_return = one_year_return_elements[0].strip() if one_year_return_elements else None
+
+    # Extract the 3-Year return
+    three_year_return_elements = container_element.xpath(three_year_return_xpath)
+    three_year_return = three_year_return_elements[0].strip() if three_year_return_elements else None
+
+    # Extract the 5-Year return
+    five_year_return_elements = container_element.xpath(five_year_return_xpath)
+    five_year_return = five_year_return_elements[0].strip() if five_year_return_elements else None
+
+    return ytd_return, one_year_return, three_year_return, five_year_return
 
 
-@cache(10, after_market_expire=60)
 async def _scrape_quote(symbol: str) -> Quote:
     """
     Asynchronously scrapes a quote from a given symbol and returns a Quote object.
@@ -171,32 +231,33 @@ async def _scrape_quote(symbol: str) -> Quote:
     try:
         url = 'https://finance.yahoo.com/quote/' + symbol + "/"
         html = await fetch(url)
+        tree = etree.HTML(html)
 
-        parse_only = SoupStrainer(['h1', 'section', 'li'])
-        soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
+        name_symbol_text = tree.xpath(name_symbol_xpath)[0].strip()
+        name = name_symbol_text.split('(')[0].strip()
 
-        symbol_name_element = soup.select_one('h1.yf-xxbei9')
-        if not symbol_name_element:
+        # If the name is empty, scraping might have failed so try to get the quote from yahooquery
+        if not name:
             return await _get_quote_from_yahooquery(symbol)
 
-        name = symbol_name_element.text.split('(')[0].strip()
+        # Async tasks
+        prices_future = asyncio.create_task(_scrape_price_data(tree))
+        list_items_future = asyncio.create_task(_scrape_general_info(tree))
+        sector_industry_future = asyncio.create_task(_scrape_company_info(tree))
+        performance_future = asyncio.create_task(_scrape_performance(tree))
 
-        prices_future = asyncio.create_task(_scrape_price_data(soup))
-        list_items_future = asyncio.create_task(_scrape_general_info(soup))
-        logo_future = asyncio.create_task(_scrape_logo(soup))
-        sector_industry_future = asyncio.create_task(_scrape_sector_industry(soup))
-        performance_future = asyncio.create_task(_scrape_performance(soup))
-
+        # Gather the async tasks in parallel
         (
             (regular_price, regular_change, regular_percent_change, post_price),
             (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
              dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
              morningstar_rating,
-             morningstar_risk, holdings_turnover, last_dividend, inception_date, about),
-            logo, (sector, industry),
+             morningstar_risk, holdings_turnover, last_dividend, inception_date),
+            (sector, industry, about, employees, logo),
             (ytd_return, year_return, three_year_return, five_year_return)) = await asyncio.gather(
-            prices_future, list_items_future, logo_future, sector_industry_future, performance_future
+            prices_future, list_items_future, sector_industry_future, performance_future
         )
+
         return Quote(
             symbol=symbol.upper(),
             name=name,
@@ -232,13 +293,15 @@ async def _scrape_quote(symbol: str) -> Quote:
             sector=sector,
             industry=industry,
             about=about,
+            employees=employees,
             ytd_return=ytd_return,
             year_return=year_return,
             three_year_return=three_year_return,
             five_year_return=five_year_return,
             logo=logo
         )
-    except Exception:
+    except Exception as e:
+        print("Scraping failed", e)
         return await _get_quote_from_yahooquery(symbol)
 
 
@@ -251,19 +314,20 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
     try:
         url = 'https://finance.yahoo.com/quote/' + symbol + "/"
         html = await fetch(url)
+        tree = etree.HTML(html)
 
-        parse_only = SoupStrainer(['h1', 'fin-streamer', 'a'])
-        soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
+        name_symbol_text = tree.xpath(name_symbol_xpath)[0].strip()
+        name = name_symbol_text.split('(')[0].strip()
 
-        symbol_name_element = soup.select_one('h1.yf-xxbei9')
-        if not symbol_name_element:
+        # If the name is empty, scraping might have failed so try to get the quote from yahooquery
+        if not name:
             return await _get_simple_quote_from_yahooquery(symbol)
 
-        name = symbol_name_element.text.split('(')[0].strip()
+        # Async tasks
+        prices_future = asyncio.create_task(_scrape_price_data(tree))
+        logo_future = asyncio.create_task(_scrape_logo(tree))
 
-        prices_future = asyncio.create_task(_scrape_price_data(soup))
-        logo_future = asyncio.create_task(_scrape_logo(soup))
-
+        # Gather the async tasks in parallel
         (regular_price, regular_change, regular_percent_change, post_price), logo = await asyncio.gather(
             prices_future, logo_future
         )
@@ -277,8 +341,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
             percent_change=regular_percent_change,
             logo=logo
         )
-    except Exception as e:
-        print(str(e))
+    except Exception:
         return await _get_simple_quote_from_yahooquery(symbol)
 
 
@@ -404,6 +467,7 @@ async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
 
     :raises: HTTPException if ticker is not found
     """
+    print("Getting simple quote from yahooquery")
     ticker = Ticker(symbol)
     quote = ticker.quotes
     profile = ticker.asset_profile
