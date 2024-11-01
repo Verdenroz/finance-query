@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
+from lxml import etree
 from typing_extensions import List
 
 from src.redis import cache
@@ -14,16 +14,11 @@ async def scrape_similar_quotes(symbol: str, limit: int = 10) -> List[SimpleQuot
     url = 'https://finance.yahoo.com/quote/' + symbol
     html = await fetch(url)
 
-    parse_only = SoupStrainer(['div'], attrs={'class': ['main-div yf-15b2o7n', 'carousel-top  yf-1pws7a4']})
-    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
-
-    similar_stocks = soup.find_all("div", class_="main-div yf-15b2o7n", limit=limit)
-    similar = await _parse_stocks(similar_stocks, symbol)
+    similar = await _parse_stocks(html, symbol, limit)
 
     # If similar_stocks is empty, try to scrape ETF data
     if not similar:
-        etf_stocks = soup.find_all("div", class_="ticker-container yf-1pws7a4 enforceMaxWidth", limit=limit)
-        similar = await _parse_etfs(etf_stocks)
+        similar = await _parse_etfs(html, limit)
 
     # If similar is still empty, the symbol is probably invalid
     if not similar:
@@ -32,32 +27,34 @@ async def scrape_similar_quotes(symbol: str, limit: int = 10) -> List[SimpleQuot
     return similar
 
 
-async def _parse_stocks(stocks_divs, symbol) -> List[SimpleQuote]:
+async def _parse_stocks(html: str, symbol: str, limit: int) -> List[SimpleQuote]:
+    tree = etree.HTML(html)
+    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[6]/div/div/div/section'
+    stock_sections = tree.xpath(container_xpath)
     stocks = []
-    for div in stocks_divs:
-        symbol_element = div.find("span")
-        if not symbol_element:
-            continue
-        div_symbol = symbol_element.text
-        if div_symbol.lower() == symbol.lower():
+    for section in stock_sections:
+        symbol_xpath = './/span/text()'
+        name_xpath = './/div/div[1]/a/div/div/text()'
+        price_xpath = './/div/div[2]/div/span/text()'
+        percent_change_xpath = './/div/div[2]/div/div/span/text()'
+
+        symbol_elements = section.xpath(symbol_xpath)
+        name_elements = section.xpath(name_xpath)
+        price_elements = section.xpath(price_xpath)
+        percent_change_elements = section.xpath(percent_change_xpath)
+
+        if not (symbol_elements and name_elements and price_elements and percent_change_elements):
             continue
 
-        name_element = div.find("div", class_="longName yf-15b2o7n")
-        if not name_element:
+        parsed_symbol = symbol_elements[0].strip()
+        # Skip the queried symbol if it appears in the similar stocks list
+        if parsed_symbol == symbol:
             continue
-        name = name_element.text
 
-        price_element = div.find("span", class_="price yf-15b2o7n")
-        if not price_element:
-            continue
-        price_text = price_element.text.replace(',', '')
+        name = name_elements[0].strip()
+        price_text = price_elements[0].strip().replace(',', '')
         price = Decimal(price_text)
-
-        change_element = (div.find("span", class_="positive yf-15b2o7n") or
-                          div.find("span", class_="negative yf-15b2o7n"))
-        if not change_element:
-            continue
-        percent_change = change_element.text
+        percent_change = percent_change_elements[0].strip()
 
         change = price / (1 + Decimal(percent_change.strip('%')) / 100) - price
         change = round(change, 2)
@@ -67,7 +64,7 @@ async def _parse_stocks(stocks_divs, symbol) -> List[SimpleQuote]:
             change_str = '+' + str(abs(change))
 
         stock = SimpleQuote(
-            symbol=div_symbol,
+            symbol=parsed_symbol,
             name=name,
             price=price,
             change=change_str,
@@ -75,33 +72,36 @@ async def _parse_stocks(stocks_divs, symbol) -> List[SimpleQuote]:
         )
         stocks.append(stock)
 
+        if len(stocks) >= limit:
+            break
+
     return stocks
 
 
-async def _parse_etfs(etf_divs):
+async def _parse_etfs(html: str, limit: int) -> List[SimpleQuote]:
+    tree = etree.HTML(html)
+    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[4]/div/div/div/section'
+    etf_sections = tree.xpath(container_xpath)
     etfs = []
-    for div in etf_divs:
-        symbol_element = div.find("span", class_="symbol yf-138ga19")
-        if not symbol_element:
-            continue
-        symbol = symbol_element.text
+    for section in etf_sections:
+        symbol_xpath = './/div/div[1]/div/span[1]/text()'
+        name_xpath = './/div/div[1]/div/span[2]/text()'
+        price_xpath = './/div/div[2]/span/strong/text()'
+        percent_change_xpath = './/div/div[2]/div/span/text()'
 
-        name_element = div.find("span", class_="tw-text-sm yf-138ga19 longName")
-        if not name_element:
-            continue
-        name = name_element.text
+        symbol_elements = section.xpath(symbol_xpath)
+        name_elements = section.xpath(name_xpath)
+        price_elements = section.xpath(price_xpath)
+        percent_change_elements = section.xpath(percent_change_xpath)
 
-        price_element = div.find("strong")
-        if not price_element:
+        if not (symbol_elements and name_elements and price_elements and percent_change_elements):
             continue
-        price_text = price_element.text.replace(',', '')
+
+        symbol = symbol_elements[0].strip()
+        name = name_elements[0].strip()
+        price_text = price_elements[0].strip().replace(',', '')
         price = Decimal(price_text)
-
-        change_element = (div.find("span", class_="txt-negative yf-1pws7a4")
-                          or div.find("span", class_="txt-positive yf-1pws7a4"))
-        if not change_element:
-            continue
-        percent_change = change_element.text
+        percent_change = percent_change_elements[0].strip()
 
         change = price / (1 + Decimal(percent_change.strip('%')) / 100) - price
         change = round(change, 2)
@@ -118,5 +118,8 @@ async def _parse_etfs(etf_divs):
             percent_change=percent_change,
         )
         etfs.append(etf)
+
+        if len(etfs) >= limit:
+            break
 
     return etfs
