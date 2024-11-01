@@ -10,7 +10,7 @@ from src.utils import fetch
 
 
 @cache(expire=15, after_market_expire=600)
-async def scrape_similar_stocks(symbol: str, limit: int = 10) -> List[SimpleQuote]:
+async def scrape_similar_quotes(symbol: str, limit: int = 10) -> List[SimpleQuote]:
     url = 'https://finance.yahoo.com/quote/' + symbol
     html = await fetch(url)
 
