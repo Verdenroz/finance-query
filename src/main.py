@@ -8,7 +8,7 @@ from mangum import Mangum
 
 from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
-                        similar_stocks_router, finance_news_router, indicators_router, search_router,
+                        similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router)
 from src.security import RateLimitMiddleware
 from src.session_manager import get_global_session, close_global_session
@@ -76,7 +76,7 @@ app.include_router(historical_prices_router, prefix="/v1")
 app.include_router(indicators_router, prefix="/v1")
 app.include_router(indices_router, prefix="/v1")
 app.include_router(movers_router, prefix="/v1")
-app.include_router(similar_stocks_router, prefix="/v1")
+app.include_router(similar_quotes_router, prefix="/v1")
 app.include_router(finance_news_router, prefix="/v1")
 app.include_router(search_router, prefix="/v1")
 app.include_router(sectors_router, prefix="/v1")

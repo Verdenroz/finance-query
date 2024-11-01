@@ -1,11 +1,11 @@
-from .quotes import router as quotes_router
+from .finance_news import router as finance_news_router
 from .historical_prices import router as historical_prices_router
+from .indicators import router as indicators_router
 from .indices import router as indices_router
 from .movers import router as movers_router
-from .similar_stocks import router as similar_stocks_router
-from .finance_news import router as finance_news_router
-from .indicators import router as indicators_router
+from .quotes import router as quotes_router
 from .search import router as search_router
 from .sectors import router as sectors_router
+from .similar_quotes import router as similar_quotes_router
 from .sockets import router as sockets_router
 from .stream import router as stream_router

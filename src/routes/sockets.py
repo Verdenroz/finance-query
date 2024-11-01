@@ -6,7 +6,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from src.connections import RedisConnectionManager
 from src.schemas import SimpleQuote
 from src.security import validate_websocket
-from src.services import scrape_quotes, scrape_similar_stocks, scrape_actives, \
+from src.services import scrape_quotes, scrape_similar_quotes, scrape_actives, \
     scrape_news_for_quote, scrape_losers, scrape_gainers, scrape_simple_quotes, scrape_indices, scrape_general_news
 from src.services.get_sectors import get_sector_for_symbol, get_sectors
 
@@ -28,7 +28,7 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
         Fetches the profile data for a symbol.
         """
         quotes_task = scrape_quotes([symbol])
-        similar_stocks_task = scrape_similar_stocks(symbol)
+        similar_stocks_task = scrape_similar_quotes(symbol)
         sector_performance_task = get_sector_for_symbol(symbol)
         news_task = scrape_news_for_quote(symbol)
 
