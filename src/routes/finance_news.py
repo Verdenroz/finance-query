@@ -19,8 +19,13 @@ async def get_news(
         symbol: Optional[str] = Query(
             None,
             description="Optional symbol to get news for. If not provided, general market news is returned"),
+        is_etf: Optional[bool] = Query(
+            None,
+            description="Optional parameter to specify if the symbol is an ETF. "
+                        "If not provided, the API will try to find news for the symbol as a stock first, then as an ETF"
+        )
 ):
     if not symbol:
         return await scrape_general_news()
     else:
-        return await scrape_news_for_quote(symbol)
+        return await scrape_news_for_quote(symbol, is_etf)
