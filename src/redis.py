@@ -51,7 +51,7 @@ indicators = {
 }
 
 
-def cache(expire, after_market_expire=None):
+def cache(expire, market_closed_expire=None):
     """
         This decorator caches the result of the function it decorates.
 
@@ -62,7 +62,7 @@ def cache(expire, after_market_expire=None):
         If the cache key does not exist, the function is called and Redis stores the result.
 
         :param expire: The expiration time for the cache key
-        :param after_market_expire: The expiration time for the cache key after the market closes
+        :param market_closed_expire: The expiration time for the cache key after the market closes
         :return: The result of the function or the cached value
         """
     lock = asyncio.Lock()
@@ -179,7 +179,7 @@ def cache(expire, after_market_expire=None):
                         return None
 
                     # Determine expiration time
-                    expire_time = after_market_expire if (after_market_expire and not is_market_open()) else expire
+                    expire_time = market_closed_expire if (market_closed_expire and not is_market_open()) else expire
 
                     # Cache the result
                     await cache_result(key, result, expire_time)

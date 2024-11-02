@@ -8,19 +8,19 @@ from ..schemas.marketmover import MarketMover
 from ..utils import fetch
 
 
-@cache(expire=15, after_market_expire=3600)
+@cache(expire=15, market_closed_expire=3600)
 async def scrape_actives():
     url = 'https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50'
     return await _scrape_movers(url)
 
 
-@cache(expire=15, after_market_expire=3600)
+@cache(expire=15, market_closed_expire=3600)
 async def scrape_gainers():
     url = 'https://finance.yahoo.com/markets/stocks/gainers/?start=0&count=50'
     return await _scrape_movers(url)
 
 
-@cache(expire=15, after_market_expire=3600)
+@cache(expire=15, market_closed_expire=3600)
 async def scrape_losers():
     url = 'https://finance.yahoo.com/markets/stocks/losers/?start=0&count=50'
     return await _scrape_movers(url)

@@ -8,7 +8,7 @@ from ..schemas.index import Index
 from ..utils import fetch
 
 
-@cache(expire=15, after_market_expire=3600)
+@cache(expire=15, market_closed_expire=3600)
 async def scrape_indices() -> list[Index]:
     """
     Scrape the Americas indices from investing.com

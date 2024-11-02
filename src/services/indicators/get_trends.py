@@ -8,7 +8,7 @@ from src.schemas.time_series import TimePeriod, Interval
 from src.services.get_historical import get_historical_quotes
 
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_macd(symbol: str, interval: Interval, fast_period: int = 12, slow_period: int = 26,
                    signal_period: int = 9):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
@@ -20,7 +20,7 @@ async def get_macd(symbol: str, interval: Interval, fast_period: int = 12, slow_
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.MACD, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_adx(symbol: str, interval: Interval, period: int = 14):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_adx(quotes, lookback_periods=period)
@@ -29,7 +29,7 @@ async def get_adx(symbol: str, interval: Interval, period: int = 14):
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.ADX, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_aroon(symbol: str, interval: Interval, period: int = 25):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_aroon(quotes, lookback_periods=period)
@@ -39,7 +39,7 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25):
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.AROON, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_bbands(symbol: str, interval: Interval, period: int = 20, std_dev: int = 2):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev)
@@ -49,7 +49,7 @@ async def get_bbands(symbol: str, interval: Interval, period: int = 20, std_dev:
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.BBANDS, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_obv(symbol: str, interval: Interval, sma_periods: int = None):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_obv(quotes, sma_periods=sma_periods)
@@ -58,7 +58,7 @@ async def get_obv(symbol: str, interval: Interval, sma_periods: int = None):
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.OBV, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_super_trend(symbol: str, interval: Interval, period: int = 10, multiplier: int = 3):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_super_trend(quotes, lookback_periods=period, multiplier=multiplier)
@@ -70,7 +70,7 @@ async def get_super_trend(symbol: str, interval: Interval, period: int = 10, mul
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.SUPER_TREND, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_ichimoku(symbol: str, interval: Interval, tenkan_period: int = 9, kijun_period: int = 26,
                        senkou_period: int = 52):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)

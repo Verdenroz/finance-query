@@ -238,7 +238,7 @@ async def _scrape_performance(tree: etree.ElementTree) -> tuple:
 
     return ytd_return, one_year_return, three_year_return, five_year_return
 
-@cache(10, after_market_expire=60)
+@cache(10, market_closed_expire=60)
 async def _scrape_quote(symbol: str) -> Quote:
     """
     Asynchronously scrapes a quote from a given symbol and returns a Quote object.
@@ -319,7 +319,7 @@ async def _scrape_quote(symbol: str) -> Quote:
         return await _get_quote_from_yahooquery(symbol)
 
 
-@cache(10, after_market_expire=60)
+@cache(10, market_closed_expire=60)
 async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
     """
     Asynchronously scrapes a simple quote from a given symbol and returns a SimpleQuote object.

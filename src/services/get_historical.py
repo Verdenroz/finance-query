@@ -14,7 +14,7 @@ from src.schemas import HistoricalData, TimeSeries
 from src.schemas.time_series import Interval, TimePeriod
 
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_historical(symbol: str, time: TimePeriod, interval: Interval) -> TimeSeries:
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])

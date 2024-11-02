@@ -24,7 +24,7 @@ urls = {
     Sector.COMMUNICATION: 'https://finance.yahoo.com/sectors/communication-services/'
 }
 
-@cache(expire=300, after_market_expire=3600)
+@cache(expire=300, market_closed_expire=3600)
 async def get_sectors() -> List[MarketSector]:
     tasks = []
     for sector, url in urls.items():
@@ -38,7 +38,7 @@ async def get_sectors() -> List[MarketSector]:
     return sectors
 
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_sector_for_symbol(symbol: str) -> MarketSector:
     ticker = Ticker(symbol)
     profile = ticker.asset_profile
@@ -53,7 +53,7 @@ async def get_sector_for_symbol(symbol: str) -> MarketSector:
     return sector
 
 
-@cache(expire=300, after_market_expire=3600)
+@cache(expire=300, market_closed_expire=3600)
 async def get_sector_details(sector: Sector) -> MarketSectorDetails:
     url = urls[sector]
     html = await fetch(url)
