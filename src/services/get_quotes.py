@@ -1,6 +1,5 @@
 import asyncio
 from datetime import datetime
-from decimal import Decimal
 from typing import List
 
 from fastapi import HTTPException
@@ -10,9 +9,6 @@ from yahooquery import Ticker
 from src.schemas import Quote, SimpleQuote
 from ..redis import cache
 from ..utils import fetch, get_logo
-
-# XPath expression to verify if the symbol is valid
-name_symbol_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/div[1]/div/section/h1/text()'
 
 
 async def scrape_quotes(symbols: List[str]) -> List[Quote]:
@@ -35,6 +31,18 @@ async def scrape_simple_quotes(symbols: List[str]) -> List[SimpleQuote]:
     return [quote for quote in quotes if not isinstance(quote, Exception)]
 
 
+async def get_company_name(tree: etree.ElementTree):
+    name_path = './/h1/text()'
+    name_container = tree.xpath(name_path)
+    if not name_container:
+        raise HTTPException(status_code=500, detail="Failed to extract company name")
+
+    name_container = name_container[1]
+    company_name = name_container.split('(')[0].strip()
+
+    return company_name
+
+
 async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
     """
     Scrape the price data from the HTML content using XPath and format the data.
@@ -43,25 +51,32 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
     :return: Regular price, change, percent change, and post price as a tuple
     """
     # XPath expressions
-    regular_price_xpath = '//*[@data-testid="qsp-price"]/@data-value'
-    regular_change_xpath = '//*[@data-testid="qsp-price-change"]/@data-value'
-    regular_percent_change_xpath = '//*[@data-testid="qsp-price-change-percent"]/@data-value'
-    post_price_xpath = '//*[@data-testid="qsp-post-price"]/@data-value'
+    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/div[2]/div[1]/section/div'
+    regular_price_xpath = './section[1]/div[1]/fin-streamer[1]/span/text()'
+    regular_change_xpath = './section[1]/div[1]/fin-streamer[2]/span/text()'
+    regular_percent_change_xpath = './section[1]/div[1]/fin-streamer[3]/span/text()'
+    post_price_xpath = './section[2]/div[1]/fin-streamer[1]/span/text()'
     pre_market_price_xpath = '//*[@data-testid="qsp-pre-price"]/@data-value'
 
     # Extraction
-    regular_price_elements = tree.xpath(regular_price_xpath)
-    regular_change_elements = tree.xpath(regular_change_xpath)
-    regular_percent_change_elements = tree.xpath(regular_percent_change_xpath)
-    pre_market_price_elements = tree.xpath(pre_market_price_xpath)
-    post_price_elements = tree.xpath(post_price_xpath)
+
+    container_element = tree.xpath(container_xpath)
+    if not container_element:
+        raise HTTPException(status_code=500, detail="Failed to extract price data")
+
+    container_element = container_element[0]
+    regular_price_elements = container_element.xpath(regular_price_xpath)
+    regular_change_elements = container_element.xpath(regular_change_xpath)
+    regular_percent_change_elements = container_element.xpath(regular_percent_change_xpath)
+    pre_market_price_elements = container_element.xpath(pre_market_price_xpath)
+    post_price_elements = container_element.xpath(post_price_xpath)
 
     # Formatting
-    regular_price = round(Decimal(regular_price_elements[0]), 2) if regular_price_elements else None
-    regular_change = f"{round(Decimal(regular_change_elements[0]), 2):+.2f}" if regular_change_elements else None
-    regular_percent_change = f"{round(Decimal(regular_percent_change_elements[0]), 2):+.2f}%" if regular_percent_change_elements else None
-    pre_price = round(Decimal(pre_market_price_elements[0]), 2) if pre_market_price_elements else None
-    post_price = round(Decimal(post_price_elements[0]), 2) if post_price_elements else None
+    regular_price = regular_price_elements[0].strip() if regular_price_elements else None
+    regular_change = regular_change_elements[0].strip() if regular_change_elements else None
+    regular_percent_change = regular_percent_change_elements[0].strip().replace('(', '').replace(')', '') if regular_percent_change_elements else None
+    pre_price = pre_market_price_elements[0].strip() if pre_market_price_elements else None
+    post_price = post_price_elements[0].strip() if post_price_elements else None
 
     return regular_price, regular_change, regular_percent_change, pre_price, post_price
 
@@ -80,9 +95,13 @@ async def _scrape_general_info(tree: etree.ElementTree) -> tuple:
     value_xpath = './/span[contains(@class, "value")]/fin-streamer/@data-value | .//span[contains(@class, "value")]/text()'
 
     # Container ul element
-    ul_element = tree.xpath(ul_xpath)[0]
+    ul_element = tree.xpath(ul_xpath)
+
+    if not ul_element:
+        raise HTTPException(status_code=500, detail="Failed to extract general info")
 
     # Extraction from the ul element
+    ul_element = tree.xpath(ul_xpath)[0]
     list_items = ul_element.xpath(list_items_xpath)
     data = {}
     for item in list_items:
@@ -92,38 +111,37 @@ async def _scrape_general_info(tree: etree.ElementTree) -> tuple:
         data[label] = value
 
     # Formatting
-    open_price = Decimal(data.get("Open").replace(',', '')) if data.get("Open") else None
-    market_cap = data.get("Market Cap (intraday)", None)
-    beta = data.get("Beta (5Y Monthly)") if data.get('Beta (5Y Monthly)') else None
-    pe = data.get("PE Ratio (TTM)") if data.get("PE Ratio (TTM)") else None
-    eps = data.get("EPS (TTM)") if data.get("EPS (TTM)") else None
+    open_price = data.get("Open")
+    market_cap = data.get("Market Cap (intraday)")
+    beta = data.get("Beta (5Y Monthly)")
+    pe = data.get("PE Ratio (TTM)")
+    eps = data.get("EPS (TTM)")
     earnings_date = data.get("Earnings Date")
-    forward_dividend_yield = data.get("Forward Dividend & Yield", None)
+    forward_dividend_yield = data.get("Forward Dividend & Yield")
     dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield else (None, None) if not (
         any(char.isdigit() for char in forward_dividend_yield)) \
         else forward_dividend_yield.replace("(", "").replace(")", "").split()
     ex_dividend = data.get("Ex-Dividend Date") if data.get("Ex-Dividend Date") != "--" else None
-    net_assets = data.get("Net Assets", None)
-    nav = data.get("NAV", None)
-    expense_ratio = data.get("Expense Ratio (net)", None)
+    net_assets = data.get("Net Assets")
+    nav = data.get("NAV")
+    expense_ratio = data.get("Expense Ratio (net)")
 
-    days_range = data.get("Day's Range", None)
-    low, high = [Decimal(x.replace(',', '')) for x in days_range.split(' - ')] if days_range else (None, None)
+    days_range = data.get("Day's Range")
+    low, high = days_range.split(' - ') if days_range else (None, None)
 
-    fifty_two_week_range = data.get("52 Week Range", None)
-    year_low, year_high = [Decimal(x.replace(',', '')) for x in
-                           fifty_two_week_range.split(' - ')] if fifty_two_week_range else (None, None)
+    fifty_two_week_range = data.get("52 Week Range")
+    year_low, year_high = fifty_two_week_range.split(' - ') if fifty_two_week_range else (None, None)
 
     volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
     avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
 
-    category = data.get("Category", None)
-    last_cap = data.get("Last Cap Gain", None)
+    category = data.get("Category")
+    last_cap = data.get("Last Cap Gain")
     morningstar_rating = data.get("Morningstar Rating").split()[0] if data.get("Morningstar Rating") else None
-    morningstar_risk = data.get("Morningstar Risk Rating", None)
-    holdings_turnover = data.get("Holdings Turnover", None)
-    last_dividend = data.get("Last Dividend", None)
-    inception_date = data.get("Inception Date", None)
+    morningstar_risk = data.get("Morningstar Risk Rating")
+    holdings_turnover = data.get("Holdings Turnover")
+    last_dividend = data.get("Last Dividend")
+    inception_date = data.get("Inception Date")
 
     return (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
             dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
@@ -138,11 +156,8 @@ async def _scrape_logo(tree: etree.ElementTree) -> str:
     :param tree: The parsed HTML tree
     :return: URL to logo as a string
     """
-    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div'
-    website_xpath = './/div[contains(@class, "description")]/a[contains(@data-ylk, "business-url")]/@href'
-    container_element = tree.xpath(container_xpath)[0]
-
-    website_elements = container_element.xpath(website_xpath)
+    website_xpath = '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href'
+    website_elements = tree.xpath(website_xpath)
     website = website_elements[0].strip() if website_elements else None
 
     return await get_logo(website) if website else None
@@ -236,21 +251,16 @@ async def _scrape_quote(symbol: str) -> Quote:
         html = await fetch(url)
         tree = etree.HTML(html)
 
-        name_symbol_text = tree.xpath(name_symbol_xpath)[0].strip()
-        name = name_symbol_text.split('(')[0].strip()
-
-        # If the name is empty, scraping might have failed so try to get the quote from yahooquery
-        if not name:
-            return await _get_quote_from_yahooquery(symbol)
-
         # Async tasks
+        name_future = asyncio.create_task(get_company_name(tree))
         prices_future = asyncio.create_task(_scrape_price_data(tree))
-        list_items_future = asyncio.create_task(_scrape_general_info(tree))
+        general_info_future = asyncio.create_task(_scrape_general_info(tree))
         sector_industry_future = asyncio.create_task(_scrape_company_info(tree))
         performance_future = asyncio.create_task(_scrape_performance(tree))
 
         # Gather the async tasks in parallel
         (
+            name,
             (regular_price, regular_change, regular_percent_change, pre_price, post_price),
             (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
              dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
@@ -258,7 +268,7 @@ async def _scrape_quote(symbol: str) -> Quote:
              morningstar_risk, holdings_turnover, last_dividend, inception_date),
             (sector, industry, about, employees, logo),
             (ytd_return, year_return, three_year_return, five_year_return)) = await asyncio.gather(
-            prices_future, list_items_future, sector_industry_future, performance_future
+            name_future, prices_future, general_info_future, sector_industry_future, performance_future
         )
 
         return Quote(
@@ -320,32 +330,28 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
         html = await fetch(url)
         tree = etree.HTML(html)
 
-        name_symbol_text = tree.xpath(name_symbol_xpath)[0].strip()
-        name = name_symbol_text.split('(')[0].strip()
-
-        # If the name is empty, scraping might have failed so try to get the quote from yahooquery
-        if not name:
-            return await _get_simple_quote_from_yahooquery(symbol)
-
         # Async tasks
+        name_future = asyncio.create_task(get_company_name(tree))
         prices_future = asyncio.create_task(_scrape_price_data(tree))
         logo_future = asyncio.create_task(_scrape_logo(tree))
 
         # Gather the async tasks in parallel
-        (regular_price, regular_change, regular_percent_change, post_price), logo = await asyncio.gather(
-            prices_future, logo_future
+        name, (regular_price, regular_change, regular_percent_change, pre_price, post_price), logo = await asyncio.gather(
+            name_future, prices_future, logo_future
         )
 
         return SimpleQuote(
             symbol=symbol.upper(),
             name=name,
             price=regular_price,
+            pre_market_price=pre_price,
             after_hours_price=post_price,
             change=regular_change,
             percent_change=regular_percent_change,
             logo=logo
         )
-    except Exception:
+    except Exception as e:
+        print("Scraping failed", e)
         return await _get_simple_quote_from_yahooquery(symbol)
 
 
@@ -365,15 +371,15 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
         raise HTTPException(status_code=404, detail="Symbol not found")
 
     name = quote[symbol]['longName']
-    regular_price = quote[symbol]['regularMarketPrice']
+    regular_price = str(quote[symbol]['regularMarketPrice'])
     regular_change_value = quote[symbol]['regularMarketChange']
     regular_percent_change_value = quote[symbol]['regularMarketChangePercent']
-    post_price = quote[symbol].get('postMarketPrice', None)
-    open_price = quote[symbol].get('regularMarketOpen', None)
-    high = quote[symbol].get('regularMarketDayHigh', None)
-    low = quote[symbol].get('regularMarketDayLow', None)
-    year_high = quote[symbol].get('fiftyTwoWeekHigh', None)
-    year_low = quote[symbol].get('fiftyTwoWeekLow', None)
+    post_price = str(quote[symbol]['postMarketPrice']) if quote[symbol].get('postMarketPrice') else None
+    open_price = str(quote[symbol]['regularMarketOpen']) if quote[symbol].get('regularMarketOpen') else None
+    high = str(quote[symbol]['regularMarketDayHigh']) if quote[symbol].get('regularMarketDayHigh') else None
+    low = str(quote[symbol]['regularMarketDayLow']) if quote[symbol].get('regularMarketDayLow') else None
+    year_high = str(quote[symbol]['fiftyTwoWeekHigh']) if quote[symbol].get('fiftyTwoWeekHigh') else None
+    year_low = str(quote[symbol]['fiftyTwoWeekLow']) if quote[symbol].get('fiftyTwoWeekLow') else None
     volume = quote[symbol].get('regularMarketVolume', None)
     avg_volume = quote[symbol].get('averageDailyVolume10Day', None)
     market_cap = quote[symbol].get('marketCap', None)
@@ -479,8 +485,8 @@ async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
     if not quote or symbol not in quote or not quote[symbol].get('longName'):
         raise HTTPException(status_code=404, detail="Symbol not found")
     name = quote[symbol]['longName']
-    regular_price = quote[symbol]['regularMarketPrice']
-    post_price = quote[symbol].get('postMarketPrice', None)
+    regular_price = str(quote[symbol]['regularMarketPrice'])
+    post_price = str(quote[symbol]['postMarketPrice']) if quote[symbol].get('postMarketPrice') else None
     regular_change = f"{quote[symbol]['regularMarketChange']:.2f}"
     regular_percent_change = f"{quote[symbol]['regularMarketChangePercent']:.2f}%"
     website = profile[symbol].get('website', None)
