@@ -8,7 +8,6 @@ from yahooquery import Ticker
 from src.redis import cache
 from src.schemas import MarketSector
 from src.schemas.sector import Sector, MarketSectorDetails
-from src.services import scrape_simple_quotes
 from src.utils import fetch
 
 urls = {
@@ -151,7 +150,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
     industries_task = parse_industries(tree)
     companies_task = parse_companies(tree)
 
-    info, returns, industries, symbols = await asyncio.gather(info_task, returns_task, industries_task, companies_task)
+    info, returns, industries, companies = await asyncio.gather(info_task, returns_task, industries_task, companies_task)
 
     data = returns + info + industries
 
@@ -166,8 +165,6 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
     num_companies = int(data[8])
     industries = data[10:]
 
-    quotes = await scrape_simple_quotes(symbols)
-
     return MarketSectorDetails(
         sector=sector_name,
         day_return=day_return,
@@ -180,5 +177,5 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         industries=num_industries,
         companies=num_companies,
         top_industries=industries,
-        top_companies=quotes
+        top_companies=companies
     )

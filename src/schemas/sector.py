@@ -3,8 +3,6 @@ from typing import List
 
 from pydantic import BaseModel, Field
 
-from src.schemas import SimpleQuote
-
 
 class Sector(Enum):
     BASIC_MATERIALS = "Basic Materials"
@@ -83,12 +81,11 @@ class MarketSectorDetails(MarketSector):
         title="Top industries in the sector",
         serialization_alias="topIndustries"
     )
-    top_companies: List[SimpleQuote] = Field(
+    top_companies: List[str] = Field(
         default=...,
         title="Top companies in the sector",
         serialization_alias="topCompanies"
     )
 
     def dict(self, *args, **kwargs):
-        base_dict = super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
-        return {k: v for k, v in base_dict.items() if v is not None}
+        return super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
