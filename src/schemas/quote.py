@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from pydantic import BaseModel, Field, AliasChoices
 from typing_extensions import Optional
 
@@ -15,21 +13,21 @@ class Quote(BaseModel):
         examples=["Apple Inc."],
         description="Company name"
     )
-    price: Decimal = Field(
+    price: str = Field(
         default=...,
-        examples=[145.00],
+        examples=["145.00"],
         description="Last traded price of the stock"
     )
-    pre_market_price: Optional[Decimal] = Field(
+    pre_market_price: Optional[str] = Field(
         default=None,
-        examples=[145.50],
+        examples=["145.50"],
         description="After hours price of the stock",
         serialization_alias="preMarketPrice",
         validation_alias=AliasChoices("preMarketPrice", "pre_market_price")
     )
-    after_hours_price: Optional[Decimal] = Field(
+    after_hours_price: Optional[str] = Field(
         default=None,
-        examples=[145.50],
+        examples=["145.50"],
         description="After hours price of the stock",
         serialization_alias="afterHoursPrice",
         validation_alias=AliasChoices("afterHoursPrice", "after_hours_price")
@@ -46,31 +44,31 @@ class Quote(BaseModel):
         serialization_alias="percentChange",
         validation_alias=AliasChoices("percentChange", "percent_change")
     )
-    open: Optional[Decimal] = Field(
+    open: Optional[str] = Field(
         default=None,
-        examples=[144.00],
+        examples=["144.00"],
         description="Opening price of the stock"
     )
-    high: Optional[Decimal] = Field(
+    high: Optional[str] = Field(
         default=None,
-        examples=[146.00],
+        examples=["146.00"],
         description="Highest day price of the stock"
     )
-    low: Optional[Decimal] = Field(
+    low: Optional[str] = Field(
         default=None,
-        examples=[143.00],
+        examples=["143.00"],
         description="Lowest day price of the stock"
     )
-    year_high: Optional[Decimal] = Field(
+    year_high: Optional[str] = Field(
         default=None,
-        examples=[150.00],
+        examples=["150.00"],
         description="52-week high price of the stock",
         serialization_alias="yearHigh",
         validation_alias=AliasChoices("yearHigh", "year_high")
     )
-    year_low: Optional[Decimal] = Field(
+    year_low: Optional[str] = Field(
         default=None,
-        examples=[100.00],
+        examples=["100.00"],
         description="52-week low price of the stock",
         serialization_alias="yearLow",
         validation_alias=AliasChoices("yearLow", "year_low")
@@ -254,5 +252,4 @@ class Quote(BaseModel):
     )
 
     def dict(self, *args, **kwargs):
-        base_dict = super().model_dump(*args, **kwargs, by_alias=True, exclude_none=True)
-        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in base_dict.items() if v is not None}
+        return super().model_dump(*args, **kwargs, by_alias=True, exclude_none=True)

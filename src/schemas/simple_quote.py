@@ -1,4 +1,3 @@
-from decimal import Decimal
 from typing import Optional
 
 from pydantic import BaseModel, Field, AliasChoices
@@ -15,14 +14,21 @@ class SimpleQuote(BaseModel):
         examples=["Apple Inc."],
         description="Company name"
     )
-    price: Decimal = Field(
+    price: str = Field(
         default=...,
-        examples=[145.00],
+        examples=["145.00"],
         description="Last traded price of the stock"
     )
-    after_hours_price: Optional[Decimal] = Field(
+    pre_market_price: Optional[str] = Field(
         default=None,
-        examples=[145.50],
+        examples=["145.50"],
+        description="After hours price of the stock",
+        serialization_alias="preMarketPrice",
+        validation_alias=AliasChoices("preMarketPrice", "pre_market_price")
+    )
+    after_hours_price: Optional[str] = Field(
+        default=None,
+        examples=["145.50"],
         description="After hours price of the stock",
         serialization_alias="afterHoursPrice",
         validation_alias=AliasChoices("afterHoursPrice", "after_hours_price")
@@ -46,5 +52,4 @@ class SimpleQuote(BaseModel):
     )
 
     def dict(self, *args, **kwargs):
-        base_dict = super().model_dump(*args, **kwargs, by_alias=True, exclude_none=True)
-        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in base_dict.items() if v is not None}
+        return super().model_dump(*args, **kwargs, by_alias=True, exclude_none=True)
