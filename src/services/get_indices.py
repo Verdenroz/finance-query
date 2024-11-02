@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-from bs4 import BeautifulSoup, SoupStrainer
 from fastapi import HTTPException
+from lxml import etree
 
 from ..redis import cache
 from ..schemas.index import Index
@@ -16,13 +16,11 @@ async def scrape_indices() -> list[Index]:
 
     :raises: HTTPException with status code 500 if an error occurs while scraping
     """
-    url = 'https://www.investing.com/indices/americas-indices'
+    url = 'https://www.investing.com/indices/usa-indices?majorIndices=on&include-major-indices=true'
 
-    try:
-        html = await fetch(url)
-        return await get_indices(html)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail={str(e)})
+    html = await fetch(url)
+    return await get_indices(html)
+
 
 
 async def get_indices(html) -> list[Index]:
@@ -31,20 +29,33 @@ async def get_indices(html) -> list[Index]:
     :param html: the HTML content
     :return: a list of Index objects
     """
-    parse_only = SoupStrainer('table', {'id': 'indice_table_1'})
-    soup = BeautifulSoup(html, 'lxml', parse_only=parse_only)
-    table = soup.find('table', {'id': 'indice_table_1'})
-    indices = []
-    if table:
-        rows = table.find_all('tr')
+    try:
+        tree = etree.HTML(html)
+        table_xpath = '/html/body/div[1]/div[2]/div[2]/div[2]/div[1]/div[5]/div[2]/div[1]/table/tbody'
+        row_xpath = './/tr'
+        name_xpath = './/td[2]//span[@dir="ltr"]/text()'
+        value_xpath = './/td[3]/span/text()'
+        change_xpath = './/td[6]/text()'
+        percent_change_xpath = './/td[7]/text()'
+
+        table = tree.xpath(table_xpath)[0]
+        rows = table.xpath(row_xpath)
+
+        indices = []
         for row in rows:
-            cells = row.find_all('td')
-            if len(cells) > 5:
-                index_data = Index(
-                    name=cells[1].text,
-                    value=Decimal(cells[2].text.replace(',', '')),
-                    change=cells[5].text,
-                    percent_change=cells[6].text,
-                )
-                indices.append(index_data)
-    return indices
+            name = row.xpath(name_xpath)[0].strip()
+            value = Decimal(row.xpath(value_xpath)[0].replace(',', ''))
+            change = row.xpath(change_xpath)[0].strip()
+            percent_change = row.xpath(percent_change_xpath)[0].strip()
+
+            index_data = Index(
+                name=name,
+                value=value,
+                change=change,
+                percent_change=percent_change,
+            )
+            indices.append(index_data)
+
+        return indices
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to parse indices: {str(e)}")
