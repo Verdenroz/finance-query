@@ -39,7 +39,7 @@ async def _scrape_movers(url: str) -> list[MarketMover]:
 
     tbody_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/div/div[2]/div/table/tbody'
     row_xpath = './/tr'
-    symbol_xpath = './/td[1]//a/@title'
+    symbol_xpath = './/td[1]/span/div/a/div/span/text()'
     name_xpath = './/td[2]//div/text()'
     price_xpath = './/td[4]//fin-streamer[@data-field="regularMarketPrice"]/text()'
     change_xpath = './/td[5]/span/fin-streamer/span/text()'
