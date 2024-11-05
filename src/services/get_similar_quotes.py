@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from fastapi import HTTPException
 from lxml import etree
 from typing_extensions import List
@@ -53,10 +51,10 @@ async def _parse_stocks(html: str, symbol: str, limit: int) -> List[SimpleQuote]
 
         name = name_elements[0].strip()
         price_text = price_elements[0].strip().replace(',', '')
-        price = Decimal(price_text)
+        price = price_text
         percent_change = percent_change_elements[0].strip()
 
-        change = price / (1 + Decimal(percent_change.strip('%')) / 100) - price
+        change = float(price) / (1 + float(percent_change.strip('%')) / 100) - float(price)
         change = round(change, 2)
         if percent_change.startswith('-'):
             change_str = '-' + str(abs(change))
@@ -99,11 +97,10 @@ async def _parse_etfs(html: str, limit: int) -> List[SimpleQuote]:
 
         symbol = symbol_elements[0].strip()
         name = name_elements[0].strip()
-        price_text = price_elements[0].strip().replace(',', '')
-        price = Decimal(price_text)
+        price = price_elements[0].strip().replace(',', '')
         percent_change = percent_change_elements[0].strip()
 
-        change = price / (1 + Decimal(percent_change.strip('%')) / 100) - price
+        change = float(price) / (1 + float(percent_change.strip('%')) / 100) - float(price)
         change = round(change, 2)
         if percent_change.startswith('-'):
             change_str = '-' + str(abs(change))
