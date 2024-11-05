@@ -82,7 +82,7 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
 #### Get similar stocks
 
 ```
-  GET /v1/similar-stocks
+  GET /v1/similar
 ```
 
 | Query Parameter | Type     | Description                       |
