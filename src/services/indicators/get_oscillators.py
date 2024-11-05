@@ -7,7 +7,7 @@ from src.schemas.time_series import TimePeriod, Interval
 from src.services.get_historical import get_historical_quotes
 
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_rsi(symbol: str, interval: Interval, period: int = 14):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_rsi(quotes, lookback_periods=period)
@@ -16,7 +16,7 @@ async def get_rsi(symbol: str, interval: Interval, period: int = 14):
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.RSI, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_srsi(symbol: str, interval: Interval, period: int = 14, stoch_period: int = 14, signal_period: int = 3,
                    smooth: int = 3):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
@@ -32,7 +32,7 @@ async def get_srsi(symbol: str, interval: Interval, period: int = 14, stoch_peri
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.SRSI, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_stoch(symbol: str, interval: Interval, period: int = 14, signal_period: int = 3, smooth: int = 3):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_stoch(
@@ -46,7 +46,7 @@ async def get_stoch(symbol: str, interval: Interval, period: int = 14, signal_pe
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(type=Indicator.STOCH, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_cci(symbol: str, interval: Interval, period: int = 20):
     quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
     results = indicators.get_cci(quotes, lookback_periods=period).remove_warmup_periods()

@@ -8,7 +8,7 @@ from mangum import Mangum
 
 from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
-                        similar_stocks_router, finance_news_router, indicators_router, search_router,
+                        similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router)
 from src.security import RateLimitMiddleware
 from src.session_manager import get_global_session, close_global_session
@@ -19,6 +19,9 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     session = await get_global_session()
+    api_url = None
+    proxy_header_token = None
+    payload = None
     if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
         async with session.get("https://api.ipify.org/") as ip_response:
             ip = await ip_response.text()
@@ -30,13 +33,14 @@ async def lifespan(app: FastAPI):
             payload = {"ip": ip}
             await session.post(api_url, headers=proxy_header_token, json=payload)
     yield
-    await session.delete(api_url, headers=proxy_header_token, json=payload)
+    if api_url and proxy_header_token and payload:
+        await session.delete(api_url, headers=proxy_header_token, json=payload)
     await close_global_session()
     await r.close()
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.4.9",
+    version="1.5.0",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."
@@ -76,7 +80,7 @@ app.include_router(historical_prices_router, prefix="/v1")
 app.include_router(indicators_router, prefix="/v1")
 app.include_router(indices_router, prefix="/v1")
 app.include_router(movers_router, prefix="/v1")
-app.include_router(similar_stocks_router, prefix="/v1")
+app.include_router(similar_quotes_router, prefix="/v1")
 app.include_router(finance_news_router, prefix="/v1")
 app.include_router(search_router, prefix="/v1")
 app.include_router(sectors_router, prefix="/v1")

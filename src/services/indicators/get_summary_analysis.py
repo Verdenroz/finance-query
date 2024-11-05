@@ -201,7 +201,7 @@ async def get_summary_ichimoku(quotes):
         # Error within the stock-indicators library itself
         return None
 
-@cache(expire=60, after_market_expire=600)
+@cache(expire=60, market_closed_expire=600)
 async def get_summary_analysis(symbol: str, interval: Interval):
     # Get the most historical data available given the interval
     # (1m, 5m, 15m, 30m -> One month)
