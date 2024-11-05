@@ -55,8 +55,8 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
     regular_price_xpath = './section[1]/div[1]/fin-streamer[1]/span/text()'
     regular_change_xpath = './section[1]/div[1]/fin-streamer[2]/span/text()'
     regular_percent_change_xpath = './section[1]/div[1]/fin-streamer[3]/span/text()'
-    post_price_xpath = './section[2]/div[1]/fin-streamer[1]/span/text()'
-    pre_market_price_xpath = '//*[@data-testid="qsp-pre-price"]/@data-value'
+    post_price_xpath = './section[2]/div[1]/fin-streamer[@data-testid="qsp-post-price"]/@data-value'
+    pre_market_price_xpath = './section[2]/div[1]/fin-streamer[@data-testid="qsp-pre-price"]/@data-value'
 
     # Extraction
 
@@ -238,7 +238,6 @@ async def _scrape_performance(tree: etree.ElementTree) -> tuple:
 
     return ytd_return, one_year_return, three_year_return, five_year_return
 
-@cache(10, market_closed_expire=60)
 async def _scrape_quote(symbol: str) -> Quote:
     """
     Asynchronously scrapes a quote from a given symbol and returns a Quote object.
