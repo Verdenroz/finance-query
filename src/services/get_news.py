@@ -10,7 +10,7 @@ from src.utils import fetch
 
 
 @cache(300)
-async def scrape_news_for_quote(symbol: str, is_etf: Optional[bool]) -> List[News]:
+async def scrape_news_for_quote(symbol: str, is_etf: Optional[bool] = None) -> List[News]:
     urls = [
         'https://stockanalysis.com/stocks/' + symbol,
         'https://stockanalysis.com/etf/' + symbol
