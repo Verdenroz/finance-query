@@ -89,7 +89,7 @@ async def _scrape_general_info(tree: etree.ElementTree) -> tuple:
     :return: A tuple of the scraped data
     """
     # XPath expressions
-    ul_xpath = '/html/body/div[2]/main/section/section/section/article/div[2]/ul'
+    ul_xpath = './/div[@data-testid="quote-statistics"]/ul'
     list_items_xpath = './/li'
     label_xpath = './/span[contains(@class, "label")]/text()'
     value_xpath = './/span[contains(@class, "value")]/fin-streamer/@data-value | .//span[contains(@class, "value")]/text()'
