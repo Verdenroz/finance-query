@@ -363,7 +363,7 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
 
     :raises: HTTPException if ticker is not found
     """
-    print("Getting quote from yahooquery")
+    print("Getting quote from yahooquery for symbol", symbol)
     ticker = Ticker(symbol)
     quote = ticker.quotes
     profile = ticker.asset_profile
@@ -478,7 +478,7 @@ async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
 
     :raises: HTTPException if ticker is not found
     """
-    print("Getting simple quote from yahooquery")
+    print("Getting simple quote from yahooquery for symbol", symbol)
     ticker = Ticker(symbol)
     quote = ticker.quotes
     profile = ticker.asset_profile
