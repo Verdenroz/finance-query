@@ -14,7 +14,7 @@ class SecurityConfig:
     RATE_LIMIT: int = 2000  # requests per day
 
     # Define paths that skip security checks
-    OPEN_PATHS: Set[str] = {"/ping", "/docs", "/openapi.json", "/redoc"}
+    OPEN_PATHS: Set[str] = {"/ping", "/health", "/docs", "/openapi.json", "/redoc"}
 
     @classmethod
     def is_open_path(cls, path: str) -> bool:
@@ -38,6 +38,16 @@ class RateLimitManager:
             "limit": SecurityConfig.RATE_LIMIT
         }
 
+    async def get_health_check_info(self, ip: str) -> dict:
+        key = f"health_check:{ip}"
+        last_check = await self.r.get(key)
+        ttl = await self.r.ttl(key)
+
+        return {
+            "can_access": last_check is None,
+            "reset_in": ttl if ttl > 0 else 1800  # 30 minutes in seconds
+        }
+
     async def increment_and_check(self, api_key: str) -> tuple[bool, dict]:
         """Returns (is_allowed, rate_limit_info)"""
         if api_key != SecurityConfig.DEMO_API_KEY:
@@ -55,6 +65,17 @@ class RateLimitManager:
             await self.r.incr(key)
 
         return True, await self.get_rate_limit_info(api_key)
+
+    async def check_health_rate_limit(self, ip: str) -> tuple[bool, dict]:
+        """Returns (is_allowed, rate_limit_info) for health check endpoint"""
+        key = f"health_check:{ip}"
+        info = await self.get_health_check_info(ip)
+
+        if info["can_access"]:
+            await self.r.set(key, "1", ex=3600)  # Set with 1-hour expiry
+            return True, {"reset_in": 3600}
+
+        return False, {"reset_in": info["reset_in"]}
 
     async def validate_websocket(self, websocket: WebSocket) -> tuple[bool, dict]:
         """
@@ -95,6 +116,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.rate_limit_manager = rate_limit_manager
 
     async def dispatch(self, request: Request, call_next):
+        # Special handling for health check endpoint
+        if request.url.path == "/health":
+            client_ip = request.client.host
+            is_allowed, rate_info = await self.rate_limit_manager.check_health_rate_limit(client_ip)
+
+            if not is_allowed:
+                return JSONResponse(
+                    {
+                        "detail": "Health check rate limit exceeded. Try again later.",
+                        "rate_limit_info": rate_info
+                    },
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+            response = await call_next(request)
+            response.headers["X-RateLimit-Reset"] = str(rate_info["reset_in"])
+            return response
+
         # Skip security for open paths
         if SecurityConfig.is_open_path(request.url.path):
             return await call_next(request)
