@@ -1,11 +1,14 @@
 import asyncio
+import datetime
 import os
+import time
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
+from starlette.responses import Response
 
 from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
@@ -13,7 +16,7 @@ from src.routes import (quotes_router, indices_router, movers_router, historical
                         sectors_router, sockets_router, stream_router)
 from src.schemas.sector import Sector
 from src.schemas.time_series import TimePeriod, Interval
-from src.security import RateLimitMiddleware
+from src.security import RateLimitMiddleware, RateLimitManager
 from src.services import scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors, \
     get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, scrape_quotes, \
     scrape_similar_quotes, get_historical, get_search, scrape_simple_quotes
@@ -48,7 +51,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.5.1",
+    version="1.5.2",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."
@@ -81,7 +84,8 @@ app.add_middleware(
 )
 
 if os.getenv('USE_SECURITY', 'False') == 'True':
-    app.add_middleware(RateLimitMiddleware)
+    rate_limit_manager = RateLimitManager(r)
+    app.add_middleware(RateLimitMiddleware, rate_limit_manager=rate_limit_manager)
 
 
 @app.get("/health",

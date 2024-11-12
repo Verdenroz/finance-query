@@ -1,131 +1,134 @@
 import os
+from typing import Set
 
+from fastapi import status
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.websockets import WebSocket
 
-from src.redis import r
 
-DEMO_API_KEY = "FinanceQueryDemoAWSHT"
-ADMIN_API_KEY = os.getenv("ADMIN_API_KEY")
-RATE_LIMIT = 2000  # requests per day
+class SecurityConfig:
+    DEMO_API_KEY: str = "FinanceQueryDemoAWSHT"
+    ADMIN_API_KEY: str = os.getenv("ADMIN_API_KEY")
+    RATE_LIMIT: int = 2000  # requests per day
+
+    # Define paths that skip security checks
+    OPEN_PATHS: Set[str] = {"/ping", "/docs", "/openapi.json", "/redoc"}
+
+    @classmethod
+    def is_open_path(cls, path: str) -> bool:
+        return path in cls.OPEN_PATHS
 
 
-async def validate_api_key(api_key: str) -> bool:
-    if api_key not in {DEMO_API_KEY, ADMIN_API_KEY}:
-        return False
-    return True
+class RateLimitManager:
+    def __init__(self, redis_client):
+        self.r = redis_client
 
-
-async def enforce_rate_limit(api_key: str) -> bool:
-    """
-    Enforce rate limiting for the demo API key
-    :param api_key: should be FinanceQueryDemoAWSHT, but can be any string
-
-    :return: True if the rate limit has not been exceeded, False otherwise
-    """
-    if api_key == DEMO_API_KEY:
+    async def get_rate_limit_info(self, api_key: str) -> dict:
         key = f"rate_limit:{api_key}"
-        count = await r.get(key)
-        if count is None:
-            # Set the key to 1 and expire it in 24 hours if it doesn't exist
-            await r.set(key, 1, ex=86400)
-        elif int(count) >= RATE_LIMIT:
-            # Rate limit exceeded
-            return False
-        else:
-            # Increment the count
-            await r.incr(key)
+        count = await self.r.get(key)
+        count = int(count) if count else 0
+        ttl = await self.r.ttl(key)
 
-    return True
-
-
-async def create_rate_limit_metadata(api_key: str) -> dict:
-    """
-    Create metadata for the rate limit for the websocket routes since they cannot return headers
-    :param api_key: Should be FinanceQueryDemoAWSHT, but can be any string
-
-    :return: metadata for the rate limit as a dictionary
-    """
-    key = f"rate_limit:{api_key}"
-    count = await r.get(key)
-    remaining = RATE_LIMIT - int(count) if count else RATE_LIMIT
-    reset = await r.ttl(key)
-    return {
-        "metadata": {
-            "rate limit": RATE_LIMIT,
-            "remaining requests": remaining,
-            "reset": reset
+        return {
+            "count": count,
+            "remaining": SecurityConfig.RATE_LIMIT - count,
+            "reset_in": ttl if ttl > 0 else 86400,
+            "limit": SecurityConfig.RATE_LIMIT
         }
-    }
 
+    async def increment_and_check(self, api_key: str) -> tuple[bool, dict]:
+        """Returns (is_allowed, rate_limit_info)"""
+        if api_key != SecurityConfig.DEMO_API_KEY:
+            return True, {}
 
-async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
-    """
-    Validate the websocket connection and enforce rate limiting
-    :param websocket: the websocket connection
+        key = f"rate_limit:{api_key}"
+        count = await self.r.get(key)
 
-    :return: a tuple containing a boolean indicating if the connection is valid and a dictionary of metadata
-    """
-    # Skip rate limiting if the environment variable is set
-    if not os.getenv('USE_SECURITY', 'False') == 'True':
-        return True, {}
+        if count is None:
+            await self.r.set(key, 1, ex=86400)
+        else:
+            count = int(count)
+            if count >= SecurityConfig.RATE_LIMIT:
+                return False, await self.get_rate_limit_info(api_key)
+            await self.r.incr(key)
 
-    api_key = websocket.headers.get("x-api-key")
-    is_demo = api_key == DEMO_API_KEY
+        return True, await self.get_rate_limit_info(api_key)
 
-    if not await validate_api_key(api_key):
-        await websocket.close(code=1008, reason="Not authenticated")
-        return False, {}
+    async def validate_websocket(self, websocket: WebSocket) -> tuple[bool, dict]:
+        """
+        Validate the websocket connection and enforce rate limiting
+        Returns: (is_valid, metadata)
+        """
+        # Skip rate limiting if security is disabled
+        if not os.getenv('USE_SECURITY', 'False') == 'True':
+            return True, {}
 
-    if is_demo:
-        if not await enforce_rate_limit(api_key):
-            await websocket.close(code=1008, reason="Rate limit exceeded")
+        api_key = websocket.headers.get("x-api-key")
+        # Validate API key
+        if api_key not in {SecurityConfig.DEMO_API_KEY, SecurityConfig.ADMIN_API_KEY}:
+            await websocket.close(code=1008, reason="Invalid API key")
             return False, {}
-        metadata = await create_rate_limit_metadata(api_key)
-        return True, metadata
 
-    return True, {}
+        # Handle rate limiting for demo key
+        if api_key == SecurityConfig.DEMO_API_KEY:
+            is_allowed, rate_info = await self.increment_and_check(api_key)
+            if not is_allowed:
+                await websocket.close(code=1008, reason="Rate limit exceeded")
+                return False, {}
+
+            return True, {
+                "metadata": {
+                    "rate_limit": rate_info["limit"],
+                    "remaining_requests": rate_info["remaining"],
+                    "reset": rate_info["reset_in"]
+                }
+            }
+
+        return True, {}
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
-    """
-    Middleware to enforce rate limiting on the API
-    """
-
-    def __init__(self, app):
+    def __init__(self, app, rate_limit_manager: RateLimitManager):
         super().__init__(app)
+        self.rate_limit_manager = rate_limit_manager
 
     async def dispatch(self, request: Request, call_next):
-        """"
-        Check the API key and enforce rate limiting
+        # Skip security for open paths
+        if SecurityConfig.is_open_path(request.url.path):
+            return await call_next(request)
 
-        Demo API key has a rate limit of 500 requests per day
-
-        Admin API key has no rate limit
-
-        All other API keys are not authenticated and will receive a 403 Forbidden response
-        """
         api_key = request.headers.get("x-api-key")
 
-        if not await validate_api_key(api_key):
-            return JSONResponse({"detail": "Not authenticated"}, status_code=403)
+        # Check API key validity
+        if api_key not in {SecurityConfig.DEMO_API_KEY, SecurityConfig.ADMIN_API_KEY}:
+            return JSONResponse(
+                {"detail": "Invalid API key"},
+                status_code=status.HTTP_401_UNAUTHORIZED
+            )
 
-        if api_key == DEMO_API_KEY:
-            if not await enforce_rate_limit(api_key):
-                return JSONResponse({"detail": "Rate limit exceeded"}, status_code=429)
+        # Check rate limit for demo key
+        if api_key == SecurityConfig.DEMO_API_KEY:
+            is_allowed, rate_info = await self.rate_limit_manager.increment_and_check(api_key)
 
-            key = f"rate_limit:{api_key}"
-            count = await r.get(key)
-            remaining = RATE_LIMIT - int(count)
+            if not is_allowed:
+                return JSONResponse(
+                    {
+                        "detail": "Rate limit exceeded",
+                        "rate_limit_info": rate_info
+                    },
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
+                )
+
+            # Continue with the request and add rate limit headers
             response = await call_next(request)
-            response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT)
-            response.headers["X-RateLimit-Remaining"] = str(remaining)
-            response.headers["X-RateLimit-Reset"] = str(await r.ttl(key))
+            response.headers.update({
+                "X-RateLimit-Limit": str(rate_info["limit"]),
+                "X-RateLimit-Remaining": str(rate_info["remaining"]),
+                "X-RateLimit-Reset": str(rate_info["reset_in"])
+            })
             return response
 
-        elif ADMIN_API_KEY and api_key == ADMIN_API_KEY:
-            # No rate limit for admin API key
-            response = await call_next(request)
-            return response
+        # Admin key - no rate limiting
+        return await call_next(request)
