@@ -4,14 +4,23 @@ from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
+from src.redis import r
 from src.schemas import SimpleQuote
-from src.security import validate_websocket
+from src.security import RateLimitManager
 from src.services import scrape_quotes, scrape_similar_quotes, scrape_actives, \
     scrape_news_for_quote, scrape_losers, scrape_gainers, scrape_simple_quotes, scrape_indices, scrape_general_news
 from src.services.get_sectors import get_sector_for_symbol, get_sectors
 
 router = APIRouter()
 connection_manager = RedisConnectionManager()
+
+
+async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
+    """
+    Backwards compatible wrapper for websocket validation
+    """
+    rate_limit_manager = RateLimitManager(redis_client=r)
+    return await rate_limit_manager.validate_websocket(websocket)
 
 
 @router.websocket("/profile/{symbol}")
@@ -22,7 +31,7 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
 
     await websocket.accept()
     channel = f"profile:{symbol}"
-    print(channel)
+
     async def get_profile():
         """
         Fetches the profile data for a symbol.
