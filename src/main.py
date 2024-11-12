@@ -164,6 +164,36 @@ async def health():
     return health_report
 
 
+@app.get("/ping",
+         response_model=dict[str, str],
+         description="Basic health check endpoint",
+         tags=["Health Check"],
+         responses={
+             200: {
+                 "description": "Successful Response",
+                 "content": {
+                     "application/json": {
+                         "example": {
+                             "status": "healthy",
+                             "timestamp": "2023-10-01T12:34:56.789Z"
+                         }
+                     }
+                 }
+             }
+         }
+         )
+async def ping(response: Response):
+    """
+    Simple health check endpoint to verify the API is up and running.
+    Returns timestamp and status.
+    """
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return {
+        "status": "healthy",
+        "timestamp": datetime.datetime.utcnow().isoformat()
+    }
+
+
 app.include_router(quotes_router, prefix="/v1")
 app.include_router(historical_prices_router, prefix="/v1")
 app.include_router(indicators_router, prefix="/v1")
