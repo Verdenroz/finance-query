@@ -84,8 +84,60 @@ if os.getenv('USE_SECURITY', 'False') == 'True':
     app.add_middleware(RateLimitMiddleware)
 
 
-@app.get("/health")
+@app.get("/health",
+         response_model=dict,
+         description="Detailed health check endpoint",
+         tags=["Health Check"],
+         responses={
+             200: {
+                 "description": "Successful Response",
+                 "content": {
+                     "application/json": {
+                         "example": {
+                             "status": "healthy",
+                             "timestamp": "2023-10-01T12:34:56.789Z",
+                             "redis": {
+                                 "status": "healthy",
+                                 "latency_ms": 1.23
+                             },
+                             "scraping": {
+                                 "Scraping status": "21/21 succeeded",
+                                 "Indices": {"status": "succeeded"},
+                                 "Market Actives": {"status": "succeeded"},
+                                 "Market Losers": {"status": "succeeded"},
+                                 "Market Gainers": {"status": "succeeded"},
+                                 "Market Sectors": {"status": "succeeded"},
+                                 "Sector for a symbol": {"status": "succeeded"},
+                                 "Detailed Sector": {"status": "succeeded"},
+                                 "General News": {"status": "succeeded"},
+                                 "News for equity": {"status": "succeeded"},
+                                 "News for ETF": {"status": "succeeded"},
+                                 "Full Quotes": {"status": "succeeded"},
+                                 "Simple Quotes": {"status": "succeeded"},
+                                 "Similar Equities": {"status": "succeeded"},
+                                 "Similar ETFs": {"status": "succeeded"},
+                                 "Historical day prices": {"status": "succeeded"},
+                                 "Historical week prices": {"status": "succeeded"},
+                                 "Historical month prices": {"status": "succeeded"},
+                                 "Historical year prices": {"status": "succeeded"},
+                                 "Historical five year prices": {"status": "succeeded"},
+                                 "Search": {"status": "succeeded"},
+                                 "Summary Analysis": {"status": "succeeded"}
+                             }
+                         }
+                     }
+                 }
+             }
+         }
+         )
 async def health():
+    """
+        Comprehensive health check endpoint that verifies:
+        - Basic API health
+        - Redis connectivity
+        - System time
+        - Service dependencies
+        """
     indices_task = scrape_indices()
     actives_task = scrape_actives()
     losers_task = scrape_losers()
@@ -134,20 +186,32 @@ async def health():
 
     results = await asyncio.gather(*[task for _, task in tasks], return_exceptions=True)
 
-    import datetime
-
     health_report = {
-        "time": datetime.datetime.now().strftime("%m/%d/%Y %H:%M"),
-        "status": {
-            "Scraping status": "100% succeeded",
-            "Redis": "OK"
+        "status": "healthy",
+        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "redis": {
         },
-        "scraping": {}
+        "scraping": {
+            "Scraping status": "21/21 succeeded",
+        }
     }
 
-    redis_ping = await r.ping()
-    if not redis_ping:
-        health_report["status"]["Redis"] = "FAILED - Redis is unreachable"
+    # Check Redis
+    try:
+        start_time = time.time()
+        redis_ping = await r.ping()
+        health_report["redis"] = {
+            "status": "healthy" if redis_ping else "unhealthy",
+            "latency_ms": round((time.time() - start_time) * 1000, 2)
+        }
+    except Exception as e:
+        health_report["dependencies"] = {
+            "redis": {
+                "status": "unhealthy",
+                "error": str(e)
+            }
+        }
+        health_report["status"] = "degraded"
 
     total = len(tasks)
     succeeded = 0
@@ -159,7 +223,7 @@ async def health():
             succeeded += 1
 
     scraping_status = f"{succeeded}/{total} succeeded"
-    health_report["status"]["Scraping status"] = scraping_status
+    health_report["scraping"]["Scraping status"] = scraping_status
 
     return health_report
 
