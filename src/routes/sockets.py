@@ -1,9 +1,12 @@
 import asyncio
+from datetime import datetime
 
-from fastapi import APIRouter
+import pytz
+from fastapi import APIRouter, Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
+from src.market import MarketSchedule
 from src.redis import r
 from src.schemas import SimpleQuote
 from src.security import RateLimitManager
@@ -221,3 +224,43 @@ async def websocket_market(websocket: WebSocket):
             await websocket.receive_text()
     except WebSocketDisconnect:
         await connection_manager.disconnect(websocket, channel)
+
+
+@router.websocket("/hours")
+async def market_status_websocket(websocket: WebSocket, market_schedule=Depends(MarketSchedule)):
+    await websocket.accept()
+
+    async def check_hours(market_schedule):
+        """
+        Checks the market status every minute and sends a message if the status changes.
+        """
+        last_status = None
+        while True:
+            current_status, reason = market_schedule.get_market_status()
+
+            # Send message if status changed or this is the initial message
+            if current_status != last_status or last_status is None:
+                message = {
+                    "status": current_status,
+                    "reason": reason,
+                    "timestamp": datetime.now(pytz.UTC).isoformat()
+                }
+                try:
+                    await websocket.send_json(message)
+                except WebSocketDisconnect:
+                    # Client disconnected while trying to send
+                    return
+                last_status = current_status
+
+            # Check status every 5 seconds
+            await asyncio.sleep(5)
+
+    # Create the background task
+    task = asyncio.create_task(check_hours(market_schedule))
+
+    # Keep the connection alive
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        task.cancel()
