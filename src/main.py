@@ -13,7 +13,7 @@ from starlette.responses import Response
 from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
-                        sectors_router, sockets_router, stream_router)
+                        sectors_router, sockets_router, stream_router, hours_router)
 from src.schemas.sector import Sector
 from src.schemas.time_series import TimePeriod, Interval
 from src.security import RateLimitMiddleware, RateLimitManager
@@ -272,6 +272,7 @@ app.include_router(finance_news_router, prefix="/v1")
 app.include_router(search_router, prefix="/v1")
 app.include_router(sectors_router, prefix="/v1")
 app.include_router(stream_router, prefix="/v1")
+app.include_router(hours_router)
 app.include_router(sockets_router)
 
 handler = Mangum(app)
