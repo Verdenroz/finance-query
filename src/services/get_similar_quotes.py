@@ -12,11 +12,7 @@ async def scrape_similar_quotes(symbol: str, limit: int = 10) -> List[SimpleQuot
     url = 'https://finance.yahoo.com/quote/' + symbol
     html = await fetch(url)
 
-    similar = await _parse_stocks(html, symbol, limit)
-
-    # If similar_stocks is empty, try to scrape ETF data
-    if not similar:
-        similar = await _parse_etfs(html, limit)
+    similar = await _parse_similar_quotes(html, symbol, limit)
 
     # If similar is still empty, the symbol is probably invalid
     if not similar:
@@ -25,98 +21,97 @@ async def scrape_similar_quotes(symbol: str, limit: int = 10) -> List[SimpleQuot
     return similar
 
 
-async def _parse_stocks(html: str, symbol: str, limit: int) -> List[SimpleQuote]:
+async def _parse_similar_quotes(html: str, symbol: str, limit: int) -> List[SimpleQuote]:
     tree = etree.HTML(html)
-    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[6]/div/div/div/section'
+
+    # Try to parse stocks first
+    container_xpath = '//*[@data-testid="compare-to"]//section'
     stock_sections = tree.xpath(container_xpath)
-    stocks = []
-    for section in stock_sections:
-        symbol_xpath = './/span/text()'
-        name_xpath = './/div/div[1]/a/div/div/text()'
-        price_xpath = './/div/div[2]/div/span/text()'
-        percent_change_xpath = './/div/div[2]/div/div/span/text()'
+    quotes = []
 
-        symbol_elements = section.xpath(symbol_xpath)
-        name_elements = section.xpath(name_xpath)
-        price_elements = section.xpath(price_xpath)
-        percent_change_elements = section.xpath(percent_change_xpath)
+    if stock_sections:
+        for section in stock_sections:
+            symbol_xpath = './/span/text()'
+            name_xpath = './/div/div[1]/a/div/div/text()'
+            price_xpath = './/div/div[2]/div/span/text()'
+            percent_change_xpath = './/div/div[2]/div/div/span/text()'
 
-        if not (symbol_elements and name_elements and price_elements and percent_change_elements):
-            continue
+            symbol_elements = section.xpath(symbol_xpath)
+            name_elements = section.xpath(name_xpath)
+            price_elements = section.xpath(price_xpath)
+            percent_change_elements = section.xpath(percent_change_xpath)
 
-        parsed_symbol = symbol_elements[0].strip()
-        # Skip the queried symbol if it appears in the similar stocks list
-        if parsed_symbol == symbol:
-            continue
+            if not (symbol_elements and name_elements and price_elements and percent_change_elements):
+                continue
 
-        name = name_elements[0].strip()
-        price_text = price_elements[0].strip().replace(',', '')
-        price = price_text
-        percent_change = percent_change_elements[0].strip()
+            parsed_symbol = symbol_elements[0].strip()
+            if parsed_symbol == symbol:
+                continue
 
-        change = float(price) / (1 + float(percent_change.strip('%')) / 100) - float(price)
-        change = round(change, 2)
-        if percent_change.startswith('-'):
-            change_str = '-' + str(abs(change))
-        else:
-            change_str = '+' + str(abs(change))
+            name = name_elements[0].strip()
+            price_text = price_elements[0].strip().replace(',', '')
+            price = price_text
+            percent_change = percent_change_elements[0].strip()
 
-        stock = SimpleQuote(
-            symbol=parsed_symbol,
-            name=name,
-            price=price,
-            change=change_str,
-            percent_change=percent_change,
-        )
-        stocks.append(stock)
+            change = float(price) / (1 + float(percent_change.strip('%')) / 100) - float(price)
+            change = round(change, 2)
+            if percent_change.startswith('-'):
+                change_str = '-' + str(abs(change))
+            else:
+                change_str = '+' + str(abs(change))
 
-        if len(stocks) >= limit:
-            break
+            stock = SimpleQuote(
+                symbol=parsed_symbol,
+                name=name,
+                price=price,
+                change=change_str,
+                percent_change=percent_change,
+            )
+            quotes.append(stock)
 
-    return stocks
+            if len(quotes) >= limit:
+                break
 
+    # If no stocks found, try to parse ETFs
+    if not quotes:
+        container_xpath = '//*[@data-testid="people-also-watch"]//section'
+        etf_sections = tree.xpath(container_xpath)
+        for section in etf_sections:
+            symbol_xpath = './/div/div[1]/div/span[1]/text()'
+            name_xpath = './/div/div[1]/div/span[2]/text()'
+            price_xpath = './/div/div[2]/span/strong/text()'
+            percent_change_xpath = './/div/div[2]/div/span/text()'
 
-async def _parse_etfs(html: str, limit: int) -> List[SimpleQuote]:
-    tree = etree.HTML(html)
-    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[4]/div/div/div/section'
-    etf_sections = tree.xpath(container_xpath)
-    etfs = []
-    for section in etf_sections:
-        symbol_xpath = './/div/div[1]/div/span[1]/text()'
-        name_xpath = './/div/div[1]/div/span[2]/text()'
-        price_xpath = './/div/div[2]/span/strong/text()'
-        percent_change_xpath = './/div/div[2]/div/span/text()'
+            symbol_elements = section.xpath(symbol_xpath)
+            name_elements = section.xpath(name_xpath)
+            price_elements = section.xpath(price_xpath)
+            percent_change_elements = section.xpath(percent_change_xpath)
 
-        symbol_elements = section.xpath(symbol_xpath)
-        name_elements = section.xpath(name_xpath)
-        price_elements = section.xpath(price_xpath)
-        percent_change_elements = section.xpath(percent_change_xpath)
+            if not (symbol_elements and name_elements and price_elements and percent_change_elements):
+                continue
 
-        if not (symbol_elements and name_elements and price_elements and percent_change_elements):
-            continue
+            symbol = symbol_elements[0].strip()
+            name = name_elements[0].strip()
+            price = price_elements[0].strip().replace(',', '')
+            percent_change = percent_change_elements[0].strip()
 
-        symbol = symbol_elements[0].strip()
-        name = name_elements[0].strip()
-        price = price_elements[0].strip().replace(',', '')
-        percent_change = percent_change_elements[0].strip()
+            change = float(price) / (1 + float(percent_change.strip('%')) / 100) - float(price)
+            change = round(change, 2)
+            if percent_change.startswith('-'):
+                change_str = '-' + str(abs(change))
+            else:
+                change_str = '+' + str(abs(change))
 
-        change = float(price) / (1 + float(percent_change.strip('%')) / 100) - float(price)
-        change = round(change, 2)
-        if percent_change.startswith('-'):
-            change_str = '-' + str(abs(change))
-        else:
-            change_str = '+' + str(abs(change))
+            etf = SimpleQuote(
+                symbol=symbol,
+                name=name,
+                price=price,
+                change=change_str,
+                percent_change=percent_change,
+            )
+            quotes.append(etf)
 
-        etf = SimpleQuote(
-            symbol=symbol,
-            name=name,
-            price=price,
-            change=change_str,
-            percent_change=percent_change,
-        )
-        etfs.append(etf)
+            if len(quotes) >= limit:
+                break
 
-        if len(etfs) >= limit:
-            break
-
-    return etfs
+    return quotes
