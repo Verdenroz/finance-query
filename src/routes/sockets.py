@@ -10,8 +10,11 @@ from src.market import MarketSchedule
 from src.redis import r
 from src.schemas import SimpleQuote
 from src.security import RateLimitManager
-from src.services import scrape_quotes, scrape_similar_quotes, scrape_actives, \
-    scrape_news_for_quote, scrape_losers, scrape_gainers, scrape_simple_quotes, scrape_indices, scrape_general_news
+from src.services import (
+    scrape_quotes, scrape_similar_quotes, scrape_actives,
+    scrape_news_for_quote, scrape_losers, scrape_gainers,
+    scrape_simple_quotes, scrape_indices, scrape_general_news
+)
 from src.services.get_sectors import get_sector_for_symbol, get_sectors
 
 router = APIRouter()
@@ -25,15 +28,92 @@ async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
     return await rate_limit_manager.validate_websocket(websocket)
 
 
-@router.websocket("/profile/{symbol}")
-async def websocket_profile(websocket: WebSocket, symbol: str, connection_manager=Depends(RedisConnectionManager)):
+def safe_convert_to_dict(items, default=None):
+    """
+    Convert items to dictionaries, handling exceptions and type variations.
+
+    :param items: List of items to convert
+    :param default: Default value to use if conversion fails
+    :return: List of dictionaries or default values
+    """
+    if default is None:
+        default = []
+
+    try:
+        return [
+            item if isinstance(item, dict) else
+            (item.dict() if hasattr(item, 'dict') else default)
+            for item in items
+        ]
+    except Exception:
+        return default
+
+
+async def handle_websocket_connection(
+        websocket: WebSocket,
+        channel: str,
+        data_fetcher: callable,
+        connection_manager: RedisConnectionManager,
+        initial_metadata: dict = None
+):
+    """
+    A generalized WebSocket connection handler.
+
+    :param websocket: The WebSocket connection
+    :param channel: The channel name for publishing data
+    :param data_fetcher: Async function to fetch data
+    :param connection_manager: Connection manager instance
+    :param initial_metadata: Optional metadata to prepend to the initial result
+    """
     is_valid, metadata = await validate_websocket(websocket)
     if not is_valid:
         return
 
     await websocket.accept()
-    channel = f"profile:{symbol}"
 
+    async def fetch_data():
+        """
+        Continuously fetches and publishes data.
+        """
+        while True:
+            try:
+                result = await data_fetcher()
+                await connection_manager.publish(result, channel)
+                await asyncio.sleep(10)
+            except WebSocketDisconnect:
+                await connection_manager.disconnect(websocket, channel)
+                break
+
+    # Starts the connection and fetches the initial data
+    if websocket not in connection_manager.active_connections.get(channel, []):
+        initial_result = await data_fetcher()
+
+        # Merge metadata if provided
+        if metadata and initial_metadata:
+            metadata.update(initial_metadata)
+            initial_result = metadata
+
+        try:
+            await websocket.send_json(initial_result)
+        except WebSocketDisconnect:
+            return
+
+        await connection_manager.connect(websocket, channel, fetch_data)
+
+    # Keep the connection alive
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        await connection_manager.disconnect(websocket, channel)
+
+
+@router.websocket("/profile/{symbol}")
+async def websocket_profile(
+        websocket: WebSocket,
+        symbol: str,
+        connection_manager=Depends(RedisConnectionManager)
+):
     async def get_profile():
         """
         Fetches the profile data for a symbol.
@@ -47,66 +127,39 @@ async def websocket_profile(websocket: WebSocket, symbol: str, connection_manage
             quotes_task, similar_quotes_task, sector_performance_task, news_task, return_exceptions=True
         )
 
-        quotes = [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
-        # If similar_stocks is an exception, set it to an empty list
-        similar_quotes = (
-            [similar if isinstance(similar, dict) else similar.dict() for similar in similar_quotes]
-            if not isinstance(similar_quotes, Exception) else []
-        )
-        # If sector_performance is an exception, set it to None
-        sector_performance = (
-            sector_performance if isinstance(sector_performance, dict) else sector_performance.dict()
-            if not isinstance(sector_performance, Exception) else None
-        )
-        # If news is an exception, set it to an empty list
-        news = (
-            [headline if isinstance(headline, dict) else headline.dict() for headline in news]
-            if not isinstance(news, Exception) else []
-        )
+        quotes = safe_convert_to_dict(quotes)
+        similar_quotes = safe_convert_to_dict(similar_quotes)
+
+        # Handle sector performance conversion
+        if isinstance(sector_performance, Exception):
+            sector_performance = None
+        elif not isinstance(sector_performance, dict):
+            sector_performance = sector_performance.dict()
+
+        news = safe_convert_to_dict(news)
 
         return {
-            "quote": quotes[0],
+            "quote": quotes[0] if quotes else None,
             "similar": similar_quotes,
             "performance": sector_performance,
             "news": news
         }
 
-    async def fetch_data():
-        """
-        Fetches the profile data every 10 seconds.
-        """
-        while True:
-            result = await get_profile()
-            await connection_manager.publish(result, channel)
-            await asyncio.sleep(10)
-
-    # Starts the connection and fetches the initial data
-    if websocket not in connection_manager.active_connections.get(channel, []):
-        initial_result = await get_profile()
-        if metadata:
-            metadata.update(initial_result)
-            initial_result = metadata
-        try:
-            await websocket.send_json(initial_result)
-        except WebSocketDisconnect:
-            # If the client disconnects before the initial data is sent, return
-            return
-        await connection_manager.connect(websocket, channel, fetch_data)
-
-    # Keep the connection alive
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        await connection_manager.disconnect(websocket, channel)
+    channel = f"profile:{symbol}"
+    await handle_websocket_connection(websocket, channel, get_profile, connection_manager)
 
 
 @router.websocket("/quotes")
-async def websocket_quotes(websocket: WebSocket, connection_manager=Depends(RedisConnectionManager)):
+async def websocket_quotes(
+        websocket: WebSocket,
+        connection_manager=Depends(RedisConnectionManager)
+):
     is_valid, metadata = await validate_websocket(websocket)
     if not is_valid:
         return
+
     await websocket.accept()
+
     try:
         channel = await websocket.receive_text()
         symbols = list(set(channel.split(",")))
@@ -133,20 +186,12 @@ async def websocket_quotes(websocket: WebSocket, connection_manager=Depends(Redi
             Fetches quotes every 10 seconds.
             """
             while True:
-                result = await get_quotes()
+                result = await get_quotes(symbols)
                 await connection_manager.publish(result, channel)
                 await asyncio.sleep(10)
 
-        # Starts the connection and fetches the initial data
+        # Starts the connection
         if websocket not in connection_manager.active_connections.get(channel, []):
-            initial_result = await get_quotes()
-            if metadata:
-                initial_result.insert(0, metadata)
-            try:
-                await websocket.send_json(initial_result)
-            except WebSocketDisconnect:
-                # If the client disconnects before the initial data is sent, return
-                return
             await connection_manager.connect(websocket, channel, fetch_data)
 
         # Keep the connection alive
@@ -157,19 +202,15 @@ async def websocket_quotes(websocket: WebSocket, connection_manager=Depends(Redi
             await connection_manager.disconnect(websocket, channel)
 
     except WebSocketDisconnect:
-        # If the client disconnects before the channel is received return,
+        # If the client disconnects before the channel is received, return
         return
 
 
 @router.websocket("/market")
-async def websocket_market(websocket: WebSocket, connection_manager=Depends(RedisConnectionManager)):
-    is_valid, metadata = await validate_websocket(websocket)
-    if not is_valid:
-        return
-
-    await websocket.accept()
-    channel = "market"
-
+async def websocket_market(
+        websocket: WebSocket,
+        connection_manager=Depends(RedisConnectionManager)
+):
     async def get_market_info():
         """
         Fetches market information.
@@ -185,66 +226,25 @@ async def websocket_market(websocket: WebSocket, connection_manager=Depends(Redi
             actives_task, gainers_task, losers_task, indices_task, news_task, sectors_task
         )
 
-        actives = [active if isinstance(active, dict) else active.dict() for active in actives]
-        gainers = [gainer if isinstance(gainer, dict) else gainer.dict() for gainer in gainers]
-        losers = [loser if isinstance(loser, dict) else loser.dict() for loser in losers]
-        indices = [index if isinstance(index, dict) else index.dict() for index in indices]
-        headlines = [headline if isinstance(headline, dict) else headline.dict() for headline in news]
-        sectors = [sector if isinstance(sector, dict) else sector.dict() for sector in sectors]
-
         return {
-            "actives": actives,
-            "gainers": gainers,
-            "losers": losers,
-            "indices": indices,
-            "headlines": headlines,
-            "sectors": sectors
+            "actives": safe_convert_to_dict(actives),
+            "gainers": safe_convert_to_dict(gainers),
+            "losers": safe_convert_to_dict(losers),
+            "indices": safe_convert_to_dict(indices),
+            "headlines": safe_convert_to_dict(news),
+            "sectors": safe_convert_to_dict(sectors)
         }
 
-    async def fetch_data():
-        """
-        Fetches market information every 10 seconds.
-        """
-        while True:
-            try:
-                result = await get_market_info()
-                await connection_manager.publish(result, channel)
-                await asyncio.sleep(10)
-            except WebSocketDisconnect:
-                await connection_manager.disconnect(websocket, channel)
-                break
-
-    # Starts the connection and fetches the initial data
-    if websocket not in connection_manager.active_connections.get(channel, []):
-        initial_result = await get_market_info()
-        if metadata:
-            metadata.update(initial_result)
-            initial_result = metadata
-        try:
-            await websocket.send_json(initial_result)
-        except WebSocketDisconnect:
-            # If the client disconnects before the initial data is sent, return
-            return
-
-        await connection_manager.connect(websocket, channel, fetch_data)
-
-    # Keep the connection alive
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        await connection_manager.disconnect(websocket, channel)
+    channel = "market"
+    await handle_websocket_connection(websocket, channel, get_market_info, connection_manager)
 
 
 @router.websocket("/hours")
-async def market_status_websocket(websocket: WebSocket, connection_manager=Depends(RedisConnectionManager), market_schedule=Depends(MarketSchedule)):
-    is_valid, metadata = await validate_websocket(websocket)
-    if not is_valid:
-        return
-
-    await websocket.accept()
-    channel = "hours"
-
+async def market_status_websocket(
+        websocket: WebSocket,
+        connection_manager=Depends(RedisConnectionManager),
+        market_schedule=Depends(MarketSchedule)
+):
     async def get_market_status_info():
         """
         Fetches the market status information.
@@ -256,39 +256,5 @@ async def market_status_websocket(websocket: WebSocket, connection_manager=Depen
             "timestamp": datetime.now(pytz.UTC).isoformat()
         }
 
-    async def fetch_data():
-        """
-        Checks the market status every 5 seconds and sends a message if the status changes.
-        """
-        last_status = None
-        while True:
-            try:
-                result = await get_market_status_info()
-                if result["status"] != last_status or last_status is None:
-                    await connection_manager.publish(result, channel)
-                    last_status = result["status"]
-                await asyncio.sleep(1)
-            except WebSocketDisconnect:
-                await connection_manager.disconnect(websocket, channel)
-                break
-
-    # Starts the connection and fetches the initial data
-    if websocket not in connection_manager.active_connections.get(channel, []):
-        initial_result = await get_market_status_info()
-        if metadata:
-            metadata.update(initial_result)
-            initial_result = metadata
-        try:
-            await websocket.send_json(initial_result)
-        except WebSocketDisconnect:
-            # If the client disconnects before the initial data is sent, return
-            return
-
-        await connection_manager.connect(websocket, channel, fetch_data)
-
-    # Keep the connection alive
-    try:
-        while True:
-            await websocket.receive_text()
-    except WebSocketDisconnect:
-        await connection_manager.disconnect(websocket, channel)
+    channel = "hours"
+    await handle_websocket_connection(websocket, channel, get_market_status_info, connection_manager)
