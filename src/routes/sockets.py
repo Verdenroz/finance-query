@@ -54,7 +54,6 @@ async def handle_websocket_connection(
         channel: str,
         data_fetcher: callable,
         connection_manager: RedisConnectionManager,
-        initial_metadata: dict = None
 ):
     """
     A generalized WebSocket connection handler.
@@ -63,9 +62,9 @@ async def handle_websocket_connection(
     :param channel: The channel name for publishing data
     :param data_fetcher: Async function to fetch data
     :param connection_manager: Connection manager instance
-    :param initial_metadata: Optional metadata to prepend to the initial result
     """
     is_valid, metadata = await validate_websocket(websocket)
+    print(is_valid, metadata)
     if not is_valid:
         return
 
@@ -88,9 +87,9 @@ async def handle_websocket_connection(
     if websocket not in connection_manager.active_connections.get(channel, []):
         initial_result = await data_fetcher()
 
-        # Merge metadata if provided
-        if metadata and initial_metadata:
-            metadata.update(initial_metadata)
+        # Add metadata if available
+        if metadata:
+            metadata.update(initial_result)
             initial_result = metadata
 
         try:
@@ -157,9 +156,7 @@ async def websocket_quotes(
     is_valid, metadata = await validate_websocket(websocket)
     if not is_valid:
         return
-
     await websocket.accept()
-
     try:
         channel = await websocket.receive_text()
         symbols = list(set(symbol.upper() for symbol in channel.split(",")))
@@ -195,10 +192,6 @@ async def websocket_quotes(
 
                 quotes.append(quote_dict)
 
-            # If metadata exists, insert it at the beginning
-            if metadata:
-                quotes.insert(0, metadata)
-
             return quotes
 
         async def fetch_data():
@@ -210,8 +203,16 @@ async def websocket_quotes(
                 await connection_manager.publish(result, channel)
                 await asyncio.sleep(10)
 
-        # Starts the connection
+        # Starts the connection and fetches the initial data
         if websocket not in connection_manager.active_connections.get(channel, []):
+            initial_result = await get_quotes(symbols)
+            if metadata:
+                initial_result.insert(0, metadata)
+            try:
+                await websocket.send_json(initial_result)
+            except WebSocketDisconnect:
+                # If the client disconnects before the initial data is sent, return
+                return
             await connection_manager.connect(websocket, channel, fetch_data)
 
         # Keep the connection alive
@@ -222,7 +223,7 @@ async def websocket_quotes(
             await connection_manager.disconnect(websocket, channel)
 
     except WebSocketDisconnect:
-        # If the client disconnects before the channel is received, return
+        # If the client disconnects before the channel is received return,
         return
 
 
