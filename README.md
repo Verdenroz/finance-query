@@ -146,11 +146,19 @@ FinanceQuery is a simple API to query financial data. It provides endpoints to g
   GET /v1/gainers
 ```
 
+#### Get market open/closed status
+
+```
+  GET /hours
+
+```
+
+
 ## Websockets Guide
 
 > **The websockets depend on Redis PubSub and will require Redis credentials in your [.env](https://github.com/Verdenroz/finance-query?tab=readme-ov-file#environment-variables)**
 
-There are currently three implemented websocket routes: `profile`, `quotes`, and `market`. These will not be accessible through Lambda. If you are interested in deployment, I highly deploying to [Render](https://render.com/) as it will be able to host the entire FastAPI server, including the websockets. If you are testing locally, your requests will be `ws` instead of `wss`. Data is returned on a set interval every 10 seconds.
+There are currently four implemented websocket routes: `profile`, `quotes`, `market`, and `hours`. These will not be accessible through Lambda. If you are interested in deployment, I recommend deploying to [Render](https://render.com/) as it will be able to host the entire FastAPI server, including the websockets. If you are testing locally, your requests will be `ws` instead of `wss`. Data is returned on a set interval every 10 seconds.
 
 ### Quote profile 
 > #### Combines `quote`, `similar stocks`, `sector for symbol`, `news for symbol`
@@ -160,7 +168,7 @@ WSS /profile/{symbol}
 ```
 
 ### Watchlist
-> #### Requires comma separated list of symbols to be sent intially, streaming simplified quotes for all provided symbols
+> #### Requires comma separated list of symbols to be sent initially, streaming simplified quotes for all provided symbols
 
 ```
 WSS /quotes
@@ -173,6 +181,12 @@ WSS /quotes
 WSS /market
 ```
 
+### Market status
+> #### Streams whether the market is open or closed, sending a message only when the status changes
+
+```
+WSS /hours
+```
 
 ## Usage/Examples
 
