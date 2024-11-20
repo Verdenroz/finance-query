@@ -15,8 +15,6 @@ from src.services import scrape_quotes, scrape_similar_quotes, scrape_actives, \
 from src.services.get_sectors import get_sector_for_symbol, get_sectors
 
 router = APIRouter()
-connection_manager = RedisConnectionManager()
-
 
 async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
     """
@@ -27,7 +25,7 @@ async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
 
 
 @router.websocket("/profile/{symbol}")
-async def websocket_profile(websocket: WebSocket, symbol: str):
+async def websocket_profile(websocket: WebSocket, symbol: str, connection_manager=Depends(RedisConnectionManager)):
     is_valid, metadata = await validate_websocket(websocket)
     if not is_valid:
         return
@@ -93,7 +91,7 @@ async def websocket_profile(websocket: WebSocket, symbol: str):
 
 
 @router.websocket("/quotes")
-async def websocket_quotes(websocket: WebSocket):
+async def websocket_quotes(websocket: WebSocket, connection_manager=Depends(RedisConnectionManager)):
     is_valid, metadata = await validate_websocket(websocket)
     if not is_valid:
         return
@@ -152,7 +150,7 @@ async def websocket_quotes(websocket: WebSocket):
 
 
 @router.websocket("/market")
-async def websocket_market(websocket: WebSocket):
+async def websocket_market(websocket: WebSocket, connection_manager=Depends(RedisConnectionManager)):
     is_valid, metadata = await validate_websocket(websocket)
     if not is_valid:
         return
