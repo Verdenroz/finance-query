@@ -12,11 +12,11 @@ from dotenv import load_dotenv
 from pydantic import BaseModel
 from redis import asyncio as aioredis, RedisError
 
+from src.market import MarketSchedule, MarketStatus
 from src.schemas import TimeSeries, SimpleQuote, Quote, MarketMover, Index, News, MarketSector
 from src.schemas.analysis import SMAData, EMAData, WMAData, VWMAData, RSIData, SRSIData, STOCHData, CCIData, MACDData, \
     ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData, Analysis, Indicator
 from src.schemas.sector import MarketSectorDetails
-from src.utils import is_market_open
 
 load_dotenv()
 
@@ -51,7 +51,7 @@ indicators = {
 }
 
 
-def cache(expire, market_closed_expire=None):
+def cache(expire, market_closed_expire=None, market_schedule=MarketSchedule()):
     """
         This decorator caches the result of the function it decorates.
 
@@ -178,8 +178,9 @@ def cache(expire, market_closed_expire=None):
                     if result is None:
                         return None
 
+                    is_closed = market_schedule.get_market_status()[0] != MarketStatus.OPEN
                     # Determine expiration time
-                    expire_time = market_closed_expire if (market_closed_expire and not is_market_open()) else expire
+                    expire_time = market_closed_expire if (market_closed_expire and is_closed) else expire
 
                     # Cache the result
                     await cache_result(key, result, expire_time)
