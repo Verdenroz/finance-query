@@ -38,23 +38,34 @@ async def websocket_profile(websocket: WebSocket, symbol: str, connection_manage
         Fetches the profile data for a symbol.
         """
         quotes_task = scrape_quotes([symbol])
-        similar_stocks_task = scrape_similar_quotes(symbol)
+        similar_quotes_task = scrape_similar_quotes(symbol)
         sector_performance_task = get_sector_for_symbol(symbol)
         news_task = scrape_news_for_quote(symbol)
 
-        quotes, similar_stocks, sector_performance, news = await asyncio.gather(
-            quotes_task, similar_stocks_task, sector_performance_task, news_task, return_exceptions=True
+        quotes, similar_quotes, sector_performance, news = await asyncio.gather(
+            quotes_task, similar_quotes_task, sector_performance_task, news_task, return_exceptions=True
         )
 
         quotes = [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
-        similar_stocks = [similar if isinstance(similar, dict) else similar.dict() for similar in similar_stocks]
-        sector_performance = sector_performance if isinstance(sector_performance, dict) else sector_performance.dict() \
+        # If similar_stocks is an exception, set it to an empty list
+        similar_quotes = (
+            [similar if isinstance(similar, dict) else similar.dict() for similar in similar_quotes]
+            if not isinstance(similar_quotes, Exception) else []
+        )
+        # If sector_performance is an exception, set it to None
+        sector_performance = (
+            sector_performance if isinstance(sector_performance, dict) else sector_performance.dict()
             if not isinstance(sector_performance, Exception) else None
-        news = [headline if isinstance(headline, dict) else headline.dict() for headline in news]
+        )
+        # If news is an exception, set it to an empty list
+        news = (
+            [headline if isinstance(headline, dict) else headline.dict() for headline in news]
+            if not isinstance(news, Exception) else []
+        )
 
         return {
             "quote": quotes[0],
-            "similar": similar_stocks,
+            "similar": similar_quotes,
             "performance": sector_performance,
             "news": news
         }
@@ -79,7 +90,6 @@ async def websocket_profile(websocket: WebSocket, symbol: str, connection_manage
         except WebSocketDisconnect:
             # If the client disconnects before the initial data is sent, return
             return
-        print("connected")
         await connection_manager.connect(websocket, channel, fetch_data)
 
     # Keep the connection alive
@@ -110,6 +120,7 @@ async def websocket_quotes(websocket: WebSocket, connection_manager=Depends(Redi
                     "symbol": quote.symbol,
                     "name": quote.name,
                     "price": str(quote.price),
+                    "preMarketPrice": str(quote.pre_market_price),
                     "afterHoursPrice": str(quote.after_hours_price),
                     "change": quote.change,
                     "percentChange": quote.percent_change,
