@@ -6,9 +6,9 @@ import pytz
 
 
 class MarketStatus(str, Enum):
-    OPEN = "open"
-    CLOSED = "closed"
-    EARLY_CLOSE = "early_close"
+    OPEN = "Open"
+    CLOSED = "Closed"
+    EARLY_CLOSE = "Early Close"
 
 
 class MarketSchedule:

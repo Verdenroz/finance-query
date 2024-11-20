@@ -16,6 +16,7 @@ from src.services.get_sectors import get_sector_for_symbol, get_sectors
 
 router = APIRouter()
 
+
 async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
     """
     Backwards compatible wrapper for websocket validation
@@ -236,40 +237,58 @@ async def websocket_market(websocket: WebSocket, connection_manager=Depends(Redi
 
 
 @router.websocket("/hours")
-async def market_status_websocket(websocket: WebSocket, market_schedule=Depends(MarketSchedule)):
-    await websocket.accept()
+async def market_status_websocket(websocket: WebSocket, connection_manager=Depends(RedisConnectionManager), market_schedule=Depends(MarketSchedule)):
+    is_valid, metadata = await validate_websocket(websocket)
+    if not is_valid:
+        return
 
-    async def check_hours(market_schedule):
+    await websocket.accept()
+    channel = "hours"
+
+    async def get_market_status_info():
         """
-        Checks the market status every minute and sends a message if the status changes.
+        Fetches the market status information.
+        """
+        current_status, reason = market_schedule.get_market_status()
+        return {
+            "status": current_status,
+            "reason": reason,
+            "timestamp": datetime.now(pytz.UTC).isoformat()
+        }
+
+    async def fetch_data():
+        """
+        Checks the market status every 5 seconds and sends a message if the status changes.
         """
         last_status = None
         while True:
-            current_status, reason = market_schedule.get_market_status()
+            try:
+                result = await get_market_status_info()
+                if result["status"] != last_status or last_status is None:
+                    await connection_manager.publish(result, channel)
+                    last_status = result["status"]
+                await asyncio.sleep(1)
+            except WebSocketDisconnect:
+                await connection_manager.disconnect(websocket, channel)
+                break
 
-            # Send message if status changed or this is the initial message
-            if current_status != last_status or last_status is None:
-                message = {
-                    "status": current_status,
-                    "reason": reason,
-                    "timestamp": datetime.now(pytz.UTC).isoformat()
-                }
-                try:
-                    await websocket.send_json(message)
-                except WebSocketDisconnect:
-                    # Client disconnected while trying to send
-                    return
-                last_status = current_status
+    # Starts the connection and fetches the initial data
+    if websocket not in connection_manager.active_connections.get(channel, []):
+        initial_result = await get_market_status_info()
+        if metadata:
+            metadata.update(initial_result)
+            initial_result = metadata
+        try:
+            await websocket.send_json(initial_result)
+        except WebSocketDisconnect:
+            # If the client disconnects before the initial data is sent, return
+            return
 
-            # Check status every 5 seconds
-            await asyncio.sleep(5)
-
-    # Create the background task
-    task = asyncio.create_task(check_hours(market_schedule))
+        await connection_manager.connect(websocket, channel, fetch_data)
 
     # Keep the connection alive
     try:
         while True:
             await websocket.receive_text()
     except WebSocketDisconnect:
-        task.cancel()
+        await connection_manager.disconnect(websocket, channel)
