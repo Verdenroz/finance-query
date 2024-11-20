@@ -162,24 +162,44 @@ async def websocket_quotes(
 
     try:
         channel = await websocket.receive_text()
-        symbols = list(set(channel.split(",")))
+        symbols = list(set(symbol.upper() for symbol in channel.split(",")))
 
-        async def get_quotes():
+        async def get_quotes(symbols):
             """
             Fetches quotes for a list of symbols.
             """
             result = await scrape_simple_quotes(symbols)
-            return [
-                {
+            quotes = []
+            for quote in result:
+                if not isinstance(quote, SimpleQuote):
+                    quotes.append(quote)
+                    continue
+
+                quote_dict = {
                     "symbol": quote.symbol,
                     "name": quote.name,
                     "price": str(quote.price),
-                    "preMarketPrice": str(quote.pre_market_price),
-                    "afterHoursPrice": str(quote.after_hours_price),
                     "change": quote.change,
-                    "percentChange": quote.percent_change,
-                    "logo": quote.logo
-                } if isinstance(quote, SimpleQuote) else quote for quote in result]
+                    "percentChange": quote.percent_change
+                }
+
+                # Add optional fields if they exist
+                if quote.pre_market_price is not None:
+                    quote_dict["preMarketPrice"] = str(quote.pre_market_price)
+
+                if quote.after_hours_price is not None:
+                    quote_dict["afterHoursPrice"] = str(quote.after_hours_price)
+
+                if quote.logo is not None:
+                    quote_dict["logo"] = quote.logo
+
+                quotes.append(quote_dict)
+
+            # If metadata exists, insert it at the beginning
+            if metadata:
+                quotes.insert(0, metadata)
+
+            return quotes
 
         async def fetch_data():
             """
