@@ -53,7 +53,7 @@ async def handle_websocket_connection(
         websocket: WebSocket,
         channel: str,
         data_fetcher: callable,
-        connection_manager: RedisConnectionManager,
+        connection_manager: RedisConnectionManager
 ):
     """
     A generalized WebSocket connection handler.
@@ -111,7 +111,7 @@ async def handle_websocket_connection(
 async def websocket_profile(
         websocket: WebSocket,
         symbol: str,
-        connection_manager=Depends(RedisConnectionManager)
+        connection_manager: RedisConnectionManager = Depends(RedisConnectionManager)
 ):
     async def get_profile():
         """
@@ -151,7 +151,7 @@ async def websocket_profile(
 @router.websocket("/quotes")
 async def websocket_quotes(
         websocket: WebSocket,
-        connection_manager=Depends(RedisConnectionManager)
+        connection_manager: RedisConnectionManager = Depends(RedisConnectionManager)
 ):
     is_valid, metadata = await validate_websocket(websocket)
     if not is_valid:
@@ -230,7 +230,7 @@ async def websocket_quotes(
 @router.websocket("/market")
 async def websocket_market(
         websocket: WebSocket,
-        connection_manager=Depends(RedisConnectionManager)
+        connection_manager: RedisConnectionManager = Depends(RedisConnectionManager)
 ):
     async def get_market_info():
         """
@@ -263,8 +263,8 @@ async def websocket_market(
 @router.websocket("/hours")
 async def market_status_websocket(
         websocket: WebSocket,
-        connection_manager=Depends(RedisConnectionManager),
-        market_schedule=Depends(MarketSchedule)
+        connection_manager: RedisConnectionManager = Depends(RedisConnectionManager),
+        market_schedule: MarketSchedule = Depends(MarketSchedule)
 ):
     async def get_market_status_info():
         """
