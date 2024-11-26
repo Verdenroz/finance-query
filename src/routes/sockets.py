@@ -64,7 +64,6 @@ async def handle_websocket_connection(
     :param connection_manager: Connection manager instance
     """
     is_valid, metadata = await validate_websocket(websocket)
-    print(is_valid, metadata)
     if not is_valid:
         return
 
