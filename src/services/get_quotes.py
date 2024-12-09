@@ -59,26 +59,29 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
     pre_market_price_xpath = './section[2]/div[1]/fin-streamer[@data-testid="qsp-pre-price"]/@data-value'
 
     # Extraction
+    try:
+        container_element = tree.xpath(container_xpath)
+        if not container_element:
+            raise HTTPException(status_code=500, detail="Failed to extract price data")
 
-    container_element = tree.xpath(container_xpath)
-    if not container_element:
-        raise HTTPException(status_code=500, detail="Failed to extract price data")
+        container_element = container_element[0]
+        regular_price_elements = container_element.xpath(regular_price_xpath)
+        regular_change_elements = container_element.xpath(regular_change_xpath)
+        regular_percent_change_elements = container_element.xpath(regular_percent_change_xpath)
+        pre_market_price_elements = container_element.xpath(pre_market_price_xpath)
+        post_price_elements = container_element.xpath(post_price_xpath)
 
-    container_element = container_element[0]
-    regular_price_elements = container_element.xpath(regular_price_xpath)
-    regular_change_elements = container_element.xpath(regular_change_xpath)
-    regular_percent_change_elements = container_element.xpath(regular_percent_change_xpath)
-    pre_market_price_elements = container_element.xpath(pre_market_price_xpath)
-    post_price_elements = container_element.xpath(post_price_xpath)
+        # Formatting
+        regular_price = regular_price_elements[0].strip() if regular_price_elements else None
+        regular_change = regular_change_elements[0].strip() if regular_change_elements else None
+        regular_percent_change = regular_percent_change_elements[0].strip().replace('(', '').replace(')', '') if regular_percent_change_elements else None
+        pre_price = pre_market_price_elements[0].strip() if pre_market_price_elements else None
+        post_price = post_price_elements[0].strip() if post_price_elements else None
 
-    # Formatting
-    regular_price = regular_price_elements[0].strip() if regular_price_elements else None
-    regular_change = regular_change_elements[0].strip() if regular_change_elements else None
-    regular_percent_change = regular_percent_change_elements[0].strip().replace('(', '').replace(')', '') if regular_percent_change_elements else None
-    pre_price = pre_market_price_elements[0].strip() if pre_market_price_elements else None
-    post_price = post_price_elements[0].strip() if post_price_elements else None
-
-    return regular_price, regular_change, regular_percent_change, pre_price, post_price
+        return regular_price, regular_change, regular_percent_change, pre_price, post_price
+    except Exception as e:
+        print("Failed to scrape prices", e)
+        return None, None, None, None, None
 
 
 async def _scrape_general_info(tree: etree.ElementTree) -> tuple:
@@ -101,52 +104,59 @@ async def _scrape_general_info(tree: etree.ElementTree) -> tuple:
         raise HTTPException(status_code=500, detail="Failed to extract general info")
 
     # Extraction from the ul element
-    ul_element = tree.xpath(ul_xpath)[0]
-    list_items = ul_element.xpath(list_items_xpath)
-    data = {}
-    for item in list_items:
-        label = item.xpath(label_xpath)[0].strip()
-        value_elements = item.xpath(value_xpath)
-        value = value_elements[0].strip() if value_elements else None
-        data[label] = value
+    try:
+        ul_element = tree.xpath(ul_xpath)[0]
+        list_items = ul_element.xpath(list_items_xpath)
+        data = {}
+        for item in list_items:
+            label = item.xpath(label_xpath)[0].strip()
+            value_elements = item.xpath(value_xpath)
+            value = value_elements[0].strip() if value_elements else None
+            data[label] = value
 
-    # Formatting
-    open_price = data.get("Open")
-    market_cap = data.get("Market Cap (intraday)")
-    beta = data.get("Beta (5Y Monthly)")
-    pe = data.get("PE Ratio (TTM)")
-    eps = data.get("EPS (TTM)")
-    earnings_date = data.get("Earnings Date")
-    forward_dividend_yield = data.get("Forward Dividend & Yield")
-    dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield else (None, None) if not (
-        any(char.isdigit() for char in forward_dividend_yield)) \
-        else forward_dividend_yield.replace("(", "").replace(")", "").split()
-    ex_dividend = data.get("Ex-Dividend Date") if data.get("Ex-Dividend Date") != "--" else None
-    net_assets = data.get("Net Assets")
-    nav = data.get("NAV")
-    expense_ratio = data.get("Expense Ratio (net)")
+        # Formatting
+        open_price = data.get("Open")
+        market_cap = data.get("Market Cap (intraday)")
+        beta = data.get("Beta (5Y Monthly)")
+        pe = data.get("PE Ratio (TTM)")
+        eps = data.get("EPS (TTM)")
+        earnings_date = data.get("Earnings Date")
+        forward_dividend_yield = data.get("Forward Dividend & Yield")
+        dividend, yield_percent = (None, data.get("Yield")) if not forward_dividend_yield else (None, None) if not (
+            any(char.isdigit() for char in forward_dividend_yield)) \
+            else forward_dividend_yield.replace("(", "").replace(")", "").split()
+        ex_dividend = data.get("Ex-Dividend Date") if data.get("Ex-Dividend Date") != "--" else None
+        net_assets = data.get("Net Assets")
+        nav = data.get("NAV")
+        expense_ratio = data.get("Expense Ratio (net)")
 
-    days_range = data.get("Day's Range")
-    low, high = days_range.split(' - ') if days_range else (None, None)
+        days_range = data.get("Day's Range")
+        low, high = days_range.split(' - ') if days_range else (None, None)
 
-    fifty_two_week_range = data.get("52 Week Range")
-    year_low, year_high = fifty_two_week_range.split(' - ') if fifty_two_week_range else (None, None)
+        fifty_two_week_range = data.get("52 Week Range")
+        year_low, year_high = fifty_two_week_range.split(' - ') if fifty_two_week_range else (None, None)
 
-    volume = int(data.get("Volume").replace(',', '')) if data.get("Volume") else None
-    avg_volume = int(data.get("Avg. Volume").replace(',', '')) if data.get("Avg. Volume") else None
+        volume_str = data.get("Volume")
+        avg_volume_str = data.get("Avg. Volume")
 
-    category = data.get("Category")
-    last_cap = data.get("Last Cap Gain")
-    morningstar_rating = data.get("Morningstar Rating").split()[0] if data.get("Morningstar Rating") else None
-    morningstar_risk = data.get("Morningstar Risk Rating")
-    holdings_turnover = data.get("Holdings Turnover")
-    last_dividend = data.get("Last Dividend")
-    inception_date = data.get("Inception Date")
+        volume = int(volume_str.replace(',', '')) if volume_str and volume_str.isdigit() else None
+        avg_volume = int(avg_volume_str.replace(',', '')) if avg_volume_str and avg_volume_str.isdigit() else None
 
-    return (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
-            dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
-            morningstar_rating, morningstar_risk,
-            holdings_turnover, last_dividend, inception_date)
+        category = data.get("Category")
+        last_cap = data.get("Last Cap Gain")
+        morningstar_rating = data.get("Morningstar Rating").split()[0] if data.get("Morningstar Rating") else None
+        morningstar_risk = data.get("Morningstar Risk Rating")
+        holdings_turnover = data.get("Holdings Turnover")
+        last_dividend = data.get("Last Dividend")
+        inception_date = data.get("Inception Date")
+
+        return (open_price, high, low, year_high, year_low, volume, avg_volume, market_cap, beta, pe, eps, earnings_date,
+                dividend, yield_percent, ex_dividend, net_assets, nav, expense_ratio, category, last_cap,
+                morningstar_rating, morningstar_risk,
+                holdings_turnover, last_dividend, inception_date)
+    except Exception as e:
+        print("Failed to scrape general info", e)
+        return tuple(None for _ in range(24))
 
 
 async def _scrape_logo(tree: etree.ElementTree) -> str:
@@ -177,30 +187,34 @@ async def _scrape_company_info(tree: etree.ElementTree) -> tuple:
     industry_xpath = './/div[contains(@class, "infoSection")][h3[text()="Industry"]]/p/a/text()'
     employees_xpath = './/div[contains(@class, "infoSection")][h3[text()="Full Time Employees"]]/p/text()'
 
-    # Extract the container element using XPath
-    container_element = tree.xpath(container_xpath)[0]
+    try:
+        # Extract the container element using XPath
+        container_element = tree.xpath(container_xpath)[0]
 
-    # Extract the about text using XPath
-    about_elements = container_element.xpath(about_xpath)
-    about = about_elements[0].strip() if about_elements else None
+        # Extract the about text using XPath
+        about_elements = container_element.xpath(about_xpath)
+        about = about_elements[0].strip() if about_elements else None
 
-    # Extract the company website link using XPath
-    website_elements = container_element.xpath(website_xpath)
-    website = website_elements[0].strip() if website_elements else None
-    logo = await get_logo(website) if website else None
+        # Extract the company website link using XPath
+        website_elements = container_element.xpath(website_xpath)
+        website = website_elements[0].strip() if website_elements else None
+        logo = await get_logo(website) if website else None
 
-    # Extract the sector using XPath
-    sector_elements = container_element.xpath(sector_xpath)
-    sector = sector_elements[0].strip() if sector_elements else None
+        # Extract the sector using XPath
+        sector_elements = container_element.xpath(sector_xpath)
+        sector = sector_elements[0].strip() if sector_elements else None
 
-    # Extract the industry using XPath
-    industry_elements = container_element.xpath(industry_xpath)
-    industry = industry_elements[0].strip() if industry_elements else None
+        # Extract the industry using XPath
+        industry_elements = container_element.xpath(industry_xpath)
+        industry = industry_elements[0].strip() if industry_elements else None
 
-    employees_elements = container_element.xpath(employees_xpath)
-    employees = employees_elements[0].strip() if employees_elements else None
+        employees_elements = container_element.xpath(employees_xpath)
+        employees = employees_elements[0].strip() if employees_elements else None
 
-    return sector, industry, about, employees, logo
+        return sector, industry, about, employees, logo
+    except Exception as e:
+        print("Failed to scrape company info", e)
+        return tuple(None for _ in range(5))
 
 
 async def _scrape_performance(tree: etree.ElementTree) -> tuple:
@@ -216,27 +230,30 @@ async def _scrape_performance(tree: etree.ElementTree) -> tuple:
     one_year_return_xpath = './/section[2]//div[contains(@class, "perf")]/text()'
     three_year_return_xpath = './/section[3]//div[contains(@class, "perf")]/text()'
     five_year_return_xpath = './/section[4]//div[contains(@class, "perf")]/text()'
+    try:
+        # Container element
+        container_element = tree.xpath(container_xpath)[0]
 
-    # Container element
-    container_element = tree.xpath(container_xpath)[0]
+        # Extract the YTD return
+        ytd_return_elements = container_element.xpath(ytd_return_xpath)
+        ytd_return = ytd_return_elements[0].strip() if ytd_return_elements else None
 
-    # Extract the YTD return
-    ytd_return_elements = container_element.xpath(ytd_return_xpath)
-    ytd_return = ytd_return_elements[0].strip() if ytd_return_elements else None
+        # Extract the 1-Year return
+        one_year_return_elements = container_element.xpath(one_year_return_xpath)
+        one_year_return = one_year_return_elements[0].strip() if one_year_return_elements else None
 
-    # Extract the 1-Year return
-    one_year_return_elements = container_element.xpath(one_year_return_xpath)
-    one_year_return = one_year_return_elements[0].strip() if one_year_return_elements else None
+        # Extract the 3-Year return
+        three_year_return_elements = container_element.xpath(three_year_return_xpath)
+        three_year_return = three_year_return_elements[0].strip() if three_year_return_elements else None
 
-    # Extract the 3-Year return
-    three_year_return_elements = container_element.xpath(three_year_return_xpath)
-    three_year_return = three_year_return_elements[0].strip() if three_year_return_elements else None
+        # Extract the 5-Year return
+        five_year_return_elements = container_element.xpath(five_year_return_xpath)
+        five_year_return = five_year_return_elements[0].strip() if five_year_return_elements else None
 
-    # Extract the 5-Year return
-    five_year_return_elements = container_element.xpath(five_year_return_xpath)
-    five_year_return = five_year_return_elements[0].strip() if five_year_return_elements else None
-
-    return ytd_return, one_year_return, three_year_return, five_year_return
+        return ytd_return, one_year_return, three_year_return, five_year_return
+    except Exception as e:
+        print("Failed to scrape performance", e)
+        return None, None, None, None
 
 
 @cache(10, market_closed_expire=60)
