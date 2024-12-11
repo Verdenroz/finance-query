@@ -3,9 +3,85 @@
 
 FinanceQuery is a simple API to query financial data. It provides endpoints to get quotes, historical prices, indices, market movers, similar stocks, finance news, indicators, search, and sectors. Data is acquired through web scraping and third party libraries. It is the successor to the [GoogleFinanceAPI](https://github.com/Verdenroz/GoogleFinanceAPI).
 
+# Table of Contents
+
+- [Documentation](#documentation)
+- [Run Locally](#run-locally)
+- [Deployment](#deployment)
+  - [AWS Lambda](#aws-lambda)
+  - [Render](#render)
+- [API Reference](#api-reference)
+  - [Get quotes](#get-quotes)
+  - [Get simplified quotes](#get-simplified-quotes)
+  - [Get historical data for a stock](#get-historical-data-for-a-stock)
+  - [Get technical indicators](#get-technical-indicators)
+  - [Get summary technical analysis](#get-summary-technical-analysis)
+  - [Get similar stocks](#get-similar-stocks)
+  - [Get news](#get-news)
+  - [Search](#search)
+  - [Get sector performance](#get-sector-performance)
+  - [Get U.S. market indices](#get-us-market-indices)
+  - [Get active stocks](#get-active-stocks)
+  - [Get losing stocks](#get-losing-stocks)
+  - [Get gaining stocks](#get-gaining-stocks)
+  - [Get market open/closed status](#get-market-openclosed-status)
+- [Websockets Guide](#websockets-guide)
+  - [Quote profile](#quote-profile)
+  - [Watchlist](#watchlist)
+  - [General market data](#general-market-data)
+  - [Market status](#market-status)
+- [Usage/Examples](#usageexamples)
+- [Proxies](#proxies)
+- [Environment Variables](#environment-variables)
+- [Feedback](#feedback)
+- [License](#license)
+
 ## Documentation
 
-[Documentation](https://d3tidzj12m5ipv.cloudfront.net)
+[Documentation](https://finance-query.onrender.com/docs)
+
+## Run Locally
+
+Clone the project
+
+```bash
+  git clone https://github.com/Verdenroz/FinanceQuery.git
+```
+
+Go to the project directory
+
+```bash
+  cd finance-query
+```
+
+Install dependencies
+
+```bash
+ pip install -r requirements.txt
+```
+
+Start the server
+
+```bash
+  python.exe -m uvicorn src.main:app --reload  
+```
+
+## Deployment
+
+#### AWS Lambda
+
+- Follow the [AWS Lambda Deployment Guide](https://docs.aws.amazon.com/lambda/latest/dg/python-image.html#python-image-instructions)
+- Remember to add the environment variables to the Lambda function
+- Alternatively use the [AWS Deployment Workflow](.github/workflows/aws-deploy.yml), providing repository secrets for `AWS_SECRET_ID` and `AWS_SECRET_KEY`.
+    - Also edit the `AWS_REGION`, `ECR_REPOSITORY`, and `FUNCTION_NAME` in the workflow file
+
+#### Render
+
+- Follow the [Render Deployment Guide](https://render.com/docs/deploy-fastapi)
+- The deployment should use the `Dockerfile` file in the repository 
+- Be sure to override the CMD in the Dockerfile in your Render project settings to `python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT`
+- Alternatively use the [Render Deployment Workflow](.github/workflows/render-deploy.yml), providing repository secrets for `RENDER_DEPLOY_HOOK_URL`.
+  - The deploy hook url can be found in the settings of your Render project
 
 
 ## API Reference
@@ -201,27 +277,6 @@ An x-api-key header must be added to all requests. The demo key is **FinanceQuer
 > If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See the [.env template](.env.template).
 
 > Again, remember the websockets above are not available through Lambda. If you deploy to Render instead, you will be able to connect to the websockets through a request that looks like `wss://finance-query.onrender.com/...`
-
-
-## Run Locally
-
-Clone the project
-
-```bash
-  git clone https://github.com/Verdenroz/FinanceQuery.git
-```
-
-Install dependencies
-
-```bash
- pip install -r requirements.txt
-```
-
-Start the server
-
-```bash
-  python.exe -m uvicorn src.main:app --reload  
-```
 
 ## Proxies
 
