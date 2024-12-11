@@ -11,16 +11,15 @@ from ..utils import fetch
 @cache(expire=15, market_closed_expire=3600)
 async def scrape_indices() -> list[Index]:
     """
-    Scrape the Americas indices from investing.com
+    Scrape the major world indices from investing.com
     :return: a list of Index objects
 
     :raises: HTTPException with status code 500 if an error occurs while scraping
     """
-    url = 'https://www.investing.com/indices/usa-indices?majorIndices=on&include-major-indices=true'
+    url = 'https://www.investing.com/indices/major-indices'
 
     html = await fetch(url)
     return await get_indices(html)
-
 
 
 async def get_indices(html) -> list[Index]:
@@ -31,16 +30,14 @@ async def get_indices(html) -> list[Index]:
     """
     try:
         tree = etree.HTML(html)
-        table_xpath = '/html/body/div[1]/div[2]/div[2]/div[2]/div[1]/div[5]/div[2]/div[1]/table/tbody'
+        table_xpath = './/tbody'
         row_xpath = './/tr'
         name_xpath = './/td[2]//span[@dir="ltr"]/text()'
         value_xpath = './/td[3]/span/text()'
         change_xpath = './/td[6]/text()'
         percent_change_xpath = './/td[7]/text()'
-
         table = tree.xpath(table_xpath)[0]
         rows = table.xpath(row_xpath)
-
         indices = []
         for row in rows:
             name = row.xpath(name_xpath)[0].strip()
