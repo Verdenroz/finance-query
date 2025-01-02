@@ -67,12 +67,20 @@ async def parse_sector(html: str, sector: str) -> MarketSector:
     container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/section[2]'
     card_xpath = './/section'
     sector_perf_xpath = './/div[div[text()="Sector"]]/div[2]/text()'
+    positive_xpath = './/div[contains(@class, "positive")]/text()'
+    negative_xpath = './/div[contains(@class, "negative")]/text()'
 
     container = tree.xpath(container_xpath)[0]
     cards = container.xpath(card_xpath)
     performance_data = []
     for card in cards:
         sector_perf = card.xpath(sector_perf_xpath)[0].strip()
+        is_positive = bool(card.xpath(positive_xpath))
+        is_negative = bool(card.xpath(negative_xpath))
+        if is_positive:
+            sector_perf = f"+{sector_perf}"
+        elif is_negative:
+            sector_perf = f"-{sector_perf}"
         performance_data.append(sector_perf)
 
     return MarketSector(
@@ -105,13 +113,20 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/section[2]'
         card_xpath = './/section'
         sector_perf_xpath = './/div[div[text()="Sector"]]/div[2]/text()'
+        positive_xpath = './/div[contains(@class, "positive")]/text()'
+        negative_xpath = './/div[contains(@class, "negative")]/text()'
 
         container = tree.xpath(container_xpath)[0]
         cards = container.xpath(card_xpath)
-
         performance_data = []
         for card in cards:
             sector_perf = card.xpath(sector_perf_xpath)[0].strip()
+            is_positive = bool(card.xpath(positive_xpath))
+            is_negative = bool(card.xpath(negative_xpath))
+            if is_positive:
+                sector_perf = f"+{sector_perf}"
+            elif is_negative:
+                sector_perf = f"-{sector_perf}"
             performance_data.append(sector_perf)
 
         return performance_data
