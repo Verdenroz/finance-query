@@ -66,21 +66,19 @@ async def parse_sector(html: str, sector: str) -> MarketSector:
     tree = etree.HTML(html)
     container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/section[2]'
     card_xpath = './/section'
-    sector_perf_xpath = './/div[div[text()="Sector"]]/div[2]/text()'
-    positive_xpath = './/div[contains(@class, "positive")]/text()'
-    negative_xpath = './/div[contains(@class, "negative")]/text()'
+    sector_perf_xpath = './/div[contains(@class, "perf")]/text()'
+    perf_class_xpath = './/div/div[contains(@class, "perf")]/@class'
 
     container = tree.xpath(container_xpath)[0]
     cards = container.xpath(card_xpath)
     performance_data = []
     for card in cards:
         sector_perf = card.xpath(sector_perf_xpath)[0].strip()
-        is_positive = bool(card.xpath(positive_xpath))
-        is_negative = bool(card.xpath(negative_xpath))
-        if is_positive:
-            sector_perf = f"+{sector_perf}"
-        elif is_negative:
-            sector_perf = f"-{sector_perf}"
+        perf_class = card.xpath(perf_class_xpath)[0].strip()
+
+        # Determine sign based on class containing 'positive' or 'negative'
+        sign = "+" if "positive" in perf_class else "-" if "negative" in perf_class else ""
+        sector_perf = f"{sign}{sector_perf}"
         performance_data.append(sector_perf)
 
     return MarketSector(
