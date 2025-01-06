@@ -9,39 +9,151 @@ from src.schemas import News
 from src.utils import fetch
 
 
+def parse_symbol_exchange(yahoo_symbol):
+    """
+    Converts a Yahoo Finance symbol with exchange suffix to StockAnalysis format
+
+    Parameters:
+    yahoo_symbol (str): Full Yahoo Finance symbol (e.g., 'ADS1.SG', 'ITC.BO')
+
+    Returns:
+    tuple: (symbol, exchange_code) where exchange_code is in StockAnalysis format
+    """
+    # Mapping of Yahoo Finance exchange codes to StockAnalysis codes because ffs they are different!
+    exchange_mapping = {
+        # Americas
+        'OTC': 'OTC',  # US OTC
+        'BA': 'BCBA',  # Buenos Aires Stock Exchange
+        'MX': 'BMV',  # Mexican Stock Exchange
+        'TO': 'TSX',  # Toronto Stock Exchange
+        'V': 'TSXV',  # TSX Venture Exchange
+        'CN': 'CSE',  # Canadian Securities Exchange
+        'SA': 'BVMF',  # Brazil Stock Exchange
+        'CR': 'BVC',  # Colombia Stock Exchange
+
+        # Asia Pacific
+        'BO': 'BOM',  # Bombay Stock Exchange
+        'NS': 'NSE',  # National Stock Exchange of India
+        'T': 'TYO',  # Tokyo Stock Exchange
+        'HK': 'HKG',  # Hong Kong Stock Exchange
+        'SZ': 'SHE',  # Shenzhen Stock Exchange
+        'SS': 'SHA',  # Shanghai Stock Exchange
+        'KS': 'KRX',  # Korea Stock Exchange
+        'KQ': 'KOSDAQ',  # KOSDAQ
+        'TW': 'TPE',  # Taiwan Stock Exchange
+        'TWO': 'TPEX',  # Taipei Exchange
+        'KL': 'KLSE',  # Bursa Malaysia
+        'BK': 'BKK',  # Stock Exchange of Thailand
+        'JK': 'IDX',  # Indonesia Stock Exchange
+        'AX': 'ASX',  # Australian Securities Exchange
+        'NZ': 'NZE',  # New Zealand Stock Exchange
+        'SI': 'SGX',  # Singapore Exchange
+
+        # Europe
+        'L': 'LON',  # London Stock Exchange
+        'PA': 'EPA',  # Euronext Paris
+        'F': 'FRA',  # Frankfurt Stock Exchange
+        'DE': 'ETR',  # Deutsche Börse Xetra
+        'MI': 'BIT',  # Borsa Italiana
+        'MC': 'BME',  # Madrid Stock Exchange
+        'AS': 'AMS',  # Euronext Amsterdam
+        'BR': 'EBR',  # Euronext Brussels
+        'ST': 'STO',  # Nasdaq Stockholm
+        'CO': 'CPH',  # Copenhagen Stock Exchange
+        'HE': 'HEL',  # Nasdaq Helsinki
+        'OL': 'OSL',  # Oslo Børs
+        'SW': 'SWX',  # SIX Swiss Exchange
+        'LS': 'ELI',  # Euronext Lisbon
+        'AT': 'ATH',  # Athens Stock Exchange
+        'VI': 'VIE',  # Vienna Stock Exchange
+        'BE': 'BELEX',  # Belgrade Stock Exchange
+        'PR': 'PRA',  # Prague Stock Exchange
+        'WA': 'WSE',  # Warsaw Stock Exchange
+
+        # Middle East & Africa
+        'TA': 'TLV',  # Tel Aviv Stock Exchange
+        'KW': 'KWSE',  # Kuwait Stock Exchange
+        'QA': 'QSE',  # Qatar Stock Exchange
+        'SR': 'TADAWUL',  # Saudi Stock Exchange
+        'JO': 'ASE',  # Amman Stock Exchange
+        'CA': 'CBSE',  # Casablanca Stock Exchange
+        'J': 'JSE',  # Johannesburg Stock Exchange
+    }
+
+    try:
+        # Split the symbol into base symbol and exchange code
+        if '.' in yahoo_symbol:
+            base_symbol, yahoo_exchange = yahoo_symbol.split('.')
+        else:
+            # If no exchange code is present, return the symbol as is with None for exchange
+            return yahoo_symbol, None
+
+        # Convert the exchange code if it exists in our mapping
+        stockanalysis_exchange = exchange_mapping.get(yahoo_exchange, None)
+
+        return base_symbol, stockanalysis_exchange
+
+    except Exception:
+        return yahoo_symbol, None
+
+
 @cache(300)
-async def scrape_news_for_quote(symbol: str, is_etf: Optional[bool] = None) -> List[News]:
-    urls = [
-        'https://stockanalysis.com/stocks/' + symbol,
-        'https://stockanalysis.com/etf/' + symbol
-    ]
+async def scrape_news_for_quote(
+        symbol: str,
+        is_etf: Optional[bool] = None
+) -> List[News]:
+    """
+    Scrapes news for a given stock/ETF symbol, handling both regular and exchange-specific symbols.
+
+    Args:
+        symbol: Trading symbol (can include exchange suffix like PETR3.SA)
+        is_etf: Optional flag to indicate if the symbol is an ETF
+
+    Returns:
+        List[News]: List of news items for the symbol
+
+    Raises:
+        HTTPException: If news cannot be fetched or symbol is invalid
+    """
+    # First convert the symbol if it has an exchange code
+    base_symbol, exchange = parse_symbol_exchange(symbol)
+    # Build URLs based on whether we have an exchange code
+    if exchange:
+        urls = [f'https://stockanalysis.com/quote/{exchange.lower()}/{base_symbol}']
+    else:
+        # If no exchange code, try all possible U.S. URLs for the symbol
+        urls = [
+            f'https://stockanalysis.com/stocks/{base_symbol}',
+            f'https://stockanalysis.com/etf/{base_symbol}',
+            f"https://stockanalysis.com/quote/otc/{base_symbol}"
+        ]
+
     container_xpath = '/html/body/div/div[1]/div[2]/main/div[3]/div[2]/div/div[2]'
 
-    if is_etf:
+    if is_etf and not exchange:  # Only try ETF URL if we know it's an ETF
         html = await fetch(urls[1])
         news_list = await _parse_news(html, container_xpath)
         if not news_list:
             raise HTTPException(status_code=404, detail="Are you sure this is an ETF?")
         return news_list
 
-    else:
-        # Try to fetch news from the stocks url, if it fails, try etf
-        # Yes, I know this is slower for ETFs, but this is how I can save money on proxies
-        # If you care about this, you can change this to fetch both at the same time with asyncio.gather
-        # Best way is to specify the type of symbol in the request
-        for url in urls:
+    # Try each URL until we find news
+    for url in urls:
+        try:
             html = await fetch(url)
             news_list = await _parse_news(html, container_xpath)
 
-            # If news was found, break the loop because the symbol is a stock
             if news_list:
-                break
+                return news_list
 
-        # If no news was found, raise an error
-        else:
-            raise HTTPException(status_code=404, detail="Error fetching news")
+        except Exception:
+            continue  # Try next URL if current one fails
 
-        return news_list
+    # If we get here, no news was found on any URL
+    raise HTTPException(
+        status_code=404,
+        detail="Could not find news for the provided symbol"
+    )
 
 
 @cache(900)
