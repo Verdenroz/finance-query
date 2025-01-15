@@ -4,7 +4,7 @@ from typing import Optional
 from aiohttp import ClientSession
 from dotenv import load_dotenv
 
-from src.proxy import proxy, proxy_auth
+from src.constants import proxy, proxy_auth
 from src.session_manager import get_global_session
 
 load_dotenv()
