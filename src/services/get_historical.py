@@ -64,7 +64,7 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval) -> T
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@alru_cache(maxsize=512)
+@alru_cache(maxsize=512, ttl=60)
 async def get_historical_quotes(symbol: str, timePeriod: TimePeriod, interval: Interval) -> List[Quote]:
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
