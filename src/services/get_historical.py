@@ -2,7 +2,6 @@ from datetime import datetime, time
 from decimal import Decimal
 
 import pandas as pd
-from async_lru import alru_cache
 from fastapi import HTTPException
 from requests.exceptions import RetryError
 from stock_indicators.indicators.common.quote import Quote
@@ -64,7 +63,7 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval) -> T
             raise HTTPException(status_code=500, detail="Internal server error")
 
 
-@alru_cache(maxsize=512, ttl=60)
+@cache(expire=60, market_closed_expire=600, memcache=True)
 async def get_historical_quotes(symbol: str, timePeriod: TimePeriod, interval: Interval) -> List[Quote]:
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])

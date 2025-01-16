@@ -8,6 +8,7 @@ from datetime import date
 
 import orjson
 from aiohttp import ClientSession
+from async_lru import alru_cache
 from dotenv import load_dotenv
 from pydantic import BaseModel
 from redis import asyncio as aioredis, RedisError
@@ -51,7 +52,7 @@ indicators = {
 }
 
 
-def cache(expire, market_closed_expire=None, market_schedule=MarketSchedule()):
+def cache(expire, market_closed_expire=None, memcache=False, market_schedule=MarketSchedule()):
     """
         This decorator caches the result of the function it decorates.
 
@@ -63,16 +64,21 @@ def cache(expire, market_closed_expire=None, market_schedule=MarketSchedule()):
 
         :param expire: The expiration time for the cache key
         :param market_closed_expire: The expiration time for the cache key after the market closes
+        :param memcache: Flag to use in-memory caching instead of Redis
+        :param market_schedule: DI for MarketSchedule class to check if market is open/closed
+
         :return: The result of the function or the cached value
         """
-    lock = asyncio.Lock()
+    use_redis = os.getenv('USE_REDIS', 'False').lower() == 'true' and not memcache
+    # Determine expiration time
+    is_closed = market_schedule.get_market_status()[0] != MarketStatus.OPEN
+    expire_time = market_closed_expire if (market_closed_expire and is_closed) else expire
 
-    async def cache_result(key, result, expire_time):
+    async def cache_in_redis(key, result):
         """
         Caches the result in Redis based on the result type.
         :param key: the cache key (function name and hashed arguments)
         :param result: the response of the endpoint to cache
-        :param expire_time: the expiration time for the cache key
         :return:
         """
 
@@ -121,8 +127,13 @@ def cache(expire, market_closed_expire=None, market_schedule=MarketSchedule()):
             return None
 
     def decorator(func):
+        # Use alru_cache for in-memory caching
+        if not use_redis:
+            return alru_cache(maxsize=512, ttl=expire_time)(func)
+
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
+            lock = asyncio.Lock()
             try:
                 async with lock:
                     # Filter out non-serializable objects
@@ -178,12 +189,8 @@ def cache(expire, market_closed_expire=None, market_schedule=MarketSchedule()):
                     if result is None:
                         return None
 
-                    is_closed = market_schedule.get_market_status()[0] != MarketStatus.OPEN
-                    # Determine expiration time
-                    expire_time = market_closed_expire if (market_closed_expire and is_closed) else expire
-
                     # Cache the result
-                    await cache_result(key, result, expire_time)
+                    await cache_in_redis(key, result)
 
                     return result
 
