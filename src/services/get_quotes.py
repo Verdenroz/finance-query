@@ -50,37 +50,33 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
     :param tree: The parsed HTML tree
     :return: Regular price, change, percent change, and post price as a tuple
     """
-    # XPath expressions
-    container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/div[2]/div[1]/section/div'
-    regular_price_xpath = './section[1]/div[1]/fin-streamer[1]/span/text()'
-    regular_change_xpath = './section[1]/div[1]/fin-streamer[2]/span/text()'
-    regular_percent_change_xpath = './section[1]/div[1]/fin-streamer[3]/span/text()'
-    post_price_xpath = './section[2]/div[1]/fin-streamer[@data-testid="qsp-post-price"]/@data-value'
-    pre_market_price_xpath = './section[2]/div[1]/fin-streamer[@data-testid="qsp-pre-price"]/@data-value'
-
-    # Extraction
     try:
-        container_element = tree.xpath(container_xpath)
-        if not container_element:
-            raise HTTPException(status_code=500, detail="Failed to extract price data")
+        # XPath expressions
+        price_xpath = "//span[@data-testid='qsp-price']/text()"
+        change_xpath = "//span[@data-testid='qsp-price-change']/text()"
+        percent_change_xpath = "//span[@data-testid='qsp-price-change-percent']/text()"
+        post_price_xpath = "//fin-streamer[@data-testid='qsp-post-price']/@data-value"
+        pre_price_xpath = "//fin-streamer[@data-testid='qsp-pre-price']/@data-value"
 
-        container_element = container_element[0]
-        regular_price_elements = container_element.xpath(regular_price_xpath)
-        regular_change_elements = container_element.xpath(regular_change_xpath)
-        regular_percent_change_elements = container_element.xpath(regular_percent_change_xpath)
-        pre_market_price_elements = container_element.xpath(pre_market_price_xpath)
-        post_price_elements = container_element.xpath(post_price_xpath)
+        # Extract values
+        regular_price = tree.xpath(price_xpath)
+        regular_change = tree.xpath(change_xpath)
+        regular_percent_change = tree.xpath(percent_change_xpath)
+        post_price = tree.xpath(post_price_xpath)
+        pre_price = tree.xpath(pre_price_xpath)
 
-        # Formatting
-        regular_price = regular_price_elements[0].strip() if regular_price_elements else None
-        regular_change = regular_change_elements[0].strip() if regular_change_elements else None
-        regular_percent_change = regular_percent_change_elements[0].strip().replace('(', '').replace(')', '') if regular_percent_change_elements else None
-        pre_price = pre_market_price_elements[0].strip() if pre_market_price_elements else None
-        post_price = post_price_elements[0].strip() if post_price_elements else None
+        # Format values
+        regular_price = regular_price[0].strip() if regular_price else None
+        regular_change = regular_change[0].strip() if regular_change else None
+        regular_percent_change = regular_percent_change[0].strip().replace('(', '').replace(')',
+                                                                                            '') if regular_percent_change else None
+        post_price = post_price[0].strip() if post_price else None
+        pre_price = pre_price[0].strip() if pre_price else None
 
         return regular_price, regular_change, regular_percent_change, pre_price, post_price
+
     except Exception as e:
-        print("Failed to scrape prices", e)
+        print(f"Failed to scrape prices: {e}")
         return None, None, None, None, None
 
 
