@@ -2,6 +2,7 @@ import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
+import psutil
 from fastapi import HTTPException
 from lxml import etree, html
 from yahooquery import Ticker
@@ -10,7 +11,24 @@ from src.schemas import Quote, SimpleQuote
 from ..redis import cache
 from ..utils import fetch, get_logo
 
-thread_pool = ThreadPoolExecutor(max_workers=4)
+# Calculate adaptive max_workers based on available CPU cores
+thread_pool = ThreadPoolExecutor(max_workers=psutil.cpu_count(logical=True) * 2)
+
+
+def get_adaptive_chunk_size():
+    cpu_count = psutil.cpu_count()
+    memory_info = psutil.virtual_memory()
+    available_memory = memory_info.available
+
+    base_chunk_size = 5
+
+    # Adjust chunk size based on available CPU and memory
+    chunk_size = base_chunk_size * cpu_count * (available_memory // (512 * 1024 * 1024))
+
+    # Ensure chunk size is within reasonable limits
+    chunk_size = max(base_chunk_size, min(chunk_size, 100))
+
+    return chunk_size
 
 
 async def scrape_quotes(symbols: list[str]) -> list[Quote]:
@@ -21,15 +39,14 @@ async def scrape_quotes(symbols: list[str]) -> list[Quote]:
     :param symbols: List of symbols
     :return: List of Quote objects
     """
-    chunk_size = 10
+    chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = []
-    for chunk in chunks:
-        quotes = await asyncio.gather(*(_scrape_quote(symbol) for symbol in chunk))
-        all_quotes.extend([quote for quote in quotes if not isinstance(quote, Exception)])
+    all_quotes = await asyncio.gather(*(
+        asyncio.gather(*(_scrape_quote(symbol) for symbol in chunk)) for chunk in chunks
+    ))
 
-    return all_quotes
+    return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
 
 
 async def scrape_simple_quotes(symbols: list[str]) -> list[SimpleQuote]:
@@ -40,15 +57,14 @@ async def scrape_simple_quotes(symbols: list[str]) -> list[SimpleQuote]:
     :param symbols: List of symbols
     :return: List of SimpleQuote objects
     """
-    chunk_size = 10
+    chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = []
-    for chunk in chunks:
-        quotes = await asyncio.gather(*(_scrape_simple_quote(symbol) for symbol in chunk))
-        all_quotes.extend([quote for quote in quotes if not isinstance(quote, Exception)])
+    all_quotes = await asyncio.gather(*(
+        asyncio.gather(*(_scrape_simple_quote(symbol) for symbol in chunk)) for chunk in chunks
+    ))
 
-    return all_quotes
+    return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
 
 
 def parse_tree(html_content: str) -> etree.ElementTree:
