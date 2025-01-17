@@ -26,6 +26,9 @@ async def fetch(url: str, session: Optional[ClientSession] = None,
 
 
 async def get_logo(url: str, session: Optional[ClientSession] = None) -> Optional[str]:
+    if not url:
+        return None
+
     session = session or await get_global_session()
     async with session.get(f"https://logo.clearbit.com/{url}") as response:
         if response.status == 200:
