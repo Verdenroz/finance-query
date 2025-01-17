@@ -23,10 +23,10 @@ load_dotenv()
 
 r = aioredis.Redis(
     connection_pool=aioredis.ConnectionPool(
-        host=os.environ['REDIS_HOST'],
-        port=int(os.environ['REDIS_PORT']),
-        username=os.environ['REDIS_USERNAME'],
-        password=os.environ['REDIS_PASSWORD'],
+        host=os.environ.get('REDIS_HOST', 'localhost'),
+        port=int(os.environ.get('REDIS_PORT', 6379)),
+        username=os.environ.get('REDIS_USERNAME'),
+        password=os.environ.get('REDIS_PASSWORD'),
         max_connections=10000
     ),
     auto_close_connection_pool=True,
