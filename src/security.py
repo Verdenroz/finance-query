@@ -50,14 +50,10 @@ class RateLimitManager:
             if v > current_time
         }
 
-    def _get_rate_limit_key(self, api_key: str, ip: str) -> str:
-        """Generate a rate limit key based on API key or IP"""
-        return f"rate_limit:{api_key or ip}"
-
-    async def get_rate_limit_info(self, api_key: str, ip: str) -> dict:
+    async def get_rate_limit_info(self, ip: str) -> dict:
         self._clean_expired()
         current_time = time.time()
-        key = self._get_rate_limit_key(api_key, ip)
+        key = f"rate_limit:{ip}"
         entry = self.rate_limits.get(key)
 
         if not entry:
@@ -109,7 +105,7 @@ class RateLimitManager:
 
         return False, {"reset_in": int(expire_at - current_time)}
 
-    async def increment_and_check(self, api_key: str, ip: str) -> tuple[bool, dict]:
+    async def increment_and_check(self, ip: str, api_key: str | None) -> tuple[bool, dict]:
         """Returns (is_allowed, rate_limit_info)"""
         # Always check admin key first
         if SecurityConfig.is_admin_key(api_key):
@@ -117,7 +113,7 @@ class RateLimitManager:
 
         self._clean_expired()
         current_time = time.time()
-        key = self._get_rate_limit_key(api_key, ip)
+        key = f"rate_limit:{ip}"
         entry = self.rate_limits.get(key)
 
         if entry is None:
@@ -128,10 +124,10 @@ class RateLimitManager:
             )
         else:
             if entry.count >= SecurityConfig.RATE_LIMIT:
-                return False, await self.get_rate_limit_info(api_key, ip)
+                return False, await self.get_rate_limit_info(ip)
             entry.count += 1
 
-        return True, await self.get_rate_limit_info(api_key, ip)
+        return True, await self.get_rate_limit_info(ip)
 
     async def validate_websocket(self, websocket: WebSocket) -> tuple[bool, dict]:
         """
@@ -149,8 +145,8 @@ class RateLimitManager:
         if SecurityConfig.is_admin_key(api_key):
             return True, {}
 
-        # Handle rate limiting for all other connections
-        is_allowed, rate_info = await self.increment_and_check(api_key, client_ip)
+        # Handle rate limiting by IP for all other connections
+        is_allowed, rate_info = await self.increment_and_check(client_ip, api_key)
         if not is_allowed:
             await websocket.close(code=1008, reason="Rate limit exceeded")
             return False, {}
@@ -194,8 +190,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Reset"] = str(rate_info["reset_in"])
             return response
 
-        # Check rate limit for all other requests (admin key check is handled inside increment_and_check)
-        is_allowed, rate_info = await self.rate_limit_manager.increment_and_check(api_key, client_ip)
+        # Check rate limit for all other requests
+        is_allowed, rate_info = await self.rate_limit_manager.increment_and_check(client_ip, api_key)
 
         if not is_allowed:
             return JSONResponse(
