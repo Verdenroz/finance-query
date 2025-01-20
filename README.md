@@ -272,7 +272,7 @@ The exposed endpoints to the API is
 
 There are two workflows that will automatically deploy to render and AWS, but they will require repository secrets for `AWS_SECRET_ID`, `AWS_SECRET_KEY`, and `RENDER_DEPLOY_HOOK_URL`. Quite frankly, render is easier to work with since it enables the websockets, but will require the paid Starter Plan as this API requires extensive memory. If you are tight on cash, consider Lambda.
 
-An x-api-key header must be added to all requests. The demo key is **FinanceQueryDemoAWSHT** (2000 requests/day). 
+An `x-api-key` header can be added if you have enabled security and rate limiting. If a key is not provided, or an invalid key is used, a rate limit of 2000 requests/day is applied to the request's ip address. 
 
 > If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See the [.env template](.env.template).
 
@@ -285,7 +285,9 @@ Proxies are off by default, but they can be enabled with the correct environment
 
 ## Environment Variables
 
-To run this project locally, you will need to add the following environment variables to your .env.
+To customize the config you can modify your `.env` file. See the [.env template](.env.template) for an example.
+
+`USE_REDIS`
 
 `REDIS_HOST`
 
@@ -311,12 +313,11 @@ To run this project locally, you will need to add the following environment vari
 
 `ADMIN_API_KEY`
 
-> - ***If you do not use redis, you can simply disable the redis cache by deleting the @cache decorator to all routes. Cache can still be enabled with in-memory async-lru. See [@alru_cache](https://pypi.org/project/async-lru/)***
-> - ***Websockets and Rate Limiting will not work without Redis.***
-> - ***Search endpoint will not work without Algolia.***
+> - ***Redis is not required for caching, if `USE_REDIS = True`, then @cache will try to cache to redis with your credentials. Otherwise, it will cache in memory***
+> - ***Websockets will not stream data without Redis.***
 > - ***Proxies are optional but recommended for deployment.***
-> - ***If security is enabled, api keys will be validated and rate limits enforced, though this depends on Redis, so it is off by default.***
-> - ***Set if admin key security is enabled. Admin API key must be kept secret as this will have no rate limit attached.***
+> - ***If security is enabled, api keys will be validated and rate limits enforced. If the admin key is missing from `x-api-key header`, a rate limit of 2000/day will be applied to the ip address***
+> - ***Set your own admin key if `USE_SECURITY = True`. Admin API key must be kept secret as this will have no rate limit attached.***
 
 ## Feedback
 
