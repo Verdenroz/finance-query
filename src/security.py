@@ -1,5 +1,7 @@
 import os
-from typing import Set
+import time
+from dataclasses import dataclass
+from typing import Set, Dict
 
 from fastapi import status
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -8,74 +10,128 @@ from starlette.responses import JSONResponse
 from starlette.websockets import WebSocket
 
 
+@dataclass
+class RateLimitEntry:
+    count: int
+    expire_at: float
+
+
 class SecurityConfig:
-    DEMO_API_KEY: str = "FinanceQueryDemoAWSHT"
     ADMIN_API_KEY: str = os.getenv("ADMIN_API_KEY")
     RATE_LIMIT: int = 2000  # requests per day
+    HEALTH_CHECK_INTERVAL: int = 1800  # 30 minutes in seconds
 
     # Define paths that skip security checks
-    OPEN_PATHS: Set[str] = {"/ping", "/health", "/docs", "/openapi.json", "/redoc"}
+    OPEN_PATHS: Set[str] = {"/ping", "/docs", "/openapi.json", "/redoc"}
 
     @classmethod
     def is_open_path(cls, path: str) -> bool:
         return path in cls.OPEN_PATHS
 
+    @classmethod
+    def is_admin_key(cls, api_key: str | None) -> bool:
+        return api_key == cls.ADMIN_API_KEY
+
 
 class RateLimitManager:
-    def __init__(self, redis_client):
-        self.r = redis_client
+    def __init__(self):
+        self.rate_limits: Dict[str, RateLimitEntry] = {}
+        self.health_checks: Dict[str, float] = {}
 
-    async def get_rate_limit_info(self, api_key: str) -> dict:
-        key = f"rate_limit:{api_key}"
-        count = await self.r.get(key)
-        count = int(count) if count else 0
-        ttl = await self.r.ttl(key)
+    def _clean_expired(self) -> None:
+        """Remove expired entries from rate limit and health check dictionaries"""
+        current_time = time.time()
+        self.rate_limits = {
+            k: v for k, v in self.rate_limits.items()
+            if v.expire_at > current_time
+        }
+        self.health_checks = {
+            k: v for k, v in self.health_checks.items()
+            if v > current_time
+        }
+
+    def _get_rate_limit_key(self, api_key: str, ip: str) -> str:
+        """Generate a rate limit key based on API key or IP"""
+        return f"rate_limit:{api_key or ip}"
+
+    async def get_rate_limit_info(self, api_key: str, ip: str) -> dict:
+        self._clean_expired()
+        current_time = time.time()
+        key = self._get_rate_limit_key(api_key, ip)
+        entry = self.rate_limits.get(key)
+
+        if not entry:
+            return {
+                "count": 0,
+                "remaining": SecurityConfig.RATE_LIMIT,
+                "reset_in": 86400,
+                "limit": SecurityConfig.RATE_LIMIT
+            }
 
         return {
-            "count": count,
-            "remaining": SecurityConfig.RATE_LIMIT - count,
-            "reset_in": ttl if ttl > 0 else 86400,
+            "count": entry.count,
+            "remaining": SecurityConfig.RATE_LIMIT - entry.count,
+            "reset_in": int(entry.expire_at - current_time),
             "limit": SecurityConfig.RATE_LIMIT
         }
 
     async def get_health_check_info(self, ip: str) -> dict:
+        self._clean_expired()
+        current_time = time.time()
         key = f"health_check:{ip}"
-        last_check = await self.r.get(key)
-        ttl = await self.r.ttl(key)
+        expire_at = self.health_checks.get(key)
+
+        if expire_at is None:
+            return {
+                "can_access": True,
+                "reset_in": SecurityConfig.HEALTH_CHECK_INTERVAL
+            }
 
         return {
-            "can_access": last_check is None,
-            "reset_in": ttl if ttl > 0 else 1800  # 30 minutes in seconds
+            "can_access": False,
+            "reset_in": int(expire_at - current_time)
         }
 
-    async def increment_and_check(self, api_key: str) -> tuple[bool, dict]:
+    async def check_health_rate_limit(self, ip: str, api_key: str | None) -> tuple[bool, dict]:
+        """Returns (is_allowed, rate_limit_info) for health check endpoint"""
+        # Always allow admin key access first
+        if SecurityConfig.is_admin_key(api_key):
+            return True, {"reset_in": SecurityConfig.HEALTH_CHECK_INTERVAL}
+
+        self._clean_expired()
+        current_time = time.time()
+        key = f"health_check:{ip}"
+        expire_at = self.health_checks.get(key)
+
+        if expire_at is None:
+            self.health_checks[key] = current_time + SecurityConfig.HEALTH_CHECK_INTERVAL
+            return True, {"reset_in": SecurityConfig.HEALTH_CHECK_INTERVAL}
+
+        return False, {"reset_in": int(expire_at - current_time)}
+
+    async def increment_and_check(self, api_key: str, ip: str) -> tuple[bool, dict]:
         """Returns (is_allowed, rate_limit_info)"""
-        if api_key != SecurityConfig.DEMO_API_KEY:
+        # Always check admin key first
+        if SecurityConfig.is_admin_key(api_key):
             return True, {}
 
-        key = f"rate_limit:{api_key}"
-        count = await self.r.get(key)
+        self._clean_expired()
+        current_time = time.time()
+        key = self._get_rate_limit_key(api_key, ip)
+        entry = self.rate_limits.get(key)
 
-        if count is None:
-            await self.r.set(key, 1, ex=86400)
+        if entry is None:
+            # New entry
+            self.rate_limits[key] = RateLimitEntry(
+                count=1,
+                expire_at=current_time + 86400
+            )
         else:
-            count = int(count)
-            if count >= SecurityConfig.RATE_LIMIT:
-                return False, await self.get_rate_limit_info(api_key)
-            await self.r.incr(key)
+            if entry.count >= SecurityConfig.RATE_LIMIT:
+                return False, await self.get_rate_limit_info(api_key, ip)
+            entry.count += 1
 
-        return True, await self.get_rate_limit_info(api_key)
-
-    async def check_health_rate_limit(self, ip: str) -> tuple[bool, dict]:
-        """Returns (is_allowed, rate_limit_info) for health check endpoint"""
-        key = f"health_check:{ip}"
-        info = await self.get_health_check_info(ip)
-
-        if info["can_access"]:
-            await self.r.set(key, "1", ex=3600)  # Set with 1-hour expiry
-            return True, {"reset_in": 3600}
-
-        return False, {"reset_in": info["reset_in"]}
+        return True, await self.get_rate_limit_info(api_key, ip)
 
     async def validate_websocket(self, websocket: WebSocket) -> tuple[bool, dict]:
         """
@@ -87,27 +143,25 @@ class RateLimitManager:
             return True, {}
 
         api_key = websocket.headers.get("x-api-key")
-        # Validate API key
-        if api_key not in {SecurityConfig.DEMO_API_KEY, SecurityConfig.ADMIN_API_KEY}:
-            await websocket.close(code=1008, reason="Invalid API key")
+        client_ip = websocket.client.host
+
+        # Always check admin key first
+        if SecurityConfig.is_admin_key(api_key):
+            return True, {}
+
+        # Handle rate limiting for all other connections
+        is_allowed, rate_info = await self.increment_and_check(api_key, client_ip)
+        if not is_allowed:
+            await websocket.close(code=1008, reason="Rate limit exceeded")
             return False, {}
 
-        # Handle rate limiting for demo key
-        if api_key == SecurityConfig.DEMO_API_KEY:
-            is_allowed, rate_info = await self.increment_and_check(api_key)
-            if not is_allowed:
-                await websocket.close(code=1008, reason="Rate limit exceeded")
-                return False, {}
-
-            return True, {
-                "metadata": {
-                    "rate_limit": rate_info["limit"],
-                    "remaining_requests": rate_info["remaining"],
-                    "reset": rate_info["reset_in"]
-                }
+        return True, {
+            "metadata": {
+                "rate_limit": rate_info["limit"],
+                "remaining_requests": rate_info["remaining"],
+                "reset": rate_info["reset_in"]
             }
-
-        return True, {}
+        }
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -116,10 +170,16 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
         self.rate_limit_manager = rate_limit_manager
 
     async def dispatch(self, request: Request, call_next):
+        api_key = request.headers.get("x-api-key")
+        client_ip = request.client.host
+
+        # Skip security for open paths
+        if SecurityConfig.is_open_path(request.url.path):
+            return await call_next(request)
+
         # Special handling for health check endpoint
         if request.url.path == "/health":
-            client_ip = request.client.host
-            is_allowed, rate_info = await self.rate_limit_manager.check_health_rate_limit(client_ip)
+            is_allowed, rate_info = await self.rate_limit_manager.check_health_rate_limit(client_ip, api_key)
 
             if not is_allowed:
                 return JSONResponse(
@@ -134,40 +194,24 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             response.headers["X-RateLimit-Reset"] = str(rate_info["reset_in"])
             return response
 
-        # Skip security for open paths
-        if SecurityConfig.is_open_path(request.url.path):
-            return await call_next(request)
+        # Check rate limit for all other requests (admin key check is handled inside increment_and_check)
+        is_allowed, rate_info = await self.rate_limit_manager.increment_and_check(api_key, client_ip)
 
-        api_key = request.headers.get("x-api-key")
-
-        # Check API key validity
-        if api_key not in {SecurityConfig.DEMO_API_KEY, SecurityConfig.ADMIN_API_KEY}:
+        if not is_allowed:
             return JSONResponse(
-                {"detail": "Invalid API key"},
-                status_code=status.HTTP_401_UNAUTHORIZED
+                {
+                    "detail": "Rate limit exceeded",
+                    "rate_limit_info": rate_info
+                },
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS
             )
 
-        # Check rate limit for demo key
-        if api_key == SecurityConfig.DEMO_API_KEY:
-            is_allowed, rate_info = await self.rate_limit_manager.increment_and_check(api_key)
-
-            if not is_allowed:
-                return JSONResponse(
-                    {
-                        "detail": "Rate limit exceeded",
-                        "rate_limit_info": rate_info
-                    },
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
-                )
-
-            # Continue with the request and add rate limit headers
-            response = await call_next(request)
+        # Continue with the request and add rate limit headers
+        response = await call_next(request)
+        if rate_info:  # Only add headers if rate info exists (not admin)
             response.headers.update({
                 "X-RateLimit-Limit": str(rate_info["limit"]),
                 "X-RateLimit-Remaining": str(rate_info["remaining"]),
                 "X-RateLimit-Reset": str(rate_info["reset_in"])
             })
-            return response
-
-        # Admin key - no rate limiting
-        return await call_next(request)
+        return response
