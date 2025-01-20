@@ -27,7 +27,7 @@ async def get_search(query: str, type: Optional[Type] = None, hits: Optional[int
     # Search parameters
     params = {
         "attributesToRetrieve": ['name', 'symbol', 'exchangeShortName', 'type'],
-        "hitsPerPage": 10,
+        "hitsPerPage": hits,
     }
 
     # If type is not None, add a facetFilters parameter to filter the results by type
@@ -38,7 +38,13 @@ async def get_search(query: str, type: Optional[Type] = None, hits: Optional[int
 
     stocks = []
     for result in results['hits']:
-        stocks.append(SearchResult(name=result['name'], symbol=result['symbol'], exchange=result['exchangeShortName'],
-                                   type=result['type']))
+        stocks.append(
+            SearchResult(
+                name=result['name'],
+                symbol=result['symbol'],
+                exchange=result['exchangeShortName'],
+                type=result['type']
+            )
+        )
 
     return stocks
