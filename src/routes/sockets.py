@@ -6,10 +6,9 @@ from fastapi import APIRouter, Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
+from src.di import get_global_rate_limit_manager
 from src.market import MarketSchedule
-from src.redis import r
 from src.schemas import SimpleQuote
-from src.security import RateLimitManager
 from src.services import (
     scrape_quotes, scrape_similar_quotes, scrape_actives,
     scrape_news_for_quote, scrape_losers, scrape_gainers,
@@ -24,7 +23,7 @@ async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
     """
     Backwards compatible wrapper for websocket validation
     """
-    rate_limit_manager = RateLimitManager(redis_client=r)
+    rate_limit_manager = get_global_rate_limit_manager()
     return await rate_limit_manager.validate_websocket(websocket)
 
 
@@ -64,6 +63,7 @@ async def handle_websocket_connection(
     :param connection_manager: Connection manager instance
     """
     is_valid, metadata = await validate_websocket(websocket)
+    print(is_valid, metadata)
     if not is_valid:
         return
 
@@ -77,7 +77,7 @@ async def handle_websocket_connection(
             try:
                 result = await data_fetcher()
                 await connection_manager.publish(result, channel)
-                await asyncio.sleep(10)
+                await asyncio.sleep(5)
             except WebSocketDisconnect:
                 await connection_manager.disconnect(websocket, channel)
                 break

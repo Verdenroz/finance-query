@@ -3,8 +3,10 @@ from typing import Optional
 from aiohttp import ClientSession
 
 from src.constants import headers
+from src.security import RateLimitManager
 
 global_session: Optional[ClientSession] = None
+global_rate_limit_manager: Optional[RateLimitManager] = None
 
 
 async def get_global_session() -> ClientSession:
@@ -19,3 +21,10 @@ async def close_global_session():
     if global_session is not None:
         await global_session.close()
         global_session = None
+
+
+def get_global_rate_limit_manager() -> RateLimitManager:
+    global global_rate_limit_manager
+    if global_rate_limit_manager is None:
+        global_rate_limit_manager = RateLimitManager()
+    return global_rate_limit_manager
