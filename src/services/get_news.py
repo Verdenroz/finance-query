@@ -1,8 +1,5 @@
-from typing import Optional
-
 from fastapi import HTTPException
 from lxml import etree
-from typing_extensions import List
 
 from src.redis import cache
 from src.schemas import News
@@ -98,10 +95,7 @@ def parse_symbol_exchange(yahoo_symbol):
 
 
 @cache(300)
-async def scrape_news_for_quote(
-        symbol: str,
-        is_etf: Optional[bool] = None
-) -> List[News]:
+async def scrape_news_for_quote(symbol: str,) -> list[News]:
     """
     Scrapes news for a given stock/ETF symbol, handling both regular and exchange-specific symbols.
 
@@ -129,13 +123,6 @@ async def scrape_news_for_quote(
         ]
 
     container_xpath = '/html/body/div/div[1]/div[2]/main/div[3]/div[2]/div/div[2]'
-
-    if is_etf and not exchange:  # Only try ETF URL if we know it's an ETF
-        html = await fetch(urls[1])
-        news_list = await _parse_news(html, container_xpath)
-        if not news_list:
-            raise HTTPException(status_code=404, detail="Are you sure this is an ETF?")
-        return news_list
 
     # Try each URL until we find news
     for url in urls:
@@ -169,7 +156,7 @@ async def scrape_general_news():
     return news_list
 
 
-async def _parse_news(html: str, container_xpath: str) -> List[News]:
+async def _parse_news(html: str, container_xpath: str) -> list[News]:
     tree = etree.HTML(html)
 
     news_xpath = './/div[div/h3/a and div/p and div/div[@title]]'
