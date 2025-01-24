@@ -2,13 +2,17 @@ import asyncio
 import datetime
 import os
 import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
-from starlette.responses import Response
+from starlette import status
+from starlette.responses import Response, JSONResponse
 
 from src.di import get_global_session, close_global_session, get_global_rate_limit_manager
 from src.redis import r
@@ -17,6 +21,7 @@ from src.routes import (quotes_router, indices_router, movers_router, historical
                         sectors_router, sockets_router, stream_router, hours_router)
 from src.schemas.sector import Sector
 from src.schemas.time_series import TimePeriod, Interval
+from src.schemas.validation_error import ValidationErrorResponse
 from src.security import RateLimitMiddleware
 from src.services import scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors, \
     get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, scrape_quotes, \
@@ -86,6 +91,22 @@ app.add_middleware(
 
 if os.getenv('USE_SECURITY', 'False') == 'True':
     app.add_middleware(RateLimitMiddleware, rate_limit_manager=get_global_rate_limit_manager())
+
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_formatter(request, exc):
+    reformatted_message = defaultdict(list)
+    for pydantic_error in exc.errors():
+        loc, msg = pydantic_error["loc"], pydantic_error["msg"]
+        filtered_loc = loc[1:] if loc[0] in ("body", "query", "path") else loc
+        field_string = ".".join(filtered_loc)  # nested fields with dot-notation
+        reformatted_message[field_string].append(msg)
+
+    error_response = ValidationErrorResponse(errors=reformatted_message)
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder(error_response)
+    )
 
 
 @app.get("/health",
