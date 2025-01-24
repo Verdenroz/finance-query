@@ -15,7 +15,11 @@ from ..utils import fetch, get_logo
 thread_pool = ThreadPoolExecutor(max_workers=psutil.cpu_count(logical=True) * 2)
 
 
-def get_adaptive_chunk_size():
+def get_adaptive_chunk_size() -> int:
+    """
+    Calculate an adaptive chunk size based on available CPU cores and memory.
+    :return: The calculated chunk size as an integer
+    """
     cpu_count = psutil.cpu_count()
     memory_info = psutil.virtual_memory()
     available_memory = memory_info.available
@@ -36,8 +40,8 @@ async def scrape_quotes(symbols: list[str]) -> list[Quote]:
     Asynchronously scrapes multiple quotes from a list of symbols and returns a list of Quote objects.
     Duplicate symbols should be removed before calling this function.
     Chunked scraping is used to avoid blocking the event loop.
+
     :param symbols: List of symbols
-    :return: List of Quote objects
     """
     chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
@@ -54,8 +58,8 @@ async def scrape_simple_quotes(symbols: list[str]) -> list[SimpleQuote]:
     Asynchronously scrapes multiple simple quotes from a list of symbols and returns a list of SimpleQuote objects.
     Duplicate symbols should be removed before calling this function.
     Chunks the symbols into groups of 10 to avoid rate limiting.
+
     :param symbols: List of symbols
-    :return: List of SimpleQuote objects
     """
     chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
@@ -303,7 +307,7 @@ async def _scrape_quote(symbol: str) -> Quote:
     Uses yahooquery as a fallback if scraping fails.
     :param symbol: Quote symbol
 
-    :return: [Quote] object
+    :raises HTTPException: if information is not found, even from yahooquery
     """
     try:
         url = f'https://finance.yahoo.com/quote/{symbol}/'
@@ -356,6 +360,8 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
     Asynchronously scrapes a simple quote from a given symbol and returns a SimpleQuote object.
     Uses yahooquery as a fallback if scraping fails.
     :param symbol: Quote symbol
+
+    :raises HTTPException: if information is not found, even from yahooquery
     """
     try:
         url = f'https://finance.yahoo.com/quote/{symbol}/'
@@ -403,7 +409,7 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
     Get quote data from Yahoo Finance using yahooquery in case the scraping fails
     :param symbol: Quote symbol
 
-    :raises: HTTPException if ticker is not found
+    :raises HTTPException: if ticker is not found
     """
     try:
         print(f"Getting quote from yahooquery for symbol {symbol}")
@@ -490,7 +496,7 @@ async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
     Get simple quote data from Yahoo Finance using yahooquery in case the scraping fails
     :param symbol: Quote symbol
 
-    :raises: HTTPException if ticker is not found
+    :raises HTTPException: if ticker is not found
     """
     try:
         print(f"Getting simple quote from yahooquery for symbol {symbol}")
