@@ -134,70 +134,64 @@ def cache(expire, market_closed_expire=None, memcache=False, market_schedule=Mar
         @functools.wraps(func)
         async def wrapper(*args, **kwargs):
             lock = asyncio.Lock()
-            try:
-                async with lock:
-                    # Filter out non-serializable objects
-                    filtered_args = [arg for arg in args if not isinstance(arg, ClientSession)]
-                    filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, ClientSession)}
+            async with lock:
+                # Filter out non-serializable objects
+                filtered_args = [arg for arg in args if not isinstance(arg, ClientSession)]
+                filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, ClientSession)}
 
-                    # Generate cache key
-                    key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}"
+                # Generate cache key
+                key = f"{func.__name__}:{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}"
 
-                    # Check cache
-                    try:
-                        if await r.exists(key):
-                            key_type = await r.type(key)
+                # Check cache
+                try:
+                    if await r.exists(key):
+                        key_type = await r.type(key)
 
-                            if key_type == b'string':
-                                data = gzip.decompress(await r.get(key))
-                                result = orjson.loads(data)
-                            elif key_type == b'list':
-                                result_list = []
-                                items = await r.lrange(key, 0, -1)
-                                if not items:  # Handle empty list case
-                                    raise KeyError("Cache key exists but no items found")
+                        if key_type == b'string':
+                            data = gzip.decompress(await r.get(key))
+                            result = orjson.loads(data)
+                        elif key_type == b'list':
+                            result_list = []
+                            items = await r.lrange(key, 0, -1)
+                            if not items:  # Handle empty list case
+                                raise KeyError("Cache key exists but no items found")
 
-                                for item in items:
-                                    data = gzip.decompress(item)
-                                    result_list.append(orjson.loads(data))
-                                result = result_list
-                            else:
-                                raise ValueError(f"Unexpected Redis key type: {key_type}")
+                            for item in items:
+                                data = gzip.decompress(item)
+                                result_list.append(orjson.loads(data))
+                            result = result_list
+                        else:
+                            raise ValueError(f"Unexpected Redis key type: {key_type}")
 
-                            # Handle Technical Analysis indicators
-                            if isinstance(result, dict) and 'Technical Analysis' in result:
-                                indicator_data = {}
-                                indicator_name = result['type']
-                                for key, value in result['Technical Analysis'].items():
-                                    if indicator_name in indicators:
-                                        indicator_value = indicators[indicator_name](**value)
-                                        indicator_data[date.fromisoformat(key)] = indicator_value
-                                return Analysis(
-                                    type=Indicator(indicator_name),
-                                    indicators=indicator_data
-                                ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+                        # Handle Technical Analysis indicators
+                        if isinstance(result, dict) and 'Technical Analysis' in result:
+                            indicator_data = {}
+                            indicator_name = result['type']
+                            for key, value in result['Technical Analysis'].items():
+                                if indicator_name in indicators:
+                                    indicator_value = indicators[indicator_name](**value)
+                                    indicator_data[date.fromisoformat(key)] = indicator_value
+                            return Analysis(
+                                type=Indicator(indicator_name),
+                                indicators=indicator_data
+                            ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-                            return result
+                        return result
 
-                    except orjson.JSONDecodeError as e:
-                        # If cache is corrupted, delete it and continue
-                        await r.delete(key)
-                        print(f"Cache corruption detected: {str(e)}")
+                except orjson.JSONDecodeError as e:
+                    # If cache is corrupted, delete it and continue
+                    await r.delete(key)
+                    print(f"Cache corruption detected: {str(e)}")
 
-                    # Get fresh result
-                    result = await func(*args, **kwargs)
-                    if result is None:
-                        return None
+                # Get fresh result
+                result = await func(*args, **kwargs)
+                if result is None:
+                    return None
 
-                    # Cache the result
-                    await cache_in_redis(key, result)
+                # Cache the result
+                await cache_in_redis(key, result)
 
-                    return result
-
-            except Exception as e:
-                print(f"Unexpected error in cache decorator: {str(e)}")
-                # Fall back to executing the function without caching
-                return await func(*args, **kwargs)
+                return result
 
         return wrapper
 
