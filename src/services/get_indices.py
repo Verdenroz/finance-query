@@ -12,9 +12,8 @@ from ..utils import fetch
 async def scrape_indices() -> list[Index]:
     """
     Scrape the major world indices from investing.com
-    :return: a list of Index objects
 
-    :raises: HTTPException with status code 500 if an error occurs while scraping
+    :raises HTTPException: with status code 500 if an error occurs while scraping
     """
     url = 'https://www.investing.com/indices/major-indices'
 
@@ -26,7 +25,8 @@ async def get_indices(html) -> list[Index]:
     """
     Parse the HTML content and return a list of Index objects
     :param html: the HTML content
-    :return: a list of Index objects
+
+    :raises HTTPException: with status code 500 if an error occurs while parsing
     """
     try:
         tree = etree.HTML(html)
