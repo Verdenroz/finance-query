@@ -10,18 +10,29 @@ from ..utils import fetch
 
 @cache(expire=15, market_closed_expire=3600)
 async def scrape_actives():
+    """
+    Scrape the most active stocks from Yahoo Finance
+    :return:
+    """
     url = 'https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50'
     return await _scrape_movers(url)
 
 
 @cache(expire=15, market_closed_expire=3600)
 async def scrape_gainers():
+    """
+    Scrape the top gaining stocks from Yahoo Finance
+    :return:
+    """
     url = 'https://finance.yahoo.com/markets/stocks/gainers/?start=0&count=50'
     return await _scrape_movers(url)
 
 
 @cache(expire=15, market_closed_expire=3600)
 async def scrape_losers():
+    """
+    Scrape the top losing stocks from Yahoo Finance
+    """
     url = 'https://finance.yahoo.com/markets/stocks/losers/?start=0&count=50'
     return await _scrape_movers(url)
 
@@ -30,9 +41,8 @@ async def _scrape_movers(url: str) -> list[MarketMover]:
     """
     Scrape the most active, gainers, or losers from Yahoo Finance
     :param url: the Yahoo Finance URL to scrape
-    :return: a list of MarketMover objects
 
-    :raises: HTTPException with status code 500 if an error occurs while scraping
+    :raises HTTPException: with status code 500 if an error occurs while scraping or no movers are found
     """
     html = await fetch(url)
     tree = etree.HTML(html)
@@ -75,6 +85,6 @@ async def _scrape_movers(url: str) -> list[MarketMover]:
 
     # If no movers are found, raise an HTTPException
     if not movers:
-        raise HTTPException(status_code=500, detail='Error scraping data from Yahoo Finance')
+        raise HTTPException(status_code=500, detail='Failed to parse market movers')
 
     return movers
