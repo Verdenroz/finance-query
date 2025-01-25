@@ -19,14 +19,13 @@ from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
-from src.schemas.sector import Sector
-from src.schemas.time_series import TimePeriod, Interval
-from src.schemas.validation_error import ValidationErrorResponse
+from src.schemas import ValidationErrorResponse, Sector, TimePeriod, Interval
 from src.security import RateLimitMiddleware
-from src.services import scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors, \
-    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, scrape_quotes, \
-    scrape_similar_quotes, get_historical, get_search, scrape_simple_quotes
-from src.services.indicators.get_summary_analysis import get_summary_analysis
+from src.services import (
+    scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors,
+    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, scrape_quotes,
+    scrape_similar_quotes, get_historical, get_search, scrape_simple_quotes, get_summary_analysis
+)
 
 load_dotenv()
 
@@ -91,6 +90,7 @@ app.add_middleware(
 
 if os.getenv('USE_SECURITY', 'False') == 'True':
     app.add_middleware(RateLimitMiddleware, rate_limit_manager=get_global_rate_limit_manager())
+
 
 @app.exception_handler(RequestValidationError)
 async def request_validation_error_formatter(request, exc):

@@ -125,7 +125,8 @@ async def get_summary_cci(quotes, period=20):
 
 async def get_summary_macd(quotes, fast_period=12, slow_period=26, signal_period=9):
     try:
-        macd = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[-1].macd
+        macd = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[
+            -1].macd
         signal = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[
             -1].signal
         if macd and signal:
@@ -162,7 +163,8 @@ async def get_summary_aroon(quotes, period=25):
 
 async def get_summary_bbands(quotes, period=20, std_dev=2):
     try:
-        bbands = get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev).remove_warmup_periods()[
+        bbands = \
+        get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev).remove_warmup_periods()[
             -1]
         upper_band = bbands.upper_band
         lower_band = bbands.lower_band
@@ -200,6 +202,7 @@ async def get_summary_ichimoku(quotes):
     except SystemError:
         # Error within the stock-indicators library itself
         return None
+
 
 @cache(expire=60, market_closed_expire=600)
 async def get_summary_analysis(symbol: str, interval: Interval):

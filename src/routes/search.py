@@ -2,9 +2,8 @@ from fastapi import APIRouter, Security, HTTPException
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.schemas import SearchResult
+from src.schemas import SearchResult, Type
 from src.services import get_search
-from src.services.get_search import Type
 
 router = APIRouter()
 

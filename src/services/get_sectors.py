@@ -6,8 +6,7 @@ from lxml import etree
 from yahooquery import Ticker
 
 from src.redis import cache
-from src.schemas import MarketSector
-from src.schemas.sector import Sector, MarketSectorDetails
+from src.schemas import MarketSector, MarketSectorDetails, Sector
 from src.utils import fetch
 
 urls = {

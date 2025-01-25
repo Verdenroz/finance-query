@@ -1,9 +1,7 @@
 from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 
-from src.schemas import TimeSeries
-from src.schemas.time_series import TimePeriod, Interval
-from src.schemas.validation_error import ValidationErrorResponse
+from src.schemas import TimeSeries, ValidationErrorResponse, TimePeriod, Interval
 from src.services import get_historical
 
 router = APIRouter()

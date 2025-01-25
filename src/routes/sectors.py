@@ -3,8 +3,7 @@ from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
 from src.schemas.sector import Sector
-from src.services import get_sectors
-from src.services.get_sectors import get_sector_for_symbol, get_sector_details
+from src.services import get_sectors, get_sector_for_symbol, get_sector_details
 
 router = APIRouter()
 

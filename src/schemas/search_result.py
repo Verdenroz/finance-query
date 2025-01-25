@@ -1,4 +1,12 @@
+from enum import Enum
+
 from pydantic import BaseModel, Field
+
+
+class Type(Enum):
+    STOCK = "stock"
+    ETF = "etf"
+    TRUST = "trust"
 
 
 class SearchResult(BaseModel):

@@ -2,11 +2,11 @@ from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.schemas.analysis import Indicator, Analysis
-from src.schemas.time_series import Interval
-from src.services.indicators import (get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci,
-                                     get_macd, get_adx, get_aroon, get_bbands, get_obv, get_super_trend, get_ichimoku)
-from src.services.indicators.get_summary_analysis import get_summary_analysis
+from src.schemas import Analysis, Indicator, Interval
+from src.services.indicators import (
+    get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci, get_macd, get_adx, get_aroon,
+    get_bbands, get_obv, get_super_trend, get_ichimoku, get_summary_analysis
+)
 
 router = APIRouter()
 
@@ -39,7 +39,7 @@ async def get_technical_indicators(
         function: Indicator = Query(..., description="The technical indicator to get."),
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Optional[Interval] = Query(
-            Interval.DAILY,
+            default=Interval.DAILY,
             description="The interval to get historical data for. Available values: 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo.")
         ,
         period: Optional[int] = Query(None, description="The look-back period for the technical indicators."),

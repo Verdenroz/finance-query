@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 
-from src.schemas import Quote, SimpleQuote
-from src.schemas.validation_error import ValidationErrorResponse
+from src.schemas import Quote, SimpleQuote, ValidationErrorResponse
 from src.services import scrape_quotes, scrape_simple_quotes
 
 router = APIRouter()

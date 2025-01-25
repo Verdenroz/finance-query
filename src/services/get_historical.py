@@ -9,8 +9,7 @@ from typing_extensions import List
 from yahooquery import Ticker
 
 from src.redis import cache
-from src.schemas import HistoricalData, TimeSeries
-from src.schemas.time_series import Interval, TimePeriod
+from src.schemas import HistoricalData, TimeSeries, TimePeriod, Interval
 
 
 @cache(expire=60, market_closed_expire=600)

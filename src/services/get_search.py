@@ -1,16 +1,9 @@
 import os
-from enum import Enum
 
 from algoliasearch.search_client import SearchClient
 from typing_extensions import Optional
 
-from src.schemas import SearchResult
-
-
-class Type(Enum):
-    STOCK = "stock"
-    ETF = "etf"
-    TRUST = "trust"
+from src.schemas import SearchResult, Type
 
 
 async def get_search(query: str, type: Optional[Type] = None, hits: Optional[int] = 10):
