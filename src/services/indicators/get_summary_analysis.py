@@ -206,13 +206,13 @@ async def get_summary_analysis(symbol: str, interval: Interval):
     # Get the most historical data available given the interval
     # (1m, 5m, 15m, 30m -> One month)
     if interval == Interval.ONE_MINUTE or interval == Interval.FIVE_MINUTES or interval == Interval.FIFTEEN_MINUTES or interval == Interval.THIRTY_MINUTES:
-        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.ONE_MONTH, interval=interval)
+        quotes = await get_historical_quotes(symbol, period=TimePeriod.ONE_MONTH, interval=interval)
     # (1h -> One year)
     elif interval == Interval.ONE_HOUR:
-        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.YEAR, interval=interval)
+        quotes = await get_historical_quotes(symbol, period=TimePeriod.YEAR, interval=interval)
     # (1d, 1wk, 1mo, 3mo -> Max)
     else:
-        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+        quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     summary = SummaryAnalysis(symbol=symbol.upper())
     tasks = [
         get_summary_sma(quotes[:200], [200, 100, 50, 20, 10]),

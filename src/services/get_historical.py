@@ -64,10 +64,19 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval) -> T
 
 
 @cache(expire=60, market_closed_expire=600, memcache=True)
-async def get_historical_quotes(symbol: str, timePeriod: TimePeriod, interval: Interval) -> List[Quote]:
+async def get_historical_quotes(symbol: str, period: TimePeriod, interval: Interval) -> List[Quote]:
+    """
+    Get historical quotes for a stock symbol based on the time period and interval provided, using YahooQuery
+    :param symbol: the symbol of the stock to get historical data for
+    :param period: the time period for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
+    :param interval: the interval for the historical data (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
+    :return: a list of YahooQuery Quote objects
+
+    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    """
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
-        data = stock.history(period=timePeriod.value, interval=interval.value)
+        data = stock.history(period=period.value, interval=interval.value)
         data = data.sort_index(ascending=False)
         quotes = []
         for _, row in data.iterrows():

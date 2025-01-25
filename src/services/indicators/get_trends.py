@@ -11,7 +11,7 @@ from src.services.get_historical import get_historical_quotes
 @cache(expire=60, market_closed_expire=600)
 async def get_macd(symbol: str, interval: Interval, fast_period: int = 12, slow_period: int = 26,
                    signal_period: int = 9):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_macd(quotes, fast_periods=round(fast_period, 2), slow_periods=round(slow_period, 2),
                                   signal_periods=signal_period)
 
@@ -22,7 +22,7 @@ async def get_macd(symbol: str, interval: Interval, fast_period: int = 12, slow_
 
 @cache(expire=60, market_closed_expire=600)
 async def get_adx(symbol: str, interval: Interval, period: int = 14):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_adx(quotes, lookback_periods=period)
     indicator_data = {result.date.date(): ADXData(value=round(result.adx, 2)) for result in results if
                       result.adx is not None}
@@ -31,7 +31,7 @@ async def get_adx(symbol: str, interval: Interval, period: int = 14):
 
 @cache(expire=60, market_closed_expire=600)
 async def get_aroon(symbol: str, interval: Interval, period: int = 25):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_aroon(quotes, lookback_periods=period)
     indicator_data = {
         result.date.date(): AROONData(aroon_up=round(result.aroon_up, 2), aroon_down=round(result.aroon_down, 2)) for
@@ -41,7 +41,7 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25):
 
 @cache(expire=60, market_closed_expire=600)
 async def get_bbands(symbol: str, interval: Interval, period: int = 20, std_dev: int = 2):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev)
     indicator_data = {
         result.date.date(): BBANDSData(upper_band=round(result.upper_band, 2), lower_band=round(result.lower_band, 2))
@@ -51,7 +51,7 @@ async def get_bbands(symbol: str, interval: Interval, period: int = 20, std_dev:
 
 @cache(expire=60, market_closed_expire=600)
 async def get_obv(symbol: str, interval: Interval, sma_periods: int = None):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_obv(quotes, sma_periods=sma_periods)
     indicator_data = {result.date.date(): OBVData(value=round(result.obv, 2)) for result in results if
                       result.obv is not None}
@@ -60,7 +60,7 @@ async def get_obv(symbol: str, interval: Interval, sma_periods: int = None):
 
 @cache(expire=60, market_closed_expire=600)
 async def get_super_trend(symbol: str, interval: Interval, period: int = 10, multiplier: int = 3):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_super_trend(quotes, lookback_periods=period, multiplier=multiplier)
     indicator_data = {
         result.date.date(): SuperTrendData(value=round(result.super_trend, 2),
@@ -73,7 +73,7 @@ async def get_super_trend(symbol: str, interval: Interval, period: int = 10, mul
 @cache(expire=60, market_closed_expire=600)
 async def get_ichimoku(symbol: str, interval: Interval, tenkan_period: int = 9, kijun_period: int = 26,
                        senkou_period: int = 52):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_ichimoku(
         quotes,
         tenkan_periods=tenkan_period,

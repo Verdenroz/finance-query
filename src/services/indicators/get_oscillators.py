@@ -9,7 +9,7 @@ from src.services.get_historical import get_historical_quotes
 
 @cache(expire=60, market_closed_expire=600)
 async def get_rsi(symbol: str, interval: Interval, period: int = 14):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_rsi(quotes, lookback_periods=period)
     indicator_data = {result.date.date(): RSIData(value=round(result.rsi, 2)) for result in results if
                       result.rsi is not None}
@@ -19,7 +19,7 @@ async def get_rsi(symbol: str, interval: Interval, period: int = 14):
 @cache(expire=60, market_closed_expire=600)
 async def get_srsi(symbol: str, interval: Interval, period: int = 14, stoch_period: int = 14, signal_period: int = 3,
                    smooth: int = 3):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_stoch_rsi(
         quotes,
         rsi_periods=period,
@@ -34,7 +34,7 @@ async def get_srsi(symbol: str, interval: Interval, period: int = 14, stoch_peri
 
 @cache(expire=60, market_closed_expire=600)
 async def get_stoch(symbol: str, interval: Interval, period: int = 14, signal_period: int = 3, smooth: int = 3):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_stoch(
         quotes,
         lookback_periods=period,
@@ -48,7 +48,7 @@ async def get_stoch(symbol: str, interval: Interval, period: int = 14, signal_pe
 
 @cache(expire=60, market_closed_expire=600)
 async def get_cci(symbol: str, interval: Interval, period: int = 20):
-    quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
     results = indicators.get_cci(quotes, lookback_periods=period).remove_warmup_periods()
     indicator_data = {result.date.date(): CCIData(value=round(result.cci, 2)) for result in results if
                       result.cci is not None}
