@@ -411,16 +411,16 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
 
     :raises HTTPException: if ticker is not found
     """
-    try:
-        print(f"Getting quote from yahooquery for symbol {symbol}")
-        ticker = Ticker(symbol)
-        quote = ticker.quotes
-        profile = ticker.asset_profile
-        ticker_calendar = ticker.calendar_events
-        ticker_calendar = ticker_calendar.get(symbol, {})
+    print(f"Getting quote from yahooquery for symbol {symbol}")
+    ticker = Ticker(symbol)
+    quote = ticker.quotes
+    profile = ticker.asset_profile
+    ticker_calendar = ticker.calendar_events
+    ticker_calendar = ticker_calendar.get(symbol, {})
 
-        if not quote or symbol not in quote or not quote[symbol].get('longName'):
-            raise HTTPException(status_code=404, detail="Symbol not found")
+    if not ticker or not quote or symbol not in quote or not quote[symbol].get('longName'):
+        raise HTTPException(status_code=404, detail=f"{symbol} not found")
+    try:
         symbol_data = quote[symbol]
 
         def format_value(value: float):
@@ -498,15 +498,14 @@ async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
 
     :raises HTTPException: if ticker is not found
     """
+    print(f"Getting simple quote from yahooquery for symbol {symbol}")
+    ticker = Ticker(symbol)
+    quote = ticker.quotes
+    profile = ticker.asset_profile
+    if not ticker or not quote or symbol not in quote or not quote[symbol].get('longName'):
+        raise HTTPException(status_code=404, detail=f"{symbol} not found")
+
     try:
-        print(f"Getting simple quote from yahooquery for symbol {symbol}")
-        ticker = Ticker(symbol)
-        quote = ticker.quotes
-        profile = ticker.asset_profile
-
-        if not quote or symbol not in quote or not quote[symbol].get('longName'):
-            raise HTTPException(status_code=404, detail="Symbol not found")
-
         symbol_data = quote[symbol]
 
         return SimpleQuote(

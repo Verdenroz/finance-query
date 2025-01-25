@@ -17,6 +17,7 @@ router = APIRouter()
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[Quote], "description": "Successfully retrieved quotes"},
+        404: {"description": "Symbol not found"},
         422: {
             "model": ValidationErrorResponse,
             "description": "Validation error when symbols are not provided",
@@ -31,7 +32,7 @@ router = APIRouter()
                 }
             }
         },
-        500: {"description": "Failed to get simple quote for {symbol}"}
+        500: {"description": "Failed to get quote for {symbol}"}
     }
 )
 async def get_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
@@ -52,6 +53,7 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[SimpleQuote], "description": "Successfully retrieved quotes"},
+        404: {"description": "Symbol not found"},
         422: {
             "model": ValidationErrorResponse,
             "description": "Validation error when symbols are not provided",
