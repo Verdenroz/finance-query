@@ -14,11 +14,20 @@ from src.schemas.time_series import Interval, TimePeriod
 
 
 @cache(expire=60, market_closed_expire=600)
-async def get_historical(symbol: str, time: TimePeriod, interval: Interval) -> TimeSeries:
+async def get_historical(symbol: str, period: TimePeriod, interval: Interval) -> TimeSeries:
+    """
+    Get historical data for a stock symbol based on the time period and interval provided, formatting the data
+    from YahooQuery into a TimeSeries object with HistoricalData objects
+
+    :param symbol: the symbol of the stock to get historical data for
+    :param period: the time period for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
+    :param interval: the interval for the historical data (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
+
+    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    """
     try:
         stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
-        data = stock.history(period=time.value, interval=interval.value)
-
+        data = stock.history(period=period.value, interval=interval.value)
         if interval in [Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES,
                         Interval.THIRTY_MINUTES, Interval.ONE_HOUR]:
             # Reset the index
@@ -58,9 +67,9 @@ async def get_historical(symbol: str, time: TimePeriod, interval: Interval) -> T
 
     except RetryError as e:
         if '404' in str(e):
-            raise HTTPException(status_code=404, detail="Stock not found")
+            raise HTTPException(status_code=404, detail="Symbol not found")
         else:
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {e}")
 
 
 @cache(expire=60, market_closed_expire=600, memcache=True)
@@ -93,6 +102,6 @@ async def get_historical_quotes(symbol: str, period: TimePeriod, interval: Inter
 
     except RetryError as e:
         if '404' in str(e):
-            raise HTTPException(status_code=404, detail="Stock not found")
+            raise HTTPException(status_code=404, detail="Symbol not found")
         else:
-            raise HTTPException(status_code=500, detail="Internal server error")
+            raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {e}")
