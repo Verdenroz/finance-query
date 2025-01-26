@@ -1,24 +1,47 @@
-from fastapi import APIRouter, Security, HTTPException, Query
+from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 
-from src.schemas import SimpleQuote
+from src.schemas import SimpleQuote, ValidationErrorResponse
 from src.services import scrape_similar_quotes
 
 router = APIRouter()
 
 
-@router.get("/similar",
-            summary="Returns similar stocks of a queried single stock",
-            description="Get relevant stock information for similar stocks.",
-            response_model=list[SimpleQuote],
-            response_model_exclude_none=True,
-            tags=["Similar Quotes"],
-            dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
-            responses={400: {"description": "Symbol parameter is required"}})
+@router.get(
+    path="/similar",
+    summary="Get similar quotes to a queried symbol",
+    description="Returns simplified quote data for similar stocks to a queried symbol,"
+                "including symbol, name, price, and percent change.",
+    response_model=list[SimpleQuote],
+    response_model_exclude_none=True,
+    tags=["Similar Quotes"],
+    dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
+    responses={
+        200: {
+            "model": list[SimpleQuote],
+            "description": "Similar stocks found.",
+            "content": {
+                "application/json": {
+                    "example": [
+                        {
+                            "symbol": "AAPL",
+                            "name": "Apple Inc.",
+                            "price": "146.06",
+                            "percent_change": "-0.11%"
+                        }
+                    ]
+                }
+            }
+        },
+        404: {"description": "No similar stocks found or invalid symbol."},
+        422: {
+            "model": ValidationErrorResponse,
+            "description": "Validation error when symbol is not provided or limit is NaN."
+        }
+    }
+)
 async def get_similar_quotes(
         symbol: str = Query(..., title="Symbol", description="Stock to find similar stocks around"),
         limit: int = Query(default=10, title="Limit", description="Number of similar stocks to return")
 ):
-    if not symbol:
-        raise HTTPException(status_code=400, detail="Symbol parameter is required")
     return await scrape_similar_quotes(symbol.upper(), limit)
