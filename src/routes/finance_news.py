@@ -10,7 +10,7 @@ router = APIRouter()
 
 @router.get(
     path="/news",
-    summary="Retrieve stock or market news",
+    summary="Get financial news",
     description="Fetch news for a specific stock, ETF, or general market news. "
                 "Supports global stock exchanges and provides flexible symbol lookup.",
     response_model=list[News],

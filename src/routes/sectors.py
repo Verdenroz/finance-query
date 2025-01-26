@@ -13,10 +13,7 @@ router = APIRouter()
     path="/sectors",
     summary="Get sector performance and information",
     description="Returns a summary of all sectors, or detailed information for a specific sector or symbol, "
-                "depending on the query parameters provided. If no query parameters are provided, a summary of all "
-                "sectors is returned. The optional query parameter 'symbol' can be used to get sector performance for "
-                "a specific stock symbol. The optional query parameter 'name' can be used to get detailed information "
-                "for a specific sector, including its performance, market weights, industries, and top companies. ",
+                "depending on the query parameters provided.",
     tags=["Sectors"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
