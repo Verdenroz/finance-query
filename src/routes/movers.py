@@ -26,8 +26,9 @@ async def get_actives():
 
 @router.get(
     path="/gainers",
-    summary="Returns stocks with the highest price increase",
-    description="The top gaining stocks or funds during the current trading session.",
+    summary="Get list of stocks with the highest price increase",
+    description="Returns the top gaining stocks or funds during the current trading session, including the "
+                "symbol, name, price, change, and percent change.",
     response_model=list[MarketMover],
     tags=["Market Movers"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
@@ -42,8 +43,9 @@ async def get_gainers():
 
 @router.get(
     path="/losers",
-    summary="Returns stocks with the highest price decrease",
-    description="The top losing stocks or funds during the current trading session.",
+    summary="Get list of stocks with the highest price decrease",
+    description="Returns the top losing stocks or funds during the current trading session, including the "
+                "symbol, name, price, change, and percent change.",
     response_model=list[MarketMover],
     tags=["Market Movers"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
