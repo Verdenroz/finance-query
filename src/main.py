@@ -109,52 +109,52 @@ async def request_validation_error_formatter(request, exc):
     )
 
 
-@app.get("/health",
-         response_model=dict,
-         description="Detailed health check endpoint",
-         tags=["Health Check"],
-         responses={
-             200: {
-                 "description": "Successful Response",
-                 "content": {
-                     "application/json": {
-                         "example": {
-                             "status": "healthy",
-                             "timestamp": "2023-10-01T12:34:56.789Z",
-                             "redis": {
-                                 "status": "healthy",
-                                 "latency_ms": 1.23
-                             },
-                             "scraping": {
-                                 "Scraping status": "21/21 succeeded",
-                                 "Indices": {"status": "succeeded"},
-                                 "Market Actives": {"status": "succeeded"},
-                                 "Market Losers": {"status": "succeeded"},
-                                 "Market Gainers": {"status": "succeeded"},
-                                 "Market Sectors": {"status": "succeeded"},
-                                 "Sector for a symbol": {"status": "succeeded"},
-                                 "Detailed Sector": {"status": "succeeded"},
-                                 "General News": {"status": "succeeded"},
-                                 "News for equity": {"status": "succeeded"},
-                                 "News for ETF": {"status": "succeeded"},
-                                 "Full Quotes": {"status": "succeeded"},
-                                 "Simple Quotes": {"status": "succeeded"},
-                                 "Similar Equities": {"status": "succeeded"},
-                                 "Similar ETFs": {"status": "succeeded"},
-                                 "Historical day prices": {"status": "succeeded"},
-                                 "Historical week prices": {"status": "succeeded"},
-                                 "Historical month prices": {"status": "succeeded"},
-                                 "Historical year prices": {"status": "succeeded"},
-                                 "Historical five year prices": {"status": "succeeded"},
-                                 "Search": {"status": "succeeded"},
-                                 "Summary Analysis": {"status": "succeeded"}
-                             }
-                         }
-                     }
-                 }
-             }
-         }
-         )
+@app.get(
+    path="/health",
+    description="Detailed health check endpoint, checking the status of the API and its dependencies.",
+    tags=["Health Check"],
+    responses={
+        200: {
+            "description": "Successful Response",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "healthy",
+                        "timestamp": "2023-10-01T12:34:56.789Z",
+                        "redis": {
+                            "status": "healthy",
+                            "latency_ms": 1.23
+                        },
+                        "scraping": {
+                            "Scraping status": "21/21 succeeded",
+                            "Indices": {"status": "succeeded"},
+                            "Market Actives": {"status": "succeeded"},
+                            "Market Losers": {"status": "succeeded"},
+                            "Market Gainers": {"status": "succeeded"},
+                            "Market Sectors": {"status": "succeeded"},
+                            "Sector for a symbol": {"status": "succeeded"},
+                            "Detailed Sector": {"status": "succeeded"},
+                            "General News": {"status": "succeeded"},
+                            "News for equity": {"status": "succeeded"},
+                            "News for ETF": {"status": "succeeded"},
+                            "Full Quotes": {"status": "succeeded"},
+                            "Simple Quotes": {"status": "succeeded"},
+                            "Similar Equities": {"status": "succeeded"},
+                            "Similar ETFs": {"status": "succeeded"},
+                            "Historical day prices": {"status": "succeeded"},
+                            "Historical week prices": {"status": "succeeded"},
+                            "Historical month prices": {"status": "succeeded"},
+                            "Historical year prices": {"status": "succeeded"},
+                            "Historical five year prices": {"status": "succeeded"},
+                            "Search": {"status": "succeeded"},
+                            "Summary Analysis": {"status": "succeeded"}
+                        }
+                    }
+                }
+            }
+        }
+    }
+)
 async def health():
     """
         Comprehensive health check endpoint that verifies:
@@ -253,24 +253,24 @@ async def health():
     return health_report
 
 
-@app.get("/ping",
-         response_model=dict[str, str],
-         description="Basic health check endpoint",
-         tags=["Health Check"],
-         responses={
-             200: {
-                 "description": "Successful Response",
-                 "content": {
-                     "application/json": {
-                         "example": {
-                             "status": "healthy",
-                             "timestamp": "2023-10-01T12:34:56.789Z"
-                         }
-                     }
-                 }
-             }
-         }
-         )
+@app.get(
+    path="/ping",
+    description="Check if the server is reachable",
+    tags=["Health Check"],
+    responses={
+        200: {
+            "description": "Successful Response",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "healthy",
+                        "timestamp": "2023-10-01T12:34:56.789Z"
+                    }
+                }
+            }
+        }
+    }
+)
 async def ping(response: Response):
     """
     Simple health check endpoint to verify the API is up and running.
