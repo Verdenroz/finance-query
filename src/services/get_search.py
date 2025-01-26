@@ -6,7 +6,13 @@ from typing_extensions import Optional
 from src.schemas import SearchResult, Type
 
 
-async def get_search(query: str, type: Optional[Type] = None, hits: Optional[int] = 10):
+async def get_search(query: str, type: Optional[Type] = None, hits: Optional[int] = 10) -> list[SearchResult]:
+    """
+    Search for a stock by name or symbol, filtering by its type and limiting the number of hits to 1-20
+    :param query: the search query
+    :param type: the type of security to filter by (stock, etf, trust)
+    :param hits: the number of hits to return (1-20)
+    """
     # My personal Algolia credentials are on free tier and are safe to be shared
     # This is out of trust that the search will not be abused
     # The API key is search-only and can't be used to modify the data
