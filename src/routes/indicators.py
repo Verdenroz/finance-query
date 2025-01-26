@@ -2,7 +2,7 @@ from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.schemas import Analysis, Indicator, Interval, ValidationErrorResponse
+from src.schemas import Analysis, Indicator, Interval, ValidationErrorResponse, SummaryAnalysis
 from src.services.indicators import (
     get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci, get_macd, get_adx, get_aroon,
     get_bbands, get_obv, get_super_trend, get_ichimoku, get_summary_analysis
@@ -102,12 +102,23 @@ async def get_technical_indicators(
         raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}")
 
 
-@router.get("/analysis",
-            summary="Returns technical indicators for a stock",
-            description="Get requested technical indicators for a stock."
-                        "per minute.",
-            tags=["Analysis"],
-            dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
+@router.get(
+    path="/analysis",
+    summary="Get an aggregated summary of technical indicators for a stock",
+    description="Returns all available technical indicators for a stock with popular default periods and settings.",
+    tags=["Analysis"],
+    dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
+    responses={
+        200: {
+            "model": SummaryAnalysis,
+            "description": "The technical analysis summary for the stock."
+        },
+        422: {
+            "model": ValidationErrorResponse,
+            "description": "Validation error when interval has invalid value."
+        },
+    }
+)
 async def get_technical_analysis(
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),

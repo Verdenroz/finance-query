@@ -1,4 +1,4 @@
-from .analysis import Analysis, Indicator
+from .analysis import Analysis, Indicator, SummaryAnalysis
 from .index import Index
 from .marketmover import MarketMover
 from .news import News
