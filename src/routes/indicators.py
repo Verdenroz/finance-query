@@ -106,7 +106,7 @@ async def get_technical_indicators(
     path="/analysis",
     summary="Get an aggregated summary of technical indicators for a stock",
     description="Returns all available technical indicators for a stock with popular default periods and settings.",
-    tags=["Analysis"],
+    tags=["Technical Indicators"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
