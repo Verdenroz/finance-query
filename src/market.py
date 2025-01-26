@@ -12,8 +12,8 @@ class MarketStatus(str, Enum):
 
 
 class MarketSchedule:
-    def __init__(self, year: Optional[int] = None):
-        self.year = year or datetime.now().year
+    def __init__(self):
+        self.year = datetime.now().year
 
         # Regular trading hours (Eastern Time)
         self.regular_open = time(9, 30)  # 9:30 AM ET
