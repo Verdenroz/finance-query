@@ -2,7 +2,7 @@ from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.schemas import Analysis, Indicator, Interval
+from src.schemas import Analysis, Indicator, Interval, ValidationErrorResponse
 from src.services.indicators import (
     get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci, get_macd, get_adx, get_aroon,
     get_bbands, get_obv, get_super_trend, get_ichimoku, get_summary_analysis
@@ -29,12 +29,26 @@ IndicatorFunctions = {
 }
 
 
-@router.get("/indicators",
-            summary="Returns technical indicators for a stock",
-            response_model=Analysis,
-            description="Get requested technical indicators for a stock.",
-            tags=["Technical Indicators"],
-            dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))])
+@router.get(
+    path="/indicators",
+    summary="Get technical indicators for a stock",
+    description="Returns the history of the requested technical indicator for a stock.",
+    response_model=Analysis,
+    tags=["Technical Indicators"],
+    dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
+    responses={
+        200: {
+            "model": Analysis,
+            "description": "The technical indicator data for the stock."
+        },
+        400: {"description": "Invalid parameter for the technical indicator."},
+        422: {
+            "model": ValidationErrorResponse,
+            "description": "Validation error when function or interval has invalid value."
+        },
+        500: {"description": "Failed to retrieve technical indicators."}
+    }
+)
 async def get_technical_indicators(
         function: Indicator = Query(..., description="The technical indicator to get."),
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
@@ -81,8 +95,11 @@ async def get_technical_indicators(
         param_name = str(e).split("'")[1]
         raise HTTPException(status_code=400,
                             detail=f"Invalid parameter: {param_name} for the {function.name} function.")
+    except HTTPException as e:
+        # Re-raise HTTPException from get_historical_quotes
+        raise e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}")
 
 
 @router.get("/analysis",
@@ -95,7 +112,4 @@ async def get_technical_analysis(
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
 ):
-    if not symbol:
-        raise HTTPException(status_code=400, detail="Symbol parameter is required")
-
     return await get_summary_analysis(symbol, interval)
