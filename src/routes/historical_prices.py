@@ -20,13 +20,44 @@ router = APIRouter()
             "model": TimeSeries,
             "description": "Successfully retrieved historical data"
         },
-        400: {"description": "If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less"},
-        404: {"description": "Symbol not found"},
+        400: {
+            "description": "Bad request",
+            "content": {"application/json":
+                {
+                    "example": {"detail": "If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less"}
+                }
+            }
+        },
+        404: {
+            "description": "Symbol not found",
+            "content": {"application/json": {"example": {"detail": "Symbol not found"}}}
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Validation error when symbol, time period, or interval is not provided"
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "symbol": ["Field required"],
+                            "time": [
+                                "Field required",
+                                "Input should be '1d', '5d', '7d', '1mo', '3mo', '6mo', 'YTD', '1Y', '5Y', '10Y' or 'max'"
+                            ],
+                            "interval": [
+                                "Field required",
+                                "Input should be '1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo' or '3mo'"
+                            ]
+                        }
+                    }
+                }
+            }
         },
-        500: {"description": "Failed to retrieve historical data"}
+        500: {
+            "description": "Internal server error",
+            "content": {"application/json": {"example": {"detail": "Failed to retrieve historical data"}}}
+        }
     }
 )
 async def get_time_series(

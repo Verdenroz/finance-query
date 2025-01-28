@@ -18,24 +18,20 @@ router = APIRouter()
     tags=["News"],
     responses={
         200: {
+            "model": list[News],
             "description": "Successfully retrieved news",
-            "content": {
-                "application/json": {
-                    "example": [
-                        {
-                            "title": "Tech Giant Announces Quarterly Earnings",
-                            "link": "https://example.com/news/tech-earnings",
-                            "source": "Financial Times",
-                            "img": "https://example.com/news-image.jpg",
-                            "time": "2 hours ago"
-                        }
-                    ]
-                }
-            }
         },
-        404: {"description": "No news found for the given symbol"},
-        422: {"model": ValidationErrorResponse}
-    })
+        404: {
+            "description": "No news found",
+            "content": {"application/json": {"example": {"detail": "No news found for the given symbol"}}}
+        },
+        422: {
+            "model": ValidationErrorResponse,
+            "description": "Validation error of query parameters",
+            "content": {"application/json": {"example": {"detail": "Invalid request"}}}
+        }
+    }
+)
 async def get_news(
         symbol: Optional[str] = Query(
             None,

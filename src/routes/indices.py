@@ -16,7 +16,10 @@ router = APIRouter()
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[Index], "description": "Successfully retrieved indices"},
-        500: {"description": "Failed to parse indices"}
+        500: {
+            "description": "Failed to parse indices",
+            "content": {"application/json": {"example": {"detail": "Failed to parse indices"}}}
+        }
     }
 )
 async def get_indices():

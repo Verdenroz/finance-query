@@ -41,12 +41,84 @@ IndicatorFunctions = {
             "model": Analysis,
             "description": "The technical indicator data for the stock."
         },
-        400: {"description": "Invalid parameter for the technical indicator."},
+        400: {
+            "description": "Invalid parameter for the technical indicator.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid parameter: {parameter} for the {function} function."
+                    }
+                }
+            }
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Validation error when function or interval has invalid value."
+            "description": "Validation error when function or interval has invalid value.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "function": [
+                                "Field required",
+                                "Input should be 'SMA', 'EMA', 'WMA', 'VWMA', 'RSI', 'SRSI', 'STOCH', 'CCI', 'OBV', "
+                                "'BBANDS', 'AROON', 'ADX', 'MACD', 'SUPERTREND' or 'ICHIMOKU'"
+                            ],
+                            "symbol": ["Field required"],
+                            "interval": [
+                                "Input should be '1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo' or '3mo'"
+                            ],
+                            "period": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "stoch_period": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "signal_period": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "smooth": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "fast_period": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "slow_period": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "std_dev": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "sma_periods": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "multiplier": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "tenkan_period": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "kijun_period": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ],
+                            "senkou_period": [
+                                "Input should be a valid integer, unable to parse string as an integer"
+                            ]
+                        }
+                    }
+                }
+            }
         },
-        500: {"description": "Failed to retrieve technical indicators."}
+        500: {
+            "description": "Failed to retrieve technical indicators.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Failed to retrieve technical indicators"
+                    }
+                }
+            }
+        }
     }
 )
 async def get_technical_indicators(
@@ -113,14 +185,55 @@ async def get_technical_indicators(
             "model": SummaryAnalysis,
             "description": "The technical analysis summary for the stock."
         },
+        404: {
+            "description": "Symbol not found",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Symbol not found"
+                    }
+                }
+            }
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Validation error when interval has invalid value."
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "symbol": [
+                                "Field required"
+                            ],
+                            "interval": [
+                                "Input should be '1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo' or '3mo'"
+                            ]
+                        }
+                    }
+                }
+            }
         },
+        500: {
+            "description": "Failed to retrieve technical analysis",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Failed to retrieve technical analysis"
+                    }
+                }
+            }
+        }
     }
 )
 async def get_technical_analysis(
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
 ):
-    return await get_summary_analysis(symbol, interval)
+    try:
+        return await get_summary_analysis(symbol, interval)
+    except HTTPException as e:
+        # Re-raise HTTPException from get_summary_analysis
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}")

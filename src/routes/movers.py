@@ -17,7 +17,10 @@ router = APIRouter()
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successful retrieved most active stocks"},
-        500: {"description": "Failed to parse market movers"}
+        500: {
+            "description": "Failed to parse market movers",
+            "content": {"application/json": {"example": {"detail": "Failed to parse market movers"}}}
+        }
     }
 )
 async def get_actives():
@@ -34,7 +37,10 @@ async def get_actives():
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successfully retrieved top gaining stocks"},
-        500: {"description": "Failed to parse market movers"}
+        500: {
+            "description": "Failed to parse market movers",
+            "content": {"application/json": {"example": {"detail": "Failed to parse market movers"}}}
+        }
     }
 )
 async def get_gainers():
@@ -51,7 +57,10 @@ async def get_gainers():
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successfully retrieved top losing stocks"},
-        500: {"description": "Failed to parse market movers"}
+        500: {
+            "description": "Failed to parse market movers",
+            "content": {"application/json": {"example": {"detail": "Failed to parse market movers"}}}
+        }
     }
 )
 async def get_losers():

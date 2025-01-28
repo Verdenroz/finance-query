@@ -44,11 +44,24 @@ async def quotes_generator(symbols: list[str]):
                 }
             }
         },
-        404: {"description": "Symbol not found"},
+        404: {
+            "description": "Symbol not found",
+            "content": {"application/json": {"example": {"detail": "Symbol not found"}}}
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Invalid symbol"
-        }
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "symbols": ["Field required"]
+                        }
+                    }
+                }
+            }
+        },
     }
 )
 async def stream_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):

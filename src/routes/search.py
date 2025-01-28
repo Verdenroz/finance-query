@@ -21,10 +21,38 @@ router = APIRouter()
             "model": list[SearchResult],
             "description": "Search results returned successfully"
         },
-        400: {"description": "Query parameter should not be empty and hits must be between 1 and 20"},
+        400: {
+            "description": "Bad request",
+            "content": {
+                "application/json": {
+                    "examples": {
+                        "empty_query": {
+                            "summary": "Empty query parameter",
+                            "value": {"detail": "Query parameter should not be empty"}
+                        },
+                        "invalid_hits": {
+                            "summary": "Hits out of range",
+                            "value": {"detail": "Hits must be between 1 and 20"}
+                        }
+                    }
+                }
+            }
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Validation error due to invalid type of hits is NaN"
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "query": ["Field required"],
+                            "type": ["Input should be 'stock', 'etf', or 'trust'"],
+                            "hits": ["Input should be a valid integer, unable to parse string as an integer"]
+                        }
+                    }
+                }
+            }
         }
     }
 )

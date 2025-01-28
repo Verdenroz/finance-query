@@ -46,7 +46,7 @@ router = APIRouter()
                             }
                         },
                         "pre_market": {
-                            "summary": "Market is in pre-market",
+                            "summary": "Pre-market hours",
                             "value": {
                                 "status": "closed",
                                 "reason": "Pre-market",
@@ -54,7 +54,7 @@ router = APIRouter()
                             }
                         },
                         "after_market": {
-                            "summary": "Market is in after-market",
+                            "summary": "After-market hours",
                             "value": {
                                 "status": "closed",
                                 "reason": "After-hours",

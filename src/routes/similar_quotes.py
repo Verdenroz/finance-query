@@ -33,10 +33,24 @@ router = APIRouter()
                 }
             }
         },
-        404: {"description": "No similar stocks found or invalid symbol."},
+        404: {
+            "description": "No similar stocks found or invalid symbol.",
+            "content": {"application/json": {"example": {"detail": "No similar stocks found or invalid symbol"}}}
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Validation error when symbol is not provided or limit is NaN."
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "symbol": ["Field required"],
+                            "limit": ["Input should be a valid integer, unable to parse string as an integer"]
+                        }
+                    }
+                }
+            }
         }
     }
 )

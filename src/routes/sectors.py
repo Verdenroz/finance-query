@@ -3,7 +3,7 @@ from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
 from src.schemas import ValidationErrorResponse
-from src.schemas.sector import Sector
+from src.schemas.sector import Sector, SectorsResponse
 from src.services import get_sectors, get_sector_for_symbol, get_sector_details
 
 router = APIRouter()
@@ -14,10 +14,12 @@ router = APIRouter()
     summary="Get sector performance and information",
     description="Returns a summary of all sectors, or detailed information for a specific sector or symbol, "
                 "depending on the query parameters provided.",
+    response_model=SectorsResponse,
     tags=["Sectors"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
+            "model": SectorsResponse,
             "description": "Successfully retrieved sector information",
             "content": {
                 "application/json": {
@@ -99,10 +101,32 @@ router = APIRouter()
                 }
             }
         },
-        404: {"description": "Symbol not found when querying sector by symbol"},
+        404: {
+            "description": "Sector not found when querying sector by symbol",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Sector for {symbol} not found"
+                    }
+                }
+            }
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Validation error name is not a valid sector"
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "name": [
+                                "Input should be 'Basic Materials', 'Communication Services', 'Consumer Cyclical', "
+                                "'Consumer Defensive', 'Energy', 'Financial Services', 'Healthcare', 'Industrials', "
+                                "'Real Estate', 'Technology' or 'Utilities'"]
+                        }
+                    }
+                }
+            }
         }
     }
 )

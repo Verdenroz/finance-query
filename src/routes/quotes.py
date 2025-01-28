@@ -17,10 +17,13 @@ router = APIRouter()
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[Quote], "description": "Successfully retrieved quotes"},
-        404: {"description": "Symbol not found"},
+        404: {
+            "description": "Symbol not found",
+            "content": {"application/json": {"example": {"detail": "Symbol not found"}}}
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Validation error when symbols are not provided",
+            "description": "Validation error of query parameters",
             "content": {
                 "application/json": {
                     "example": {
@@ -32,7 +35,10 @@ router = APIRouter()
                 }
             }
         },
-        500: {"description": "Failed to get quote for {symbol}"}
+        500: {
+            "description": "Failed to get quote",
+            "content": {"application/json": {"example": {"detail": "Failed to get quote for {symbol}"}}}
+        }
     }
 )
 async def get_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
@@ -53,10 +59,13 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[SimpleQuote], "description": "Successfully retrieved quotes"},
-        404: {"description": "Symbol not found"},
+        404: {
+            "description": "Symbol not found",
+            "content": {"application/json": {"example": {"detail": "Symbol not found"}}}
+        },
         422: {
             "model": ValidationErrorResponse,
-            "description": "Validation error when symbols are not provided",
+            "description": "Validation error of query parameters",
             "content": {
                 "application/json": {
                     "example": {
@@ -68,10 +77,14 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
                 }
             }
         },
-        500: {"description": "Failed to get simple quote for {symbol}"}
+        500: {
+            "description": "Failed to get simple quote",
+            "content": {"application/json": {"example": {"detail": "Failed to get simple quote for {symbol}"}}}
+        }
     }
 )
-async def get_simple_quote(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
+async def get_simple_quote(
+        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
     symbols = list(set(symbols.upper().replace(' ', '').split(',')))
     quotes = await scrape_simple_quotes(symbols)
 
