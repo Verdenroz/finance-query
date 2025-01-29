@@ -273,17 +273,18 @@ class Analysis(BaseModel):
 class SummaryAnalysis(BaseModel):
     symbol: str = Field(
         default=...,
-        description="Stock symbol"
+        description="Stock symbol",
+        examples=["NVDA"]
     )
     sma_10: Optional[float] = Field(
         default=None,
         description="10-day Simple Moving Average",
-        serialization_alias="SMA(10)"
+        serialization_alias="SMA(10)",
     )
     sma_20: Optional[float] = Field(
         default=None,
         description="20-day Simple Moving Average",
-        serialization_alias="SMA(20)"
+        serialization_alias="SMA(20)",
     )
     sma_50: Optional[float] = Field(
         default=None,

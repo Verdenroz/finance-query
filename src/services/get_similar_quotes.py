@@ -1,6 +1,5 @@
 from fastapi import HTTPException
 from lxml import etree
-from typing_extensions import List
 
 from src.redis import cache
 from src.schemas import SimpleQuote
@@ -8,7 +7,13 @@ from src.utils import fetch
 
 
 @cache(expire=15, market_closed_expire=600)
-async def scrape_similar_quotes(symbol: str, limit: int = 10) -> List[SimpleQuote]:
+async def scrape_similar_quotes(symbol: str, limit: int = 10) -> list[SimpleQuote]:
+    """
+    Scrape similar stocks from Yahoo Finance for a single symbol
+    :param symbol: the symbol of the stock to find similar stocks around
+    :param limit: the number of similar stocks to return
+    :return:
+    """
     url = 'https://finance.yahoo.com/quote/' + symbol
     html = await fetch(url)
 
@@ -21,7 +26,14 @@ async def scrape_similar_quotes(symbol: str, limit: int = 10) -> List[SimpleQuot
     return similar
 
 
-async def _parse_similar_quotes(html: str, symbol: str, limit: int) -> List[SimpleQuote]:
+async def _parse_similar_quotes(html: str, symbol: str, limit: int) -> list[SimpleQuote]:
+    """
+    Parse similar stocks from Yahoo Finance HTML
+    :param html: the HTML content of the Yahoo Finance page
+    :param symbol: the symbol of the stock to find similar stocks around
+    :param limit: the number of similar stocks to return
+    :return: a list of SimpleQuote objects
+    """
     tree = etree.HTML(html)
 
     # Try to parse stocks first

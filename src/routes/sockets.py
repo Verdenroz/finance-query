@@ -12,9 +12,9 @@ from src.schemas import SimpleQuote
 from src.services import (
     scrape_quotes, scrape_similar_quotes, scrape_actives,
     scrape_news_for_quote, scrape_losers, scrape_gainers,
-    scrape_simple_quotes, scrape_indices, scrape_general_news
+    scrape_simple_quotes, scrape_indices, scrape_general_news,
+    get_sectors, get_sector_for_symbol
 )
-from src.services.get_sectors import get_sector_for_symbol, get_sectors
 
 router = APIRouter()
 

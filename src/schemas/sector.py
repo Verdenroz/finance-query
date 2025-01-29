@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import List
+from typing import List, Union
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, RootModel
 
 
 class Sector(Enum):
@@ -51,7 +51,7 @@ class MarketSector(BaseModel):
     )
 
     def dict(self, *args, **kwargs):
-        base_dict = super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
+        base_dict = super().model_dump(*args, **kwargs, exclude_none=True, by_alias=True)
         return {k: v for k, v in base_dict.items() if v is not None}
 
 
@@ -89,3 +89,7 @@ class MarketSectorDetails(MarketSector):
 
     def dict(self, *args, **kwargs):
         return super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
+
+
+class SectorsResponse(RootModel):
+    root: Union[List[MarketSector], MarketSector, MarketSectorDetails]

@@ -2,26 +2,30 @@ import asyncio
 import datetime
 import os
 import time
+from collections import defaultdict
 from contextlib import asynccontextmanager
 
 from dotenv import load_dotenv
 from fastapi import FastAPI
+from fastapi.encoders import jsonable_encoder
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from mangum import Mangum
-from starlette.responses import Response
+from starlette import status
+from starlette.responses import Response, JSONResponse
 
 from src.di import get_global_session, close_global_session, get_global_rate_limit_manager
 from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
-from src.schemas.sector import Sector
-from src.schemas.time_series import TimePeriod, Interval
+from src.schemas import ValidationErrorResponse, Sector, TimePeriod, Interval
 from src.security import RateLimitMiddleware
-from src.services import scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors, \
-    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, scrape_quotes, \
-    scrape_similar_quotes, get_historical, get_search, scrape_simple_quotes
-from src.services.indicators.get_summary_analysis import get_summary_analysis
+from src.services import (
+    scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors,
+    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, scrape_quotes,
+    scrape_similar_quotes, get_historical, get_search, scrape_simple_quotes, get_summary_analysis
+)
 
 load_dotenv()
 
@@ -51,12 +55,12 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.5.10",
+    version="1.5.11",
     description="FinanceQuery is a simple API to query financial data."
                 " It provides endpoints to get quotes, historical prices, indices,"
                 " market movers, similar stocks, finance news, indicators, search, and sectors."
-                "Please note if an admin key is not set, a rate limit of 2000/day will be applied to the request's ip "
-                "address."
+                " Please note if an admin key is not set, a rate limit of 2000/day will be applied to the request's ip"
+                " address."
                 " You are free to deploy your own instance of FinanceQuery to AWS and create your onw admin API key."
                 " If you are testing locally you can use the local server and will not need a key."
     ,
@@ -88,52 +92,69 @@ if os.getenv('USE_SECURITY', 'False') == 'True':
     app.add_middleware(RateLimitMiddleware, rate_limit_manager=get_global_rate_limit_manager())
 
 
-@app.get("/health",
-         response_model=dict,
-         description="Detailed health check endpoint",
-         tags=["Health Check"],
-         responses={
-             200: {
-                 "description": "Successful Response",
-                 "content": {
-                     "application/json": {
-                         "example": {
-                             "status": "healthy",
-                             "timestamp": "2023-10-01T12:34:56.789Z",
-                             "redis": {
-                                 "status": "healthy",
-                                 "latency_ms": 1.23
-                             },
-                             "scraping": {
-                                 "Scraping status": "21/21 succeeded",
-                                 "Indices": {"status": "succeeded"},
-                                 "Market Actives": {"status": "succeeded"},
-                                 "Market Losers": {"status": "succeeded"},
-                                 "Market Gainers": {"status": "succeeded"},
-                                 "Market Sectors": {"status": "succeeded"},
-                                 "Sector for a symbol": {"status": "succeeded"},
-                                 "Detailed Sector": {"status": "succeeded"},
-                                 "General News": {"status": "succeeded"},
-                                 "News for equity": {"status": "succeeded"},
-                                 "News for ETF": {"status": "succeeded"},
-                                 "Full Quotes": {"status": "succeeded"},
-                                 "Simple Quotes": {"status": "succeeded"},
-                                 "Similar Equities": {"status": "succeeded"},
-                                 "Similar ETFs": {"status": "succeeded"},
-                                 "Historical day prices": {"status": "succeeded"},
-                                 "Historical week prices": {"status": "succeeded"},
-                                 "Historical month prices": {"status": "succeeded"},
-                                 "Historical year prices": {"status": "succeeded"},
-                                 "Historical five year prices": {"status": "succeeded"},
-                                 "Search": {"status": "succeeded"},
-                                 "Summary Analysis": {"status": "succeeded"}
-                             }
-                         }
-                     }
-                 }
-             }
-         }
-         )
+@app.exception_handler(RequestValidationError)
+async def request_validation_error_formatter(request, exc):
+    reformatted_message = defaultdict(list)
+    for pydantic_error in exc.errors():
+        loc, msg = pydantic_error["loc"], pydantic_error["msg"]
+        filtered_loc = loc[1:] if loc[0] in ("body", "query", "path") else loc
+        field_string = ".".join(filtered_loc)  # nested fields with dot-notation
+        reformatted_message[field_string].append(msg)
+
+    error_response = ValidationErrorResponse(errors=reformatted_message)
+
+    return JSONResponse(
+        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+        content=jsonable_encoder(error_response)
+    )
+
+
+@app.get(
+    path="/health",
+    description="Detailed health check endpoint, checking the status of the API and its dependencies.",
+    tags=["Health Check"],
+    responses={
+        200: {
+            "description": "Successful Response",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "healthy",
+                        "timestamp": "2023-10-01T12:34:56.789Z",
+                        "redis": {
+                            "status": "healthy",
+                            "latency_ms": 1.23
+                        },
+                        "scraping": {
+                            "Scraping status": "21/21 succeeded",
+                            "Indices": {"status": "succeeded"},
+                            "Market Actives": {"status": "succeeded"},
+                            "Market Losers": {"status": "succeeded"},
+                            "Market Gainers": {"status": "succeeded"},
+                            "Market Sectors": {"status": "succeeded"},
+                            "Sector for a symbol": {"status": "succeeded"},
+                            "Detailed Sector": {"status": "succeeded"},
+                            "General News": {"status": "succeeded"},
+                            "News for equity": {"status": "succeeded"},
+                            "News for ETF": {"status": "succeeded"},
+                            "Full Quotes": {"status": "succeeded"},
+                            "Simple Quotes": {"status": "succeeded"},
+                            "Similar Equities": {"status": "succeeded"},
+                            "Similar ETFs": {"status": "succeeded"},
+                            "Historical day prices": {"status": "succeeded"},
+                            "Historical week prices": {"status": "succeeded"},
+                            "Historical month prices": {"status": "succeeded"},
+                            "Historical year prices": {"status": "succeeded"},
+                            "Historical five year prices": {"status": "succeeded"},
+                            "Search": {"status": "succeeded"},
+                            "Summary Analysis": {"status": "succeeded"}
+                        }
+                    }
+                }
+            }
+        }
+    }
+)
 async def health():
     """
         Comprehensive health check endpoint that verifies:
@@ -232,24 +253,24 @@ async def health():
     return health_report
 
 
-@app.get("/ping",
-         response_model=dict[str, str],
-         description="Basic health check endpoint",
-         tags=["Health Check"],
-         responses={
-             200: {
-                 "description": "Successful Response",
-                 "content": {
-                     "application/json": {
-                         "example": {
-                             "status": "healthy",
-                             "timestamp": "2023-10-01T12:34:56.789Z"
-                         }
-                     }
-                 }
-             }
-         }
-         )
+@app.get(
+    path="/ping",
+    description="Check if the server is reachable",
+    tags=["Health Check"],
+    responses={
+        200: {
+            "description": "Successful Response",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "status": "healthy",
+                        "timestamp": "2023-10-01T12:34:56.789Z"
+                    }
+                }
+            }
+        }
+    }
+)
 async def ping(response: Response):
     """
     Simple health check endpoint to verify the API is up and running.
@@ -262,17 +283,17 @@ async def ping(response: Response):
     }
 
 
+app.include_router(sockets_router)
+app.include_router(hours_router)
 app.include_router(quotes_router, prefix="/v1")
 app.include_router(historical_prices_router, prefix="/v1")
-app.include_router(indicators_router, prefix="/v1")
-app.include_router(indices_router, prefix="/v1")
 app.include_router(movers_router, prefix="/v1")
 app.include_router(similar_quotes_router, prefix="/v1")
 app.include_router(finance_news_router, prefix="/v1")
-app.include_router(search_router, prefix="/v1")
+app.include_router(indices_router, prefix="/v1")
 app.include_router(sectors_router, prefix="/v1")
+app.include_router(search_router, prefix="/v1")
+app.include_router(indicators_router, prefix="/v1")
 app.include_router(stream_router, prefix="/v1")
-app.include_router(hours_router)
-app.include_router(sockets_router)
 
 handler = Mangum(app)

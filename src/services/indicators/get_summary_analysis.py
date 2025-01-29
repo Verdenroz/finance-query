@@ -9,7 +9,14 @@ from src.schemas.time_series import Interval, TimePeriod
 from src.services.get_historical import get_historical_quotes
 
 
-async def get_summary_sma(quotes, periods, sma=None):
+async def get_summary_sma(quotes, periods, sma=None) -> list:
+    """
+    Recursively calculate the Simple Moving Average (SMA) for a list of periods and return the results
+    :param quotes: the historical quotes to calculate the SMA for
+    :param periods: the list of periods to calculate the SMA for
+    :param sma: the list of SMA values to append to, initially empty
+    :return: a list of SMA values for the given periods
+    """
     try:
         if sma is None:
             sma = []
@@ -26,10 +33,17 @@ async def get_summary_sma(quotes, periods, sma=None):
         return await get_summary_sma(remaining_quotes, remaining_periods, sma)
     except SystemError:
         # Error within the stock-indicators library itself
-        return None
+        return []
 
 
-async def get_summary_ema(quotes, periods, ema=None):
+async def get_summary_ema(quotes, periods, ema=None) -> list:
+    """
+    Recursively calculate the Exponential Moving Average (EMA) for a list of periods and return the results
+    :param quotes: the historical quotes to calculate the EMA for
+    :param periods: the list of periods to calculate the EMA for
+    :param ema: the list of EMA values to append to, initially empty
+    :return: the list of EMA values for the given periods
+    """
     try:
         if ema is None:
             ema = []
@@ -45,10 +59,17 @@ async def get_summary_ema(quotes, periods, ema=None):
         return await get_summary_ema(remaining_quotes, remaining_periods, ema)
     except SystemError:
         # Error within the stock-indicators library itself
-        return None
+        return []
 
 
-async def get_summary_wma(quotes, periods, wma=None):
+async def get_summary_wma(quotes, periods, wma=None) -> list:
+    """
+    Recursively calculate the Weighted Moving Average (WMA) for a list of periods and return the results
+    :param quotes: the historical quotes to calculate the WMA for
+    :param periods: the list of periods to calculate the WMA for
+    :param wma: the list of WMA values to append to, initially empty
+    :return: the list of WMA values for the given periods
+    """
     try:
         if wma is None:
             wma = []
@@ -64,10 +85,16 @@ async def get_summary_wma(quotes, periods, wma=None):
         return await get_summary_wma(remaining_quotes, remaining_periods, wma)
     except SystemError:
         # Error within the stock-indicators library itself
-        return None
+        return []
 
 
-async def get_summary_vwma(quotes, period=20):
+async def get_summary_vwma(quotes, period=20) -> float | None:
+    """
+    Calculates the Volume Weighted Moving Average (VWMA) for a given period
+    :param quotes: the historical quotes to calculate the VWMA for
+    :param period: the default period to calculate the VWMA for (should not change)
+    :return: the VWMA value for the given period or None if it cannot be calculated
+    """
     try:
         vwma = get_vwma(quotes, period)[-1].vwma
         if vwma:
@@ -78,7 +105,13 @@ async def get_summary_vwma(quotes, period=20):
         return None
 
 
-async def get_summary_rsi(quotes, period=14):
+async def get_summary_rsi(quotes, period=14) -> float | None:
+    """
+    Calculates the Relative Strength Index (RSI) for a given period
+    :param quotes: the historical quotes to calculate the RSI for
+    :param period: the default period to calculate the RSI for (should not change)
+    :return: the RSI value for the given period or None if it cannot be calculated
+    """
     try:
         rsi = get_rsi(quotes, period)[-1].rsi
         if rsi:
@@ -89,7 +122,16 @@ async def get_summary_rsi(quotes, period=14):
         return None
 
 
-async def get_summary_srsi(quotes, period=14, stoch_period=14, signal_period=3, smooth=3):
+async def get_summary_srsi(quotes, period=14, stoch_period=14, signal_period=3, smooth=3) -> float | None:
+    """
+    Calculates the Stochastic RSI (SRSI) for a given period
+    :param quotes: the historical quotes to calculate the SRSI for
+    :param period: the default period to calculate the RSI for (should not change)
+    :param stoch_period: the default period to calculate the Stochastic Oscillator for (should not change)
+    :param signal_period: the default period to calculate the signal line for (should not change)
+    :param smooth: the default period to smooth the signal line for (should not change)
+    :return: the SRSI value for the given period or None if it cannot be calculated
+    """
     try:
         srsi = get_stoch_rsi(quotes, rsi_periods=period, stoch_periods=stoch_period,
                              signal_periods=signal_period, smooth_periods=smooth)[-1].stoch_rsi
@@ -101,7 +143,15 @@ async def get_summary_srsi(quotes, period=14, stoch_period=14, signal_period=3, 
         return None
 
 
-async def get_summary_stoch(quotes, period=14, signal_period=3, smooth=3):
+async def get_summary_stoch(quotes, period=14, signal_period=3, smooth=3) -> float | None:
+    """
+    Calculates the Stochastic Oscillator (STOCH) for a given period
+    :param quotes: the historical quotes to calculate the STOCH for
+    :param period: the default period to calculate the STOCH for (should not change)
+    :param signal_period: the default period to calculate the signal line for (should not change)
+    :param smooth: the default period to smooth the signal line for (should not change)
+    :return: the STOCH value for the given period or None if it cannot be calculated
+    """
     try:
         stoch = get_stoch(quotes, lookback_periods=period, signal_periods=signal_period, smooth_periods=smooth)[-1].k
         if stoch:
@@ -112,7 +162,13 @@ async def get_summary_stoch(quotes, period=14, signal_period=3, smooth=3):
         return None
 
 
-async def get_summary_cci(quotes, period=20):
+async def get_summary_cci(quotes, period=20) -> float | None:
+    """
+    Calculates the Commodity Channel Index (CCI) for a given period
+    :param quotes: the historical quotes to calculate the CCI for
+    :param period: the default period to calculate the CCI for (should not change)
+    :return: the CCI value for the given period or None if it cannot be calculated
+    """
     try:
         cci = get_cci(quotes, period)[-1].cci
         if cci:
@@ -123,9 +179,18 @@ async def get_summary_cci(quotes, period=20):
         return None
 
 
-async def get_summary_macd(quotes, fast_period=12, slow_period=26, signal_period=9):
+async def get_summary_macd(quotes, fast_period=12, slow_period=26, signal_period=9) -> MACDData | None:
+    """
+    Calculates the Moving Average Convergence Divergence (MACD) for a given period
+    :param quotes: the historical quotes to calculate the MACD for
+    :param fast_period: the default period to calculate the fast EMA for (should not change)
+    :param slow_period: the default period to calculate the slow EMA for (should not change)
+    :param signal_period: the default period to calculate the signal line for (should not change)
+    :return: the MACD value for the given period or None if it cannot be calculated
+    """
     try:
-        macd = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[-1].macd
+        macd = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[
+            -1].macd
         signal = get_macd(quotes, fast_periods=fast_period, slow_periods=slow_period, signal_periods=signal_period)[
             -1].signal
         if macd and signal:
@@ -136,7 +201,13 @@ async def get_summary_macd(quotes, fast_period=12, slow_period=26, signal_period
         return None
 
 
-async def get_summary_adx(quotes, period=14):
+async def get_summary_adx(quotes, period=14) -> float | None:
+    """
+    Calculates the Average Directional Index (ADX) for a given period
+    :param quotes: the historical quotes to calculate the ADX for
+    :param period: the default period to calculate the ADX for (should not change)
+    :return:
+    """
     try:
         adx = get_adx(quotes, period)[-1].adx
         if adx:
@@ -147,7 +218,13 @@ async def get_summary_adx(quotes, period=14):
         return None
 
 
-async def get_summary_aroon(quotes, period=25):
+async def get_summary_aroon(quotes, period=25) -> AROONData | None:
+    """
+    Calculates the Aroon indicator for a given period
+    :param quotes: the historical quotes to calculate the Aroon indicator for
+    :param period: the default period to calculate the Aroon indicator for (should not change)
+    :return: the Aroon indicator value for the given period or None if it cannot be calculated
+    """
     try:
         aroon = get_aroon(quotes, lookback_periods=period)[-1]
         upper_band = aroon.aroon_up
@@ -160,9 +237,17 @@ async def get_summary_aroon(quotes, period=25):
         return None
 
 
-async def get_summary_bbands(quotes, period=20, std_dev=2):
+async def get_summary_bbands(quotes, period=20, std_dev=2) -> BBANDSData | None:
+    """
+    Calculates the Bollinger Bands for a given period
+    :param quotes: the historical quotes to calculate the Bollinger Bands for
+    :param period: the default period to calculate the Bollinger Bands for (should not change)
+    :param std_dev: the default standard deviation to calculate the Bollinger Bands for (should not change)
+    :return: the Bollinger Bands value for the given period or None if it cannot be calculated
+    """
     try:
-        bbands = get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev).remove_warmup_periods()[
+        bbands = \
+        get_bollinger_bands(quotes, lookback_periods=period, standard_deviations=std_dev).remove_warmup_periods()[
             -1]
         upper_band = bbands.upper_band
         lower_band = bbands.lower_band
@@ -174,7 +259,14 @@ async def get_summary_bbands(quotes, period=20, std_dev=2):
         return None
 
 
-async def get_summary_super_trend(quotes, period=10, multiplier=3):
+async def get_summary_super_trend(quotes, period=10, multiplier=3) -> SuperTrendData | None:
+    """
+    Calculates the SuperTrend indicator for a given period
+    :param quotes: the historical quotes to calculate the SuperTrend indicator for
+    :param period: the default period to calculate the SuperTrend indicator for (should not change)
+    :param multiplier: the default multiplier to calculate the SuperTrend indicator for (should not change)
+    :return: the SuperTrend indicator value for the given period or None if it cannot be calculated
+    """
     try:
         super_trend = get_super_trend(quotes, lookback_periods=period, multiplier=multiplier)[-1]
         if not super_trend.super_trend:
@@ -187,7 +279,12 @@ async def get_summary_super_trend(quotes, period=10, multiplier=3):
         return None
 
 
-async def get_summary_ichimoku(quotes):
+async def get_summary_ichimoku(quotes) -> IchimokuData | None:
+    """
+    Calculates the Ichimoku Cloud indicator
+    :param quotes: the historical quotes to calculate the Ichimoku Cloud for
+    :return: the Ichimoku Cloud indicator values or None if it cannot be calculated
+    """
     try:
         ichimoku = get_ichimoku(quotes)[-1]
         tenkan_sen = ichimoku.tenkan_sen
@@ -201,19 +298,32 @@ async def get_summary_ichimoku(quotes):
         # Error within the stock-indicators library itself
         return None
 
+
 @cache(expire=60, market_closed_expire=600)
-async def get_summary_analysis(symbol: str, interval: Interval):
+async def get_summary_analysis(symbol: str, interval: Interval) -> dict:
+    """
+    Get a summary analysis of technical indicators for a stock symbol, based on the interval provided.
+    Includes Simple Moving Average (SMA), Exponential Moving Average (EMA), Weighted Moving Average (WMA),
+    Volume Weighted Moving Average (VWMA), Relative Strength Index (RSI), Stochastic RSI (SRSI),
+    Stochastic Oscillator (STOCH), Commodity Channel Index (CCI), Moving Average Convergence Divergence (MACD),
+    Average Directional Index (ADX), Aroon indicator, Bollinger Bands, SuperTrend, and Ichimoku Cloud.
+    :param symbol: the symbol of the stock to get the summary analysis for
+    :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
+    :return: the serialized summary analysis as a dictionary
+    """
     # Get the most historical data available given the interval
     # (1m, 5m, 15m, 30m -> One month)
     if interval == Interval.ONE_MINUTE or interval == Interval.FIVE_MINUTES or interval == Interval.FIFTEEN_MINUTES or interval == Interval.THIRTY_MINUTES:
-        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.ONE_MONTH, interval=interval)
+        quotes = await get_historical_quotes(symbol, period=TimePeriod.ONE_MONTH, interval=interval)
     # (1h -> One year)
     elif interval == Interval.ONE_HOUR:
-        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.YEAR, interval=interval)
+        quotes = await get_historical_quotes(symbol, period=TimePeriod.YEAR, interval=interval)
     # (1d, 1wk, 1mo, 3mo -> Max)
     else:
-        quotes = await get_historical_quotes(symbol, timePeriod=TimePeriod.MAX, interval=interval)
+        quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
+
     summary = SummaryAnalysis(symbol=symbol.upper())
+    # Define the tasks to run concurrently
     tasks = [
         get_summary_sma(quotes[:200], [200, 100, 50, 20, 10]),
         get_summary_ema(quotes[:750], [200, 100, 50, 20, 10]),
@@ -232,7 +342,8 @@ async def get_summary_analysis(symbol: str, interval: Interval):
     ]
     # Run the tasks concurrently and unpack the results
     sma, ema, wma, vwma, rsi, srsi, stoch, cci, macd, adx, aroon, bbands, super_trend, ichimoku = await (
-        asyncio.gather(*tasks))
+        asyncio.gather(*tasks)
+    )
 
     summary.sma_10 = sma[4] if sma else None
     summary.sma_20 = sma[3] if sma else None

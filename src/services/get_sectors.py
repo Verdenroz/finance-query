@@ -1,13 +1,11 @@
 import asyncio
-from typing import List
 
 from fastapi import HTTPException
 from lxml import etree
 from yahooquery import Ticker
 
 from src.redis import cache
-from src.schemas import MarketSector
-from src.schemas.sector import Sector, MarketSectorDetails
+from src.schemas import MarketSector, MarketSectorDetails, Sector
 from src.utils import fetch
 
 urls = {
@@ -24,9 +22,15 @@ urls = {
     Sector.COMMUNICATION: 'https://finance.yahoo.com/sectors/communication-services/'
 }
 
+
 @cache(expire=300, market_closed_expire=3600)
-async def get_sectors() -> List[MarketSector]:
+async def get_sectors() -> list[MarketSector]:
+    """
+    Fetches and parses sector data for all sectors.
+    :return: a list of MarketSector objects
+    """
     tasks = []
+    # Fetch sector data concurrently
     for sector, url in urls.items():
         tasks.append((sector.value, fetch(url)))
     responses = await asyncio.gather(*[task for _, task in tasks])
@@ -40,6 +44,13 @@ async def get_sectors() -> List[MarketSector]:
 
 @cache(expire=60, market_closed_expire=600)
 async def get_sector_for_symbol(symbol: str) -> MarketSector:
+    """
+    Fetches and parses sector data for a specific stock symbol.
+    :param symbol: the stock symbol
+    :return: a single MarketSector object
+
+    :raises HTTPException: with code 404 if the sector for the symbol is not found
+    """
     ticker = Ticker(symbol)
     profile = ticker.asset_profile
     sector = profile[symbol]['sector'] if 'sector' in profile[symbol] else None
@@ -55,6 +66,11 @@ async def get_sector_for_symbol(symbol: str) -> MarketSector:
 
 @cache(expire=300, market_closed_expire=3600)
 async def get_sector_details(sector: Sector) -> MarketSectorDetails:
+    """
+    Fetches and parses detailed sector data for a specific sector.
+    :param sector: the sector to get detailed data for
+    :return: a MarketSectorDetails object
+    """
     url = urls[sector]
     html = await fetch(url)
     sector = await parse_sector_details(html, sector.value)
@@ -63,6 +79,12 @@ async def get_sector_details(sector: Sector) -> MarketSectorDetails:
 
 
 async def parse_sector(html: str, sector: str) -> MarketSector:
+    """
+    Parses sector data from the HTML response.
+    :param html: the HTML content
+    :param sector: the sector name
+    :return: a MarketSector object
+    """
     tree = etree.HTML(html)
     container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/section[2]'
     card_xpath = './/section'
@@ -92,7 +114,18 @@ async def parse_sector(html: str, sector: str) -> MarketSector:
 
 
 async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetails:
-    async def parse_info(tree: etree.ElementTree):
+    """
+    Parses detailed sector data from the HTML response.
+    :param html: the HTML content
+    :param sector_name: the sector name
+    :return: the MarketSectorDetails object
+    """
+    async def parse_info(tree: etree.ElementTree) -> list[str]:
+        """
+        Parses the market cap, market weight, num. industries, and num. companies from the HTML tree.
+        :param tree: the lxml tree
+        :return: a list of the parsed data
+        """
         container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/div/section/div[2]/div[2]'
         market_cap_xpath = './/div[1]/div[2]/text()'
         market_weight_xpath = './/div[2]/div[2]/text()'
@@ -107,7 +140,12 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
 
         return [market_cap_text, market_weight_text, industries_text, companies_text]
 
-    async def parse_returns(tree: etree.ElementTree):
+    async def parse_returns(tree: etree.ElementTree) -> list[str]:
+        """
+        Parses the returns data from the HTML tree.
+        :param tree: the lxml tree
+        :return: the returns data as a list
+        """
         container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/section[2]'
         card_xpath = './/section'
         sector_perf_xpath = './/div[div[text()="Sector"]]/div[2]/text()'
@@ -129,7 +167,12 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
 
         return performance_data
 
-    async def parse_industries(tree: etree.ElementTree):
+    async def parse_industries(tree: etree.ElementTree) -> list[str]:
+        """
+        Parses the top industries from the HTML tree.
+        :param tree: the lxml tree
+        :return: the top industries as a list
+        """
         container_xpath = '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[1]/div/div[2]/table/tbody/tr'
         industry_name_xpath = './td[1]/text()'
         market_weight_xpath = './td[2]/span/text()'
@@ -144,7 +187,12 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
 
         return parsed_industries
 
-    async def parse_companies(tree: etree.ElementTree):
+    async def parse_companies(tree: etree.ElementTree) -> list[str]:
+        """
+        Parses the top companies from the HTML tree.
+        :param tree: the lxml tree
+        :return: the top companies as a list
+        """
         container_xpath = '/html/body/div[2]/main/section/section/section/article/section[3]/div[2]/div/table/tbody/tr'
         symbol_xpath = './td[1]//a/div/span[1]/text()'
 
@@ -163,7 +211,8 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
     industries_task = parse_industries(tree)
     companies_task = parse_companies(tree)
 
-    info, returns, industries, companies = await asyncio.gather(info_task, returns_task, industries_task, companies_task)
+    info, returns, industries, companies = await asyncio.gather(info_task, returns_task, industries_task,
+                                                                companies_task)
 
     data = returns + info + industries
 
