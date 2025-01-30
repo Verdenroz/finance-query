@@ -65,7 +65,7 @@ class MarketSectorDetails(MarketSector):
         default=...,
         title="Market weight",
         serialization_alias="marketWeight"
-    ),
+    )
     industries: int = Field(
         default=...,
         title="Number of industries",
