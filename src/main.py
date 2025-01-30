@@ -5,16 +5,18 @@ import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
+import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_injectable import cleanup_all_exit_stacks
 from mangum import Mangum
 from starlette import status
 from starlette.responses import Response, JSONResponse
 
-from src.di import get_global_session, close_global_session, get_global_rate_limit_manager
+from src.di import get_global_rate_limit_manager
 from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
@@ -32,25 +34,28 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    session = await get_global_session()
+    """
+    FastAPI lifespan context manager that handles proxy setup and cleanup.
+    """
     api_url = None
     proxy_header_token = None
     payload = None
-    if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
-        async with session.get("https://api.ipify.org/") as ip_response:
-            ip = await ip_response.text()
+    try:
+        if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
+            ip_response = requests.get("https://api.ipify.org/")
+            ip = ip_response.text
             api_url = "https://api.brightdata.com/zone/whitelist"
             proxy_header_token = {
                 "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
                 "Content-Type": "application/json"
             }
             payload = {"ip": ip}
-            await session.post(api_url, headers=proxy_header_token, json=payload)
-    yield
-    if api_url and proxy_header_token and payload:
-        await session.delete(api_url, headers=proxy_header_token, json=payload)
-    await close_global_session()
-    await r.close()
+            requests.post(api_url, headers=proxy_header_token, json=payload)
+        yield
+    finally:
+        if api_url and proxy_header_token and payload:
+            requests.delete(api_url, headers=proxy_header_token, json=payload)
+        await cleanup_all_exit_stacks()
 
 
 app = FastAPI(
