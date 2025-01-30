@@ -1,26 +1,23 @@
-from typing import Optional
+from typing import Optional, AsyncGenerator
 
 from aiohttp import ClientSession
 
 from src.constants import headers
 from src.security import RateLimitManager
 
-global_session: Optional[ClientSession] = None
 global_rate_limit_manager: Optional[RateLimitManager] = None
 
 
-async def get_global_session() -> ClientSession:
-    global global_session
-    if global_session is None:
-        global_session = ClientSession(max_field_size=30000, headers=headers)
-    return global_session
-
-
-async def close_global_session():
-    global global_session
-    if global_session is not None:
-        await global_session.close()
-        global_session = None
+async def get_session() -> AsyncGenerator[ClientSession, None]:
+    """
+    Creates and yields an aiohttp ClientSession with proper cleanup.
+    Headers can be customized as needed.
+    """
+    session = ClientSession(headers=headers, max_field_size=30000)
+    try:
+        yield session
+    finally:
+        await session.close()
 
 
 def get_global_rate_limit_manager() -> RateLimitManager:
