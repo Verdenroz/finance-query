@@ -220,7 +220,7 @@ async def _scrape_logo(tree: etree.ElementTree) -> str:
     website_elements = tree.xpath(website_xpath)
     website = website_elements[0].strip() if website_elements else None
 
-    return await get_logo(website) if website else None
+    return await get_logo(url=website) if website else None
 
 
 async def _scrape_company_info(tree: etree.ElementTree):
@@ -251,7 +251,7 @@ async def _scrape_company_info(tree: etree.ElementTree):
             results[key] = elements[0].strip() if elements else None
 
         # Get logo asynchronously if website exists
-        logo = await get_logo(results['website']) if results.get('website') else None
+        logo = await get_logo(url=results['website']) if results.get('website') else None
 
         return {
             'sector': results['sector'],
@@ -311,7 +311,7 @@ async def _scrape_quote(symbol: str) -> Quote:
     """
     try:
         url = f'https://finance.yahoo.com/quote/{symbol}/'
-        html_content = await fetch(url)
+        html_content = await fetch(url=url)
 
         # Parse HTML in a separate thread
         loop = asyncio.get_event_loop()
@@ -365,7 +365,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
     """
     try:
         url = f'https://finance.yahoo.com/quote/{symbol}/'
-        html_content = await fetch(url)
+        html_content = await fetch(url=url)
 
         # Parse HTML in a separate thread
         loop = asyncio.get_event_loop()
@@ -386,7 +386,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
         website_elements = tree.xpath(
             '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href')
         website = website_elements[0].strip() if website_elements else None
-        logo = await get_logo(website) if website else None
+        logo = await get_logo(url=website) if website else None
 
         return SimpleQuote(
             symbol=symbol.upper(),
@@ -483,7 +483,7 @@ async def _get_quote_from_yahooquery(symbol: str) -> Quote:
             sector=profile.get(symbol, {}).get('sector'),
             industry=profile.get(symbol, {}).get('industry'),
             about=profile.get(symbol, {}).get('longBusinessSummary'),
-            logo=await get_logo(profile.get(symbol, {}).get('website'))
+            logo=await get_logo(url=profile.get(symbol, {}).get('website'))
         )
 
     except Exception as e:
@@ -516,7 +516,7 @@ async def _get_simple_quote_from_yahooquery(symbol: str) -> SimpleQuote:
             after_hours_price=str(symbol_data.get('postMarketPrice')) if symbol_data.get('postMarketPrice') else None,
             change=f"{symbol_data['regularMarketChange']:+.2f}",
             percent_change=f"{symbol_data['regularMarketChangePercent']:+.2f}%",
-            logo=await get_logo(profile.get(symbol, {}).get('website'))
+            logo=await get_logo(url=profile.get(symbol, {}).get('website'))
         )
 
     except Exception as e:

@@ -32,7 +32,7 @@ async def get_sectors() -> list[MarketSector]:
     tasks = []
     # Fetch sector data concurrently
     for sector, url in urls.items():
-        tasks.append((sector.value, fetch(url)))
+        tasks.append((sector.value, fetch(url=url)))
     responses = await asyncio.gather(*[task for _, task in tasks])
 
     sectors = []
@@ -58,7 +58,7 @@ async def get_sector_for_symbol(symbol: str) -> MarketSector:
         raise HTTPException(status_code=404, detail=f"Sector for {symbol} not found.")
 
     url = urls[Sector(sector)]
-    html = await fetch(url)
+    html = await fetch(url=url)
 
     sector = await parse_sector(html, sector)
     return sector
@@ -72,7 +72,7 @@ async def get_sector_details(sector: Sector) -> MarketSectorDetails:
     :return: a MarketSectorDetails object
     """
     url = urls[sector]
-    html = await fetch(url)
+    html = await fetch(url=url)
     sector = await parse_sector_details(html, sector.value)
 
     return sector

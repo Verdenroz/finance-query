@@ -117,7 +117,7 @@ async def scrape_news_for_quote(symbol: str) -> list[News]:
     # Try each URL until we find news
     for url in urls:
         try:
-            html = await fetch(url)
+            html = await fetch(url=url)
             news_list = await _parse_news(html, container_xpath)
 
             if news_list:
@@ -136,7 +136,7 @@ async def scrape_news_for_quote(symbol: str) -> list[News]:
 @cache(900)
 async def scrape_general_news():
     url = 'https://stockanalysis.com/news/'
-    html = await fetch(url)
+    html = await fetch(url=url)
     container_xpath = '/html/body/div/div[1]/div[2]/main/div[2]/div/div'
     news_list = await _parse_news(html, container_xpath)
     # If no news was found, raise an error

@@ -44,7 +44,7 @@ async def _scrape_movers(url: str) -> list[MarketMover]:
 
     :raises HTTPException: with status code 500 if an error occurs while scraping or no movers are found
     """
-    html = await fetch(url)
+    html = await fetch(url=url)
     tree = etree.HTML(html)
 
     tbody_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/div/div[2]/div/table/tbody'

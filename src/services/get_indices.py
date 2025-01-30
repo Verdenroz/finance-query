@@ -17,7 +17,7 @@ async def scrape_indices() -> list[Index]:
     """
     url = 'https://www.investing.com/indices/major-indices'
 
-    html = await fetch(url)
+    html = await fetch(url=url)
     return await get_indices(html)
 
 

@@ -15,7 +15,7 @@ async def scrape_similar_quotes(symbol: str, limit: int = 10) -> list[SimpleQuot
     :return:
     """
     url = 'https://finance.yahoo.com/quote/' + symbol
-    html = await fetch(url)
+    html = await fetch(url=url)
 
     similar = await _parse_similar_quotes(html, symbol, limit)
 
