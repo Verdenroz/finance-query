@@ -3,9 +3,9 @@ from decimal import Decimal
 from fastapi import HTTPException
 from lxml import etree
 
-from ..redis import cache
-from ..schemas.marketmover import MarketMover
-from ..utils import fetch
+from src.dependencies import fetch
+from src.redis import cache
+from src.schemas import MarketMover
 
 
 @cache(expire=15, market_closed_expire=3600)

@@ -1,15 +1,26 @@
 import os
-from typing import Optional, Annotated
+from typing import Optional, Annotated, AsyncGenerator
 
 from aiohttp import ClientSession
 from dotenv import load_dotenv
 from fastapi import Depends
 from fastapi_injectable import injectable
 
-from src.constants import proxy, proxy_auth
-from src.di import get_session
+from src.constants import proxy, proxy_auth, headers
 
 load_dotenv()
+
+
+async def get_session() -> AsyncGenerator[ClientSession, None]:
+    """
+    Creates and yields an aiohttp ClientSession with proper cleanup.
+    Headers can be customized as needed.
+    """
+    session = ClientSession(headers=headers, max_field_size=30000)
+    try:
+        yield session
+    finally:
+        await session.close()
 
 
 @injectable

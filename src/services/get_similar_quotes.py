@@ -1,9 +1,9 @@
 from fastapi import HTTPException
 from lxml import etree
 
+from src.dependencies import fetch
 from src.redis import cache
 from src.schemas import SimpleQuote
-from src.utils import fetch
 
 
 @cache(expire=15, market_closed_expire=600)

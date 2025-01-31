@@ -7,9 +7,9 @@ from fastapi import HTTPException
 from lxml import etree, html
 from yahooquery import Ticker
 
+from src.dependencies import fetch, get_logo
+from src.redis import cache
 from src.schemas import Quote, SimpleQuote
-from ..redis import cache
-from ..utils import fetch, get_logo
 
 # Calculate adaptive max_workers based on available CPU cores
 thread_pool = ThreadPoolExecutor(max_workers=psutil.cpu_count(logical=True) * 2)
@@ -129,7 +129,7 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
 
 async def _scrape_general_info(tree: etree.ElementTree):
     """
-    Scrape misc. info from the soup object and formats the data
+    Scrape misc. info from the tree object and formats the data
 
     :param tree: The parsed HTML tree
     :return: A tuple of the scraped data
@@ -225,7 +225,7 @@ async def _scrape_logo(tree: etree.ElementTree) -> str:
 
 async def _scrape_company_info(tree: etree.ElementTree):
     """
-    Scrape the sector and industry data from the soup object
+    Scrape the sector and industry data from the tree object
 
     :return: sector, industry, about, employees, logo as a tuple
     """
