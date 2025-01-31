@@ -6,9 +6,9 @@ from fastapi import APIRouter, Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
-from src.di import get_global_rate_limit_manager
 from src.market import MarketSchedule
 from src.schemas import SimpleQuote
+from src.security import validate_websocket
 from src.services import (
     scrape_quotes, scrape_similar_quotes, scrape_actives,
     scrape_news_for_quote, scrape_losers, scrape_gainers,
@@ -17,14 +17,6 @@ from src.services import (
 )
 
 router = APIRouter()
-
-
-async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
-    """
-    Backwards compatible wrapper for websocket validation
-    """
-    rate_limit_manager = get_global_rate_limit_manager()
-    return await rate_limit_manager.validate_websocket(websocket)
 
 
 def safe_convert_to_dict(items, default=None):
@@ -62,8 +54,7 @@ async def handle_websocket_connection(
     :param data_fetcher: Async function to fetch data
     :param connection_manager: Connection manager instance
     """
-    is_valid, metadata = await validate_websocket(websocket)
-    print(is_valid, metadata)
+    is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
         return
 
@@ -152,7 +143,7 @@ async def websocket_quotes(
         websocket: WebSocket,
         connection_manager: RedisConnectionManager = Depends(RedisConnectionManager)
 ):
-    is_valid, metadata = await validate_websocket(websocket)
+    is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
         return
     await websocket.accept()

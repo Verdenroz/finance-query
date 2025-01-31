@@ -16,7 +16,6 @@ from mangum import Mangum
 from starlette import status
 from starlette.responses import Response, JSONResponse
 
-from src.di import get_global_rate_limit_manager
 from src.redis import r
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
@@ -94,7 +93,7 @@ app.add_middleware(
 )
 
 if os.getenv('USE_SECURITY', 'False') == 'True':
-    app.add_middleware(RateLimitMiddleware, rate_limit_manager=get_global_rate_limit_manager())
+    app.add_middleware(RateLimitMiddleware)
 
 
 @app.exception_handler(RequestValidationError)
