@@ -1,106 +1,158 @@
-from datetime import datetime, time
+from datetime import datetime
 from decimal import Decimal
 
 import pandas as pd
 from fastapi import HTTPException
-from requests.exceptions import RetryError
+from orjson import orjson
 from stock_indicators.indicators.common.quote import Quote
-from typing_extensions import List
-from yahooquery import Ticker
 
+from src.dependencies import fetch
 from src.redis import cache
 from src.schemas import HistoricalData, TimeSeries, TimePeriod, Interval
 
 
 @cache(expire=60, market_closed_expire=600)
-async def get_historical(symbol: str, period: TimePeriod, interval: Interval) -> TimeSeries:
+async def get_historical(
+        symbol: str,
+        period: TimePeriod,
+        interval: Interval,
+        epoch: bool = False
+) -> TimeSeries:
     """
-    Get historical data for a stock symbol based on the time period and interval provided, formatting the data
-    from YahooQuery into a TimeSeries object with HistoricalData objects
-
+    Get historical data for a stock symbol based on the time period and interval provided.
     :param symbol: the symbol of the stock to get historical data for
     :param period: the time period for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the interval for the historical data (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
+    :param epoch: whether to return timestamps as epoch integers or formatted date strings
 
     :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
     """
+
+    base_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+
+    # Setup request parameters
+    params = {
+        'interval': interval.value,
+        'range': period.value,
+        'includePrePost': 'false'
+    }
+
+    # Construct URL with parameters
+    url = f"{base_url}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
+
     try:
-        stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
-        data = stock.history(period=period.value, interval=interval.value)
-        if interval in [Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES,
-                        Interval.THIRTY_MINUTES, Interval.ONE_HOUR]:
-            # Reset the index
-            data.reset_index(inplace=True)
+        # Use the provided fetch function to make the request
+        response_text = await fetch(url=url)
+        data = orjson.loads(response_text)
 
-            # Convert the 'date' column to datetime
-            data['date'] = pd.to_datetime(data['date'])
+        # Check for error response from Yahoo Finance
+        if 'chart' in data:
+            if data['chart'].get('error'):
+                error = data['chart']['error']
+                if error['code'] == 'Not Found':
+                    raise HTTPException(status_code=404, detail=error['description'])
+                else:
+                    raise HTTPException(status_code=500, detail=f"Yahoo Finance API error: {error['description']}")
 
-            # Sort the DataFrame by the 'date' column in ascending order
-            data.sort_values(by='date', ascending=False, inplace=True)
-
-            # Set the index back to ['symbol', 'date']
-            data.set_index(['symbol', 'date'], inplace=True)
+            if not data['chart'].get('result') or not data['chart']['result'][0]:
+                raise HTTPException(status_code=404, detail="No data returned for symbol")
         else:
-            data = data.sort_index(ascending=False)
-            if not isinstance(data.index.get_level_values('date'), pd.DatetimeIndex):
-                data.index = data.index.set_levels(pd.to_datetime(data.index.get_level_values('date'), utc=True),
-                                                   level='date')
-            data.index = data.index.set_levels(data.index.get_level_values('date').date.astype(str), level='date')
+            raise HTTPException(status_code=500, detail="Invalid response structure from Yahoo Finance API")
 
-        # Convert the DataFrame to a dictionary
-        data_dict = {}
-        for date, row in data.iterrows():
-            if isinstance(date[1], pd.Timestamp):
-                date_str = date[1].strftime('%Y-%m-%d %H:%M:%S')
-            else:
-                date_str = date[1]
-            data_dict[date_str] = HistoricalData(
-                open=round(Decimal(row['open']), 2),
-                high=round(Decimal(row['high']), 2),
-                low=round(Decimal(row['low']), 2),
-                close=round(Decimal(row['close']), 2),
-                adj_close=round(Decimal(row['adjclose']), 2) if 'adjclose' in data.columns else None,
-                volume=int(row['volume'])
+        chart_data = data['chart']['result'][0]
+
+        # Extract timestamp and price data
+        timestamps = pd.to_datetime(chart_data['timestamp'], unit='s')
+        quote = chart_data['indicators']['quote'][0]
+
+        df = pd.DataFrame({
+            'open': quote['open'],
+            'high': quote['high'],
+            'low': quote['low'],
+            'close': quote['close'],
+            'volume': quote['volume']
+        }, index=timestamps)
+
+        # Add adjusted close if available
+        if 'adjclose' in chart_data['indicators']:
+            df['adjclose'] = chart_data['indicators']['adjclose'][0]['adjclose']
+
+        # Clean missing data
+        df.dropna(inplace=True)
+
+        # Sort and determine date format based on interval type
+        df.sort_index(ascending=False, inplace=True)
+        date_format = '%Y-%m-%d %H:%M:%S' if interval in [
+            Interval.ONE_MINUTE,
+            Interval.FIVE_MINUTES,
+            Interval.FIFTEEN_MINUTES,
+            Interval.THIRTY_MINUTES,
+            Interval.ONE_HOUR
+        ] else '%Y-%m-%d'
+
+        # Convert to TimeSeries format
+        history_dict = {}
+        for timestamp, row in df.iterrows():
+            # Use either formatted date string or epoch timestamp as key
+            date_key = timestamp.strftime(date_format) if not epoch else int(timestamp.timestamp())
+
+            history_dict[str(date_key)] = HistoricalData(
+                open=round(Decimal(str(row['open'])), 2),
+                high=round(Decimal(str(row['high'])), 2),
+                low=round(Decimal(str(row['low'])), 2),
+                close=round(Decimal(str(row['close'])), 2),
+                volume=int(row['volume']),
+                adj_close=round(Decimal(str(row['adjclose'])), 2) if 'adjclose' in df.columns else None
             )
-        return TimeSeries(history=data_dict)
 
-    except RetryError as e:
-        if '404' in str(e):
+        return TimeSeries(history=history_dict)
+
+    except orjson.JSONDecodeError:
+        raise HTTPException(status_code=500, detail="Invalid response from Yahoo Finance API")
+    except Exception as e:
+        if "404" in str(e):
             raise HTTPException(status_code=404, detail="Symbol not found")
-        else:
-            raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {str(e)}")
 
 
 @cache(expire=60, market_closed_expire=600, memcache=True)
-async def get_historical_quotes(symbol: str, period: TimePeriod, interval: Interval) -> List[Quote]:
+async def get_historical_quotes(symbol: str, period: TimePeriod, interval: Interval) -> list[Quote]:
     """
-    Get historical quotes for a stock symbol based on the time period and interval provided, using YahooQuery
+    Get historical quotes for a stock symbol based on the time period and interval provided.
     :param symbol: the symbol of the stock to get historical data for
     :param period: the time period for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the interval for the historical data (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
-    :return: a list of YahooQuery Quote objects
 
     :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
     """
     try:
-        stock = Ticker(symbol, asynchronous=True, retry=3, status_forcelist=[404, 429, 500, 502, 503, 504])
-        data = stock.history(period=period.value, interval=interval.value)
-        data = data.sort_index(ascending=False)
+        time_series = await get_historical(symbol, period, interval)
+
+        # Check if the returned object is a dictionary and convert it to TimeSeries
+        if isinstance(time_series, dict):
+            time_series = TimeSeries(**time_series)
         quotes = []
-        for _, row in data.iterrows():
-            if row.name[1] is not None:
-                date = row.name[1]
-                if not isinstance(date, datetime):
-                    date = datetime.combine(date, time())  # Convert date to datetime.datetime
-                if date is not None:
-                    quotes.append(
-                        Quote(date=date, open=row['open'], high=row['high'], low=row['low'], close=row['close'],
-                              volume=row['volume'])
-                    )
+        for date_key, historical_data in time_series.history.items():
+            if date_key.isdigit():
+                date = datetime.fromtimestamp(int(date_key))
+            else:
+                try:
+                    date = datetime.strptime(date_key, '%Y-%m-%d %H:%M:%S')
+                except ValueError:
+                    date = datetime.strptime(date_key, '%Y-%m-%d')
+            quotes.append(
+                Quote(
+                    date=date,
+                    open=historical_data.open,
+                    high=historical_data.high,
+                    low=historical_data.low,
+                    close=historical_data.close,
+                    volume=historical_data.volume
+                )
+            )
         return quotes
 
-    except RetryError as e:
-        if '404' in str(e):
-            raise HTTPException(status_code=404, detail="Symbol not found")
-        else:
-            raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {e}")
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {str(e)}")
