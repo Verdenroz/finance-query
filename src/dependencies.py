@@ -7,6 +7,7 @@ from fastapi import Depends
 from fastapi_injectable import injectable
 from redis import asyncio as aioredis
 
+from src.connections import RedisConnectionManager
 from src.constants import proxy, proxy_auth, headers
 
 load_dotenv()
@@ -35,7 +36,19 @@ async def get_redis() -> AsyncGenerator[aioredis.Redis, None]:
     try:
         yield redis
     finally:
-        await redis.aclose()
+        await redis.close()
+
+
+@injectable
+async def get_redis_connection_manager(redis: Annotated[aioredis.Redis, Depends(get_redis)]) -> RedisConnectionManager:
+    """
+    Get Redis connection manager instance
+    """
+    connection_manager = RedisConnectionManager(redis)
+    try:
+        return connection_manager
+    finally:
+        await connection_manager.close()
 
 
 @injectable

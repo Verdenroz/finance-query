@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
-from src.dependencies import get_redis
+from src.dependencies import get_redis_connection_manager
 from src.market import MarketSchedule
 from src.schemas import SimpleQuote
 from src.security import validate_websocket
@@ -102,7 +102,7 @@ async def handle_websocket_connection(
 async def websocket_profile(
         websocket: WebSocket,
         symbol: str,
-        connection_manager: RedisConnectionManager = Depends(lambda: RedisConnectionManager(get_redis()))
+        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager)
 ):
     async def get_profile():
         """
@@ -142,7 +142,7 @@ async def websocket_profile(
 @router.websocket("/quotes")
 async def websocket_quotes(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(lambda: RedisConnectionManager(get_redis()))
+        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager)
 ):
     is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
@@ -221,7 +221,7 @@ async def websocket_quotes(
 @router.websocket("/market")
 async def websocket_market(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(lambda: RedisConnectionManager(get_redis()))
+        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager)
 ):
     async def get_market_info():
         """
@@ -254,7 +254,7 @@ async def websocket_market(
 @router.websocket("/hours")
 async def market_status_websocket(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(lambda: RedisConnectionManager(get_redis())),
+        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager),
         market_schedule: MarketSchedule = Depends(MarketSchedule)
 ):
     async def get_market_status_info():

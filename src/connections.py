@@ -4,19 +4,18 @@ from orjson import orjson
 from redis.client import PubSub
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.redis import r
-
 
 class RedisConnectionManager:
     """
     Manages active websocket connections and listens to Redis channels to broadcast messages to clients.
     """
 
-    def __init__(self):
+    def __init__(self, redis):
         self.active_connections: dict[str, list[WebSocket]] = {}
         self.pubsub: dict[str, PubSub] = {}
         self.listen_tasks: dict[str, asyncio.Task] = {}
         self.tasks: dict[str, asyncio.Task] = {}
+        self.redis = redis
 
     async def connect(self, websocket: WebSocket, channel: str, task: callable):
         """
@@ -28,7 +27,7 @@ class RedisConnectionManager:
         """
         if channel not in self.active_connections:
             self.active_connections[channel] = []
-            self.pubsub[channel] = r.pubsub()
+            self.pubsub[channel] = self.redis.pubsub()
 
         self.active_connections[channel].append(websocket)
 
@@ -90,12 +89,26 @@ class RedisConnectionManager:
             for client in disconnected_clients:
                 await self.disconnect(client, channel)
 
-    @staticmethod
-    async def publish(message: dict | list, channel: str):
+    async def publish(self, message: dict | list, channel: str):
         """
         Publishes a message to a Redis channel.
         :param message: the json message to publish
         :param channel: the channel to publish to
         :return:
         """
-        await r.publish(channel, orjson.dumps(message))
+        await self.redis.publish(channel, orjson.dumps(message))
+
+    async def close(self):
+        """
+        Closes all connections and tasks.
+        :return:
+        """
+        for channel in self.active_connections:
+            for connection in self.active_connections[channel]:
+                await self.disconnect(connection, channel)
+
+        for pubsub in self.pubsub.values():
+            pubsub.close()
+
+        for task in self.tasks.values():
+            task.cancel()
