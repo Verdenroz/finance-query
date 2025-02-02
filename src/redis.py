@@ -10,9 +10,12 @@ import orjson
 from aiohttp import ClientSession
 from async_lru import alru_cache
 from dotenv import load_dotenv
+from fastapi import Depends
+from fastapi_injectable import injectable
 from pydantic import BaseModel
 from redis import asyncio as aioredis, RedisError
 
+from src.dependencies import get_redis
 from src.market import MarketSchedule, MarketStatus
 from src.schemas import TimeSeries, SimpleQuote, Quote, MarketMover, Index, News, MarketSector
 from src.schemas.analysis import SMAData, EMAData, WMAData, VWMAData, RSIData, SRSIData, STOCHData, CCIData, MACDData, \
@@ -20,18 +23,6 @@ from src.schemas.analysis import SMAData, EMAData, WMAData, VWMAData, RSIData, S
 from src.schemas.sector import MarketSectorDetails
 
 load_dotenv()
-
-r = aioredis.Redis(
-    connection_pool=aioredis.ConnectionPool(
-        host=os.environ.get('REDIS_HOST', 'localhost'),
-        port=int(os.environ.get('REDIS_PORT', 6379)),
-        username=os.environ.get('REDIS_USERNAME'),
-        password=os.environ.get('REDIS_PASSWORD'),
-        max_connections=10000
-    ),
-    auto_close_connection_pool=True,
-    single_connection_client=True,
-)
 
 indicators = {
     "SMA": SMAData,
@@ -52,7 +43,14 @@ indicators = {
 }
 
 
-def cache(expire, market_closed_expire=None, memcache=False, market_schedule=MarketSchedule()):
+@injectable
+def cache(
+        expire: int = 0,
+        market_closed_expire=None,
+        memcache=False,
+        market_schedule=MarketSchedule(),
+        r: aioredis.Redis = Depends(get_redis)
+):
     """
     This decorator caches the result of the function it decorates.
 
@@ -66,6 +64,7 @@ def cache(expire, market_closed_expire=None, memcache=False, market_schedule=Mar
     :param market_closed_expire: The expiration time for the cache key after the market closes
     :param memcache: Flag to use in-memory caching instead of Redis
     :param market_schedule: DI for MarketSchedule class to check if market is open/closed
+    :param r: the Redis connection instance
 
     :return: The result of the function or the cached value
     """

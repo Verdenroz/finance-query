@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 import requests
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,7 +16,7 @@ from mangum import Mangum
 from starlette import status
 from starlette.responses import Response, JSONResponse
 
-from src.redis import r
+from src.dependencies import get_redis
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
@@ -159,7 +159,7 @@ async def request_validation_error_formatter(request, exc):
         }
     }
 )
-async def health():
+async def health(r=Depends(get_redis)):
     """
         Comprehensive health check endpoint that verifies:
         - Basic API health

@@ -5,6 +5,7 @@ from aiohttp import ClientSession
 from dotenv import load_dotenv
 from fastapi import Depends
 from fastapi_injectable import injectable
+from redis import asyncio as aioredis
 
 from src.constants import proxy, proxy_auth, headers
 
@@ -21,6 +22,20 @@ async def get_session() -> AsyncGenerator[ClientSession, None]:
         yield session
     finally:
         await session.close()
+
+
+async def get_redis() -> AsyncGenerator[aioredis.Redis, None]:
+    """
+    Get Redis connection instance
+    """
+    if not os.getenv('REDIS_URL'):
+        raise ValueError("REDIS_URL not set in .env")
+
+    redis = aioredis.from_url(os.getenv('REDIS_URL'))
+    try:
+        yield redis
+    finally:
+        await redis.aclose()
 
 
 @injectable

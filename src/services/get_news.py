@@ -90,7 +90,7 @@ def parse_symbol_exchange(yahoo_symbol: str):
         return yahoo_symbol, None
 
 
-@cache(300)
+@cache(expire=300)
 async def scrape_news_for_quote(symbol: str) -> list[News]:
     """
     Fetches news for a specific stock or ETF symbol from StockAnalysis.
@@ -133,7 +133,7 @@ async def scrape_news_for_quote(symbol: str) -> list[News]:
     )
 
 
-@cache(900)
+@cache(expire=900)
 async def scrape_general_news():
     url = 'https://stockanalysis.com/news/'
     html = await fetch(url=url)
