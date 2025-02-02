@@ -63,7 +63,8 @@ router = APIRouter()
 async def get_time_series(
         symbol: str = Query(..., description="The symbol of the stock to get historical data for."),
         time: TimePeriod = Query(..., description="The time period for the historical data."),
-        interval: Interval = Query(..., description="The interval for the historical data.")
+        interval: Interval = Query(..., description="The interval for the historical data."),
+        epoch: bool = Query(False, description="Whether to format dates as strings or use epoch timestamps.")
 ):
     # Validate the combination of time period and interval
     if (interval in [Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES] and
@@ -77,4 +78,8 @@ async def get_time_series(
                                                       TimePeriod.YTD, TimePeriod.YEAR]:
         raise HTTPException(status_code=400, detail="If interval is 1h, time period must be 1Y or less")
 
-    return await get_historical(symbol, time, interval)
+    try:
+        return await get_historical(symbol, time, interval, epoch)
+    except HTTPException as e:
+        # Re-raise HTTPExceptions with their status code and detail
+        raise e
