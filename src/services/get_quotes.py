@@ -7,8 +7,8 @@ from fastapi import HTTPException
 from lxml import etree, html
 from yahooquery import Ticker
 
+from src.cache import cache
 from src.dependencies import fetch, get_logo
-from src.redis import cache
 from src.schemas import Quote, SimpleQuote
 
 # Calculate adaptive max_workers based on available CPU cores

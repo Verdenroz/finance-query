@@ -3,8 +3,8 @@ from decimal import Decimal
 from fastapi import HTTPException
 from lxml import etree
 
+from src.cache import cache
 from src.dependencies import fetch
-from src.redis import cache
 from src.schemas import MarketMover
 
 

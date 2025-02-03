@@ -6,8 +6,8 @@ from fastapi import HTTPException
 from orjson import orjson
 from stock_indicators.indicators.common.quote import Quote
 
+from src.cache import cache
 from src.dependencies import fetch
-from src.redis import cache
 from src.schemas import HistoricalData, TimeSeries, TimePeriod, Interval
 
 

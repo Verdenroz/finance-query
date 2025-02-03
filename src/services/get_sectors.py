@@ -4,8 +4,8 @@ from fastapi import HTTPException
 from lxml import etree
 from yahooquery import Ticker
 
+from src.cache import cache
 from src.dependencies import fetch
-from src.redis import cache
 from src.schemas import MarketSector, MarketSectorDetails, Sector
 
 urls = {

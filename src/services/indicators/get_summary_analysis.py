@@ -3,7 +3,7 @@ import asyncio
 from stock_indicators.indicators import get_ema, get_wma, get_vwma, get_rsi, get_stoch_rsi, get_stoch, \
     get_cci, get_macd, get_adx, get_aroon, get_bollinger_bands, get_super_trend, get_ichimoku, get_sma
 
-from src.redis import cache
+from src.cache import cache
 from src.schemas.analysis import SummaryAnalysis, AROONData, BBANDSData, SuperTrendData, IchimokuData, MACDData
 from src.schemas.time_series import Interval, TimePeriod
 from src.services.get_historical import get_historical_quotes
