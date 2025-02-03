@@ -3,7 +3,7 @@ from typing import Optional, Annotated, AsyncGenerator
 
 from aiohttp import ClientSession
 from dotenv import load_dotenv
-from fastapi import Depends
+from fastapi import Depends, Request
 from fastapi_injectable import injectable
 from redis import asyncio as aioredis
 from starlette.websockets import WebSocket
@@ -26,18 +26,9 @@ async def get_session() -> AsyncGenerator[ClientSession, None]:
         await session.close()
 
 
-async def get_redis() -> AsyncGenerator[aioredis.Redis, None]:
-    """
-    Get Redis connection instance
-    """
-    if not os.getenv('REDIS_URL'):
-        raise ValueError("REDIS_URL not set in .env")
-
-    redis = aioredis.from_url(os.getenv('REDIS_URL'))
-    try:
-        yield redis
-    finally:
-        await redis.close()
+def get_redis(request: Request) -> aioredis.Redis:
+    """Get Redis client from registered app state"""
+    return request.app.state.redis
 
 
 async def get_redis_connection_manager(websocket: WebSocket) -> RedisConnectionManager:
