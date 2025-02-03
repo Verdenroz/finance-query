@@ -40,6 +40,10 @@ async def lifespan(app: FastAPI):
     FastAPI lifespan context manager that handles proxy setup and cleanup.
     """
     await register_app(app)
+    redis = None
+    redis_connection_manager = None
+
+
     api_url = None
     proxy_header_token = None
     payload = None
@@ -56,20 +60,21 @@ async def lifespan(app: FastAPI):
             requests.post(api_url, headers=proxy_header_token, json=payload)
 
         if os.getenv('USE_REDIS') == 'True':
-            if not os.getenv('REDIS_URL'):
-                raise ValueError("REDIS_URL not set in .env")
+            if os.getenv('REDIS_URL') is None:
+                raise ValueError("REDIS_URL environment variable is not set.")
 
-            redis = aioredis.from_url(os.getenv('REDIS_URL'))
-            app.state.connection_manager = RedisConnectionManager(redis)
+            redis = Redis.from_url(os.getenv('REDIS_URL'))
+            redis_connection_manager = RedisConnectionManager(redis)
             app.state.redis = redis
+            app.state.connection_manager = redis_connection_manager
 
         yield
     finally:
         if api_url and proxy_header_token and payload:
             requests.delete(api_url, headers=proxy_header_token, json=payload)
-        if os.getenv('USE_REDIS') == 'True':
-            await app.state.connection_manager.close()
-            await app.state.redis.close()
+        if redis:
+            await redis.close()
+            await redis_connection_manager.close()
 
         await cleanup_all_exit_stacks()
 
@@ -245,7 +250,7 @@ async def health(r=Depends(get_redis)):
     # Check Redis
     try:
         start_time = time.time()
-        redis_ping = await r.ping()
+        redis_ping = r.ping()
         health_report["redis"] = {
             "status": "healthy" if redis_ping else "unhealthy",
             "latency_ms": round((time.time() - start_time) * 1000, 2)
