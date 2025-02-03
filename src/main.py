@@ -11,11 +11,13 @@ from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi_injectable import cleanup_all_exit_stacks
+from fastapi_injectable import cleanup_all_exit_stacks, register_app
 from mangum import Mangum
+from redis import asyncio as aioredis
 from starlette import status
 from starlette.responses import Response, JSONResponse
 
+from src.connections import RedisConnectionManager
 from src.dependencies import get_redis
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
@@ -36,6 +38,7 @@ async def lifespan(app: FastAPI):
     """
     FastAPI lifespan context manager that handles proxy setup and cleanup.
     """
+    await register_app(app)
     api_url = None
     proxy_header_token = None
     payload = None
@@ -50,10 +53,23 @@ async def lifespan(app: FastAPI):
             }
             payload = {"ip": ip}
             requests.post(api_url, headers=proxy_header_token, json=payload)
+
+        if os.getenv('USE_REDIS') == 'True':
+            if not os.getenv('REDIS_URL'):
+                raise ValueError("REDIS_URL not set in .env")
+
+            redis = aioredis.from_url(os.getenv('REDIS_URL'))
+            app.state.connection_manager = RedisConnectionManager(redis)
+            app.state.redis = redis
+
         yield
     finally:
         if api_url and proxy_header_token and payload:
             requests.delete(api_url, headers=proxy_header_token, json=payload)
+        if os.getenv('USE_REDIS') == 'True':
+            await app.state.connection_manager.close()
+            await app.state.redis.close()
+
         await cleanup_all_exit_stacks()
 
 
@@ -182,7 +198,6 @@ async def health(r=Depends(get_redis)):
     similar_equity_task = scrape_similar_quotes("NVDA")
     similar_etf_task = scrape_similar_quotes("QQQ")
     historical_data_task_day = get_historical("NVDA", TimePeriod.DAY, Interval.ONE_MINUTE)
-    historical_data_task_week = get_historical("NVDA", TimePeriod.SEVEN_DAYS, Interval.FIVE_MINUTES)
     historical_data_task_month = get_historical("NVDA", TimePeriod.YTD, Interval.DAILY)
     historical_data_task_year = get_historical("NVDA", TimePeriod.YEAR, Interval.DAILY)
     historical_data_task_five_years = get_historical("NVDA", TimePeriod.FIVE_YEARS, Interval.MONTHLY)
@@ -205,7 +220,6 @@ async def health(r=Depends(get_redis)):
         ("Similar Equities", similar_equity_task),
         ("Similar ETFs", similar_etf_task),
         ("Historical day prices", historical_data_task_day),
-        ("Historical week prices", historical_data_task_week),
         ("Historical month prices", historical_data_task_month),
         ("Historical year prices", historical_data_task_year),
         ("Historical five year prices", historical_data_task_five_years),

@@ -100,8 +100,7 @@ class RedisConnectionManager:
 
     async def close(self):
         """
-        Closes all connections and tasks.
-        :return:
+        Clean up all connections and tasks.
         """
         for channel in self.active_connections:
             for connection in self.active_connections[channel]:

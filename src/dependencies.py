@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from fastapi import Depends
 from fastapi_injectable import injectable
 from redis import asyncio as aioredis
+from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager
 from src.constants import proxy, proxy_auth, headers
@@ -39,16 +40,11 @@ async def get_redis() -> AsyncGenerator[aioredis.Redis, None]:
         await redis.close()
 
 
-@injectable
-async def get_redis_connection_manager(redis: Annotated[aioredis.Redis, Depends(get_redis)]) -> RedisConnectionManager:
+async def get_redis_connection_manager(websocket: WebSocket) -> RedisConnectionManager:
     """
-    Get Redis connection manager instance
+    Get Redis connection manager instance from app state using WebSocket
     """
-    connection_manager = RedisConnectionManager(redis)
-    try:
-        return connection_manager
-    finally:
-        await connection_manager.close()
+    return websocket.app.state.connection_manager
 
 
 @injectable
