@@ -13,11 +13,12 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_injectable import cleanup_all_exit_stacks, register_app
 from mangum import Mangum
-from redis import asyncio as aioredis
+from redis import Redis
 from starlette import status
 from starlette.responses import Response, JSONResponse
 
 from src.connections import RedisConnectionManager
+from src.context import RequestContextMiddleware
 from src.dependencies import get_redis
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
@@ -107,6 +108,8 @@ app.add_middleware(
     allow_headers=["*"],  # Allows all headers
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
 )
+
+app.add_middleware(RequestContextMiddleware)
 
 if os.getenv('USE_SECURITY', 'False') == 'True':
     app.add_middleware(RateLimitMiddleware)
