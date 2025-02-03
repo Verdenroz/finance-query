@@ -68,7 +68,7 @@ async def handle_websocket_connection(
         while True:
             try:
                 result = await data_fetcher()
-                await connection_manager.publish(result, channel)
+                await asyncio.to_thread(connection_manager.publish, result, channel)
                 await asyncio.sleep(5)
             except WebSocketDisconnect:
                 await connection_manager.disconnect(websocket, channel)

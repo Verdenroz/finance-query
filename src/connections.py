@@ -53,8 +53,8 @@ class RedisConnectionManager:
             self.tasks[channel].cancel()
             del self.tasks[channel]
 
-            await self.pubsub[channel].unsubscribe(channel)
-            await self.pubsub[channel].close()
+            self.pubsub[channel].unsubscribe(channel)
+            self.pubsub[channel].close()
             del self.pubsub[channel]
 
     async def _listen_to_channel(self, channel: str):
@@ -63,14 +63,15 @@ class RedisConnectionManager:
         :param channel: the channel to subscribe to with Redis PubSub
         :return:
         """
-        await self.pubsub[channel].subscribe(channel)
+        self.pubsub[channel].subscribe(channel)
         while True:
-            message = await self.pubsub[channel].get_message(ignore_subscribe_messages=True)
+            message = self.pubsub[channel].get_message(ignore_subscribe_messages=True)
             if message and message['type'] == 'message':
                 message_channel = message['channel'].decode('utf-8')
                 if message_channel == channel:
                     data = orjson.loads(message['data'])
                     await self._broadcast(channel, data)
+            await asyncio.sleep(0.1)
 
     async def _broadcast(self, channel: str, message: dict):
         """
@@ -89,14 +90,14 @@ class RedisConnectionManager:
             for client in disconnected_clients:
                 await self.disconnect(client, channel)
 
-    async def publish(self, message: dict | list, channel: str):
+    def publish(self, message: dict | list, channel: str):
         """
         Publishes a message to a Redis channel.
         :param message: the json message to publish
         :param channel: the channel to publish to
         :return:
         """
-        await self.redis.publish(channel, orjson.dumps(message))
+        self.redis.publish(channel, orjson.dumps(message))
 
     async def close(self):
         """
