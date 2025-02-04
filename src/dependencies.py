@@ -1,9 +1,9 @@
 import os
-from typing import Optional, Annotated, AsyncGenerator
+from typing import Optional, Annotated, AsyncGenerator, Union
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, ClientResponse
 from dotenv import load_dotenv
-from fastapi import Depends, Request
+from fastapi import Depends, Request, HTTPException
 from fastapi_injectable import injectable
 from redis import asyncio as aioredis
 from starlette.websockets import WebSocket
@@ -26,7 +26,7 @@ async def get_session() -> AsyncGenerator[ClientSession, None]:
         await session.close()
 
 
-def get_redis(request: Request) -> aioredis.Redis:
+async def get_redis(request: Request) -> aioredis.Redis:
     """Get Redis client from registered app state"""
     return request.app.state.redis
 
@@ -38,6 +38,16 @@ async def get_redis_connection_manager(websocket: WebSocket) -> RedisConnectionM
     return websocket.app.state.connection_manager
 
 
+async def get_yahoo_cookies(request: Request) -> dict:
+    """Get Yahoo cookies from app state"""
+    return request.app.state.cookies
+
+
+async def get_yahoo_crumb(request: Request) -> str:
+    """Get Yahoo crumb from app state"""
+    return request.app.state.crumb
+
+
 @injectable
 async def fetch(
         session: Annotated[ClientSession, Depends(get_session)],
@@ -47,7 +57,7 @@ async def fetch(
         headers: dict = None,
         return_response: bool = False,
         use_proxy: bool = os.getenv('USE_PROXY', 'False') == 'True',
-) -> str:
+) -> Union[str, ClientResponse]:
     """
     Fetch URL content with optional proxy support
     """
@@ -82,3 +92,35 @@ async def get_logo(
         if response.status == 200:
             return str(response.url)
         return None
+
+
+async def _get_auth_data() -> tuple[str, str]:
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive',
+    }
+
+    try:
+        response = await fetch(url='https://finance.yahoo.com', headers=headers, return_response=True)
+        cookies = response.headers.get('Set-Cookie', '')
+        if cookies:
+            headers['Cookie'] = cookies
+            return cookies, await _get_crumb(headers)
+    except Exception as e:
+        print(f"finance.yahoo.com auth failed: {e}")
+
+    raise HTTPException(status_code=500, detail="Failed to authenticate with Yahoo Finance")
+
+
+async def _get_crumb(headers: dict[str, str]) -> str:
+    try:
+        response = await fetch(url='https://query1.finance.yahoo.com/v1/test/getcrumb', headers=headers)
+        crumb = response.strip('"')
+        if crumb:
+            return crumb
+    except Exception as e:
+        print(f"Crumb retrieval failed: {e}")
+
+    raise ValueError("Failed to get valid crumb")

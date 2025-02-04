@@ -19,7 +19,7 @@ from starlette.responses import Response, JSONResponse
 
 from src.connections import RedisConnectionManager
 from src.context import RequestContextMiddleware
-from src.dependencies import get_redis
+from src.dependencies import get_redis, _get_auth_data
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
@@ -67,6 +67,10 @@ async def lifespan(app: FastAPI):
             redis_connection_manager = RedisConnectionManager(redis)
             app.state.redis = redis
             app.state.connection_manager = redis_connection_manager
+
+        cookies, crumb = await _get_auth_data()
+        app.state.cookies = cookies
+        app.state.crumb = crumb
 
         yield
     finally:
