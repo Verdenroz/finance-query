@@ -42,6 +42,10 @@ async def get_redis_connection_manager(websocket: WebSocket) -> RedisConnectionM
 async def fetch(
         session: Annotated[ClientSession, Depends(get_session)],
         url: str = "",
+        method: str = "GET",
+        params: dict = None,
+        headers: dict = None,
+        return_response: bool = False,
         use_proxy: bool = os.getenv('USE_PROXY', 'False') == 'True',
 ) -> str:
     """
@@ -55,11 +59,12 @@ async def fetch(
         if proxy is None or proxy_auth is None:
             raise ValueError("Proxy URL/Auth/Token not set in .env")
 
-        async with session.get(url, proxy=proxy, proxy_auth=proxy_auth) as response:
-            return await response.text()
+        async with session.request(method=method, url=url, proxy=proxy, proxy_auth=proxy_auth, params=params,
+                                   headers=headers) as response:
+            return await response.text() if not return_response else response
 
-    async with session.get(url) as response:
-        return await response.text()
+    async with session.request(method=method, url=url, params=params, headers=headers) as response:
+        return await response.text() if not return_response else response
 
 
 @injectable

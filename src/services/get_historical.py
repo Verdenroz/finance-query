@@ -41,7 +41,6 @@ async def get_historical(
     url = f"{base_url}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
 
     try:
-        # Use the provided fetch function to make the request
         response_text = await fetch(url=url)
         data = orjson.loads(response_text)
 
