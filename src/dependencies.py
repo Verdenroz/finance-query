@@ -57,24 +57,44 @@ async def fetch(
         headers: dict = None,
         return_response: bool = False,
         use_proxy: bool = os.getenv('USE_PROXY', 'False') == 'True',
-) -> Union[str, ClientResponse]:
+        max_retries: int = 3,
+        retry_delay: float = 1.0
+) -> Optional[Union[str, ClientResponse]]:
     """
-    Fetch URL content with optional proxy support
+    Fetch URL content with retry logic and optional proxy support
     """
     if not url:
-        return ""
+        return None
 
-    # Check if proxy is enabled and required values are set
     if use_proxy:
-        if proxy is None or proxy_auth is None:
-            raise ValueError("Proxy URL/Auth/Token not set in .env")
+        if not proxy or not proxy_auth:
+            raise HTTPException(status_code=500, detail="Proxy configuration is missing")
 
-        async with session.request(method=method, url=url, proxy=proxy, proxy_auth=proxy_auth, params=params,
-                                   headers=headers) as response:
-            return await response.text() if not return_response else response
+    for attempt in range(max_retries):
+        try:
+            async with session.request(
+                    method=method,
+                    url=url,
+                    params=params,
+                    headers=headers,
+                    proxy=proxy if use_proxy else None,
+                    proxy_auth=proxy_auth if use_proxy else None,
+                    timeout=5
+            ) as response:
+                if return_response:
+                    # Create a new response object with the content already read
+                    content = await response.read()
+                    response._body = content
+                    return response
+                return await response.text()
 
-    async with session.request(method=method, url=url, params=params, headers=headers) as response:
-        return await response.text() if not return_response else response
+        except (ClientPayloadError, asyncio.TimeoutError, ClientError) as e:
+            if attempt == max_retries - 1:
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Request failed after {max_retries} attempts: {str(e)}"
+                )
+            await asyncio.sleep(retry_delay)
 
 
 @injectable
