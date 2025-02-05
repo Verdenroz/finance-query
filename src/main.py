@@ -68,7 +68,7 @@ async def lifespan(app: FastAPI):
             app.state.redis = redis
             app.state.connection_manager = redis_connection_manager
 
-        cookies, crumb = await _get_auth_data()
+        cookies, crumb = await _get_auth_data(redis)
         app.state.cookies = cookies
         app.state.crumb = crumb
 
@@ -77,7 +77,7 @@ async def lifespan(app: FastAPI):
         if api_url and proxy_header_token and payload:
             requests.delete(api_url, headers=proxy_header_token, json=payload)
         if redis:
-            await redis.close()
+            redis.close()
             await redis_connection_manager.close()
 
         await cleanup_all_exit_stacks()
