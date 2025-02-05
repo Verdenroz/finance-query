@@ -13,7 +13,7 @@ def get_adaptive_chunk_size() -> int:
     memory_info = psutil.virtual_memory()
     available_memory = memory_info.available
 
-    base_chunk_size = 5
+    base_chunk_size = 10
     chunk_size = base_chunk_size * cpu_count * (available_memory // (512 * 1024 * 1024))
     return max(base_chunk_size, min(chunk_size, 100))
 
