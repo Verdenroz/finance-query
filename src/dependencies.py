@@ -1,11 +1,12 @@
+import asyncio
 import os
 from typing import Optional, Annotated, AsyncGenerator, Union
 
-from aiohttp import ClientSession, ClientResponse
+from aiohttp import ClientSession, ClientResponse, ClientPayloadError, ClientError
 from dotenv import load_dotenv
 from fastapi import Depends, Request, HTTPException
 from fastapi_injectable import injectable
-from redis import asyncio as aioredis
+from redis import Redis
 from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager
@@ -26,7 +27,7 @@ async def get_session() -> AsyncGenerator[ClientSession, None]:
         await session.close()
 
 
-async def get_redis(request: Request) -> aioredis.Redis:
+async def get_redis(request: Request) -> Redis:
     """Get Redis client from registered app state"""
     return request.app.state.redis
 
@@ -114,24 +115,32 @@ async def get_logo(
         return None
 
 
-async def _get_auth_data() -> tuple[str, str]:
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
-        'Accept-Language': 'en-US,en;q=0.5',
-        'Connection': 'keep-alive',
-    }
+async def _get_auth_data(redis: Redis = None) -> tuple[str, str]:
+    if redis:
+        cookies = redis.get('yahoo_cookies')
+        crumb = redis.get('yahoo_crumb')
+        if cookies and crumb:
+            return cookies.decode('utf-8'), crumb.decode('utf-8')
 
     try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+        }
         response = await fetch(url='https://finance.yahoo.com', headers=headers, return_response=True)
         cookies = response.headers.get('Set-Cookie', '')
         if cookies:
             headers['Cookie'] = cookies
-            return cookies, await _get_crumb(headers)
+            crumb = await _get_crumb(headers)
+            if redis:
+                redis.set('yahoo_cookies', cookies, ex=90 * 24 * 60 * 60)  # 90 days in seconds
+                redis.set('yahoo_crumb', crumb, ex=90 * 24 * 60 * 60)  # 90 days in seconds
+            return cookies, crumb
     except Exception as e:
         print(f"finance.yahoo.com auth failed: {e}")
-
-    raise HTTPException(status_code=500, detail="Failed to authenticate with Yahoo Finance")
+        raise HTTPException(status_code=500, detail="Failed to authenticate with Yahoo Finance")
 
 
 async def _get_crumb(headers: dict[str, str]) -> str:
