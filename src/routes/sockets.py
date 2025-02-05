@@ -11,9 +11,9 @@ from src.market import MarketSchedule
 from src.schemas import SimpleQuote
 from src.security import validate_websocket
 from src.services import (
-    scrape_quotes, scrape_similar_quotes, scrape_actives,
+    get_quotes, scrape_similar_quotes, scrape_actives,
     scrape_news_for_quote, scrape_losers, scrape_gainers,
-    scrape_simple_quotes, scrape_indices, scrape_general_news,
+    get_simple_quotes, scrape_indices, scrape_general_news,
     get_sectors, get_sector_for_symbol
 )
 
@@ -108,7 +108,7 @@ async def websocket_profile(
         """
         Fetches the profile data for a symbol.
         """
-        quotes_task = scrape_quotes([symbol])
+        quotes_task = get_quotes([symbol])
         similar_quotes_task = scrape_similar_quotes(symbol)
         sector_performance_task = get_sector_for_symbol(symbol)
         news_task = scrape_news_for_quote(symbol)
@@ -156,7 +156,7 @@ async def websocket_quotes(
             """
             Fetches quotes for a list of symbols.
             """
-            result = await scrape_simple_quotes(symbols)
+            result = await get_simple_quotes(symbols)
             quotes = []
             for quote in result:
                 if not isinstance(quote, SimpleQuote):

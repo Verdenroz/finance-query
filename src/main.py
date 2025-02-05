@@ -27,8 +27,8 @@ from src.schemas import ValidationErrorResponse, Sector, TimePeriod, Interval
 from src.security import RateLimitMiddleware
 from src.services import (
     scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors,
-    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, scrape_quotes,
-    scrape_similar_quotes, get_historical, get_search, scrape_simple_quotes, get_summary_analysis
+    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, get_quotes,
+    scrape_similar_quotes, get_historical, get_search, get_simple_quotes, get_summary_analysis
 )
 
 load_dotenv()
@@ -205,8 +205,8 @@ async def health(r=Depends(get_redis)):
     news_task = scrape_general_news()
     news_by_symbol_task = scrape_news_for_quote("NVDA")
     scrape_etf_news_task = scrape_news_for_quote("QQQ")
-    quotes_task = scrape_quotes(["NVDA", "QQQ", "GTLOX"])
-    simple_quotes_task = scrape_simple_quotes(["NVDA", "QQQ", "GTLOX"])
+    quotes_task = get_quotes(["NVDA", "QQQ", "GTLOX"])
+    simple_quotes_task = get_simple_quotes(["NVDA", "QQQ", "GTLOX"])
     similar_equity_task = scrape_similar_quotes("NVDA")
     similar_etf_task = scrape_similar_quotes("QQQ")
     historical_data_task_day = get_historical("NVDA", TimePeriod.DAY, Interval.ONE_MINUTE)

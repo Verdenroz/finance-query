@@ -6,7 +6,7 @@ from fastapi.security import APIKeyHeader
 from orjson import orjson
 
 from src.schemas import ValidationErrorResponse
-from src.services import scrape_simple_quotes
+from src.services import get_simple_quotes
 
 router = APIRouter()
 
@@ -19,7 +19,7 @@ async def quotes_generator(symbols: list[str]):
     :return:
     """
     while True:
-        quotes = await scrape_simple_quotes(symbols)
+        quotes = await get_simple_quotes(symbols)
         quotes = [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
         data = orjson.dumps(quotes).decode('utf-8')
         yield f"quote: {data}\n\n"
