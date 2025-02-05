@@ -41,10 +41,10 @@ async def get_simple_quotes(symbols: list[str], cookies: str, crumb: str) -> lis
     """
     try:
         return await fetch_simple_quotes(symbols, cookies, crumb)
+    except HTTPException as e:
+        # Re-raise HTTPException
+        raise e
     except Exception as e:
         # Fallback to scraping when cookies and crumb are not available
         print("Error fetching simple quotes:", e)
         return await scrape_simple_quotes(symbols)
-    except HTTPException as e:
-        # Re-raise HTTPException
-        raise e
