@@ -19,7 +19,7 @@ from starlette.responses import Response, JSONResponse
 
 from src.connections import RedisConnectionManager
 from src.context import RequestContextMiddleware
-from src.dependencies import get_redis, _get_auth_data
+from src.dependencies import get_redis, _get_auth_data, get_yahoo_cookies, get_yahoo_crumb
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
@@ -187,7 +187,11 @@ async def request_validation_error_formatter(request, exc):
         }
     }
 )
-async def health(r=Depends(get_redis)):
+async def health(
+        r=Depends(get_redis),
+        cookies=Depends(get_yahoo_cookies),
+        crumb=Depends(get_yahoo_crumb)
+):
     """
         Comprehensive health check endpoint that verifies:
         - Basic API health
@@ -200,13 +204,13 @@ async def health(r=Depends(get_redis)):
     losers_task = scrape_losers()
     gainers_task = scrape_gainers()
     sectors_task = get_sectors()
-    sector_by_symbol_task = get_sector_for_symbol("NVDA")
+    sector_by_symbol_task = get_sector_for_symbol("NVDA", cookies, crumb)
     sector_by_name_task = get_sector_details(Sector.TECHNOLOGY)
     news_task = scrape_general_news()
     news_by_symbol_task = scrape_news_for_quote("NVDA")
     scrape_etf_news_task = scrape_news_for_quote("QQQ")
-    quotes_task = get_quotes(["NVDA", "QQQ", "GTLOX"])
-    simple_quotes_task = get_simple_quotes(["NVDA", "QQQ", "GTLOX"])
+    quotes_task = get_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
+    simple_quotes_task = get_simple_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
     similar_equity_task = scrape_similar_quotes("NVDA")
     similar_etf_task = scrape_similar_quotes("QQQ")
     historical_data_task_day = get_historical("NVDA", TimePeriod.DAY, Interval.ONE_MINUTE)

@@ -5,7 +5,7 @@ from src.dependencies import fetch
 from src.schemas import SimpleQuote
 
 
-async def scrape_similar_quotes(symbol: str, limit: int) -> list[SimpleQuote]:
+async def scrape_similar_quotes(symbol: str, limit: int = 10) -> list[SimpleQuote]:
     """
     Parse similar stocks from Yahoo Finance HTML
     :param symbol: the symbol of the stock to find similar stocks around

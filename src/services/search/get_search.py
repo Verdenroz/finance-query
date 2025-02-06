@@ -5,7 +5,7 @@ from src.services.search import fetch_yahoo_search_results
 from src.services.search.fetchers.algolia_search import fetch_algolia_search_results
 
 
-async def get_search(query: str, hits: int, type: Type) -> list[SearchResult]:
+async def get_search(query: str, hits: int = 10, type: Type = None) -> list[SearchResult]:
     """
     Search for a stock by name or symbol, filtering by its type and limiting the number of hits to 1-20
     :param query: the search query
