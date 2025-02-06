@@ -1,7 +1,6 @@
 from pprint import pprint
 from typing import Optional
 
-from fastapi import HTTPException
 from orjson import orjson
 
 from src.dependencies import fetch
@@ -64,8 +63,5 @@ async def fetch_yahoo_search_results(
             type=yf_to_type.get(item.get("quoteType"))
         )
         results.append(result)
-
-    if not results:
-        raise HTTPException(status_code=404, detail="No search results found.")
 
     return results
