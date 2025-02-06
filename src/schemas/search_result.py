@@ -2,7 +2,13 @@ from enum import Enum
 
 from pydantic import BaseModel, Field
 
-
+"""
+ Stocks, ETFs, and Trusts are all types of securities, but they can be called different things depending on the context.
+    For example:
+    
+    stock -> equity
+    trust -> mutual funds
+"""
 class Type(Enum):
     STOCK = "stock"
     ETF = "etf"
@@ -27,6 +33,6 @@ class SearchResult(BaseModel):
     )
     type: str = Field(
         default=...,
-        examples=["Equity"],
+        examples=["stock"],
         description="The type of security"
     )

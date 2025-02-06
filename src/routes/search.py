@@ -65,7 +65,7 @@ router = APIRouter()
 )
 async def search(
         query: str,
+        hits: int = Query(default=50, ge=1, le=100),
         type: Optional[Type] = None,
-        hits: Optional[int] = Query(default=10, ge=1, le=20)
 ):
-    return await get_search(query, type, hits)
+    return await get_search(query, hits, type)
