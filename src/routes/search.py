@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, HTTPException
+from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
@@ -21,34 +21,41 @@ router = APIRouter()
             "model": list[SearchResult],
             "description": "Search results returned successfully"
         },
-        400: {
-            "description": "Bad request",
-            "content": {
-                "application/json": {
-                    "examples": {
-                        "empty_query": {
-                            "summary": "Empty query parameter",
-                            "value": {"detail": "Query parameter should not be empty"}
-                        },
-                        "invalid_hits": {
-                            "summary": "Hits out of range",
-                            "value": {"detail": "Hits must be between 1 and 20"}
-                        }
-                    }
-                }
-            }
-        },
         422: {
             "model": ValidationErrorResponse,
             "description": "Validation error of query parameters",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Invalid request",
-                        "errors": {
-                            "query": ["Field required"],
-                            "type": ["Input should be 'stock', 'etf', or 'trust'"],
-                            "hits": ["Input should be a valid integer, unable to parse string as an integer"]
+                    "examples": {
+                        "empty_query": {
+                            "summary": "Empty query parameter",
+                            "value": {
+                                "detail": "Invalid request",
+                                "errors": {
+                                    "query": ["Field required"],
+                                }
+                            }
+                        },
+                        "invalid_hits": {
+                            "summary": "Hits out of range",
+                            "value": {
+                                "detail": "Invalid request",
+                                "errors": {
+                                    "hits": [
+                                        "Input should be less than or equal to 20"
+                                    ]
+                                }
+                            }
+                        },
+                        "invalid_request": {
+                            "summary": "Invalid query parameters",
+                            "value": {
+                                "detail": "Invalid request",
+                                "errors": {
+                                    "type": ["Input should be 'stock', 'etf', or 'trust'"],
+                                    "hits": ["Input should be a valid integer, unable to parse string as an integer"]
+                                }
+                            }
                         }
                     }
                 }
@@ -56,11 +63,9 @@ router = APIRouter()
         }
     }
 )
-async def search(query: str, type: Optional[Type] = None, hits: Optional[int] = 10):
-    if not query:
-        raise HTTPException(status_code=400, detail="Query parameter should not be empty")
-
-    if hits < 1 or hits > 20:
-        raise HTTPException(status_code=400, detail="Hits must be between 1 and 20")
-
+async def search(
+        query: str,
+        type: Optional[Type] = None,
+        hits: Optional[int] = Query(default=10, ge=1, le=20)
+):
     return await get_search(query, type, hits)
