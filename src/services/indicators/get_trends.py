@@ -5,7 +5,7 @@ from src.cache import cache
 from src.schemas.analysis import (MACDData, Analysis, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData,
                                   IchimokuData, Indicator)
 from src.schemas.time_series import TimePeriod, Interval
-from src.services.get_historical import get_historical_quotes
+from src.services.historical.get_historical import get_historical_quotes
 
 
 @cache(expire=60, market_closed_expire=600)
