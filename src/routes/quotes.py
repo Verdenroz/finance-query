@@ -35,10 +35,6 @@ router = APIRouter()
                     }
                 }
             }
-        },
-        500: {
-            "description": "Failed to get quote",
-            "content": {"application/json": {"example": {"detail": "Failed to get quotes"}}}
         }
     }
 )
@@ -81,10 +77,6 @@ async def get_quote(
                     }
                 }
             }
-        },
-        500: {
-            "description": "Failed to get simple quote",
-            "content": {"application/json": {"example": {"detail": "Failed to get simple quotes"}}}
         }
     }
 )

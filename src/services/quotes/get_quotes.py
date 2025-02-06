@@ -17,14 +17,17 @@ async def get_quotes(symbols: list[str], cookies: str, crumb: str) -> list[Quote
     :param crumb: Authentication crumb
     """
     try:
-        return await fetch_quotes(symbols, cookies, crumb)
-    except HTTPException as e:
-        # Re-raise HTTPException
-        raise e
+        if cookies and crumb:
+            return await fetch_quotes(symbols, cookies, crumb)
+    except HTTPException:
+        raise  # Re-raise the exception
+    except ValueError as e:
+        print(f"Error with Yahoo Finance credentials: {e}")
     except Exception as e:
-        # Fallback to scraping when cookies and crumb are not available
-        print("Error fetching quotes:", e)
-        return await scrape_quotes(symbols)
+        print(f"Error fetching quotes from API: {e}")
+
+    # Fallback to scraping if API fails or credentials aren't available
+    return await scrape_quotes(symbols)
 
 
 async def get_simple_quotes(symbols: list[str], cookies: str, crumb: str) -> list[SimpleQuote]:
@@ -40,11 +43,14 @@ async def get_simple_quotes(symbols: list[str], cookies: str, crumb: str) -> lis
     :param crumb: Authentication crumb
     """
     try:
-        return await fetch_simple_quotes(symbols, cookies, crumb)
-    except HTTPException as e:
-        # Re-raise HTTPException
-        raise e
+        if cookies and crumb:
+            return await fetch_simple_quotes(symbols, cookies, crumb)
+    except HTTPException:
+        raise  # Re-raise the exception
+    except ValueError as e:
+        print(f"Error with Yahoo Finance credentials: {e}")
     except Exception as e:
-        # Fallback to scraping when cookies and crumb are not available
-        print("Error fetching simple quotes:", e)
-        return await scrape_simple_quotes(symbols)
+        print(f"Error fetching quotes from API: {e}")
+
+    # Fallback to scraping if API fails or credentials aren't available
+    return await scrape_simple_quotes(symbols)
