@@ -1,7 +1,7 @@
 from enum import Enum
-from typing import List, Union
+from typing import List
 
-from pydantic import BaseModel, Field, RootModel
+from pydantic import BaseModel, Field
 
 
 class Sector(Enum):
@@ -89,7 +89,3 @@ class MarketSectorDetails(MarketSector):
 
     def dict(self, *args, **kwargs):
         return super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
-
-
-class SectorsResponse(RootModel):
-    root: Union[List[MarketSector], MarketSector, MarketSectorDetails]
