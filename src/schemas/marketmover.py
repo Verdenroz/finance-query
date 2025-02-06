@@ -1,4 +1,12 @@
+from enum import Enum
+
 from pydantic import BaseModel, Field, AliasChoices
+
+
+class MoverCount(Enum):
+    TWENTY_FIVE = "25"
+    FIFTY = "50"
+    HUNDRED = "100"
 
 
 class MarketMover(BaseModel):

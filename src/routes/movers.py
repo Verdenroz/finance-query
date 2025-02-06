@@ -1,7 +1,8 @@
-from fastapi import APIRouter, Security
+from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 
-from src.schemas import MarketMover
+from src.schemas import MarketMover, ValidationErrorResponse
+from src.schemas.marketmover import MoverCount
 from src.services import scrape_actives, scrape_gainers, scrape_losers
 
 router = APIRouter()
@@ -17,14 +18,26 @@ router = APIRouter()
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successful retrieved most active stocks"},
-        500: {
-            "description": "Failed to parse market movers",
-            "content": {"application/json": {"example": {"detail": "Failed to parse market movers"}}}
+        422: {
+            "model": ValidationErrorResponse,
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "count": [
+                                "Input should be '25', '50' or '100'"
+                            ]
+                        }
+                    }
+                }
+            }
         }
     }
 )
-async def get_actives():
-    return await scrape_actives()
+async def get_actives(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
+    return await scrape_actives(count)
 
 
 @router.get(
@@ -37,14 +50,26 @@ async def get_actives():
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successfully retrieved top gaining stocks"},
-        500: {
-            "description": "Failed to parse market movers",
-            "content": {"application/json": {"example": {"detail": "Failed to parse market movers"}}}
+        422: {
+            "model": ValidationErrorResponse,
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "count": [
+                                "Input should be '25', '50' or '100'"
+                            ]
+                        }
+                    }
+                }
+            }
         }
     }
 )
-async def get_gainers():
-    return await scrape_gainers()
+async def get_gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
+    return await scrape_gainers(count)
 
 
 @router.get(
@@ -57,11 +82,23 @@ async def get_gainers():
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successfully retrieved top losing stocks"},
-        500: {
-            "description": "Failed to parse market movers",
-            "content": {"application/json": {"example": {"detail": "Failed to parse market movers"}}}
+        422: {
+            "model": ValidationErrorResponse,
+            "description": "Validation error of query parameters",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "detail": "Invalid request",
+                        "errors": {
+                            "count": [
+                                "Input should be '25', '50' or '100'"
+                            ]
+                        }
+                    }
+                }
+            }
         }
     }
 )
-async def get_losers():
-    return await scrape_losers()
+async def get_losers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
+    return await scrape_losers(count)
