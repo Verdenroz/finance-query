@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Security, Query
+from fastapi import APIRouter, Security, Query, Depends
 from fastapi.security import APIKeyHeader
 
-from src.schemas import SimpleQuote, ValidationErrorResponse
-from src.services import scrape_similar_quotes
+from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
+from src.schemas import SimpleQuote
+from src.services.similar import get_similar_quotes
 
 router = APIRouter()
 
@@ -38,24 +39,19 @@ router = APIRouter()
             "content": {"application/json": {"example": {"detail": "No similar stocks found or invalid symbol"}}}
         },
         422: {
-            "model": ValidationErrorResponse,
-            "description": "Validation error of query parameters",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Invalid request",
-                        "errors": {
-                            "symbol": ["Field required"],
-                            "limit": ["Input should be a valid integer, unable to parse string as an integer"]
-                        }
-                    }
-                }
+            "detail": "Invalid request",
+            "errors": {
+                "limit": [
+                    "Input should be greater than or equal to 1 and less than or equal to 20"
+                ],
             }
         }
     }
 )
-async def get_similar_quotes(
+async def similar_quotes(
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb),
         symbol: str = Query(..., title="Symbol", description="Stock to find similar stocks around"),
-        limit: int = Query(default=10, title="Limit", description="Number of similar stocks to return")
+        limit: int = Query(default=10, title="Limit", description="Number of similar stocks to return", ge=1, le=20),
 ):
-    return await scrape_similar_quotes(symbol.upper(), limit)
+    return await get_similar_quotes(cookies, crumb, symbol.upper(), limit)
