@@ -2,7 +2,7 @@ from fastapi import HTTPException
 from lxml import etree
 
 from src.dependencies import fetch
-from src.schemas import SimpleQuote
+from src.models import SimpleQuote
 
 
 async def scrape_similar_quotes(symbol: str, limit: int = 10) -> list[SimpleQuote]:

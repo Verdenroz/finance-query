@@ -8,7 +8,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from src.connections import RedisConnectionManager
 from src.dependencies import get_redis_connection_manager
 from src.market import MarketSchedule
-from src.schemas import SimpleQuote
+from src.models import SimpleQuote
 from src.security import validate_websocket
 from src.services import (
     get_quotes, scrape_similar_quotes, scrape_actives,

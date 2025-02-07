@@ -1,5 +1,5 @@
 from src.cache import cache
-from src.schemas.marketmover import MoverCount
+from src.models.marketmover import MoverCount
 from src.services.movers import fetch_movers, scrape_movers
 
 

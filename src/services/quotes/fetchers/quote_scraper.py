@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from src.cache import cache
 from src.dependencies import get_logo, fetch
-from src.schemas import Quote, SimpleQuote
+from src.models import Quote, SimpleQuote
 from src.services.quotes.utils import (thread_pool, get_adaptive_chunk_size, _scrape_price_data, _scrape_general_info,
                                        parse_tree, _scrape_company_info, _scrape_performance)
 

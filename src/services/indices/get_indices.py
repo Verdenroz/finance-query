@@ -5,7 +5,7 @@ from lxml import etree
 
 from src.cache import cache
 from src.dependencies import fetch
-from src.schemas import Index
+from src.models import Index
 
 
 @cache(expire=15, market_closed_expire=3600)

@@ -4,7 +4,7 @@ from typing import Optional
 from orjson import orjson
 
 from src.dependencies import fetch
-from src.schemas import Type, SearchResult
+from src.models import Type, SearchResult
 
 
 async def fetch_yahoo_search_results(

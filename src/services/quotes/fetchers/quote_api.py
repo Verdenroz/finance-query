@@ -4,7 +4,7 @@ from fastapi import HTTPException
 from orjson import orjson
 
 from src.dependencies import fetch, get_logo
-from src.schemas import Quote, SimpleQuote
+from src.models import Quote, SimpleQuote
 from src.services.quotes.utils import (get_adaptive_chunk_size, format_date, get_fmt, get_raw, format_percent,
                                        get_morningstar_risk_rating, format_change, is_within_pre_market_time,
                                        is_within_post_market_time)

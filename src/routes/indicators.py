@@ -2,7 +2,7 @@ from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.schemas import Analysis, Indicator, Interval, ValidationErrorResponse, SummaryAnalysis
+from src.models import Analysis, Indicator, Interval, ValidationErrorResponse, SummaryAnalysis
 from src.services.indicators import (
     get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci, get_macd, get_adx, get_aroon,
     get_bbands, get_obv, get_super_trend, get_ichimoku, get_summary_analysis

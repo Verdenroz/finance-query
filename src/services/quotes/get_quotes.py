@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from src.schemas import Quote, SimpleQuote
+from src.models import Quote, SimpleQuote
 from src.services.quotes import fetch_quotes, scrape_quotes, fetch_simple_quotes, scrape_simple_quotes
 
 

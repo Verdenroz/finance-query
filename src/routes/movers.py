@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 
-from src.schemas import MarketMover, ValidationErrorResponse
-from src.schemas.marketmover import MoverCount
+from src.models import MarketMover, ValidationErrorResponse
+from src.models.marketmover import MoverCount
 from src.services import scrape_actives, scrape_gainers, scrape_losers
 
 router = APIRouter()

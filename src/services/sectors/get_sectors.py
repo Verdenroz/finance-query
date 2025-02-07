@@ -4,7 +4,7 @@ from fastapi import HTTPException
 
 from src.cache import cache
 from src.dependencies import fetch
-from src.schemas import MarketSector, MarketSectorDetails, Sector
+from src.models import MarketSector, MarketSectorDetails, Sector
 from src.services.sectors import get_yahoo_sector, parse_sector, parse_sector_details
 
 urls = {

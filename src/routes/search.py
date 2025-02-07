@@ -2,7 +2,7 @@ from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.schemas import SearchResult, Type, ValidationErrorResponse
+from src.models import SearchResult, Type, ValidationErrorResponse
 from src.services import get_search
 
 router = APIRouter()

@@ -1,7 +1,7 @@
 from orjson import orjson
 
 from src.dependencies import fetch
-from src.schemas import MarketMover
+from src.models import MarketMover
 
 
 async def fetch_movers(url: str) -> list[MarketMover]:

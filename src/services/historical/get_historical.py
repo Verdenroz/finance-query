@@ -8,7 +8,7 @@ from stock_indicators.indicators.common.quote import Quote
 
 from src.cache import cache
 from src.dependencies import fetch
-from src.schemas import HistoricalData, TimePeriod, Interval
+from src.models import HistoricalData, TimePeriod, Interval
 
 
 @cache(expire=60, market_closed_expire=600)

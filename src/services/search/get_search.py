@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 
-from src.schemas import SearchResult, Type
+from src.models import SearchResult, Type
 from src.services.search import fetch_yahoo_search_results
 from src.services.search.fetchers.algolia_search import fetch_algolia_search_results
 

@@ -20,10 +20,10 @@ from starlette.responses import Response, JSONResponse
 from src.connections import RedisConnectionManager
 from src.context import RequestContextMiddleware
 from src.dependencies import get_redis, _get_auth_data, get_yahoo_cookies, get_yahoo_crumb
+from src.models import ValidationErrorResponse, Sector, TimePeriod, Interval
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
-from src.schemas import ValidationErrorResponse, Sector, TimePeriod, Interval
 from src.security import RateLimitMiddleware
 from src.services import (
     scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors,

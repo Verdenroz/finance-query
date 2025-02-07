@@ -3,7 +3,7 @@ import asyncio
 from fastapi import HTTPException
 from lxml import etree
 
-from src.schemas import MarketSector, MarketSectorDetails
+from src.models import MarketSector, MarketSectorDetails
 
 
 async def parse_sector(html: str, sector: str) -> MarketSector:

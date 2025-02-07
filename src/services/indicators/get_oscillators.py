@@ -2,8 +2,8 @@ from stock_indicators import indicators
 from typing_extensions import OrderedDict
 
 from src.cache import cache
-from src.schemas.analysis import RSIData, Analysis, SRSIData, STOCHData, CCIData, Indicator
-from src.schemas.historical_data import TimePeriod, Interval
+from src.models.analysis import RSIData, Analysis, SRSIData, STOCHData, CCIData, Indicator
+from src.models.historical_data import TimePeriod, Interval
 from src.services.historical.get_historical import get_historical_quotes
 
 

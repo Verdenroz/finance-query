@@ -5,7 +5,7 @@ from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from orjson import orjson
 
-from src.schemas import ValidationErrorResponse
+from src.models import ValidationErrorResponse
 from src.services import get_simple_quotes
 
 router = APIRouter()

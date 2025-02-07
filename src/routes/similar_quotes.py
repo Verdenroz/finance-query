@@ -2,7 +2,7 @@ from fastapi import APIRouter, Security, Query, Depends
 from fastapi.security import APIKeyHeader
 
 from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
-from src.schemas import SimpleQuote
+from src.models import SimpleQuote
 from src.services.similar import get_similar_quotes
 
 router = APIRouter()

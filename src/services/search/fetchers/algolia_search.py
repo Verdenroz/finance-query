@@ -3,7 +3,7 @@ from typing import Optional
 
 from algoliasearch.search_client import SearchClient
 
-from src.schemas import Type, SearchResult
+from src.models import Type, SearchResult
 
 
 async def fetch_algolia_search_results(query: str, hits: int, type: Optional[Type]) -> list[SearchResult]:

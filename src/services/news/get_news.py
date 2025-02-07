@@ -3,7 +3,7 @@ from lxml import etree
 
 from src.cache import cache
 from src.dependencies import fetch
-from src.schemas import News
+from src.models import News
 
 
 def parse_symbol_exchange(yahoo_symbol: str):
