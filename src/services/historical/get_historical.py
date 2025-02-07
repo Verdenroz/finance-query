@@ -8,7 +8,7 @@ from stock_indicators.indicators.common.quote import Quote
 
 from src.cache import cache
 from src.dependencies import fetch
-from src.schemas import HistoricalData, TimeSeries, TimePeriod, Interval
+from src.schemas import HistoricalData, TimePeriod, Interval
 
 
 @cache(expire=60, market_closed_expire=600)
@@ -17,7 +17,7 @@ async def get_historical(
         period: TimePeriod,
         interval: Interval,
         epoch: bool = False
-) -> TimeSeries:
+) -> dict[str, HistoricalData]:
     """
     Get historical data for a stock symbol based on the time period and interval provided.
     :param symbol: the symbol of the stock to get historical data for
@@ -104,7 +104,7 @@ async def get_historical(
                 adj_close=round(Decimal(str(row['adjclose'])), 2) if 'adjclose' in df.columns else None
             )
 
-        return TimeSeries(history=history_dict)
+        return history_dict
 
     except orjson.JSONDecodeError:
         raise HTTPException(status_code=500, detail="Invalid response from Yahoo Finance API")
@@ -127,11 +127,8 @@ async def get_historical_quotes(symbol: str, period: TimePeriod, interval: Inter
     try:
         time_series = await get_historical(symbol, period, interval)
 
-        # Check if the returned object is a dictionary and convert it to TimeSeries
-        if isinstance(time_series, dict):
-            time_series = TimeSeries(**time_series)
         quotes = []
-        for date_key, historical_data in time_series.history.items():
+        for date_key, historical_data in time_series.items():
             if date_key.isdigit():
                 date = datetime.fromtimestamp(int(date_key))
             else:

@@ -64,20 +64,3 @@ class HistoricalData(BaseModel):
         examples=[1000000],
         description="Volume traded"
     )
-
-
-class TimeSeries(BaseModel):
-    history: dict[str, HistoricalData] = Field(
-        default=...,
-        serialization_alias="Historical Data",
-        validation_alias=AliasChoices("Historical Data", "history"),
-        examples=[{
-            "2021-07-09": {
-                "open": 145.00,
-                "high": 145.00,
-                "low": 145.00,
-                "adjClose": 145.00,
-                "volume": 1000000
-            }
-        }], description="Dates with historical data for the stock"
-    )

@@ -3,7 +3,7 @@ from typing_extensions import OrderedDict
 
 from src.cache import cache
 from src.schemas.analysis import SMAData, Analysis, EMAData, WMAData, VWMAData, Indicator
-from src.schemas.time_series import TimePeriod, Interval
+from src.schemas.historical_data import TimePeriod, Interval
 from src.services.historical.get_historical import get_historical_quotes
 
 
