@@ -59,7 +59,4 @@ async def get_time_series(
                                                       TimePeriod.YTD, TimePeriod.YEAR]:
         raise HTTPException(status_code=400, detail="If interval is 1h, time period must be 1Y or less")
 
-    try:
-        return await get_historical(symbol, time, interval, epoch)
-    except HTTPException as e:
-        raise e
+    return await get_historical(symbol, time, interval, epoch)

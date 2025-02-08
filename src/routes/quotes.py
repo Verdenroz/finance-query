@@ -44,9 +44,7 @@ async def get_quote(
         crumb: str = Depends(get_yahoo_crumb)
 ):
     symbols = list(set(symbols.upper().replace(' ', '').split(',')))
-    quotes = await get_quotes(symbols, cookies, crumb)
-
-    return [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
+    return await get_quotes(symbols, cookies, crumb)
 
 
 @router.get(
@@ -86,6 +84,4 @@ async def get_simple_quote(
         crumb: str = Depends(get_yahoo_crumb)
 ):
     symbols = list(set(symbols.upper().replace(' ', '').split(',')))
-    quotes = await get_simple_quotes(symbols, cookies, crumb)
-
-    return [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
+    return await get_simple_quotes(symbols, cookies, crumb)

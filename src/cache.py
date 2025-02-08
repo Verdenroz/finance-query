@@ -1,16 +1,14 @@
 import asyncio
-import decimal
 import functools
 import gzip
 import hashlib
 import os
 from datetime import date
-from typing import Optional, Any, TypeVar, Callable, Union
+from typing import Optional, Any, TypeVar, Callable, get_type_hints, get_args
 
 import orjson
 from aiohttp import ClientSession
 from async_lru import alru_cache
-from dotenv import load_dotenv
 from pydantic import BaseModel
 from redis import RedisError
 
@@ -18,34 +16,14 @@ from src.context import request_context
 from src.market import MarketSchedule, MarketStatus
 from src.models import HistoricalData, SimpleQuote, Quote, MarketMover, Index, News, MarketSector
 from src.models.analysis import SMAData, EMAData, WMAData, VWMAData, RSIData, SRSIData, STOCHData, CCIData, MACDData, \
-    ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData, Analysis, Indicator
+    ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData, Analysis
 from src.models.sector import MarketSectorDetails
-
-load_dotenv()
-
-indicators = {
-    "SMA": SMAData,
-    "EMA": EMAData,
-    "WMA": WMAData,
-    "VWMA": VWMAData,
-    "RSI": RSIData,
-    "SRSI": SRSIData,
-    "STOCH": STOCHData,
-    "CCI": CCIData,
-    "MACD": MACDData,
-    "ADX": ADXData,
-    "AROON": AROONData,
-    "BBANDS": BBANDSData,
-    "OBV": OBVData,
-    "SUPERTREND": SuperTrendData,
-    "ICHIMOKU": IchimokuData
-}
 
 T = TypeVar('T')
 
 
-class CacheHandler:
-    """Handles caching operations with different storage backends and data types."""
+class RedisCacheHandler:
+    """Handles caching operations with type-aware reconstruction of cached data."""
 
     def __init__(self, expire: int, market_closed_expire: Optional[int], market_schedule: MarketSchedule):
         self.expire = expire
@@ -61,10 +39,13 @@ class CacheHandler:
     @staticmethod
     def handle_data(obj: Any) -> Any:
         """Convert special types to JSON-serializable formats."""
-        if isinstance(obj, decimal.Decimal):
-            return float(obj)
+        if isinstance(obj, date):
+            return obj.isoformat()
         if isinstance(obj, BaseModel):
-            return obj.model_dump()
+            return {
+                "__type__": obj.__class__.__name__,
+                "data": obj.model_dump(by_alias=True, exclude_none=True)
+            }
         if hasattr(obj, 'to_dict'):
             return obj.to_dict()
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
@@ -73,64 +54,117 @@ class CacheHandler:
         """Serialize and compress data for storage."""
         return gzip.compress(orjson.dumps(data, default=self.handle_data))
 
-    @staticmethod
-    def deserialize_data(data: bytes) -> Any:
-        """Decompress and deserialize data from storage."""
-        return orjson.loads(gzip.decompress(data))
+    def reconstruct_type(self, data: Any, type_hint: type) -> Any:
+        """Recursively reconstruct complex types from cached data."""
+        if data is None:
+            return None
+
+        # Handle container types (dict, list)
+        origin = getattr(type_hint, "__origin__", None)
+        if origin is not None:
+            if origin is dict:
+                key_type, value_type = get_args(type_hint)
+                return {k: self.reconstruct_type(v, value_type) for k, v in data.items()}
+            elif origin is list:
+                value_type = get_args(type_hint)[0]
+                return [self.reconstruct_type(item, value_type) for item in data]
+
+        # Handle BaseModel instances
+        if isinstance(data, dict) and "__type__" in data:
+            model_name = data["__type__"]
+            model_data = data["data"]
+
+            # Import your model classes here
+            model_map = {
+                "Analysis": Analysis,
+                "SMAData": SMAData,
+                "EMAData": EMAData,
+                "WMAData": WMAData,
+                "VWMAData": VWMAData,
+                "RSIData": RSIData,
+                "SRSIData": SRSIData,
+                "STOCHData": STOCHData,
+                "CCIData": CCIData,
+                "MACDData": MACDData,
+                "ADXData": ADXData,
+                "AROONData": AROONData,
+                "BBANDSData": BBANDSData,
+                "OBVData": OBVData,
+                "SuperTrendData": SuperTrendData,
+                "IchimokuData": IchimokuData,
+                "SimpleQuote": SimpleQuote,
+                "Quote": Quote,
+                "MarketMover": MarketMover,
+                "Index": Index,
+                "MarketSector": MarketSector,
+                "MarketSectorDetails": MarketSectorDetails,
+                "HistoricalData": HistoricalData,
+                "News": News,
+            }
+
+            if model_name in model_map:
+                return model_map[model_name](**model_data)
+
+        return data
+
+    def deserialize_data(self, data: bytes, type_hint: Optional[type] = None) -> Any:
+        """Decompress and deserialize data with type reconstruction."""
+        deserialized = orjson.loads(gzip.decompress(data))
+        if type_hint:
+            return self.reconstruct_type(deserialized, type_hint)
+        return deserialized
+
+    async def get_from_redis(self, key: str, return_type: type) -> Optional[Any]:
+        """Retrieve and reconstruct data from Redis."""
+        try:
+            request = request_context.get()
+            redis = request.app.state.redis
+
+            if not redis.exists(key):
+                return None
+
+            key_type = redis.type(key)
+            if key_type == b'string':
+                cached_data = redis.get(key)
+                return self.deserialize_data(cached_data, return_type)
+            elif key_type == b'list':
+                items = redis.lrange(key, 0, -1)
+                if not items:
+                    return None
+                # For lists, we need to get the type of the list items
+                item_type = get_args(return_type)[0] if hasattr(return_type, '__args__') else Any
+                return [self.deserialize_data(item, item_type) for item in items]
+
+            return None
+
+        except (RedisError, orjson.JSONDecodeError) as e:
+            print(f"Redis error: {str(e)}")
+            return None
 
     def store_in_redis(self, key: str, result: Any, expire_time: int) -> None:
-        """Store data in Redis with appropriate serialization based on type."""
+        """Store data in Redis with type information preservation."""
         try:
             request = request_context.get()
             pipe = request.app.state.redis.pipeline()
 
             if isinstance(result, dict):
-                if result and isinstance(next(iter(result.values())), HistoricalData):
-                    # Handle HistoricalData dictionary
-                    serialized = {k: v.model_dump(by_alias=True, exclude_none=True)
-                                  for k, v in result.items()}
-                    pipe.set(key, self.serialize_data(serialized))
-                else:
-                    pipe.set(key, self.serialize_data(result))
-
-            elif isinstance(result, (SimpleQuote, Quote, MarketMover, Index, News,
-                                     MarketSector, MarketSectorDetails)):
-                pipe.set(key, gzip.compress(
-                    result.model_dump_json(by_alias=True, exclude_none=True).encode()
-                ))
-
+                pipe.set(key, self.serialize_data(result))
+            elif isinstance(result, BaseModel):
+                pipe.set(key, self.serialize_data({
+                    "__type__": result.__class__.__name__,
+                    "data": result.model_dump(by_alias=True, exclude_none=True)
+                }))
             elif isinstance(result, list):
                 pipe.delete(key)
-                if result and isinstance(result[0], (SimpleQuote, Quote, MarketMover,
-                                                     Index, News, MarketSector)):
-                    items = [item.dict() for item in result]
-                else:
-                    items = result
-                for item in items:
-                    pipe.rpush(key, self.serialize_data(item))
+                serialized_items = [self.serialize_data(item) for item in result]
+                if serialized_items:
+                    pipe.rpush(key, *serialized_items)
 
             pipe.expire(key, expire_time)
             pipe.execute()
 
         except RedisError as e:
-            print(f"Redis caching error: {str(e)}")
-            return None
-
-    @staticmethod
-    def process_cached_result(result: dict) -> Union[dict, Analysis]:
-        """Process and transform cached results if needed."""
-        if isinstance(result, dict) and 'Technical Analysis' in result:
-            indicator_data = {}
-            indicator_name = result['type']
-            if indicator_name in indicators:
-                for key, value in result['Technical Analysis'].items():
-                    indicator_value = indicators[indicator_name](**value)
-                    indicator_data[date.fromisoformat(key)] = indicator_value
-                return Analysis(
-                    type=Indicator(indicator_name),
-                    indicators=indicator_data
-                ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
-        return result
+            print(f"Redis error: {str(e)}")
 
 
 def cache(
@@ -139,17 +173,13 @@ def cache(
         memcache: bool = False,
         market_schedule: MarketSchedule = MarketSchedule(),
 ) -> Callable:
-    """
-    Cache decorator that supports both Redis and in-memory caching.
-
-    :param expire: default expiration time
-    :param market_closed_expire: when market is closed
-    :param memcache: whether to use in-memory caching
-    :param market_schedule: market schedule for determining cache expiration
-    """
-    handler = CacheHandler(expire, market_closed_expire, market_schedule)
+    """Cache decorator with type-aware reconstruction of cached data."""
+    handler = RedisCacheHandler(expire, market_closed_expire, market_schedule)
 
     def decorator(func: Callable[..., T]) -> Callable[..., T]:
+        # Get the return type hint from the function
+        return_type = get_type_hints(func).get('return')
+
         if memcache or not handler.use_redis:
             return alru_cache(maxsize=512, ttl=handler.get_expire_time())(func)
 
@@ -161,32 +191,15 @@ def cache(
                 filtered_kwargs = {k: v for k, v in kwargs.items()
                                    if not isinstance(v, ClientSession)}
 
-                # Generate cache key
                 key = (f"{func.__name__}:"
                        f"{hashlib.sha256(orjson.dumps((filtered_args, filtered_kwargs))).hexdigest()}")
 
-                try:
-                    request = request_context.get()
-                    redis = request.app.state.redis
+                # Try to get from cache with proper type reconstruction
+                cached_result = await handler.get_from_redis(key, return_type)
+                if cached_result is not None:
+                    return cached_result
 
-                    if redis.exists(key):
-                        key_type = redis.type(key)
-                        if key_type == b'string':
-                            result = handler.deserialize_data(redis.get(key))
-                            return handler.process_cached_result(result)
-                        elif key_type == b'list':
-                            items = redis.lrange(key, 0, -1)
-                            if not items:
-                                raise KeyError("Cache key exists but no items found")
-                            return [handler.deserialize_data(item) for item in items]
-                        else:
-                            raise ValueError(f"Unexpected Redis key type: {key_type}")
-
-                except orjson.JSONDecodeError as e:
-                    redis.delete(key)
-                    print(f"Cache corruption detected: {str(e)}")
-
-                # Cache miss - execute function and store result
+                # If not in cache, call the function and store result
                 result = await func(*args, **kwargs)
                 if result is not None:
                     handler.store_in_redis(key, result, handler.get_expire_time())
