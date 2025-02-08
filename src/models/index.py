@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from pydantic import BaseModel, Field, AliasChoices
 
 
@@ -9,7 +7,7 @@ class Index(BaseModel):
         examples=["S&P 500"],
         description="Name of the index"
     )
-    value: Decimal = Field(
+    value: float = Field(
         default=...,
         examples=[4300.00],
         description="Current value of the index"
@@ -27,5 +25,4 @@ class Index(BaseModel):
         validation_alias=AliasChoices("percentChange", "percent_change"))
 
     def dict(self, *args, **kwargs):
-        base_dict = super().model_dump(*args, **kwargs, exclude_none=True, by_alias=True)
-        return {k: (str(v) if isinstance(v, Decimal) else v) for k, v in base_dict.items() if v is not None}
+        return super().model_dump(*args, **kwargs, exclude_none=True, by_alias=True)

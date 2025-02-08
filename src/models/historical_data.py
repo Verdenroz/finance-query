@@ -1,4 +1,3 @@
-from decimal import Decimal
 from enum import Enum
 from typing import Optional
 
@@ -32,27 +31,27 @@ class Interval(Enum):
 
 
 class HistoricalData(BaseModel):
-    open: Decimal = Field(
+    open: float = Field(
         default=...,
         examples=[145.00],
         description="Opening price"
     )
-    high: Decimal = Field(
+    high: float = Field(
         default=...,
         examples=[145.00],
         description="Highest price"
     )
-    low: Decimal = Field(
+    low: float = Field(
         default=...,
         examples=[145.00],
         description="Lowest price"
     )
-    close: Decimal = Field(
+    close: float = Field(
         default=...,
         examples=[145.00],
         description="Closing price",
     )
-    adj_close: Optional[Decimal] = Field(
+    adj_close: Optional[float] = Field(
         default=None,
         examples=[145.00],
         description="Adjusted closing price",

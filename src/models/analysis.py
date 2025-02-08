@@ -1,5 +1,4 @@
 from datetime import date
-from decimal import Decimal
 from enum import Enum
 
 from pydantic import Field, BaseModel, AliasChoices, SerializeAsAny
@@ -29,7 +28,7 @@ class IndicatorData(BaseModel):
 
 
 class SMAData(IndicatorData):
-    value: Decimal = Field(
+    value: float = Field(
         ..., examples=[30.00], description="Simple Moving Average value", serialization_alias="SMA"
     )
 
@@ -41,7 +40,7 @@ class SMAData(IndicatorData):
 
 
 class EMAData(IndicatorData):
-    value: Decimal = Field(
+    value: float = Field(
         ..., examples=[30.00], description="Exponential Moving Average value", serialization_alias="EMA"
     )
 
@@ -53,7 +52,7 @@ class EMAData(IndicatorData):
 
 
 class WMAData(IndicatorData):
-    value: Decimal = Field(
+    value: float = Field(
         ..., examples=[30.00], description="Weighted Moving Average value", serialization_alias="WMA"
     )
 
@@ -65,7 +64,7 @@ class WMAData(IndicatorData):
 
 
 class VWMAData(IndicatorData):
-    value: Decimal = Field(
+    value: float = Field(
         ..., examples=[30.00], description="Volume Weighted Moving Average value", serialization_alias="VWMA"
     )
 
@@ -77,7 +76,7 @@ class VWMAData(IndicatorData):
 
 
 class RSIData(IndicatorData):
-    value: Decimal = Field(
+    value: float = Field(
         ..., examples=[30.00], description="Relative Strength Index value", serialization_alias="RSI"
     )
 
@@ -89,10 +88,10 @@ class RSIData(IndicatorData):
 
 
 class SRSIData(IndicatorData):
-    k: Decimal = Field(
+    k: float = Field(
         ..., examples=[30.00], description="Stochastic RSI value", serialization_alias="%K"
     )
-    d: Decimal = Field(
+    d: float = Field(
         ..., examples=[30.00], description="Stochastic RSI Signal value", serialization_alias="%D"
     )
 
@@ -105,10 +104,10 @@ class SRSIData(IndicatorData):
 
 
 class STOCHData(IndicatorData):
-    k: Decimal = Field(
+    k: float = Field(
         ..., examples=[30.00], description="Stochastic Oscillator %K value", serialization_alias="%K"
     )
-    d: Decimal = Field(
+    d: float = Field(
         ..., examples=[30.00], description="Stochastic Oscillator %D value", serialization_alias="%D"
     )
 
@@ -121,7 +120,7 @@ class STOCHData(IndicatorData):
 
 
 class CCIData(IndicatorData):
-    value: Decimal = Field(
+    value: float = Field(
         ..., examples=[30.00], description="Commodity Channel Index value", serialization_alias="CCI"
     )
 
@@ -133,10 +132,10 @@ class CCIData(IndicatorData):
 
 
 class MACDData(IndicatorData):
-    value: Decimal = Field(
+    value: float = Field(
         ..., examples=[30.00], description="Moving Average Convergence Divergence value", serialization_alias="MACD"
     )
-    signal: Decimal = Field(
+    signal: float = Field(
         ..., examples=[30.00], description="MACD Signal value", serialization_alias="Signal"
     )
 
@@ -149,7 +148,7 @@ class MACDData(IndicatorData):
 
 
 class ADXData(IndicatorData):
-    value: Decimal = Field(
+    value: float = Field(
         ..., examples=[30.00], description="Average Directional Index value", serialization_alias="ADX"
     )
 
@@ -161,10 +160,10 @@ class ADXData(IndicatorData):
 
 
 class AROONData(IndicatorData):
-    aroon_up: Decimal = Field(
+    aroon_up: float = Field(
         ..., examples=[30.00], description="Aroon Up value", serialization_alias="Aroon Up"
     )
-    aroon_down: Decimal = Field(
+    aroon_down: float = Field(
         ..., examples=[30.00], description="Aroon Down value", serialization_alias="Aroon Down"
     )
 
@@ -177,10 +176,10 @@ class AROONData(IndicatorData):
 
 
 class BBANDSData(IndicatorData):
-    upper_band: Decimal = Field(
+    upper_band: float = Field(
         ..., examples=[30.00], description="Upper Bollinger Band value", serialization_alias="Upper Band"
     )
-    lower_band: Decimal = Field(
+    lower_band: float = Field(
         ..., examples=[30.00], description="Lower Bollinger Band value", serialization_alias="Lower Band"
     )
 
@@ -193,7 +192,7 @@ class BBANDSData(IndicatorData):
 
 
 class OBVData(IndicatorData):
-    value: Decimal = Field(..., examples=[30.00], description="On Balance Volume value", serialization_alias="OBV")
+    value: float = Field(..., examples=[30.00], description="On Balance Volume value", serialization_alias="OBV")
 
     def to_dict(self):
         return {
@@ -203,7 +202,7 @@ class OBVData(IndicatorData):
 
 
 class SuperTrendData(IndicatorData):
-    value: Decimal = Field(..., examples=[30.00], description="Super Trend value", serialization_alias="Super Trend")
+    value: float = Field(..., examples=[30.00], description="Super Trend value", serialization_alias="Super Trend")
     trend: str = Field(..., examples=["UP"], description="Trend direction", serialization_alias="Trend")
 
     def to_dict(self):
@@ -215,19 +214,19 @@ class SuperTrendData(IndicatorData):
 
 
 class IchimokuData(IndicatorData):
-    tenkan_sen: Optional[Decimal] = Field(
+    tenkan_sen: Optional[float] = Field(
         None, examples=[30.00], description="Tenkan-sen value", serialization_alias="Conversion Line"
     )
-    kijun_sen: Optional[Decimal] = Field(
+    kijun_sen: Optional[float] = Field(
         None, examples=[30.00], description="Kijun-sen value", serialization_alias="Base Line"
     )
-    chikou_span: Optional[Decimal] = Field(
+    chikou_span: Optional[float] = Field(
         None, examples=[30.00], description="Chikou Span value", serialization_alias="Lagging Span"
     )
-    senkou_span_a: Optional[Decimal] = Field(
+    senkou_span_a: Optional[float] = Field(
         None, examples=[30.00], description="Senkou Span A value", serialization_alias="Leading Span A"
     )
-    senkou_span_b: Optional[Decimal] = Field(
+    senkou_span_b: Optional[float] = Field(
         None, examples=[30.00], description="Senkou Span B value", serialization_alias="Leading Span B"
     )
 

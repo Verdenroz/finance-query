@@ -1,5 +1,4 @@
 from datetime import datetime
-from decimal import Decimal
 
 import pandas as pd
 from fastapi import HTTPException
@@ -22,7 +21,7 @@ async def get_historical(
     Get historical data for a stock symbol based on the time period and interval provided.
     :param symbol: the symbol of the stock to get historical data for
     :param period: the time period for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
-    :param interval: the interval for the historical data (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
+    :param interval: the time interval between data points (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param epoch: whether to return timestamps as epoch integers or formatted date strings
 
     :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
@@ -96,12 +95,12 @@ async def get_historical(
             date_key = timestamp.strftime(date_format) if not epoch else int(timestamp.timestamp())
 
             history_dict[str(date_key)] = HistoricalData(
-                open=round(Decimal(str(row['open'])), 2),
-                high=round(Decimal(str(row['high'])), 2),
-                low=round(Decimal(str(row['low'])), 2),
-                close=round(Decimal(str(row['close'])), 2),
+                open=round(float(row['open']), 2),
+                high=round(float(row['high']), 2),
+                low=round(float(row['low']), 2),
+                close=round(float(row['close']), 2),
                 volume=int(row['volume']),
-                adj_close=round(Decimal(str(row['adjclose'])), 2) if 'adjclose' in df.columns else None
+                adj_close=round(float(row['adjclose']), 2) if 'adjclose' in df.columns else None
             )
 
         return history_dict

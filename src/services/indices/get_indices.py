@@ -1,5 +1,3 @@
-from decimal import Decimal
-
 from fastapi import HTTPException
 from lxml import etree
 
@@ -41,7 +39,7 @@ async def get_indices(html) -> list[Index]:
         indices = []
         for row in rows:
             name = row.xpath(name_xpath)[0].strip()
-            value = Decimal(row.xpath(value_xpath)[0].replace(',', ''))
+            value = float(row.xpath(value_xpath)[0].replace(',', ''))
             change = row.xpath(change_xpath)[0].strip()
             percent_change = row.xpath(percent_change_xpath)[0].strip()
 
