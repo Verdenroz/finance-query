@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import RedisConnectionManager
-from src.dependencies import get_redis_connection_manager
+from src.dependencies import get_redis_connection_manager, get_yahoo_cookies, get_yahoo_crumb
 from src.market import MarketSchedule
 from src.models import SimpleQuote
 from src.security import validate_websocket
@@ -102,13 +102,15 @@ async def handle_websocket_connection(
 async def websocket_profile(
         websocket: WebSocket,
         symbol: str,
-        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager)
+        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager),
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb)
 ):
     async def get_profile():
         """
         Fetches the profile data for a symbol.
         """
-        quotes_task = get_quotes([symbol])
+        quotes_task = get_quotes([symbol], cookies, crumb)
         similar_quotes_task = scrape_similar_quotes(symbol)
         sector_performance_task = get_sector_for_symbol(symbol)
         news_task = scrape_news_for_quote(symbol)
@@ -142,7 +144,9 @@ async def websocket_profile(
 @router.websocket("/quotes")
 async def websocket_quotes(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager)
+        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager),
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb)
 ):
     is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
@@ -156,7 +160,7 @@ async def websocket_quotes(
             """
             Fetches quotes for a list of symbols.
             """
-            result = await get_simple_quotes(symbols)
+            result = await get_simple_quotes(symbols, cookies, crumb)
             quotes = []
             for quote in result:
                 if not isinstance(quote, SimpleQuote):

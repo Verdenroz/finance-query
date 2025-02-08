@@ -3,7 +3,6 @@ import os
 from typing import Optional, Annotated, AsyncGenerator, Union
 
 from aiohttp import ClientSession, ClientResponse, ClientPayloadError, ClientError
-from dotenv import load_dotenv
 from fastapi import Depends, Request, HTTPException
 from fastapi_injectable import injectable
 from redis import Redis
@@ -11,8 +10,7 @@ from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager
 from src.constants import proxy, proxy_auth, headers
-
-load_dotenv()
+from src.context import request_context
 
 
 async def get_session() -> AsyncGenerator[ClientSession, None]:
@@ -27,9 +25,9 @@ async def get_session() -> AsyncGenerator[ClientSession, None]:
         await session.close()
 
 
-async def get_redis(request: Request) -> Redis:
-    """Get Redis client from registered app state"""
-    return request.app.state.redis
+async def get_request_context() -> Request | WebSocket:
+    """Get request context from FastAPI app"""
+    return request_context.get()
 
 
 async def get_redis_connection_manager(websocket: WebSocket) -> RedisConnectionManager:
@@ -39,12 +37,20 @@ async def get_redis_connection_manager(websocket: WebSocket) -> RedisConnectionM
     return websocket.app.state.connection_manager
 
 
-async def get_yahoo_cookies(request: Request) -> dict:
+@injectable
+async def get_redis(request=Depends(get_request_context)) -> Redis:
+    """Get Redis client from registered app state"""
+    return request.app.state.redis
+
+
+@injectable
+async def get_yahoo_cookies(request=Depends(get_request_context)) -> dict:
     """Get Yahoo cookies from app state"""
     return request.app.state.cookies
 
 
-async def get_yahoo_crumb(request: Request) -> str:
+@injectable
+async def get_yahoo_crumb(request=Depends(get_request_context)) -> str:
     """Get Yahoo crumb from app state"""
     return request.app.state.crumb
 
