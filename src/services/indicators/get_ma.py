@@ -3,8 +3,8 @@ from typing_extensions import OrderedDict
 from src.models.analysis import SMAData, Analysis, EMAData, WMAData, VWMAData, Indicator
 from src.models.historical_data import TimePeriod, Interval
 from src.services.historical.get_historical import get_historical
-from src.services.indicators.core import calculate_sma, calculate_ema, calculate_wma, calculate_vwma, \
-    prepare_price_data, create_indicator_dict
+from src.services.indicators.core import (calculate_sma, calculate_ema, calculate_wma, calculate_vwma,
+                                          prepare_price_data, create_indicator_dict)
 
 
 async def get_sma(symbol: str, interval: Interval, period: int = 10) -> dict:
