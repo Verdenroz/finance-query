@@ -126,7 +126,7 @@ async def get_technical_indicators(
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Optional[Interval] = Query(
             default=Interval.DAILY,
-            description="The interval to get historical data for. Available values: 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo.")
+            description="The interval between data points. Available values: 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo.")
         ,
         period: Optional[int] = Query(None, description="The look-back period for the technical indicators."),
         stoch_period: Optional[int] = Query(None, description="The stochastic look-back period for STOCH and SRSI."),

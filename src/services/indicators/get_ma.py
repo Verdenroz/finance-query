@@ -1,13 +1,11 @@
-from stock_indicators import indicators
 from typing_extensions import OrderedDict
 
-from src.cache import cache
 from src.models.analysis import SMAData, Analysis, EMAData, WMAData, VWMAData, Indicator
 from src.models.historical_data import TimePeriod, Interval
-from src.services.historical.get_historical import get_historical_quotes
+from src.services.historical.get_historical import get_historical
+from src.services.indicators.core import calculate_sma, calculate_ema, calculate_wma, calculate_vwma
 
 
-@cache(expire=60, market_closed_expire=600)
 async def get_sma(symbol: str, interval: Interval, period: int = 10) -> dict:
     """
     Get the Simple Moving Average (SMA) for a symbol.
@@ -20,19 +18,18 @@ async def get_sma(symbol: str, interval: Interval, period: int = 10) -> dict:
 
     :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
     """
-    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
-    results = indicators.get_sma(quotes, period)
-    indicator_data = {result.date.date(): SMAData(value=round(result.sma, 2)) for result in results if
-                      result.sma is not None}
+    historical_data = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval, rounded=False)
+    sma_values = calculate_sma(historical_data, period)
+    indicator_data = {date: SMAData(value=value) for date, value in sma_values.items()}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
+
     return Analysis(
         type=Indicator.SMA,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-@cache(expire=60, market_closed_expire=600)
-async def get_ema(symbol: str, interval: Interval, period: int = 10):
+async def get_ema(symbol: str, interval: Interval, period: int = 10) -> dict:
     """
     Get the Exponential Moving Average (EMA) for a symbol.
     :param symbol: the stock symbol
@@ -42,19 +39,19 @@ async def get_ema(symbol: str, interval: Interval, period: int = 10):
 
     :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
     """
-    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
-    results = indicators.get_ema(quotes, period).remove_warmup_periods()
-    indicator_data = {result.date.date(): EMAData(value=round(result.ema, 2)) for result in results if
-                      result.ema is not None}
+    historical_data = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval, rounded=False)
+    print(historical_data)
+    ema_values = calculate_ema(historical_data, period)
+    indicator_data = {date: EMAData(value=value) for date, value in ema_values.items()}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
+
     return Analysis(
         type=Indicator.EMA,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-@cache(expire=60, market_closed_expire=600)
-async def get_wma(symbol: str, interval: Interval, period: int = 10):
+async def get_wma(symbol: str, interval: Interval, period: int = 10) -> dict:
     """
     Get the Weighted Moving Average (WMA) for a symbol.
     :param symbol: the stock symbol
@@ -66,10 +63,9 @@ async def get_wma(symbol: str, interval: Interval, period: int = 10):
 
     :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
     """
-    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
-    results = indicators.get_wma(quotes, period).remove_warmup_periods()
-    indicator_data = {result.date.date(): WMAData(value=round(result.wma, 2)) for result in results if
-                      result.wma is not None}
+    historical_data = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval, rounded=False)
+    wma_values = calculate_wma(historical_data, period)
+    indicator_data = {date: WMAData(value=value) for date, value in wma_values.items()}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
     return Analysis(
         type=Indicator.WMA,
@@ -77,7 +73,6 @@ async def get_wma(symbol: str, interval: Interval, period: int = 10):
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-@cache(expire=60, market_closed_expire=600)
 async def get_vwma(symbol: str, interval: Interval, period: int = 20):
     """
     Get the Volume Weighted Moving Average (VWMA) for a symbol.
@@ -91,11 +86,11 @@ async def get_vwma(symbol: str, interval: Interval, period: int = 20):
 
     :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
     """
-    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
-    results = indicators.get_vwma(quotes, period).remove_warmup_periods()
-    indicator_data = {result.date.date(): VWMAData(value=round(result.vwma, 2)) for result in results
-                      if result.vwma is not None}
+    historical_data = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval, rounded=False)
+    vwma_values = calculate_vwma(historical_data, period)
+    indicator_data = {date: VWMAData(value=value) for date, value in vwma_values.items()}
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
+
     return Analysis(
         type=Indicator.VWMA,
         indicators=indicator_data
