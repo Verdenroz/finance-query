@@ -179,6 +179,9 @@ class BBANDSData(IndicatorData):
     upper_band: float = Field(
         ..., examples=[30.00], description="Upper Bollinger Band value", serialization_alias="Upper Band"
     )
+    middle_band: float = Field(
+        ..., examples=[30.00], description="Middle Bollinger Band value", serialization_alias="Middle Band"
+    )
     lower_band: float = Field(
         ..., examples=[30.00], description="Lower Bollinger Band value", serialization_alias="Lower Band"
     )
