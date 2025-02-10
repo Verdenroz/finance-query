@@ -1,4 +1,4 @@
-from .analysis import Analysis, Indicator, SummaryAnalysis
+from .indicators import Analysis, Indicator, SummaryAnalysis
 from .historical_data import HistoricalData, TimePeriod, Interval
 from .index import Index
 from .marketmover import MarketMover

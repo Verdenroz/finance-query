@@ -1,6 +1,6 @@
 from typing_extensions import OrderedDict
 
-from src.models.analysis import SMAData, Analysis, EMAData, WMAData, VWMAData, Indicator
+from src.models.indicators import SMAData, Analysis, EMAData, WMAData, VWMAData, Indicator
 from src.models.historical_data import TimePeriod, Interval
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (calculate_sma, calculate_ema, calculate_wma, calculate_vwma,

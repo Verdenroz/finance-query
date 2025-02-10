@@ -15,7 +15,7 @@ from redis import RedisError
 from src.context import request_context
 from src.market import MarketSchedule, MarketStatus
 from src.models import HistoricalData, SimpleQuote, Quote, MarketMover, Index, News, MarketSector
-from src.models.analysis import SMAData, EMAData, WMAData, VWMAData, RSIData, SRSIData, STOCHData, CCIData, MACDData, \
+from src.models.indicators import SMAData, EMAData, WMAData, VWMAData, RSIData, SRSIData, STOCHData, CCIData, MACDData, \
     ADXData, AROONData, BBANDSData, OBVData, SuperTrendData, IchimokuData, Analysis
 from src.models.sector import MarketSectorDetails
 

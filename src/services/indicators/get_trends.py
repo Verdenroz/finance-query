@@ -1,8 +1,8 @@
 import numpy as np
 from typing_extensions import OrderedDict
 
-from src.models.analysis import (MACDData, Analysis, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData,
-                                 IchimokuData, Indicator)
+from src.models.indicators import (MACDData, Analysis, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData,
+                                   IchimokuData, Indicator)
 from src.models.historical_data import TimePeriod, Interval
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (

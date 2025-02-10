@@ -1,7 +1,7 @@
 from typing_extensions import OrderedDict
 import numpy as np
 
-from src.models.analysis import RSIData, Analysis, SRSIData, STOCHData, CCIData, Indicator
+from src.models.indicators import RSIData, Analysis, SRSIData, STOCHData, CCIData, Indicator
 from src.models.historical_data import TimePeriod, Interval
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (calculate_rsi, calculate_stoch_rsi, calculate_stoch, calculate_cci,

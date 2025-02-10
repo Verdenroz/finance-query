@@ -4,7 +4,7 @@ from stock_indicators.indicators import get_ema, get_wma, get_vwma, get_rsi, get
     get_cci, get_macd, get_adx, get_aroon, get_bollinger_bands, get_super_trend, get_ichimoku, get_sma
 
 from src.cache import cache
-from src.models.analysis import SummaryAnalysis, AROONData, BBANDSData, SuperTrendData, IchimokuData, MACDData
+from src.models.indicators import SummaryAnalysis, AROONData, BBANDSData, SuperTrendData, IchimokuData, MACDData
 from src.models.historical_data import Interval, TimePeriod
 from src.services.historical.get_historical import get_historical_quotes
 
