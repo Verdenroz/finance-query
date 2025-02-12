@@ -11,7 +11,7 @@ from src.market import MarketSchedule
 from src.models import SimpleQuote
 from src.security import validate_websocket
 from src.services import (
-    get_quotes, scrape_similar_quotes, scrape_actives,
+    get_quotes, get_similar_quotes, scrape_actives,
     scrape_news_for_quote, scrape_losers, scrape_gainers,
     get_simple_quotes, scrape_indices, scrape_general_news,
     get_sectors, get_sector_for_symbol
@@ -111,7 +111,7 @@ async def websocket_profile(
         Fetches the profile data for a symbol.
         """
         quotes_task = get_quotes([symbol], cookies, crumb)
-        similar_quotes_task = scrape_similar_quotes(symbol)
+        similar_quotes_task = get_similar_quotes(symbol)
         sector_performance_task = get_sector_for_symbol(symbol)
         news_task = scrape_news_for_quote(symbol)
 

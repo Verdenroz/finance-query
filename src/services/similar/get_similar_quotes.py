@@ -2,7 +2,7 @@ from fastapi import HTTPException
 
 from src.cache import cache
 from src.models import SimpleQuote
-from src.services.similar import fetch_similar, scrape_similar_quotes
+from src.services.similar.fetchers import fetch_similar, scrape_similar_quotes
 
 
 @cache(expire=15, market_closed_expire=600)
