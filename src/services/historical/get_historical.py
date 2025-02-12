@@ -3,7 +3,6 @@ from datetime import datetime
 import pandas as pd
 from fastapi import HTTPException
 from orjson import orjson
-from stock_indicators.indicators.common.quote import Quote
 
 from src.cache import cache
 from src.dependencies import fetch
@@ -110,44 +109,4 @@ async def get_historical(
     except Exception as e:
         if "404" in str(e):
             raise HTTPException(status_code=404, detail="Symbol not found")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {str(e)}")
-
-
-@cache(expire=60, market_closed_expire=600, memcache=True)
-async def get_historical_quotes(symbol: str, period: TimePeriod, interval: Interval) -> list[Quote]:
-    """
-    Get historical quotes for a stock symbol based on the time period and interval provided.
-    :param symbol: the symbol of the stock to get historical data for
-    :param period: the time period for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
-    :param interval: the interval for the historical data (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
-
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
-    """
-    try:
-        time_series = await get_historical(symbol, period, interval)
-
-        quotes = []
-        for date_key, historical_data in time_series.items():
-            if date_key.isdigit():
-                date = datetime.fromtimestamp(int(date_key))
-            else:
-                try:
-                    date = datetime.strptime(date_key, '%Y-%m-%d %H:%M:%S')
-                except ValueError:
-                    date = datetime.strptime(date_key, '%Y-%m-%d')
-            quotes.append(
-                Quote(
-                    date=date,
-                    open=historical_data.open,
-                    high=historical_data.high,
-                    low=historical_data.low,
-                    close=historical_data.close,
-                    volume=historical_data.volume
-                )
-            )
-        return quotes
-
-    except HTTPException as e:
-        raise e
-    except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {str(e)}")
