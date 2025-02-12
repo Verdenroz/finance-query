@@ -278,102 +278,102 @@ class SummaryAnalysis(BaseModel):
         description="Stock symbol",
         examples=["NVDA"]
     )
-    sma_10: Optional[float] = Field(
+    sma_10: Optional[SMAData] = Field(
         default=None,
         description="10-day Simple Moving Average",
         serialization_alias="SMA(10)",
     )
-    sma_20: Optional[float] = Field(
+    sma_20: Optional[SMAData] = Field(
         default=None,
         description="20-day Simple Moving Average",
         serialization_alias="SMA(20)",
     )
-    sma_50: Optional[float] = Field(
+    sma_50: Optional[SMAData] = Field(
         default=None,
         description="50-day Simple Moving Average",
         serialization_alias="SMA(50)"
     )
-    sma_100: Optional[float] = Field(
+    sma_100: Optional[SMAData] = Field(
         default=None,
         description="100-day Simple Moving Average",
         serialization_alias="SMA(100)"
     )
-    sma_200: Optional[float] = Field(
+    sma_200: Optional[SMAData] = Field(
         default=None,
         description="200-day Simple Moving Average",
         serialization_alias="SMA(200)"
     )
-    ema_10: Optional[float] = Field(
+    ema_10: Optional[EMAData] = Field(
         default=None,
         description="10-day Exponential Moving Average",
         serialization_alias="EMA(10)"
     )
-    ema_20: Optional[float] = Field(
+    ema_20: Optional[EMAData] = Field(
         default=None,
         description="20-day Exponential Moving Average",
         serialization_alias="EMA(20)"
     )
-    ema_50: Optional[float] = Field(
+    ema_50: Optional[EMAData] = Field(
         default=None,
         description="50-day Exponential Moving Average",
         serialization_alias="EMA(50)"
     )
-    ema_100: Optional[float] = Field(
+    ema_100: Optional[EMAData] = Field(
         default=None,
         description="100-day Exponential Moving Average",
         serialization_alias="EMA(100)"
     )
-    ema_200: Optional[float] = Field(
+    ema_200: Optional[EMAData] = Field(
         default=None,
         description="200-day Exponential Moving Average",
         serialization_alias="EMA(200)"
     )
-    wma_10: Optional[float] = Field(
+    wma_10: Optional[WMAData] = Field(
         default=None,
         description="10-day Weighted Moving Average",
         serialization_alias="WMA(10)"
     )
-    wma_20: Optional[float] = Field(
+    wma_20: Optional[WMAData] = Field(
         default=None,
         description="20-day Weighted Moving Average",
         serialization_alias="WMA(20)"
     )
-    wma_50: Optional[float] = Field(
+    wma_50: Optional[WMAData] = Field(
         default=None,
         description="50-day Weighted Moving Average",
         serialization_alias="WMA(50)"
     )
-    wma_100: Optional[float] = Field(
+    wma_100: Optional[WMAData] = Field(
         default=None,
         description="100-day Weighted Moving Average",
         serialization_alias="WMA(100)"
     )
-    wma_200: Optional[float] = Field(
+    wma_200: Optional[WMAData] = Field(
         default=None,
         description="200-day Weighted Moving Average",
         serialization_alias="WMA(200)"
     )
-    vwma: Optional[float] = Field(
+    vwma: Optional[VWMAData] = Field(
         default=None,
         description="20-day Volume Weighted Moving Average",
         serialization_alias="VWMA(20)"
     )
-    rsi: Optional[float] = Field(
+    rsi: Optional[RSIData] = Field(
         default=None,
         description="14-day Relative Strength Index",
         serialization_alias="RSI(14)"
     )
-    srsi: Optional[float] = Field(
+    srsi: Optional[SRSIData] = Field(
         default=None,
         description="14-day Stochastic RSI",
         serialization_alias="SRSI(3,3,14,14)"
     )
-    cci: Optional[float] = Field(
+    cci: Optional[CCIData] = Field(
         default=None,
         description="20-day Commodity Channel Index",
         serialization_alias="CCI(20)"
     )
-    adx: Optional[float] = Field(
+    adx: Optional[ADXData] = Field(
         default=None,
         description="14-day Average Directional Index",
         serialization_alias="ADX(14)"
@@ -383,7 +383,7 @@ class SummaryAnalysis(BaseModel):
         description="Moving Average Convergence Divergence",
         serialization_alias="MACD(12,26)"
     )
-    stoch: Optional[float] = Field(
+    stoch: Optional[STOCHData] = Field(
         default=None,
         description="Stochastic Oscillator",
         serialization_alias="STOCH %K(14,3,3)"
