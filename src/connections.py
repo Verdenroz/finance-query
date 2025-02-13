@@ -1,5 +1,4 @@
 import asyncio
-
 from orjson import orjson
 from redis.client import PubSub
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -43,19 +42,23 @@ class RedisConnectionManager:
         :param channel: the channel to disconnect from
         :return:
         """
-        self.active_connections[channel].remove(websocket)
-        if not self.active_connections[channel]:
-            del self.active_connections[channel]
+        if channel in self.active_connections:
+            self.active_connections[channel].remove(websocket)
+            if not self.active_connections[channel]:
+                del self.active_connections[channel]
 
-            self.listen_tasks[channel].cancel()
-            del self.listen_tasks[channel]
+                if channel in self.listen_tasks:
+                    self.listen_tasks[channel].cancel()
+                    del self.listen_tasks[channel]
 
-            self.tasks[channel].cancel()
-            del self.tasks[channel]
+                if channel in self.tasks:
+                    self.tasks[channel].cancel()
+                    del self.tasks[channel]
 
-            self.pubsub[channel].unsubscribe(channel)
-            self.pubsub[channel].close()
-            del self.pubsub[channel]
+                if channel in self.pubsub:
+                    self.pubsub[channel].unsubscribe(channel)
+                    self.pubsub[channel].close()
+                    del self.pubsub[channel]
 
     async def _listen_to_channel(self, channel: str):
         """

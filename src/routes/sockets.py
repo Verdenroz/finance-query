@@ -19,6 +19,9 @@ from src.services import (
 
 router = APIRouter()
 
+# Refresh interval for fetching data
+REFRESH_INTERVAL = 5
+
 
 def safe_convert_to_dict(items, default=None):
     """
@@ -69,7 +72,7 @@ async def handle_websocket_connection(
             try:
                 result = await data_fetcher()
                 await asyncio.to_thread(connection_manager.publish, result, channel)
-                await asyncio.sleep(5)
+                await asyncio.sleep(REFRESH_INTERVAL)
             except WebSocketDisconnect:
                 await connection_manager.disconnect(websocket, channel)
                 break
@@ -156,7 +159,7 @@ async def websocket_quotes(
         channel = await websocket.receive_text()
         symbols = list(set(symbol.upper() for symbol in channel.split(",")))
 
-        async def get_quotes(symbols):
+        async def get_request_symbols():
             """
             Fetches quotes for a list of symbols.
             """
@@ -191,16 +194,16 @@ async def websocket_quotes(
 
         async def fetch_data():
             """
-            Fetches quotes every 10 seconds.
+            Fetches quotes every 5 seconds.
             """
             while True:
-                result = await get_quotes(symbols)
-                await connection_manager.publish(result, channel)
-                await asyncio.sleep(10)
+                result = await get_request_symbols()
+                connection_manager.publish(result, channel)
+                await asyncio.sleep(REFRESH_INTERVAL)
 
         # Starts the connection and fetches the initial data
         if websocket not in connection_manager.active_connections.get(channel, []):
-            initial_result = await get_quotes(symbols)
+            initial_result = await get_request_symbols()
             if metadata:
                 initial_result.insert(0, metadata)
             try:
