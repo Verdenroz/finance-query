@@ -5,8 +5,8 @@ import pytz
 from fastapi import APIRouter, Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.connections import RedisConnectionManager
-from src.dependencies import get_redis_connection_manager, get_yahoo_cookies, get_yahoo_crumb
+from src.connections import RedisConnectionManager, ConnectionManager
+from src.dependencies import get_connection_manager, get_yahoo_cookies, get_yahoo_crumb
 from src.market import MarketSchedule
 from src.models import SimpleQuote
 from src.security import validate_websocket
@@ -48,7 +48,7 @@ async def handle_websocket_connection(
         websocket: WebSocket,
         channel: str,
         data_fetcher: callable,
-        connection_manager: RedisConnectionManager
+        connection_manager: RedisConnectionManager | ConnectionManager
 ):
     """
     A generalized WebSocket connection handler.
@@ -71,7 +71,10 @@ async def handle_websocket_connection(
         while True:
             try:
                 result = await data_fetcher()
-                await asyncio.to_thread(connection_manager.publish, result, channel)
+                if isinstance(connection_manager, RedisConnectionManager):
+                    await asyncio.to_thread(connection_manager.publish, result, channel)
+                else:
+                    await connection_manager.broadcast(channel, result)
                 await asyncio.sleep(REFRESH_INTERVAL)
             except WebSocketDisconnect:
                 await connection_manager.disconnect(websocket, channel)
@@ -105,7 +108,7 @@ async def handle_websocket_connection(
 async def websocket_profile(
         websocket: WebSocket,
         symbol: str,
-        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager),
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
         cookies: str = Depends(get_yahoo_cookies),
         crumb: str = Depends(get_yahoo_crumb)
 ):
@@ -147,7 +150,7 @@ async def websocket_profile(
 @router.websocket("/quotes")
 async def websocket_quotes(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager),
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
         cookies: str = Depends(get_yahoo_cookies),
         crumb: str = Depends(get_yahoo_crumb)
 ):
@@ -198,7 +201,10 @@ async def websocket_quotes(
             """
             while True:
                 result = await get_request_symbols()
-                connection_manager.publish(result, channel)
+                if isinstance(connection_manager, RedisConnectionManager):
+                    await asyncio.to_thread(connection_manager.publish, result, channel)
+                else:
+                    await connection_manager.broadcast(channel, result)
                 await asyncio.sleep(REFRESH_INTERVAL)
 
         # Starts the connection and fetches the initial data
@@ -228,7 +234,7 @@ async def websocket_quotes(
 @router.websocket("/market")
 async def websocket_market(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager)
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager)
 ):
     async def get_market_info():
         """
@@ -261,7 +267,7 @@ async def websocket_market(
 @router.websocket("/hours")
 async def market_status_websocket(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(get_redis_connection_manager),
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
         market_schedule: MarketSchedule = Depends(MarketSchedule)
 ):
     async def get_market_status_info():
