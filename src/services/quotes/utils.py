@@ -34,7 +34,7 @@ def format_date(date_string: str) -> str | None:
     if not date_string:
         return None
     try:
-        date = datetime.fromtimestamp(int(date_string))
+        date = datetime.strptime(date_string, "%Y-%m-%d")
         return date.strftime("%b %d, %Y")
     except (ValueError, TypeError):
         return None

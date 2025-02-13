@@ -108,7 +108,7 @@ async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
     earnings_dates = calendar.get('earnings', {}).get('earningsDate', [])
     earnings_date = None
     if earnings_dates:
-        formatted_dates = [format_date(str(date.get('raw'))) for date in earnings_dates if date.get('raw')]
+        formatted_dates = [format_date(date.get('fmt')) for date in earnings_dates if date.get('fmt')]
         earnings_date = ' - '.join(formatted_dates) if formatted_dates else None
 
     quote_data = {
@@ -132,7 +132,7 @@ async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
         "eps": get_fmt(summary_detail, "trailingEps"),
         "dividend": get_fmt(summary_detail, "dividendRate"),
         "dividend_yield": get_fmt(summary_detail, "dividendYield"),
-        "ex_dividend": format_date(summary_detail.get('fundInceptionDate', {}).get('raw')),
+        "ex_dividend": format_date(calendar.get('exDividendDate', {}).get('fmt')),
         "net_assets": get_fmt(summary_detail, "totalAssets"),
         "nav": get_fmt(summary_detail, "navPrice"),
         "expense_ratio": format_percent(stats.get("annualReportExpenseRatio")),
