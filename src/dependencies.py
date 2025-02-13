@@ -30,9 +30,9 @@ async def get_request_context() -> Request | WebSocket:
     return request_context.get()
 
 
-async def get_redis_connection_manager(websocket: WebSocket) -> RedisConnectionManager:
+async def get_connection_manager(websocket: WebSocket) -> RedisConnectionManager:
     """
-    Get Redis connection manager instance from app state using WebSocket
+    Get connection manager instance from app state using WebSocket
     """
     return websocket.app.state.connection_manager
 

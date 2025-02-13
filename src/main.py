@@ -17,7 +17,7 @@ from redis import Redis
 from starlette import status
 from starlette.responses import Response, JSONResponse
 
-from src.connections import RedisConnectionManager
+from src.connections import RedisConnectionManager, ConnectionManager
 from src.context import RequestContextMiddleware
 from src.dependencies import get_redis, _get_auth_data, get_yahoo_cookies, get_yahoo_crumb
 from src.models import ValidationErrorResponse, Sector, TimePeriod, Interval
@@ -67,6 +67,9 @@ async def lifespan(app: FastAPI):
             redis_connection_manager = RedisConnectionManager(redis)
             app.state.redis = redis
             app.state.connection_manager = redis_connection_manager
+        else:
+            app.state.redis = None
+            app.state.connection_manager = ConnectionManager()
 
         cookies, crumb = await _get_auth_data(redis)
         app.state.cookies = cookies
