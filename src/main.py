@@ -59,10 +59,7 @@ async def lifespan(app: FastAPI):
             payload = {"ip": ip}
             requests.post(api_url, headers=proxy_header_token, json=payload)
 
-        if os.getenv('USE_REDIS') == 'True':
-            if os.getenv('REDIS_URL') is None:
-                raise ValueError("REDIS_URL environment variable is not set.")
-
+        if os.getenv('REDIS_URL'):
             redis = Redis.from_url(os.getenv('REDIS_URL'))
             redis_connection_manager = RedisConnectionManager(redis)
             app.state.redis = redis

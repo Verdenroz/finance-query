@@ -29,7 +29,6 @@ class RedisCacheHandler:
         self.expire = expire
         self.market_closed_expire = market_closed_expire
         self.market_schedule = market_schedule
-        self.use_redis = os.getenv('USE_REDIS', 'False').lower() == 'true'
 
     def get_expire_time(self) -> int:
         """Determine the appropriate expiration time based on market status."""
@@ -165,7 +164,7 @@ def cache(
         # Get the return type hint from the function
         return_type = get_type_hints(func).get('return')
 
-        if memcache or not handler.use_redis:
+        if memcache or not os.getenv("REDIS_URL"):
             return alru_cache(maxsize=512, ttl=handler.get_expire_time())(func)
 
         @functools.wraps(func)
