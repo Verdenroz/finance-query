@@ -43,7 +43,6 @@ async def lifespan(app: FastAPI):
     redis = None
     redis_connection_manager = None
 
-
     api_url = None
     proxy_header_token = None
     payload = None
@@ -152,34 +151,73 @@ async def request_validation_error_formatter(request, exc):
                 "application/json": {
                     "example": {
                         "status": "healthy",
-                        "timestamp": "2023-10-01T12:34:56.789Z",
+                        "timestamp": "2025-02-13T18:27:37.508568",
                         "redis": {
                             "status": "healthy",
-                            "latency_ms": 1.23
+                            "latency_ms": 13.1
                         },
-                        "scraping": {
-                            "Scraping status": "21/21 succeeded",
-                            "Indices": {"status": "succeeded"},
-                            "Market Actives": {"status": "succeeded"},
-                            "Market Losers": {"status": "succeeded"},
-                            "Market Gainers": {"status": "succeeded"},
-                            "Market Sectors": {"status": "succeeded"},
-                            "Sector for a symbol": {"status": "succeeded"},
-                            "Detailed Sector": {"status": "succeeded"},
-                            "General News": {"status": "succeeded"},
-                            "News for equity": {"status": "succeeded"},
-                            "News for ETF": {"status": "succeeded"},
-                            "Full Quotes": {"status": "succeeded"},
-                            "Simple Quotes": {"status": "succeeded"},
-                            "Similar Equities": {"status": "succeeded"},
-                            "Similar ETFs": {"status": "succeeded"},
-                            "Historical day prices": {"status": "succeeded"},
-                            "Historical week prices": {"status": "succeeded"},
-                            "Historical month prices": {"status": "succeeded"},
-                            "Historical year prices": {"status": "succeeded"},
-                            "Historical five year prices": {"status": "succeeded"},
-                            "Search": {"status": "succeeded"},
-                            "Summary Analysis": {"status": "succeeded"}
+                        "services": {
+                            "status": "20/20 succeeded",
+                            "Indices": {
+                                "status": "succeeded"
+                            },
+                            "Market Actives": {
+                                "status": "succeeded"
+                            },
+                            "Market Losers": {
+                                "status": "succeeded"
+                            },
+                            "Market Gainers": {
+                                "status": "succeeded"
+                            },
+                            "Market Sectors": {
+                                "status": "succeeded"
+                            },
+                            "Sector for a symbol": {
+                                "status": "succeeded"
+                            },
+                            "Detailed Sector": {
+                                "status": "succeeded"
+                            },
+                            "General News": {
+                                "status": "succeeded"
+                            },
+                            "News for equity": {
+                                "status": "succeeded"
+                            },
+                            "News for ETF": {
+                                "status": "succeeded"
+                            },
+                            "Full Quotes": {
+                                "status": "succeeded"
+                            },
+                            "Simple Quotes": {
+                                "status": "succeeded"
+                            },
+                            "Similar Equities": {
+                                "status": "succeeded"
+                            },
+                            "Similar ETFs": {
+                                "status": "succeeded"
+                            },
+                            "Historical day prices": {
+                                "status": "succeeded"
+                            },
+                            "Historical month prices": {
+                                "status": "succeeded"
+                            },
+                            "Historical year prices": {
+                                "status": "succeeded"
+                            },
+                            "Historical five year prices": {
+                                "status": "succeeded"
+                            },
+                            "Search": {
+                                "status": "succeeded"
+                            },
+                            "Summary Analysis": {
+                                "status": "succeeded"
+                            }
                         }
                     }
                 }
@@ -249,40 +287,46 @@ async def health(
         "status": "healthy",
         "timestamp": datetime.datetime.utcnow().isoformat(),
         "redis": {
+            "status": "healthy",
+            "latency_ms": 0
         },
-        "scraping": {
-            "Scraping status": "21/21 succeeded",
+        "services": {
+            "status": "20/20 succeeded",
         }
     }
 
     # Check Redis
-    try:
-        start_time = time.time()
-        redis_ping = r.ping()
-        health_report["redis"] = {
-            "status": "healthy" if redis_ping else "unhealthy",
-            "latency_ms": round((time.time() - start_time) * 1000, 2)
-        }
-    except Exception as e:
-        health_report["dependencies"] = {
-            "redis": {
-                "status": "unhealthy",
-                "error": str(e)
+    if r:
+        try:
+            start_time = time.time()
+            redis_ping = r.ping()
+            health_report["redis"] = {
+                "status": "healthy" if redis_ping else "unhealthy",
+                "latency_ms": round((time.time() - start_time) * 1000, 2)
             }
-        }
-        health_report["status"] = "degraded"
+        except Exception as e:
+            health_report["dependencies"] = {
+                "redis": {
+                    "status": "unhealthy",
+                    "error": str(e)
+                }
+            }
+            health_report["status"] = "degraded"
+
+    if not r:
+        del health_report["redis"]
 
     total = len(tasks)
     succeeded = 0
     for (name, task), result in zip(tasks, results):
         if isinstance(result, Exception):
-            health_report["scraping"][name] = {"status": "FAILED", "ERROR": str(result)}
+            health_report["services"][name] = {"status": "FAILED", "ERROR": str(result)}
         else:
-            health_report["scraping"][name] = {"status": "succeeded"}
+            health_report["services"][name] = {"status": "succeeded"}
             succeeded += 1
 
-    scraping_status = f"{succeeded}/{total} succeeded"
-    health_report["scraping"]["Scraping status"] = scraping_status
+    service_status = f"{succeeded}/{total} succeeded"
+    health_report["services"]["status"] = service_status
 
     return health_report
 
