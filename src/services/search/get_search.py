@@ -1,8 +1,7 @@
 from fastapi import HTTPException
 
 from src.models import SearchResult, Type
-from src.services.search import fetch_yahoo_search_results
-from src.services.search.fetchers.algolia_search import fetch_algolia_search_results
+from src.services.search.fetchers import fetch_algolia_search_results, fetch_yahoo_search_results
 
 
 async def get_search(query: str, hits: int = 10, type: Type = None) -> list[SearchResult]:

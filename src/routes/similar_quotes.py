@@ -54,4 +54,4 @@ async def similar_quotes(
         symbol: str = Query(..., title="Symbol", description="Stock to find similar stocks around"),
         limit: int = Query(default=10, title="Limit", description="Number of similar stocks to return", ge=1, le=20),
 ):
-    return await get_similar_quotes(cookies, crumb, symbol.upper(), limit)
+    return await get_similar_quotes(symbol.upper(), cookies, crumb, limit)

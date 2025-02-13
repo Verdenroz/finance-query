@@ -1,2 +1,5 @@
-from .fetchers.sector_scraper import parse_sector, parse_sector_details
-from .utils import get_yahoo_sector
+from .get_sectors import get_sectors
+
+__all__ = [
+    'get_sectors'
+]

@@ -3,7 +3,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models import MarketMover, ValidationErrorResponse
 from src.models.marketmover import MoverCount
-from src.services import scrape_actives, scrape_gainers, scrape_losers
+from src.services import get_actives, get_gainers, get_losers
 
 router = APIRouter()
 
@@ -36,8 +36,8 @@ router = APIRouter()
         }
     }
 )
-async def get_actives(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    return await scrape_actives(count)
+async def actives(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
+    return await get_actives(count)
 
 
 @router.get(
@@ -68,8 +68,8 @@ async def get_actives(count: MoverCount = Query(MoverCount.FIFTY, description="N
         }
     }
 )
-async def get_gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    return await scrape_gainers(count)
+async def gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
+    return await get_gainers(count)
 
 
 @router.get(
@@ -100,5 +100,5 @@ async def get_gainers(count: MoverCount = Query(MoverCount.FIFTY, description="N
         }
     }
 )
-async def get_losers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    return await scrape_losers(count)
+async def losers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
+    return await get_losers(count)

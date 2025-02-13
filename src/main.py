@@ -26,7 +26,7 @@ from src.routes import (quotes_router, indices_router, movers_router, historical
                         sectors_router, sockets_router, stream_router, hours_router)
 from src.security import RateLimitMiddleware
 from src.services import (
-    scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors,
+    scrape_indices, get_actives, get_losers, get_gainers, get_sectors,
     get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, get_quotes,
     get_similar_quotes, get_historical, get_search, get_simple_quotes, get_summary_analysis
 )
@@ -200,9 +200,9 @@ async def health(
         - Service dependencies
         """
     indices_task = scrape_indices()
-    actives_task = scrape_actives()
-    losers_task = scrape_losers()
-    gainers_task = scrape_gainers()
+    actives_task = get_actives()
+    losers_task = get_losers()
+    gainers_task = get_gainers()
     sectors_task = get_sectors()
     sector_by_symbol_task = get_sector_for_symbol("NVDA", cookies, crumb)
     sector_by_name_task = get_sector_details(Sector.TECHNOLOGY)
@@ -211,8 +211,8 @@ async def health(
     scrape_etf_news_task = scrape_news_for_quote("QQQ")
     quotes_task = get_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
     simple_quotes_task = get_simple_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
-    similar_equity_task = get_similar_quotes("NVDA")
-    similar_etf_task = get_similar_quotes("QQQ")
+    similar_equity_task = get_similar_quotes("NVDA", cookies, crumb)
+    similar_etf_task = get_similar_quotes("QQQ", cookies, crumb)
     historical_data_task_day = get_historical("NVDA", TimePeriod.DAY, Interval.ONE_MINUTE)
     historical_data_task_month = get_historical("NVDA", TimePeriod.YTD, Interval.DAILY)
     historical_data_task_year = get_historical("NVDA", TimePeriod.YEAR, Interval.DAILY)

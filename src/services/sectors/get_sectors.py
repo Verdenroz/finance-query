@@ -5,7 +5,8 @@ from fastapi import HTTPException
 from src.cache import cache
 from src.dependencies import fetch
 from src.models import MarketSector, MarketSectorDetails, Sector
-from src.services.sectors import get_yahoo_sector, parse_sector, parse_sector_details
+from src.services.sectors.fetchers import parse_sector, parse_sector_details
+from src.services.sectors.utils import get_yahoo_sector
 
 urls = {
     Sector.TECHNOLOGY: 'https://finance.yahoo.com/sectors/technology/',
