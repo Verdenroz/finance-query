@@ -27,7 +27,6 @@ class Interval(Enum):
     DAILY = "1d"
     WEEKLY = "1wk"
     MONTHLY = "1mo"
-    QUARTERLY = "3mo"
 
 
 class HistoricalData(BaseModel):
