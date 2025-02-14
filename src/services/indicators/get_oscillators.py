@@ -2,19 +2,20 @@ from typing_extensions import OrderedDict
 import numpy as np
 
 from src.models.indicators import RSIData, Analysis, SRSIData, STOCHData, CCIData, Indicator
-from src.models.historical_data import TimePeriod, Interval
+from src.models.historical_data import TimeRange, Interval
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (calculate_rsi, calculate_stoch_rsi, calculate_stoch, calculate_cci,
                                           prepare_price_data, create_indicator_dict)
 
 
-async def get_rsi(symbol: str, interval: Interval, period: int = 14):
+async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14):
     """
     Get the Relative Strength Index (RSI) for a symbol. RSI measures the speed and magnitude of recent price
     changes to evaluate overbought or oversold conditions. It oscillates between 0 and 100, with traditional
     overbought levels at 70 and oversold levels at 30.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The number of periods used to calculate the average gains and losses. The default of 14
                   is standard - shorter periods (e.g., 9) create a more volatile indicator that's more
@@ -23,9 +24,9 @@ async def get_rsi(symbol: str, interval: Interval, period: int = 14):
                   The first calculation uses a simple average, while subsequent calculations use an
                   exponentially weighted moving average
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     rsi_values = calculate_rsi(prices, period=period)
@@ -44,6 +45,7 @@ async def get_rsi(symbol: str, interval: Interval, period: int = 14):
 
 async def get_srsi(
         symbol: str,
+        time_range: TimeRange,
         interval: Interval,
         period: int = 14,
         stoch_period: int = 14,
@@ -56,6 +58,7 @@ async def get_srsi(
     historical range.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The number of periods used to calculate the initial RSI value. A larger period creates a
                   smoother RSI line with fewer signals
@@ -66,9 +69,9 @@ async def get_srsi(
     :param smooth: The number of periods used to smooth the %K line before calculating %D. Higher values reduce
                   noise but increase lag in the indicator
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     k_values, d_values = calculate_stoch_rsi(
@@ -96,6 +99,7 @@ async def get_srsi(
 
 async def get_stoch(
         symbol: str,
+        time_range: TimeRange,
         interval: Interval,
         period: int = 14,
         smooth: int = 3,
@@ -107,6 +111,7 @@ async def get_stoch(
     and oversold conditions.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The lookback period used to find the highest high and lowest low for calculating %K.
                   This determines how many periods of price data are used to establish the trading range.
@@ -117,9 +122,9 @@ async def get_stoch(
     :param smooth: The number of periods used to smooth the %K line before calculating %D. Higher values
                   produce a smoother indicator that's less prone to whipsaws but may delay signal generation
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
 
     dates, prices, highs, lows, _ = prepare_price_data(quotes)
 
@@ -147,22 +152,23 @@ async def get_stoch(
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_cci(symbol: str, interval: Interval, period: int = 20):
+async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20):
     """
     Get the Commodity Channel Index (CCI) for a symbol. CCI measures the current price level relative to an
     average price level over a given period of time. The indicator oscillates above and below zero, with
     readings above +100 suggesting overbought conditions and below -100 suggesting oversold conditions.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The number of periods used to calculate both the Simple Moving Average (SMA) of typical
                   prices and the Mean Deviation. The default of 20 is standard - lower values make the
                   indicator more sensitive to price changes but may generate more false signals, while
                   higher values create a smoother line better suited for identifying longer-term trends
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
 
     dates, close_prices, high_prices, low_prices, _ = prepare_price_data(quotes)
 

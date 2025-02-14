@@ -5,7 +5,7 @@ import numpy as np
 from src.cache import cache
 from src.models.indicators import (SummaryAnalysis, MACDData, AROONData, BBANDSData, SuperTrendData, IchimokuData,
                                    SRSIData, STOCHData, SMAData, EMAData, WMAData, VWMAData, RSIData, CCIData, ADXData)
-from src.models.historical_data import Interval, TimePeriod
+from src.models.historical_data import Interval, TimeRange
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (prepare_price_data, calculate_sma, calculate_ema, calculate_wma,
                                           calculate_vwma, calculate_rsi, calculate_stoch_rsi, calculate_stoch,
@@ -76,7 +76,7 @@ async def get_indicator_data(symbol: str, interval: Interval):
 
     :return: tuple of indicator data
     """
-    quotes = await get_historical(symbol, period=TimePeriod.YEAR, interval=interval)
+    quotes = await get_historical(symbol, time_range=TimeRange.YEAR, interval=interval)
     dates, prices, high_prices, low_prices, volumes = prepare_price_data(quotes)
 
     async def get_sma_data(period):
