@@ -4,7 +4,7 @@ from typing import Optional
 from pydantic import BaseModel, Field, AliasChoices
 
 
-class TimePeriod(Enum):
+class TimeRange(Enum):
     DAY = "1d"
     FIVE_DAYS = "5d"
     ONE_MONTH = "1mo"

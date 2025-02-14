@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Security, Query, HTTPException
+from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 
-from src.models import HistoricalData, ValidationErrorResponse, TimePeriod, Interval
+from src.models import HistoricalData, ValidationErrorResponse, TimeRange, Interval
 from src.services import get_historical
 
 router = APIRouter()
@@ -44,19 +44,8 @@ router = APIRouter()
 )
 async def get_time_series(
         symbol: str = Query(..., description="The symbol of the stock to get historical data for."),
-        time: TimePeriod = Query(..., description="The time period for the historical data."),
+        time_range: TimeRange = Query(..., description="The range of time for the historical data.", alias="range"),
         interval: Interval = Query(..., description="The interval for the historical data."),
         epoch: bool = Query(False, description="Whether to format dates as strings or use epoch timestamps.")
 ):
-    # Validate the combination of time period and interval
-    if (interval in [Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES] and
-            time not in [TimePeriod.DAY, TimePeriod.FIVE_DAYS, TimePeriod.ONE_MONTH]):
-        raise HTTPException(status_code=400, detail="If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less")
-
-    if interval == Interval.ONE_HOUR and time not in [TimePeriod.DAY, TimePeriod.FIVE_DAYS,
-                                                      TimePeriod.ONE_MONTH, TimePeriod.THREE_MONTHS,
-                                                      TimePeriod.SIX_MONTHS,
-                                                      TimePeriod.YTD, TimePeriod.YEAR]:
-        raise HTTPException(status_code=400, detail="If interval is 1h, time period must be 1Y or less")
-
-    return await get_historical(symbol, time, interval, epoch)
+    return await get_historical(symbol, time_range, interval, epoch)

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.models import Analysis, Indicator, Interval, ValidationErrorResponse, SummaryAnalysis
+from src.models import Analysis, Indicator, Interval, ValidationErrorResponse, SummaryAnalysis, TimeRange
 from src.services.indicators import (
     get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci, get_macd, get_adx, get_aroon,
     get_bbands, get_obv, get_super_trend, get_ichimoku, get_summary_analysis
@@ -45,8 +45,19 @@ IndicatorFunctions = {
             "description": "Invalid parameter for the technical indicator.",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Invalid parameter: {parameter} for the {function} function."
+                    "examples": {
+                        "invalid_parameter": {
+                            "summary": "Invalid parameter",
+                            "value": {
+                                "detail": "Invalid parameter: {parameter} for the {function} function."
+                            }
+                        },
+                        "invalid_range_interval": {
+                            "summary": "Invalid range and interval combination",
+                            "value": {
+                                "detail": "If interval is 1m, range must be 1d, 5d, or 1mo."
+                            }
+                        }
                     }
                 }
             }
@@ -122,27 +133,87 @@ IndicatorFunctions = {
     }
 )
 async def get_technical_indicators(
-        function: Indicator = Query(..., description="The technical indicator to get."),
-        symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
+        function: Indicator = Query(
+            ...,
+            description="The technical indicator to get.",
+        ),
+        symbol: str = Query(
+            ...,
+            description="The symbol of the stock to get technical indicators for.",
+        ),
+        time_range: Optional[TimeRange] = Query(
+            TimeRange.TWO_YEARS,
+            description="The time range for the historical data.",
+            alias="range"
+        ),
         interval: Optional[Interval] = Query(
             default=Interval.DAILY,
-            description="The interval between data points. Available values: 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo.")
-        ,
-        period: Optional[int] = Query(None, description="The look-back period for the technical indicators."),
-        stoch_period: Optional[int] = Query(None, description="The stochastic look-back period for STOCH and SRSI."),
-        signal_period: Optional[int] = Query(None, description="The signal period for MACD, STOCH, and SRSI."),
-        smooth: Optional[int] = Query(None, description="The smoothing period for STOCH and SRSI."),
-        fast_period: Optional[int] = Query(None, description="The fast period for MACD."),
-        slow_period: Optional[int] = Query(None, description="The slow period for MACD."),
-        std_dev: Optional[int] = Query(None, description="The standard deviation for Bollinger Bands."),
-        sma_periods: Optional[int] = Query(None, description="The look-back period for the SMA in OBV."),
-        multiplier: Optional[int] = Query(None, description="The multiplier for SuperTrend."),
-        tenkan_period: Optional[int] = Query(None, description="The look-back period for the Tenkan line in Ichimoku."),
-        kijun_period: Optional[int] = Query(None, description="The look-back period for the Kijun line in Ichimoku."),
-        senkou_period: Optional[int] = Query(None, description="The look-back period for the Senkou span in Ichimoku."),
+            description="The interval between data points. Available values: 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo."
+        ),
+        period: Optional[int] = Query(
+            None,
+            description="The look-back period for the technical indicators.",
+            alias="lookBackPeriod"
+        ),
+        stoch_period: Optional[int] = Query(
+            None,
+            description="The stochastic look-back period for STOCH and SRSI.",
+            alias="stochPeriod"
+        ),
+        signal_period: Optional[int] = Query(
+            None,
+            description="The signal period for MACD, STOCH, and SRSI.",
+            alias="signalPeriod"
+        ),
+        smooth: Optional[int] = Query(
+            None,
+            description="The smoothing period for STOCH and SRSI.",
+            alias="smooth"
+        ),
+        fast_period: Optional[int] = Query(
+            None,
+            description="The fast period for MACD.",
+            alias="fastPeriod"
+        ),
+        slow_period: Optional[int] = Query(
+            None,
+            description="The slow period for MACD.",
+            alias="slowPeriod"
+        ),
+        std_dev: Optional[int] = Query(
+            None,
+            description="The standard deviation for Bollinger Bands.",
+            alias="stdDev"
+        ),
+        sma_periods: Optional[int] = Query(
+            None,
+            description="The look-back period for the SMA in OBV.",
+            alias="smaPeriods"
+        ),
+        multiplier: Optional[int] = Query(
+            None,
+            description="The multiplier for SuperTrend.",
+            alias="multiplier"
+        ),
+        tenkan_period: Optional[int] = Query(
+            None,
+            description="The look-back period for the Tenkan line in Ichimoku.",
+            alias="tenkanPeriod"
+        ),
+        kijun_period: Optional[int] = Query(
+            None,
+            description="The look-back period for the Kijun line in Ichimoku.",
+            alias="kijunPeriod"
+        ),
+        senkou_period: Optional[int] = Query(
+            None,
+            description="The look-back period for the Senkou span in Ichimoku.",
+            alias="senkouPeriod"
+        ),
 ):
     params = {
         "symbol": symbol,
+        "time_range": time_range,
         "interval": interval,
         "period": period,
         "stoch_period": stoch_period,

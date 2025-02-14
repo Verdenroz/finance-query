@@ -4,32 +4,49 @@ from orjson import orjson
 
 from src.cache import cache
 from src.dependencies import fetch
-from src.models import HistoricalData, TimePeriod, Interval
+from src.models import HistoricalData, TimeRange, Interval
 
 
 @cache(expire=60, market_closed_expire=600)
 async def get_historical(
         symbol: str,
-        period: TimePeriod,
+        time_range: TimeRange,
         interval: Interval,
         epoch: bool = False
 ) -> dict[str, HistoricalData]:
     """
     Get historical data for a stock symbol based on the time period and interval provided.
     :param symbol: the symbol of the stock to get historical data for
-    :param period: the time period for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
+    :param time_range: the time range for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the time interval between data points (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param epoch: whether to return timestamps as epoch integers or formatted date strings
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 if the combination of time period and interval is invalid,
+    404 if the symbol cannot be found, or 500 for any other error
     """
+    # Validate the combination of time period and interval
+    valid_ranges = {
+        Interval.ONE_MINUTE: [TimeRange.DAY, TimeRange.FIVE_DAYS],
+        Interval.FIVE_MINUTES: [TimeRange.DAY, TimeRange.FIVE_DAYS, TimeRange.ONE_MONTH],
+        Interval.FIFTEEN_MINUTES: [TimeRange.DAY, TimeRange.FIVE_DAYS, TimeRange.ONE_MONTH],
+        Interval.THIRTY_MINUTES: [TimeRange.DAY, TimeRange.FIVE_DAYS, TimeRange.ONE_MONTH],
+        Interval.ONE_HOUR: [TimeRange.DAY, TimeRange.FIVE_DAYS, TimeRange.ONE_MONTH, TimeRange.THREE_MONTHS,
+                            TimeRange.SIX_MONTHS, TimeRange.YTD, TimeRange.YEAR],
+    }
+
+    if time_range == TimeRange.MAX and interval != Interval.MONTHLY:
+        raise HTTPException(status_code=400, detail="If range is max, interval must be 1mo")
+
+    if interval in valid_ranges and time_range not in valid_ranges[interval]:
+        raise HTTPException(status_code=400,
+                            detail=f"If interval is {interval.value}, range must be {', '.join([r.value for r in valid_ranges[interval]])}")
 
     base_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
 
     # Setup request parameters
     params = {
         'interval': interval.value,
-        'range': period.value,
+        'range': time_range.value,
         'includePrePost': 'false'
     }
 

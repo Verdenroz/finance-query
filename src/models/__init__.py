@@ -1,5 +1,5 @@
 from .indicators import Analysis, Indicator, SummaryAnalysis
-from .historical_data import HistoricalData, TimePeriod, Interval
+from .historical_data import HistoricalData, TimeRange, Interval
 from .index import Index
 from .marketmover import MarketMover
 from .news import News
