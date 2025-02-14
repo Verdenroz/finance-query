@@ -20,7 +20,7 @@ from starlette.responses import Response, JSONResponse
 from src.connections import RedisConnectionManager, ConnectionManager
 from src.context import RequestContextMiddleware
 from src.dependencies import get_redis, _get_auth_data, get_yahoo_cookies, get_yahoo_crumb
-from src.models import ValidationErrorResponse, Sector, TimePeriod, Interval
+from src.models import ValidationErrorResponse, Sector, TimeRange, Interval
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
@@ -251,10 +251,10 @@ async def health(
     simple_quotes_task = get_simple_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
     similar_equity_task = get_similar_quotes("NVDA", cookies, crumb)
     similar_etf_task = get_similar_quotes("QQQ", cookies, crumb)
-    historical_data_task_day = get_historical("NVDA", TimePeriod.DAY, Interval.ONE_MINUTE)
-    historical_data_task_month = get_historical("NVDA", TimePeriod.YTD, Interval.DAILY)
-    historical_data_task_year = get_historical("NVDA", TimePeriod.YEAR, Interval.DAILY)
-    historical_data_task_five_years = get_historical("NVDA", TimePeriod.FIVE_YEARS, Interval.MONTHLY)
+    historical_data_task_day = get_historical("NVDA", TimeRange.DAY, Interval.ONE_MINUTE)
+    historical_data_task_month = get_historical("NVDA", TimeRange.YTD, Interval.DAILY)
+    historical_data_task_year = get_historical("NVDA", TimeRange.YEAR, Interval.DAILY)
+    historical_data_task_five_years = get_historical("NVDA", TimeRange.FIVE_YEARS, Interval.MONTHLY)
     search_task = get_search("NVDA")
     summary_analysis_task = get_summary_analysis("NVDA", Interval.DAILY)
 

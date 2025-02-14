@@ -8,7 +8,7 @@ from src.services.indicators.core import (calculate_rsi, calculate_stoch_rsi, ca
                                           prepare_price_data, create_indicator_dict)
 
 
-async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14):
+async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False):
     """
     Get the Relative Strength Index (RSI) for a symbol. RSI measures the speed and magnitude of recent price
     changes to evaluate overbought or oversold conditions. It oscillates between 0 and 100, with traditional
@@ -23,10 +23,12 @@ async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period
                   RSI that responds more slowly to price changes but may help identify longer-term trends.
                   The first calculation uses a simple average, while subsequent calculations use an
                   exponentially weighted moving average
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
-    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
+    or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     rsi_values = calculate_rsi(prices, period=period)
@@ -50,7 +52,8 @@ async def get_srsi(
         period: int = 14,
         stoch_period: int = 14,
         signal_period: int = 3,
-        smooth: int = 3
+        smooth: int = 3,
+        epoch: bool = False
 ):
     """
     Get the Stochastic RSI (SRSI) for a symbol. SRSI applies the Stochastic Oscillator formula to RSI values
@@ -68,10 +71,12 @@ async def get_srsi(
                          creates a more responsive signal line that may generate more trading signals
     :param smooth: The number of periods used to smooth the %K line before calculating %D. Higher values reduce
                   noise but increase lag in the indicator
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
-    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
+    or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     k_values, d_values = calculate_stoch_rsi(
@@ -103,7 +108,8 @@ async def get_stoch(
         interval: Interval,
         period: int = 14,
         smooth: int = 3,
-        signal_period: int = 3
+        signal_period: int = 3,
+        epoch: bool = False
 ):
     """
     Get the Stochastic Oscillator (STOCH) for a symbol. The Stochastic Oscillator measures the position of
@@ -121,10 +127,12 @@ async def get_stoch(
                          generate more false signals
     :param smooth: The number of periods used to smooth the %K line before calculating %D. Higher values
                   produce a smoother indicator that's less prone to whipsaws but may delay signal generation
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
-    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
+    or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, highs, lows, _ = prepare_price_data(quotes)
 
@@ -152,7 +160,7 @@ async def get_stoch(
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20):
+async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False):
     """
     Get the Commodity Channel Index (CCI) for a symbol. CCI measures the current price level relative to an
     average price level over a given period of time. The indicator oscillates above and below zero, with
@@ -165,10 +173,12 @@ async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period
                   prices and the Mean Deviation. The default of 20 is standard - lower values make the
                   indicator more sensitive to price changes but may generate more false signals, while
                   higher values create a smoother line better suited for identifying longer-term trends
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
-    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
+    or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, close_prices, high_prices, low_prices, _ = prepare_price_data(quotes)
 

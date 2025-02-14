@@ -18,7 +18,8 @@ async def get_macd(
         interval: Interval,
         fast_period: int = 12,
         slow_period: int = 26,
-        signal_period: int = 9
+        signal_period: int = 9,
+        epoch: bool = False
 ) -> dict:
     """
     Get the Moving Average Convergence Divergence (MACD) for a symbol.
@@ -34,10 +35,11 @@ async def get_macd(
     :param fast_period: the number of periods used to calculate the fast EMA (default 12). A shorter period
     :param slow_period: the number of periods used to calculate the slow EMA (default 26). A longer period
     :param signal_period: the number of periods used to calculate the signal line (default 9). A shorter period
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
     dates, prices, _, _, _ = prepare_price_data(quotes)
     macd_line, signal_line = calculate_macd(prices, fast_period=fast_period,
                                             slow_period=slow_period, signal_period=signal_period)
@@ -62,7 +64,13 @@ async def get_macd(
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_adx(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14) -> dict:
+async def get_adx(
+        symbol: str,
+        time_range: TimeRange,
+        interval: Interval,
+        period: int = 14,
+        epoch: bool = False
+) -> dict:
     """
     Get the Average Directional Index (ADX) for a symbol.
     The ADX is a trend strength indicator that quantifies the strength of a trend without indicating its direction.
@@ -75,10 +83,11 @@ async def get_adx(symbol: str, time_range: TimeRange, interval: Interval, period
     :param period: The number of periods used to calculate the DMI lines and ADX (default 14). Lower values
                   create a more responsive indicator but may generate more false signals. Values above 25
                   typically indicate a strong trend
+                  :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, closes, highs, lows, _ = prepare_price_data(quotes)
     adx_values = calculate_adx(highs, lows, closes, period=period)
@@ -95,7 +104,7 @@ async def get_adx(symbol: str, time_range: TimeRange, interval: Interval, period
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_aroon(symbol: str, interval: Interval, period: int = 25) -> dict:
+async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bool = False) -> dict:
     """
     Get the Aroon indicator for a symbol.
     The Aroon indicator consists of two lines: Aroon Up and Aroon Down. Aroon Up measures the number of periods
@@ -108,10 +117,11 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25) -> dict:
     :param period: The lookback period for finding the highest high and lowest low (default 25). A longer
                   period helps identify more significant trends but may be less responsive to recent price
                   changes. Values range from 0 to 100, with readings above 70 indicating a strong trend
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=TimeRange.YEAR, interval=interval)
+    quotes = await get_historical(symbol, time_range=TimeRange.YEAR, interval=interval, epoch=epoch)
 
     dates, _, highs, lows, _ = prepare_price_data(quotes)
     aroon_up, aroon_down = calculate_aroon(highs, lows, period=period)
@@ -135,8 +145,14 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25) -> dict:
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_bbands(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20,
-                     std_dev: int = 2) -> dict:
+async def get_bbands(
+        symbol: str,
+        time_range: TimeRange,
+        interval: Interval,
+        period: int = 20,
+        std_dev: int = 2,
+        epoch: bool = False
+) -> dict:
     """
     Get the Bollinger Bands (BBands) for a symbol.
     Bollinger Bands consist of a middle band (SMA) and two outer bands (standard deviations from the SMA).
@@ -150,10 +166,11 @@ async def get_bbands(symbol: str, time_range: TimeRange, interval: Interval, per
     :param std_dev: The number of standard deviations for the upper and lower bands (default 2). Higher
                    values create wider bands that identify more extreme price movements. About 95% of price
                    action occurs within 2 standard deviations
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, closes, _, _, _ = prepare_price_data(quotes)
     upper_band, middle_band, lower_band = calculate_bbands(closes, period=period, std_dev=std_dev)
@@ -179,7 +196,7 @@ async def get_bbands(symbol: str, time_range: TimeRange, interval: Interval, per
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_obv(symbol: str, time_range: TimeRange, interval: Interval) -> dict:
+async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict:
     """
     Get the On-Balance Volume (OBV) for a symbol.
     The OBV is a volume-based indicator that uses volume flow to predict changes in stock price. It works on the
@@ -191,10 +208,11 @@ async def get_obv(symbol: str, time_range: TimeRange, interval: Interval) -> dic
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, closes, _, _, volumes = prepare_price_data(quotes)
     obv_values = calculate_obv(closes, volumes)
@@ -211,8 +229,14 @@ async def get_obv(symbol: str, time_range: TimeRange, interval: Interval) -> dic
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_super_trend(symbol: str, time_range: TimeRange, interval: Interval, period: int = 10,
-                          multiplier: int = 3) -> dict:
+async def get_super_trend(
+        symbol: str,
+        time_range: TimeRange,
+        interval: Interval,
+        period: int = 10,
+        multiplier: int = 3,
+        epoch: bool = False
+) -> dict:
     """
     Get the Super Trend indicator for a symbol.
     The Super Trend indicator is a trend-following indicator that uses the Average True Range (ATR) to determine
@@ -227,10 +251,11 @@ async def get_super_trend(symbol: str, time_range: TimeRange, interval: Interval
                   period creates a smoother, less reactive indicator
     :param multiplier: The factor applied to the ATR to calculate the bands (default 3). A higher multiplier
                       creates wider bands that generate fewer signals but may reduce false breakouts
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, closes, highs, lows, _ = prepare_price_data(quotes)
     supertrend_values, trend = calculate_supertrend(highs, lows, closes, period=period, multiplier=multiplier)
@@ -261,7 +286,8 @@ async def get_ichimoku(
         interval: Interval,
         tenkan_period: int = 9,
         kijun_period: int = 26,
-        senkou_period: int = 52
+        senkou_period: int = 52,
+        epoch: bool = False
 ) -> dict:
     """
     Get the Ichimoku Cloud (Ichimoku Kinko Hyo) for a symbol.
@@ -283,10 +309,11 @@ async def get_ichimoku(
                         as a medium-term trend indicator
     :param senkou_period: The period for calculating Senkou Span B (default 52). This long-term line helps
                          form the cloud and indicates long-term trend direction
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
     dates, closes, highs, lows, _ = prepare_price_data(quotes)
     tenkan_sen, kijun_sen, senkou_span_a, senkou_span_b, chikou_span = calculate_ichimoku(
         highs, lows, closes,

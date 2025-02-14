@@ -150,6 +150,10 @@ async def get_technical_indicators(
             default=Interval.DAILY,
             description="The interval between data points. Available values: 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo."
         ),
+        epoch: Optional[bool] = Query(
+            False,
+            description="Whether to return the timestamps as epoch time."
+        ),
         period: Optional[int] = Query(
             None,
             description="The look-back period for the technical indicators.",
@@ -209,13 +213,14 @@ async def get_technical_indicators(
             None,
             description="The look-back period for the Senkou span in Ichimoku.",
             alias="senkouPeriod"
-        ),
+        )
 ):
     params = {
         "symbol": symbol,
         "time_range": time_range,
         "interval": interval,
         "period": period,
+        "epoch": epoch,
         "stoch_period": stoch_period,
         "signal_period": signal_period,
         "smooth": smooth,
