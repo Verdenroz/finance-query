@@ -1,8 +1,9 @@
-from datetime import date
+from datetime import date, datetime
 from enum import Enum
+from typing import Union
 
 from pydantic import Field, BaseModel, AliasChoices, SerializeAsAny
-from typing_extensions import Dict, Optional
+from typing_extensions import Optional, Annotated
 
 
 class Indicator(Enum):
@@ -244,13 +245,16 @@ class IchimokuData(IndicatorData):
         }
 
 
+DateType = Annotated[Union[date, datetime, str], Field(description="Date in any format")]
+
+
 class Analysis(BaseModel):
     type: Indicator = Field(
         default=...,
         examples=["SMA"],
         description="The type of technical indicator"
     )
-    indicators: Dict[date, SerializeAsAny[IndicatorData]] = Field(
+    indicators: dict[DateType, SerializeAsAny[IndicatorData]] = Field(
         default=...,
         serialization_alias="Technical Analysis",
         validation_alias=AliasChoices("Technical Analysis", "indicators"),
@@ -262,13 +266,35 @@ class Analysis(BaseModel):
         description="Dates with indicators for the stock"
     )
 
-    def model_dump(self, *args, **kwargs):
+    def model_dump(self, *args, **kwargs) -> dict:
         base_dict = super().model_dump(*args, **kwargs)
-        # Convert date keys to strings
+
+        # Format the date keys based on their type
         if 'Technical Analysis' in base_dict:
-            base_dict['Technical Analysis'] = {str(k): v for k, v in base_dict['Technical Analysis'].items()}
+            formatted_dict = {}
+            for k, v in base_dict['Technical Analysis'].items():
+                if isinstance(k, datetime):
+                    # For datetime, keep full timestamp
+                    formatted_dict[k.strftime('%Y-%m-%d %H:%M:%S')] = v
+                elif isinstance(k, date):
+                    # For date, use date-only format
+                    formatted_dict[k.strftime('%Y-%m-%d')] = v
+                else:
+                    # For strings, keep as is
+                    formatted_dict[str(k)] = v
+            base_dict['Technical Analysis'] = formatted_dict
+
         elif 'indicators' in base_dict:
-            base_dict['indicators'] = {str(k): v for k, v in base_dict['indicators'].items()}
+            formatted_dict = {}
+            for k, v in base_dict['indicators'].items():
+                if isinstance(k, datetime):
+                    formatted_dict[k.strftime('%Y-%m-%d %H:%M:%S')] = v
+                elif isinstance(k, date):
+                    formatted_dict[k.strftime('%Y-%m-%d')] = v
+                else:
+                    formatted_dict[str(k)] = v
+            base_dict['indicators'] = formatted_dict
+
         return base_dict
 
 
