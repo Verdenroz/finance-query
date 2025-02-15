@@ -84,16 +84,11 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.5.11",
-    description="FinanceQuery is a simple API to query financial data."
-                " It provides endpoints to get quotes, historical prices, indices,"
-                " market movers, similar stocks, finance news, indicators, search, and sectors."
-                " Please note if an admin key is not set, a rate limit of 2000/day will be applied to the request's ip"
-                " address."
-                " You are free to deploy your own instance of FinanceQuery to AWS and create your onw admin API key."
-                " If you are testing locally you can use the local server and will not need a key."
-    ,
+    version="1.6.0",
+    description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & "
+                "Yahoo Finance's Unofficial API.",
     servers=[
+        {"url": "https://finance-query.onrender.com", "description": "Render server"},
         {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "AWS server"},
         {"url": "http://127.0.0.1:8000", "description": "Local server"}
     ],

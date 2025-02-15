@@ -31,8 +31,8 @@ IndicatorFunctions = {
 
 @router.get(
     path="/indicator",
-    summary="Get technical indicators for a stock",
-    description="Returns the history of the requested technical indicator for a stock.",
+    summary="Get technical indicator data over time for a stock",
+    description="Returns the history of the requested technical indicator",
     response_model=TechnicalIndicator,
     tags=["Technical Indicators"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
@@ -252,8 +252,8 @@ async def technical_indicator(
 
 @router.get(
     path="/indicators",
-    summary="Get an aggregated summary of technical indicators for a stock",
-    description="Returns all available technical indicators for a stock with popular default periods and settings.",
+    summary="Get latest technical indicators for a symbol",
+    description="Returns only the latest values for the requested technical indicators",
     tags=["Technical Indicators"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
