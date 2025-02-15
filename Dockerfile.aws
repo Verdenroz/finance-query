@@ -10,6 +10,9 @@ RUN microdnf install -y \
     openssl \
     tar \
     gzip \
+    gcc \
+    gcc-c++ \
+    python3-devel \
     && microdnf clean all
 
 # Copy requirements.txt
