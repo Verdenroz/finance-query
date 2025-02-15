@@ -1,20 +1,21 @@
-from stock_indicators import indicators
 from typing_extensions import OrderedDict
+import numpy as np
 
-from src.redis import cache
-from src.schemas.analysis import RSIData, Analysis, SRSIData, STOCHData, CCIData, Indicator
-from src.schemas.time_series import TimePeriod, Interval
-from src.services.get_historical import get_historical_quotes
+from src.models.indicators import RSIData, TechnicalIndicator, SRSIData, STOCHData, CCIData, Indicator
+from src.models.historical_data import TimeRange, Interval
+from src.services.historical.get_historical import get_historical
+from src.services.indicators.core import (calculate_rsi, calculate_stoch_rsi, calculate_stoch, calculate_cci,
+                                          prepare_price_data, create_indicator_dict)
 
 
-@cache(expire=60, market_closed_expire=600)
-async def get_rsi(symbol: str, interval: Interval, period: int = 14):
+async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False):
     """
     Get the Relative Strength Index (RSI) for a symbol. RSI measures the speed and magnitude of recent price
     changes to evaluate overbought or oversold conditions. It oscillates between 0 and 100, with traditional
     overbought levels at 70 and oversold levels at 30.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The number of periods used to calculate the average gains and losses. The default of 14
                   is standard - shorter periods (e.g., 9) create a more volatile indicator that's more
@@ -22,28 +23,45 @@ async def get_rsi(symbol: str, interval: Interval, period: int = 14):
                   RSI that responds more slowly to price changes but may help identify longer-term trends.
                   The first calculation uses a simple average, while subsequent calculations use an
                   exponentially weighted moving average
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
+    or 500 for any other error
     """
-    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
-    results = indicators.get_rsi(quotes, lookback_periods=period)
-    indicator_data = {result.date.date(): RSIData(value=round(result.rsi, 2)) for result in results if
-                      result.rsi is not None}
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+
+    dates, prices, _, _, _ = prepare_price_data(quotes)
+    rsi_values = calculate_rsi(prices, period=period)
+
+    indicator_data = {
+        date: RSIData(value=value)
+        for date, value in create_indicator_dict(dates, rsi_values).items()
+    }
+
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.RSI,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, market_closed_expire=600)
-async def get_srsi(symbol: str, interval: Interval, period: int = 14, stoch_period: int = 14, signal_period: int = 3,
-                   smooth: int = 3):
+
+async def get_srsi(
+        symbol: str,
+        time_range: TimeRange,
+        interval: Interval,
+        period: int = 14,
+        stoch_period: int = 14,
+        signal_period: int = 3,
+        smooth: int = 3,
+        epoch: bool = False
+):
     """
     Get the Stochastic RSI (SRSI) for a symbol. SRSI applies the Stochastic Oscillator formula to RSI values
     instead of price data, resulting in an indicator that measures the relative position of RSI within its
     historical range.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The number of periods used to calculate the initial RSI value. A larger period creates a
                   smoother RSI line with fewer signals
@@ -53,33 +71,53 @@ async def get_srsi(symbol: str, interval: Interval, period: int = 14, stoch_peri
                          creates a more responsive signal line that may generate more trading signals
     :param smooth: The number of periods used to smooth the %K line before calculating %D. Higher values reduce
                   noise but increase lag in the indicator
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
+    or 500 for any other error
     """
-    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
-    results = indicators.get_stoch_rsi(
-        quotes,
-        rsi_periods=period,
-        stoch_periods=stoch_period,
-        signal_periods=signal_period,
-        smooth_periods=smooth
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+
+    dates, prices, _, _, _ = prepare_price_data(quotes)
+    k_values, d_values = calculate_stoch_rsi(
+        prices,
+        rsi_period=period,
+        stoch_period=stoch_period,
+        smooth=smooth,
+        signal_period=signal_period
     )
-    indicator_data = {result.date.date(): SRSIData(k=round(result.stoch_rsi, 2), d=round(result.signal, 2)) for
-                      result in results if result.stoch_rsi is not None and result.signal is not None}
+
+    k_dict = create_indicator_dict(dates, k_values)
+    d_dict = create_indicator_dict(dates, d_values)
+
+    indicator_data = {
+        date: SRSIData(k=k_dict[date], d=d_dict[date])
+        for date in k_dict.keys() & d_dict.keys()
+    }
+
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.SRSI,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, market_closed_expire=600)
-async def get_stoch(symbol: str, interval: Interval, period: int = 14, signal_period: int = 3, smooth: int = 3):
+
+async def get_stoch(
+        symbol: str,
+        time_range: TimeRange,
+        interval: Interval,
+        period: int = 14,
+        smooth: int = 3,
+        signal_period: int = 3,
+        epoch: bool = False
+):
     """
     Get the Stochastic Oscillator (STOCH) for a symbol. The Stochastic Oscillator measures the position of
     the closing price relative to the high-low range over a specified period, helping identify overbought
     and oversold conditions.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The lookback period used to find the highest high and lowest low for calculating %K.
                   This determines how many periods of price data are used to establish the trading range.
@@ -89,46 +127,71 @@ async def get_stoch(symbol: str, interval: Interval, period: int = 14, signal_pe
                          generate more false signals
     :param smooth: The number of periods used to smooth the %K line before calculating %D. Higher values
                   produce a smoother indicator that's less prone to whipsaws but may delay signal generation
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
+    or 500 for any other error
     """
-    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
-    results = indicators.get_stoch(
-        quotes,
-        lookback_periods=period,
-        signal_periods=signal_period,
-        smooth_periods=smooth
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+
+    dates, prices, highs, lows, _ = prepare_price_data(quotes)
+
+    k_values, d_values = calculate_stoch(
+        highs,
+        lows,
+        prices,
+        period=period,
+        smooth=smooth,
+        signal_period=signal_period
     )
-    indicator_data = {result.date.date(): STOCHData(k=round(result.k, 2), d=round(result.d, 2)) for
-                      result in results if result.k is not None and result.d is not None}
+
+    k_dict = create_indicator_dict(dates, k_values)
+    d_dict = create_indicator_dict(dates, d_values)
+
+    indicator_data = {
+        date: STOCHData(k=k_dict[date], d=d_dict[date])
+        for date in k_dict.keys() & d_dict.keys()
+    }
+
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.STOCH,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
-@cache(expire=60, market_closed_expire=600)
-async def get_cci(symbol: str, interval: Interval, period: int = 20):
+
+async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False):
     """
     Get the Commodity Channel Index (CCI) for a symbol. CCI measures the current price level relative to an
     average price level over a given period of time. The indicator oscillates above and below zero, with
     readings above +100 suggesting overbought conditions and below -100 suggesting oversold conditions.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The number of periods used to calculate both the Simple Moving Average (SMA) of typical
                   prices and the Mean Deviation. The default of 20 is standard - lower values make the
                   indicator more sensitive to price changes but may generate more false signals, while
                   higher values create a smoother line better suited for identifying longer-term trends
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found or code 500 for any other error
+    :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
+    or 500 for any other error
     """
-    quotes = await get_historical_quotes(symbol, period=TimePeriod.MAX, interval=interval)
-    results = indicators.get_cci(quotes, lookback_periods=period).remove_warmup_periods()
-    indicator_data = {result.date.date(): CCIData(value=round(result.cci, 2)) for result in results if
-                      result.cci is not None}
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+
+    dates, close_prices, high_prices, low_prices, _ = prepare_price_data(quotes)
+
+    cci_values = calculate_cci(high_prices, low_prices, close_prices, period=period)
+
+    indicator_data = {
+        dates[i]: CCIData(value=round(float(cci_values[i]), 2))
+        for i in range(len(dates))
+        if not np.isnan(cci_values[i])
+    }
+
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.CCI,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)

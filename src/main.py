@@ -5,26 +5,32 @@ import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
+import requests
+from aiohttp import ClientSession
 from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi_injectable import cleanup_all_exit_stacks, register_app
 from mangum import Mangum
+from redis import Redis
 from starlette import status
 from starlette.responses import Response, JSONResponse
 
-from src.di import get_global_session, close_global_session, get_global_rate_limit_manager
-from src.redis import r
+from src.connections import RedisConnectionManager, ConnectionManager
+from src.constants import headers
+from src.context import RequestContextMiddleware
+from src.dependencies import get_redis, _get_auth_data, get_yahoo_cookies, get_yahoo_crumb
+from src.models import ValidationErrorResponse, Sector, TimeRange, Interval
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
-from src.schemas import ValidationErrorResponse, Sector, TimePeriod, Interval
 from src.security import RateLimitMiddleware
 from src.services import (
-    scrape_indices, scrape_actives, scrape_losers, scrape_gainers, get_sectors,
-    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, scrape_quotes,
-    scrape_similar_quotes, get_historical, get_search, scrape_simple_quotes, get_summary_analysis
+    scrape_indices, get_actives, get_losers, get_gainers, get_sectors,
+    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, get_quotes,
+    get_similar_quotes, get_historical, get_search, get_simple_quotes, get_technical_indicators
 )
 
 load_dotenv()
@@ -32,39 +38,60 @@ load_dotenv()
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    session = await get_global_session()
+    """
+    FastAPI lifespan context manager that handles proxy setup and cleanup.
+    """
+    await register_app(app)
+    redis = None
+    redis_connection_manager = None
+
     api_url = None
     proxy_header_token = None
     payload = None
-    if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
-        async with session.get("https://api.ipify.org/") as ip_response:
-            ip = await ip_response.text()
+    try:
+        if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
+            ip_response = requests.get("https://api.ipify.org/")
+            ip = ip_response.text
             api_url = "https://api.brightdata.com/zone/whitelist"
             proxy_header_token = {
                 "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
                 "Content-Type": "application/json"
             }
             payload = {"ip": ip}
-            await session.post(api_url, headers=proxy_header_token, json=payload)
-    yield
-    if api_url and proxy_header_token and payload:
-        await session.delete(api_url, headers=proxy_header_token, json=payload)
-    await close_global_session()
-    await r.close()
+            requests.post(api_url, headers=proxy_header_token, json=payload)
+
+        if os.getenv('REDIS_URL'):
+            redis = Redis.from_url(os.getenv('REDIS_URL'))
+            redis_connection_manager = RedisConnectionManager(redis)
+            app.state.redis = redis
+            app.state.connection_manager = redis_connection_manager
+        else:
+            app.state.redis = None
+            app.state.connection_manager = ConnectionManager()
+
+        cookies, crumb = await _get_auth_data(redis)
+        app.state.cookies = cookies
+        app.state.crumb = crumb
+        app.state.session = ClientSession(headers=headers, max_field_size=30000)
+
+        yield
+    finally:
+        if api_url and proxy_header_token and payload:
+            requests.delete(api_url, headers=proxy_header_token, json=payload)
+        if redis:
+            redis.close()
+            await redis_connection_manager.close()
+
+        await cleanup_all_exit_stacks()
 
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.5.11",
-    description="FinanceQuery is a simple API to query financial data."
-                " It provides endpoints to get quotes, historical prices, indices,"
-                " market movers, similar stocks, finance news, indicators, search, and sectors."
-                " Please note if an admin key is not set, a rate limit of 2000/day will be applied to the request's ip"
-                " address."
-                " You are free to deploy your own instance of FinanceQuery to AWS and create your onw admin API key."
-                " If you are testing locally you can use the local server and will not need a key."
-    ,
+    version="1.6.0",
+    description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & "
+                "Yahoo Finance's Unofficial API.",
     servers=[
+        {"url": "https://finance-query.onrender.com", "description": "Render server"},
         {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "AWS server"},
         {"url": "http://127.0.0.1:8000", "description": "Local server"}
     ],
@@ -88,8 +115,10 @@ app.add_middleware(
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
 )
 
+app.add_middleware(RequestContextMiddleware)
+
 if os.getenv('USE_SECURITY', 'False') == 'True':
-    app.add_middleware(RateLimitMiddleware, rate_limit_manager=get_global_rate_limit_manager())
+    app.add_middleware(RateLimitMiddleware)
 
 
 @app.exception_handler(RequestValidationError)
@@ -120,34 +149,73 @@ async def request_validation_error_formatter(request, exc):
                 "application/json": {
                     "example": {
                         "status": "healthy",
-                        "timestamp": "2023-10-01T12:34:56.789Z",
+                        "timestamp": "2025-02-13T18:27:37.508568",
                         "redis": {
                             "status": "healthy",
-                            "latency_ms": 1.23
+                            "latency_ms": 13.1
                         },
-                        "scraping": {
-                            "Scraping status": "21/21 succeeded",
-                            "Indices": {"status": "succeeded"},
-                            "Market Actives": {"status": "succeeded"},
-                            "Market Losers": {"status": "succeeded"},
-                            "Market Gainers": {"status": "succeeded"},
-                            "Market Sectors": {"status": "succeeded"},
-                            "Sector for a symbol": {"status": "succeeded"},
-                            "Detailed Sector": {"status": "succeeded"},
-                            "General News": {"status": "succeeded"},
-                            "News for equity": {"status": "succeeded"},
-                            "News for ETF": {"status": "succeeded"},
-                            "Full Quotes": {"status": "succeeded"},
-                            "Simple Quotes": {"status": "succeeded"},
-                            "Similar Equities": {"status": "succeeded"},
-                            "Similar ETFs": {"status": "succeeded"},
-                            "Historical day prices": {"status": "succeeded"},
-                            "Historical week prices": {"status": "succeeded"},
-                            "Historical month prices": {"status": "succeeded"},
-                            "Historical year prices": {"status": "succeeded"},
-                            "Historical five year prices": {"status": "succeeded"},
-                            "Search": {"status": "succeeded"},
-                            "Summary Analysis": {"status": "succeeded"}
+                        "services": {
+                            "status": "20/20 succeeded",
+                            "Indices": {
+                                "status": "succeeded"
+                            },
+                            "Market Actives": {
+                                "status": "succeeded"
+                            },
+                            "Market Losers": {
+                                "status": "succeeded"
+                            },
+                            "Market Gainers": {
+                                "status": "succeeded"
+                            },
+                            "Market Sectors": {
+                                "status": "succeeded"
+                            },
+                            "Sector for a symbol": {
+                                "status": "succeeded"
+                            },
+                            "Detailed Sector": {
+                                "status": "succeeded"
+                            },
+                            "General News": {
+                                "status": "succeeded"
+                            },
+                            "News for equity": {
+                                "status": "succeeded"
+                            },
+                            "News for ETF": {
+                                "status": "succeeded"
+                            },
+                            "Full Quotes": {
+                                "status": "succeeded"
+                            },
+                            "Simple Quotes": {
+                                "status": "succeeded"
+                            },
+                            "Similar Equities": {
+                                "status": "succeeded"
+                            },
+                            "Similar ETFs": {
+                                "status": "succeeded"
+                            },
+                            "Historical day prices": {
+                                "status": "succeeded"
+                            },
+                            "Historical month prices": {
+                                "status": "succeeded"
+                            },
+                            "Historical year prices": {
+                                "status": "succeeded"
+                            },
+                            "Historical five year prices": {
+                                "status": "succeeded"
+                            },
+                            "Search": {
+                                "status": "succeeded"
+                            },
+                            "Summary Analysis": {
+                                "status": "succeeded"
+                            }
                         }
                     }
                 }
@@ -155,7 +223,11 @@ async def request_validation_error_formatter(request, exc):
         }
     }
 )
-async def health():
+async def health(
+        r=Depends(get_redis),
+        cookies=Depends(get_yahoo_cookies),
+        crumb=Depends(get_yahoo_crumb)
+):
     """
         Comprehensive health check endpoint that verifies:
         - Basic API health
@@ -164,26 +236,25 @@ async def health():
         - Service dependencies
         """
     indices_task = scrape_indices()
-    actives_task = scrape_actives()
-    losers_task = scrape_losers()
-    gainers_task = scrape_gainers()
+    actives_task = get_actives()
+    losers_task = get_losers()
+    gainers_task = get_gainers()
     sectors_task = get_sectors()
-    sector_by_symbol_task = get_sector_for_symbol("NVDA")
+    sector_by_symbol_task = get_sector_for_symbol("NVDA", cookies, crumb)
     sector_by_name_task = get_sector_details(Sector.TECHNOLOGY)
     news_task = scrape_general_news()
     news_by_symbol_task = scrape_news_for_quote("NVDA")
     scrape_etf_news_task = scrape_news_for_quote("QQQ")
-    quotes_task = scrape_quotes(["NVDA", "QQQ", "GTLOX"])
-    simple_quotes_task = scrape_simple_quotes(["NVDA", "QQQ", "GTLOX"])
-    similar_equity_task = scrape_similar_quotes("NVDA")
-    similar_etf_task = scrape_similar_quotes("QQQ")
-    historical_data_task_day = get_historical("NVDA", TimePeriod.DAY, Interval.ONE_MINUTE)
-    historical_data_task_week = get_historical("NVDA", TimePeriod.SEVEN_DAYS, Interval.FIVE_MINUTES)
-    historical_data_task_month = get_historical("NVDA", TimePeriod.YTD, Interval.DAILY)
-    historical_data_task_year = get_historical("NVDA", TimePeriod.YEAR, Interval.DAILY)
-    historical_data_task_five_years = get_historical("NVDA", TimePeriod.FIVE_YEARS, Interval.MONTHLY)
+    quotes_task = get_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
+    simple_quotes_task = get_simple_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
+    similar_equity_task = get_similar_quotes("NVDA", cookies, crumb)
+    similar_etf_task = get_similar_quotes("QQQ", cookies, crumb)
+    historical_data_task_day = get_historical("NVDA", TimeRange.DAY, Interval.ONE_MINUTE)
+    historical_data_task_month = get_historical("NVDA", TimeRange.YTD, Interval.DAILY)
+    historical_data_task_year = get_historical("NVDA", TimeRange.YEAR, Interval.DAILY)
+    historical_data_task_five_years = get_historical("NVDA", TimeRange.FIVE_YEARS, Interval.MONTHLY)
     search_task = get_search("NVDA")
-    summary_analysis_task = get_summary_analysis("NVDA", Interval.DAILY)
+    summary_analysis_task = get_technical_indicators("NVDA", Interval.DAILY)
 
     tasks = [
         ("Indices", indices_task),
@@ -201,7 +272,6 @@ async def health():
         ("Similar Equities", similar_equity_task),
         ("Similar ETFs", similar_etf_task),
         ("Historical day prices", historical_data_task_day),
-        ("Historical week prices", historical_data_task_week),
         ("Historical month prices", historical_data_task_month),
         ("Historical year prices", historical_data_task_year),
         ("Historical five year prices", historical_data_task_five_years),
@@ -215,40 +285,46 @@ async def health():
         "status": "healthy",
         "timestamp": datetime.datetime.utcnow().isoformat(),
         "redis": {
+            "status": "healthy",
+            "latency_ms": 0
         },
-        "scraping": {
-            "Scraping status": "21/21 succeeded",
+        "services": {
+            "status": "20/20 succeeded",
         }
     }
 
     # Check Redis
-    try:
-        start_time = time.time()
-        redis_ping = await r.ping()
-        health_report["redis"] = {
-            "status": "healthy" if redis_ping else "unhealthy",
-            "latency_ms": round((time.time() - start_time) * 1000, 2)
-        }
-    except Exception as e:
-        health_report["dependencies"] = {
-            "redis": {
-                "status": "unhealthy",
-                "error": str(e)
+    if r:
+        try:
+            start_time = time.time()
+            redis_ping = r.ping()
+            health_report["redis"] = {
+                "status": "healthy" if redis_ping else "unhealthy",
+                "latency_ms": round((time.time() - start_time) * 1000, 2)
             }
-        }
-        health_report["status"] = "degraded"
+        except Exception as e:
+            health_report["dependencies"] = {
+                "redis": {
+                    "status": "unhealthy",
+                    "error": str(e)
+                }
+            }
+            health_report["status"] = "degraded"
+
+    if not r:
+        del health_report["redis"]
 
     total = len(tasks)
     succeeded = 0
     for (name, task), result in zip(tasks, results):
         if isinstance(result, Exception):
-            health_report["scraping"][name] = {"status": "FAILED", "ERROR": str(result)}
+            health_report["services"][name] = {"status": "FAILED", "ERROR": str(result)}
         else:
-            health_report["scraping"][name] = {"status": "succeeded"}
+            health_report["services"][name] = {"status": "succeeded"}
             succeeded += 1
 
-    scraping_status = f"{succeeded}/{total} succeeded"
-    health_report["scraping"]["Scraping status"] = scraping_status
+    service_status = f"{succeeded}/{total} succeeded"
+    health_report["services"]["status"] = service_status
 
     return health_report
 

@@ -2,7 +2,7 @@ from fastapi import APIRouter, Security, Query
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.schemas import News, ValidationErrorResponse
+from src.models import News, ValidationErrorResponse
 from src.services import scrape_news_for_quote, scrape_general_news
 
 router = APIRouter()

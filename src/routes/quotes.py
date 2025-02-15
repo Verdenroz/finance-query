@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Security, Query
+from fastapi import APIRouter, Security, Query, Depends
 from fastapi.security import APIKeyHeader
 
-from src.schemas import Quote, SimpleQuote, ValidationErrorResponse
-from src.services import scrape_quotes, scrape_simple_quotes
+from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
+from src.models import Quote, SimpleQuote, ValidationErrorResponse
+from src.services import get_quotes, get_simple_quotes
 
 router = APIRouter()
 
@@ -34,18 +35,16 @@ router = APIRouter()
                     }
                 }
             }
-        },
-        500: {
-            "description": "Failed to get quote",
-            "content": {"application/json": {"example": {"detail": "Failed to get quote for {symbol}"}}}
         }
     }
 )
-async def get_quotes(symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
+async def get_quote(
+        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb)
+):
     symbols = list(set(symbols.upper().replace(' ', '').split(',')))
-    quotes = await scrape_quotes(symbols)
-
-    return [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
+    return await get_quotes(symbols, cookies, crumb)
 
 
 @router.get(
@@ -76,16 +75,13 @@ async def get_quotes(symbols: str = Query(..., title="Symbols", description="Com
                     }
                 }
             }
-        },
-        500: {
-            "description": "Failed to get simple quote",
-            "content": {"application/json": {"example": {"detail": "Failed to get simple quote for {symbol}"}}}
         }
     }
 )
 async def get_simple_quote(
-        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols")):
+        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb)
+):
     symbols = list(set(symbols.upper().replace(' ', '').split(',')))
-    quotes = await scrape_simple_quotes(symbols)
-
-    return [quote if isinstance(quote, dict) else quote.dict() for quote in quotes]
+    return await get_simple_quotes(symbols, cookies, crumb)

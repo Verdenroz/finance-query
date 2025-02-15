@@ -38,13 +38,12 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Build a docker container and
-          # push it to ECR so that it can
-          # be deployed to ECS.
-          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          # Build a docker container using the specified Dockerfile and
+          # push it to ECR so that it can be deployed to ECS.
+          docker build -f Dockerfile.aws -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_ENV
 
       - name: Update Lambda function
         run: |
-          aws lambda update-function-code --function-name ${{ env.FUNCTION_NAME }} --image-uri ${{ env.image }} --region ${{ env.AWS_REGION }}
+          aws lambda update-function-code --function-name ${{ env.FUNCTION_NAME }} --image-uri ${{ env.image }} --region ${{ env.AWS_REGION }} --no-cli-pager

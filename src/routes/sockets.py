@@ -5,26 +5,22 @@ import pytz
 from fastapi import APIRouter, Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.connections import RedisConnectionManager
-from src.di import get_global_rate_limit_manager
+from src.connections import RedisConnectionManager, ConnectionManager
+from src.dependencies import get_connection_manager, get_yahoo_cookies, get_yahoo_crumb
 from src.market import MarketSchedule
-from src.schemas import SimpleQuote
+from src.models import SimpleQuote
+from src.security import validate_websocket
 from src.services import (
-    scrape_quotes, scrape_similar_quotes, scrape_actives,
-    scrape_news_for_quote, scrape_losers, scrape_gainers,
-    scrape_simple_quotes, scrape_indices, scrape_general_news,
+    get_quotes, get_similar_quotes, get_actives,
+    scrape_news_for_quote, get_losers, get_gainers,
+    get_simple_quotes, scrape_indices, scrape_general_news,
     get_sectors, get_sector_for_symbol
 )
 
 router = APIRouter()
 
-
-async def validate_websocket(websocket: WebSocket) -> tuple[bool, dict]:
-    """
-    Backwards compatible wrapper for websocket validation
-    """
-    rate_limit_manager = get_global_rate_limit_manager()
-    return await rate_limit_manager.validate_websocket(websocket)
+# Refresh interval for fetching data
+REFRESH_INTERVAL = 5
 
 
 def safe_convert_to_dict(items, default=None):
@@ -52,7 +48,7 @@ async def handle_websocket_connection(
         websocket: WebSocket,
         channel: str,
         data_fetcher: callable,
-        connection_manager: RedisConnectionManager
+        connection_manager: RedisConnectionManager | ConnectionManager
 ):
     """
     A generalized WebSocket connection handler.
@@ -62,8 +58,7 @@ async def handle_websocket_connection(
     :param data_fetcher: Async function to fetch data
     :param connection_manager: Connection manager instance
     """
-    is_valid, metadata = await validate_websocket(websocket)
-    print(is_valid, metadata)
+    is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
         return
 
@@ -76,8 +71,11 @@ async def handle_websocket_connection(
         while True:
             try:
                 result = await data_fetcher()
-                await connection_manager.publish(result, channel)
-                await asyncio.sleep(5)
+                if isinstance(connection_manager, RedisConnectionManager):
+                    await asyncio.to_thread(connection_manager.publish, result, channel)
+                else:
+                    await connection_manager.broadcast(channel, result)
+                await asyncio.sleep(REFRESH_INTERVAL)
             except WebSocketDisconnect:
                 await connection_manager.disconnect(websocket, channel)
                 break
@@ -110,14 +108,16 @@ async def handle_websocket_connection(
 async def websocket_profile(
         websocket: WebSocket,
         symbol: str,
-        connection_manager: RedisConnectionManager = Depends(RedisConnectionManager)
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb)
 ):
     async def get_profile():
         """
         Fetches the profile data for a symbol.
         """
-        quotes_task = scrape_quotes([symbol])
-        similar_quotes_task = scrape_similar_quotes(symbol)
+        quotes_task = get_quotes([symbol], cookies, crumb)
+        similar_quotes_task = get_similar_quotes(symbol, cookies, crumb)
         sector_performance_task = get_sector_for_symbol(symbol)
         news_task = scrape_news_for_quote(symbol)
 
@@ -150,9 +150,11 @@ async def websocket_profile(
 @router.websocket("/quotes")
 async def websocket_quotes(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(RedisConnectionManager)
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb)
 ):
-    is_valid, metadata = await validate_websocket(websocket)
+    is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
         return
     await websocket.accept()
@@ -160,11 +162,11 @@ async def websocket_quotes(
         channel = await websocket.receive_text()
         symbols = list(set(symbol.upper() for symbol in channel.split(",")))
 
-        async def get_quotes(symbols):
+        async def get_request_symbols():
             """
             Fetches quotes for a list of symbols.
             """
-            result = await scrape_simple_quotes(symbols)
+            result = await get_simple_quotes(symbols, cookies, crumb)
             quotes = []
             for quote in result:
                 if not isinstance(quote, SimpleQuote):
@@ -195,16 +197,19 @@ async def websocket_quotes(
 
         async def fetch_data():
             """
-            Fetches quotes every 10 seconds.
+            Fetches quotes every 5 seconds.
             """
             while True:
-                result = await get_quotes(symbols)
-                await connection_manager.publish(result, channel)
-                await asyncio.sleep(10)
+                result = await get_request_symbols()
+                if isinstance(connection_manager, RedisConnectionManager):
+                    await asyncio.to_thread(connection_manager.publish, result, channel)
+                else:
+                    await connection_manager.broadcast(channel, result)
+                await asyncio.sleep(REFRESH_INTERVAL)
 
         # Starts the connection and fetches the initial data
         if websocket not in connection_manager.active_connections.get(channel, []):
-            initial_result = await get_quotes(symbols)
+            initial_result = await get_request_symbols()
             if metadata:
                 initial_result.insert(0, metadata)
             try:
@@ -229,15 +234,15 @@ async def websocket_quotes(
 @router.websocket("/market")
 async def websocket_market(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(RedisConnectionManager)
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager)
 ):
     async def get_market_info():
         """
         Fetches market information.
         """
-        actives_task = scrape_actives()
-        gainers_task = scrape_gainers()
-        losers_task = scrape_losers()
+        actives_task = get_actives()
+        gainers_task = get_gainers()
+        losers_task = get_losers()
         indices_task = scrape_indices()
         news_task = scrape_general_news()
         sectors_task = get_sectors()
@@ -262,7 +267,7 @@ async def websocket_market(
 @router.websocket("/hours")
 async def market_status_websocket(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager = Depends(RedisConnectionManager),
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
         market_schedule: MarketSchedule = Depends(MarketSchedule)
 ):
     async def get_market_status_info():
