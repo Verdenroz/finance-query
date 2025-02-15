@@ -1,6 +1,6 @@
 from typing_extensions import OrderedDict
 
-from src.models.indicators import SMAData, Analysis, EMAData, WMAData, VWMAData, Indicator
+from src.models.indicators import SMAData, TechnicalIndicator, EMAData, WMAData, VWMAData, Indicator
 from src.models.historical_data import TimeRange, Interval
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (calculate_sma, calculate_ema, calculate_wma, calculate_vwma,
@@ -39,7 +39,7 @@ async def get_sma(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.SMA,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -74,7 +74,7 @@ async def get_ema(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.EMA,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -105,7 +105,7 @@ async def get_wma(symbol: str, range: TimeRange, interval: Interval, period: int
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.WMA,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -143,7 +143,7 @@ async def get_vwma(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.VWMA,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)

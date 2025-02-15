@@ -1,7 +1,7 @@
 from typing_extensions import OrderedDict
 import numpy as np
 
-from src.models.indicators import RSIData, Analysis, SRSIData, STOCHData, CCIData, Indicator
+from src.models.indicators import RSIData, TechnicalIndicator, SRSIData, STOCHData, CCIData, Indicator
 from src.models.historical_data import TimeRange, Interval
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (calculate_rsi, calculate_stoch_rsi, calculate_stoch, calculate_cci,
@@ -39,7 +39,7 @@ async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.RSI,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -96,7 +96,7 @@ async def get_srsi(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.SRSI,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -154,7 +154,7 @@ async def get_stoch(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.STOCH,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -191,7 +191,7 @@ async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.CCI,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)

@@ -1,7 +1,7 @@
 import numpy as np
 from typing_extensions import OrderedDict
 
-from src.models.indicators import (MACDData, Analysis, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData,
+from src.models.indicators import (MACDData, TechnicalIndicator, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData,
                                    IchimokuData, Indicator)
 from src.models.historical_data import TimeRange, Interval
 from src.services.historical.get_historical import get_historical
@@ -58,7 +58,7 @@ async def get_macd(
 
     # Sort the dictionary by date in reverse order
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.MACD,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -98,7 +98,7 @@ async def get_adx(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.ADX,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -139,7 +139,7 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bo
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.AROON,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -190,7 +190,7 @@ async def get_bbands(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.BBANDS,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -223,7 +223,7 @@ async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch:
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.OBV,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -274,7 +274,7 @@ async def get_super_trend(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.SUPER_TREND,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
@@ -344,7 +344,7 @@ async def get_ichimoku(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return Analysis(
+    return TechnicalIndicator(
         type=Indicator.ICHIMOKU,
         indicators=indicator_data
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
