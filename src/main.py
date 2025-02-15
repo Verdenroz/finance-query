@@ -6,6 +6,7 @@ from collections import defaultdict
 from contextlib import asynccontextmanager
 
 import requests
+from aiohttp import ClientSession
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
 from fastapi.encoders import jsonable_encoder
@@ -18,6 +19,7 @@ from starlette import status
 from starlette.responses import Response, JSONResponse
 
 from src.connections import RedisConnectionManager, ConnectionManager
+from src.constants import headers
 from src.context import RequestContextMiddleware
 from src.dependencies import get_redis, _get_auth_data, get_yahoo_cookies, get_yahoo_crumb
 from src.models import ValidationErrorResponse, Sector, TimeRange, Interval
@@ -70,6 +72,7 @@ async def lifespan(app: FastAPI):
         cookies, crumb = await _get_auth_data(redis)
         app.state.cookies = cookies
         app.state.crumb = crumb
+        app.state.session = ClientSession(headers=headers, max_field_size=30000)
 
         yield
     finally:

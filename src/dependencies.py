@@ -13,18 +13,6 @@ from src.constants import proxy, proxy_auth, headers
 from src.context import request_context
 
 
-async def get_session() -> AsyncGenerator[ClientSession, None]:
-    """
-    Creates and yields an aiohttp ClientSession with proper cleanup.
-    Headers can be customized as needed.
-    """
-    session = ClientSession(headers=headers, max_field_size=30000)
-    try:
-        yield session
-    finally:
-        await session.close()
-
-
 async def get_request_context() -> Request | WebSocket:
     """Get request context from FastAPI app"""
     return request_context.get()
@@ -35,6 +23,14 @@ async def get_connection_manager(websocket: WebSocket) -> RedisConnectionManager
     Get connection manager instance from app state using WebSocket
     """
     return websocket.app.state.connection_manager
+
+
+async def get_session(request=Depends(get_request_context)) -> ClientSession:
+    """
+    Creates and yields an aiohttp ClientSession with proper cleanup.
+    Headers can be customized as needed.
+    """
+    return request.app.state.session
 
 
 @injectable
