@@ -2,10 +2,10 @@ from fastapi import APIRouter, Security, Query, HTTPException
 from fastapi.security import APIKeyHeader
 from typing_extensions import Optional
 
-from src.models import Analysis, Indicator, Interval, ValidationErrorResponse, SummaryAnalysis, TimeRange
+from src.models import TechnicalIndicator, Indicator, Interval, ValidationErrorResponse, TimeRange
 from src.services.indicators import (
     get_sma, get_ema, get_wma, get_vwma, get_rsi, get_srsi, get_stoch, get_cci, get_macd, get_adx, get_aroon,
-    get_bbands, get_obv, get_super_trend, get_ichimoku, get_summary_analysis
+    get_bbands, get_obv, get_super_trend, get_ichimoku, get_technical_indicators
 )
 
 router = APIRouter()
@@ -30,15 +30,15 @@ IndicatorFunctions = {
 
 
 @router.get(
-    path="/indicators",
+    path="/indicator",
     summary="Get technical indicators for a stock",
     description="Returns the history of the requested technical indicator for a stock.",
-    response_model=Analysis,
+    response_model=TechnicalIndicator,
     tags=["Technical Indicators"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
-            "model": Analysis,
+            "model": TechnicalIndicator,
             "description": "The technical indicator data for the stock."
         },
         400: {
@@ -132,7 +132,7 @@ IndicatorFunctions = {
         }
     }
 )
-async def get_technical_indicators(
+async def technical_indicator(
         function: Indicator = Query(
             ...,
             description="The technical indicator to get.",
@@ -251,15 +251,119 @@ async def get_technical_indicators(
 
 
 @router.get(
-    path="/analysis",
+    path="/indicators",
     summary="Get an aggregated summary of technical indicators for a stock",
     description="Returns all available technical indicators for a stock with popular default periods and settings.",
     tags=["Technical Indicators"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
-            "model": SummaryAnalysis,
-            "description": "The technical analysis summary for the stock."
+            "description": "The technical analysis summary for the stock.",
+            "content": {
+                "application/json": {
+                    "example": {
+                        "SMA(10)": {
+                            "SMA": 129.03
+                        },
+                        "SMA(20)": {
+                            "SMA": 131.08
+                        },
+                        "SMA(50)": {
+                            "SMA": 134.95
+                        },
+                        "SMA(100)": {
+                            "SMA": 135.54
+                        },
+                        "SMA(200)": {
+                            "SMA": 124.78
+                        },
+                        "EMA(10)": {
+                            "EMA": 131.93
+                        },
+                        "EMA(20)": {
+                            "EMA": 131.64
+                        },
+                        "EMA(50)": {
+                            "EMA": 133.51
+                        },
+                        "EMA(100)": {
+                            "EMA": 131.7
+                        },
+                        "EMA(200)": {
+                            "EMA": 120.76
+                        },
+                        "WMA(10)": {
+                            "WMA": 125.72
+                        },
+                        "WMA(20)": {
+                            "WMA": 132.3
+                        },
+                        "WMA(50)": {
+                            "WMA": 136.83
+                        },
+                        "WMA(100)": {
+                            "WMA": 135.32
+                        },
+                        "WMA(200)": {
+                            "WMA": 118.59
+                        },
+                        "VWMA(20)": {
+                            "VWMA": 128.17
+                        },
+                        "RSI(14)": {
+                            "RSI": 56.56
+                        },
+                        "SRSI(3,3,14,14)": {
+                            "%K": 92.79,
+                            "%D": 81.77
+                        },
+                        "STOCH %K(14,3,3)": {
+                            "%K": 81.25,
+                            "%D": 67.41
+                        },
+                        "CCI(20)": {
+                            "CCI": 63.36
+                        },
+                        "BBANDS(20,2)": {
+                            "Upper Band": 149.81,
+                            "Middle Band": 131.08,
+                            "Lower Band": 112.35
+                        },
+                        "Aroon(25)": {
+                            "Aroon Up": 40.0,
+                            "Aroon Down": 64.0
+                        },
+                        "ADX(14)": {
+                            "ADX": 14.43
+                        },
+                        "MACD(12,26)": {
+                            "MACD": -0.53,
+                            "Signal": -2.1
+                        },
+                        "Super Trend": {
+                            "Super Trend": 140.25,
+                            "Trend": "DOWN"
+                        },
+                        "Ichimoku Cloud": {
+                            "Conversion Line": 127.97,
+                            "Base Line": 130.99,
+                            "Lagging Span": 138.85,
+                            "Leading Span A": 141.74,
+                            "Leading Span B": 140.0
+                        }
+                    }
+                }
+            }
+        },
+        400: {
+            "description": "Invalid parameter for the technical indicator.",
+            "content": {
+                "application/jsoin": {
+                    "example": {
+                        "detail": "Invalid parameter: {parameter} for the {function} function."
+                    }
+                }
+            }
         },
         404: {
             "description": "Symbol not found",
@@ -302,14 +406,15 @@ async def get_technical_indicators(
         }
     }
 )
-async def get_technical_analysis(
+async def technical_indicators(
         symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
         interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
+        functions: Optional[str] = Query(None, description="Comma-separated list of technical indicators to calculate."),
 ):
     try:
-        return await get_summary_analysis(symbol, interval)
-    except HTTPException as e:
-        # Re-raise HTTPException from get_summary_analysis
-        raise e
+        indicator_list = [Indicator[ind.strip()] for ind in functions.split(",")] if functions else None
+        return await get_technical_indicators(symbol, interval, indicator_list)
+    except KeyError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(e)}")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}")

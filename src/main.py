@@ -28,7 +28,7 @@ from src.security import RateLimitMiddleware
 from src.services import (
     scrape_indices, get_actives, get_losers, get_gainers, get_sectors,
     get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, get_quotes,
-    get_similar_quotes, get_historical, get_search, get_simple_quotes, get_summary_analysis
+    get_similar_quotes, get_historical, get_search, get_simple_quotes, get_technical_indicators
 )
 
 load_dotenv()
@@ -256,7 +256,7 @@ async def health(
     historical_data_task_year = get_historical("NVDA", TimeRange.YEAR, Interval.DAILY)
     historical_data_task_five_years = get_historical("NVDA", TimeRange.FIVE_YEARS, Interval.MONTHLY)
     search_task = get_search("NVDA")
-    summary_analysis_task = get_summary_analysis("NVDA", Interval.DAILY)
+    summary_analysis_task = get_technical_indicators("NVDA", Interval.DAILY)
 
     tasks = [
         ("Indices", indices_task),
