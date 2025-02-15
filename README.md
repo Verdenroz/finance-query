@@ -1,7 +1,7 @@
 
 # FinanceQuery
 
-FinanceQuery is a simple API to query financial data. It provides endpoints to get quotes, historical prices, indices, market movers, similar stocks, finance news, indicators, search, and sectors. Data is acquired through web scraping and third party libraries. It is the successor to the [GoogleFinanceAPI](https://github.com/Verdenroz/GoogleFinanceAPI).
+FinanceQuery is a free and open-source API to query financial data. It provides endpoints to get quotes, historical prices, indices, market movers, similar stocks, finance news, indicators, search, and sectors. Data is acquired through web scraping and the unofficial Yahoo Finance API. It is the successor to the [GoogleFinanceAPI](https://github.com/Verdenroz/GoogleFinanceAPI).
 
 ## Documentation
 
@@ -25,6 +25,12 @@ Install dependencies
 
 ```bash
  pip install -r requirements.txt
+```
+
+Cythonize files
+
+```bash
+  python setup.py build_ext --inplace
 ```
 
 Start the server
