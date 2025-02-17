@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.6.0",
+    version="1.6.1",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & "
                 "Yahoo Finance's Unofficial API.",
     servers=[
