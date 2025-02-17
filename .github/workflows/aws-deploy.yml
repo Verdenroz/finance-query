@@ -46,4 +46,4 @@ jobs:
 
       - name: Update Lambda function
         run: |
-          aws lambda update-function-code --function-name ${{ env.FUNCTION_NAME }} --image-uri ${{ env.image }} --region ${{ env.AWS_REGION }} --no-cli-pager
+          aws lambda update-function-code --function-name ${{ env.FUNCTION_NAME }} --image-uri ${{ env.image }} --region ${{ env.AWS_REGION }} > /dev/null
