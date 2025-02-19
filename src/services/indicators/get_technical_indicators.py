@@ -22,7 +22,7 @@ async def get_technical_indicators(
     if not indicators:
         indicators = list(Indicator)
 
-    # Any other interval will be mapped to 10 years
+    # Any other interval will be mapped to 5 years
     interval_to_range = {
         Interval.ONE_MINUTE: TimeRange.FIVE_DAYS,
         Interval.FIVE_MINUTES: TimeRange.ONE_MONTH,
@@ -31,7 +31,7 @@ async def get_technical_indicators(
         Interval.ONE_HOUR: TimeRange.ONE_MONTH,
     }
 
-    time_range = interval_to_range.get(interval, TimeRange.TEN_YEARS)
+    time_range = interval_to_range.get(interval, TimeRange.FIVE_YEARS)
 
     quotes = await get_historical(symbol, time_range=time_range, interval=interval)
     dates, prices, high_prices, low_prices, volumes = prepare_price_data(quotes)
