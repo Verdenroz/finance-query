@@ -22,12 +22,8 @@ def prepare_price_data(dict historical_data):
 
     return dates, prices, high_prices, low_prices, volumes
 
-def create_indicator_dict(list dates, np.ndarray[DTYPE_t, ndim=1] values, bint exclude_nan=True):
+def create_indicator_dict(list dates, np.ndarray[DTYPE_t, ndim=1] values):
     """
     Standardized creation of date-to-value dictionary for indicators.
     """
-    if exclude_nan:
-        return {dates[i]: round(float(values[i]), 2)
-                for i in range(len(dates)) if not isnan(values[i])}
-    return {dates[i]: round(float(values[i]), 2)
-            for i in range(len(dates))}
+    return {dates[i]: round(float(values[i]), 2) if not isnan(values[i]) else None for i in range(len(dates))}
