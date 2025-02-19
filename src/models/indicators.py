@@ -32,101 +32,105 @@ class IndicatorData(BaseModel):
 
 
 class SMAData(IndicatorData):
-    value: float = Field(
-        ..., examples=[30.00], description="Simple Moving Average value", serialization_alias="SMA"
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Simple Moving Average value", serialization_alias="SMA"
     )
 
 
 class EMAData(IndicatorData):
-    value: float = Field(
-        ..., examples=[30.00], description="Exponential Moving Average value", serialization_alias="EMA"
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Exponential Moving Average value", serialization_alias="EMA"
     )
 
 
 class WMAData(IndicatorData):
-    value: float = Field(
-        ..., examples=[30.00], description="Weighted Moving Average value", serialization_alias="WMA"
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Weighted Moving Average value", serialization_alias="WMA"
     )
 
 
 class VWMAData(IndicatorData):
-    value: float = Field(
-        ..., examples=[30.00], description="Volume Weighted Moving Average value", serialization_alias="VWMA"
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Volume Weighted Moving Average value", serialization_alias="VWMA"
     )
 
 
 class RSIData(IndicatorData):
-    value: float = Field(
-        ..., examples=[30.00], description="Relative Strength Index value", serialization_alias="RSI"
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Relative Strength Index value", serialization_alias="RSI"
     )
 
 
 class SRSIData(IndicatorData):
-    k: float = Field(
-        ..., examples=[30.00], description="Stochastic RSI value", serialization_alias="%K"
+    k: Optional[float] = Field(
+        None, examples=[30.00], description="Stochastic RSI value", serialization_alias="%K"
     )
-    d: float = Field(
-        ..., examples=[30.00], description="Stochastic RSI Signal value", serialization_alias="%D"
+    d: Optional[float] = Field(
+        None, examples=[30.00], description="Stochastic RSI Signal value", serialization_alias="%D"
     )
 
 
 class STOCHData(IndicatorData):
-    k: float = Field(
-        ..., examples=[30.00], description="Stochastic Oscillator %K value", serialization_alias="%K"
+    k: Optional[float] = Field(
+        None, examples=[30.00], description="Stochastic Oscillator %K value", serialization_alias="%K"
     )
-    d: float = Field(
-        ..., examples=[30.00], description="Stochastic Oscillator %D value", serialization_alias="%D"
+    d: Optional[float] = Field(
+        None, examples=[30.00], description="Stochastic Oscillator %D value", serialization_alias="%D"
     )
 
 
 class CCIData(IndicatorData):
-    value: float = Field(
-        ..., examples=[30.00], description="Commodity Channel Index value", serialization_alias="CCI"
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Commodity Channel Index value", serialization_alias="CCI"
     )
 
 
 class MACDData(IndicatorData):
-    value: float = Field(
-        ..., examples=[30.00], description="Moving Average Convergence Divergence value", serialization_alias="MACD"
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Moving Average Convergence Divergence value", serialization_alias="MACD"
     )
-    signal: float = Field(
-        ..., examples=[30.00], description="MACD Signal value", serialization_alias="Signal"
+    signal: Optional[float] = Field(
+        None, examples=[30.00], description="MACD Signal value", serialization_alias="Signal"
     )
 
 
 class ADXData(IndicatorData):
-    value: float = Field(
-        ..., examples=[30.00], description="Average Directional Index value", serialization_alias="ADX"
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Average Directional Index value", serialization_alias="ADX"
     )
 
 
 class AROONData(IndicatorData):
-    aroon_up: float = Field(
-        ..., examples=[30.00], description="Aroon Up value", serialization_alias="Aroon Up"
+    aroon_up: Optional[float] = Field(
+        None, examples=[30.00], description="Aroon Up value", serialization_alias="Aroon Up"
     )
-    aroon_down: float = Field(
-        ..., examples=[30.00], description="Aroon Down value", serialization_alias="Aroon Down"
+    aroon_down: Optional[float] = Field(
+        None, examples=[30.00], description="Aroon Down value", serialization_alias="Aroon Down"
     )
 
 
 class BBANDSData(IndicatorData):
-    upper_band: float = Field(
-        ..., examples=[30.00], description="Upper Bollinger Band value", serialization_alias="Upper Band"
+    upper_band: Optional[float] = Field(
+        None, examples=[30.00], description="Upper Bollinger Band value", serialization_alias="Upper Band"
     )
-    middle_band: float = Field(
-        ..., examples=[30.00], description="Middle Bollinger Band value", serialization_alias="Middle Band"
+    middle_band: Optional[float] = Field(
+        None, examples=[30.00], description="Middle Bollinger Band value", serialization_alias="Middle Band"
     )
-    lower_band: float = Field(
-        ..., examples=[30.00], description="Lower Bollinger Band value", serialization_alias="Lower Band"
+    lower_band: Optional[float] = Field(
+        None, examples=[30.00], description="Lower Bollinger Band value", serialization_alias="Lower Band"
     )
 
 
 class OBVData(IndicatorData):
-    value: float = Field(..., examples=[30.00], description="On Balance Volume value", serialization_alias="OBV")
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="On Balance Volume value", serialization_alias="OBV"
+    )
 
 
 class SuperTrendData(IndicatorData):
-    value: float = Field(..., examples=[30.00], description="Super Trend value", serialization_alias="Super Trend")
+    value: Optional[float] = Field(
+        None, examples=[30.00], description="Super Trend value", serialization_alias="Super Trend"
+    )
     trend: str = Field(..., examples=["UP"], description="Trend direction", serialization_alias="Trend")
 
 
