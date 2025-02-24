@@ -66,7 +66,7 @@ async def mock_context():
 
 # Helper function to bypass cache for testing
 @contextmanager
-def bypass_cache():
+def bypass_cache(target: str):
     """Temporarily bypass the cache mechanism during tests"""
-    with patch('src.services.movers.get_movers.cache', return_value=lambda f: f):
+    with patch(target, return_value=lambda f: f):
         yield
