@@ -6,7 +6,8 @@ from typing import Optional, Annotated, Union
 
 import requests
 from aiohttp import ClientSession, ClientResponse, ClientPayloadError, ClientError
-from fastapi import Depends, Request, HTTPException, FastAPI
+from fastapi import Depends, Request, HTTPException
+from fastapi import FastAPI
 from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
