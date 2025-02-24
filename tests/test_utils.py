@@ -12,7 +12,7 @@ from src.context import request_context
 
 
 def timeout(
-        seconds: Union[int, float],
+        seconds: Union[int, float] = 1,
         message: Optional[str] = None,
         debug: bool = False
 ):
@@ -21,7 +21,7 @@ def timeout(
     number of seconds to complete.
 
     Args:
-        seconds: Number of seconds before timeout
+        seconds: Number of seconds before timeout, default is 1 second
         message: Custom message to show on timeout
         debug: If True, prints debug information when timeout occurs
     """
