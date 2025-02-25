@@ -8,7 +8,7 @@ from src.main import app
 VERSION = "v1"
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_redis():
     """Mock Redis client"""
     redis_mock = MagicMock()
@@ -16,7 +16,7 @@ def mock_redis():
     return redis_mock
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_session():
     """Mock aiohttp ClientSession"""
     session_mock = AsyncMock()
@@ -32,7 +32,7 @@ def test_client(mock_redis, mock_session):
         yield client
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_request_context():
     """Mock request context"""
     with patch('src.dependencies.request_context', MagicMock()) as mock:
@@ -41,7 +41,7 @@ def mock_request_context():
         yield mock
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def mock_yahoo_auth(mock_request_context):
     """Mock Yahoo authentication data"""
     with patch('src.dependencies._get_auth_data', new_callable=AsyncMock) as mock:
