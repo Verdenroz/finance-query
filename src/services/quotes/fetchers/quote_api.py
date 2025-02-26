@@ -62,7 +62,7 @@ async def _fetch_yahoo_data(symbol: str, cookies: str, crumb: str) -> dict:
     """
     summary_url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}"
     summary_params = {
-        "modules": "assetProfile,price,summaryDetail,defaultKeyStatistics,calendarEvents",
+        "modules": "assetProfile,price,summaryDetail,defaultKeyStatistics,calendarEvents,quoteUnadjustedPerformanceOverview",
         "crumb": crumb
     }
     headers = {
@@ -97,6 +97,7 @@ async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
     stats = summary_result.get('defaultKeyStatistics', {})
     profile = summary_result.get('assetProfile', {})
     calendar = summary_result.get('calendarEvents', {})
+    performance_overview = summary_result.get('quoteUnadjustedPerformanceOverview', {}).get('performanceOverview', {})
 
     # Get pre- and post-market prices if within timeframe
     pre_market_price = get_fmt(price_data, "preMarketPrice") if is_within_pre_market_time(
@@ -151,10 +152,16 @@ async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
         "about": profile.get("longBusinessSummary"),
         "employees": str(profile.get("fullTimeEmployees")) if profile.get(
             "fullTimeEmployees") is not None else None,
-        "ytd_return": format_percent(stats.get("ytdReturn")),
-        "year_return": format_percent(stats.get("oneYearReturn")),
-        "three_year_return": format_percent(stats.get("threeYearAverageReturn")),
-        "five_year_return": format_percent(stats.get("fiveYearAverageReturn")),
+        "five_days_return": performance_overview.get("fiveDaysReturn", {}).get("fmt"),
+        "one_month_return": performance_overview.get("oneMonthReturn", {}).get("fmt"),
+        "three_month_return": performance_overview.get("threeMonthReturn", {}).get("fmt"),
+        "six_month_return": performance_overview.get("sixMonthReturn", {}).get("fmt"),
+        "ytd_return": performance_overview.get("ytdReturnPct", {}).get("fmt"),
+        "year_return": performance_overview.get("oneYearTotalReturn", {}).get("fmt"),
+        "three_year_return": performance_overview.get("threeYearTotalReturn", {}).get("fmt"),
+        "five_year_return": performance_overview.get("fiveYearTotalReturn", {}).get("fmt"),
+        "ten_year_return": performance_overview.get("tenYearTotalReturn", {}).get("fmt"),
+        "max_return": performance_overview.get("maxReturn", {}).get("fmt"),
     }
 
     return Quote(

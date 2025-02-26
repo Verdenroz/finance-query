@@ -217,6 +217,34 @@ class Quote(BaseModel):
         examples=["150,000"],
         description="Number of employees in the company"
     )
+    five_days_return: Optional[str] = Field(
+        default=None,
+        examples=["-19.35%"],
+        description="Five days return of the company",
+        serialization_alias="fiveDaysReturn",
+        validation_alias=AliasChoices("fiveDaysReturn", "five_days_return")
+    )
+    one_month_return: Optional[str] = Field(
+        default=None,
+        examples=["-28.48%"],
+        description="One month return of the company",
+        serialization_alias="oneMonthReturn",
+        validation_alias=AliasChoices("oneMonthReturn", "one_month_return")
+    )
+    three_month_return: Optional[str] = Field(
+        default=None,
+        examples=["-14.02%"],
+        description="Three month return of the company",
+        serialization_alias="threeMonthReturn",
+        validation_alias=AliasChoices("threeMonthReturn", "three_month_return")
+    )
+    six_month_return: Optional[str] = Field(
+        default=None,
+        examples=["36.39%"],
+        description="Six month return of the company",
+        serialization_alias="sixMonthReturn",
+        validation_alias=AliasChoices("sixMonthReturn", "six_month_return")
+    )
     ytd_return: Optional[str] = Field(
         default=None,
         examples=["+10.00%"],
@@ -244,6 +272,20 @@ class Quote(BaseModel):
         description="Five year return of the company",
         serialization_alias="fiveYearReturn",
         validation_alias=AliasChoices("fiveYearReturn", "five_year_return")
+    )
+    ten_year_return: Optional[str] = Field(
+        default=None,
+        examples=["2,005.31%"],
+        description="Ten year return of the company",
+        serialization_alias="tenYearReturn",
+        validation_alias=AliasChoices("tenYearReturn", "ten_year_return")
+    )
+    max_return: Optional[str] = Field(
+        default=None,
+        examples=["22,857.89%"],
+        description="Maximum return of the company",
+        serialization_alias="maxReturn",
+        validation_alias=AliasChoices("maxReturn", "max_return")
     )
     logo: Optional[str] = Field(
         default=None,
