@@ -2,6 +2,7 @@ import asyncio
 import os
 from typing import Optional, Annotated, AsyncGenerator, Union
 
+import requests
 from aiohttp import ClientSession, ClientResponse, ClientPayloadError, ClientError
 from fastapi import Depends, Request, HTTPException
 from fastapi_injectable import injectable
@@ -117,7 +118,7 @@ async def get_logo(
         return None
 
 
-async def _get_auth_data(redis: Redis = None) -> tuple[str, str]:
+async def get_auth_data(redis: Redis = None) -> tuple[str, str]:
     if redis:
         cookies = redis.get('yahoo_cookies')
         crumb = redis.get('yahoo_crumb')
@@ -131,24 +132,24 @@ async def _get_auth_data(redis: Redis = None) -> tuple[str, str]:
             'Accept-Language': 'en-US,en;q=0.5',
             'Connection': 'keep-alive',
         }
-        response = await fetch(url='https://finance.yahoo.com', headers=headers, return_response=True)
+        response = requests.get('https://finance.yahoo.com', headers=headers)
         cookies = response.headers.get('Set-Cookie', '')
         if cookies:
             headers['Cookie'] = cookies
-            crumb = await _get_crumb(headers)
+            crumb = get_crumb(headers)
             if redis:
-                redis.set('yahoo_cookies', cookies, ex=90 * 24 * 60 * 60)  # 90 days in seconds
-                redis.set('yahoo_crumb', crumb, ex=90 * 24 * 60 * 60)  # 90 days in seconds
+                redis.set('yahoo_cookies', cookies, ex=180 * 24 * 60 * 60)  # 180 days in seconds
+                redis.set('yahoo_crumb', crumb, ex=180 * 24 * 60 * 60)  # 180 days in seconds
             return cookies, crumb
     except Exception as e:
         print(f"finance.yahoo.com auth failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to authenticate with Yahoo Finance")
 
 
-async def _get_crumb(headers: dict[str, str]) -> str:
+def get_crumb(headers: dict[str, str]) -> str:
     try:
-        response = await fetch(url='https://query1.finance.yahoo.com/v1/test/getcrumb', headers=headers)
-        crumb = response.strip('"')
+        response = requests.get('https://query1.finance.yahoo.com/v1/test/getcrumb', headers=headers)
+        crumb = response.text.strip('"')
         if crumb:
             return crumb
     except Exception as e:
