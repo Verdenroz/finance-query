@@ -3,6 +3,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models import Index
 from src.services import scrape_indices
+from src.models import MarketIndex
 
 router = APIRouter()
 
@@ -15,7 +16,7 @@ router = APIRouter()
     tags=["Indices"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
-        200: {"model": list[Index], "description": "Successfully retrieved indices"},
+        200: {"model": list[MarketIndex], "description": "Successfully retrieved indices"},
         500: {
             "description": "Failed to parse indices",
             "content": {"application/json": {"example": {"detail": "Failed to parse indices"}}}

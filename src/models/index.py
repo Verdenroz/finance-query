@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field, AliasChoices
 
 
 class Index(BaseModel):
+class MarketIndex(BaseModel):
     name: str = Field(
         default=...,
         examples=["S&P 500"],

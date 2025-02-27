@@ -1,6 +1,6 @@
 from .indicators import TechnicalIndicator, Indicator
 from .historical_data import HistoricalData, TimeRange, Interval
-from .index import Index
+from .index import MarketIndex
 from .marketmover import MarketMover
 from .news import News
 from .quote import Quote
