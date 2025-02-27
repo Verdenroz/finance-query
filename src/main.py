@@ -21,14 +21,14 @@ from starlette.responses import Response, JSONResponse
 from src.connections import RedisConnectionManager, ConnectionManager
 from src.constants import headers
 from src.context import RequestContextMiddleware
-from src.dependencies import get_redis, _get_auth_data, get_yahoo_cookies, get_yahoo_crumb
+from src.dependencies import get_redis, get_auth_data, get_yahoo_cookies, get_yahoo_crumb
 from src.models import ValidationErrorResponse, Sector, TimeRange, Interval
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
                         sectors_router, sockets_router, stream_router, hours_router)
 from src.security import RateLimitMiddleware
 from src.services import (
-    scrape_indices, get_actives, get_losers, get_gainers, get_sectors,
+    get_indices, get_actives, get_losers, get_gainers, get_sectors,
     get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, get_quotes,
     get_similar_quotes, get_historical, get_search, get_simple_quotes, get_technical_indicators
 )
@@ -48,6 +48,7 @@ async def lifespan(app: FastAPI):
     api_url = None
     proxy_header_token = None
     payload = None
+    app.state.session = ClientSession(headers=headers, max_field_size=30000)
     try:
         if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
             ip_response = requests.get("https://api.ipify.org/")
@@ -69,10 +70,9 @@ async def lifespan(app: FastAPI):
             app.state.redis = None
             app.state.connection_manager = ConnectionManager()
 
-        cookies, crumb = await _get_auth_data(redis)
+        cookies, crumb = await get_auth_data(redis)
         app.state.cookies = cookies
         app.state.crumb = crumb
-        app.state.session = ClientSession(headers=headers, max_field_size=30000)
 
         yield
     finally:
@@ -87,7 +87,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.6.2",
+    version="1.6.3",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & "
                 "Yahoo Finance's Unofficial API.",
     servers=[
@@ -127,7 +127,7 @@ async def request_validation_error_formatter(request, exc):
     for pydantic_error in exc.errors():
         loc, msg = pydantic_error["loc"], pydantic_error["msg"]
         filtered_loc = loc[1:] if loc[0] in ("body", "query", "path") else loc
-        field_string = ".".join(filtered_loc)  # nested fields with dot-notation
+        field_string = ".".join(map(str, filtered_loc))  # nested fields with dot-notation
         reformatted_message[field_string].append(msg)
 
     error_response = ValidationErrorResponse(errors=reformatted_message)
@@ -235,7 +235,7 @@ async def health(
         - System time
         - Service dependencies
         """
-    indices_task = scrape_indices()
+    indices_task = get_indices()
     actives_task = get_actives()
     losers_task = get_losers()
     gainers_task = get_gainers()

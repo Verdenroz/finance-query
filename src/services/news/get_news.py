@@ -44,6 +44,7 @@ def parse_symbol_exchange(yahoo_symbol: str):
 
         # Europe
         'L': 'LON',  # London Stock Exchange
+        'IL': 'LON',  # London Stock Exchange
         'PA': 'EPA',  # Euronext Paris
         'F': 'FRA',  # Frankfurt Stock Exchange
         'DE': 'ETR',  # Deutsche Börse Xetra

@@ -13,7 +13,7 @@ from src.security import validate_websocket
 from src.services import (
     get_quotes, get_similar_quotes, get_actives,
     scrape_news_for_quote, get_losers, get_gainers,
-    get_simple_quotes, scrape_indices, scrape_general_news,
+    get_simple_quotes, get_indices, scrape_general_news,
     get_sectors, get_sector_for_symbol
 )
 
@@ -243,7 +243,7 @@ async def websocket_market(
         actives_task = get_actives()
         gainers_task = get_gainers()
         losers_task = get_losers()
-        indices_task = scrape_indices()
+        indices_task = get_indices()
         news_task = scrape_general_news()
         sectors_task = get_sectors()
 

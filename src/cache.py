@@ -14,7 +14,7 @@ from redis import RedisError
 
 from src.context import request_context
 from src.market import MarketSchedule, MarketStatus
-from src.models import HistoricalData, SimpleQuote, Quote, MarketMover, Index, News, MarketSector
+from src.models import HistoricalData, SimpleQuote, Quote, MarketMover, MarketIndex, News, MarketSector
 from src.models.sector import MarketSectorDetails
 
 T = TypeVar('T')
@@ -76,7 +76,7 @@ class RedisCacheHandler:
                 "Quote": Quote,
                 "SimpleQuote": SimpleQuote,
                 "MarketMover": MarketMover,
-                "Index": Index,
+                "MarketIndex": MarketIndex,
                 "MarketSector": MarketSector,
                 "MarketSectorDetails": MarketSectorDetails,
                 "HistoricalData": HistoricalData,

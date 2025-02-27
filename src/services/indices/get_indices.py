@@ -1,56 +1,35 @@
-from fastapi import HTTPException
-from lxml import etree
+import asyncio
 
 from src.cache import cache
-from src.dependencies import fetch
-from src.models import Index
+from src.models import MarketIndex
+from src.models.index import Index
+from src.services.indices.fetchers import fetch_index
+from src.services.quotes import get_adaptive_chunk_size
 
 
-@cache(expire=15, market_closed_expire=3600)
-async def scrape_indices() -> list[Index]:
+@cache(expire=15, market_closed_expire=180)
+async def get_indices(cookies: str, crumb: str, indices: list[Index]) -> list[MarketIndex]:
     """
-    Scrape the major world indices from investing.com
+    Gets an aggregated performance of major world market indices or specific indices.
+
+    :param indices: A list of indices to fetch. If None, fetches all indices.
+    :param cookies: The cookies required for Yahoo Finance API.
+    :param crumb: The crumb required for Yahoo Finance API.
 
     :raises HTTPException: with status code 500 if an error occurs while scraping
     """
-    url = 'https://www.investing.com/indices/major-indices'
+    if not cookies or not crumb:
+        raise ValueError("Cookies and crumb are required for Yahoo Finance API")
 
-    html = await fetch(url=url)
-    return await get_indices(html)
+    chunk_size = get_adaptive_chunk_size()
+    chunks = [indices[i:i + chunk_size] for i in range(0, len(indices), chunk_size)]
 
+    async def fetch_index_data(index: Index) -> MarketIndex:
+        return await fetch_index(index, cookies, crumb)
 
-async def get_indices(html) -> list[Index]:
-    """
-    Parse the HTML content and return a list of Index objects
-    :param html: the HTML content
+    all_indices = await asyncio.gather(*(
+        asyncio.gather(*(fetch_index_data(index) for index in chunk))
+        for chunk in chunks
+    ))
 
-    :raises HTTPException: with status code 500 if an error occurs while parsing
-    """
-    try:
-        tree = etree.HTML(html)
-        table_xpath = './/tbody'
-        row_xpath = './/tr'
-        name_xpath = './/td[2]//span[@dir="ltr"]/text()'
-        value_xpath = './/td[3]/span/text()'
-        change_xpath = './/td[6]/text()'
-        percent_change_xpath = './/td[7]/text()'
-        table = tree.xpath(table_xpath)[0]
-        rows = table.xpath(row_xpath)
-        indices = []
-        for row in rows:
-            name = row.xpath(name_xpath)[0].strip()
-            value = float(row.xpath(value_xpath)[0].replace(',', ''))
-            change = row.xpath(change_xpath)[0].strip()
-            percent_change = row.xpath(percent_change_xpath)[0].strip()
-
-            index_data = Index(
-                name=name,
-                value=value,
-                change=change,
-                percent_change=percent_change,
-            )
-            indices.append(index_data)
-
-        return indices
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to parse indices: {str(e)}")
+    return [index for indices in all_indices for index in indices if not isinstance(index, Exception)]

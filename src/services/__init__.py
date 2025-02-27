@@ -1,6 +1,6 @@
 from src.services.historical.get_historical import get_historical
 from src.services.indicators import *
-from src.services.indices.get_indices import scrape_indices
+from src.services.indices.get_indices import get_indices
 from src.services.movers.get_movers import get_actives, get_gainers, get_losers
 from src.services.news.get_news import scrape_news_for_quote, scrape_general_news
 from src.services.quotes.get_quotes import get_quotes, get_simple_quotes
