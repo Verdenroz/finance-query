@@ -234,7 +234,9 @@ async def websocket_quotes(
 @router.websocket("/market")
 async def websocket_market(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager)
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb)
 ):
     async def get_market_info():
         """
@@ -243,7 +245,7 @@ async def websocket_market(
         actives_task = get_actives()
         gainers_task = get_gainers()
         losers_task = get_losers()
-        indices_task = get_indices()
+        indices_task = get_indices(cookies, crumb)
         news_task = scrape_general_news()
         sectors_task = get_sectors()
 

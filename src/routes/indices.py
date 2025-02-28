@@ -26,7 +26,4 @@ async def market_indices(
         crumb: str = Depends(get_yahoo_crumb),
         index: Annotated[list[Index] | None, Query(description="A specific index")] = None
 ) -> list[MarketIndex]:
-    # If no index is provided, return all indices
-    if not index:
-        index = list(Index)
     return await get_indices(cookies, crumb, index)
