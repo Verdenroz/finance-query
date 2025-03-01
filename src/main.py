@@ -5,7 +5,6 @@ import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-import requests
 from aiohttp import ClientSession
 from dotenv import load_dotenv
 from fastapi import FastAPI, Depends
@@ -21,7 +20,8 @@ from starlette.responses import Response, JSONResponse
 from src.connections import RedisConnectionManager, ConnectionManager
 from src.constants import headers
 from src.context import RequestContextMiddleware
-from src.dependencies import get_redis, get_auth_data, get_yahoo_cookies, get_yahoo_crumb
+from src.dependencies import (get_redis, get_auth_data, get_yahoo_cookies, get_yahoo_crumb, setup_proxy_whitelist,
+                              refresh_yahoo_auth, remove_proxy_whitelist)
 from src.models import ValidationErrorResponse, Sector, TimeRange, Interval
 from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
                         similar_quotes_router, finance_news_router, indicators_router, search_router,
@@ -39,28 +39,28 @@ load_dotenv()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    FastAPI lifespan context manager that handles proxy setup and cleanup.
+    FastAPI lifespan context manager that handles setup and cleanup.
     """
+
     await register_app(app)
     redis = None
     redis_connection_manager = None
+    auth_refresh_task = None
+    proxy_data = None
 
-    api_url = None
-    proxy_header_token = None
-    payload = None
+    # Set up HTTP session
     app.state.session = ClientSession(headers=headers, max_field_size=30000)
-    try:
-        if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
-            ip_response = requests.get("https://api.ipify.org/")
-            ip = ip_response.text
-            api_url = "https://api.brightdata.com/zone/whitelist"
-            proxy_header_token = {
-                "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
-                "Content-Type": "application/json"
-            }
-            payload = {"ip": ip}
-            requests.post(api_url, headers=proxy_header_token, json=payload)
 
+    # Set up auth refresh configuration
+    app.state.auth_refresh_interval = 86400  # 24 hours in seconds
+    app.state.auth_expiry = None
+
+    try:
+        # Setup proxy if needed
+        if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
+            proxy_data = await setup_proxy_whitelist()
+
+        # Setup Redis if configured
         if os.getenv('REDIS_URL'):
             redis = Redis.from_url(os.getenv('REDIS_URL'))
             redis_connection_manager = RedisConnectionManager(redis)
@@ -70,14 +70,34 @@ async def lifespan(app: FastAPI):
             app.state.redis = None
             app.state.connection_manager = ConnectionManager()
 
-        cookies, crumb = await get_auth_data(redis)
+        # Initial auth data fetch
+        cookies, crumb = await get_auth_data()
         app.state.cookies = cookies
         app.state.crumb = crumb
+        app.state.auth_expiry = time.time() + app.state.auth_refresh_interval
+
+        # Start background task for Yahoo auth refresh
+        auth_refresh_task = asyncio.create_task(refresh_yahoo_auth(app))
 
         yield
     finally:
-        if api_url and proxy_header_token and payload:
-            requests.delete(api_url, headers=proxy_header_token, json=payload)
+        # Cancel the auth refresh task
+        if auth_refresh_task:
+            auth_refresh_task.cancel()
+            try:
+                await auth_refresh_task
+            except asyncio.CancelledError:
+                pass
+
+        # Clean up proxy configuration
+        if proxy_data:
+            await remove_proxy_whitelist(proxy_data)
+
+        # Close session
+        if app.state.session:
+            await app.state.session.close()
+
+        # Clean up Redis
         if redis:
             redis.close()
             await redis_connection_manager.close()
