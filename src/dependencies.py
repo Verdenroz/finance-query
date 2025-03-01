@@ -118,13 +118,11 @@ async def get_logo(
         return None
 
 
-async def get_auth_data(redis: Redis = None) -> tuple[str, str]:
-    if redis:
-        cookies = redis.get('yahoo_cookies')
-        crumb = redis.get('yahoo_crumb')
-        if cookies and crumb:
-            return cookies.decode('utf-8'), crumb.decode('utf-8')
-
+async def get_auth_data() -> tuple[str, str]:
+    """
+    Get Yahoo Finance authentication data (cookies and crumb)
+    No longer requires Redis as storage is handled by app state
+    """
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
@@ -133,14 +131,14 @@ async def get_auth_data(redis: Redis = None) -> tuple[str, str]:
             'Connection': 'keep-alive',
         }
         response = requests.get('https://finance.yahoo.com', headers=headers)
-        cookies = response.headers.get('Set-Cookie', '')
-        if cookies:
-            headers['Cookie'] = cookies
+        cookies_dict = response.cookies.get_dict()
+        cookies_str = '; '.join([f'{k}={v}' for k, v in cookies_dict.items()])
+
+        if cookies_str:
+            headers['Cookie'] = cookies_str
             crumb = get_crumb(headers)
-            if redis:
-                redis.set('yahoo_cookies', cookies, ex=180 * 24 * 60 * 60)  # 180 days in seconds
-                redis.set('yahoo_crumb', crumb, ex=180 * 24 * 60 * 60)  # 180 days in seconds
-            return cookies, crumb
+            return cookies_str, crumb
+
     except Exception as e:
         print(f"finance.yahoo.com auth failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to authenticate with Yahoo Finance")
@@ -156,3 +154,34 @@ def get_crumb(headers: dict[str, str]) -> str:
         print(f"Crumb retrieval failed: {e}")
 
     raise ValueError("Failed to get valid crumb")
+
+
+async def refresh_yahoo_auth(app: FastAPI) -> None:
+    """Background task to refresh Yahoo Finance authentication"""
+    while True:
+        try:
+            current_time = time.time()
+
+            # If auth_expiry doesn't exist or time has passed the expiry
+            if not app.state.auth_expiry or current_time > app.state.auth_expiry:
+                # Get new auth data
+                cookies, crumb = await get_auth_data()
+
+                # Update app state
+                app.state.cookies = cookies
+                app.state.crumb = crumb
+                app.state.auth_expiry = current_time + app.state.auth_refresh_interval
+
+                refresh_time = datetime.datetime.now().isoformat()
+                print(f"Yahoo Finance auth refreshed at {refresh_time}, next refresh at "
+                      f"{datetime.datetime.fromtimestamp(app.state.auth_expiry).isoformat()}")
+        except Exception as e:
+            print(f"Auth refresh error: {e}")
+
+        # Sleep until 5 minutes before expiry or check every hour if something went wrong
+        sleep_time = 3600  # Default 1 hour
+        if app.state.auth_expiry:
+            time_to_expiry = max(0, app.state.auth_expiry - time.time() - 300)  # 5 minutes before expiry
+            sleep_time = min(time_to_expiry, 3600)  # Don't wait more than an hour
+
+        await asyncio.sleep(sleep_time)
