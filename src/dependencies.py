@@ -1,16 +1,18 @@
 import asyncio
+import datetime
 import os
-from typing import Optional, Annotated, AsyncGenerator, Union
+import time
+from typing import Optional, Annotated, Union
 
 import requests
 from aiohttp import ClientSession, ClientResponse, ClientPayloadError, ClientError
-from fastapi import Depends, Request, HTTPException
+from fastapi import Depends, Request, HTTPException, FastAPI
 from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager
-from src.constants import proxy, proxy_auth, headers
+from src.constants import proxy, proxy_auth
 from src.context import request_context
 
 
@@ -185,3 +187,53 @@ async def refresh_yahoo_auth(app: FastAPI) -> None:
             sleep_time = min(time_to_expiry, 3600)  # Don't wait more than an hour
 
         await asyncio.sleep(sleep_time)
+
+
+async def setup_proxy_whitelist() -> dict | None:
+    """
+    Setup proxy whitelist for BrightData or similar proxy services
+    Returns the configuration data needed for cleanup
+    """
+    if not os.getenv('PROXY_TOKEN') or os.getenv('USE_PROXY', 'False') != 'True':
+        raise ValueError("Proxy configuration is missing")
+
+    try:
+        ip_response = requests.get("https://api.ipify.org/")
+        ip = ip_response.text
+        api_url = "https://api.brightdata.com/zone/whitelist"
+        proxy_header_token = {
+            "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
+            "Content-Type": "application/json"
+        }
+        payload = {"ip": ip}
+
+        response = requests.post(api_url, headers=proxy_header_token, json=payload)
+        if response.status_code != 200:
+            print(f"Proxy whitelist setup failed: {response.text}")
+            return None
+
+        return {
+            "api_url": api_url,
+            "headers": proxy_header_token,
+            "payload": payload
+        }
+    except Exception as e:
+        print(f"Error setting up proxy whitelist: {e}")
+        return None
+
+
+async def remove_proxy_whitelist(proxy_data: dict) -> None:
+    """
+    Remove IP from proxy whitelist when application is shutting down
+    """
+    if not proxy_data:
+        return
+
+    try:
+        requests.delete(
+            proxy_data["api_url"],
+            headers=proxy_data["headers"],
+            json=proxy_data["payload"]
+        )
+    except Exception as e:
+        print(f"Error removing proxy whitelist: {e}")
