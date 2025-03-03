@@ -117,20 +117,31 @@ async def _parse_yahoo_index(summary_data: dict, index: Index) -> MarketIndex:
     default_name = price_data.get('longName') or price_data.get('shortName') or index.value
     formatted_name = _get_formatted_index_name(index, default_name)
 
+    # Helper function to format return values with plus sign for positives
+    def format_return(value):
+        if not value:
+            return None
+        if isinstance(value, dict):
+            fmt = value.get('fmt')
+            if fmt and not fmt.startswith('-') and not fmt == '0.00%':
+                return f"+{fmt}"
+            return fmt
+        return value
+
     return MarketIndex(
         name=formatted_name,
         value=round(price_data['regularMarketPrice']['raw'], 2),
         change=price_data['regularMarketChange']['fmt'],
         percent_change=price_data['regularMarketChangePercent']['fmt'],
-        five_days_return=performance_data.get('fiveDaysReturn', {}).get('fmt'),
-        one_month_return=performance_data.get('oneMonthReturn', {}).get('fmt'),
-        three_month_return=performance_data.get('threeMonthReturn', {}).get('fmt'),
-        six_month_return=performance_data.get('sixMonthReturn', {}).get('fmt'),
-        ytd_return=performance_data.get('ytdReturnPct', {}).get('fmt'),
-        year_return=performance_data.get('oneYearTotalReturn', {}).get('fmt'),
-        two_year_return=performance_data.get('twoYearTotalReturn', {}).get('fmt'),
-        three_year_return=performance_data.get('threeYearTotalReturn', {}).get('fmt'),
-        five_year_return=performance_data.get('fiveYearTotalReturn', {}).get('fmt'),
-        ten_year_return=performance_data.get('tenYearTotalReturn', {}).get('fmt'),
-        max_return=performance_data.get('maxReturn', {}).get('fmt')
+        five_days_return=format_return(performance_data.get('fiveDaysReturn')),
+        one_month_return=format_return(performance_data.get('oneMonthReturn')),
+        three_month_return=format_return(performance_data.get('threeMonthReturn')),
+        six_month_return=format_return(performance_data.get('sixMonthReturn')),
+        ytd_return=format_return(performance_data.get('ytdReturnPct')),
+        year_return=format_return(performance_data.get('oneYearTotalReturn')),
+        two_year_return=format_return(performance_data.get('twoYearTotalReturn')),
+        three_year_return=format_return(performance_data.get('threeYearTotalReturn')),
+        five_year_return=format_return(performance_data.get('fiveYearTotalReturn')),
+        ten_year_return=format_return(performance_data.get('tenYearTotalReturn')),
+        max_return=format_return(performance_data.get('maxReturn'))
     )
