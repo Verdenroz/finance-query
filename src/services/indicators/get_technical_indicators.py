@@ -71,7 +71,6 @@ async def get_technical_indicators(
             tasks.append((f"Ichimoku Cloud", get_ichimoku_data(high_prices, low_prices, prices)))
 
     task_results = await asyncio.gather(*[task[1] for task in tasks])
-    print(task_results)
     return {name: result for (name, _), result in zip(tasks, task_results)}
 
 

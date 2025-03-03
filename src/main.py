@@ -107,7 +107,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.6.3",
+    version="1.6.4",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & "
                 "Yahoo Finance's Unofficial API.",
     servers=[
@@ -255,7 +255,7 @@ async def health(
         - System time
         - Service dependencies
         """
-    indices_task = get_indices()
+    indices_task = get_indices(cookies, crumb)
     actives_task = get_actives()
     losers_task = get_losers()
     gainers_task = get_gainers()
