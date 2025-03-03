@@ -93,10 +93,6 @@ async def lifespan(app: FastAPI):
         if proxy_data:
             await remove_proxy_whitelist(proxy_data)
 
-        # Close session
-        if app.state.session:
-            await app.state.session.close()
-
         # Clean up Redis
         if redis:
             redis.close()
