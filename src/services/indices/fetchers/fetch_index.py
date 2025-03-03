@@ -26,7 +26,6 @@ def _get_yahoo_index_symbol(index: Index) -> str:
         Index.MOEX_ME: "MOEX.ME",
         Index.DX_Y_NYB: "DX-Y.NYB",
         Index.USD_STRD: "^125904-USD-STRD",
-        Index.SS: "000001.SS",
         Index.MSCI_WORLD: "^990100-USD-STRD",
         Index.SHANGHAI: "000001.SS",
         Index.SZSE: "399001.SZ",

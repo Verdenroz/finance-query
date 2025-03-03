@@ -66,7 +66,6 @@ class Index(Enum):
     KLSE = "ftse-bursa"          # FTSE Bursa Malaysia
     KS11 = "kospi"               # Korea KOSPI
     TWII = "twse"                # Taiwan TAIEX
-    SS = "sse-composite"         # Shanghai Composite
     N225 = "nikkei-225"          # Nikkei 225
     SHANGHAI = "shanghai"        # Shanghai Composite
     SZSE = "szse-component"      # Shenzhen Component
@@ -161,7 +160,6 @@ INDEX_REGIONS = {
     Index.KLSE: Region.ASIA,
     Index.KS11: Region.ASIA,
     Index.TWII: Region.ASIA,
-    Index.SS: Region.ASIA,
     Index.N225: Region.ASIA,
     Index.SHANGHAI: Region.ASIA,
     Index.SZSE: Region.ASIA,
