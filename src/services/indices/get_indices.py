@@ -8,7 +8,7 @@ from src.services.quotes import get_adaptive_chunk_size
 
 
 @cache(expire=15, market_closed_expire=180)
-async def get_indices(cookies: str, crumb: str, indices: list[Index]) -> list[MarketIndex]:
+async def get_indices(cookies: str, crumb: str, indices: list[Index] = None) -> list[MarketIndex]:
     """
     Gets an aggregated performance of major world market indices or specific indices.
 
@@ -20,6 +20,10 @@ async def get_indices(cookies: str, crumb: str, indices: list[Index]) -> list[Ma
     """
     if not cookies or not crumb:
         raise ValueError("Cookies and crumb are required for Yahoo Finance API")
+
+    # Get all indices by default
+    if not indices:
+        indices = list(Index)
 
     chunk_size = get_adaptive_chunk_size()
     chunks = [indices[i:i + chunk_size] for i in range(0, len(indices), chunk_size)]

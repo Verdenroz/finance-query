@@ -8,7 +8,7 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 from src.connections import RedisConnectionManager, ConnectionManager
 from src.dependencies import get_connection_manager, get_yahoo_cookies, get_yahoo_crumb
 from src.market import MarketSchedule
-from src.models import SimpleQuote
+from src.models import SimpleQuote, MarketSector
 from src.security import validate_websocket
 from src.services import (
     get_quotes, get_similar_quotes, get_actives,
@@ -118,7 +118,7 @@ async def websocket_profile(
         """
         quotes_task = get_quotes([symbol], cookies, crumb)
         similar_quotes_task = get_similar_quotes(symbol, cookies, crumb)
-        sector_performance_task = get_sector_for_symbol(symbol)
+        sector_performance_task = get_sector_for_symbol(symbol, cookies, crumb)
         news_task = scrape_news_for_quote(symbol)
 
         quotes, similar_quotes, sector_performance, news = await asyncio.gather(
@@ -127,19 +127,12 @@ async def websocket_profile(
 
         quotes = safe_convert_to_dict(quotes)
         similar_quotes = safe_convert_to_dict(similar_quotes)
-
-        # Handle sector performance conversion
-        if isinstance(sector_performance, Exception):
-            sector_performance = None
-        elif not isinstance(sector_performance, dict):
-            sector_performance = sector_performance.dict()
-
         news = safe_convert_to_dict(news)
 
         return {
             "quote": quotes[0] if quotes else None,
             "similar": similar_quotes,
-            "performance": sector_performance,
+            "sectorPerformance": sector_performance.dict() if isinstance(sector_performance, MarketSector) else None,
             "news": news
         }
 
@@ -234,7 +227,9 @@ async def websocket_quotes(
 @router.websocket("/market")
 async def websocket_market(
         websocket: WebSocket,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager)
+        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
+        cookies: str = Depends(get_yahoo_cookies),
+        crumb: str = Depends(get_yahoo_crumb)
 ):
     async def get_market_info():
         """
@@ -243,7 +238,7 @@ async def websocket_market(
         actives_task = get_actives()
         gainers_task = get_gainers()
         losers_task = get_losers()
-        indices_task = get_indices()
+        indices_task = get_indices(cookies, crumb)
         news_task = scrape_general_news()
         sectors_task = get_sectors()
 
