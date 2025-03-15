@@ -191,9 +191,9 @@ async def get_bbands(
     # Create indicator data for dates present in all dictionaries
     indicator_data = {
         date: BBANDSData(
-            upper_band=round(upper_band_dict[date], 2),
-            middle_band=round(middle_band_dict[date], 2),
-            lower_band=round(lower_band_dict[date], 2)
+            upper_band=upper_band_dict[date],
+            middle_band=middle_band_dict[date],
+            lower_band=lower_band_dict[date]
         )
         for date in upper_band_dict.keys() if date in middle_band_dict and date in lower_band_dict
     }
@@ -227,7 +227,7 @@ async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch:
     obv_values = calculate_obv(closes, volumes)
 
     indicator_data = {
-        date: OBVData(value=round(value, 2))
+        date: OBVData(value=value)
         for date, value in create_indicator_dict(dates, obv_values).items()
     }
 
@@ -276,8 +276,8 @@ async def get_super_trend(
     # Create indicator data only for dates present in both dictionaries
     indicator_data = {
         date: SuperTrendData(
-            value=round(value, 2),
-            trend="UP" if trend_dict[date] > 0 else "DOWN"
+            value=value,
+            trend="UP" if trend_dict.get(date, 0) == 1 else "DOWN"
         )
         for date, value in supertrend_values_dict.items() if date in trend_dict
     }
@@ -337,17 +337,14 @@ async def get_ichimoku(
     senkou_b_dict = create_indicator_dict(dates, senkou_span_b)
     chikou_dict = create_indicator_dict(dates, chikou_span)
 
-    # Create indicator data, using the closing price for the Chikou Span if the value is NaN
+    # Create indicator data, using the last closing price as fallback for chikou_span
     indicator_data = {
         date: IchimokuData(
-            tenkan_sen=round(tenkan_dict.get(date, np.nan), 2) if not np.isnan(tenkan_dict.get(date, np.nan)) else None,
-            kijun_sen=round(kijun_dict.get(date, np.nan), 2) if not np.isnan(kijun_dict.get(date, np.nan)) else None,
-            senkou_span_a=round(senkou_a_dict.get(date, np.nan), 2) if not np.isnan(
-                senkou_a_dict.get(date, np.nan)) else None,
-            senkou_span_b=round(senkou_b_dict.get(date, np.nan), 2) if not np.isnan(
-                senkou_b_dict.get(date, np.nan)) else None,
-            chikou_span=round(chikou_dict.get(date, np.nan), 2) if not np.isnan(chikou_dict.get(date, np.nan)) else
-            closes[-1]
+            tenkan_sen=tenkan_dict.get(date),
+            kijun_sen=kijun_dict.get(date),
+            senkou_span_a=senkou_a_dict.get(date),
+            senkou_span_b=senkou_b_dict.get(date),
+            chikou_span=chikou_dict.get(date) or closes[-1]
         )
         for date in tenkan_dict.keys()
     }
