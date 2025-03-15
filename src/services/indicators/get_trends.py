@@ -1,8 +1,10 @@
 import numpy as np
 from typing_extensions import OrderedDict
 
-from src.models.indicators import (MACDData, TechnicalIndicator, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData,
-                                   IchimokuData, Indicator)
+from src.models.indicators import (
+    MACDData, TechnicalIndicator, ADXData, AROONData, BBANDSData, OBVData,
+    SuperTrendData, IchimokuData, Indicator
+)
 from src.models.historical_data import TimeRange, Interval
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (
@@ -83,7 +85,7 @@ async def get_adx(
     :param period: The number of periods used to calculate the DMI lines and ADX (default 14). Lower values
                   create a more responsive indicator but may generate more false signals. Values above 25
                   typically indicate a strong trend
-                  :param epoch: Whether to return the dates as epoch timestamps (default False)
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
@@ -93,7 +95,7 @@ async def get_adx(
     adx_values = calculate_adx(highs, lows, closes, period=period)
 
     indicator_data = {
-        date: ADXData(value=round(value, 2))
+        date: ADXData(value=value)
         for date, value in create_indicator_dict(dates, adx_values).items()
     }
 
@@ -104,7 +106,13 @@ async def get_adx(
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bool = False) -> dict:
+async def get_aroon(
+        symbol: str,
+        time_range: TimeRange,
+        interval: Interval,
+        period: int = 25,
+        epoch: bool = False
+) -> dict:
     """
     Get the Aroon indicator for a symbol.
     The Aroon indicator consists of two lines: Aroon Up and Aroon Down. Aroon Up measures the number of periods
@@ -113,6 +121,7 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bo
     70 indicating a strong trend.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The lookback period for finding the highest high and lowest low (default 25). A longer
                   period helps identify more significant trends but may be less responsive to recent price
@@ -121,7 +130,7 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bo
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=TimeRange.YEAR, interval=interval, epoch=epoch)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, _, highs, lows, _ = prepare_price_data(quotes)
     aroon_up, aroon_down = calculate_aroon(highs, lows, period=period)
