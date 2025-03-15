@@ -80,11 +80,17 @@ async def get_ema(
     ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_wma(symbol: str, range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
+async def get_wma(
+        symbol: str,
+        time_range: TimeRange,
+        interval: Interval,
+        period: int = 10,
+        epoch: bool = False
+) -> dict:
     """
     Get the Weighted Moving Average (WMA) for a symbol.
     :param symbol: the stock symbol
-    :param range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: The timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The number of data points used in the weighted moving average calculation (default 10).
                   WMA assigns a linear weighting that decreases arithmetically (n, n-1, n-2, ..., 1) from
@@ -94,7 +100,7 @@ async def get_wma(symbol: str, range: TimeRange, interval: Interval, period: int
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=range, interval=interval, epoch=epoch)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     wma_values = calculate_wma(prices, period=period)
