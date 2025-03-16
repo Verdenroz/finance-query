@@ -1,10 +1,13 @@
+import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from orjson import orjson
+from starlette.websockets import WebSocket
 
+from src.connections import RedisConnectionManager, ConnectionManager
 from src.main import app
 from src.models import HistoricalData
 
@@ -67,14 +70,47 @@ def historical_quotes():
 
 
 @pytest.fixture
-def epoch_quotes():
-    """Load historical price data with epoch timestamps from a JSON file for testing"""
-    data_path = Path(__file__).parent / "data" / "epoch_quotes.json"
-    with open(data_path, "r") as file:
-        raw_data = orjson.loads(file.read())
+def mock_websocket():
+    """Fixture for mocking a WebSocket connection."""
+    websocket = AsyncMock(spec=WebSocket)
+    websocket.accept = AsyncMock()
+    websocket.send_text = AsyncMock()
+    websocket.send_json = AsyncMock()
+    websocket.receive_text = AsyncMock()
+    websocket.receive_json = AsyncMock()
+    websocket.close = AsyncMock()
+    websocket.client = MagicMock()
+    websocket.client.host = "127.0.0.1"
+    return websocket
 
-    # Convert each date entry to a HistoricalData object
-    return {
-        date: HistoricalData(**quote_data)
-        for date, quote_data in raw_data.items()
-    }
+
+@pytest.fixture
+async def redis_connection_manager(mock_redis):
+    """Fixture for a RedisConnectionManager instance with mocked Redis client."""
+    with patch('redis.Redis', return_value=mock_redis):
+        # Make redis.publish return an awaitable mock
+        mock_redis.publish = AsyncMock()
+
+        manager = RedisConnectionManager(mock_redis)
+
+        # Monkey patch the _listen_to_channel method to prevent it from actually running
+        original_listen = manager._listen_to_channel
+
+        async def mock_listen_to_channel(channel):
+            # Create a dummy task that doesn't do anything
+            await asyncio.sleep(0)
+
+        manager._listen_to_channel = mock_listen_to_channel
+
+        try:
+            yield manager
+        finally:
+            # Restore the original method
+            manager._listen_to_channel = original_listen
+            await manager.close()
+
+
+@pytest.fixture
+def connection_manager():
+    """Fixture for a ConnectionManager instance."""
+    return ConnectionManager()

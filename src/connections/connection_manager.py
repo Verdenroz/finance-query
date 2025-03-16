@@ -43,7 +43,7 @@ class ConnectionManager:
                     self.tasks[channel].cancel()
                     del self.tasks[channel]
 
-    async def broadcast(self, channel: str, message: dict):
+    async def broadcast(self, channel: str, message: dict | list):
         """
         Broadcasts a message to all clients connected to a channel.
         :param channel: the channel to broadcast to
