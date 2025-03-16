@@ -64,9 +64,20 @@ class ConnectionManager:
         """
         Clean up all connections and tasks.
         """
-        for channel in self.active_connections:
-            for connection in self.active_connections[channel]:
+        # Create a copy of channels to avoid modifying dict during iteration
+        channels = list(self.active_connections.keys())
+
+        for channel in channels:
+            # Create a copy of connections to avoid modifying list during iteration
+            connections = self.active_connections[channel].copy()
+            for connection in connections:
+                await connection.close()  # Close the websocket connection
                 await self.disconnect(connection, channel)
 
+        # Cancel all remaining tasks
         for task in self.tasks.values():
             task.cancel()
+
+        # Clear any remaining data
+        self.active_connections.clear()
+        self.tasks.clear()
