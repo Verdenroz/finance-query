@@ -72,7 +72,7 @@ async def handle_websocket_connection(
             try:
                 result = await data_fetcher()
                 if isinstance(connection_manager, RedisConnectionManager):
-                    await asyncio.to_thread(connection_manager.publish, result, channel)
+                    await connection_manager.publish(result, channel)
                 else:
                     await connection_manager.broadcast(channel, result)
                 await asyncio.sleep(REFRESH_INTERVAL)
@@ -155,7 +155,7 @@ async def websocket_quotes(
         channel = await websocket.receive_text()
         symbols = list(set(symbol.upper() for symbol in channel.split(",")))
 
-        async def get_request_symbols():
+        async def get_request_symbols() -> list[dict]:
             """
             Fetches quotes for a list of symbols.
             """
@@ -195,7 +195,7 @@ async def websocket_quotes(
             while True:
                 result = await get_request_symbols()
                 if isinstance(connection_manager, RedisConnectionManager):
-                    await asyncio.to_thread(connection_manager.publish, result, channel)
+                    await connection_manager.publish(result, channel)
                 else:
                     await connection_manager.broadcast(channel, result)
                 await asyncio.sleep(REFRESH_INTERVAL)
