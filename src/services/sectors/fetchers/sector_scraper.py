@@ -34,11 +34,11 @@ async def parse_sector(html: str, sector: str) -> MarketSector:
 
         return MarketSector(
             sector=sector,
-            day_return=performance_data[0],
-            ytd_return=performance_data[1],
-            year_return=performance_data[2],
-            three_year_return=performance_data[3],
-            five_year_return=performance_data[4]
+            dayReturn=performance_data[0],
+            ytdReturn=performance_data[1],
+            yearReturn=performance_data[2],
+            threeYearReturn=performance_data[3],
+            fiveYearReturn=performance_data[4]
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse sector data: {e}")
@@ -162,17 +162,17 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
 
         return MarketSectorDetails(
             sector=sector_name,
-            day_return=day_return,
-            ytd_return=ytd_return,
-            year_return=year_return,
-            three_year_return=three_year_return,
-            five_year_return=five_year_return,
-            market_cap=market_cap,
-            market_weight=market_weight,
+            dayReturn=day_return,
+            ytdReturn=ytd_return,
+            yearReturn=year_return,
+            threeYearReturn=three_year_return,
+            fiveYearReturn=five_year_return,
+            marketCap=market_cap,
+            marketWeight=market_weight,
             industries=num_industries,
             companies=num_companies,
-            top_industries=industries,
-            top_companies=companies
+            topIndustries=industries,
+            topCompanies=companies
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse sector details: {e}")
