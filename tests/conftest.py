@@ -8,6 +8,7 @@ from orjson import orjson
 from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager, ConnectionManager
+from src.context import request_context
 from src.main import app
 from src.models import HistoricalData
 
@@ -114,3 +115,36 @@ async def redis_connection_manager(mock_redis):
 def connection_manager():
     """Fixture for a ConnectionManager instance."""
     return ConnectionManager()
+
+
+@pytest.fixture
+def bypass_cache(monkeypatch):
+    """
+    Fixture to bypass both Redis and in-memory caching.
+    Works regardless of whether REDIS_URL is set or not.
+    """
+
+    # Create mock request
+    mock_request = MagicMock()
+    mock_request.app.state.redis = MagicMock()
+
+    # Set the context variable directly
+    token = request_context.set(mock_request)
+
+    # Make alru_cache a pass-through
+    def passthrough_cache(*args, **kwargs):
+        def decorator(func):
+            return func
+
+        return decorator
+
+    monkeypatch.setattr('async_lru.alru_cache', passthrough_cache)
+
+    # Clean up the context variable after the test
+    yield passthrough_cache()
+
+    try:
+        request_context.reset(token)
+    except ValueError:
+        # Context may already be reset
+        pass
