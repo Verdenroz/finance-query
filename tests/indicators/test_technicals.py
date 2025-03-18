@@ -1,7 +1,11 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
+
+import numpy as np
+import pandas as pd
 
 import src.routes.technicals
 from src.models import TechnicalIndicator, TimeRange, Interval, Indicator
+from src.services import get_technical_indicators
 from tests.conftest import VERSION
 
 # Sample mock response for technical indicator data
@@ -225,3 +229,86 @@ def test_technical_indicator_with_all_indicator_types(test_client, mock_yahoo_au
 
         # Reset the mock
         mock_indicator.reset_mock()
+
+
+async def test_get_technical_indicators_comprehensive(historical_quotes):
+    """Test the actual implementation of get_technical_indicators with all indicators"""
+    # Mock the get_historical function
+    with patch('src.services.indicators.get_technical_indicators.get_historical',
+               AsyncMock(return_value=historical_quotes)):
+
+        # Test with default parameters (all indicators)
+        result = await get_technical_indicators('AAPL', Interval.DAILY)
+
+        # Verify all indicator types are in the result
+        for indicator in Indicator:
+            if indicator == Indicator.SMA:
+                assert 'SMA(10)' in result
+                assert 'SMA(20)' in result
+                assert 'SMA(50)' in result
+                assert 'SMA(100)' in result
+                assert 'SMA(200)' in result
+            elif indicator == Indicator.EMA:
+                assert 'EMA(10)' in result
+                assert 'EMA(20)' in result
+                assert 'EMA(50)' in result
+                assert 'EMA(100)' in result
+                assert 'EMA(200)' in result
+            elif indicator == Indicator.WMA:
+                assert 'WMA(10)' in result
+                assert 'WMA(20)' in result
+                assert 'WMA(50)' in result
+                assert 'WMA(100)' in result
+                assert 'WMA(200)' in result
+            elif indicator == Indicator.VWMA:
+                assert 'VWMA(20)' in result
+            elif indicator == Indicator.RSI:
+                assert 'RSI(14)' in result
+            elif indicator == Indicator.SRSI:
+                assert 'SRSI(3,3,14,14)' in result
+            elif indicator == Indicator.STOCH:
+                assert 'STOCH %K(14,3,3)' in result
+            elif indicator == Indicator.CCI:
+                assert 'CCI(20)' in result
+            elif indicator == Indicator.MACD:
+                assert 'MACD(12,26)' in result
+            elif indicator == Indicator.ADX:
+                assert 'ADX(14)' in result
+            elif indicator == Indicator.AROON:
+                assert 'Aroon(25)' in result
+            elif indicator == Indicator.BBANDS:
+                assert 'BBANDS(20,2)' in result
+            elif indicator == Indicator.SUPER_TREND:
+                assert 'Super Trend' in result
+            elif indicator == Indicator.ICHIMOKU:
+                assert 'Ichimoku Cloud' in result
+
+        # Test correct time range selection for different intervals
+        for interval in [Interval.ONE_MINUTE, Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES,
+                         Interval.THIRTY_MINUTES, Interval.ONE_HOUR, Interval.DAILY]:
+
+            with patch('src.services.indicators.get_technical_indicators.get_historical',
+                       AsyncMock(return_value=historical_quotes)) as mock_get_historical:
+
+                # Test with a subset of indicators to check specific calculations
+                subset_indicators = [Indicator.SMA, Indicator.RSI, Indicator.MACD]
+                await get_technical_indicators('AAPL', interval, subset_indicators)
+
+                # Verify correct time range was used based on interval
+                if interval in [Interval.ONE_MINUTE]:
+                    expected_time_range = TimeRange.FIVE_DAYS
+                elif interval in [Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES,
+                                  Interval.THIRTY_MINUTES, Interval.ONE_HOUR]:
+                    expected_time_range = TimeRange.ONE_MONTH
+                else:
+                    expected_time_range = TimeRange.FIVE_YEARS
+
+                mock_get_historical.assert_called_once_with(
+                    'AAPL', time_range=expected_time_range, interval=interval)
+
+        # Test empty indicators list
+        with patch('src.services.indicators.get_technical_indicators.get_historical',
+                   AsyncMock(return_value=historical_quotes)):
+            result = await get_technical_indicators('AAPL', Interval.DAILY, [])
+            # Should default to all indicators
+            assert len(result) > 10  # Basic sanity check that we got multiple indicators
