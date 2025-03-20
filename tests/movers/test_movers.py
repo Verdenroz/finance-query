@@ -1,8 +1,14 @@
-from unittest.mock import AsyncMock
+import hashlib
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
 
+import orjson
 import pytest
+import requests
 
-from src.models.marketmover import MoverCount
+from src.models.marketmover import MoverCount, MarketMover
+from src.services.movers import get_actives, get_gainers, get_losers
+from src.services.movers.fetchers import fetch_movers, scrape_movers
 from tests.conftest import VERSION
 
 # Mock response data for different count values
@@ -45,6 +51,90 @@ COUNT_RESPONSE_MAP = {
 
 # Test data for endpoints
 ENDPOINTS = ["actives", "gainers", "losers"]
+
+
+@pytest.fixture
+def cached_html_content():
+    """
+    Fixture that provides a function to get cached HTML content for URLs.
+    If the HTML is not cached, it will fetch and cache it from the real URL.
+    """
+    # Path for storing cached HTML responses
+    cache_dir = Path(__file__).parent / "data" / "movers"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+
+    # Create a dictionary to store HTML content by URL
+    html_cache = {}
+
+    def get_cached_html(url):
+        # Check if we already have this URL in our in-memory cache
+        if url in html_cache:
+            return html_cache[url]
+
+        # Extract endpoint and count from URL for filename
+        filename = hashlib.md5(url.encode()).hexdigest()
+
+        if 'most-active' in url:
+            endpoint = 'actives'
+        elif 'gainers' in url:
+            endpoint = 'gainers'
+        elif 'losers' in url:
+            endpoint = 'losers'
+        else:
+            endpoint = 'unknown'
+
+        count = url.split('count=')[-1]
+        cache_file = cache_dir / f"{endpoint}_{count}_{filename}.html"
+
+        # Check if we have cached HTML
+        if cache_file.exists():
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+        else:
+            # Fetch real content from the URL
+            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            html_content = response.text
+
+            # Save for future test runs
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+
+        # Store HTML in our cache dictionary
+        html_cache[url] = html_content
+        return html_content
+
+    return get_cached_html
+
+
+@pytest.fixture
+def mock_api_response():
+    """
+    Fixture that provides mock Yahoo Finance API responses for movers.
+    """
+
+    def get_mock_response(count=50):
+        mock_items = []
+        for i in range(1, count + 1):
+            mock_items.append({
+                "symbol": f"SYM{i}",
+                "longName": f"Company {i} Long",
+                "shortName": f"Company {i}",
+                "regularMarketPrice": {"fmt": f"{100 + i:.2f}"},
+                "regularMarketChange": {"fmt": f"+{i * 0.5:.2f}"},
+                "regularMarketChangePercent": {"fmt": f"+{i * 0.5:.2f}%"}
+            })
+
+        return {
+            "finance": {
+                "result": [
+                    {
+                        "quotes": mock_items
+                    }
+                ]
+            }
+        }
+
+    return get_mock_response
 
 
 @pytest.mark.parametrize("count", ["25", "50", "100"])
@@ -114,3 +204,111 @@ def test_get_movers_invalid_count(test_client, endpoint, mock_yahoo_auth):
     assert "count" in data["errors"]
     assert "Input should be '25', '50' or '100'" in data["errors"]["count"]
 
+
+async def test_fetch_movers(mock_api_response, bypass_cache):
+    """Test fetch_movers function with mocked API response"""
+    test_url = "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=MOST_ACTIVES"
+    test_count = 50
+
+    # Get mock API response
+    mock_response = mock_api_response(test_count)
+    expected_movers = []
+
+    for item in mock_response["finance"]["result"][0]["quotes"]:
+        mover = MarketMover(
+            symbol=item["symbol"],
+            name=item["longName"],
+            price=item["regularMarketPrice"]["fmt"],
+            change=item["regularMarketChange"]["fmt"],
+            percent_change=item["regularMarketChangePercent"]["fmt"]
+        )
+        expected_movers.append(mover)
+
+    # Mock the fetch function
+    with patch('src.services.movers.fetchers.movers_api.fetch', new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = orjson.dumps(mock_response)
+
+        # Call the function
+        result = await fetch_movers(test_url)
+
+        # Verify the result structure
+        assert isinstance(result, list)
+        assert len(result) == test_count
+        assert all(isinstance(mover, MarketMover) for mover in result)
+
+        # Verify fetch was called with correct parameters
+        expected_params = {
+            "fields": "symbol,longName,shortName,regularMarketPrice,regularMarketChange,regularMarketChangePercent",
+        }
+        mock_fetch.assert_called_once_with(url=test_url, params=expected_params)
+
+        # Verify data matches expected values
+        for i, mover in enumerate(result):
+            assert mover.symbol == f"SYM{i + 1}"
+            assert mover.name == f"Company {i + 1} Long"
+            assert mover.price == f"{100 + (i + 1):.2f}"
+            assert mover.change == f"+{(i + 1) * 0.5:.2f}"
+            assert mover.percent_change == f"+{(i + 1) * 0.5:.2f}%"
+
+
+async def test_scrape_movers(cached_html_content, bypass_cache):
+    """Test scrape_movers function with cached HTML content"""
+    test_url = "https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50"
+
+    # Get cached HTML
+    html_content = cached_html_content(test_url)
+
+    # Mock the fetch function
+    with patch('src.services.movers.fetchers.movers_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = html_content
+
+        # Call the function
+        result = await scrape_movers(test_url)
+        # Verify the result structure
+        assert isinstance(result, list)
+        assert len(result) == 50
+        assert all(isinstance(mover, MarketMover) for mover in result)
+        assert all(mover.change.startswith(('+', '-', '0')) for mover in result)
+        assert all(mover.percent_change.startswith(('+', '-', '0')) for mover in result)
+        assert all(mover.percent_change.endswith('%') for mover in result)
+
+        # Verify fetch was called with correct parameters
+        mock_fetch.assert_called_once_with(url=test_url)
+
+
+@pytest.mark.parametrize("service_func,api_url,scrape_url", [
+    (get_actives,
+     "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=MOST_ACTIVES",
+     "https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50"),
+    (get_gainers,
+     "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=DAY_GAINERS",
+     "https://finance.yahoo.com/markets/stocks/gainers/?start=0&count=50"),
+    (get_losers,
+     "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=DAY_LOSERS",
+     "https://finance.yahoo.com/markets/stocks/losers/?start=0&count=50")
+])
+async def test_get_movers_services_fallback(service_func, api_url, scrape_url, bypass_cache, cached_html_content):
+    """Test get_movers service functions when API fetch fails and falls back to scraping"""
+    test_count = MoverCount.FIFTY
+
+    # Mock the fetch_movers to fail and scrape_movers to succeed with real HTML content
+    with patch('src.services.movers.get_movers.fetch_movers', new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.side_effect = Exception("API failure")
+
+        # Get cached HTML content
+        html_content = cached_html_content(scrape_url)
+
+        # Mock the fetch function in movers_scraper to return the cached HTML content
+        with patch('src.services.movers.fetchers.movers_scraper.fetch', new_callable=AsyncMock) as mock_scrape_fetch:
+            mock_scrape_fetch.return_value = html_content
+
+            # Call the service function
+            result = await service_func(test_count)
+
+            # Verify the result structure
+            assert isinstance(result, list)
+            assert all(isinstance(mover, MarketMover) for mover in result)
+
+            # Verify both functions were called with the correct URLs
+            mock_fetch.assert_called_once_with(api_url)
+            mock_scrape_fetch.assert_called_once_with(url=scrape_url)
