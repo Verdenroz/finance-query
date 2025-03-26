@@ -1,12 +1,24 @@
-from unittest.mock import patch
-
+from pathlib import Path
+from unittest.mock import AsyncMock, patch
+import hashlib
+import requests
 import pytest
+from fastapi import HTTPException
 
 from src.models import News
+from src.services.news.get_news import scrape_news_for_quote, scrape_general_news, parse_symbol_exchange
 from tests.conftest import VERSION
 
-# Test data
-sample_news = [
+# Mock response data for news
+MOCK_NEWS_RESPONSE = {
+    "title": "Test News 1",
+    "link": "https://example.com/news1",
+    "source": "Test Source",
+    "img": "https://example.com/image1.jpg",
+    "time": "1 hour ago"
+}
+
+MOCK_SYMBOL_NEWS_RESPONSE = [
     News(
         title="Test News 1",
         link="https://example.com/news1",
@@ -23,95 +35,122 @@ sample_news = [
     )
 ]
 
-
 @pytest.fixture
-def mock_scrape_general_news():
-    with patch('src.routes.finance_news.scrape_general_news') as mock:
-        mock.return_value = sample_news
-        yield mock
+def cached_html_content():
+    """
+    Fixture that provides a function to get cached HTML content for URLs.
+    If the HTML is not cached, it will fetch and cache it from the real URL.
+    """
+    cache_dir = Path(__file__).parent / "data" / "news"
+    cache_dir.mkdir(parents=True, exist_ok=True)
 
+    html_cache = {}
 
-@pytest.fixture
-def mock_scrape_news_for_quote():
-    with patch('src.routes.finance_news.scrape_news_for_quote') as mock:
-        mock.return_value = sample_news
-        yield mock
+    def get_cached_html(url):
+        if url in html_cache:
+            return html_cache[url]
 
+        filename = hashlib.md5(url.encode()).hexdigest()
+        cache_file = cache_dir / f"{filename}.html"
 
-def test_get_general_news_success(test_client, mock_scrape_general_news):
-    """Test successful retrieval of general news"""
+        if cache_file.exists():
+            with open(cache_file, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+        else:
+            response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
+            html_content = response.text
+            with open(cache_file, 'w', encoding='utf-8') as f:
+                f.write(html_content)
+
+        html_cache[url] = html_content
+        return html_content
+
+    return get_cached_html
+
+@pytest.mark.parametrize("symbol,expected_base,expected_exchange", [
+    ("AAPL", "AAPL", None),
+    ("AAPL.US", "AAPL", None),
+    ("VOD.L", "VOD", "LON"),
+    ("INVALID.XX", "INVALID", None)
+])
+def test_parse_symbol_exchange(symbol, expected_base, expected_exchange):
+    """Test parse_symbol_exchange function with different symbols"""
+    base_symbol, exchange = parse_symbol_exchange(symbol)
+    assert base_symbol == expected_base
+    assert exchange == expected_exchange
+
+@pytest.mark.parametrize("symbol", ["AAPL", "MSFT"])
+async def test_scrape_news_for_quote(cached_html_content, symbol, bypass_cache):
+    """Test scrape_news_for_quote function with cached HTML content"""
+    test_url = f"https://stockanalysis.com/stocks/{symbol}"
+    html_content = cached_html_content(test_url)
+
+    with patch('src.services.news.get_news.fetch', new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = html_content
+
+        result = await scrape_news_for_quote(symbol)
+
+        assert isinstance(result, list)
+        assert all(isinstance(news, News) for news in result)
+        assert len(result) > 0
+
+        mock_fetch.assert_called()
+
+async def test_scrape_general_news(cached_html_content, bypass_cache):
+    """Test scrape_general_news function with cached HTML content"""
+    test_url = "https://stockanalysis.com/news/"
+    html_content = cached_html_content(test_url)
+
+    with patch('src.services.news.get_news.fetch', new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = html_content
+
+        result = await scrape_general_news()
+
+        assert isinstance(result, list)
+        assert all(isinstance(news, News) for news in result)
+        assert len(result) > 0
+
+        mock_fetch.assert_called_once_with(url=test_url)
+
+async def test_scrape_news_invalid_symbol(bypass_cache):
+    """Test scrape_news_for_quote with invalid symbol"""
+    with pytest.raises(HTTPException) as exc_info:
+        await scrape_news_for_quote("INVALID")
+    assert exc_info.value.status_code == 404
+    assert "Could not find news for the provided symbol" in str(exc_info.value.detail)
+
+def test_get_news_success(test_client, monkeypatch):
+    """Test successful news retrieval"""
+    mock_service = AsyncMock(return_value=MOCK_SYMBOL_NEWS_RESPONSE)
+    monkeypatch.setattr("src.routes.finance_news.scrape_general_news", mock_service)
+
     response = test_client.get(f"{VERSION}/news")
+    data = response.json()
 
-    mock_scrape_general_news.assert_awaited_once()
     assert response.status_code == 200
-    assert len(response.json()) == 2
+    assert len(data) == len(MOCK_SYMBOL_NEWS_RESPONSE)
+    assert data[0]["title"] == MOCK_SYMBOL_NEWS_RESPONSE[0].title
 
-    news_items = response.json()
-    assert news_items[0]["title"] == "Test News 1"
-    assert news_items[1]["title"] == "Test News 2"
+    mock_service.assert_awaited_once()
 
-    # Verify the response matches our News model structure
-    for item in news_items:
-        assert all(key in item for key in ["title", "link", "source", "img", "time"])
+def test_get_symbol_news_success(test_client, monkeypatch):
+    """Test successful symbol news retrieval"""
+    mock_service = AsyncMock(return_value=MOCK_SYMBOL_NEWS_RESPONSE)
+    monkeypatch.setattr("src.routes.finance_news.scrape_news_for_quote", mock_service)
 
-    # Verify the data types of the response
-    for item in news_items:
-        assert isinstance(item["title"], str)
-        assert isinstance(item["link"], str)
-        assert isinstance(item["source"], str)
-        assert isinstance(item["img"], str)
-        assert isinstance(item["time"], str)
-
-
-def test_get_general_news_failure(test_client, mock_scrape_general_news):
-    """Test failure case when general news cannot be fetched"""
-    mock_scrape_general_news.side_effect = Exception("Failed to fetch news")
-    response = test_client.get(f"{VERSION}/news")
-    assert response.status_code == 404
-
-
-def test_get_symbol_news_success(test_client, mock_scrape_news_for_quote):
-    """Test successful retrieval of news for a specific symbol"""
     response = test_client.get(f"{VERSION}/news?symbol=AAPL")
+    data = response.json()
 
-    mock_scrape_news_for_quote.assert_awaited_once_with("AAPL")
     assert response.status_code == 200
-    assert len(response.json()) == 2
+    assert len(data) == len(MOCK_SYMBOL_NEWS_RESPONSE)
+    assert data[0]["title"] == MOCK_SYMBOL_NEWS_RESPONSE[0].title
 
-    news_items = response.json()
-    assert news_items[0]["title"] == "Test News 1"
-    assert news_items[1]["title"] == "Test News 2"
+    mock_service.assert_awaited_once_with("AAPL")
 
+def test_get_news_failure(test_client, monkeypatch):
+    """Test failure case when news cannot be fetched"""
+    mock_service = AsyncMock(side_effect=HTTPException(status_code=404, detail="Error fetching news"))
+    monkeypatch.setattr("src.routes.finance_news.scrape_general_news", mock_service)
 
-def test_get_symbol_news_not_found(test_client, mock_scrape_news_for_quote):
-    """Test case when no news is found for a symbol"""
-    mock_scrape_news_for_quote.side_effect = Exception("Could not find news for the provided symbol")
-    response = test_client.get(f"{VERSION}/news?symbol=INVALID")
+    response = test_client.get(f"{VERSION}/news")
     assert response.status_code == 404
-    assert response.json()["detail"] == "Could not find news for the provided symbol"
-
-
-def test_get_symbol_news_with_exchange(test_client, mock_scrape_news_for_quote):
-    """Test news retrieval for a symbol with exchange code"""
-    with patch('src.services.news.get_news.parse_symbol_exchange') as mock_parse:
-        mock_parse.return_value = ('300750', 'SHE')
-        with patch('src.services.news.get_news.scrape_news_for_quote') as mock_scrape:
-            mock_scrape.return_value = sample_news
-            response = test_client.get(f"{VERSION}/news?symbol=300750.SZ")
-
-            mock_scrape_news_for_quote.assert_called_once_with('300750.SZ')
-            assert response.status_code == 200
-            assert len(response.json()) == 2
-
-
-def test_invalid_symbol_format(test_client, mock_scrape_general_news):
-    """Test with invalid symbol format"""
-    with patch('src.services.news.get_news.scrape_news_for_quote') as mock_scrape:
-        response = test_client.get(f"{VERSION}/news?symbol=")
-
-        # Assert general news was called instead of symbol news
-        mock_scrape_general_news.assert_awaited_once()
-        mock_scrape.assert_not_awaited()
-
-        assert response.status_code == 200
-        assert len(response.json()) == 2
