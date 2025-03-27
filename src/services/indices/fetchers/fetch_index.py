@@ -139,7 +139,6 @@ async def _parse_yahoo_index(summary_data: dict, index: Index) -> MarketIndex:
         six_month_return=format_return(performance_data.get('sixMonthReturn')),
         ytd_return=format_return(performance_data.get('ytdReturnPct')),
         year_return=format_return(performance_data.get('oneYearTotalReturn')),
-        two_year_return=format_return(performance_data.get('twoYearTotalReturn')),
         three_year_return=format_return(performance_data.get('threeYearTotalReturn')),
         five_year_return=format_return(performance_data.get('fiveYearTotalReturn')),
         ten_year_return=format_return(performance_data.get('tenYearTotalReturn')),
