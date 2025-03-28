@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from orjson import orjson
 
 from src.models import INDEX_REGIONS, Region, Index, MarketIndex
+from src.services import get_indices
 from src.services.indices.fetchers import fetch_index
 from tests.conftest import VERSION
 
@@ -290,6 +291,97 @@ def test_get_indices_invalid_index(test_client, mock_yahoo_auth):
     # Response should contain validation error
     error_detail = response.json()["errors"]
     assert "index.0" in error_detail
+
+
+async def test_get_indices(bypass_cache):
+    """Test get_indices function with all indices"""
+    test_cookies = "mock_cookies"
+    test_crumb = "mock_crumb"
+
+    # Create mock index data
+    mock_index_data = MarketIndex(
+        name="Test Index",
+        value=1000.0,
+        change="+10.0",
+        percent_change="+1.0%",
+        five_days_return=None,
+        one_month_return=None,
+        three_month_return=None,
+        six_month_return=None,
+        ytd_return=None,
+        year_return=None,
+        three_year_return=None,
+        five_year_return=None,
+        ten_year_return=None,
+        max_return=None
+    )
+
+    # Mock the fetch_index function
+    with patch('src.services.indices.get_indices.fetch_index', new_callable=AsyncMock) as mock_fetch_index:
+        mock_fetch_index.return_value = mock_index_data
+        indices = list(Index)
+        # Call get_indices with specific indices
+        result = await get_indices(test_cookies, test_crumb, None)
+
+        # Verify results
+        assert len(result) == len(indices)
+        assert all(isinstance(index, MarketIndex) for index in result)
+        assert all(index.name == "Test Index" for index in result)
+
+        # Verify fetch_index was called for each index
+        assert mock_fetch_index.call_count == len(indices)
+
+        # Check that fetch_index was called with correct parameters
+        for idx in indices:
+            mock_fetch_index.assert_any_call(idx, test_cookies, test_crumb)
+
+
+async def test_get_indices_error_handling(bypass_cache):
+    """Test get_indices handles errors correctly"""
+    test_cookies = "mock_cookies"
+    test_crumb = "mock_crumb"
+
+    # Create a mock index that works normally
+    mock_index_data = MarketIndex(
+        name="Test Index",
+        value=1000.0,
+        change="+10.0",
+        percent_change="+1.0%"
+    )
+
+    def mock_fetch_side_effect(index, *args, **kwargs):
+        # Return an exception for GDAXI but normal data for other indices
+        if index == Index.GDAXI:
+            return Exception("Failed to fetch index")
+        return mock_index_data
+
+    # Mock the fetch_index function with side effect
+    with patch('src.services.indices.get_indices.fetch_index', new_callable=AsyncMock) as mock_fetch_index:
+        mock_fetch_index.side_effect = mock_fetch_side_effect
+
+        # Call get_indices with specific indices
+        test_indices = [Index.GSPC, Index.DJI, Index.GDAXI, Index.IXIC]
+        result = await get_indices(test_cookies, test_crumb, test_indices)
+
+        # Verify results - should exclude the exception
+        assert len(result) == 3  # One less than input due to excluded exception
+        assert all(isinstance(index, MarketIndex) for index in result)
+
+        # Verify fetch_index was called for each index
+        assert mock_fetch_index.call_count == len(test_indices)
+
+
+async def test_get_indices_missing_credentials(bypass_cache):
+    """Test get_indices raises error with missing credentials"""
+    with pytest.raises(ValueError) as exc_info:
+        await get_indices("", "")
+
+    assert "Cookies and crumb are required" in str(exc_info.value)
+
+    with pytest.raises(ValueError) as exc_info:
+        await get_indices("cookies", "")
+
+    assert "Cookies and crumb are required" in str(exc_info.value)
 
 
 @pytest.mark.parametrize("index", [Index.GSPC, Index.DJI])
