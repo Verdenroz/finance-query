@@ -60,7 +60,7 @@ async def fetch_yahoo_search_results(
             name=item.get("shortname", item.get("longname")),
             symbol=item.get("symbol"),
             exchange=item.get("exchange"),
-            type=yf_to_type.get(item.get("quoteType"))
+            type=yf_to_type.get(item.get("quoteType"), Type.STOCK.value)
         )
         results.append(result)
 
