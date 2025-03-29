@@ -73,21 +73,15 @@ def parse_symbol_exchange(yahoo_symbol: str):
         'CA': 'CBSE',  # Casablanca Stock Exchange
         'J': 'JSE',  # Johannesburg Stock Exchange
     }
-
-    try:
-        # Split the symbol into base symbol and exchange code
-        if '.' in yahoo_symbol:
-            base_symbol, yahoo_exchange = yahoo_symbol.split('.')
-        else:
-            # If no exchange code is present, return the symbol as is with None for exchange
-            return yahoo_symbol, None
+    # Split the symbol into base symbol and exchange code
+    if '.' in yahoo_symbol:
+        base_symbol, yahoo_exchange = yahoo_symbol.split('.')
 
         # Convert the exchange code if it exists in our mapping
         stockanalysis_exchange = exchange_mapping.get(yahoo_exchange, None)
-
         return base_symbol, stockanalysis_exchange
-
-    except Exception:
+    else:
+        # If no exchange code is present, return the symbol as is with None for exchange
         return yahoo_symbol, None
 
 

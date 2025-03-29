@@ -37,10 +37,7 @@ async def get_news(
             None,
             description="Optional symbol to get news for. If not provided, general market news is returned")
 ):
-    try:
-        if not symbol:
-            return await scrape_general_news()
-        else:
-            return await scrape_news_for_quote(symbol)
-    except Exception as e:
-        raise HTTPException(status_code=404, detail=str(e))
+    if not symbol:
+        return await scrape_general_news()
+    else:
+        return await scrape_news_for_quote(symbol)
