@@ -57,26 +57,29 @@ async def get_historical(
         response_text = await fetch(url=url)
         data = orjson.loads(response_text)
 
-        # Check for error response from Yahoo Finance
-        if 'chart' in data:
-            if data['chart'].get('error'):
-                error = data['chart']['error']
-                if error['code'] == 'Not Found':
-                    raise HTTPException(status_code=404, detail=error['description'])
-                else:
-                    raise HTTPException(status_code=500, detail=f"Yahoo Finance API error: {error['description']}")
-
-            if not data['chart'].get('result') or not data['chart']['result'][0]:
-                raise HTTPException(status_code=404, detail="No data returned for symbol")
-        else:
+        # Validate response structure
+        if 'chart' not in data:
             raise HTTPException(status_code=500, detail="Invalid response structure from Yahoo Finance API")
 
-        chart_data = data['chart']['result'][0]
+        chart = data['chart']
 
-        # Extract timestamp and price data
+        # Check for API errors
+        if chart.get('error'):
+            error = chart['error']
+            if error['code'] == 'Not Found':
+                raise HTTPException(status_code=404, detail=error['description'])
+            raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {error['description']}")
+
+        # Check for valid results
+        if not chart.get('result') or not chart['result'][0]:
+            raise HTTPException(status_code=404, detail="No data returned for symbol")
+
+        # Process chart data
+        chart_data = chart['result'][0]
         timestamps = pd.to_datetime(chart_data['timestamp'], unit='s')
         quote = chart_data['indicators']['quote'][0]
 
+        # Create DataFrame
         df = pd.DataFrame({
             'open': quote['open'],
             'high': quote['high'],
@@ -89,24 +92,22 @@ async def get_historical(
         if 'adjclose' in chart_data['indicators']:
             df['adjclose'] = chart_data['indicators']['adjclose'][0]['adjclose']
 
-        # Clean missing data
+        # Clean and format data
         df.dropna(inplace=True)
-
-        # Sort and determine date format based on interval type
         df.sort_index(ascending=False, inplace=True)
-        date_format = '%Y-%m-%d %H:%M:%S' if interval in [
-            Interval.ONE_MINUTE,
-            Interval.FIVE_MINUTES,
-            Interval.FIFTEEN_MINUTES,
-            Interval.THIRTY_MINUTES,
-            Interval.ONE_HOUR
-        ] else '%Y-%m-%d'
 
-        # Convert to TimeSeries format
+        # Determine date format based on interval
+        is_intraday = interval in [
+            Interval.ONE_MINUTE, Interval.FIVE_MINUTES,
+            Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES,
+            Interval.ONE_HOUR
+        ]
+        date_format = '%Y-%m-%d %H:%M:%S' if is_intraday else '%Y-%m-%d'
+
+        # Convert to expected output format
         history_dict = {}
         for timestamp, row in df.iterrows():
-            # Use either formatted date string or epoch timestamp as key
-            date_key = timestamp.strftime(date_format) if not epoch else int(timestamp.timestamp())
+            date_key = int(timestamp.timestamp()) if epoch else timestamp.strftime(date_format)
 
             history_dict[str(date_key)] = HistoricalData(
                 open=round(float(row['open']), 2),
@@ -120,8 +121,4 @@ async def get_historical(
         return history_dict
 
     except orjson.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Invalid response from Yahoo Finance API")
-    except Exception as e:
-        if "404" in str(e):
-            raise HTTPException(status_code=404, detail="Symbol not found")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve historical data: {str(e)}")
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Yahoo Finance API")
