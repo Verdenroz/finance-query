@@ -112,7 +112,7 @@ def test_technical_indicator_general_exception(test_client, mock_yahoo_auth, mon
 
     # Assertions
     assert response.status_code == 500
-    assert "Invalid response from Yahoo Finance API" in response.json()["detail"]
+    assert "Invalid JSON response from Yahoo Finance API" in response.json()["detail"]
 
 
 def test_technical_indicators_summary_success(test_client, mock_yahoo_auth, monkeypatch):
