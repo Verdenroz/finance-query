@@ -71,7 +71,8 @@ def cached_html_content():
     ("AAPL", "AAPL", None),
     ("AAPL.US", "AAPL", None),
     ("VOD.L", "VOD", "LON"),
-    ("INVALID.XX", "INVALID", None)
+    ("INVALID.XX", "INVALID", None),
+    ("NVDA.TO", "NVDA", "TSX"),
 ])
 def test_parse_symbol_exchange(symbol, expected_base, expected_exchange):
     """Test parse_symbol_exchange function with different symbols"""
@@ -79,11 +80,16 @@ def test_parse_symbol_exchange(symbol, expected_base, expected_exchange):
     assert base_symbol == expected_base
     assert exchange == expected_exchange
 
-@pytest.mark.parametrize("symbol", ["AAPL", "MSFT"])
-async def test_scrape_news_for_quote(cached_html_content, symbol, bypass_cache):
+@pytest.mark.parametrize("symbol,test_url", [
+    ("AAPL", "https://stockanalysis.com/stocks/AAPL"),
+    ("MSFT", "https://stockanalysis.com/stocks/MSFT"),
+    ("QQQ", "https://stockanalysis.com/etf/QQQ"),
+    ("TQQQ", "https://stockanalysis.com/etf/TQQQ"),
+    ("NVDA.TO", "https://stockanalysis.com/quote/tsx/NVDA"), # should be verified from last test
+])
+async def test_scrape_news_for_quote(cached_html_content, symbol, test_url, bypass_cache):
     """Test scrape_news_for_quote function with cached HTML content"""
-    test_url = f"https://stockanalysis.com/stocks/{symbol}"
-    html_content = cached_html_content(test_url)
+    html_content = cached_html_content(test_url, symbol=symbol)
 
     with patch('src.services.news.get_news.fetch', new_callable=AsyncMock) as mock_fetch:
         mock_fetch.return_value = html_content
