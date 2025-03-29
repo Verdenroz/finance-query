@@ -46,12 +46,11 @@ def cached_html_content():
 
     html_cache = {}
 
-    def get_cached_html(url):
+    def get_cached_html(url, symbol="general"):
         if url in html_cache:
             return html_cache[url]
 
-        filename = hashlib.md5(url.encode()).hexdigest()
-        cache_file = cache_dir / f"{filename}.html"
+        cache_file = cache_dir / f"{symbol}.html"
 
         if cache_file.exists():
             with open(cache_file, 'r', encoding='utf-8') as f:
