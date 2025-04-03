@@ -218,21 +218,7 @@ async def _scrape_general_info(tree: etree.ElementTree):
         return {}
 
 
-async def _scrape_logo(tree: etree.ElementTree) -> str:
-    """
-    Scrape only the logo from the HTML tree
-
-    :param tree: The parsed HTML tree
-    :return: URL to logo as a string
-    """
-    website_xpath = '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href'
-    website_elements = tree.xpath(website_xpath)
-    website = website_elements[0].strip() if website_elements else None
-
-    return await get_logo(url=website) if website else None
-
-
-async def _scrape_company_info(tree: etree.ElementTree):
+async def _scrape_company_info(tree: etree.ElementTree, symbol: str):
     """
     Scrape the sector and industry data from the tree object
 
@@ -260,7 +246,7 @@ async def _scrape_company_info(tree: etree.ElementTree):
             results[key] = elements[0].strip() if elements else None
 
         # Get logo asynchronously if website exists
-        logo = await get_logo(url=results['website']) if results.get('website') else None
+        logo = await get_logo(symbol=symbol, url=results['website']) if results.get('website') else None
 
         return {
             'sector': results['sector'],
