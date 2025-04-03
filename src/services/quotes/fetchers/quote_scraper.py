@@ -62,7 +62,7 @@ async def _scrape_quote(symbol: str) -> Quote:
         # Execute all scraping tasks in parallel
         prices_task = asyncio.create_task(_scrape_price_data(tree))
         general_info_task = asyncio.create_task(_scrape_general_info(tree))
-        company_info_task = asyncio.create_task(_scrape_company_info(tree))
+        company_info_task = asyncio.create_task(_scrape_company_info(tree, symbol))
         performance_task = asyncio.create_task(_scrape_performance(tree))
 
         prices, general_info, company_info, performance = await asyncio.gather(
@@ -113,7 +113,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
         website_elements = tree.xpath(
             '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href')
         website = website_elements[0].strip() if website_elements else None
-        logo = await get_logo(url=website) if website else None
+        logo = await get_logo(symbol=symbol, url=website) if website else None
 
         return SimpleQuote(
             symbol=symbol.upper(),

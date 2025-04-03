@@ -3,6 +3,7 @@ import datetime
 import os
 import time
 from typing import Optional, Annotated, Union
+from urllib.parse import urlparse
 
 import requests
 from aiohttp import ClientSession, ClientResponse, ClientPayloadError, ClientError
@@ -106,24 +107,37 @@ async def fetch(
 @injectable
 async def get_logo(
         session: Annotated[ClientSession, Depends(get_session)],
+        symbol: str = "",
         url: str = "",
 ) -> Optional[str]:
     """
-    Get logo URL from Clearbit
+    Get logo URL from logo.dev
     """
-    if not url:
+    if not url and not symbol:
         return None
 
-    async with session.get(f"https://logo.clearbit.com/{url}") as response:
+    if url:
+        parsed_url = urlparse(url)
+        domain = parsed_url.netloc.replace('www.', '')
+        # The token is my personal public key, but feel free to use your own
+        async with session.get(f"https://img.logo.dev/{domain}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true") as response:
+            if response.status == 200:
+                return str(response.url)
+
+    # Fallback to using the symbol if the domain request fails
+    async with session.get(f"https://img.logo.dev/ticker/{symbol}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true") as response:
         if response.status == 200:
             return str(response.url)
-        return None
+
+    return None
 
 
-async def get_auth_data() -> tuple[str, str]:
+async def get_auth_data() -> tuple[str, str] | None:
     """
     Get Yahoo Finance authentication data (cookies and crumb)
-    No longer requires Redis as storage is handled by app state
+
+    Raises:
+        HTTPException: If unable to get cookies or crumb
     """
     try:
         headers = {
