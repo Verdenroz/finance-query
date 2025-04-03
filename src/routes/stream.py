@@ -40,7 +40,7 @@ async def quotes_generator(symbols: list[str]):
                 "text/event-stream": {
                     "example": 'quote: [{"symbol":"NVDA","name":"NVIDIA Corporation","price":"142.62",'
                                '"change":"-4.60","percentChange":"-3.12%",'
-                               '"logo":"https://logo.clearbit.com/https://www.nvidia.com"}]\n\n'
+                               '"logo":"https://img.logo.dev/nvidia.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"}]\n\n'
                 }
             }
         },
