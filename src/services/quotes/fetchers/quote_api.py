@@ -166,7 +166,7 @@ async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
 
     return Quote(
         **quote_data,
-        logo=await get_logo(url=profile.get('website'))
+        logo=await get_logo(symbol=price_data.get("symbol"), url=profile.get('website'))
     )
 
 
@@ -193,5 +193,5 @@ async def _parse_yahoo_simple_quote_data(summary_data: dict) -> SimpleQuote:
     }
     return SimpleQuote(
         **quote_data,
-        logo=await get_logo(url=profile.get('website'))
+        logo=await get_logo(symbol=price_data.get("symbol"), url=profile.get('website'))
     )

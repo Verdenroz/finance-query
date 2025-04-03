@@ -47,7 +47,7 @@ class SimpleQuote(BaseModel):
     )
     logo: Optional[str] = Field(
         default=None,
-        examples=["https://logo.clearbit.com/apple.com"],
+        examples=["https://img.logo.dev/apple.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"],
         description="Company logo"
     )
 
