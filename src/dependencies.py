@@ -3,6 +3,7 @@ import datetime
 import os
 import time
 from typing import Optional, Annotated, Union
+from urllib.parse import urlparse
 
 import requests
 from aiohttp import ClientSession, ClientResponse, ClientPayloadError, ClientError
@@ -109,12 +110,15 @@ async def get_logo(
         url: str = "",
 ) -> Optional[str]:
     """
-    Get logo URL from Clearbit
+    Get logo URL from logo.dev
     """
     if not url:
         return None
 
-    async with session.get(f"https://logo.clearbit.com/{url}") as response:
+    parsed_url = urlparse(url)
+    domain = parsed_url.netloc.replace('www.', '')
+
+    async with session.get(f"https://img.logo.dev/{domain}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true") as response:
         if response.status == 200:
             return str(response.url)
         return None
