@@ -241,11 +241,7 @@ async def technical_indicator(
 
     except TypeError as e:
         param_name = str(e).split("'")[1]
-        raise HTTPException(status_code=400,
-                            detail=f"Invalid parameter: {param_name} for the {function.name} function.")
-    except HTTPException as e:
-        # Re-raise HTTPException from get_historical_quotes
-        raise e
+        raise HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}")
 
