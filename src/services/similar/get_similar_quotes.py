@@ -20,3 +20,5 @@ async def get_similar_quotes(symbol: str, cookies: str, crumb: str, limit: int =
 
     if not similar:
         return await scrape_similar_quotes(symbol, limit)
+
+    return similar
