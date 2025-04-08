@@ -3,7 +3,9 @@ from unittest.mock import patch, AsyncMock
 
 import pytest
 import requests
+from aiohttp import ClientResponse
 from fastapi import HTTPException
+from orjson import orjson
 
 from src.models import MarketSector, Sector, MarketSectorDetails
 from src.services.sectors.get_sectors import get_sector_for_symbol, urls, get_yahoo_sector, get_sector_details
@@ -397,3 +399,53 @@ async def test_get_sector_details(cached_html_content, bypass_cache):
 
             # Mock was called with the correct URL
             mock_fetch.assert_called_once_with(url=url)
+
+
+async def test_fetch_yahoo_data():
+    """Test the _fetch_yahoo_data function with mocked responses"""
+    from src.services.sectors.utils import _fetch_yahoo_data
+
+    # Test successful response
+    mock_successful_data = {
+        "quoteSummary": {
+            "result": [{
+                "assetProfile": {
+                    "sector": "Technology"
+                }
+            }]
+        }
+    }
+
+    mock_response = AsyncMock(spec=ClientResponse)
+    mock_response.status = 200
+    mock_response.text.return_value = orjson.dumps(mock_successful_data).decode()
+
+    with patch('src.services.sectors.utils.fetch', new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = mock_response
+
+        result = await _fetch_yahoo_data("AAPL", "test_cookies", "test_crumb")
+
+        assert result == mock_successful_data
+        mock_fetch.assert_called_once_with(
+            url="https://query2.finance.yahoo.com/v10/finance/quoteSummary/AAPL",
+            params={"modules": "assetProfile", "crumb": "test_crumb"},
+            headers={
+                'Cookie': 'test_cookies',
+                'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept': 'application/json'
+            },
+            return_response=True
+        )
+
+    # Test 404 response
+    mock_error_response = AsyncMock(spec=ClientResponse)
+    mock_error_response.status = 404
+
+    with patch('src.services.sectors.utils.fetch', new_callable=AsyncMock) as mock_fetch:
+        mock_fetch.return_value = mock_error_response
+
+        with pytest.raises(HTTPException) as excinfo:
+            await _fetch_yahoo_data("INVALID", "test_cookies", "test_crumb")
+
+        assert excinfo.value.status_code == 404
+        assert "Symbol not found: INVALID" in excinfo.value.detail
