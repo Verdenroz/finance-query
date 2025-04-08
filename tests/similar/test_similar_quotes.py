@@ -449,7 +449,7 @@ async def test_get_similar_quotes_fallback(bypass_cache):
     with patch('src.services.similar.get_similar_quotes.fetch_similar', new_callable=AsyncMock) as mock_fetch, \
             patch('src.services.similar.get_similar_quotes.scrape_similar_quotes',
                   new_callable=AsyncMock) as mock_scrape:
-        mock_fetch.side_effect = Exception("API failure")
+        mock_fetch.return_value = []
         mock_scrape.return_value = mock_quotes
 
         # Call the function
