@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from unittest.mock import patch, AsyncMock
 
+from pydantic import BaseModel
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.models import SimpleQuote
@@ -266,13 +267,9 @@ async def test_market_status_websocket(test_client, mock_yahoo_auth, monkeypatch
 def test_safe_convert_to_dict():
     """Test the safe_convert_to_dict function with various input types"""
 
-    @dataclass
-    class SampleClass:
+    class SampleModel(BaseModel):
         name: str
         value: int
-
-        def dict(self):
-            return {"name": self.name, "value": self.value}
 
     # Test case 1: Empty list
     assert safe_convert_to_dict([]) == []
@@ -281,10 +278,10 @@ def test_safe_convert_to_dict():
     input_dicts = [{"a": 1}, {"b": 2}]
     assert safe_convert_to_dict(input_dicts) == input_dicts
 
-    # Test case 3: List with objects that have dict() method
+    # Test case 3: List with Pydantic models
     sample_objects = [
-        SampleClass("test1", 1),
-        SampleClass("test2", 2)
+        SampleModel(name="test1", value=1),
+        SampleModel(name="test2", value=2)
     ]
     expected_dicts = [
         {"name": "test1", "value": 1},
@@ -292,10 +289,10 @@ def test_safe_convert_to_dict():
     ]
     assert safe_convert_to_dict(sample_objects) == expected_dicts
 
-    # Test case 4: Mixed list with dicts and objects
+    # Test case 4: Mixed list with dicts and Pydantic models
     mixed_list = [
         {"a": 1},
-        SampleClass("test", 2)
+        SampleModel(name="test", value=2)
     ]
     expected_mixed = [
         {"a": 1},

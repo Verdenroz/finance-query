@@ -34,6 +34,9 @@ def safe_convert_to_dict(items: list, default=None):
     if default is None:
         default = []
 
+    if not isinstance(items, (list, tuple)) or items is None:
+        return default
+
     return [
         item if isinstance(item, dict) else
         item.model_dump() if hasattr(item, 'model_dump') else
