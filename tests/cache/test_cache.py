@@ -121,7 +121,7 @@ class TestRedisCacheHandler:
             # Mock serialized SimpleQuote
             serialized = handler.serialize_data({
                 "__type__": "SimpleQuote",
-                "data": quote.dict()
+                "data": quote.model_dump(by_alias=True, exclude_none=True)
             })
             redis_mock.get.return_value = serialized
 
@@ -134,11 +134,11 @@ class TestRedisCacheHandler:
             redis_mock.type.return_value = b'list'
             quote1 = handler.serialize_data({
                 "__type__": "SimpleQuote",
-                "data": quote.dict()
+                "data": quote.model_dump(by_alias=True, exclude_none=True)
             })
             quote2 = handler.serialize_data({
                 "__type__": "SimpleQuote",
-                "data": quote2.dict()
+                "data": quote2.model_dump(by_alias=True, exclude_none=True)
             })
             redis_mock.lrange.return_value = [quote1, quote2]
 
