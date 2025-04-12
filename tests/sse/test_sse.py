@@ -36,8 +36,12 @@ async def test_quotes_generator():
     # Patch dependencies
     with patch('src.routes.stream.get_simple_quotes', return_value=mock_quotes), \
             patch('asyncio.sleep', AsyncMock()):
+        # Mock cookies and crumb
+        mock_cookies = "mock_cookies"
+        mock_crumb = "mock_crumb"
+
         # Get generator
-        generator = stream.quotes_generator(symbols)
+        generator = stream.quotes_generator(symbols, mock_cookies, mock_crumb)
 
         # Get first response
         response = await anext(generator)
@@ -81,7 +85,7 @@ async def test_stream_quotes_endpoint(test_client, mock_yahoo_auth):
 
     # Mock the generator function directly to return only one item
     async def mock_quotes_generator(symbols):
-        quotes = [quote.dict() for quote in mock_quotes]
+        quotes = [quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True) for quote in mock_quotes]
         data = orjson.dumps(quotes).decode('utf-8')
         yield f"quote: {data}\n\n"
         # No sleep or infinite loop here
@@ -112,6 +116,7 @@ async def test_stream_quotes_endpoint(test_client, mock_yahoo_auth):
         assert len(data) == 1
 
         quote = data[0]
+        print(quote)
         assert quote["symbol"] == "AAPL"
         assert quote["name"] == "Apple Inc."
         assert quote["price"] == "150.00"
