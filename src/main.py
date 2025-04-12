@@ -90,8 +90,7 @@ async def lifespan(app: FastAPI):
                 pass
 
         # Clean up proxy configuration
-        if proxy_data:
-            await remove_proxy_whitelist(proxy_data)
+        await remove_proxy_whitelist(proxy_data)
 
         # Clean up Redis
         if redis:
@@ -299,7 +298,7 @@ async def health(
 
     health_report = {
         "status": "healthy",
-        "timestamp": datetime.datetime.utcnow().isoformat(),
+        "timestamp": datetime.datetime.now().isoformat(),
         "redis": {
             "status": "healthy",
             "latency_ms": 0
@@ -371,7 +370,7 @@ async def ping(response: Response):
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
     return {
         "status": "healthy",
-        "timestamp": datetime.datetime.utcnow().isoformat()
+        "timestamp": datetime.datetime.now().isoformat()
     }
 
 
