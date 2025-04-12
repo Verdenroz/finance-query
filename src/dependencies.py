@@ -108,7 +108,7 @@ async def fetch(
 async def get_logo(
         session: Annotated[ClientSession, Depends(get_session)],
         symbol: str = "",
-        url: str = "",
+        url: Optional[str] = None,
 ) -> Optional[str]:
     """
     Get logo URL from logo.dev
@@ -116,6 +116,11 @@ async def get_logo(
     if not url and not symbol:
         return None
 
+    async with session.get(f"https://img.logo.dev/ticker/{symbol}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true") as response:
+        if response.status == 200:
+            return str(response.url)
+
+    # Fallback to using the domain if the symbol request fails
     if url:
         parsed_url = urlparse(url)
         domain = parsed_url.netloc.replace('www.', '')
@@ -123,11 +128,6 @@ async def get_logo(
         async with session.get(f"https://img.logo.dev/{domain}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true") as response:
             if response.status == 200:
                 return str(response.url)
-
-    # Fallback to using the symbol if the domain request fails
-    async with session.get(f"https://img.logo.dev/ticker/{symbol}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true") as response:
-        if response.status == 200:
-            return str(response.url)
 
     return None
 
