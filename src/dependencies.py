@@ -211,29 +211,25 @@ async def setup_proxy_whitelist() -> dict | None:
     if not os.getenv('PROXY_TOKEN') or os.getenv('USE_PROXY', 'False') != 'True':
         raise ValueError("Proxy configuration is missing")
 
-    try:
-        ip_response = requests.get("https://api.ipify.org/")
-        ip = ip_response.text
-        api_url = "https://api.brightdata.com/zone/whitelist"
-        proxy_header_token = {
-            "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
-            "Content-Type": "application/json"
-        }
-        payload = {"ip": ip}
+    ip_response = requests.get("https://api.ipify.org/")
+    ip = ip_response.text
+    api_url = "https://api.brightdata.com/zone/whitelist"
+    proxy_header_token = {
+        "Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}",
+        "Content-Type": "application/json"
+    }
+    payload = {"ip": ip}
 
-        response = requests.post(api_url, headers=proxy_header_token, json=payload)
-        if response.status_code != 200:
-            print(f"Proxy whitelist setup failed: {response.text}")
-            return None
-
-        return {
-            "api_url": api_url,
-            "headers": proxy_header_token,
-            "payload": payload
-        }
-    except Exception as e:
-        print(f"Error setting up proxy whitelist: {e}")
+    response = requests.post(api_url, headers=proxy_header_token, json=payload)
+    if response.status_code != 200:
+        print(f"Proxy whitelist setup failed: {response.text}")
         return None
+
+    return {
+        "api_url": api_url,
+        "headers": proxy_header_token,
+        "payload": payload
+    }
 
 
 async def remove_proxy_whitelist(proxy_data: dict) -> None:
@@ -242,12 +238,8 @@ async def remove_proxy_whitelist(proxy_data: dict) -> None:
     """
     if not proxy_data:
         return
-
-    try:
-        requests.delete(
-            proxy_data["api_url"],
-            headers=proxy_data["headers"],
-            json=proxy_data["payload"]
-        )
-    except Exception as e:
-        print(f"Error removing proxy whitelist: {e}")
+    requests.delete(
+        proxy_data["api_url"],
+        headers=proxy_data["headers"],
+        json=proxy_data["payload"]
+    )
