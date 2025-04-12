@@ -23,25 +23,23 @@ router = APIRouter()
 REFRESH_INTERVAL = 5
 
 
-def safe_convert_to_dict(items, default=None):
+def safe_convert_to_dict(items: list, default=None):
     """
     Convert items to dictionaries, handling exceptions and type variations.
 
-    :param items: List of items to convert
+    :param items: List of items to convert (dicts or Pydantic models)
     :param default: Default value to use if conversion fails
     :return: List of dictionaries or default values
     """
     if default is None:
         default = []
 
-    try:
-        return [
-            item if isinstance(item, dict) else
-            (item.dict() if hasattr(item, 'dict') else default)
-            for item in items
-        ]
-    except Exception:
-        return default
+    return [
+        item if isinstance(item, dict) else
+        item.model_dump() if hasattr(item, 'model_dump') else
+        default
+        for item in items
+    ]
 
 
 async def handle_websocket_connection(

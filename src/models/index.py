@@ -18,95 +18,95 @@ class Region(Enum):
 
 class Index(Enum):
     # United States
-    GSPC = "snp"                 # S&P 500
-    DJI = "djia"                 # Dow Jones Industrial Average
-    IXIC = "nasdaq"              # NASDAQ Composite
-    NYA = "nyse-composite"       # NYSE Composite
-    XAX = "nyse-amex"            # NYSE American Composite
-    RUT = "rut"                  # Russell 2000
-    VIX = "vix"                  # CBOE Volatility Index
+    GSPC = "snp"  # S&P 500
+    DJI = "djia"  # Dow Jones Industrial Average
+    IXIC = "nasdaq"  # NASDAQ Composite
+    NYA = "nyse-composite"  # NYSE Composite
+    XAX = "nyse-amex"  # NYSE American Composite
+    RUT = "rut"  # Russell 2000
+    VIX = "vix"  # CBOE Volatility Index
 
     # North America (excluding US)
-    GSPTSE = "tsx-composite"     # Toronto Stock Exchange
+    GSPTSE = "tsx-composite"  # Toronto Stock Exchange
 
     # South America
-    BVSP = "ibovespa"            # Brazil Bovespa
-    MXX = "ipc-mexico"           # Mexican IPC
-    IPSA = "ipsa"                # Chile IPSA
-    MERV = "merval"              # Argentina Merval
-    IVBX = "ivbx"                # Brazil IVBX
-    IBRX_50 = "ibrx-50"          # Brazil IBrX-50
+    BVSP = "ibovespa"  # Brazil Bovespa
+    MXX = "ipc-mexico"  # Mexican IPC
+    IPSA = "ipsa"  # Chile IPSA
+    MERV = "merval"  # Argentina Merval
+    IVBX = "ivbx"  # Brazil IVBX
+    IBRX_50 = "ibrx-50"  # Brazil IBrX-50
 
     # Europe
-    FTSE = "ftse-100"            # FTSE 100
-    GDAXI = "dax"                # German DAX
-    FCHI = "cac-40"              # French CAC 40
-    STOXX50E = "euro-stoxx-50"   # Euro Stoxx 50
-    N100 = "euronext-100"        # Euronext 100
-    BFX = "bel-20"               # Belgian BEL 20
-    MOEX_ME = "moex"             # Moscow Exchange
-    AEX = "aex"                  # Amsterdam Exchange
-    IBEX = "ibex-35"             # Spanish IBEX 35
-    FTSEMIB = "ftse-mib"         # Italian FTSE MIB
-    SSMI = "smi"                 # Swiss Market Index
-    PSI = "psi"                  # Portuguese PSI
-    ATX = "atx"                  # Austrian ATX
-    OMXS30 = "omxs30"            # Stockholm OMX 30
-    OMXC25 = "omxc25"            # Copenhagen OMX 25
-    WIG20 = "wig20"              # Warsaw WIG 20
-    BUX = "budapest-se"          # Budapest Stock Exchange
-    IMOEX = "moex-russia"        # Moscow Exchange Russia
-    RTSI = "rtsi"                # Russian Trading System
+    FTSE = "ftse-100"  # FTSE 100
+    GDAXI = "dax"  # German DAX
+    FCHI = "cac-40"  # French CAC 40
+    STOXX50E = "euro-stoxx-50"  # Euro Stoxx 50
+    N100 = "euronext-100"  # Euronext 100
+    BFX = "bel-20"  # Belgian BEL 20
+    MOEX_ME = "moex"  # Moscow Exchange
+    AEX = "aex"  # Amsterdam Exchange
+    IBEX = "ibex-35"  # Spanish IBEX 35
+    FTSEMIB = "ftse-mib"  # Italian FTSE MIB
+    SSMI = "smi"  # Swiss Market Index
+    PSI = "psi"  # Portuguese PSI
+    ATX = "atx"  # Austrian ATX
+    OMXS30 = "omxs30"  # Stockholm OMX 30
+    OMXC25 = "omxc25"  # Copenhagen OMX 25
+    WIG20 = "wig20"  # Warsaw WIG 20
+    BUX = "budapest-se"  # Budapest Stock Exchange
+    IMOEX = "moex-russia"  # Moscow Exchange Russia
+    RTSI = "rtsi"  # Russian Trading System
 
     # Asia
-    HSI = "hang-seng"            # Hong Kong Hang Seng
-    STI = "sti"                  # Singapore Straits Times
-    BSESN = "sensex"             # BSE Sensex (India)
-    JKSE = "idx-composite"       # Jakarta Composite
-    KLSE = "ftse-bursa"          # FTSE Bursa Malaysia
-    KS11 = "kospi"               # Korea KOSPI
-    TWII = "twse"                # Taiwan TAIEX
-    N225 = "nikkei-225"          # Nikkei 225
-    SHANGHAI = "shanghai"        # Shanghai Composite
-    SZSE = "szse-component"      # Shenzhen Component
-    SET = "set"                  # Thailand SET
-    NSEI = "nifty-50"            # NSE Nifty 50 (India)
-    CNX200 = "nifty-200"         # NSE Nifty 200
-    PSEI = "psei-composite"      # Philippines PSEi Composite
-    CHINA_A50 = "china-a50"      # FTSE China A50
-    DJSH = "dj-shanghai"         # Dow Jones Shanghai
-    INDIAVIX = "india-vix"       # India VIX
+    HSI = "hang-seng"  # Hong Kong Hang Seng
+    STI = "sti"  # Singapore Straits Times
+    BSESN = "sensex"  # BSE Sensex (India)
+    JKSE = "idx-composite"  # Jakarta Composite
+    KLSE = "ftse-bursa"  # FTSE Bursa Malaysia
+    KS11 = "kospi"  # Korea KOSPI
+    TWII = "twse"  # Taiwan TAIEX
+    N225 = "nikkei-225"  # Nikkei 225
+    SHANGHAI = "shanghai"  # Shanghai Composite
+    SZSE = "szse-component"  # Shenzhen Component
+    SET = "set"  # Thailand SET
+    NSEI = "nifty-50"  # NSE Nifty 50 (India)
+    CNX200 = "nifty-200"  # NSE Nifty 200
+    PSEI = "psei-composite"  # Philippines PSEi Composite
+    CHINA_A50 = "china-a50"  # FTSE China A50
+    DJSH = "dj-shanghai"  # Dow Jones Shanghai
+    INDIAVIX = "india-vix"  # India VIX
 
     # Africa
-    CASE30 = "egx-30"            # Egypt EGX 30
-    JN0U_JO = "jse-40"           # FTSE JSE Top 40- USD Net TRI
-    FTSEJSE = "ftse-jse"         # FTSE/JSE SA Financials Index
-    AFR40 = "afr-40"             # All Africa 40 Rand Index
-    RAF40 = "raf-40"             # RAFI 40 Index
-    SA40 = "sa-40"               # South Africa Top 40
-    ALT15 = "alt-15"             # Alternative 15
+    CASE30 = "egx-30"  # Egypt EGX 30
+    JN0U_JO = "jse-40"  # FTSE JSE Top 40- USD Net TRI
+    FTSEJSE = "ftse-jse"  # FTSE/JSE SA Financials Index
+    AFR40 = "afr-40"  # All Africa 40 Rand Index
+    RAF40 = "raf-40"  # RAFI 40 Index
+    SA40 = "sa-40"  # South Africa Top 40
+    ALT15 = "alt-15"  # Alternative 15
 
     # Middle East
-    TA125_TA = "ta-125"          # Tel Aviv 125
-    TA35 = "ta-35"               # Tel Aviv 35
-    TASI = "tadawul-all-share"   # Tadawul All Share
-    TAMAYUZ = "tamayuz"          # Egyptian Tamayuz
-    BIST100 = "bist-100"         # Borsa Istanbul 100
+    TA125_TA = "ta-125"  # Tel Aviv 125
+    TA35 = "ta-35"  # Tel Aviv 35
+    TASI = "tadawul-all-share"  # Tadawul All Share
+    TAMAYUZ = "tamayuz"  # Egyptian Tamayuz
+    BIST100 = "bist-100"  # Borsa Istanbul 100
 
     # Oceania
-    AXJO = "asx-200"             # ASX 200 (Australia)
-    AORD = "all-ordinaries"      # All Ordinaries (Australia)
-    NZ50 = "nzx-50"              # NZX 50 (New Zealand)
+    AXJO = "asx-200"  # ASX 200 (Australia)
+    AORD = "all-ordinaries"  # All Ordinaries (Australia)
+    NZ50 = "nzx-50"  # NZX 50 (New Zealand)
 
     # Global/Currency
-    DX_Y_NYB = "usd"             # US Dollar Index
-    USD_STRD = "msci-europe"     # MSCI Europe USD
-    XDB = "gbp"                  # British Pound
-    XDE = "euro"                 # Euro
-    XDN = "yen"                  # Japanese Yen
-    XDA = "australian"           # Australian Dollar
-    MSCI_WORLD = "msci-world"    # MSCI World Index
-    BUK100P = "cboe-uk-100"      # CBOE UK 100
+    DX_Y_NYB = "usd"  # US Dollar Index
+    USD_STRD = "msci-europe"  # MSCI Europe USD
+    XDB = "gbp"  # British Pound
+    XDE = "euro"  # Euro
+    XDN = "yen"  # Japanese Yen
+    XDA = "australian"  # Australian Dollar
+    MSCI_WORLD = "msci-world"  # MSCI World Index
+    BUK100P = "cboe-uk-100"  # CBOE UK 100
 
 
 # Mapping of indices to their regions
@@ -296,6 +296,3 @@ class MarketIndex(BaseModel):
         serialization_alias="maxReturn",
         validation_alias=AliasChoices("maxReturn", "max_return")
     )
-
-    def dict(self, *args, **kwargs):
-        return super().model_dump(*args, **kwargs, exclude_none=True, by_alias=True)

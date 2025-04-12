@@ -36,6 +36,3 @@ class MarketMover(BaseModel):
         description="Percentage change in the stock price",
         serialization_alias="percentChange",
         validation_alias=AliasChoices("percentChange", "percent_change"))
-
-    def dict(self, *args, **kwargs):
-        return super().model_dump(*args, **kwargs, exclude_none=True, by_alias=True)

@@ -43,8 +43,6 @@ class RedisCacheHandler:
                 "__type__": obj.__class__.__name__,
                 "data": obj.model_dump(by_alias=True, exclude_none=True)
             }
-        if hasattr(obj, 'to_dict'):
-            return obj.to_dict()
         raise TypeError(f"Object of type {type(obj)} is not JSON serializable")
 
     def serialize_data(self, data: Any) -> bytes:

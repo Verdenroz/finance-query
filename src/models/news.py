@@ -27,7 +27,3 @@ class News(BaseModel):
         examples=["1 day ago"],
         description="Time relative to current time when the news was published"
     )
-
-    def dict(self, *args, **kwargs):
-        base_dict = super().model_dump(*args, **kwargs, exclude_none=True, by_alias=True)
-        return {k: v for k, v in base_dict.items() if v is not None}

@@ -292,6 +292,3 @@ class Quote(BaseModel):
         examples=["https://logo.clearbit.com/apple.com"],
         description="Company logo"
     )
-
-    def dict(self, *args, **kwargs):
-        return super().model_dump(*args, **kwargs, by_alias=True, exclude_none=True)

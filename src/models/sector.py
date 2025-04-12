@@ -92,6 +92,3 @@ class MarketSectorDetails(MarketSector):
         alias="topCompanies",
         validation_alias=AliasChoices("topCompanies", "top_companies")
     )
-
-    def dict(self, *args, **kwargs):
-        return super().dict(*args, **kwargs, exclude_none=True, by_alias=True)
