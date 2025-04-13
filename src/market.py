@@ -73,27 +73,38 @@ class MarketSchedule:
             date(self.year, 7, 4): "Independence Day",
             date(self.year, 12, 25): "Christmas Day",
 
-            # Nth weekday of month holidays
+            # Weekday-based holidays
             self._get_nth_weekday_of_month(self.year, 1, 0, 3): "Martin Luther King Jr. Day",  # 3rd Monday in January
             self._get_nth_weekday_of_month(self.year, 2, 0, 3): "Presidents Day",  # 3rd Monday in February
-            self._get_nth_weekday_of_month(self.year, 5, 0, -1): "Memorial Day",  # Last Monday in May
+            self._get_last_monday_of_month(self.year, 5): "Memorial Day",  # Last Monday in May
             self._get_nth_weekday_of_month(self.year, 9, 0, 1): "Labor Day",  # 1st Monday in September
-            self._get_nth_weekday_of_month(self.year, 11, 4, 4): "Thanksgiving Day",  # 4th Thursday in November
+            self._get_nth_weekday_of_month(self.year, 11, 3, 4): "Thanksgiving Day",  # 4th Thursday in November
 
-            # Special calculations
             self._get_good_friday(self.year): "Good Friday",
         }
 
         # Calculate early closure dates
         self.early_close_dates = {
             date(self.year, 7, 3): "July 3rd",  # Day before Independence Day
-            self._get_nth_weekday_of_month(self.year, 11, 4, 4) + timedelta(days=1): "Black Friday",
+            self._get_nth_weekday_of_month(self.year, 11, 3, 4) + timedelta(days=1): "Black Friday",
             # Day after Thanksgiving
             date(self.year, 12, 24): "Christmas Eve",
         }
-
         # Handle weekend adjustments for fixed-date holidays
         self._adjust_weekend_holidays()
+
+    def _get_last_monday_of_month(self, year: int, month: int) -> date:
+        """Get the last Monday of the given month."""
+        # Get the last day of the month
+        if month == 12:
+            first_day_next = date(year + 1, 1, 1)
+        else:
+            first_day_next = date(year, month + 1, 1)
+        last_day = first_day_next - timedelta(days=1)
+
+        # Get the last Monday by going backwards from the last day
+        days_back = (last_day.weekday() - 0) % 7  # 0 is Monday
+        return last_day - timedelta(days=days_back)
 
     def _adjust_weekend_holidays(self):
         """Adjust fixed-date holidays that fall on weekends."""
@@ -125,6 +136,10 @@ class MarketSchedule:
         current_et = datetime.now(et_tz)
         current_date = current_et.date()
         current_time = current_et.time()
+
+        # Debug time comparison
+        print(
+            f"Current time: {current_time}, Open time: {self.regular_open}, Is open: {current_time >= self.regular_open}")
 
         # Check if it's a weekend
         if current_et.weekday() >= 5:  # 5 is Saturday, 6 is Sunday
