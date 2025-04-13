@@ -87,18 +87,6 @@ def parse_tree(html_content: str) -> etree.ElementTree:
     return html.fromstring(html_content)
 
 
-async def get_company_name(tree: etree.ElementTree):
-    name_path = './/h1/text()'
-    name_container = tree.xpath(name_path)
-    if not name_container:
-        raise HTTPException(status_code=500, detail="Failed to extract company name")
-
-    name_container = name_container[1]
-    company_name = name_container.split('(')[0].strip()
-
-    return company_name
-
-
 async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
     """
     Scrape the price data from the HTML content using XPath and format the data.
