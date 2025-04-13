@@ -87,29 +87,10 @@ def mock_websocket():
 
 @pytest.fixture
 async def redis_connection_manager(mock_redis):
-    """Fixture for a RedisConnectionManager instance with mocked Redis client."""
     with patch('redis.Redis', return_value=mock_redis):
-        # Make redis.publish return an awaitable mock
-        mock_redis.publish = AsyncMock()
-
+        mock_redis.publish = MagicMock(return_value=None)
         manager = RedisConnectionManager(mock_redis)
-
-        # Monkey patch the _listen_to_channel method to prevent it from actually running
-        original_listen = manager._listen_to_channel
-
-        async def mock_listen_to_channel(channel):
-            # Create a dummy task that doesn't do anything
-            await asyncio.sleep(0)
-
-        manager._listen_to_channel = mock_listen_to_channel
-
-        try:
-            yield manager
-        finally:
-            # Restore the original method
-            manager._listen_to_channel = original_listen
-            await manager.close()
-
+        return manager
 
 @pytest.fixture
 def connection_manager():
