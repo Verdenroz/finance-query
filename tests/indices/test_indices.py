@@ -239,7 +239,7 @@ class TestIndices:
         error_detail = response.json()["errors"]
         assert "index.0" in error_detail
 
-    @pytest.mark.asyncio
+    
     async def test_get_indices(self, bypass_cache):
         """Test get_indices function with all indices"""
         test_cookies = "mock_cookies"
@@ -261,7 +261,7 @@ class TestIndices:
             assert all(isinstance(index, MarketIndex) for index in result)
             assert mock_fetch_index.call_count == len(indices)
 
-    @pytest.mark.asyncio
+    
     async def test_get_indices_error_handling(self, bypass_cache):
         """Test get_indices handles errors correctly"""
         test_cookies = "mock_cookies"
@@ -285,7 +285,7 @@ class TestIndices:
             result = await get_indices(test_cookies, test_crumb, test_indices)
             assert len(result) == 3
 
-    @pytest.mark.asyncio
+    
     async def test_get_indices_missing_credentials(self, bypass_cache):
         """Test get_indices raises error with missing credentials"""
         with pytest.raises(ValueError):
@@ -294,7 +294,7 @@ class TestIndices:
             await get_indices("cookies", "")
 
     @pytest.mark.parametrize("index", [Index.GSPC, Index.DJI])
-    @pytest.mark.asyncio
+    
     async def test_fetch_index(self, mock_api_response, index, bypass_cache):
         """Test fetch_index function with mocked API response"""
         test_cookies = "mock_cookies"
@@ -318,7 +318,7 @@ class TestIndices:
             assert result.percent_change.startswith(('+', '-'))
 
     @pytest.mark.parametrize("index", [Index.GSPC, Index.DJI])
-    @pytest.mark.asyncio
+    
     async def test_fetch_index_failure(self, mock_api_response, index):
         """Test fetch_index function with mocked API response failure"""
         test_cookies = "mock_cookies"

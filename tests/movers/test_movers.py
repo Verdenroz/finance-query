@@ -52,6 +52,7 @@ COUNT_RESPONSE_MAP = {
 # Test data for endpoints
 ENDPOINTS = ["actives", "gainers", "losers"]
 
+
 class TestMovers:
     @pytest.fixture
     def cached_html_content(self):
@@ -98,6 +99,7 @@ class TestMovers:
         """
         Fixture that provides mock Yahoo Finance API responses for movers.
         """
+
         def get_mock_response(count=50):
             mock_items = []
             for i in range(1, count + 1):
@@ -116,6 +118,7 @@ class TestMovers:
                     ]
                 }
             }
+
         return get_mock_response
 
     @pytest.mark.parametrize("count", ["25", "50", "100"])
@@ -169,7 +172,6 @@ class TestMovers:
         assert "count" in data["errors"]
         assert "Input should be '25', '50' or '100'" in data["errors"]["count"]
 
-    @pytest.mark.asyncio
     async def test_fetch_movers(self, mock_api_response, bypass_cache):
         """Test fetch_movers function with mocked API response"""
         test_url = (
@@ -198,19 +200,18 @@ class TestMovers:
         assert all(isinstance(m, MarketMover) for m in result)
         expected_params = {
             "fields": (
-                "symbol,longName,shortName,regularMarketPrice,"  
+                "symbol,longName,shortName,regularMarketPrice,"
                 "regularMarketChange,regularMarketChangePercent"
             ),
         }
         mock_fetch.assert_called_once_with(url=test_url, params=expected_params)
         for i, mover in enumerate(result):
-            assert mover.symbol == f"SYM{i+1}"
-            assert mover.name == f"Company {i+1} Long"
-            assert mover.price == f"{100 + i+1:.2f}"
-            assert mover.change == f"+{(i+1)*0.5:.2f}"
-            assert mover.percent_change == f"+{(i+1)*0.5:.2f}%"
+            assert mover.symbol == f"SYM{i + 1}"
+            assert mover.name == f"Company {i + 1} Long"
+            assert mover.price == f"{100 + i + 1:.2f}"
+            assert mover.change == f"+{(i + 1) * 0.5:.2f}"
+            assert mover.percent_change == f"+{(i + 1) * 0.5:.2f}%"
 
-    @pytest.mark.asyncio
     async def test_scrape_movers(self, cached_html_content, bypass_cache):
         """Test scrape_movers function with cached HTML content"""
         test_url = (
@@ -224,7 +225,7 @@ class TestMovers:
         assert isinstance(result, list)
         assert len(result) == 50
         assert all(isinstance(m, MarketMover) for m in result)
-        assert all(m.change.startswith(('+','-','0')) for m in result)
+        assert all(m.change.startswith(('+', '-', '0')) for m in result)
         assert all(m.percent_change.endswith('%') for m in result)
         mock_fetch.assert_called_once_with(url=test_url)
 
@@ -239,14 +240,15 @@ class TestMovers:
          "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=DAY_LOSERS",
          "https://finance.yahoo.com/markets/stocks/losers/?start=0&count=50")
     ])
-    @pytest.mark.asyncio
-    async def test_get_movers_services_fallback(self, service_func, api_url, scrape_url, bypass_cache, cached_html_content):
+    async def test_get_movers_services_fallback(self, service_func, api_url, scrape_url, bypass_cache,
+                                                cached_html_content):
         """Test get_movers service functions when API fetch fails and falls back to scraping"""
         test_count = MoverCount.FIFTY
         with patch('src.services.movers.get_movers.fetch_movers', new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = Exception("API failure")
             html_content = cached_html_content(scrape_url)
-            with patch('src.services.movers.fetchers.movers_scraper.fetch', new_callable=AsyncMock) as mock_scrape_fetch:
+            with patch('src.services.movers.fetchers.movers_scraper.fetch',
+                       new_callable=AsyncMock) as mock_scrape_fetch:
                 mock_scrape_fetch.return_value = html_content
                 result = await service_func(test_count)
 
