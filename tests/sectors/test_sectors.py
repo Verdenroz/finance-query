@@ -20,7 +20,7 @@ class TestSectors:
         If the HTML is not cached, it will fetch and cache it.
         """
         # Path for storing cached HTML responses
-        cache_dir = Path(__file__).parent / "data" / "sectors"
+        cache_dir = Path(__file__).resolve().parent.parent / "data" / "sectors"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a dictionary to store HTML content by URL
@@ -61,7 +61,7 @@ class TestSectors:
         If the data is not cached, it will create mock data and cache it.
         """
         # Path for storing cached Yahoo API responses
-        cache_dir = Path(__file__).parent / "data" / "yahoo"
+        cache_dir = Path(__file__).resolve().parent.parent / "data" / "yahoo"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         # Create a dictionary to store data by symbol

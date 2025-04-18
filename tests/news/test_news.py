@@ -44,7 +44,7 @@ class TestNews:
         Fixture that provides a function to get cached HTML content for URLs.
         If the HTML is not cached, it will fetch and cache it from the real URL.
         """
-        cache_dir = Path(__file__).parent / "data" / "news"
+        cache_dir = Path(__file__).resolve().parent.parent / "data" / "news"
         cache_dir.mkdir(parents=True, exist_ok=True)
 
         html_cache = {}

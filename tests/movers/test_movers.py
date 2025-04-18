@@ -59,7 +59,7 @@ class TestMovers:
         """
         Fixture that provides a function to get cached HTML content for URLs.
         """
-        cache_dir = Path(__file__).parent / "data" / "movers"
+        cache_dir = Path(__file__).resolve().parent.parent / "data" / "movers"
         cache_dir.mkdir(parents=True, exist_ok=True)
         html_cache = {}
 
