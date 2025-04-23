@@ -16,7 +16,7 @@ from tests.conftest import VERSION
 
 class TestSimilarQuotesHandler:
     @pytest.fixture
-    def cached_html_content(self):
+    def similar_quotes_html(self):
         """
         Fixture that provides a function to get cached HTML content for URLs.
         If the HTML is not cached, it will fetch and cache it.
@@ -59,10 +59,15 @@ class TestSimilarQuotesHandler:
             html_cache[url] = html_content
             return html_content
 
-        return get_cached_html
+        yield get_cached_html
+        # Cleanup on teardown
+        for file in cache_dir.glob("*.html"):
+            file.unlink()
+        if cache_dir.exists():
+            cache_dir.rmdir()
 
     @pytest.fixture
-    def cached_recommendation_data(self):
+    def yahoo_recommendations(self):
         """
         Fixture that provides a function to get cached Yahoo recommendation data for symbols.
         If the data is not cached, it will create mock data and cache it.
@@ -125,7 +130,12 @@ class TestSimilarQuotesHandler:
             data_cache[symbol] = yahoo_data
             return yahoo_data
 
-        return get_cached_data
+        yield get_cached_data
+        # Cleanup on teardown
+        for file in cache_dir.glob("*.json"):
+            file.unlink()
+        if cache_dir.exists():
+            cache_dir.rmdir()
 
     @pytest.fixture
     def cached_quote_data(self):
@@ -207,7 +217,12 @@ class TestSimilarQuotesHandler:
             data_cache[symbols_key] = quotes_data
             return quotes_data
 
-        return get_cached_data
+        yield get_cached_data
+        # Cleanup on teardown
+        for file in cache_dir.glob("*.json"):
+            file.unlink()
+        if cache_dir.exists():
+            cache_dir.rmdir()
 
     async def test_similar_quotes_endpoint(self, test_client, monkeypatch, mock_yahoo_auth):
         """Test the /similar endpoint"""
@@ -251,7 +266,7 @@ class TestSimilarQuotesHandler:
         assert len(data) == 1
         assert data[0]["symbol"] == "AMD"
 
-    async def test_fetch_yahoo_recommended_symbols(self, cached_recommendation_data, bypass_cache):
+    async def test_fetch_yahoo_recommended_symbols(self, yahoo_recommendations, bypass_cache):
         """Test _fetch_yahoo_recommended_symbols function with cached data"""
 
         test_symbols = ['AAPL', 'MSFT', 'NVDA', 'JPM']
@@ -259,7 +274,7 @@ class TestSimilarQuotesHandler:
 
         for symbol in test_symbols:
             # Get cached recommendation data
-            yahoo_data = cached_recommendation_data(symbol)
+            yahoo_data = yahoo_recommendations(symbol)
 
             # Expected recommendations from the cached data
             recommendations = yahoo_data["finance"]["result"][0]["recommendedSymbols"]
@@ -281,7 +296,7 @@ class TestSimilarQuotesHandler:
                 assert call_args["url"] == f"https://query1.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
                 assert call_args["params"] == {"count": test_limit}  # Verify limit is passed to API
 
-    async def test_fetch_similar(self, cached_recommendation_data, cached_quote_data, bypass_cache):
+    async def test_fetch_similar(self, yahoo_recommendations, cached_quote_data, bypass_cache):
         """Test fetch_similar function with cached data"""
 
         test_symbol = 'NVDA'
@@ -290,7 +305,7 @@ class TestSimilarQuotesHandler:
         test_crumb = 'test_crumb'
 
         # Get cached recommendation data
-        yahoo_data = cached_recommendation_data(test_symbol)
+        yahoo_data = yahoo_recommendations(test_symbol)
         recommendations = yahoo_data["finance"]["result"][0]["recommendedSymbols"]
         recommended_symbols = [rec["symbol"] for rec in recommendations[:test_limit]]
 
@@ -338,7 +353,7 @@ class TestSimilarQuotesHandler:
             assert excinfo.value.status_code == 404
             assert "No similar stocks found or invalid symbol" in excinfo.value.detail
 
-    async def test_scrape_similar_quotes(self, cached_html_content, bypass_cache):
+    async def test_scrape_similar_quotes(self, similar_quotes_html, bypass_cache):
         """Test scrape_similar_quotes function with cached HTML content"""
         test_symbols = ['AAPL', 'MSFT', 'NVDA', 'JPM', 'TQQQ', 'SPY']
         test_limit = 5
@@ -346,7 +361,7 @@ class TestSimilarQuotesHandler:
         for symbol in test_symbols:
             # Get cached HTML for this symbol
             url = f'https://finance.yahoo.com/quote/{symbol}'
-            html_content = cached_html_content(url)
+            html_content = similar_quotes_html(url)
 
             # Mock the fetch function
             with patch('src.services.similar.fetchers.similar_scraper.fetch', new_callable=AsyncMock) as mock_fetch:

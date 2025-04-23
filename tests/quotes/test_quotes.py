@@ -54,7 +54,7 @@ MOCK_SIMPLE_QUOTE_RESPONSE = {
 
 class TestQuotes:
     @pytest.fixture
-    def cached_html_content(self):
+    def quote_html(self):
         """
         Fixture that provides a function to get cached HTML content for URLs.
         If the HTML is not cached, it will fetch and cache it from the real URL.
@@ -83,7 +83,12 @@ class TestQuotes:
             html_cache[url] = html_content
             return html_content
 
-        return get_cached_html
+        yield get_cached_html
+        # Cleanup on teardown
+        for file in cache_dir.glob("*.html"):
+            file.unlink()
+        if cache_dir.exists():
+            cache_dir.rmdir()
 
     @pytest.fixture
     def mock_api_response(self):
@@ -188,11 +193,11 @@ class TestQuotes:
             mock_fetch.assert_called()
 
     @pytest.mark.parametrize("symbols", [["NVDA"], ["AAPL", "MSFT"]])
-    async def test_scrape_quotes(self, cached_html_content, symbols, bypass_cache):
+    async def test_scrape_quotes(self, quote_html, symbols, bypass_cache):
         """Test scrape_quotes function with cached HTML content"""
         test_url = f"https://finance.yahoo.com/quote/{symbols[0]}/"
 
-        html_content = cached_html_content(test_url)
+        html_content = quote_html(test_url)
 
         with patch('src.services.quotes.fetchers.quote_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
@@ -231,11 +236,11 @@ class TestQuotes:
             mock_fetch.assert_called()
 
     @pytest.mark.parametrize("symbols", [["NVDA"], ["AAPL", "MSFT"]])
-    async def test_scrape_simple_quotes(self, cached_html_content, symbols, bypass_cache):
+    async def test_scrape_simple_quotes(self, quote_html, symbols, bypass_cache):
         """Test scrape_simple_quotes function with cached HTML content"""
         test_url = f"https://finance.yahoo.com/quote/{symbols[0]}/"
 
-        html_content = cached_html_content(test_url)
+        html_content = quote_html(test_url)
 
         with patch('src.services.quotes.fetchers.quote_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content

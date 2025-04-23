@@ -1,4 +1,5 @@
 import hashlib
+from os import rmdir
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
@@ -39,7 +40,7 @@ MOCK_SYMBOL_NEWS_RESPONSE = [
 
 class TestNews:
     @pytest.fixture
-    def cached_html_content(self):
+    def news_html(self):
         """
         Fixture that provides a function to get cached HTML content for URLs.
         If the HTML is not cached, it will fetch and cache it from the real URL.
@@ -67,7 +68,12 @@ class TestNews:
             html_cache[url] = html_content
             return html_content
 
-        return get_cached_html
+        yield get_cached_html
+        # Cleanup on teardown
+        for file in cache_dir.glob("*.html"):
+            file.unlink()
+        if cache_dir.exists():
+            cache_dir.rmdir()
 
     @pytest.mark.parametrize("symbol,expected_base,expected_exchange", [
         ("AAPL", "AAPL", None),
@@ -89,9 +95,9 @@ class TestNews:
         ("TQQQ", "https://stockanalysis.com/etf/TQQQ"),
         ("NVDA.TO", "https://stockanalysis.com/quote/tsx/NVDA"),  # should be verified from last test
     ])
-    async def test_scrape_news_for_quote(self, cached_html_content, symbol, test_url, bypass_cache):
+    async def test_scrape_news_for_quote(self, news_html, symbol, test_url, bypass_cache):
         """Test scrape_news_for_quote function with cached HTML content"""
-        html_content = cached_html_content(test_url, symbol=symbol)
+        html_content = news_html(test_url, symbol=symbol)
 
         with patch('src.services.news.get_news.fetch', new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
@@ -104,10 +110,10 @@ class TestNews:
 
             mock_fetch.assert_called()
 
-    async def test_scrape_general_news(self, cached_html_content, bypass_cache):
+    async def test_scrape_general_news(self, news_html, bypass_cache):
         """Test scrape_general_news function with cached HTML content"""
         test_url = "https://stockanalysis.com/news/"
-        html_content = cached_html_content(test_url)
+        html_content = news_html(test_url)
 
         with patch('src.services.news.get_news.fetch', new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content

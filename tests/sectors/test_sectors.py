@@ -14,7 +14,7 @@ from tests.conftest import VERSION
 
 class TestSectors:
     @pytest.fixture
-    def cached_html_content(self):
+    def sector_html(self):
         """
         Fixture that provides a function to get cached HTML content for URLs.
         If the HTML is not cached, it will fetch and cache it.
@@ -52,10 +52,15 @@ class TestSectors:
             html_cache[url] = html_content
             return html_content
 
-        return get_cached_html
+        yield get_cached_html
+        # Cleanup on teardown
+        for file in cache_dir.glob("*.html"):
+            file.unlink()
+        if cache_dir.exists():
+            cache_dir.rmdir()
 
     @pytest.fixture
-    def cached_yahoo_data(self):
+    def yahoo_sectors(self):
         """
         Fixture that provides a function to get cached Yahoo API data for symbols.
         If the data is not cached, it will create mock data and cache it.
@@ -121,7 +126,12 @@ class TestSectors:
             data_cache[symbol] = yahoo_data
             return yahoo_data
 
-        return get_cached_data
+        yield get_cached_data
+        # Cleanup on teardown
+        for file in cache_dir.glob("*.json"):
+            file.unlink()
+        if cache_dir.exists():
+            cache_dir.rmdir()
 
     async def test_sectors_endpoint(self, test_client, monkeypatch):
         """Test the /sectors endpoint"""
@@ -213,14 +223,14 @@ class TestSectors:
         response = test_client.get(f"/{VERSION}/sectors/details/invalid")
         assert response.status_code == 422  # Validation error
 
-    async def test_get_sectors(self, cached_html_content, bypass_cache):
+    async def test_get_sectors(self, sector_html, bypass_cache):
         """Test the sector scraping service with real cached HTML responses"""
         # Create a dictionary to store HTML content by URL
         html_cache = {}
 
         # Prepare HTML cache for each sector URL
         for sector, url in urls.items():
-            html_content = cached_html_content(url)
+            html_content = sector_html(url)
             html_cache[url] = html_content
 
         # Create a fetch mock that returns cached HTML directly
@@ -257,14 +267,14 @@ class TestSectors:
             assert sector_data.three_year_return.endswith("%")
             assert sector_data.five_year_return.endswith("%")
 
-    async def test_get_yahoo_sector(self, cached_yahoo_data, bypass_cache):
+    async def test_get_yahoo_sector(self, yahoo_sectors, bypass_cache):
         """Test the get_yahoo_sector function with cached Yahoo API data"""
         # Get test symbols
         test_symbols = ['AAPL', 'MSFT', 'JPM', 'PFE']
 
         for symbol in test_symbols:
             # Get cached data for this symbol
-            yahoo_data = cached_yahoo_data(symbol)
+            yahoo_data = yahoo_sectors(symbol)
 
             # Expected sector from the cached data
             expected_sector = yahoo_data['quoteSummary']['result'][0]['assetProfile']['sector']
@@ -282,21 +292,21 @@ class TestSectors:
                 # Verify the fetch function was called with correct parameters
                 mock_fetch.assert_called_once_with(symbol, 'test_cookies', 'test_crumb')
 
-    async def test_get_sector_for_symbol(self, cached_yahoo_data, cached_html_content, bypass_cache):
+    async def test_get_sector_for_symbol(self, yahoo_sectors, sector_html, bypass_cache):
         """Test the get_sector_for_symbol function with cached data"""
         # Set up test symbols
         test_symbols = ['AAPL', 'MSFT', 'JPM', 'PFE']
 
         for symbol in test_symbols:
             # Get cached Yahoo data for this symbol
-            yahoo_data = cached_yahoo_data(symbol)
+            yahoo_data = yahoo_sectors(symbol)
             expected_sector = yahoo_data['quoteSummary']['result'][0]['assetProfile']['sector']
 
             # Get the sector URL
             sector_url = urls[Sector(expected_sector)]
 
             # Get cached HTML for this sector
-            html_content = cached_html_content(sector_url)
+            html_content = sector_html(sector_url)
 
             # Mock the necessary functions
             with patch('src.services.sectors.get_sectors.get_yahoo_sector', new_callable=AsyncMock) as mock_get_sector, \
@@ -343,7 +353,7 @@ class TestSectors:
             assert excinfo.value.status_code == 404
             assert "Sector for UNKNOWN not found" in excinfo.value.detail
 
-    async def test_get_sector_details(self, cached_html_content, bypass_cache):
+    async def test_get_sector_details(self, sector_html, bypass_cache):
         """Test the get_sector_details function with cached HTML content"""
         # Test with all sectors
         test_sectors = list(Sector)
@@ -351,7 +361,7 @@ class TestSectors:
         for sector in test_sectors:
             # Get cached HTML for this sector
             url = urls[sector]
-            html_content = cached_html_content(url)
+            html_content = sector_html(url)
 
             # Mock the fetch function
             with patch('src.services.sectors.get_sectors.fetch', new_callable=AsyncMock) as mock_fetch:

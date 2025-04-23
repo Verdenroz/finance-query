@@ -55,7 +55,7 @@ ENDPOINTS = ["actives", "gainers", "losers"]
 
 class TestMovers:
     @pytest.fixture
-    def cached_html_content(self):
+    def movers_html(self):
         """
         Fixture that provides a function to get cached HTML content for URLs.
         """
@@ -92,7 +92,12 @@ class TestMovers:
             html_cache[url] = html_content
             return html_content
 
-        return get_cached_html
+        yield get_cached_html
+        # Cleanup on teardown
+        for file in cache_dir.glob("*.html"):
+            file.unlink()
+        if cache_dir.exists():
+            cache_dir.rmdir()
 
     @pytest.fixture
     def mock_api_response(self):
@@ -212,12 +217,12 @@ class TestMovers:
             assert mover.change == f"+{(i + 1) * 0.5:.2f}"
             assert mover.percent_change == f"+{(i + 1) * 0.5:.2f}%"
 
-    async def test_scrape_movers(self, cached_html_content, bypass_cache):
+    async def test_scrape_movers(self, movers_html, bypass_cache):
         """Test scrape_movers function with cached HTML content"""
         test_url = (
             "https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50"
         )
-        html_content = cached_html_content(test_url)
+        html_content = movers_html(test_url)
         with patch('src.services.movers.fetchers.movers_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
             result = await scrape_movers(test_url)
@@ -241,12 +246,12 @@ class TestMovers:
          "https://finance.yahoo.com/markets/stocks/losers/?start=0&count=50")
     ])
     async def test_get_movers_services_fallback(self, service_func, api_url, scrape_url, bypass_cache,
-                                                cached_html_content):
+                                                movers_html):
         """Test get_movers service functions when API fetch fails and falls back to scraping"""
         test_count = MoverCount.FIFTY
         with patch('src.services.movers.get_movers.fetch_movers', new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = Exception("API failure")
-            html_content = cached_html_content(scrape_url)
+            html_content = movers_html(scrape_url)
             with patch('src.services.movers.fetchers.movers_scraper.fetch',
                        new_callable=AsyncMock) as mock_scrape_fetch:
                 mock_scrape_fetch.return_value = html_content
