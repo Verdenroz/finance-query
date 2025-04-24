@@ -62,8 +62,6 @@ source = ["src"]
 tests = ["test", "*/test"]
 
 [tool.coverage.run]
-parallel = true
-branch = true
 source = ["src"]
 
 [tool.coverage.report]
