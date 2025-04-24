@@ -27,6 +27,11 @@ class TestRedisCacheHandler:
         return schedule
 
     @pytest.fixture
+    def mock_redis_env(self, monkeypatch):
+        """Set up environment for Redis cache"""
+        monkeypatch.setenv("REDIS_URL", "redis://localhost:6379")
+
+    @pytest.fixture
     def handler(self, market_schedule):
         """Create a RedisCacheHandler with default expire time"""
         return RedisCacheHandler(expire=60, market_closed_expire=300, market_schedule=market_schedule)
@@ -319,34 +324,44 @@ class TestCacheDecorator:
         assert info_final.misses == 2
 
     @patch('src.cache.asyncio.Lock')
-    async def test_cache_concurrency(self, mock_lock, bypass_cache):
+    async def test_cache_concurrency(self, mock_lock, mock_redis_env):
         """Test that cache uses a lock to prevent concurrent function execution"""
-        # Setup mock lock
-        mock_lock_instance = AsyncMock()
-        mock_lock_context = AsyncMock()
-        mock_lock_instance.__aenter__.return_value = mock_lock_context
-        mock_lock.return_value = mock_lock_instance
+        # Mock request context
+        redis_mock = MagicMock()
+        request_mock = MagicMock()
+        request_mock.app.state.redis = redis_mock
+        token = request_context.set(request_mock)
 
-        call_count = 0
+        try:
+            # Setup mock lock
+            mock_lock_instance = AsyncMock()
+            mock_lock_context = AsyncMock()
+            mock_lock_instance.__aenter__.return_value = mock_lock_context
+            mock_lock.return_value = mock_lock_instance
 
-        @cache(expire=60, memcache=False)
-        async def slow_function() -> int:
-            nonlocal call_count
-            call_count += 1
-            await asyncio.sleep(0.1)
-            return call_count
+            call_count = 0
 
-        # Call the function concurrently
-        tasks = [slow_function() for _ in range(5)]
-        results = await asyncio.gather(*tasks)
+            @cache(expire=60, memcache=False)
+            async def slow_function() -> int:
+                nonlocal call_count
+                call_count += 1
+                await asyncio.sleep(0.1)
+                return call_count
 
-        # Lock should be acquired once per call
-        assert mock_lock_instance.__aenter__.call_count == 5
-        assert mock_lock_instance.__aexit__.call_count == 5
+            # Call the function concurrently
+            tasks = [slow_function() for _ in range(5)]
+            results = await asyncio.gather(*tasks)
 
-        # Function should be called 5 times (bypassing cache)
-        assert call_count == 5
-        assert all(result in [1, 2, 3, 4, 5] for result in results)
+            # Lock should be acquired once per call
+            assert mock_lock_instance.__aenter__.call_count == 5
+            assert mock_lock_instance.__aexit__.call_count == 5
+
+            # Function should be called 5 times
+            assert call_count == 5
+            assert all(result in [1, 2, 3, 4, 5] for result in results)
+
+        finally:
+            request_context.reset(token)
 
     @patch('os.getenv')
     async def test_cache_expiry(self, mock_getenv):
