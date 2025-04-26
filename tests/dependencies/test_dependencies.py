@@ -7,12 +7,12 @@ from fastapi import HTTPException, FastAPI
 from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager
+from src.context import request_context
 from src.dependencies import (
     get_request_context, get_connection_manager, get_session,
     fetch, get_logo, get_auth_data, get_crumb,
     refresh_yahoo_auth, setup_proxy_whitelist, remove_proxy_whitelist
 )
-from src.context import request_context
 
 
 class TestDependencies:
@@ -159,48 +159,57 @@ class TestDependencies:
 
             assert result == "test response"
 
+    @pytest.mark.parametrize("use_proxy,proxy_value,proxy_auth_value", [
+        (False, None, None),  # No proxy
+        (True, "http://test.proxy", "test_auth"),  # With proxy
+    ])
     @patch('os.getenv')
-    async def test_fetch_return_response(self, mock_getenv):
-        """Test fetch function with return_response=True"""
-        mock_getenv.return_value = 'False'  # USE_PROXY=False
+    async def test_fetch_return_response(self, mock_getenv, use_proxy, proxy_value, proxy_auth_value):
+        """Test fetch function with return_response=True for both proxy settings"""
+        # Set environment variable according to test case
+        mock_getenv.return_value = 'True' if use_proxy else 'False'
         mock_session = AsyncMock(spec=ClientSession)
-
-        # Create mock response
         mock_response = AsyncMock()
         mock_response.read = AsyncMock(return_value=b'response content')
 
-        # Configure context manager for successful response
         async_cm = AsyncMock()
         async_cm.__aenter__.return_value = mock_response
         mock_session.request.return_value = async_cm
 
-        # Test successful case with return_response=True
-        result = await fetch.__wrapped__(
-            session=mock_session,
-            url="https://example.com",
-            return_response=True
-        )
+        # Apply proxy patches conditionally
+        with patch('src.dependencies.proxy', proxy_value):
+            with patch('src.dependencies.proxy_auth', proxy_auth_value):
+                result = await fetch.__wrapped__(
+                    session=mock_session,
+                    url="https://example.com",
+                    return_response=True,
+                    use_proxy=use_proxy
+                )
 
-        # Verify request was made correctly
+        # Check response body was set correctly
+        assert hasattr(result, '_body')
+        assert result._body == b'response content'
+
+        # Verify request was made with correct proxy settings
         mock_session.request.assert_called_with(
             method="GET",
             url="https://example.com",
             params=None,
             headers=None,
-            proxy=None,
-            proxy_auth=None,
+            proxy=proxy_value,
+            proxy_auth=proxy_auth_value,
             timeout=5
         )
 
-        # Verify response was returned with content
-        assert result == mock_response
-        assert result._body == b'response content'
-        mock_response.read.assert_called_once()
-
+    @pytest.mark.parametrize("use_proxy,proxy_value,proxy_auth_value", [
+        (False, None, None),  # No proxy
+        (True, "http://test.proxy", "test_auth"),  # With proxy
+    ])
     @patch('os.getenv')
-    async def test_fetch_with_retry(self, mock_getenv):
-        """Test fetch retry logic on failure"""
-        mock_getenv.return_value = 'False'  # USE_PROXY=False
+    async def test_fetch_with_retry(self, mock_getenv, use_proxy, proxy_value, proxy_auth_value):
+        """Test fetch retry logic on failure with and without proxy"""
+        # Set environment variable according to test case
+        mock_getenv.return_value = 'True' if use_proxy else 'False'
         mock_session = AsyncMock(spec=ClientSession)
 
         # Create mock context managers that raise exceptions
@@ -220,13 +229,15 @@ class TestDependencies:
         mock_session.request.side_effect = [error_cm1, error_cm2, success_cm]
 
         with patch('asyncio.sleep', AsyncMock()) as mock_sleep:
-            result = await fetch.__wrapped__(
-                session=mock_session,
-                url="https://example.com",
-                max_retries=3,
-                retry_delay=0.1,
-                use_proxy=False
-            )
+            with patch('src.dependencies.proxy', proxy_value):
+                with patch('src.dependencies.proxy_auth', proxy_auth_value):
+                    result = await fetch.__wrapped__(
+                        session=mock_session,
+                        url="https://example.com",
+                        max_retries=3,
+                        retry_delay=0.1,
+                        use_proxy=use_proxy
+                    )
 
         # Verify sleep was called between retries
         assert mock_sleep.call_count == 2
@@ -234,12 +245,26 @@ class TestDependencies:
 
         # Verify request was attempted 3 times
         assert mock_session.request.call_count == 3
+
+        # Verify proxy settings were correctly applied
+        for i in range(3):
+            assert mock_session.request.call_args_list[i].kwargs['method'] == "GET"
+            assert mock_session.request.call_args_list[i].kwargs['url'] == "https://example.com"
+            assert mock_session.request.call_args_list[i].kwargs['proxy'] == proxy_value
+            assert mock_session.request.call_args_list[i].kwargs['proxy_auth'] == proxy_auth_value
+
+        # Verify result is as expected
         assert result == "success"
 
+    @pytest.mark.parametrize("use_proxy,proxy_value,proxy_auth_value", [
+        (False, None, None),  # No proxy
+        (True, "http://test.proxy", "test_auth"),  # With proxy
+    ])
     @patch('os.getenv')
-    async def test_fetch_max_retries_exceeded(self, mock_getenv):
-        """Test fetch raises HTTPException when max retries exceeded"""
-        mock_getenv.return_value = 'False'  # USE_PROXY=False
+    async def test_fetch_max_retries_exceeded(self, mock_getenv, use_proxy, proxy_value, proxy_auth_value):
+        """Test fetch raises HTTPException when max retries exceeded with and without proxy"""
+        # Set environment variable according to test case
+        mock_getenv.return_value = 'True' if use_proxy else 'False'
         mock_session = AsyncMock(spec=ClientSession)
 
         # Create mock context managers that raise exceptions
@@ -253,17 +278,30 @@ class TestDependencies:
         mock_session.request.side_effect = [error_cm1, error_cm2]
 
         with patch('asyncio.sleep', AsyncMock()):
-            with pytest.raises(HTTPException) as excinfo:
-                await fetch.__wrapped__(
-                    session=mock_session,
-                    url="https://example.com",
-                    max_retries=2,
-                    retry_delay=0.1,
-                    use_proxy=False
-                )
+            with patch('src.dependencies.proxy', proxy_value):
+                with patch('src.dependencies.proxy_auth', proxy_auth_value):
+                    with pytest.raises(HTTPException) as excinfo:
+                        await fetch.__wrapped__(
+                            session=mock_session,
+                            url="https://example.com",
+                            max_retries=2,
+                            retry_delay=0.1,
+                            use_proxy=use_proxy
+                        )
 
+        # Verify error details
         assert excinfo.value.status_code == 500
         assert "Request failed after 2 attempts" in str(excinfo.value.detail)
+
+        # Verify request was attempted twice
+        assert mock_session.request.call_count == 2
+
+        # Verify proxy settings were correctly applied
+        for i in range(2):
+            assert mock_session.request.call_args_list[i].kwargs['method'] == "GET"
+            assert mock_session.request.call_args_list[i].kwargs['url'] == "https://example.com"
+            assert mock_session.request.call_args_list[i].kwargs['proxy'] == proxy_value
+            assert mock_session.request.call_args_list[i].kwargs['proxy_auth'] == proxy_auth_value
 
     async def test_get_logo_from_symbol(self):
         """Test get_logo function with symbol"""
