@@ -137,10 +137,6 @@ class MarketSchedule:
         current_date = current_et.date()
         current_time = current_et.time()
 
-        # Debug time comparison
-        print(
-            f"Current time: {current_time}, Open time: {self.regular_open}, Is open: {current_time >= self.regular_open}")
-
         # Check if it's a weekend
         if current_et.weekday() >= 5:  # 5 is Saturday, 6 is Sunday
             return MarketStatus.CLOSED, "Weekend"
