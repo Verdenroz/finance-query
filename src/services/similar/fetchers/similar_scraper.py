@@ -83,10 +83,11 @@ async def parse_etfs(tree: etree.ElementTree, symbol: str, limit: int) -> list[S
     quotes = []
 
     for section in etf_sections:
-        symbol_xpath = './/div/div[1]/div/span[1]/text()'
-        name_xpath = './/div/div[1]/div/span[2]/text()'
-        price_xpath = './/div/div[2]/span/strong/text()'
-        percent_change_xpath = './/div/div[2]/div/span/text()'
+        # use contains() on class names for resilience
+        symbol_xpath = ".//span[contains(@class,'symbol')]/text()"
+        name_xpath = ".//span[contains(@class,'longName')]/@title | .//span[contains(@class,'longName')]/text()"
+        price_xpath = ".//div[contains(@class,'moreInfo')]//strong/text()"
+        percent_change_xpath = ".//div[contains(@class,'changes')]//span/text()"
 
         symbol_elements = section.xpath(symbol_xpath)
         name_elements = section.xpath(name_xpath)
@@ -101,15 +102,18 @@ async def parse_etfs(tree: etree.ElementTree, symbol: str, limit: int) -> list[S
             continue
 
         name = name_elements[0].strip()
-        price = price_elements[0].strip().replace(',', '')
+        price = price_elements[0].strip().replace(",", "")
         percent_change = percent_change_elements[0].strip()
 
-        change = float(price) / (1 + float(percent_change.strip('%')) / 100) - float(price)
-        change = round(change, 2)
-        if percent_change.startswith('-'):
-            change_str = '-' + str(abs(change))
+        # compute the absolute change from price and percent
+        pct_val = float(percent_change.strip("%"))
+        price_val = float(price)
+        change = round(price_val / (1 + pct_val / 100) - price_val, 2)
+
+        if percent_change.startswith("-"):
+            change_str = f"-{abs(change)}"
         else:
-            change_str = '+' + str(abs(change))
+            change_str = f"+{abs(change)}"
 
         etf = SimpleQuote(
             symbol=parsed_symbol,
