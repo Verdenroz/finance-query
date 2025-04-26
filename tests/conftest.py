@@ -1,4 +1,4 @@
-import asyncio
+import functools
 from pathlib import Path
 from unittest.mock import MagicMock, AsyncMock, patch
 
@@ -92,6 +92,7 @@ async def redis_connection_manager(mock_redis):
         manager = RedisConnectionManager(mock_redis)
         return manager
 
+
 @pytest.fixture
 def connection_manager():
     """Fixture for a ConnectionManager instance."""
@@ -104,25 +105,30 @@ def bypass_cache(monkeypatch):
     Fixture to bypass both Redis and in-memory caching.
     Works regardless of whether REDIS_URL is set or not.
     """
-
-    # Create mock request
     mock_request = MagicMock()
-    mock_request.app.state.redis = MagicMock()
+    mock_redis = MagicMock()
+    mock_redis.exists.return_value = False  # Always return cache miss
+    mock_request.app.state.redis = mock_redis
 
-    # Set the context variable directly
+    # Set the context variable
     token = request_context.set(mock_request)
 
-    # Make alru_cache a pass-through
-    def passthrough_cache(*args, **kwargs):
+    # Define a pass-through decorator to replace cache
+    def bypass_decorator(*args, **kwargs):
         def decorator(func):
-            return func
+            @functools.wraps(func)
+            async def wrapper(*fn_args, **fn_kwargs):
+                return await func(*fn_args, **fn_kwargs)
+
+            return wrapper
 
         return decorator
 
-    monkeypatch.setattr('async_lru.alru_cache', passthrough_cache)
+    # Patch the cache decorator in the src.cache module
+    monkeypatch.setattr('src.cache.cache', bypass_decorator)
 
     # Clean up the context variable after the test
-    yield passthrough_cache()
+    yield
 
     try:
         request_context.reset(token)
