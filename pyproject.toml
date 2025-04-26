@@ -30,7 +30,6 @@ cython = ">=3.0.11"
 setuptools = ">=61.0"
 fastapi-injectable = ">=0.4.1"
 algoliasearch = "==3.0.0"
-beautifulsoup4 = ">=4.12.3"
 lxml = ">=4.9.4"
 mangum = ">=0.19.0"
 orjson = ">=3.10.11"
@@ -62,6 +61,7 @@ source = ["src"]
 tests = ["test", "*/test"]
 
 [tool.coverage.run]
+parallel = true
 source = ["src"]
 
 [tool.coverage.report]
