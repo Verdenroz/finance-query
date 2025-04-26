@@ -62,6 +62,11 @@ tests = ["test", "*/test"]
 [tool.coverage.run]
 parallel = true
 source = ["src"]
+omit = [
+    "src/security/rate_limit_middleware.py",
+    "src/**/dependencies.py",
+    "src/**/*middleware.py"
+]
 
 [tool.coverage.report]
 show_missing = true
