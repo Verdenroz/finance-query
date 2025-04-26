@@ -25,6 +25,7 @@ class TestRateLimitManager:
         assert info["limit"] == SecurityConfig.RATE_LIMIT
 
     async def test_increment_and_check_increments(self, monkeypatch):
+        monkeypatch.setattr(SecurityConfig, "ADMIN_API_KEY", "test")
         monkeypatch.setattr(SecurityConfig, "RATE_LIMIT", 3)
         manager = RateLimitManager()
         ip = "127.0.0.1"
