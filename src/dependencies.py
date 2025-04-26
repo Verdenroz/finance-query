@@ -103,6 +103,8 @@ async def fetch(
                 )
             await asyncio.sleep(retry_delay)
 
+    return None
+
 
 @injectable
 async def get_logo(
