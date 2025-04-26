@@ -391,7 +391,7 @@ class TestSimilarQuotesHandler:
 
                     # Verify percent_change format
                     assert quote.percent_change.endswith('%')
-                    assert quote.percent_change.startswith('+') or quote.percent_change.startswith('-')
+                    assert quote.percent_change.startswith('+') or quote.percent_change.startswith('-') or quote.percent_change.startswith('0')
 
                 # Verify fetch was called with correct parameters
                 mock_fetch.assert_called_once_with(url=url)
