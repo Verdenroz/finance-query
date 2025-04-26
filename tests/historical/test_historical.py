@@ -237,7 +237,7 @@ class TestHistorical:
     ])
     async def test_get_historical_yahoo_errors(self, bypass_cache, test_case):
         """Test handling of various Yahoo Finance API error responses"""
-        symbol = "AAPL"
+        symbol = "NVDA"
         time_range = TimeRange.ONE_MONTH
         interval = Interval.DAILY
 
@@ -252,7 +252,7 @@ class TestHistorical:
 
     async def test_get_historical_json_decode_error(self, bypass_cache):
         """Test handling of JSON decode error from API response"""
-        symbol = "AAPL"
+        symbol = "NVDA"
         time_range = TimeRange.ONE_MONTH
         interval = Interval.DAILY
 

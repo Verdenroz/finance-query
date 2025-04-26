@@ -440,7 +440,7 @@ class TestSimilarQuotesHandler:
 
     async def test_get_similar_quotes_fallback(self, bypass_cache):
         """Test get_similar_quotes fallback to scraper when API fails"""
-        test_symbol = 'AAPL'
+        test_symbol = 'NVDA'
         test_cookies = 'test_cookies'
         test_crumb = 'test_crumb'
         test_limit = 3
