@@ -7,6 +7,6 @@ from .movers import router as movers_router
 from .quotes import router as quotes_router
 from .search import router as search_router
 from .sectors import router as sectors_router
-from .similar_quotes import router as similar_quotes_router
+from .similar import router as similar_quotes_router
 from .sockets import router as sockets_router
 from .stream import router as stream_router

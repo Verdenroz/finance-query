@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Security, Depends
+from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
+from src.dependencies import YahooCookies, YahooCrumb
 from src.models import ValidationErrorResponse
-from src.models.sector import Sector, MarketSector, MarketSectorDetails
-from src.services import get_sectors, get_sector_for_symbol, get_sector_details
+from src.models.sector import MarketSector, MarketSectorDetails, Sector
+from src.services import get_sector_details, get_sector_for_symbol, get_sectors
 
 router = APIRouter()
 
@@ -12,9 +12,7 @@ router = APIRouter()
 @router.get(
     path="/sectors",
     summary="Get summary performance for all sectors",
-    description="Returns a summary of all sectors, or detailed information for a specific sector or symbol, "
-                "depending on the query parameters provided.",
-    tags=["Sectors"],
+    description="Returns a summary of all sectors, or detailed information for a specific sector or symbol, depending on the query parameters provided.",
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
@@ -29,7 +27,7 @@ router = APIRouter()
                             "ytdReturn": "-2.36%",
                             "yearReturn": "+24.00%",
                             "threeYearReturn": "+50.20%",
-                            "fiveYearReturn": "+158.41%"
+                            "fiveYearReturn": "+158.41%",
                         },
                         {
                             "sector": "Healthcare",
@@ -37,7 +35,7 @@ router = APIRouter()
                             "ytdReturn": "+7.45%",
                             "yearReturn": "+4.04%",
                             "threeYearReturn": "+7.59%",
-                            "fiveYearReturn": "+44.74%"
+                            "fiveYearReturn": "+44.74%",
                         },
                         {
                             "sector": "Financial Services",
@@ -45,7 +43,7 @@ router = APIRouter()
                             "ytdReturn": "+5.94%",
                             "yearReturn": "+30.86%",
                             "threeYearReturn": "+26.28%",
-                            "fiveYearReturn": "+63.57%"
+                            "fiveYearReturn": "+63.57%",
                         },
                         {
                             "sector": "Consumer Cyclical",
@@ -53,7 +51,7 @@ router = APIRouter()
                             "ytdReturn": "+1.55%",
                             "yearReturn": "+27.74%",
                             "threeYearReturn": "+19.39%",
-                            "fiveYearReturn": "+102.42%"
+                            "fiveYearReturn": "+102.42%",
                         },
                         {
                             "sector": "Industrials",
@@ -61,7 +59,7 @@ router = APIRouter()
                             "ytdReturn": "+3.06%",
                             "yearReturn": "+12.32%",
                             "threeYearReturn": "+24.85%",
-                            "fiveYearReturn": "+57.96%"
+                            "fiveYearReturn": "+57.96%",
                         },
                         {
                             "sector": "Consumer Defensive",
@@ -69,7 +67,7 @@ router = APIRouter()
                             "ytdReturn": "+3.47%",
                             "yearReturn": "+15.60%",
                             "threeYearReturn": "+15.16%",
-                            "fiveYearReturn": "+39.80%"
+                            "fiveYearReturn": "+39.80%",
                         },
                         {
                             "sector": "Energy",
@@ -77,7 +75,7 @@ router = APIRouter()
                             "ytdReturn": "+4.96%",
                             "yearReturn": "+10.88%",
                             "threeYearReturn": "+25.30%",
-                            "fiveYearReturn": "+61.17%"
+                            "fiveYearReturn": "+61.17%",
                         },
                         {
                             "sector": "Real Estate",
@@ -85,7 +83,7 @@ router = APIRouter()
                             "ytdReturn": "+2.33%",
                             "yearReturn": "+14.11%",
                             "threeYearReturn": "-3.16%",
-                            "fiveYearReturn": "+14.27%"
+                            "fiveYearReturn": "+14.27%",
                         },
                         {
                             "sector": "Utilities",
@@ -93,7 +91,7 @@ router = APIRouter()
                             "ytdReturn": "+4.73%",
                             "yearReturn": "+37.61%",
                             "threeYearReturn": "+23.87%",
-                            "fiveYearReturn": "+31.59%"
+                            "fiveYearReturn": "+31.59%",
                         },
                         {
                             "sector": "Basic Materials",
@@ -101,7 +99,7 @@ router = APIRouter()
                             "ytdReturn": "+6.16%",
                             "yearReturn": "+9.99%",
                             "threeYearReturn": "+8.52%",
-                            "fiveYearReturn": "+53.48%"
+                            "fiveYearReturn": "+53.48%",
                         },
                         {
                             "sector": "Communication Services",
@@ -109,13 +107,13 @@ router = APIRouter()
                             "ytdReturn": "+5.72%",
                             "yearReturn": "+30.47%",
                             "threeYearReturn": "+29.44%",
-                            "fiveYearReturn": "+73.06%"
-                        }
+                            "fiveYearReturn": "+73.06%",
+                        },
                     ]
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def sectors():
     return await get_sectors()
@@ -124,10 +122,8 @@ async def sectors():
 @router.get(
     path="/sectors/symbol/{symbol}",
     summary="Get summary sector performance of a quote",
-    description="Returns the quote's sector performance summary, including its returns over a 1d, ytd, year, 3y, "
-                "and 5y period",
+    description="Returns the quote's sector performance summary, including its returns over a 1d, ytd, year, 3y, and 5y period",
     response_model=MarketSector,
-    tags=["Sectors"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
@@ -141,32 +137,26 @@ async def sectors():
                         "ytdReturn": "-2.13%",
                         "yearReturn": "+24.28%",
                         "threeYearReturn": "+50.55%",
-                        "fiveYearReturn": "+159.00%"
+                        "fiveYearReturn": "+159.00%",
                     }
                 }
-            }
+            },
         },
         404: {
             "description": "Sector not found when querying sector by symbol",
-            "content": {
-                "application/json": {
-                    "example": {
-                        "detail": "Sector for {symbol} not found"
-                    }
-                }
-            }
+            "content": {"application/json": {"example": {"detail": "Sector for {symbol} not found"}}},
         },
         422: {
             "model": ValidationErrorResponse,
             "description": "Validation error of query parameters",
-            "content": {"application/json": {"example": {"detail": "Invalid request"}}}
-        }
-    }
+            "content": {"application/json": {"example": {"detail": "Invalid request"}}},
+        },
+    },
 )
 async def sector_by_symbol(
-        symbol: str,
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb)
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
+    symbol: str,
 ):
     return await get_sector_for_symbol(symbol, cookies, crumb)
 
@@ -175,9 +165,8 @@ async def sector_by_symbol(
     path="/sectors/details/{sector}",
     summary="Get a more comprehensive summary of an individual sector",
     description="Returns the quote's sector performance details, including its returns, market cap, market weight, "
-                "number of industries, number of companies, top industries, and top companies",
+    "number of industries, number of companies, top industries, and top companies",
     response_model=MarketSectorDetails,
-    tags=["Sectors"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
@@ -208,23 +197,12 @@ async def sector_by_symbol(
                             "Electronic Components: 1.43%",
                             "Scientific & Technical Instruments: 1.02%",
                             "Solar: 0.20%",
-                            "Electronics & Computer Distribution: 0.16%"
+                            "Electronics & Computer Distribution: 0.16%",
                         ],
-                        "topCompanies": [
-                            "NVDA",
-                            "AAPL",
-                            "MSFT",
-                            "AVGO",
-                            "ORCL",
-                            "CRM",
-                            "CSCO",
-                            "NOW",
-                            "ACN",
-                            "IBM"
-                        ]
+                        "topCompanies": ["NVDA", "AAPL", "MSFT", "AVGO", "ORCL", "CRM", "CSCO", "NOW", "ACN", "IBM"],
                     }
                 }
-            }
+            },
         },
         422: {
             "model": ValidationErrorResponse,
@@ -239,14 +217,12 @@ async def sector_by_symbol(
                                 "'Consumer Defensive', 'Energy', 'Financial Services', 'Healthcare', 'Industrials', "
                                 "'Real Estate', 'Technology' or 'Utilities'"
                             ]
-                        }
+                        },
                     }
                 }
-            }
-        }
-    }
+            },
+        },
+    },
 )
-async def sector_details(
-        sector: Sector
-):
+async def sector_details(sector: Sector):
     return await get_sector_details(sector)

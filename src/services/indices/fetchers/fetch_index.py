@@ -60,47 +60,36 @@ def _get_formatted_index_name(index: Index, default_name: str) -> str:
     Get the properly formatted name for an index if it is not already formatted.
     """
     formatted_names = {
-        Index.GDAXI: 'DAX Performance Index',
-        Index.STOXX50E: 'EURO STOXX 50',
-        Index.NZ50: 'S&P/NZX 50 Index',
-        Index.SET: 'Thailand SET Index',
-        Index.JN0U_JO: 'FTSE JSE Top 40- USD Net TRI',
-        Index.SA40: 'South Africa Top 40'
+        Index.GDAXI: "DAX Performance Index",
+        Index.STOXX50E: "EURO STOXX 50",
+        Index.NZ50: "S&P/NZX 50 Index",
+        Index.SET: "Thailand SET Index",
+        Index.JN0U_JO: "FTSE JSE Top 40- USD Net TRI",
+        Index.SA40: "South Africa Top 40",
     }
 
     return formatted_names.get(index, default_name)
 
 
 async def _fetch_yahoo_index(index: Index, cookies: str, crumb: str) -> dict:
-    """ Fetch raw index data from Yahoo Finance API using cookies and crumb. """
+    """Fetch raw index data from Yahoo Finance API using cookies and crumb."""
     symbol = _get_yahoo_index_symbol(index)
     summary_url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}"
 
-    summary_params = {
-        "modules": "price,quoteUnadjustedPerformanceOverview",
-        "crumb": crumb
-    }
+    summary_params = {"modules": "price,quoteUnadjustedPerformanceOverview", "crumb": crumb}
     headers = {
-        'Cookie': cookies,
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-        'Accept': 'application/json'
+        "Cookie": cookies,
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+        "Accept": "application/json",
     }
 
-    summary_response = await fetch(
-        url=summary_url,
-        params=summary_params,
-        headers=headers,
-        return_response=True
-    )
+    summary_response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
 
     if summary_response.status != 200:
         response_text = await summary_response.text()
         response_data = orjson.loads(response_text)
-        error_description = response_data.get('quoteSummary', {}).get('error', {}).get('description')
-        raise HTTPException(
-            status_code=summary_response.status,
-            detail=error_description or f"Failed to fetch index data for {index}"
-        )
+        error_description = response_data.get("quoteSummary", {}).get("error", {}).get("description")
+        raise HTTPException(status_code=summary_response.status, detail=error_description or f"Failed to fetch index data for {index}")
 
     response_text = await summary_response.text()
     summary_data = orjson.loads(response_text)
@@ -108,13 +97,13 @@ async def _fetch_yahoo_index(index: Index, cookies: str, crumb: str) -> dict:
 
 
 async def _parse_yahoo_index(summary_data: dict, index: Index) -> MarketIndex:
-    """ Parse Yahoo Finance API response into MarketIndex object. """
-    summary_result = summary_data.get('quoteSummary', {}).get('result', [{}])[0]
-    price_data = summary_result.get('price', {})
-    performance_data = summary_result.get('quoteUnadjustedPerformanceOverview', {}).get('performanceOverview', {})
+    """Parse Yahoo Finance API response into MarketIndex object."""
+    summary_result = summary_data.get("quoteSummary", {}).get("result", [{}])[0]
+    price_data = summary_result.get("price", {})
+    performance_data = summary_result.get("quoteUnadjustedPerformanceOverview", {}).get("performanceOverview", {})
 
     # Cleans unformatted names for some indices
-    default_name = price_data.get('longName') or price_data.get('shortName') or index.value
+    default_name = price_data.get("longName") or price_data.get("shortName") or index.value
     formatted_name = _get_formatted_index_name(index, default_name)
 
     # Helper function to format return values with plus sign for positives
@@ -122,26 +111,25 @@ async def _parse_yahoo_index(summary_data: dict, index: Index) -> MarketIndex:
         if not value:
             return None
         if isinstance(value, dict):
-            fmt = value.get('fmt')
-            if fmt and not fmt.startswith('-') and not fmt == '0.00%':
+            fmt = value.get("fmt")
+            if fmt and not fmt.startswith("-") and not fmt == "0.00%":
                 return f"+{fmt}"
             return fmt
         return value
 
     return MarketIndex(
         name=formatted_name,
-        value=round(price_data['regularMarketPrice']['raw'], 2),
-        change=price_data['regularMarketChange']['fmt'],
-        percent_change=price_data['regularMarketChangePercent']['fmt'],
-        five_days_return=format_return(performance_data.get('fiveDaysReturn')),
-        one_month_return=format_return(performance_data.get('oneMonthReturn')),
-        three_month_return=format_return(performance_data.get('threeMonthReturn')),
-        six_month_return=format_return(performance_data.get('sixMonthReturn')),
-        ytd_return=format_return(performance_data.get('ytdReturnPct')),
-        year_return=format_return(performance_data.get('oneYearTotalReturn')),
-        two_year_return=format_return(performance_data.get('twoYearTotalReturn')),
-        three_year_return=format_return(performance_data.get('threeYearTotalReturn')),
-        five_year_return=format_return(performance_data.get('fiveYearTotalReturn')),
-        ten_year_return=format_return(performance_data.get('tenYearTotalReturn')),
-        max_return=format_return(performance_data.get('maxReturn'))
+        value=round(price_data["regularMarketPrice"]["raw"], 2),
+        change=price_data["regularMarketChange"]["fmt"],
+        percent_change=price_data["regularMarketChangePercent"]["fmt"],
+        five_days_return=format_return(performance_data.get("fiveDaysReturn")),
+        one_month_return=format_return(performance_data.get("oneMonthReturn")),
+        three_month_return=format_return(performance_data.get("threeMonthReturn")),
+        six_month_return=format_return(performance_data.get("sixMonthReturn")),
+        ytd_return=format_return(performance_data.get("ytdReturnPct")),
+        year_return=format_return(performance_data.get("oneYearTotalReturn")),
+        three_year_return=format_return(performance_data.get("threeYearTotalReturn")),
+        five_year_return=format_return(performance_data.get("fiveYearTotalReturn")),
+        ten_year_return=format_return(performance_data.get("tenYearTotalReturn")),
+        max_return=format_return(performance_data.get("maxReturn")),
     )

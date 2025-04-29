@@ -1,4 +1,5 @@
 import asyncio
+
 from orjson import orjson
 from redis.client import PubSub
 from starlette.websockets import WebSocket, WebSocketDisconnect
@@ -69,10 +70,10 @@ class RedisConnectionManager:
         self.pubsub[channel].subscribe(channel)
         while True:
             message = self.pubsub[channel].get_message(ignore_subscribe_messages=True)
-            if message and message['type'] == 'message':
-                message_channel = message['channel'].decode('utf-8')
+            if message and message["type"] == "message":
+                message_channel = message["channel"].decode("utf-8")
                 if message_channel == channel:
-                    data = orjson.loads(message['data'])
+                    data = orjson.loads(message["data"])
                     await self._broadcast(channel, data)
             await asyncio.sleep(0.1)
 
@@ -93,25 +94,37 @@ class RedisConnectionManager:
             for client in disconnected_clients:
                 await self.disconnect(client, channel)
 
-    def publish(self, message: dict | list, channel: str):
+    async def publish(self, message: dict | list, channel: str):
         """
         Publishes a message to a Redis channel.
         :param message: the json message to publish
         :param channel: the channel to publish to
         :return:
         """
-        self.redis.publish(channel, orjson.dumps(message))
+        await asyncio.to_thread(self.redis.publish, channel, orjson.dumps(message))
 
     async def close(self):
         """
         Clean up all connections and tasks.
         """
-        for channel in self.active_connections:
-            for connection in self.active_connections[channel]:
+        # Create a copy of channels to avoid modifying dict during iteration
+        channels = list(self.active_connections.keys())
+
+        for channel in channels:
+            # Create a copy of connections to avoid modifying list during iteration
+            connections = self.active_connections[channel].copy()
+            for connection in connections:
+                await connection.close()  # Close the websocket connection
                 await self.disconnect(connection, channel)
 
+        # Cancel all remaining tasks
+        for task in self.tasks.values():
+            task.cancel()
+
+        # Close all pubsub connections
         for pubsub in self.pubsub.values():
             pubsub.close()
 
-        for task in self.tasks.values():
-            task.cancel()
+        # Clear any remaining data
+        self.active_connections.clear()
+        self.tasks.clear()

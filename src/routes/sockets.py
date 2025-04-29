@@ -2,19 +2,25 @@ import asyncio
 from datetime import datetime
 
 import pytz
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.connections import RedisConnectionManager, ConnectionManager
-from src.dependencies import get_connection_manager, get_yahoo_cookies, get_yahoo_crumb
-from src.market import MarketSchedule
-from src.models import SimpleQuote, MarketSector
+from dependencies import Schedule, WebsocketConnectionManager, YahooCookies, YahooCrumb
+from src.connections import ConnectionManager, RedisConnectionManager
+from src.models import MarketSector, SimpleQuote
 from src.security import validate_websocket
 from src.services import (
-    get_quotes, get_similar_quotes, get_actives,
-    scrape_news_for_quote, get_losers, get_gainers,
-    get_simple_quotes, get_indices, scrape_general_news,
-    get_sectors, get_sector_for_symbol
+    get_actives,
+    get_gainers,
+    get_indices,
+    get_losers,
+    get_quotes,
+    get_sector_for_symbol,
+    get_sectors,
+    get_similar_quotes,
+    get_simple_quotes,
+    scrape_general_news,
+    scrape_news_for_quote,
 )
 
 router = APIRouter()
@@ -23,32 +29,28 @@ router = APIRouter()
 REFRESH_INTERVAL = 5
 
 
-def safe_convert_to_dict(items, default=None):
+def safe_convert_to_dict(items: list, default=None):
     """
     Convert items to dictionaries, handling exceptions and type variations.
 
-    :param items: List of items to convert
+    :param items: List of items to convert (dicts or Pydantic models)
     :param default: Default value to use if conversion fails
     :return: List of dictionaries or default values
     """
     if default is None:
         default = []
 
-    try:
-        return [
-            item if isinstance(item, dict) else
-            (item.dict() if hasattr(item, 'dict') else default)
-            for item in items
-        ]
-    except Exception:
+    if not isinstance(items, list | tuple) or items is None:
         return default
+
+    return [item if isinstance(item, dict) else item.model_dump() if hasattr(item, "model_dump") else default for item in items]
 
 
 async def handle_websocket_connection(
-        websocket: WebSocket,
-        channel: str,
-        data_fetcher: callable,
-        connection_manager: RedisConnectionManager | ConnectionManager
+    websocket: WebSocket,
+    channel: str,
+    data_fetcher: callable,
+    connection_manager: RedisConnectionManager | ConnectionManager,
 ):
     """
     A generalized WebSocket connection handler.
@@ -72,7 +74,7 @@ async def handle_websocket_connection(
             try:
                 result = await data_fetcher()
                 if isinstance(connection_manager, RedisConnectionManager):
-                    await asyncio.to_thread(connection_manager.publish, result, channel)
+                    await connection_manager.publish(result, channel)
                 else:
                     await connection_manager.broadcast(channel, result)
                 await asyncio.sleep(REFRESH_INTERVAL)
@@ -106,11 +108,11 @@ async def handle_websocket_connection(
 
 @router.websocket("/profile/{symbol}")
 async def websocket_profile(
-        websocket: WebSocket,
-        symbol: str,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb)
+    websocket: WebSocket,
+    symbol: str,
+    connection_manager: WebsocketConnectionManager,
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
 ):
     async def get_profile():
         """
@@ -133,7 +135,7 @@ async def websocket_profile(
             "quote": quotes[0] if quotes else None,
             "similar": similar_quotes,
             "sectorPerformance": sector_performance.dict() if isinstance(sector_performance, MarketSector) else None,
-            "news": news
+            "news": news,
         }
 
     channel = f"profile:{symbol}"
@@ -142,10 +144,10 @@ async def websocket_profile(
 
 @router.websocket("/quotes")
 async def websocket_quotes(
-        websocket: WebSocket,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb)
+    websocket: WebSocket,
+    connection_manager: WebsocketConnectionManager,
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
 ):
     is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
@@ -153,9 +155,9 @@ async def websocket_quotes(
     await websocket.accept()
     try:
         channel = await websocket.receive_text()
-        symbols = list(set(symbol.upper() for symbol in channel.split(",")))
+        symbols = list({symbol.upper() for symbol in channel.split(",")})
 
-        async def get_request_symbols():
+        async def get_request_symbols() -> list[dict]:
             """
             Fetches quotes for a list of symbols.
             """
@@ -171,7 +173,7 @@ async def websocket_quotes(
                     "name": quote.name,
                     "price": str(quote.price),
                     "change": quote.change,
-                    "percentChange": quote.percent_change
+                    "percentChange": quote.percent_change,
                 }
 
                 # Add optional fields if they exist
@@ -195,7 +197,7 @@ async def websocket_quotes(
             while True:
                 result = await get_request_symbols()
                 if isinstance(connection_manager, RedisConnectionManager):
-                    await asyncio.to_thread(connection_manager.publish, result, channel)
+                    await connection_manager.publish(result, channel)
                 else:
                     await connection_manager.broadcast(channel, result)
                 await asyncio.sleep(REFRESH_INTERVAL)
@@ -226,10 +228,10 @@ async def websocket_quotes(
 
 @router.websocket("/market")
 async def websocket_market(
-        websocket: WebSocket,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb)
+    websocket: WebSocket,
+    connection_manager: WebsocketConnectionManager,
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
 ):
     async def get_market_info():
         """
@@ -242,9 +244,7 @@ async def websocket_market(
         news_task = scrape_general_news()
         sectors_task = get_sectors()
 
-        actives, gainers, losers, indices, news, sectors = await asyncio.gather(
-            actives_task, gainers_task, losers_task, indices_task, news_task, sectors_task
-        )
+        actives, gainers, losers, indices, news, sectors = await asyncio.gather(actives_task, gainers_task, losers_task, indices_task, news_task, sectors_task)
 
         return {
             "actives": safe_convert_to_dict(actives),
@@ -252,7 +252,7 @@ async def websocket_market(
             "losers": safe_convert_to_dict(losers),
             "indices": safe_convert_to_dict(indices),
             "headlines": safe_convert_to_dict(news),
-            "sectors": safe_convert_to_dict(sectors)
+            "sectors": safe_convert_to_dict(sectors),
         }
 
     channel = "market"
@@ -261,20 +261,16 @@ async def websocket_market(
 
 @router.websocket("/hours")
 async def market_status_websocket(
-        websocket: WebSocket,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-        market_schedule: MarketSchedule = Depends(MarketSchedule)
+    websocket: WebSocket,
+    connection_manager: WebsocketConnectionManager,
+    market_schedule: Schedule,
 ):
     async def get_market_status_info():
         """
         Fetches the market status information.
         """
         current_status, reason = market_schedule.get_market_status()
-        return {
-            "status": current_status,
-            "reason": reason,
-            "timestamp": datetime.now(pytz.UTC).isoformat()
-        }
+        return {"status": current_status, "reason": reason, "timestamp": datetime.now(pytz.UTC).isoformat()}
 
     channel = "hours"
     await handle_websocket_connection(websocket, channel, get_market_status_info, connection_manager)

@@ -38,7 +38,7 @@ Cythonize files
 Start the server
 
 ```bash
-  python -m uvicorn src.main:app --reload  
+  python -m uvicorn src.main:app --reload
 ```
 
 ## Deployment
@@ -175,4 +175,3 @@ If something is not working or if you have any suggestions, contact me at harvey
 ## License
 
 [MIT](https://opensource.org/license/MIT)
-

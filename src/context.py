@@ -13,6 +13,7 @@ class RequestContextMiddleware(BaseHTTPMiddleware):
     Middleware to set the request context for FastAPI and Starlette apps.
     We can use this to access the request object in any part of the app.
     """
+
     def __init__(self, app: ASGIApp):
         super().__init__(app)
 

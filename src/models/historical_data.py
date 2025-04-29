@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel, Field, AliasChoices
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class TimeRange(Enum):
@@ -30,21 +30,9 @@ class Interval(Enum):
 
 
 class HistoricalData(BaseModel):
-    open: float = Field(
-        default=...,
-        examples=[145.00],
-        description="Opening price"
-    )
-    high: float = Field(
-        default=...,
-        examples=[145.00],
-        description="Highest price"
-    )
-    low: float = Field(
-        default=...,
-        examples=[145.00],
-        description="Lowest price"
-    )
+    open: float = Field(default=..., examples=[145.00], description="Opening price")
+    high: float = Field(default=..., examples=[145.00], description="Highest price")
+    low: float = Field(default=..., examples=[145.00], description="Lowest price")
     close: float = Field(
         default=...,
         examples=[145.00],
@@ -55,10 +43,6 @@ class HistoricalData(BaseModel):
         examples=[145.00],
         description="Adjusted closing price",
         serialization_alias="adjClose",
-        validation_alias=AliasChoices("adjClose", "adj_close")
+        validation_alias=AliasChoices("adjClose", "adj_close"),
     )
-    volume: int = Field(
-        default=...,
-        examples=[1000000],
-        description="Volume traded"
-    )
+    volume: int = Field(default=..., examples=[1000000], description="Volume traded")

@@ -1,4 +1,5 @@
-from typing import AsyncGenerator, Annotated
+from collections.abc import AsyncGenerator
+from typing import Annotated
 
 from fastapi import Depends
 from fastapi_injectable import injectable
@@ -18,28 +19,28 @@ async def get_rate_limit_manager() -> AsyncGenerator[RateLimitManager, None]:
 
 @injectable
 async def increment_and_check(
-        rate_limit_manager: Annotated[RateLimitManager, Depends(get_rate_limit_manager)],
-        ip: str = "",
-        api_key: str | None = None,
+    rate_limit_manager: Annotated[RateLimitManager, Depends(get_rate_limit_manager)],
+    ip: str = "",
+    api_key: str | None = None,
 ) -> tuple[bool, dict]:
-    """ Returns (is_allowed, rate_limit_info) """
+    """Returns (is_allowed, rate_limit_info)"""
     return await rate_limit_manager.increment_and_check(ip, api_key)
 
 
 @injectable
 async def check_health_rate_limit(
-        rate_limit_manager: Annotated[RateLimitManager, Depends(get_rate_limit_manager)],
-        ip: str = "",
-        api_key: str | None = None,
+    rate_limit_manager: Annotated[RateLimitManager, Depends(get_rate_limit_manager)],
+    ip: str = "",
+    api_key: str | None = None,
 ) -> tuple[bool, dict]:
-    """ Returns (is_allowed, rate_limit_info) for health check endpoint """
+    """Returns (is_allowed, rate_limit_info) for health check endpoint"""
     return await rate_limit_manager.check_health_rate_limit(ip, api_key)
 
 
 @injectable
 async def validate_websocket(
-        rate_limit_manager: Annotated[RateLimitManager, Depends(get_rate_limit_manager)],
-        websocket: WebSocket,
+    rate_limit_manager: Annotated[RateLimitManager, Depends(get_rate_limit_manager)],
+    websocket: WebSocket,
 ) -> tuple[bool, dict]:
     """
     Backwards compatible wrapper for websocket validation

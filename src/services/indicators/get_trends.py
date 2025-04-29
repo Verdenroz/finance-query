@@ -1,25 +1,39 @@
-import numpy as np
-from typing_extensions import OrderedDict
+from collections import OrderedDict
 
-from src.models.indicators import (MACDData, TechnicalIndicator, ADXData, AROONData, BBANDSData, OBVData, SuperTrendData,
-                                   IchimokuData, Indicator)
-from src.models.historical_data import TimeRange, Interval
+from src.models.historical_data import Interval, TimeRange
+from src.models.indicators import (
+    ADXData,
+    AROONData,
+    BBANDSData,
+    IchimokuData,
+    Indicator,
+    MACDData,
+    OBVData,
+    SuperTrendData,
+    TechnicalIndicator,
+)
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (
-    prepare_price_data, create_indicator_dict, calculate_macd, calculate_adx,
-    calculate_aroon, calculate_bbands,
-    calculate_obv, calculate_ichimoku, calculate_supertrend
+    calculate_adx,
+    calculate_aroon,
+    calculate_bbands,
+    calculate_ichimoku,
+    calculate_macd,
+    calculate_obv,
+    calculate_supertrend,
+    create_indicator_dict,
+    prepare_price_data,
 )
 
 
 async def get_macd(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        fast_period: int = 12,
-        slow_period: int = 26,
-        signal_period: int = 9,
-        epoch: bool = False
+    symbol: str,
+    time_range: TimeRange,
+    interval: Interval,
+    fast_period: int = 12,
+    slow_period: int = 26,
+    signal_period: int = 9,
+    epoch: bool = False,
 ) -> dict:
     """
     Get the Moving Average Convergence Divergence (MACD) for a symbol.
@@ -41,36 +55,20 @@ async def get_macd(
     """
     quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
     dates, prices, _, _, _ = prepare_price_data(quotes)
-    macd_line, signal_line = calculate_macd(prices, fast_period=fast_period,
-                                            slow_period=slow_period, signal_period=signal_period)
+    macd_line, signal_line = calculate_macd(prices, fast_period=fast_period, slow_period=slow_period, signal_period=signal_period)
 
     macd_dict = create_indicator_dict(dates, macd_line)
     signal_dict = create_indicator_dict(dates, signal_line)
 
     # Create indicator data only for dates present in both dictionaries
-    indicator_data = {
-        date: MACDData(
-            value=macd_dict[date],
-            signal=signal_dict[date]
-        )
-        for date in macd_dict.keys() if date in signal_dict
-    }
+    indicator_data = {date: MACDData(value=macd_dict[date], signal=signal_dict[date]) for date in macd_dict.keys() if date in signal_dict}
 
     # Sort the dictionary by date in reverse order
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.MACD,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.MACD, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_adx(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        period: int = 14,
-        epoch: bool = False
-) -> dict:
+async def get_adx(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False) -> dict:
     """
     Get the Average Directional Index (ADX) for a symbol.
     The ADX is a trend strength indicator that quantifies the strength of a trend without indicating its direction.
@@ -83,7 +81,7 @@ async def get_adx(
     :param period: The number of periods used to calculate the DMI lines and ADX (default 14). Lower values
                   create a more responsive indicator but may generate more false signals. Values above 25
                   typically indicate a strong trend
-                  :param epoch: Whether to return the dates as epoch timestamps (default False)
+    :param epoch: Whether to return the dates as epoch timestamps (default False)
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
@@ -92,19 +90,13 @@ async def get_adx(
     dates, closes, highs, lows, _ = prepare_price_data(quotes)
     adx_values = calculate_adx(highs, lows, closes, period=period)
 
-    indicator_data = {
-        date: ADXData(value=round(value, 2))
-        for date, value in create_indicator_dict(dates, adx_values).items()
-    }
+    indicator_data = {date: ADXData(value=value) for date, value in create_indicator_dict(dates, adx_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.ADX,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.ADX, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bool = False) -> dict:
+async def get_aroon(symbol: str, time_range: TimeRange, interval: Interval, period: int = 25, epoch: bool = False) -> dict:
     """
     Get the Aroon indicator for a symbol.
     The Aroon indicator consists of two lines: Aroon Up and Aroon Down. Aroon Up measures the number of periods
@@ -113,6 +105,7 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bo
     70 indicating a strong trend.
 
     :param symbol: the stock symbol
+    :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
     :param period: The lookback period for finding the highest high and lowest low (default 25). A longer
                   period helps identify more significant trends but may be less responsive to recent price
@@ -121,7 +114,7 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bo
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=TimeRange.YEAR, interval=interval, epoch=epoch)
+    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, _, highs, lows, _ = prepare_price_data(quotes)
     aroon_up, aroon_down = calculate_aroon(highs, lows, period=period)
@@ -130,29 +123,13 @@ async def get_aroon(symbol: str, interval: Interval, period: int = 25, epoch: bo
     down_dict = create_indicator_dict(dates, aroon_down)
 
     # Create indicator data for dates present in both dictionaries
-    indicator_data = {
-        date: AROONData(
-            aroon_up=up_dict[date],
-            aroon_down=down_dict[date]
-        )
-        for date in up_dict.keys() if date in down_dict
-    }
+    indicator_data = {date: AROONData(aroon_up=up_dict[date], aroon_down=down_dict[date]) for date in up_dict.keys() if date in down_dict}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.AROON,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.AROON, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_bbands(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        period: int = 20,
-        std_dev: int = 2,
-        epoch: bool = False
-) -> dict:
+async def get_bbands(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, std_dev: int = 2, epoch: bool = False) -> dict:
     """
     Get the Bollinger Bands (BBands) for a symbol.
     Bollinger Bands consist of a middle band (SMA) and two outer bands (standard deviations from the SMA).
@@ -181,19 +158,13 @@ async def get_bbands(
 
     # Create indicator data for dates present in all dictionaries
     indicator_data = {
-        date: BBANDSData(
-            upper_band=round(upper_band_dict[date], 2),
-            middle_band=round(middle_band_dict[date], 2),
-            lower_band=round(lower_band_dict[date], 2)
-        )
-        for date in upper_band_dict.keys() if date in middle_band_dict and date in lower_band_dict
+        date: BBANDSData(upper_band=upper_band_dict[date], middle_band=middle_band_dict[date], lower_band=lower_band_dict[date])
+        for date in upper_band_dict.keys()
+        if date in middle_band_dict and date in lower_band_dict
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.BBANDS,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.BBANDS, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
 async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict:
@@ -217,26 +188,13 @@ async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch:
     dates, closes, _, _, volumes = prepare_price_data(quotes)
     obv_values = calculate_obv(closes, volumes)
 
-    indicator_data = {
-        date: OBVData(value=round(value, 2))
-        for date, value in create_indicator_dict(dates, obv_values).items()
-    }
+    indicator_data = {date: OBVData(value=value) for date, value in create_indicator_dict(dates, obv_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.OBV,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.OBV, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_super_trend(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        period: int = 10,
-        multiplier: int = 3,
-        epoch: bool = False
-) -> dict:
+async def get_super_trend(symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, multiplier: int = 3, epoch: bool = False) -> dict:
     """
     Get the Super Trend indicator for a symbol.
     The Super Trend indicator is a trend-following indicator that uses the Average True Range (ATR) to determine
@@ -266,35 +224,30 @@ async def get_super_trend(
 
     # Create indicator data only for dates present in both dictionaries
     indicator_data = {
-        date: SuperTrendData(
-            value=round(value, 2),
-            trend="UP" if trend_dict[date] > 0 else "DOWN"
-        )
-        for date, value in supertrend_values_dict.items() if date in trend_dict
+        date: SuperTrendData(value=value, trend="UP" if trend_dict.get(date, 0) == 1 else "DOWN")
+        for date, value in supertrend_values_dict.items()
+        if date in trend_dict
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.SUPER_TREND,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.SUPER_TREND, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
 async def get_ichimoku(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        tenkan_period: int = 9,
-        kijun_period: int = 26,
-        senkou_period: int = 52,
-        epoch: bool = False
+    symbol: str,
+    time_range: TimeRange,
+    interval: Interval,
+    tenkan_period: int = 9,
+    kijun_period: int = 26,
+    senkou_period: int = 52,
+    epoch: bool = False,
 ) -> dict:
     """
     Get the Ichimoku Cloud (Ichimoku Kinko Hyo) for a symbol.
     The Ichimoku Cloud is a comprehensive indicator that defines support and resistance, identifies trend direction,
     gauges momentum, and provides trading signals. It consists of five main components: Tenkan-sen (Conversion Line),
     Kijun-sen (Baseline), Senkou Span A (Leading Span A), Senkou Span B (Leading Span B), and Chikou Span (Lagging Span).
-    
+
     The Tenkan-sen and Kijun-sen lines are used to identify the current trend and potential reversals. The Senkou Span A
     and Senkou Span B lines form the "cloud," which provides dynamic support and resistance levels. The Chikou Span
     line is used to confirm the trend direction. The Ichimoku Cloud is best suited for identifying trends and
@@ -316,10 +269,7 @@ async def get_ichimoku(
     quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
     dates, closes, highs, lows, _ = prepare_price_data(quotes)
     tenkan_sen, kijun_sen, senkou_span_a, senkou_span_b, chikou_span = calculate_ichimoku(
-        highs, lows, closes,
-        tenkan_period=tenkan_period,
-        kijun_period=kijun_period,
-        senkou_period=senkou_period
+        highs, lows, closes, tenkan_period=tenkan_period, kijun_period=kijun_period, senkou_period=senkou_period
     )
     # Create dictionaries for each Ichimoku component
     tenkan_dict = create_indicator_dict(dates, tenkan_sen)
@@ -328,23 +278,17 @@ async def get_ichimoku(
     senkou_b_dict = create_indicator_dict(dates, senkou_span_b)
     chikou_dict = create_indicator_dict(dates, chikou_span)
 
-    # Create indicator data, using the closing price for the Chikou Span if the value is NaN
+    # Create indicator data, using the last closing price as fallback for chikou_span
     indicator_data = {
         date: IchimokuData(
-            tenkan_sen=round(tenkan_dict.get(date, np.nan), 2) if not np.isnan(tenkan_dict.get(date, np.nan)) else None,
-            kijun_sen=round(kijun_dict.get(date, np.nan), 2) if not np.isnan(kijun_dict.get(date, np.nan)) else None,
-            senkou_span_a=round(senkou_a_dict.get(date, np.nan), 2) if not np.isnan(
-                senkou_a_dict.get(date, np.nan)) else None,
-            senkou_span_b=round(senkou_b_dict.get(date, np.nan), 2) if not np.isnan(
-                senkou_b_dict.get(date, np.nan)) else None,
-            chikou_span=round(chikou_dict.get(date, np.nan), 2) if not np.isnan(chikou_dict.get(date, np.nan)) else
-            closes[-1]
+            tenkan_sen=tenkan_dict.get(date),
+            kijun_sen=kijun_dict.get(date),
+            senkou_span_a=senkou_a_dict.get(date),
+            senkou_span_b=senkou_b_dict.get(date),
+            chikou_span=chikou_dict.get(date) or closes[-1],
         )
         for date in tenkan_dict.keys()
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.ICHIMOKU,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.ICHIMOKU, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)

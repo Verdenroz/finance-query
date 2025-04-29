@@ -4,6 +4,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from src.security.dependencies import check_health_rate_limit, increment_and_check
+
 from .rate_limit_manager import SecurityConfig
 
 
@@ -25,11 +26,8 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
             if not is_allowed:
                 return JSONResponse(
-                    {
-                        "detail": "Health check rate limit exceeded. Try again later.",
-                        "rate_limit_info": rate_info
-                    },
-                    status_code=status.HTTP_429_TOO_MANY_REQUESTS
+                    {"detail": "Health check rate limit exceeded. Try again later.", "rate_limit_info": rate_info},
+                    status_code=status.HTTP_429_TOO_MANY_REQUESTS,
                 )
 
             response = await call_next(request)
@@ -41,19 +39,18 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         if not is_allowed:
             return JSONResponse(
-                {
-                    "detail": "Rate limit exceeded",
-                    "rate_limit_info": rate_info
-                },
-                status_code=status.HTTP_429_TOO_MANY_REQUESTS
+                {"detail": "Rate limit exceeded", "rate_limit_info": rate_info},
+                status_code=status.HTTP_429_TOO_MANY_REQUESTS,
             )
 
         # Continue with the request and add rate limit headers
         response = await call_next(request)
         if rate_info:  # Only add headers if rate info exists (not admin)
-            response.headers.update({
-                "X-RateLimit-Limit": str(rate_info["limit"]),
-                "X-RateLimit-Remaining": str(rate_info["remaining"]),
-                "X-RateLimit-Reset": str(rate_info["reset_in"])
-            })
+            response.headers.update(
+                {
+                    "X-RateLimit-Limit": str(rate_info["limit"]),
+                    "X-RateLimit-Remaining": str(rate_info["remaining"]),
+                    "X-RateLimit-Reset": str(rate_info["reset_in"]),
+                }
+            )
         return response

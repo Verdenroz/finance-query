@@ -9,17 +9,17 @@ from src.services.sectors.fetchers import parse_sector, parse_sector_details
 from src.services.sectors.utils import get_yahoo_sector
 
 urls = {
-    Sector.TECHNOLOGY: 'https://finance.yahoo.com/sectors/technology/',
-    Sector.HEALTHCARE: 'https://finance.yahoo.com/sectors/healthcare/',
-    Sector.FINANCIAL_SERVICES: 'https://finance.yahoo.com/sectors/financial-services/',
-    Sector.CONSUMER_CYCLICAL: 'https://finance.yahoo.com/sectors/consumer-cyclical/',
-    Sector.INDUSTRIALS: 'https://finance.yahoo.com/sectors/industrials/',
-    Sector.CONSUMER_DEFENSIVE: 'https://finance.yahoo.com/sectors/consumer-defensive/',
-    Sector.ENERGY: 'https://finance.yahoo.com/sectors/energy/',
-    Sector.REAL_ESTATE: 'https://finance.yahoo.com/sectors/real-estate/',
-    Sector.UTILITIES: 'https://finance.yahoo.com/sectors/utilities/',
-    Sector.BASIC_MATERIALS: 'https://finance.yahoo.com/sectors/basic-materials/',
-    Sector.COMMUNICATION: 'https://finance.yahoo.com/sectors/communication-services/'
+    Sector.TECHNOLOGY: "https://finance.yahoo.com/sectors/technology/",
+    Sector.HEALTHCARE: "https://finance.yahoo.com/sectors/healthcare/",
+    Sector.FINANCIAL_SERVICES: "https://finance.yahoo.com/sectors/financial-services/",
+    Sector.CONSUMER_CYCLICAL: "https://finance.yahoo.com/sectors/consumer-cyclical/",
+    Sector.INDUSTRIALS: "https://finance.yahoo.com/sectors/industrials/",
+    Sector.CONSUMER_DEFENSIVE: "https://finance.yahoo.com/sectors/consumer-defensive/",
+    Sector.ENERGY: "https://finance.yahoo.com/sectors/energy/",
+    Sector.REAL_ESTATE: "https://finance.yahoo.com/sectors/real-estate/",
+    Sector.UTILITIES: "https://finance.yahoo.com/sectors/utilities/",
+    Sector.BASIC_MATERIALS: "https://finance.yahoo.com/sectors/basic-materials/",
+    Sector.COMMUNICATION: "https://finance.yahoo.com/sectors/communication-services/",
 }
 
 
@@ -36,7 +36,7 @@ async def get_sectors() -> list[MarketSector]:
     responses = await asyncio.gather(*[task for _, task in tasks])
 
     sectors = []
-    for (sector, _), html in zip(tasks, responses):
+    for (sector, _), html in zip(tasks, responses, strict=False):
         sector_data = await parse_sector(html, sector)
         sectors.append(sector_data)
     return sectors

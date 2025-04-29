@@ -1,7 +1,6 @@
 import os
 import time
 from dataclasses import dataclass
-from typing import Set, Dict
 
 from starlette.websockets import WebSocket
 
@@ -18,7 +17,7 @@ class SecurityConfig:
     HEALTH_CHECK_INTERVAL: int = 1800  # 30 minutes in seconds
 
     # Define paths that skip security checks
-    OPEN_PATHS: Set[str] = {"/ping", "/docs", "/openapi.json", "/redoc"}
+    OPEN_PATHS: set[str] = {"/ping", "/docs", "/openapi.json", "/redoc"}
 
     @classmethod
     def is_open_path(cls, path: str) -> bool:
@@ -31,20 +30,14 @@ class SecurityConfig:
 
 class RateLimitManager:
     def __init__(self):
-        self.rate_limits: Dict[str, RateLimitEntry] = {}
-        self.health_checks: Dict[str, float] = {}
+        self.rate_limits: dict[str, RateLimitEntry] = {}
+        self.health_checks: dict[str, float] = {}
 
     def _clean_expired(self) -> None:
         """Remove expired entries from rate limit and health check dictionaries"""
         current_time = time.time()
-        self.rate_limits = {
-            k: v for k, v in self.rate_limits.items()
-            if v.expire_at > current_time
-        }
-        self.health_checks = {
-            k: v for k, v in self.health_checks.items()
-            if v > current_time
-        }
+        self.rate_limits = {k: v for k, v in self.rate_limits.items() if v.expire_at > current_time}
+        self.health_checks = {k: v for k, v in self.health_checks.items() if v > current_time}
 
     async def get_rate_limit_info(self, ip: str) -> dict:
         self._clean_expired()
@@ -57,14 +50,14 @@ class RateLimitManager:
                 "count": 0,
                 "remaining": SecurityConfig.RATE_LIMIT,
                 "reset_in": 86400,
-                "limit": SecurityConfig.RATE_LIMIT
+                "limit": SecurityConfig.RATE_LIMIT,
             }
 
         return {
             "count": entry.count,
             "remaining": SecurityConfig.RATE_LIMIT - entry.count,
             "reset_in": int(entry.expire_at - current_time),
-            "limit": SecurityConfig.RATE_LIMIT
+            "limit": SecurityConfig.RATE_LIMIT,
         }
 
     async def get_health_check_info(self, ip: str) -> dict:
@@ -74,15 +67,9 @@ class RateLimitManager:
         expire_at = self.health_checks.get(key)
 
         if expire_at is None:
-            return {
-                "can_access": True,
-                "reset_in": SecurityConfig.HEALTH_CHECK_INTERVAL
-            }
+            return {"can_access": True, "reset_in": SecurityConfig.HEALTH_CHECK_INTERVAL}
 
-        return {
-            "can_access": False,
-            "reset_in": int(expire_at - current_time)
-        }
+        return {"can_access": False, "reset_in": int(expire_at - current_time)}
 
     async def check_health_rate_limit(self, ip: str, api_key: str) -> tuple[bool, dict]:
         """Returns (is_allowed, rate_limit_info) for health check endpoint"""
@@ -114,10 +101,7 @@ class RateLimitManager:
 
         if entry is None:
             # New entry
-            self.rate_limits[key] = RateLimitEntry(
-                count=1,
-                expire_at=current_time + 86400
-            )
+            self.rate_limits[key] = RateLimitEntry(count=1, expire_at=current_time + 86400)
         else:
             if entry.count >= SecurityConfig.RATE_LIMIT:
                 return False, await self.get_rate_limit_info(ip)
@@ -131,7 +115,7 @@ class RateLimitManager:
         Returns: (is_valid, metadata)
         """
         # Skip rate limiting if security is disabled
-        if not os.getenv('USE_SECURITY', 'False') == 'True':
+        if not os.getenv("USE_SECURITY", "False") == "True":
             return True, {}
 
         api_key = websocket.headers.get("x-api-key")
@@ -151,7 +135,7 @@ class RateLimitManager:
             "metadata": {
                 "rate_limit": rate_info["limit"],
                 "remaining_requests": rate_info["remaining"],
-                "reset": rate_info["reset_in"]
+                "reset": rate_info["reset_in"],
             }
         }
 
