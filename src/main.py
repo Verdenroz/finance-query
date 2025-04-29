@@ -17,12 +17,13 @@ from redis import Redis
 from starlette import status
 from starlette.responses import JSONResponse, Response
 
-from dependencies import YahooCookies, YahooCrumb
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.constants import headers
 from src.context import RequestContextMiddleware
 from src.dependencies import (
     RedisClient,
+    YahooCookies,
+    YahooCrumb,
     get_auth_data,
     refresh_yahoo_auth,
     remove_proxy_whitelist,
