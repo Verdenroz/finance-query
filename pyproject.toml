@@ -6,7 +6,7 @@ build-backend = "poetry.core.masonry.api"
 name = "financequery"
 version = "1.7.0"
 description = "A free and open-source financial data API for pricing, fundamentals, and technical indicators."
-license = { text = "MIT" }
+license = "MIT"
 authors = [
     { name = "Harvey Tseng", email = "harveytseng2@gmail.com" }
 ]
