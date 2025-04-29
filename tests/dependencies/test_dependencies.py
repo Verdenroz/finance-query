@@ -1,4 +1,3 @@
-import asyncio
 from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
@@ -224,7 +223,7 @@ class TestDependencies:
         error_cm1.__aenter__.side_effect = ClientPayloadError("Connection error")
 
         error_cm2 = AsyncMock()
-        error_cm2.__aenter__.side_effect = asyncio.TimeoutError("Timeout")
+        error_cm2.__aenter__.side_effect = TimeoutError("Timeout")
 
         # Create successful response
         success_response = AsyncMock()

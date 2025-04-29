@@ -181,9 +181,7 @@ class TestHistorical:
             assert result["2023-01-01"].open == expected_open
             assert result["2023-01-02"].close == expected_close
 
-            expected_url = (
-                f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}" f"?interval={interval.value}&range={time_range.value}&includePrePost=false"
-            )
+            expected_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval.value}&range={time_range.value}&includePrePost=false"
             mock_fetch.assert_called_once_with(url=expected_url)
 
     @pytest.mark.parametrize(

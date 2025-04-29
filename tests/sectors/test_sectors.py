@@ -302,9 +302,10 @@ class TestSectors:
             html_content = sector_html(sector_url)
 
             # Mock the necessary functions
-            with patch("src.services.sectors.get_sectors.get_yahoo_sector", new_callable=AsyncMock) as mock_get_sector, patch(
-                "src.services.sectors.get_sectors.fetch", new_callable=AsyncMock
-            ) as mock_fetch:
+            with (
+                patch("src.services.sectors.get_sectors.get_yahoo_sector", new_callable=AsyncMock) as mock_get_sector,
+                patch("src.services.sectors.get_sectors.fetch", new_callable=AsyncMock) as mock_fetch,
+            ):
                 # Set up the mocks to return our cached data
                 mock_get_sector.return_value = expected_sector
                 mock_fetch.return_value = html_content

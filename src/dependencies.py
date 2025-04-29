@@ -105,7 +105,7 @@ async def fetch(
                     return response
                 return await response.text()
 
-        except (ClientPayloadError, asyncio.TimeoutError, ClientError) as e:
+        except (TimeoutError, ClientPayloadError, ClientError) as e:
             if attempt == max_retries - 1:
                 raise HTTPException(status_code=500, detail=f"Request failed after {max_retries} attempts: {str(e)}") from e
             await asyncio.sleep(retry_delay)
@@ -198,9 +198,7 @@ async def refresh_yahoo_auth(app: FastAPI) -> None:
                 app.state.auth_expiry = current_time + app.state.auth_refresh_interval
 
                 refresh_time = datetime.datetime.now().isoformat()
-                print(
-                    f"Yahoo Finance auth refreshed at {refresh_time}, next refresh at " f"{datetime.datetime.fromtimestamp(app.state.auth_expiry).isoformat()}"
-                )
+                print(f"Yahoo Finance auth refreshed at {refresh_time}, next refresh at {datetime.datetime.fromtimestamp(app.state.auth_expiry).isoformat()}")
         except Exception as e:
             print(f"Auth refresh error: {e}")
 

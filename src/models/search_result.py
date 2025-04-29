@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 """
  Stocks, ETFs, and Trusts are all types of securities, but they can be called different things depending on the context.
     For example:
-    
+
     stock -> equity
     trust -> mutual funds
 """

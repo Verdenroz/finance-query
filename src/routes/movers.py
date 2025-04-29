@@ -38,7 +38,7 @@ async def actives(count: MoverCount = Query(MoverCount.FIFTY, description="Numbe
 @router.get(
     path="/gainers",
     summary="Get list of stocks with the highest price increase",
-    description="Returns the top gaining stocks or funds during the current trading session, including the " "symbol, name, price, change, and percent change.",
+    description="Returns the top gaining stocks or funds during the current trading session, including the symbol, name, price, change, and percent change.",
     response_model=list[MarketMover],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
@@ -64,7 +64,7 @@ async def gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Numbe
 @router.get(
     path="/losers",
     summary="Get list of stocks with the highest price decrease",
-    description="Returns the top losing stocks or funds during the current trading session, including the " "symbol, name, price, change, and percent change.",
+    description="Returns the top losing stocks or funds during the current trading session, including the symbol, name, price, change, and percent change.",
     response_model=list[MarketMover],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={

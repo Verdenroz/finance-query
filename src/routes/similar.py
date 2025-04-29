@@ -11,7 +11,7 @@ router = APIRouter()
 @router.get(
     path="/similar",
     summary="Get similar quotes to a queried symbol",
-    description="Returns simplified quote data for similar stocks to a queried symbol," "including symbol, name, price, and percent change.",
+    description="Returns simplified quote data for similar stocks to a queried symbol,including symbol, name, price, and percent change.",
     response_model=list[SimpleQuote],
     response_model_exclude_none=True,
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],

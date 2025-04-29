@@ -97,8 +97,9 @@ class TestSocketsHandler:
         ]
         metadata = {"rate_limit": 2000, "remaining_requests": 1999, "reset": 86400}
 
-        with patch("src.routes.sockets.get_simple_quotes", return_value=mock_quotes), patch(
-            "src.routes.sockets.validate_websocket", return_value=(True, metadata)
+        with (
+            patch("src.routes.sockets.get_simple_quotes", return_value=mock_quotes),
+            patch("src.routes.sockets.validate_websocket", return_value=(True, metadata)),
         ):
             with test_client.websocket_connect("/quotes") as websocket:
                 websocket.send_text(symbols_str)

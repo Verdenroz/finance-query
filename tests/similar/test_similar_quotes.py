@@ -353,9 +353,10 @@ class TestSimilarQuotesHandler:
         quote_data = cached_quote_data(recommended_symbols)
 
         # Mock the necessary functions
-        with patch("src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock) as mock_fetch_symbols, patch(
-            "src.services.similar.fetchers.similar_api.get_simple_quotes", new_callable=AsyncMock
-        ) as mock_get_quotes:
+        with (
+            patch("src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock) as mock_fetch_symbols,
+            patch("src.services.similar.fetchers.similar_api.get_simple_quotes", new_callable=AsyncMock) as mock_get_quotes,
+        ):
             mock_fetch_symbols.return_value = recommended_symbols
             mock_get_quotes.return_value = [SimpleQuote(**quote) for quote in quote_data]
 
@@ -488,9 +489,10 @@ class TestSimilarQuotesHandler:
         ]
 
         # Mock fetch_similar to raise a generic exception
-        with patch("src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock) as mock_fetch, patch(
-            "src.services.similar.get_similar_quotes.scrape_similar_quotes", new_callable=AsyncMock
-        ) as mock_scrape:
+        with (
+            patch("src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock) as mock_fetch,
+            patch("src.services.similar.get_similar_quotes.scrape_similar_quotes", new_callable=AsyncMock) as mock_scrape,
+        ):
             mock_fetch.return_value = []
             mock_scrape.return_value = mock_quotes
 

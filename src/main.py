@@ -22,11 +22,11 @@ from src.connections import ConnectionManager, RedisConnectionManager
 from src.constants import headers
 from src.context import RequestContextMiddleware
 from src.dependencies import (
+    RedisClient,
     get_auth_data,
     refresh_yahoo_auth,
     remove_proxy_whitelist,
     setup_proxy_whitelist,
-    RedisClient,
 )
 from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
 from src.routes import (
@@ -132,7 +132,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FinanceQuery",
     version="1.6.4",
-    description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & " "Yahoo Finance's Unofficial API.",
+    description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & Yahoo Finance's Unofficial API.",
     servers=[
         {"url": "https://finance-query.onrender.com", "description": "Render server"},
         {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "AWS server"},

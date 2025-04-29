@@ -178,7 +178,7 @@ class TestMovers:
 
     async def test_fetch_movers(self, mock_api_response, bypass_cache):
         """Test fetch_movers function with mocked API response"""
-        test_url = "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?" "count=50&formatted=true&scrIds=MOST_ACTIVES"
+        test_url = "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=MOST_ACTIVES"
         test_count = 50
         mock_response = mock_api_response(test_count)
         expected_movers = []
@@ -200,7 +200,7 @@ class TestMovers:
         assert len(result) == test_count
         assert all(isinstance(m, MarketMover) for m in result)
         expected_params = {
-            "fields": ("symbol,longName,shortName,regularMarketPrice," "regularMarketChange,regularMarketChangePercent"),
+            "fields": ("symbol,longName,shortName,regularMarketPrice,regularMarketChange,regularMarketChangePercent"),
         }
         mock_fetch.assert_called_once_with(url=test_url, params=expected_params)
         for i, mover in enumerate(result):

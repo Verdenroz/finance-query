@@ -279,9 +279,10 @@ class TestQuotes:
 
     def test_scrape_quotes_fallback(self, test_client, mock_yahoo_auth):
         """Test failure case when quotes cannot be fetched and fallback to scraping"""
-        with patch("src.services.quotes.get_quotes.fetch_quotes", new_callable=AsyncMock) as fetch_mock, patch(
-            "src.services.quotes.get_quotes.scrape_quotes", new_callable=AsyncMock
-        ) as scrape_mock:
+        with (
+            patch("src.services.quotes.get_quotes.fetch_quotes", new_callable=AsyncMock) as fetch_mock,
+            patch("src.services.quotes.get_quotes.scrape_quotes", new_callable=AsyncMock) as scrape_mock,
+        ):
             fetch_mock.side_effect = ValueError("Error with Yahoo Finance credentials")
             scrape_mock.return_value = [Quote(**MOCK_QUOTE_RESPONSE)]
 
@@ -297,9 +298,10 @@ class TestQuotes:
 
     def test_scrape_simple_quotes_fallback(self, test_client, mock_yahoo_auth):
         """Test failure case when simple quotes cannot be fetched and fallback to scraping"""
-        with patch("src.services.quotes.get_quotes.fetch_simple_quotes", new_callable=AsyncMock) as fetch_mock, patch(
-            "src.services.quotes.get_quotes.scrape_simple_quotes", new_callable=AsyncMock
-        ) as scrape_mock:
+        with (
+            patch("src.services.quotes.get_quotes.fetch_simple_quotes", new_callable=AsyncMock) as fetch_mock,
+            patch("src.services.quotes.get_quotes.scrape_simple_quotes", new_callable=AsyncMock) as scrape_mock,
+        ):
             fetch_mock.side_effect = ValueError("Error with Yahoo Finance credentials")
             scrape_mock.return_value = [SimpleQuote(**MOCK_SIMPLE_QUOTE_RESPONSE)]
 

@@ -6,9 +6,9 @@ build-backend = "poetry.core.masonry.api"
 name = "financequery"
 version = "1.7.0"
 description = "A free and open-source financial data API for pricing, fundamentals, and technical indicators."
-license = {text = "MIT"}
+license = { text = "MIT" }
 authors = [
-    {name = "Harvey Tseng", email = "harveytseng2@gmail.com"}
+    { name = "Harvey Tseng", email = "harveytseng2@gmail.com" }
 ]
 readme = "README.md"
 requires-python = ">=3.11, <4.0"
@@ -107,26 +107,28 @@ fail_under = 95
 [tool.ruff]
 target-version = "py311"
 line-length = 160
+exclude = ["__init__.py"]
+
+[tool.ruff.lint]
 select = [
     "E", # pycodestyle errors
     "F", # pyflakes
-    "I", # isort
+    "I", # isort integration
     "B", # flake8-bugbear
     "C4", # flake8-comprehensions
     "N", # pep8-naming
     "UP", # pyupgrade
 ]
 ignore = [
-    "B008", # Ignore "Do not perform function call in argument defaults"
-    "N806", # Ignore "Variable in function call should be lowercase"
-    "UP007"  # Ignore "Use `X | Y` for type annotations"
+    "B008", # function call in default arg
+    "N806", # non-lowercase variable in function call
+    "UP007" # prefer X | Y for types
 ]
-exclude = ["__init__.py"]
-
-[tool.ruff.isort]
-known-first-party = ["financequery"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
+
+[tool.ruff.isort]
+known-first-party = ["financequery"]

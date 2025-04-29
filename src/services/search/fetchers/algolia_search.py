@@ -14,7 +14,7 @@ async def fetch_algolia_search_results(query: str, hits: int, type: Optional[Typ
     :param hits: the number of hits to return (1-20)
     """
 
-    """    
+    """
     My personal Algolia credentials are on free tier and are safe to be shared
     This is out of trust that the search will not be abused
     The API key is search-only and can't be used to modify the data

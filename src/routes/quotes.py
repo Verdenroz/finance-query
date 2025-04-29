@@ -40,7 +40,7 @@ async def get_quote(
 @router.get(
     path="/simple-quotes",
     summary="Get summary data for multiple stocks",
-    description="Returns a simplified version of quote data for multiple stocks, including only symbols, names, " "prices, changes, and logos.",
+    description="Returns a simplified version of quote data for multiple stocks, including only symbols, names, prices, changes, and logos.",
     response_model=list[SimpleQuote],
     response_model_exclude_none=True,
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
