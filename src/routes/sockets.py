@@ -5,7 +5,7 @@ import pytz
 from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from dependencies import Schedule, WebsocketConnectionManager, YahooCookies, YahooCrumb
+from src.dependencies import Schedule, WebsocketConnectionManager, YahooCookies, YahooCrumb
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.models import MarketSector, SimpleQuote
 from src.security import validate_websocket
