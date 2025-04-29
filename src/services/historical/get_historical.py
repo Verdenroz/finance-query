@@ -125,5 +125,5 @@ async def get_historical(symbol: str, time_range: TimeRange, interval: Interval,
 
         return history_dict
 
-    except orjson.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Invalid JSON response from Yahoo Finance API") from orjson.JSONDecodeError
+    except orjson.JSONDecodeError as e:
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Yahoo Finance API") from e

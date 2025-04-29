@@ -159,9 +159,9 @@ async def technical_indicator(
     try:
         return await IndicatorFunctions[function](**params)
 
-    except TypeError as e:
-        param_name = str(e).split("'")[1]
-        raise HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.") from e
+    except TypeError as te:
+        param_name = str(te).split("'")[1]
+        raise HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.") from te
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}") from e
 
@@ -250,7 +250,7 @@ async def technical_indicators(
     try:
         indicator_list = [Indicator[ind.strip()] for ind in functions.split(",")] if functions else None
         return await get_technical_indicators(symbol, interval, indicator_list)
-    except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(e)}") from e
+    except KeyError as ke:
+        raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(ke)}") from ke
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}") from e
