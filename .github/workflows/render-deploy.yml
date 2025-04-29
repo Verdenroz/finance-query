@@ -1,7 +1,6 @@
 name: Render Deploy
 
 on:
-  pull_request:
   push:
     branches: [ "master" ]
 
