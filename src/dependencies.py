@@ -12,9 +12,8 @@ from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
 
-from connections import ConnectionManager
 from market import MarketSchedule
-from src.connections import RedisConnectionManager
+from src.connections import ConnectionManager, RedisConnectionManager
 from src.constants import proxy, proxy_auth
 from src.context import request_context
 
@@ -141,7 +140,7 @@ async def get_logo(
     return None
 
 
-async def get_auth_data() -> tuple[str, str] | None:
+async def get_auth_data() -> tuple[dict, str] | None:
     """
     Get Yahoo Finance authentication data (cookies and crumb)
 
