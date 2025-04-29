@@ -188,9 +188,7 @@ class TestDependencies:
         # Apply proxy patches conditionally
         with patch("src.dependencies.proxy", proxy_value):
             with patch("src.dependencies.proxy_auth", proxy_auth_value):
-                result = await fetch.__wrapped__(
-                    session=mock_session, url="https://example.com", return_response=True, use_proxy=use_proxy
-                )
+                result = await fetch.__wrapped__(session=mock_session, url="https://example.com", return_response=True, use_proxy=use_proxy)
 
         # Check response body was set correctly
         assert hasattr(result, "_body")
@@ -330,9 +328,7 @@ class TestDependencies:
         result = await get_logo.__wrapped__(session=mock_session, symbol="AAPL")
 
         # Verify the correct URL was called
-        mock_session.get.assert_called_with(
-            "https://img.logo.dev/ticker/AAPL?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"
-        )
+        mock_session.get.assert_called_with("https://img.logo.dev/ticker/AAPL?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true")
         assert result == "https://img.logo.dev/ticker/AAPL"
 
     async def test_get_logo_from_domain(self):
@@ -432,9 +428,7 @@ class TestDependencies:
         result = get_crumb({"Cookie": "test=value"})
 
         # Verify request was made with correct URL and headers
-        mock_requests_get.assert_called_with(
-            "https://query1.finance.yahoo.com/v1/test/getcrumb", headers={"Cookie": "test=value"}
-        )
+        mock_requests_get.assert_called_with("https://query1.finance.yahoo.com/v1/test/getcrumb", headers={"Cookie": "test=value"})
 
         # Verify result is unquoted crumb
         assert result == "abc123"
@@ -487,9 +481,7 @@ class TestDependencies:
     async def test_setup_proxy_whitelist_success(self, mock_getenv, mock_post, mock_get):
         """Test setup_proxy_whitelist successfully adds IP to whitelist"""
         # Mock environment variables
-        mock_getenv.side_effect = lambda key, default=None: {"PROXY_TOKEN": "test_token", "USE_PROXY": "True"}.get(
-            key, default
-        )
+        mock_getenv.side_effect = lambda key, default=None: {"PROXY_TOKEN": "test_token", "USE_PROXY": "True"}.get(key, default)
 
         # Mock IP retrieval
         mock_ip_response = MagicMock()
@@ -535,9 +527,7 @@ class TestDependencies:
     async def test_setup_proxy_whitelist_failure(self, mock_getenv, mock_post, mock_get):
         """Test setup_proxy_whitelist handles API failure"""
         # Mock environment variables
-        mock_getenv.side_effect = lambda key, default=None: {"PROXY_TOKEN": "test_token", "USE_PROXY": "True"}.get(
-            key, default
-        )
+        mock_getenv.side_effect = lambda key, default=None: {"PROXY_TOKEN": "test_token", "USE_PROXY": "True"}.get(key, default)
 
         # Mock IP retrieval
         mock_ip_response = MagicMock()

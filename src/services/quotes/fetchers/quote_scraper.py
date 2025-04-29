@@ -26,9 +26,7 @@ async def scrape_quotes(symbols: list[str]):
     chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = await asyncio.gather(
-        *(asyncio.gather(*(_scrape_quote(symbol) for symbol in chunk)) for chunk in chunks)
-    )
+    all_quotes = await asyncio.gather(*(asyncio.gather(*(_scrape_quote(symbol) for symbol in chunk)) for chunk in chunks))
 
     return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
 
@@ -41,9 +39,7 @@ async def scrape_simple_quotes(symbols: list[str]):
     chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = await asyncio.gather(
-        *(asyncio.gather(*(_scrape_simple_quote(symbol) for symbol in chunk)) for chunk in chunks)
-    )
+    all_quotes = await asyncio.gather(*(asyncio.gather(*(_scrape_simple_quote(symbol) for symbol in chunk)) for chunk in chunks))
 
     return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
 
@@ -72,9 +68,7 @@ async def _scrape_quote(symbol: str) -> Quote:
         company_info_task = asyncio.create_task(_scrape_company_info(tree, symbol))
         performance_task = asyncio.create_task(_scrape_performance(tree))
 
-        prices, general_info, company_info, performance = await asyncio.gather(
-            prices_task, general_info_task, company_info_task, performance_task
-        )
+        prices, general_info, company_info, performance = await asyncio.gather(prices_task, general_info_task, company_info_task, performance_task)
 
         regular_price, regular_change, regular_percent_change, pre_price, post_price = prices
 
@@ -117,9 +111,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
         regular_price, regular_change, regular_percent_change, pre_price, post_price = prices
 
         # Get logo asynchronously
-        website_elements = tree.xpath(
-            "/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href"
-        )
+        website_elements = tree.xpath("/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href")
         website = website_elements[0].strip() if website_elements else None
         logo = await get_logo(symbol=symbol, url=website) if website else None
 

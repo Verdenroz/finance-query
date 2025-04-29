@@ -111,9 +111,7 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
         # Format values
         regular_price = regular_price[0].strip() if regular_price else None
         regular_change = regular_change[0].strip() if regular_change else None
-        regular_percent_change = (
-            regular_percent_change[0].strip().replace("(", "").replace(")", "") if regular_percent_change else None
-        )
+        regular_percent_change = regular_percent_change[0].strip().replace("(", "").replace(")", "") if regular_percent_change else None
         post_price = post_price[0].strip() if post_price else None
         pre_price = pre_price[0].strip() if pre_price else None
 
@@ -135,9 +133,7 @@ async def _scrape_general_info(tree: etree.ElementTree):
         ul_xpath = './/div[@data-testid="quote-statistics"]/ul'
         list_items_xpath = ".//li"
         label_xpath = './/span[contains(@class, "label")]/text()'
-        value_xpath = (
-            './/span[contains(@class, "value")]/fin-streamer/@data-value | .//span[contains(@class, "value")]/text()'
-        )
+        value_xpath = './/span[contains(@class, "value")]/fin-streamer/@data-value | .//span[contains(@class, "value")]/text()'
 
         ul_element = tree.xpath(ul_xpath)
         if not ul_element:
@@ -165,11 +161,7 @@ async def _scrape_general_info(tree: etree.ElementTree):
         avg_volume_str = data.get("Avg. Volume", "")
 
         volume = int(volume_str.replace(",", "")) if volume_str and volume_str.replace(",", "").isdigit() else None
-        avg_volume = (
-            int(avg_volume_str.replace(",", ""))
-            if avg_volume_str and avg_volume_str.replace(",", "").isdigit()
-            else None
-        )
+        avg_volume = int(avg_volume_str.replace(",", "")) if avg_volume_str and avg_volume_str.replace(",", "").isdigit() else None
 
         forward_dividend_yield = data.get("Forward Dividend & Yield", "")
         if forward_dividend_yield and any(char.isdigit() for char in forward_dividend_yield):
@@ -198,9 +190,7 @@ async def _scrape_general_info(tree: etree.ElementTree):
             "expense_ratio": data.get("Expense Ratio (net)"),
             "category": data.get("Category"),
             "last_capital_gain": data.get("Last Cap Gain"),
-            "morningstar_rating": data.get("Morningstar Rating", "").split()[0]
-            if data.get("Morningstar Rating")
-            else None,
+            "morningstar_rating": data.get("Morningstar Rating", "").split()[0] if data.get("Morningstar Rating") else None,
             "morningstar_risk_rating": data.get("Morningstar Risk Rating"),
             "holdings_turnover": data.get("Holdings Turnover"),
             "last_dividend": data.get("Last Dividend"),

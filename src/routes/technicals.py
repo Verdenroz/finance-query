@@ -116,40 +116,24 @@ async def technical_indicator(
         ...,
         description="The symbol of the stock to get technical indicators for.",
     ),
-    time_range: Optional[TimeRange] = Query(
-        TimeRange.TWO_YEARS, description="The time range for the historical data.", alias="range"
-    ),
+    time_range: Optional[TimeRange] = Query(TimeRange.TWO_YEARS, description="The time range for the historical data.", alias="range"),
     interval: Optional[Interval] = Query(
         default=Interval.DAILY,
         description="The interval between data points. Available values: 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo.",
     ),
     epoch: Optional[bool] = Query(False, description="Whether to return the timestamps as epoch time."),
-    period: Optional[int] = Query(
-        None, description="The look-back period for the technical indicators.", alias="lookBackPeriod"
-    ),
-    stoch_period: Optional[int] = Query(
-        None, description="The stochastic look-back period for STOCH and SRSI.", alias="stochPeriod"
-    ),
-    signal_period: Optional[int] = Query(
-        None, description="The signal period for MACD, STOCH, and SRSI.", alias="signalPeriod"
-    ),
+    period: Optional[int] = Query(None, description="The look-back period for the technical indicators.", alias="lookBackPeriod"),
+    stoch_period: Optional[int] = Query(None, description="The stochastic look-back period for STOCH and SRSI.", alias="stochPeriod"),
+    signal_period: Optional[int] = Query(None, description="The signal period for MACD, STOCH, and SRSI.", alias="signalPeriod"),
     smooth: Optional[int] = Query(None, description="The smoothing period for STOCH and SRSI.", alias="smooth"),
     fast_period: Optional[int] = Query(None, description="The fast period for MACD.", alias="fastPeriod"),
     slow_period: Optional[int] = Query(None, description="The slow period for MACD.", alias="slowPeriod"),
     std_dev: Optional[int] = Query(None, description="The standard deviation for Bollinger Bands.", alias="stdDev"),
-    sma_periods: Optional[int] = Query(
-        None, description="The look-back period for the SMA in OBV.", alias="smaPeriods"
-    ),
+    sma_periods: Optional[int] = Query(None, description="The look-back period for the SMA in OBV.", alias="smaPeriods"),
     multiplier: Optional[int] = Query(None, description="The multiplier for SuperTrend.", alias="multiplier"),
-    tenkan_period: Optional[int] = Query(
-        None, description="The look-back period for the Tenkan line in Ichimoku.", alias="tenkanPeriod"
-    ),
-    kijun_period: Optional[int] = Query(
-        None, description="The look-back period for the Kijun line in Ichimoku.", alias="kijunPeriod"
-    ),
-    senkou_period: Optional[int] = Query(
-        None, description="The look-back period for the Senkou span in Ichimoku.", alias="senkouPeriod"
-    ),
+    tenkan_period: Optional[int] = Query(None, description="The look-back period for the Tenkan line in Ichimoku.", alias="tenkanPeriod"),
+    kijun_period: Optional[int] = Query(None, description="The look-back period for the Kijun line in Ichimoku.", alias="kijunPeriod"),
+    senkou_period: Optional[int] = Query(None, description="The look-back period for the Senkou span in Ichimoku.", alias="senkouPeriod"),
 ):
     params = {
         "symbol": symbol,
@@ -177,9 +161,7 @@ async def technical_indicator(
 
     except TypeError as e:
         param_name = str(e).split("'")[1]
-        raise HTTPException(
-            status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function."
-        ) from e
+        raise HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.") from e
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}") from e
 
@@ -233,11 +215,7 @@ async def technical_indicator(
         },
         400: {
             "description": "Invalid parameter for the technical indicator.",
-            "content": {
-                "application/jsoin": {
-                    "example": {"detail": "Invalid parameter: {parameter} for the {function} function."}
-                }
-            },
+            "content": {"application/jsoin": {"example": {"detail": "Invalid parameter: {parameter} for the {function} function."}}},
         },
         404: {
             "description": "Symbol not found",

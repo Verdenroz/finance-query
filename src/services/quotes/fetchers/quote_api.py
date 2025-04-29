@@ -26,9 +26,7 @@ async def fetch_quotes(symbols: list[str], cookies: str, crumb: str) -> list[Quo
     chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = await asyncio.gather(
-        *(asyncio.gather(*(_get_quote_from_yahoo(symbol, cookies, crumb) for symbol in chunk)) for chunk in chunks)
-    )
+    all_quotes = await asyncio.gather(*(asyncio.gather(*(_get_quote_from_yahoo(symbol, cookies, crumb) for symbol in chunk)) for chunk in chunks))
 
     return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
 
@@ -41,12 +39,7 @@ async def fetch_simple_quotes(symbols: list[str], cookies: str, crumb: str) -> l
     chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = await asyncio.gather(
-        *(
-            asyncio.gather(*(_get_simple_quote_from_yahoo(symbol, cookies, crumb) for symbol in chunk))
-            for chunk in chunks
-        )
-    )
+    all_quotes = await asyncio.gather(*(asyncio.gather(*(_get_simple_quote_from_yahoo(symbol, cookies, crumb) for symbol in chunk)) for chunk in chunks))
 
     return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
 
@@ -101,14 +94,8 @@ async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
     performance_overview = summary_result.get("quoteUnadjustedPerformanceOverview", {}).get("performanceOverview", {})
 
     # Get pre- and post-market prices if within timeframe
-    pre_market_price = (
-        get_fmt(price_data, "preMarketPrice") if is_within_pre_market_time(price_data.get("preMarketTime", 0)) else None
-    )
-    post_market_price = (
-        get_fmt(price_data, "postMarketPrice")
-        if is_within_post_market_time(price_data.get("postMarketTime", 0))
-        else None
-    )
+    pre_market_price = get_fmt(price_data, "preMarketPrice") if is_within_pre_market_time(price_data.get("preMarketTime", 0)) else None
+    post_market_price = get_fmt(price_data, "postMarketPrice") if is_within_post_market_time(price_data.get("postMarketTime", 0)) else None
 
     # Parse earnings dates
     earnings_dates = calendar.get("earnings", {}).get("earningsDate", [])
@@ -144,9 +131,7 @@ async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
         "expense_ratio": format_percent(stats.get("annualReportExpenseRatio")),
         "category": stats.get("category"),
         "last_capital_gain": get_fmt(stats, "lastCapGain"),
-        "morningstar_rating": f"★{'★' * (stats.get('morningStarOverallRating', {}).get('raw', 0) - 1)}"
-        if stats.get("morningStarOverallRating")
-        else None,
+        "morningstar_rating": f"★{'★' * (stats.get('morningStarOverallRating', {}).get('raw', 0) - 1)}" if stats.get("morningStarOverallRating") else None,
         "morningstar_risk_rating": get_morningstar_risk_rating(stats.get("morningStarRiskRating", {}).get("raw", -1)),
         "holdings_turnover": format_percent(stats.get("annualHoldingsTurnover")),
         "earnings_date": earnings_date,
@@ -178,14 +163,8 @@ async def _parse_yahoo_simple_quote_data(summary_data: dict) -> SimpleQuote:
     profile = summary_result.get("assetProfile", {})
 
     # Get pre- and post-market prices if within timeframe
-    pre_market_price = (
-        get_fmt(price_data, "preMarketPrice") if is_within_pre_market_time(price_data.get("preMarketTime", 0)) else None
-    )
-    post_market_price = (
-        get_fmt(price_data, "postMarketPrice")
-        if is_within_post_market_time(price_data.get("postMarketTime", 0))
-        else None
-    )
+    pre_market_price = get_fmt(price_data, "preMarketPrice") if is_within_pre_market_time(price_data.get("preMarketTime", 0)) else None
+    post_market_price = get_fmt(price_data, "postMarketPrice") if is_within_post_market_time(price_data.get("postMarketTime", 0)) else None
 
     quote_data = {
         "symbol": price_data.get("symbol"),

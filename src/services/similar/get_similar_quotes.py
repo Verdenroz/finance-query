@@ -1,4 +1,3 @@
-
 from src.cache import cache
 from src.models import SimpleQuote
 from src.services.similar.fetchers import fetch_similar, scrape_similar_quotes

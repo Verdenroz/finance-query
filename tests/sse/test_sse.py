@@ -34,9 +34,7 @@ class TestSSE:
         ]
 
         # Patch dependencies
-        with patch("src.routes.stream.get_simple_quotes", return_value=mock_quotes), patch(
-            "asyncio.sleep", AsyncMock()
-        ):
+        with patch("src.routes.stream.get_simple_quotes", return_value=mock_quotes), patch("asyncio.sleep", AsyncMock()):
             # Mock cookies and crumb
             mock_cookies = "mock_cookies"
             mock_crumb = "mock_crumb"
@@ -85,10 +83,7 @@ class TestSSE:
 
         # Mock the generator function directly to return only one item
         async def mock_quotes_generator(symbols):
-            quotes = [
-                quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True)
-                for quote in mock_quotes
-            ]
+            quotes = [quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True) for quote in mock_quotes]
             data = orjson.dumps(quotes).decode("utf-8")
             yield f"quote: {data}\n\n"
             # No sleep or infinite loop here

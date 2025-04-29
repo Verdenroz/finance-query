@@ -145,20 +145,13 @@ class Quote(BaseModel):
         validation_alias=AliasChoices("inceptionDate", "inception_date"),
     )
     sector: Optional[str] = Field(default=None, examples=["Technology"], description="Sector of the company")
-    industry: Optional[str] = Field(
-        default=None, examples=["Consumer Electronics"], description="Industry of the company"
-    )
+    industry: Optional[str] = Field(default=None, examples=["Consumer Electronics"], description="Industry of the company")
     about: Optional[str] = Field(
         default=None,
-        examples=[
-            "Apple Inc. designs, manufactures, and markets smartphones, personal computers, "
-            "tablets, wearables, and accessories worldwide."
-        ],
+        examples=["Apple Inc. designs, manufactures, and markets smartphones, personal computers, " "tablets, wearables, and accessories worldwide."],
         description="About the company",
     )
-    employees: Optional[str] = Field(
-        default=None, examples=["150,000"], description="Number of employees in the company"
-    )
+    employees: Optional[str] = Field(default=None, examples=["150,000"], description="Number of employees in the company")
     five_days_return: Optional[str] = Field(
         default=None,
         examples=["-19.35%"],
@@ -229,6 +222,4 @@ class Quote(BaseModel):
         serialization_alias="maxReturn",
         validation_alias=AliasChoices("maxReturn", "max_return"),
     )
-    logo: Optional[str] = Field(
-        default=None, examples=["https://logo.clearbit.com/apple.com"], description="Company logo"
-    )
+    logo: Optional[str] = Field(default=None, examples=["https://logo.clearbit.com/apple.com"], description="Company logo")

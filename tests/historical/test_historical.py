@@ -95,11 +95,7 @@ class TestHistorical:
 
     def test_get_historical_with_epoch(self, test_client, mock_yahoo_auth, monkeypatch):
         """Test historical data retrieval with epoch timestamps"""
-        epoch_data = {
-            "1672531200": HistoricalData(
-                open=150.0, high=155.0, low=149.0, close=153.5, adj_close=153.5, volume=10000000
-            )
-        }
+        epoch_data = {"1672531200": HistoricalData(open=150.0, high=155.0, low=149.0, close=153.5, adj_close=153.5, volume=10000000)}
 
         mock_get_historical = AsyncMock(return_value=epoch_data)
         monkeypatch.setattr("src.routes.historical_prices.get_historical", mock_get_historical)
@@ -169,12 +165,8 @@ class TestHistorical:
         assert exc_info.value.status_code == 400
         assert exc_info.value.detail == expected_error
 
-    @pytest.mark.parametrize(
-        "symbol, expected_open, expected_close", [("AAPL", 150.0, 157.0), ("GOOGL", 2800.0, 2900.0)]
-    )
-    async def test_get_historical_api_success(
-        self, bypass_cache, mock_api_response, symbol, expected_open, expected_close
-    ):
+    @pytest.mark.parametrize("symbol, expected_open, expected_close", [("AAPL", 150.0, 157.0), ("GOOGL", 2800.0, 2900.0)])
+    async def test_get_historical_api_success(self, bypass_cache, mock_api_response, symbol, expected_open, expected_close):
         """Test successful historical data retrieval with mocked API response"""
         time_range = TimeRange.ONE_MONTH
         interval = Interval.DAILY
@@ -190,8 +182,7 @@ class TestHistorical:
             assert result["2023-01-02"].close == expected_close
 
             expected_url = (
-                f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-                f"?interval={interval.value}&range={time_range.value}&includePrePost=false"
+                f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}" f"?interval={interval.value}&range={time_range.value}&includePrePost=false"
             )
             mock_fetch.assert_called_once_with(url=expected_url)
 
@@ -219,9 +210,7 @@ class TestHistorical:
                 "expected_detail": "Symbol AAPL not found",
             },
             {
-                "response": {
-                    "chart": {"error": {"code": "Internal Server Error", "description": "Yahoo API unavailable"}}
-                },
+                "response": {"chart": {"error": {"code": "Internal Server Error", "description": "Yahoo API unavailable"}}},
                 "expected_status": 500,
                 "expected_detail": "Failed to retrieve historical data: Yahoo API unavailable",
             },

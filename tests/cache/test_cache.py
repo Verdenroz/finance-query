@@ -80,9 +80,7 @@ class TestRedisCacheHandler:
             redis.exists.return_value = True
             redis.type.return_value = b"string"
             q = SimpleQuote(symbol="AAPL", name="Apple", price="150.0", change="+1.00", percent_change="+0.69%")
-            ser = handler.serialize_data(
-                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)}
-            )
+            ser = handler.serialize_data({"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)})
             redis.get.return_value = ser
             out = await handler.get("str", SimpleQuote)
             assert isinstance(out, SimpleQuote)
@@ -90,12 +88,8 @@ class TestRedisCacheHandler:
 
             # list key
             redis.type.return_value = b"list"
-            ser1 = handler.serialize_data(
-                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)}
-            )
-            ser2 = handler.serialize_data(
-                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)}
-            )
+            ser1 = handler.serialize_data({"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)})
+            ser2 = handler.serialize_data({"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)})
             redis.lrange.return_value = [ser1, ser2]
             lst = await handler.get("lst", list[SimpleQuote])
             assert isinstance(lst, list)

@@ -22,18 +22,14 @@ class MarketSector(BaseModel):
         default=...,
         title="Sector name",
     )
-    day_return: str = Field(
-        default=..., title="Day return", alias="dayReturn", validation_alias=AliasChoices("dayReturn", "day_return")
-    )
+    day_return: str = Field(default=..., title="Day return", alias="dayReturn", validation_alias=AliasChoices("dayReturn", "day_return"))
     ytd_return: str = Field(
         default=...,
         title="Year to date return",
         alias="ytdReturn",
         validation_alias=AliasChoices("ytdReturn", "ytd_return"),
     )
-    year_return: str = Field(
-        default=..., title="Year return", alias="yearReturn", validation_alias=AliasChoices("yearReturn", "year_return")
-    )
+    year_return: str = Field(default=..., title="Year return", alias="yearReturn", validation_alias=AliasChoices("yearReturn", "year_return"))
     three_year_return: str = Field(
         default=...,
         title="Three year return",

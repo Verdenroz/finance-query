@@ -21,9 +21,7 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
     """
     while True:
         quotes = await get_simple_quotes(symbols, cookies, crumb)
-        quotes = [
-            quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True) for quote in quotes
-        ]
+        quotes = [quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True) for quote in quotes]
         data = orjson.dumps(quotes).decode("utf-8")
         yield f"quote: {data}\n\n"
         await asyncio.sleep(10)
@@ -53,11 +51,7 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
         422: {
             "model": ValidationErrorResponse,
             "description": "Validation error of query parameters",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "errors": {"symbols": ["Field required"]}}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "Invalid request", "errors": {"symbols": ["Field required"]}}}},
         },
     },
 )
@@ -65,8 +59,6 @@ async def stream_quotes(
     cookies: YahooCookies,
     crumb: YahooCrumb,
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
-    cookies: str = Depends(get_yahoo_cookies),
-    crumb: str = Depends(get_yahoo_crumb),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
     return StreamingResponse(quotes_generator(symbols, cookies, crumb), media_type="text/event-stream")

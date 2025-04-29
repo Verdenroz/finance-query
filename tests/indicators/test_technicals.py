@@ -25,14 +25,10 @@ class TestTechnicals:
         function = "SMA"
         time_range = "1y"
         interval = "1d"
-        response = test_client.get(
-            f"{VERSION}/indicator?function={function}&symbol={symbol}&range={time_range}&interval={interval}"
-        )
+        response = test_client.get(f"{VERSION}/indicator?function={function}&symbol={symbol}&range={time_range}&interval={interval}")
 
         assert response.status_code == 200
-        mock_get_indicator.assert_awaited_once_with(
-            symbol=symbol, time_range=TimeRange.YEAR, interval=Interval.DAILY, epoch=False
-        )
+        mock_get_indicator.assert_awaited_once_with(symbol=symbol, time_range=TimeRange.YEAR, interval=Interval.DAILY, epoch=False)
 
     def test_technical_indicator_with_optional_params(self, test_client, mock_yahoo_auth, monkeypatch):
         """Test technical indicator with all optional parameters"""
@@ -44,9 +40,7 @@ class TestTechnicals:
         )
         monkeypatch.setitem(src.routes.technicals.IndicatorFunctions, Indicator.MACD, mock_get_macd)
 
-        response = test_client.get(
-            f"{VERSION}/indicator?function=MACD&symbol=AAPL&range=1y&interval=1d&fastPeriod=4&slowPeriod=30&signalPeriod=1&epoch=true"
-        )
+        response = test_client.get(f"{VERSION}/indicator?function=MACD&symbol=AAPL&range=1y&interval=1d&fastPeriod=4&slowPeriod=30&signalPeriod=1&epoch=true")
 
         assert response.status_code == 200
         mock_get_macd.assert_awaited_once_with(
@@ -96,9 +90,7 @@ class TestTechnicals:
         assert "BBANDS(20,2)" in data
         assert data["SMA(14)"]["SMA"] == 150.0
 
-        mock_get_indicators.assert_awaited_once_with(
-            symbol, Interval.DAILY, [Indicator.SMA, Indicator.RSI, Indicator.BBANDS]
-        )
+        mock_get_indicators.assert_awaited_once_with(symbol, Interval.DAILY, [Indicator.SMA, Indicator.RSI, Indicator.BBANDS])
 
     def test_technical_indicators_summary_no_functions(self, test_client, mock_yahoo_auth, monkeypatch):
         """Test technical indicators summary without specifying functions"""
@@ -150,18 +142,14 @@ class TestTechnicals:
             mock_indicator = AsyncMock(return_value=mock_response)
             monkeypatch.setitem(src.routes.technicals.IndicatorFunctions, indicator, mock_indicator)
 
-            response = test_client.get(
-                f"{VERSION}/indicator?function={indicator.value}&symbol=AAPL&range=1y&interval=1d"
-            )
+            response = test_client.get(f"{VERSION}/indicator?function={indicator.value}&symbol=AAPL&range=1y&interval=1d")
 
             assert response.status_code == 200, f"Failed for indicator {indicator.value}"
             mock_indicator.reset_mock()
 
     async def test_get_technical_indicators_comprehensive(self, historical_quotes):
         """Test the actual implementation of get_technical_indicators with all indicators"""
-        with patch(
-            "src.services.indicators.get_technical_indicators.get_historical", AsyncMock(return_value=historical_quotes)
-        ):
+        with patch("src.services.indicators.get_technical_indicators.get_historical", AsyncMock(return_value=historical_quotes)):
             result = await get_technical_indicators("AAPL", Interval.DAILY)
 
             self._verify_indicator_presence(result)
@@ -221,8 +209,7 @@ class TestTechnicals:
                     if interval == Interval.ONE_MINUTE
                     else (
                         TimeRange.ONE_MONTH
-                        if interval
-                        in [Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES, Interval.ONE_HOUR]
+                        if interval in [Interval.FIVE_MINUTES, Interval.FIFTEEN_MINUTES, Interval.THIRTY_MINUTES, Interval.ONE_HOUR]
                         else TimeRange.FIVE_YEARS
                     )
                 )

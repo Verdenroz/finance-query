@@ -29,6 +29,4 @@ class SimpleQuote(BaseModel):
         serialization_alias="percentChange",
         validation_alias=AliasChoices("percentChange", "percent_change"),
     )
-    logo: Optional[str] = Field(
-        default=None, examples=["https://logo.clearbit.com/apple.com"], description="Company logo"
-    )
+    logo: Optional[str] = Field(default=None, examples=["https://logo.clearbit.com/apple.com"], description="Company logo")

@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from aiohttp import ClientSession
 from dotenv import load_dotenv
-from fastapi import Depends, FastAPI
+from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,17 +17,16 @@ from redis import Redis
 from starlette import status
 from starlette.responses import JSONResponse, Response
 
+from dependencies import YahooCookies, YahooCrumb
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.constants import headers
 from src.context import RequestContextMiddleware
 from src.dependencies import (
     get_auth_data,
-    get_redis,
-    get_yahoo_cookies,
-    get_yahoo_crumb,
     refresh_yahoo_auth,
     remove_proxy_whitelist,
     setup_proxy_whitelist,
+    RedisClient,
 )
 from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
 from src.routes import (
@@ -133,8 +132,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="FinanceQuery",
     version="1.6.4",
-    description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & "
-    "Yahoo Finance's Unofficial API.",
+    description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & " "Yahoo Finance's Unofficial API.",
     servers=[
         {"url": "https://finance-query.onrender.com", "description": "Render server"},
         {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "AWS server"},
@@ -320,9 +318,7 @@ async def health(r: RedisClient, cookies=YahooCookies, crumb=YahooCrumb):
     responses={
         200: {
             "description": "Successful Response",
-            "content": {
-                "application/json": {"example": {"status": "healthy", "timestamp": "2023-10-01T12:34:56.789Z"}}
-            },
+            "content": {"application/json": {"example": {"status": "healthy", "timestamp": "2023-10-01T12:34:56.789Z"}}},
         }
     },
 )

@@ -446,9 +446,7 @@ class TestSocketsHandler:
         websocket.receive_text.side_effect = WebSocketDisconnect()
 
         # Patch sleep to avoid waiting and validate_websocket to return valid
-        with patch("src.routes.sockets.validate_websocket", return_value=(True, {})), patch(
-            "asyncio.sleep", AsyncMock()
-        ):
+        with patch("src.routes.sockets.validate_websocket", return_value=(True, {})), patch("asyncio.sleep", AsyncMock()):
             await handle_websocket_connection(
                 websocket=websocket,
                 channel="test_channel",

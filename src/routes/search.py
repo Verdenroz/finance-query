@@ -12,8 +12,7 @@ router = APIRouter()
 @router.get(
     path="/search",
     summary="Get stocks by name or symbol",
-    description="Search for a stock by name or symbol, filtering by its type (stock, etf, trust) and limiting the "
-    "number of hits to 1-20",
+    description="Search for a stock by name or symbol, filtering by its type (stock, etf, trust) and limiting the " "number of hits to 1-20",
     response_model=list[SearchResult],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={

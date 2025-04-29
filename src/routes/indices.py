@@ -31,10 +31,7 @@ async def market_indices(
     # Add indices from selected region to the set
     if region:
         region_indices = [
-            idx
-            for idx in Index
-            if INDEX_REGIONS.get(idx) == region
-            or (INDEX_REGIONS.get(idx) == Region.UNITED_STATES and region == Region.NORTH_AMERICA)
+            idx for idx in Index if INDEX_REGIONS.get(idx) == region or (INDEX_REGIONS.get(idx) == Region.UNITED_STATES and region == Region.NORTH_AMERICA)
         ]
         selected_indices.update(region_indices)
 

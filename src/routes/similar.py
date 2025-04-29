@@ -11,8 +11,7 @@ router = APIRouter()
 @router.get(
     path="/similar",
     summary="Get similar quotes to a queried symbol",
-    description="Returns simplified quote data for similar stocks to a queried symbol,"
-    "including symbol, name, price, and percent change.",
+    description="Returns simplified quote data for similar stocks to a queried symbol," "including symbol, name, price, and percent change.",
     response_model=list[SimpleQuote],
     response_model_exclude_none=True,
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
@@ -20,11 +19,7 @@ router = APIRouter()
         200: {
             "model": list[SimpleQuote],
             "description": "Similar stocks found.",
-            "content": {
-                "application/json": {
-                    "example": [{"symbol": "AAPL", "name": "Apple Inc.", "price": "146.06", "percent_change": "-0.11%"}]
-                }
-            },
+            "content": {"application/json": {"example": [{"symbol": "AAPL", "name": "Apple Inc.", "price": "146.06", "percent_change": "-0.11%"}]}},
         },
         404: {
             "description": "No similar stocks found or invalid symbol.",

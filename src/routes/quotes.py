@@ -24,11 +24,7 @@ router = APIRouter()
         422: {
             "model": ValidationErrorResponse,
             "description": "Validation error of query parameters",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "errors": {"symbols": ["Field required"]}}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "Invalid request", "errors": {"symbols": ["Field required"]}}}},
         },
     },
 )
@@ -36,8 +32,6 @@ async def get_quote(
     cookies: YahooCookies,
     crumb: YahooCrumb,
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
-    cookies: str = Depends(get_yahoo_cookies),
-    crumb: str = Depends(get_yahoo_crumb),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
     return await get_quotes(symbols, cookies, crumb)
@@ -46,8 +40,7 @@ async def get_quote(
 @router.get(
     path="/simple-quotes",
     summary="Get summary data for multiple stocks",
-    description="Returns a simplified version of quote data for multiple stocks, including only symbols, names, "
-    "prices, changes, and logos.",
+    description="Returns a simplified version of quote data for multiple stocks, including only symbols, names, " "prices, changes, and logos.",
     response_model=list[SimpleQuote],
     response_model_exclude_none=True,
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
@@ -60,11 +53,7 @@ async def get_quote(
         422: {
             "model": ValidationErrorResponse,
             "description": "Validation error of query parameters",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "Invalid request", "errors": {"symbols": ["Field required"]}}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "Invalid request", "errors": {"symbols": ["Field required"]}}}},
         },
     },
 )
@@ -72,8 +61,6 @@ async def get_simple_quote(
     cookies: YahooCookies,
     crumb: YahooCrumb,
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
-    cookies: str = Depends(get_yahoo_cookies),
-    crumb: str = Depends(get_yahoo_crumb),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
     return await get_simple_quotes(symbols, cookies, crumb)

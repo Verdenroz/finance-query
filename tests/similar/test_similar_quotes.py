@@ -333,9 +333,7 @@ class TestSimilarQuotesHandler:
                 # Verify fetch was called with correct parameters
                 mock_fetch.assert_called_once()
                 call_args = mock_fetch.call_args[1]
-                assert (
-                    call_args["url"] == f"https://query1.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
-                )
+                assert call_args["url"] == f"https://query1.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
                 assert call_args["params"] == {"count": test_limit}  # Verify limit is passed to API
 
     async def test_fetch_similar(self, yahoo_recommendations, cached_quote_data, bypass_cache):
@@ -355,9 +353,7 @@ class TestSimilarQuotesHandler:
         quote_data = cached_quote_data(recommended_symbols)
 
         # Mock the necessary functions
-        with patch(
-            "src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock
-        ) as mock_fetch_symbols, patch(
+        with patch("src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock) as mock_fetch_symbols, patch(
             "src.services.similar.fetchers.similar_api.get_simple_quotes", new_callable=AsyncMock
         ) as mock_get_quotes:
             mock_fetch_symbols.return_value = recommended_symbols
@@ -384,9 +380,7 @@ class TestSimilarQuotesHandler:
         test_crumb = "test_crumb"
 
         # Mock _fetch_yahoo_recommended_symbols to raise HTTPException
-        with patch(
-            "src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock
-        ) as mock_fetch:
+        with patch("src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
 
             # Verify that HTTPException is re-raised
@@ -435,11 +429,7 @@ class TestSimilarQuotesHandler:
 
                     # Verify percent_change format
                     assert quote.percent_change.endswith("%")
-                    assert (
-                        quote.percent_change.startswith("+")
-                        or quote.percent_change.startswith("-")
-                        or quote.percent_change.startswith("0")
-                    )
+                    assert quote.percent_change.startswith("+") or quote.percent_change.startswith("-") or quote.percent_change.startswith("0")
 
                 # Verify fetch was called with correct parameters
                 mock_fetch.assert_called_once_with(url=url)
@@ -469,13 +459,9 @@ class TestSimilarQuotesHandler:
         test_limit = 3
 
         mock_quotes = [
-            SimpleQuote(
-                symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17", percent_change="-0.82%"
-            ),
+            SimpleQuote(symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17", percent_change="-0.82%"),
             SimpleQuote(symbol="GOOGL", name="Alphabet Inc.", price="142.65", change="1.23", percent_change="+0.87%"),
-            SimpleQuote(
-                symbol="META", name="Meta Platforms, Inc.", price="485.58", change="5.37", percent_change="+1.12%"
-            ),
+            SimpleQuote(symbol="META", name="Meta Platforms, Inc.", price="485.58", change="5.37", percent_change="+1.12%"),
         ]
 
         # Mock fetch_similar to return our test quotes
@@ -497,16 +483,12 @@ class TestSimilarQuotesHandler:
         test_limit = 3
 
         mock_quotes = [
-            SimpleQuote(
-                symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17", percent_change="-0.82%"
-            ),
+            SimpleQuote(symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17", percent_change="-0.82%"),
             SimpleQuote(symbol="GOOGL", name="Alphabet Inc.", price="142.65", change="1.23", percent_change="+0.87%"),
         ]
 
         # Mock fetch_similar to raise a generic exception
-        with patch(
-            "src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock
-        ) as mock_fetch, patch(
+        with patch("src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock) as mock_fetch, patch(
             "src.services.similar.get_similar_quotes.scrape_similar_quotes", new_callable=AsyncMock
         ) as mock_scrape:
             mock_fetch.return_value = []

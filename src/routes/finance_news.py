@@ -12,8 +12,7 @@ router = APIRouter()
 @router.get(
     path="/news",
     summary="Get financial news",
-    description="Fetch news for a specific stock, ETF, or general market news. "
-    "Supports global stock exchanges and provides flexible symbol lookup.",
+    description="Fetch news for a specific stock, ETF, or general market news. " "Supports global stock exchanges and provides flexible symbol lookup.",
     response_model=list[News],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
@@ -33,9 +32,7 @@ router = APIRouter()
     },
 )
 async def get_news(
-    symbol: Optional[str] = Query(
-        None, description="Optional symbol to get news for. If not provided, general market news is returned"
-    ),
+    symbol: Optional[str] = Query(None, description="Optional symbol to get news for. If not provided, general market news is returned"),
 ):
     if not symbol:
         return await scrape_general_news()

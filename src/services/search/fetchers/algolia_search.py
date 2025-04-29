@@ -40,10 +40,6 @@ async def fetch_algolia_search_results(query: str, hits: int, type: Optional[Typ
 
     stocks = []
     for result in results["hits"]:
-        stocks.append(
-            SearchResult(
-                name=result["name"], symbol=result["symbol"], exchange=result["exchangeShortName"], type=result["type"]
-            )
-        )
+        stocks.append(SearchResult(name=result["name"], symbol=result["symbol"], exchange=result["exchangeShortName"], type=result["type"]))
 
     return stocks

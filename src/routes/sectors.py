@@ -12,8 +12,7 @@ router = APIRouter()
 @router.get(
     path="/sectors",
     summary="Get summary performance for all sectors",
-    description="Returns a summary of all sectors, or detailed information for a specific sector or symbol, "
-    "depending on the query parameters provided.",
+    description="Returns a summary of all sectors, or detailed information for a specific sector or symbol, " "depending on the query parameters provided.",
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
@@ -123,8 +122,7 @@ async def sectors():
 @router.get(
     path="/sectors/symbol/{symbol}",
     summary="Get summary sector performance of a quote",
-    description="Returns the quote's sector performance summary, including its returns over a 1d, ytd, year, 3y, "
-    "and 5y period",
+    description="Returns the quote's sector performance summary, including its returns over a 1d, ytd, year, 3y, " "and 5y period",
     response_model=MarketSector,
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={

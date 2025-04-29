@@ -8,9 +8,7 @@ from src.models import HistoricalData, Interval, TimeRange
 
 
 @cache(expire=60, market_closed_expire=600)
-async def get_historical(
-    symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False
-) -> dict[str, HistoricalData]:
+async def get_historical(symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict[str, HistoricalData]:
     """
     Get historical data for a stock symbol based on the time period and interval provided.
     :param symbol: the symbol of the stock to get historical data for

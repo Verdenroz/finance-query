@@ -246,9 +246,7 @@ class TestSectors:
             assert isinstance(sector_data.sector, str)
 
             # Verify that the sector string matches one of the Sector enum values
-            assert sector_data.sector in [
-                s.value for s in Sector
-            ], f"{sector_data.sector} is not a valid Sector enum value"
+            assert sector_data.sector in [s.value for s in Sector], f"{sector_data.sector} is not a valid Sector enum value"
 
             assert sector_data.day_return.startswith("+") or sector_data.day_return.startswith("-")
             assert sector_data.ytd_return.startswith("+") or sector_data.ytd_return.startswith("-")
@@ -304,9 +302,9 @@ class TestSectors:
             html_content = sector_html(sector_url)
 
             # Mock the necessary functions
-            with patch(
-                "src.services.sectors.get_sectors.get_yahoo_sector", new_callable=AsyncMock
-            ) as mock_get_sector, patch("src.services.sectors.get_sectors.fetch", new_callable=AsyncMock) as mock_fetch:
+            with patch("src.services.sectors.get_sectors.get_yahoo_sector", new_callable=AsyncMock) as mock_get_sector, patch(
+                "src.services.sectors.get_sectors.fetch", new_callable=AsyncMock
+            ) as mock_fetch:
                 # Set up the mocks to return our cached data
                 mock_get_sector.return_value = expected_sector
                 mock_fetch.return_value = html_content

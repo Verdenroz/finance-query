@@ -10,19 +10,14 @@ router = APIRouter()
 @router.get(
     path="/historical",
     summary="Get historical data for a stock",
-    description="Returns historical data, including its date and OHLCV, for a stock symbol based on the time "
-    "period and interval provided.",
+    description="Returns historical data, including its date and OHLCV, for a stock symbol based on the time " "period and interval provided.",
     response_model=dict[str, HistoricalData],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": dict[str, HistoricalData], "description": "Successfully retrieved historical data"},
         400: {
             "description": "Bad request",
-            "content": {
-                "application/json": {
-                    "example": {"detail": "If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less"}
-                }
-            },
+            "content": {"application/json": {"example": {"detail": "If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less"}}},
         },
         404: {
             "description": "Symbol not found",

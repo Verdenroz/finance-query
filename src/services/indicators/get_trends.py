@@ -55,30 +55,20 @@ async def get_macd(
     """
     quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
     dates, prices, _, _, _ = prepare_price_data(quotes)
-    macd_line, signal_line = calculate_macd(
-        prices, fast_period=fast_period, slow_period=slow_period, signal_period=signal_period
-    )
+    macd_line, signal_line = calculate_macd(prices, fast_period=fast_period, slow_period=slow_period, signal_period=signal_period)
 
     macd_dict = create_indicator_dict(dates, macd_line)
     signal_dict = create_indicator_dict(dates, signal_line)
 
     # Create indicator data only for dates present in both dictionaries
-    indicator_data = {
-        date: MACDData(value=macd_dict[date], signal=signal_dict[date])
-        for date in macd_dict.keys()
-        if date in signal_dict
-    }
+    indicator_data = {date: MACDData(value=macd_dict[date], signal=signal_dict[date]) for date in macd_dict.keys() if date in signal_dict}
 
     # Sort the dictionary by date in reverse order
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.MACD, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.MACD, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_adx(
-    symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False
-) -> dict:
+async def get_adx(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False) -> dict:
     """
     Get the Average Directional Index (ADX) for a symbol.
     The ADX is a trend strength indicator that quantifies the strength of a trend without indicating its direction.
@@ -103,14 +93,10 @@ async def get_adx(
     indicator_data = {date: ADXData(value=value) for date, value in create_indicator_dict(dates, adx_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.ADX, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.ADX, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_aroon(
-    symbol: str, time_range: TimeRange, interval: Interval, period: int = 25, epoch: bool = False
-) -> dict:
+async def get_aroon(symbol: str, time_range: TimeRange, interval: Interval, period: int = 25, epoch: bool = False) -> dict:
     """
     Get the Aroon indicator for a symbol.
     The Aroon indicator consists of two lines: Aroon Up and Aroon Down. Aroon Up measures the number of periods
@@ -137,21 +123,13 @@ async def get_aroon(
     down_dict = create_indicator_dict(dates, aroon_down)
 
     # Create indicator data for dates present in both dictionaries
-    indicator_data = {
-        date: AROONData(aroon_up=up_dict[date], aroon_down=down_dict[date])
-        for date in up_dict.keys()
-        if date in down_dict
-    }
+    indicator_data = {date: AROONData(aroon_up=up_dict[date], aroon_down=down_dict[date]) for date in up_dict.keys() if date in down_dict}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.AROON, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.AROON, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_bbands(
-    symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, std_dev: int = 2, epoch: bool = False
-) -> dict:
+async def get_bbands(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, std_dev: int = 2, epoch: bool = False) -> dict:
     """
     Get the Bollinger Bands (BBands) for a symbol.
     Bollinger Bands consist of a middle band (SMA) and two outer bands (standard deviations from the SMA).
@@ -180,17 +158,13 @@ async def get_bbands(
 
     # Create indicator data for dates present in all dictionaries
     indicator_data = {
-        date: BBANDSData(
-            upper_band=upper_band_dict[date], middle_band=middle_band_dict[date], lower_band=lower_band_dict[date]
-        )
+        date: BBANDSData(upper_band=upper_band_dict[date], middle_band=middle_band_dict[date], lower_band=lower_band_dict[date])
         for date in upper_band_dict.keys()
         if date in middle_band_dict and date in lower_band_dict
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.BBANDS, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.BBANDS, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
 async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict:
@@ -217,14 +191,10 @@ async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch:
     indicator_data = {date: OBVData(value=value) for date, value in create_indicator_dict(dates, obv_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.OBV, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.OBV, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_super_trend(
-    symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, multiplier: int = 3, epoch: bool = False
-) -> dict:
+async def get_super_trend(symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, multiplier: int = 3, epoch: bool = False) -> dict:
     """
     Get the Super Trend indicator for a symbol.
     The Super Trend indicator is a trend-following indicator that uses the Average True Range (ATR) to determine
@@ -260,9 +230,7 @@ async def get_super_trend(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.SUPER_TREND, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.SUPER_TREND, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
 async def get_ichimoku(
@@ -323,6 +291,4 @@ async def get_ichimoku(
     }
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.ICHIMOKU, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.ICHIMOKU, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)

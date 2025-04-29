@@ -43,9 +43,7 @@ async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period
     indicator_data = {date: RSIData(value=value) for date, value in create_indicator_dict(dates, rsi_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.RSI, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.RSI, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
 async def get_srsi(
@@ -82,9 +80,7 @@ async def get_srsi(
     quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
-    k_values, d_values = calculate_stoch_rsi(
-        prices, rsi_period=period, stoch_period=stoch_period, smooth=smooth, signal_period=signal_period
-    )
+    k_values, d_values = calculate_stoch_rsi(prices, rsi_period=period, stoch_period=stoch_period, smooth=smooth, signal_period=signal_period)
 
     k_dict = create_indicator_dict(dates, k_values)
     d_dict = create_indicator_dict(dates, d_values)
@@ -92,9 +88,7 @@ async def get_srsi(
     indicator_data = {date: SRSIData(k=k_dict[date], d=d_dict[date]) for date in k_dict.keys() & d_dict.keys()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.SRSI, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.SRSI, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
 async def get_stoch(
@@ -139,9 +133,7 @@ async def get_stoch(
     indicator_data = {date: STOCHData(k=k_dict[date], d=d_dict[date]) for date in k_dict.keys() & d_dict.keys()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.STOCH, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.STOCH, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
 async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False):
@@ -168,13 +160,7 @@ async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period
 
     cci_values = calculate_cci(high_prices, low_prices, close_prices, period=period)
 
-    indicator_data = {
-        dates[i]: CCIData(value=round(float(cci_values[i]), 2))
-        for i in range(len(dates))
-        if not np.isnan(cci_values[i])
-    }
+    indicator_data = {dates[i]: CCIData(value=round(float(cci_values[i]), 2)) for i in range(len(dates)) if not np.isnan(cci_values[i])}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(type=Indicator.CCI, indicators=indicator_data).model_dump(
-        exclude_none=True, by_alias=True, serialize_as_any=True
-    )
+    return TechnicalIndicator(type=Indicator.CCI, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)

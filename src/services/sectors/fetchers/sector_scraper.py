@@ -105,9 +105,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: the top industries as a list
         """
-        container_xpath = (
-            "/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[1]/div/div[2]/table/tbody/tr"
-        )
+        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[1]/div/div[2]/table/tbody/tr"
         industry_name_xpath = "./td[1]/text()"
         market_weight_xpath = "./td[2]/span/text()"
 
@@ -146,9 +144,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         industries_task = parse_industries(tree)
         companies_task = parse_companies(tree)
 
-        info, returns, industries, companies = await asyncio.gather(
-            info_task, returns_task, industries_task, companies_task
-        )
+        info, returns, industries, companies = await asyncio.gather(info_task, returns_task, industries_task, companies_task)
 
         data = returns + info + industries
 

@@ -7,8 +7,6 @@ from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from dependencies import YahooCookies, YahooCrumb, Schedule, WebsocketConnectionManager
 from src.connections import ConnectionManager, RedisConnectionManager
-from src.dependencies import get_connection_manager, get_yahoo_cookies, get_yahoo_crumb
-from src.market import MarketSchedule
 from src.models import MarketSector, SimpleQuote
 from src.security import validate_websocket
 from src.services import (
@@ -45,10 +43,7 @@ def safe_convert_to_dict(items: list, default=None):
     if not isinstance(items, list | tuple) or items is None:
         return default
 
-    return [
-        item if isinstance(item, dict) else item.model_dump() if hasattr(item, "model_dump") else default
-        for item in items
-    ]
+    return [item if isinstance(item, dict) else item.model_dump() if hasattr(item, "model_dump") else default for item in items]
 
 
 async def handle_websocket_connection(
@@ -249,9 +244,7 @@ async def websocket_market(
         news_task = scrape_general_news()
         sectors_task = get_sectors()
 
-        actives, gainers, losers, indices, news, sectors = await asyncio.gather(
-            actives_task, gainers_task, losers_task, indices_task, news_task, sectors_task
-        )
+        actives, gainers, losers, indices, news, sectors = await asyncio.gather(actives_task, gainers_task, losers_task, indices_task, news_task, sectors_task)
 
         return {
             "actives": safe_convert_to_dict(actives),
