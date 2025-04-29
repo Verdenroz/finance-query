@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Query, Security
+from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
+from src.dependencies import YahooCookies, YahooCrumb
 from src.models import SimpleQuote
 from src.services import get_similar_quotes
 
@@ -39,8 +39,8 @@ router = APIRouter()
     },
 )
 async def similar_quotes(
-    cookies: str = Depends(get_yahoo_cookies),
-    crumb: str = Depends(get_yahoo_crumb),
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
     symbol: str = Query(..., title="Symbol", description="Stock to find similar stocks around"),
     limit: int = Query(default=10, title="Limit", description="Number of similar stocks to return", ge=1, le=20),
 ):

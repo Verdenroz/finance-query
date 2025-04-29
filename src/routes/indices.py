@@ -1,9 +1,9 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Security
+from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
+from src.dependencies import YahooCookies, YahooCrumb
 from src.models import INDEX_REGIONS, Index, MarketIndex, Region
 from src.services import get_indices
 
@@ -21,8 +21,8 @@ router = APIRouter()
     },
 )
 async def market_indices(
-    cookies: str = Depends(get_yahoo_cookies),
-    crumb: str = Depends(get_yahoo_crumb),
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
     index: Annotated[list[Index] | None, Query(description="Specific indices to include")] = None,
     region: Annotated[Region | None, Query(description="Filter indices by region")] = None,
 ) -> list[MarketIndex]:

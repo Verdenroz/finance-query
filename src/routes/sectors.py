@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Security
+from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
+from src.dependencies import YahooCookies, YahooCrumb
 from src.models import ValidationErrorResponse
 from src.models.sector import MarketSector, MarketSectorDetails, Sector
 from src.services import get_sector_details, get_sector_for_symbol, get_sectors
@@ -156,7 +156,9 @@ async def sectors():
     },
 )
 async def sector_by_symbol(
-    symbol: str, cookies: str = Depends(get_yahoo_cookies), crumb: str = Depends(get_yahoo_crumb)
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
+    symbol: str,
 ):
     return await get_sector_for_symbol(symbol, cookies, crumb)
 

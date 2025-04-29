@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Depends, Query, Security
+from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
+from src.dependencies import YahooCookies, YahooCrumb
 from src.models import Quote, SimpleQuote, ValidationErrorResponse
 from src.services import get_quotes, get_simple_quotes
 
@@ -33,6 +33,8 @@ router = APIRouter()
     },
 )
 async def get_quote(
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
     cookies: str = Depends(get_yahoo_cookies),
     crumb: str = Depends(get_yahoo_crumb),
@@ -67,6 +69,8 @@ async def get_quote(
     },
 )
 async def get_simple_quote(
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
     cookies: str = Depends(get_yahoo_cookies),
     crumb: str = Depends(get_yahoo_crumb),

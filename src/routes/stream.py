@@ -1,11 +1,11 @@
 import asyncio
 
-from fastapi import APIRouter, Depends, Query, Security
+from fastapi import APIRouter, Query, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from orjson import orjson
 
-from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
+from src.dependencies import YahooCookies, YahooCrumb
 from src.models import ValidationErrorResponse
 from src.services import get_simple_quotes
 
@@ -62,6 +62,8 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
     },
 )
 async def stream_quotes(
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
     cookies: str = Depends(get_yahoo_cookies),
     crumb: str = Depends(get_yahoo_crumb),

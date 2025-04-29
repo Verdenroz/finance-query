@@ -12,6 +12,8 @@ from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
 
+from connections import ConnectionManager
+from market import MarketSchedule
 from src.connections import RedisConnectionManager
 from src.constants import proxy, proxy_auth
 from src.context import request_context
@@ -55,9 +57,17 @@ async def get_yahoo_crumb(request=Depends(get_request_context)) -> str:
     return request.app.state.crumb
 
 
+Session = Annotated[ClientSession, Depends(get_session)]
+WebsocketConnectionManager = Annotated[RedisConnectionManager, ConnectionManager, Depends(get_connection_manager)]
+RedisClient = Annotated[Redis, Depends(get_redis)]
+YahooCookies = Annotated[dict, Depends(get_yahoo_cookies)]
+YahooCrumb = Annotated[str, Depends(get_yahoo_crumb)]
+Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
+
+
 @injectable
 async def fetch(
-    session: Annotated[ClientSession, Depends(get_session)],
+    session: Session,
     url: str = "",
     method: str = "GET",
     params: dict = None,
@@ -105,7 +115,7 @@ async def fetch(
 
 @injectable
 async def get_logo(
-    session: Annotated[ClientSession, Depends(get_session)],
+    session: Session,
     symbol: str = "",
     url: Optional[str] = None,
 ) -> Optional[str]:
@@ -115,9 +125,7 @@ async def get_logo(
     if not url and not symbol:
         return None
 
-    async with session.get(
-        f"https://img.logo.dev/ticker/{symbol}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"
-    ) as response:
+    async with session.get(f"https://img.logo.dev/ticker/{symbol}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true") as response:
         if response.status == 200:
             return str(response.url)
 
@@ -126,9 +134,7 @@ async def get_logo(
         parsed_url = urlparse(url)
         domain = parsed_url.netloc.replace("www.", "")
         # The token is my personal public key, but feel free to use your own
-        async with session.get(
-            f"https://img.logo.dev/{domain}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"
-        ) as response:
+        async with session.get(f"https://img.logo.dev/{domain}?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true") as response:
             if response.status == 200:
                 return str(response.url)
 
@@ -193,8 +199,7 @@ async def refresh_yahoo_auth(app: FastAPI) -> None:
 
                 refresh_time = datetime.datetime.now().isoformat()
                 print(
-                    f"Yahoo Finance auth refreshed at {refresh_time}, next refresh at "
-                    f"{datetime.datetime.fromtimestamp(app.state.auth_expiry).isoformat()}"
+                    f"Yahoo Finance auth refreshed at {refresh_time}, next refresh at " f"{datetime.datetime.fromtimestamp(app.state.auth_expiry).isoformat()}"
                 )
         except Exception as e:
             print(f"Auth refresh error: {e}")

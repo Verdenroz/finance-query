@@ -2,9 +2,10 @@ import asyncio
 from datetime import datetime
 
 import pytz
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from dependencies import YahooCookies, YahooCrumb, Schedule, WebsocketConnectionManager
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.dependencies import get_connection_manager, get_yahoo_cookies, get_yahoo_crumb
 from src.market import MarketSchedule
@@ -114,9 +115,9 @@ async def handle_websocket_connection(
 async def websocket_profile(
     websocket: WebSocket,
     symbol: str,
-    connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-    cookies: str = Depends(get_yahoo_cookies),
-    crumb: str = Depends(get_yahoo_crumb),
+    connection_manager: WebsocketConnectionManager,
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
 ):
     async def get_profile():
         """
@@ -149,9 +150,9 @@ async def websocket_profile(
 @router.websocket("/quotes")
 async def websocket_quotes(
     websocket: WebSocket,
-    connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-    cookies: str = Depends(get_yahoo_cookies),
-    crumb: str = Depends(get_yahoo_crumb),
+    connection_manager: WebsocketConnectionManager,
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
 ):
     is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
@@ -233,9 +234,9 @@ async def websocket_quotes(
 @router.websocket("/market")
 async def websocket_market(
     websocket: WebSocket,
-    connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-    cookies: str = Depends(get_yahoo_cookies),
-    crumb: str = Depends(get_yahoo_crumb),
+    connection_manager: WebsocketConnectionManager,
+    cookies: YahooCookies,
+    crumb: YahooCrumb,
 ):
     async def get_market_info():
         """
@@ -268,8 +269,8 @@ async def websocket_market(
 @router.websocket("/hours")
 async def market_status_websocket(
     websocket: WebSocket,
-    connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-    market_schedule: MarketSchedule = Depends(MarketSchedule),
+    connection_manager: WebsocketConnectionManager,
+    market_schedule: Schedule,
 ):
     async def get_market_status_info():
         """
