@@ -128,7 +128,7 @@ curl -X GET 'https://finance-query.onrender.com/v1/quotes?symbols=nvda' \
     "fiveYearReturn": "1,802.61%",
     "tenYearReturn": "21,686.04%",
     "maxReturn": "274,528.59%",
-    "logo": "https://logo.clearbit.com/https://www.nvidia.com"
+    "logo": "https://img.logo.dev/nvidia.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"
   }
 ]
 ```
@@ -161,7 +161,7 @@ ws.onmessage = (event) => {
     "price": "398.09",
     "change": "+0.94",
     "percentChange": "+0.24%",
-    "logo": "https://logo.clearbit.com/https://www.tesla.com"
+    "logo": "https://img.logo.dev/tesla.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"
   }
 ]
 ```

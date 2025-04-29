@@ -220,6 +220,10 @@ class Quote(BaseModel):
         examples=["22,857.89%"],
         description="Maximum return of the company",
         serialization_alias="maxReturn",
-        validation_alias=AliasChoices("maxReturn", "max_return"),
+        validation_alias=AliasChoices("maxReturn", "max_return")
     )
-    logo: Optional[str] = Field(default=None, examples=["https://logo.clearbit.com/apple.com"], description="Company logo")
+    logo: Optional[str] = Field(
+        default=None,
+        examples=["https://img.logo.dev/apple.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"],
+        description="Company logo"
+    )
