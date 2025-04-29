@@ -30,7 +30,5 @@ class SimpleQuote(BaseModel):
         validation_alias=AliasChoices("percentChange", "percent_change"),
     )
     logo: Optional[str] = Field(
-        default=None,
-        examples=["https://img.logo.dev/apple.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"],
-        description="Company logo"
+        default=None, examples=["https://img.logo.dev/apple.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"], description="Company logo"
     )

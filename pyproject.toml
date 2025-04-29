@@ -125,10 +125,10 @@ ignore = [
     "UP007" # prefer X | Y for types
 ]
 
+[tool.ruff.lint.isort]
+known-first-party = ["financequery"]
+
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
 line-ending = "auto"
-
-[tool.ruff.isort]
-known-first-party = ["financequery"]
