@@ -278,10 +278,10 @@ class TestSocketsHandler:
 
                 return datetime.fromisoformat(mock_timestamp.replace("+00:00", "")).replace(tzinfo=UTC)
 
-        from src.market import MarketSchedule
+        from src.dependencies import Schedule
 
         # Patches
-        monkeypatch.setattr(MarketSchedule, "get_market_status", mock_get_market_status)
+        monkeypatch.setattr(Schedule, "get_market_status", mock_get_market_status)
         monkeypatch.setattr("src.routes.sockets.datetime", MockDateTime)
 
         with patch("src.routes.sockets.validate_websocket", return_value=(True, {})):
