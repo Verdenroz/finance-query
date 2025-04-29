@@ -36,7 +36,7 @@ async def get_sectors() -> list[MarketSector]:
     responses = await asyncio.gather(*[task for _, task in tasks])
 
     sectors = []
-    for (sector, _), html in zip(tasks, responses):
+    for (sector, _), html in zip(tasks, responses, strict=False):
         sector_data = await parse_sector(html, sector)
         sectors.append(sector_data)
     return sectors

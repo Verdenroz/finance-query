@@ -8,7 +8,7 @@ import requests
 from fastapi import HTTPException
 
 from src.models import Quote, SimpleQuote
-from src.services.quotes.fetchers import fetch_quotes, scrape_quotes, fetch_simple_quotes, scrape_simple_quotes
+from src.services.quotes.fetchers import fetch_quotes, fetch_simple_quotes, scrape_quotes, scrape_simple_quotes
 from tests.conftest import VERSION
 
 # Mock response data for quotes
@@ -72,7 +72,7 @@ class TestQuotes:
             cache_file = cache_dir / f"{filename}.html"
 
             if cache_file.exists():
-                with open(cache_file, "r", encoding="utf-8") as f:
+                with open(cache_file, encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})

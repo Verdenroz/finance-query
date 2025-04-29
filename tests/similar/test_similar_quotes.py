@@ -1,10 +1,10 @@
 import hashlib
 from pathlib import Path
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
+import orjson
 import pytest
 import requests
-import orjson
 from fastapi import HTTPException
 
 from src.models import SimpleQuote
@@ -44,7 +44,7 @@ class TestSimilarQuotesHandler:
 
             # Check if we have cached HTML
             if cache_file.exists():
-                with open(cache_file, "r", encoding="utf-8") as f:
+                with open(cache_file, encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 # Fetch real content if no cache exists (only for first run)
@@ -89,7 +89,7 @@ class TestSimilarQuotesHandler:
 
             # Check if we have cached data
             if cache_file.exists():
-                with open(cache_file, "r") as f:
+                with open(cache_file) as f:
                     import json
 
                     yahoo_data = json.load(f)
@@ -157,7 +157,7 @@ class TestSimilarQuotesHandler:
 
             # Check if we have cached data
             if cache_file.exists():
-                with open(cache_file, "r") as f:
+                with open(cache_file) as f:
                     import json
 
                     quotes_data = json.load(f)

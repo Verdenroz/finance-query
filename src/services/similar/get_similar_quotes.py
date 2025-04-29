@@ -1,4 +1,3 @@
-from fastapi import HTTPException
 
 from src.cache import cache
 from src.models import SimpleQuote

@@ -1,25 +1,26 @@
-from fastapi import APIRouter, Security, Query, HTTPException
-from fastapi.security import APIKeyHeader
-from typing_extensions import Optional
+from typing import Optional
 
-from src.models import TechnicalIndicator, Indicator, Interval, ValidationErrorResponse, TimeRange
+from fastapi import APIRouter, HTTPException, Query, Security
+from fastapi.security import APIKeyHeader
+
+from src.models import Indicator, Interval, TechnicalIndicator, TimeRange, ValidationErrorResponse
 from src.services.indicators import (
-    get_sma,
-    get_ema,
-    get_wma,
-    get_vwma,
-    get_rsi,
-    get_srsi,
-    get_stoch,
-    get_cci,
-    get_macd,
     get_adx,
     get_aroon,
     get_bbands,
-    get_obv,
-    get_super_trend,
+    get_cci,
+    get_ema,
     get_ichimoku,
+    get_macd,
+    get_obv,
+    get_rsi,
+    get_sma,
+    get_srsi,
+    get_stoch,
+    get_super_trend,
     get_technical_indicators,
+    get_vwma,
+    get_wma,
 )
 
 router = APIRouter()
@@ -179,9 +180,9 @@ async def technical_indicator(
         param_name = str(e).split("'")[1]
         raise HTTPException(
             status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function."
-        )
+        ) from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}") from e
 
 
 @router.get(
@@ -274,6 +275,6 @@ async def technical_indicators(
         indicator_list = [Indicator[ind.strip()] for ind in functions.split(",")] if functions else None
         return await get_technical_indicators(symbol, interval, indicator_list)
     except KeyError as e:
-        raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(e)}") from e
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}") from e

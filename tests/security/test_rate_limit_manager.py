@@ -3,7 +3,7 @@ from unittest.mock import AsyncMock
 
 from starlette.websockets import WebSocket
 
-from src.security.rate_limit_manager import RateLimitManager, SecurityConfig, RateLimitEntry
+from src.security.rate_limit_manager import RateLimitEntry, RateLimitManager, SecurityConfig
 
 
 # Dummy websocket class for testing validate_websocket

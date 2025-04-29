@@ -1,24 +1,24 @@
 import asyncio
-from unittest.mock import MagicMock, AsyncMock, patch, call
+from unittest.mock import AsyncMock, MagicMock, call, patch
 
 import pytest
-from aiohttp import ClientSession, ClientPayloadError, ClientError
-from fastapi import HTTPException, FastAPI
+from aiohttp import ClientError, ClientPayloadError, ClientSession
+from fastapi import FastAPI, HTTPException
 from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager
 from src.context import request_context
 from src.dependencies import (
-    get_request_context,
-    get_connection_manager,
-    get_session,
     fetch,
-    get_logo,
     get_auth_data,
+    get_connection_manager,
     get_crumb,
+    get_logo,
+    get_request_context,
+    get_session,
     refresh_yahoo_auth,
-    setup_proxy_whitelist,
     remove_proxy_whitelist,
+    setup_proxy_whitelist,
 )
 
 

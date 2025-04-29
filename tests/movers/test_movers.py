@@ -6,7 +6,7 @@ import orjson
 import pytest
 import requests
 
-from src.models.marketmover import MoverCount, MarketMover
+from src.models.marketmover import MarketMover, MoverCount
 from src.services.movers import get_actives, get_gainers, get_losers
 from src.services.movers.fetchers import fetch_movers, scrape_movers
 from tests.conftest import VERSION
@@ -84,7 +84,7 @@ class TestMovers:
             cache_file = cache_dir / f"{endpoint}_{count}_{filename}.html"
 
             if cache_file.exists():
-                with open(cache_file, "r", encoding="utf-8") as f:
+                with open(cache_file, encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})

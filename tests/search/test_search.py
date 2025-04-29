@@ -1,11 +1,11 @@
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from fastapi import HTTPException
-from unittest.mock import AsyncMock, patch, MagicMock
 from orjson import orjson
 
-from src.models import Type, SearchResult
-from src.services.search.fetchers import fetch_algolia_search_results, fetch_yahoo_search_results
+from src.models import SearchResult, Type
 from src.services import get_search
+from src.services.search.fetchers import fetch_algolia_search_results, fetch_yahoo_search_results
 from tests.conftest import VERSION
 
 # Mock search response data for all three supported types

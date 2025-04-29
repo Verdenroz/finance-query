@@ -1,10 +1,10 @@
 from unittest.mock import AsyncMock, patch
 
-import pytest
 import orjson
+import pytest
 from fastapi import HTTPException
 
-from src.models import TimeRange, Interval, HistoricalData
+from src.models import HistoricalData, Interval, TimeRange
 from src.services import get_historical
 from tests.conftest import VERSION
 

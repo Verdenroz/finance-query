@@ -1,11 +1,12 @@
 import asyncio
-import time
 import functools
 import gzip
 import hashlib
 import os
+import time
+from collections.abc import Callable
 from datetime import date
-from typing import Optional, Any, TypeVar, Callable, get_type_hints, get_args
+from typing import Any, Optional, TypeVar, get_args, get_type_hints
 
 import orjson
 from aiohttp import ClientSession
@@ -14,7 +15,7 @@ from redis import RedisError
 
 from src.context import request_context
 from src.market import MarketSchedule, MarketStatus
-from src.models import HistoricalData, SimpleQuote, Quote, MarketMover, MarketIndex, News, MarketSector
+from src.models import HistoricalData, MarketIndex, MarketMover, MarketSector, News, Quote, SimpleQuote
 from src.models.sector import MarketSectorDetails
 
 T = TypeVar("T")

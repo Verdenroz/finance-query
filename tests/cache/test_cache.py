@@ -1,11 +1,11 @@
 import asyncio
 from datetime import date
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from redis import RedisError
 
-from src.cache import cache, RedisCacheHandler, MemCacheHandler
+from src.cache import MemCacheHandler, RedisCacheHandler, cache
 from src.context import request_context
 from src.market import MarketSchedule, MarketStatus
 from src.models import SimpleQuote
@@ -280,11 +280,15 @@ class TestCacheDecoratorMemcache:
 
         r1 = await f("a")
         assert r1 == {"x": "a", "cnt": 1}
+
         r2 = await f("a")
         assert count == 1
+        assert r2 == {"x": "a", "cnt": 1}
         await asyncio.sleep(1.1)
+
         r3 = await f("a")
         assert count == 2
+        assert r3 == {"x": "a", "cnt": 2}
 
     async def test_memcache_isolated_by_args(self):
         count = 0

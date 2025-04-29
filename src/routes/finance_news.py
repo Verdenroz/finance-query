@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Security, Query, HTTPException
+from typing import Optional
+
+from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
-from typing_extensions import Optional
 
 from src.models import News, ValidationErrorResponse
-from src.services import scrape_news_for_quote, scrape_general_news
+from src.services import scrape_general_news, scrape_news_for_quote
 
 router = APIRouter()
 

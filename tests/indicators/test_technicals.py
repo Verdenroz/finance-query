@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, patch
 
 import src.routes.technicals
-from src.models import TechnicalIndicator, TimeRange, Interval, Indicator
+from src.models import Indicator, Interval, TechnicalIndicator, TimeRange
 from src.services import get_technical_indicators
 from tests.conftest import VERSION
 
@@ -193,7 +193,7 @@ class TestTechnicals:
             Indicator.ICHIMOKU: ["Ichimoku Cloud"],
         }
 
-        for indicator, expected_values in indicators_config.items():
+        for expected_values in indicators_config.values():
             for value in expected_values:
                 assert value in result
 

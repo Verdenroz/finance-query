@@ -1,7 +1,7 @@
-from fastapi import APIRouter, Security, Query
+from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from src.models import HistoricalData, ValidationErrorResponse, TimeRange, Interval
+from src.models import HistoricalData, Interval, TimeRange, ValidationErrorResponse
 from src.services import get_historical
 
 router = APIRouter()

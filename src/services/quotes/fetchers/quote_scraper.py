@@ -3,16 +3,16 @@ import asyncio
 from fastapi import HTTPException
 
 from src.cache import cache
-from src.dependencies import get_logo, fetch
+from src.dependencies import fetch, get_logo
 from src.models import Quote, SimpleQuote
 from src.services.quotes.utils import (
-    thread_pool,
-    get_adaptive_chunk_size,
-    _scrape_price_data,
-    _scrape_general_info,
-    parse_tree,
     _scrape_company_info,
+    _scrape_general_info,
     _scrape_performance,
+    _scrape_price_data,
+    get_adaptive_chunk_size,
+    parse_tree,
+    thread_pool,
 )
 
 
@@ -91,7 +91,7 @@ async def _scrape_quote(symbol: str) -> Quote:
             **performance,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error scraping quote for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error scraping quote for {symbol}: {e}") from e
 
 
 @cache(expire=10, market_closed_expire=60)
@@ -134,4 +134,4 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
             logo=logo,
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error scraping simple quote for {symbol}: {e}")
+        raise HTTPException(status_code=500, detail=f"Error scraping simple quote for {symbol}: {e}") from e

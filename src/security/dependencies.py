@@ -1,4 +1,5 @@
-from typing import AsyncGenerator, Annotated
+from collections.abc import AsyncGenerator
+from typing import Annotated
 
 from fastapi import Depends
 from fastapi_injectable import injectable

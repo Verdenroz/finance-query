@@ -1,14 +1,12 @@
-import hashlib
-from os import rmdir
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-import requests
 import pytest
+import requests
 from fastapi import HTTPException
 
 from src.models import News
-from src.services.news.get_news import scrape_news_for_quote, scrape_general_news, parse_symbol_exchange
+from src.services.news.get_news import parse_symbol_exchange, scrape_general_news, scrape_news_for_quote
 from tests.conftest import VERSION
 
 # Mock response data for news
@@ -57,7 +55,7 @@ class TestNews:
             cache_file = cache_dir / f"{symbol}.html"
 
             if cache_file.exists():
-                with open(cache_file, "r", encoding="utf-8") as f:
+                with open(cache_file, encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})

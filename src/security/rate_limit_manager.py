@@ -1,7 +1,6 @@
 import os
 import time
 from dataclasses import dataclass
-from typing import Set, Dict
 
 from starlette.websockets import WebSocket
 
@@ -18,7 +17,7 @@ class SecurityConfig:
     HEALTH_CHECK_INTERVAL: int = 1800  # 30 minutes in seconds
 
     # Define paths that skip security checks
-    OPEN_PATHS: Set[str] = {"/ping", "/docs", "/openapi.json", "/redoc"}
+    OPEN_PATHS: set[str] = {"/ping", "/docs", "/openapi.json", "/redoc"}
 
     @classmethod
     def is_open_path(cls, path: str) -> bool:
@@ -31,8 +30,8 @@ class SecurityConfig:
 
 class RateLimitManager:
     def __init__(self):
-        self.rate_limits: Dict[str, RateLimitEntry] = {}
-        self.health_checks: Dict[str, float] = {}
+        self.rate_limits: dict[str, RateLimitEntry] = {}
+        self.health_checks: dict[str, float] = {}
 
     def _clean_expired(self) -> None:
         """Remove expired entries from rate limit and health check dictionaries"""

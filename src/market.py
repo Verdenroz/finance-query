@@ -1,4 +1,4 @@
-from datetime import datetime, time, date, timedelta
+from datetime import date, datetime, time, timedelta
 from enum import Enum
 from typing import Optional
 
@@ -53,11 +53,11 @@ class MarketSchedule:
         h = (19 * a + b - d - g + 15) % 30
         i = c // 4
         k = c % 4
-        l = (32 + 2 * e + 2 * i - h - k) % 7
-        m = (a + 11 * h + 22 * l) // 451
+        L = (32 + 2 * e + 2 * i - h - k) % 7
+        m = (a + 11 * h + 22 * L) // 451
 
-        month = (h + l - 7 * m + 114) // 31
-        day = ((h + l - 7 * m + 114) % 31) + 1
+        month = (h + L - 7 * m + 114) // 31
+        day = ((h + L - 7 * m + 114) % 31) + 1
 
         # Easter Sunday
         easter = date(year, month, day)

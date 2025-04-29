@@ -1,6 +1,6 @@
 import asyncio
 
-from fastapi import APIRouter, Query, Security, Depends
+from fastapi import APIRouter, Depends, Query, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from orjson import orjson

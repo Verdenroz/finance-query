@@ -2,12 +2,12 @@ import asyncio
 import datetime
 import os
 import time
-from typing import Optional, Annotated, Union
+from typing import Annotated, Optional, Union
 from urllib.parse import urlparse
 
 import requests
-from aiohttp import ClientSession, ClientResponse, ClientPayloadError, ClientError
-from fastapi import Depends, Request, HTTPException, FastAPI
+from aiohttp import ClientError, ClientPayloadError, ClientResponse, ClientSession
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
@@ -97,7 +97,7 @@ async def fetch(
 
         except (ClientPayloadError, asyncio.TimeoutError, ClientError) as e:
             if attempt == max_retries - 1:
-                raise HTTPException(status_code=500, detail=f"Request failed after {max_retries} attempts: {str(e)}")
+                raise HTTPException(status_code=500, detail=f"Request failed after {max_retries} attempts: {str(e)}") from e
             await asyncio.sleep(retry_delay)
 
     return None
@@ -160,7 +160,7 @@ async def get_auth_data() -> tuple[str, str] | None:
 
     except Exception as e:
         print(f"finance.yahoo.com auth failed: {e}")
-        raise HTTPException(status_code=500, detail="Failed to authenticate with Yahoo Finance")
+        raise HTTPException(status_code=500, detail="Failed to authenticate with Yahoo Finance") from e
 
 
 def get_crumb(headers: dict[str, str]) -> str:

@@ -1,29 +1,28 @@
-import numpy as np
-from typing_extensions import OrderedDict
+from collections import OrderedDict
 
+from src.models.historical_data import Interval, TimeRange
 from src.models.indicators import (
-    MACDData,
-    TechnicalIndicator,
     ADXData,
     AROONData,
     BBANDSData,
-    OBVData,
-    SuperTrendData,
     IchimokuData,
     Indicator,
+    MACDData,
+    OBVData,
+    SuperTrendData,
+    TechnicalIndicator,
 )
-from src.models.historical_data import TimeRange, Interval
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (
-    prepare_price_data,
-    create_indicator_dict,
-    calculate_macd,
     calculate_adx,
     calculate_aroon,
     calculate_bbands,
-    calculate_obv,
     calculate_ichimoku,
+    calculate_macd,
+    calculate_obv,
     calculate_supertrend,
+    create_indicator_dict,
+    prepare_price_data,
 )
 
 

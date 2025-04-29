@@ -1,9 +1,8 @@
 from datetime import date, datetime
 from enum import Enum
-from typing import Union
+from typing import Annotated, Optional, Union
 
-from pydantic import Field, BaseModel, AliasChoices, SerializeAsAny
-from typing_extensions import Optional, Annotated
+from pydantic import AliasChoices, BaseModel, Field, SerializeAsAny
 
 
 class Indicator(Enum):

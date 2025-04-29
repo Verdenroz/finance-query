@@ -2,7 +2,6 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 
 import psutil
-from fastapi import HTTPException
 from lxml import etree, html
 
 from src.dependencies import get_logo

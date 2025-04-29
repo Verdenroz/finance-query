@@ -4,7 +4,7 @@ import pytest
 from fastapi import HTTPException
 from orjson import orjson
 
-from src.models import INDEX_REGIONS, Region, Index, MarketIndex
+from src.models import INDEX_REGIONS, Index, MarketIndex, Region
 from src.services import get_indices
 from src.services.indices.fetchers import fetch_index
 from tests.conftest import VERSION

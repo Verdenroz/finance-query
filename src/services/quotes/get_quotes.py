@@ -1,7 +1,6 @@
-from fastapi import HTTPException
 
 from src.models import Quote, SimpleQuote
-from src.services.quotes.fetchers import fetch_quotes, scrape_quotes, fetch_simple_quotes, scrape_simple_quotes
+from src.services.quotes.fetchers import fetch_quotes, fetch_simple_quotes, scrape_quotes, scrape_simple_quotes
 
 
 async def get_quotes(symbols: list[str], cookies: str, crumb: str) -> list[Quote]:

@@ -1,13 +1,13 @@
 import functools
 from pathlib import Path
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
 from orjson import orjson
 from starlette.websockets import WebSocket
 
-from src.connections import RedisConnectionManager, ConnectionManager
+from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import request_context
 from src.main import app
 from src.models import HistoricalData
@@ -60,7 +60,7 @@ def mock_yahoo_auth(mock_request_context):
 def historical_quotes():
     """Load historical price data from a JSON file for testing and convert to HistoricalData objects"""
     data_path = Path(__file__).parent / "data" / "historical_quotes.json"
-    with open(data_path, "r") as file:
+    with open(data_path) as file:
         raw_data = orjson.loads(file.read())
 
     # Convert each date entry to a HistoricalData object

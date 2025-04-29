@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock
 
-from src.models import TimeRange, Interval, Indicator
-from src.services import get_rsi, get_srsi, get_stoch, get_cci
+from src.models import Indicator, Interval, TimeRange
+from src.services import get_cci, get_rsi, get_srsi, get_stoch
 
 
 class TestOscillators:

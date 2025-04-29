@@ -1,6 +1,7 @@
-from fastapi import APIRouter, Security, Query
+from typing import Optional
+
+from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
-from typing_extensions import Optional
 
 from src.models import SearchResult, Type, ValidationErrorResponse
 from src.services import get_search

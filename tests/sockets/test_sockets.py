@@ -1,11 +1,12 @@
-from unittest.mock import patch, AsyncMock
+from datetime import UTC
+from unittest.mock import AsyncMock, patch
 
 from pydantic import BaseModel
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.models import SimpleQuote
 from src.routes import sockets
-from src.routes.sockets import safe_convert_to_dict, handle_websocket_connection
+from src.routes.sockets import handle_websocket_connection, safe_convert_to_dict
 
 # Test data
 symbol = "NVDA"
@@ -272,9 +273,9 @@ class TestSocketsHandler:
         class MockDateTime:
             @staticmethod
             def now(tz=None):
-                from datetime import datetime, timezone
+                from datetime import datetime
 
-                return datetime.fromisoformat(mock_timestamp.replace("+00:00", "")).replace(tzinfo=timezone.utc)
+                return datetime.fromisoformat(mock_timestamp.replace("+00:00", "")).replace(tzinfo=UTC)
 
         from src.market import MarketSchedule
 

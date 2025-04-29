@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock
 
-from src.models import TimeRange, Interval, Indicator
-from src.services import get_sma, get_ema, get_wma, get_vwma
+from src.models import Indicator, Interval, TimeRange
+from src.services import get_ema, get_sma, get_vwma, get_wma
 
 
 class TestMA:

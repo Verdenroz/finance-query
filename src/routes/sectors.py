@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Security, Depends
+from fastapi import APIRouter, Depends, Security
 from fastapi.security import APIKeyHeader
 
 from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
 from src.models import ValidationErrorResponse
-from src.models.sector import Sector, MarketSector, MarketSectorDetails
-from src.services import get_sectors, get_sector_for_symbol, get_sector_details
+from src.models.sector import MarketSector, MarketSectorDetails, Sector
+from src.services import get_sector_details, get_sector_for_symbol, get_sectors
 
 router = APIRouter()
 

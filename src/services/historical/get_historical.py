@@ -4,7 +4,7 @@ from orjson import orjson
 
 from src.cache import cache
 from src.dependencies import fetch
-from src.models import HistoricalData, TimeRange, Interval
+from src.models import HistoricalData, Interval, TimeRange
 
 
 @cache(expire=60, market_closed_expire=600)
@@ -128,4 +128,4 @@ async def get_historical(
         return history_dict
 
     except orjson.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Invalid JSON response from Yahoo Finance API")
+        raise HTTPException(status_code=500, detail="Invalid JSON response from Yahoo Finance API") from orjson.JSONDecodeError

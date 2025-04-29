@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from aiohttp import ClientSession
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends
+from fastapi import Depends, FastAPI
 from fastapi.encoders import jsonable_encoder
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
@@ -15,52 +15,52 @@ from fastapi_injectable import cleanup_all_exit_stacks, register_app
 from mangum import Mangum
 from redis import Redis
 from starlette import status
-from starlette.responses import Response, JSONResponse
+from starlette.responses import JSONResponse, Response
 
-from src.connections import RedisConnectionManager, ConnectionManager
+from src.connections import ConnectionManager, RedisConnectionManager
 from src.constants import headers
 from src.context import RequestContextMiddleware
 from src.dependencies import (
-    get_redis,
     get_auth_data,
+    get_redis,
     get_yahoo_cookies,
     get_yahoo_crumb,
-    setup_proxy_whitelist,
     refresh_yahoo_auth,
     remove_proxy_whitelist,
+    setup_proxy_whitelist,
 )
-from src.models import ValidationErrorResponse, Sector, TimeRange, Interval
+from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
 from src.routes import (
-    quotes_router,
+    finance_news_router,
+    historical_prices_router,
+    hours_router,
+    indicators_router,
     indices_router,
     movers_router,
-    historical_prices_router,
-    similar_quotes_router,
-    finance_news_router,
-    indicators_router,
+    quotes_router,
     search_router,
     sectors_router,
+    similar_quotes_router,
     sockets_router,
     stream_router,
-    hours_router,
 )
 from src.security import RateLimitMiddleware
 from src.services import (
-    get_indices,
     get_actives,
-    get_losers,
     get_gainers,
-    get_sectors,
-    get_sector_for_symbol,
-    get_sector_details,
-    scrape_general_news,
-    scrape_news_for_quote,
-    get_quotes,
-    get_similar_quotes,
     get_historical,
+    get_indices,
+    get_losers,
+    get_quotes,
     get_search,
+    get_sector_details,
+    get_sector_for_symbol,
+    get_sectors,
+    get_similar_quotes,
     get_simple_quotes,
     get_technical_indicators,
+    scrape_general_news,
+    scrape_news_for_quote,
 )
 
 load_dotenv()
@@ -300,7 +300,7 @@ async def health(r=Depends(get_redis), cookies=Depends(get_yahoo_cookies), crumb
 
     total = len(tasks)
     succeeded = 0
-    for (name, task), result in zip(tasks, results):
+    for (name, _), result in zip(tasks, results, strict=False):
         if isinstance(result, Exception):
             health_report["services"][name] = {"status": "FAILED", "ERROR": str(result)}
         else:

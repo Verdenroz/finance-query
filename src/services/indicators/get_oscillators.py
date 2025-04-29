@@ -1,16 +1,17 @@
-from typing_extensions import OrderedDict
+from collections import OrderedDict
+
 import numpy as np
 
-from src.models.indicators import RSIData, TechnicalIndicator, SRSIData, STOCHData, CCIData, Indicator
-from src.models.historical_data import TimeRange, Interval
+from src.models.historical_data import Interval, TimeRange
+from src.models.indicators import CCIData, Indicator, RSIData, SRSIData, STOCHData, TechnicalIndicator
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (
-    calculate_rsi,
-    calculate_stoch_rsi,
-    calculate_stoch,
     calculate_cci,
-    prepare_price_data,
+    calculate_rsi,
+    calculate_stoch,
+    calculate_stoch_rsi,
     create_indicator_dict,
+    prepare_price_data,
 )
 
 

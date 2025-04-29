@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, Query, Depends
+from fastapi import APIRouter, Depends, Query, Security
 from fastapi.security import APIKeyHeader
 
 from src.dependencies import get_yahoo_cookies, get_yahoo_crumb

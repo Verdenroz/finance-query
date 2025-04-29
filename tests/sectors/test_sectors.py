@@ -1,5 +1,5 @@
 from pathlib import Path
-from unittest.mock import patch, AsyncMock
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import requests
@@ -7,8 +7,8 @@ from aiohttp import ClientResponse
 from fastapi import HTTPException
 from orjson import orjson
 
-from src.models import MarketSector, Sector, MarketSectorDetails
-from src.services.sectors.get_sectors import get_sector_for_symbol, urls, get_yahoo_sector, get_sector_details
+from src.models import MarketSector, MarketSectorDetails, Sector
+from src.services.sectors.get_sectors import get_sector_details, get_sector_for_symbol, get_yahoo_sector, urls
 from tests.conftest import VERSION
 
 
@@ -37,7 +37,7 @@ class TestSectors:
 
             # Check if we have cached HTML
             if cache_file.exists():
-                with open(cache_file, "r", encoding="utf-8") as f:
+                with open(cache_file, encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 # Fetch real content if no cache exists (only for first run)
@@ -84,7 +84,7 @@ class TestSectors:
             if cache_file.exists():
                 import json
 
-                with open(cache_file, "r") as f:
+                with open(cache_file) as f:
                     yahoo_data = json.load(f)
             else:
                 # Create mock data if no cache exists
@@ -221,7 +221,7 @@ class TestSectors:
         html_cache = {}
 
         # Prepare HTML cache for each sector URL
-        for sector, url in urls.items():
+        for url in urls.values():
             html_content = sector_html(url)
             html_cache[url] = html_content
 

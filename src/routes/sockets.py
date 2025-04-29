@@ -5,23 +5,23 @@ import pytz
 from fastapi import APIRouter, Depends
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
-from src.connections import RedisConnectionManager, ConnectionManager
+from src.connections import ConnectionManager, RedisConnectionManager
 from src.dependencies import get_connection_manager, get_yahoo_cookies, get_yahoo_crumb
 from src.market import MarketSchedule
-from src.models import SimpleQuote, MarketSector
+from src.models import MarketSector, SimpleQuote
 from src.security import validate_websocket
 from src.services import (
-    get_quotes,
-    get_similar_quotes,
     get_actives,
-    scrape_news_for_quote,
-    get_losers,
     get_gainers,
-    get_simple_quotes,
     get_indices,
-    scrape_general_news,
-    get_sectors,
+    get_losers,
+    get_quotes,
     get_sector_for_symbol,
+    get_sectors,
+    get_similar_quotes,
+    get_simple_quotes,
+    scrape_general_news,
+    scrape_news_for_quote,
 )
 
 router = APIRouter()
@@ -41,7 +41,7 @@ def safe_convert_to_dict(items: list, default=None):
     if default is None:
         default = []
 
-    if not isinstance(items, (list, tuple)) or items is None:
+    if not isinstance(items, list | tuple) or items is None:
         return default
 
     return [
@@ -159,7 +159,7 @@ async def websocket_quotes(
     await websocket.accept()
     try:
         channel = await websocket.receive_text()
-        symbols = list(set(symbol.upper() for symbol in channel.split(",")))
+        symbols = list({symbol.upper() for symbol in channel.split(",")})
 
         async def get_request_symbols() -> list[dict]:
             """

@@ -1,13 +1,13 @@
-from .moving_averages import calculate_sma, calculate_ema, calculate_wma, calculate_vwma
-from .oscillators import calculate_rsi, calculate_stoch_rsi, calculate_stoch, calculate_cci
+from .moving_averages import calculate_ema, calculate_sma, calculate_vwma, calculate_wma
+from .oscillators import calculate_cci, calculate_rsi, calculate_stoch, calculate_stoch_rsi
 from .trends import (
-    calculate_macd,
     calculate_adx,
     calculate_aroon,
     calculate_bbands,
+    calculate_ichimoku,
+    calculate_macd,
     calculate_obv,
     calculate_supertrend,
-    calculate_ichimoku,
 )
 from .utils import create_indicator_dict, prepare_price_data
 

@@ -1,5 +1,6 @@
-from pydantic import BaseModel, Field, AliasChoices
-from typing_extensions import Optional
+from typing import Optional
+
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class Quote(BaseModel):

@@ -1,10 +1,10 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Security, Depends, Query
+from fastapi import APIRouter, Depends, Query, Security
 from fastapi.security import APIKeyHeader
 
 from src.dependencies import get_yahoo_cookies, get_yahoo_crumb
-from src.models import MarketIndex, Index, Region, INDEX_REGIONS
+from src.models import INDEX_REGIONS, Index, MarketIndex, Region
 from src.services import get_indices
 
 router = APIRouter()

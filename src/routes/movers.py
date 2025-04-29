@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Security, Query
+from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
 from src.models import MarketMover, ValidationErrorResponse

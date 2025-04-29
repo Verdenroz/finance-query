@@ -4,40 +4,40 @@ import numpy as np
 
 from src.models.historical_data import Interval, TimeRange
 from src.models.indicators import (
-    MACDData,
+    ADXData,
     AROONData,
     BBANDSData,
-    SuperTrendData,
-    IchimokuData,
-    SRSIData,
-    STOCHData,
-    SMAData,
-    EMAData,
-    WMAData,
-    VWMAData,
-    RSIData,
     CCIData,
-    ADXData,
+    EMAData,
+    IchimokuData,
     Indicator,
     IndicatorData,
+    MACDData,
+    RSIData,
+    SMAData,
+    SRSIData,
+    STOCHData,
+    SuperTrendData,
+    VWMAData,
+    WMAData,
 )
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (
-    prepare_price_data,
-    calculate_sma,
-    calculate_ema,
-    calculate_wma,
-    calculate_vwma,
-    calculate_rsi,
-    calculate_stoch_rsi,
-    calculate_stoch,
-    calculate_cci,
-    calculate_macd,
     calculate_adx,
     calculate_aroon,
     calculate_bbands,
-    calculate_supertrend,
+    calculate_cci,
+    calculate_ema,
     calculate_ichimoku,
+    calculate_macd,
+    calculate_rsi,
+    calculate_sma,
+    calculate_stoch,
+    calculate_stoch_rsi,
+    calculate_supertrend,
+    calculate_vwma,
+    calculate_wma,
+    prepare_price_data,
 )
 
 
@@ -76,30 +76,30 @@ async def get_technical_indicators(
             for period in [10, 20, 50, 100, 200]:
                 tasks.append((f"WMA({period})", get_wma_data(prices, period)))
         elif indicator == Indicator.VWMA:
-            tasks.append((f"VWMA(20)", get_vwma_data(prices, volumes)))
+            tasks.append(("VWMA(20)", get_vwma_data(prices, volumes)))
         elif indicator == Indicator.RSI:
-            tasks.append((f"RSI(14)", get_rsi_data(prices)))
+            tasks.append(("RSI(14)", get_rsi_data(prices)))
         elif indicator == Indicator.SRSI:
-            tasks.append((f"SRSI(3,3,14,14)", get_srsi_data(prices)))
+            tasks.append(("SRSI(3,3,14,14)", get_srsi_data(prices)))
         elif indicator == Indicator.STOCH:
-            tasks.append((f"STOCH %K(14,3,3)", get_stoch_data(high_prices, low_prices, prices)))
+            tasks.append(("STOCH %K(14,3,3)", get_stoch_data(high_prices, low_prices, prices)))
         elif indicator == Indicator.CCI:
-            tasks.append((f"CCI(20)", get_cci_data(high_prices, low_prices, prices)))
+            tasks.append(("CCI(20)", get_cci_data(high_prices, low_prices, prices)))
         elif indicator == Indicator.MACD:
-            tasks.append((f"MACD(12,26)", get_macd_data(prices)))
+            tasks.append(("MACD(12,26)", get_macd_data(prices)))
         elif indicator == Indicator.ADX:
-            tasks.append((f"ADX(14)", get_adx_data(high_prices, low_prices, prices)))
+            tasks.append(("ADX(14)", get_adx_data(high_prices, low_prices, prices)))
         elif indicator == Indicator.AROON:
-            tasks.append((f"Aroon(25)", get_aroon_data(high_prices, low_prices)))
+            tasks.append(("Aroon(25)", get_aroon_data(high_prices, low_prices)))
         elif indicator == Indicator.BBANDS:
-            tasks.append((f"BBANDS(20,2)", get_bbands_data(prices)))
+            tasks.append(("BBANDS(20,2)", get_bbands_data(prices)))
         elif indicator == Indicator.SUPER_TREND:
-            tasks.append((f"Super Trend", get_supertrend_data(high_prices, low_prices, prices)))
+            tasks.append(("Super Trend", get_supertrend_data(high_prices, low_prices, prices)))
         elif indicator == Indicator.ICHIMOKU:
-            tasks.append((f"Ichimoku Cloud", get_ichimoku_data(high_prices, low_prices, prices)))
+            tasks.append(("Ichimoku Cloud", get_ichimoku_data(high_prices, low_prices, prices)))
 
     task_results = await asyncio.gather(*[task[1] for task in tasks])
-    return {name: result for (name, _), result in zip(tasks, task_results)}
+    return {name: result for (name, _), result in zip(tasks, task_results, strict=False)}
 
 
 # Helper functions for individual indicators

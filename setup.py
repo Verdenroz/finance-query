@@ -2,7 +2,7 @@ import os
 
 import numpy
 from Cython.Build import cythonize
-from setuptools import setup, Extension
+from setuptools import Extension, setup
 
 CORE_DIR = "src/services/indicators/core"
 

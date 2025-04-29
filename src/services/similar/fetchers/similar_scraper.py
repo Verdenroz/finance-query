@@ -22,7 +22,7 @@ async def scrape_similar_quotes(symbol: str, limit: int = 10) -> list[SimpleQuot
             quotes.extend(await parse_etfs(tree, symbol, limit - len(quotes)))
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"No similar stocks found or invalid symbol: {e}")
+        raise HTTPException(status_code=500, detail=f"No similar stocks found or invalid symbol: {e}") from e
 
     return quotes
 

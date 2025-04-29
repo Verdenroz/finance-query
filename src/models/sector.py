@@ -1,6 +1,6 @@
 from enum import Enum
 
-from pydantic import BaseModel, Field, AliasChoices
+from pydantic import AliasChoices, BaseModel, Field
 
 
 class Sector(Enum):

@@ -1,15 +1,15 @@
-from typing_extensions import OrderedDict
+from collections import OrderedDict
 
-from src.models.indicators import SMAData, TechnicalIndicator, EMAData, WMAData, VWMAData, Indicator
-from src.models.historical_data import TimeRange, Interval
+from src.models.historical_data import Interval, TimeRange
+from src.models.indicators import EMAData, Indicator, SMAData, TechnicalIndicator, VWMAData, WMAData
 from src.services.historical.get_historical import get_historical
 from src.services.indicators.core import (
-    calculate_sma,
     calculate_ema,
-    calculate_wma,
+    calculate_sma,
     calculate_vwma,
-    prepare_price_data,
+    calculate_wma,
     create_indicator_dict,
+    prepare_price_data,
 )
 
 
