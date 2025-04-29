@@ -140,7 +140,7 @@ async def get_logo(
     return None
 
 
-async def get_auth_data() -> tuple[dict, str] | None:
+async def get_auth_data() -> tuple[str, str] | None:
     """
     Get Yahoo Finance authentication data (cookies and crumb)
 
@@ -162,6 +162,7 @@ async def get_auth_data() -> tuple[dict, str] | None:
             headers["Cookie"] = cookies_str
             crumb = get_crumb(headers)
             return cookies_str, crumb
+        return None
 
     except Exception as e:
         print(f"finance.yahoo.com auth failed: {e}")
