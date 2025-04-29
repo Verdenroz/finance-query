@@ -14,7 +14,6 @@ router = APIRouter()
     description="Returns summary data for the most active stocks during the current trading session, including the "
     "symbol, name, price, change, and percent change.",
     response_model=list[MarketMover],
-    tags=["Market Movers"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successful retrieved most active stocks"},
@@ -42,7 +41,6 @@ async def actives(count: MoverCount = Query(MoverCount.FIFTY, description="Numbe
     description="Returns the top gaining stocks or funds during the current trading session, including the "
     "symbol, name, price, change, and percent change.",
     response_model=list[MarketMover],
-    tags=["Market Movers"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successfully retrieved top gaining stocks"},
@@ -70,7 +68,6 @@ async def gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Numbe
     description="Returns the top losing stocks or funds during the current trading session, including the "
     "symbol, name, price, change, and percent change.",
     response_model=list[MarketMover],
-    tags=["Market Movers"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketMover], "description": "Successfully retrieved top losing stocks"},

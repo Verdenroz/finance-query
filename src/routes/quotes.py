@@ -14,7 +14,6 @@ router = APIRouter()
     description="Returns detailed quote data including all available fields for multiple stocks.",
     response_model=list[Quote],
     response_model_exclude_none=True,
-    tags=["Quotes"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[Quote], "description": "Successfully retrieved quotes"},
@@ -49,7 +48,6 @@ async def get_quote(
     "prices, changes, and logos.",
     response_model=list[SimpleQuote],
     response_model_exclude_none=True,
-    tags=["Quotes"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[SimpleQuote], "description": "Successfully retrieved quotes"},

@@ -13,7 +13,6 @@ router = APIRouter()
     path="/hours",
     summary="Get the current market status",
     description="Returns the current status of the market (open, closed, early close, pre-market, after-market).",
-    tags=["Hours"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {

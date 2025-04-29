@@ -15,7 +15,6 @@ router = APIRouter()
     description="Search for a stock by name or symbol, filtering by its type (stock, etf, trust) and limiting the "
     "number of hits to 1-20",
     response_model=list[SearchResult],
-    tags=["Search"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[SearchResult], "description": "Search results returned successfully"},

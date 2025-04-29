@@ -15,7 +15,6 @@ router = APIRouter()
     summary="Get major world market indices performance",
     description="Returns the major world market indices performance including the name, value, change, and percent change.",
     response_model=list[MarketIndex],
-    tags=["Indices"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketIndex], "description": "Successfully retrieved indices"},

@@ -49,7 +49,6 @@ IndicatorFunctions = {
     summary="Get technical indicator data over time for a stock",
     description="Returns the history of the requested technical indicator",
     response_model=TechnicalIndicator,
-    tags=["Technical Indicators"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": TechnicalIndicator, "description": "The technical indicator data for the stock."},
@@ -189,7 +188,6 @@ async def technical_indicator(
     path="/indicators",
     summary="Get latest technical indicators for a symbol",
     description="Returns only the latest values for the requested technical indicators",
-    tags=["Technical Indicators"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {

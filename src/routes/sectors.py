@@ -14,7 +14,6 @@ router = APIRouter()
     summary="Get summary performance for all sectors",
     description="Returns a summary of all sectors, or detailed information for a specific sector or symbol, "
     "depending on the query parameters provided.",
-    tags=["Sectors"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
@@ -127,7 +126,6 @@ async def sectors():
     description="Returns the quote's sector performance summary, including its returns over a 1d, ytd, year, 3y, "
     "and 5y period",
     response_model=MarketSector,
-    tags=["Sectors"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
@@ -169,7 +167,6 @@ async def sector_by_symbol(
     description="Returns the quote's sector performance details, including its returns, market cap, market weight, "
     "number of industries, number of companies, top industries, and top companies",
     response_model=MarketSectorDetails,
-    tags=["Sectors"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {

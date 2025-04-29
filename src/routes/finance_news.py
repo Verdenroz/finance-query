@@ -16,7 +16,6 @@ router = APIRouter()
     "Supports global stock exchanges and provides flexible symbol lookup.",
     response_model=list[News],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
-    tags=["News"],
     responses={
         200: {
             "model": list[News],

@@ -14,7 +14,6 @@ router = APIRouter()
     "period and interval provided.",
     response_model=dict[str, HistoricalData],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
-    tags=["Historical Data"],
     responses={
         200: {"model": dict[str, HistoricalData], "description": "Successfully retrieved historical data"},
         400: {

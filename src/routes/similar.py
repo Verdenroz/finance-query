@@ -15,7 +15,6 @@ router = APIRouter()
     "including symbol, name, price, and percent change.",
     response_model=list[SimpleQuote],
     response_model_exclude_none=True,
-    tags=["Similar Quotes"],
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {

@@ -35,7 +35,6 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
     description="Stream stock quotes via SSE for the given symbols every 10 seconds. Response format: 'quote: {"
     "json_data}\\n\\n' with text/event-stream content type.",
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
-    tags=["SSE"],
     responses={
         200: {
             "description": "Stream stock quotes by SSE",
