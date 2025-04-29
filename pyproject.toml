@@ -1,16 +1,49 @@
-[tool.poetry]
+[build-system]
+requires = ["poetry-core>=1.0.0", "setuptools>=61.0", "wheel", "numpy>=2.1.3", "Cython>=3.0.11"]
+build-backend = "poetry.core.masonry.api"
+
+[project]
 name = "financequery"
 version = "1.7.0"
 description = "A free and open-source financial data API for pricing, fundamentals, and technical indicators."
-license = "MIT"
-authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
+license = {text = "MIT"}
+authors = [
+    {name = "Harvey Tseng", email = "harveytseng2@gmail.com"}
+]
 readme = "README.md"
+requires-python = ">=3.11, <4.0"
+dependencies = [
+    "aiohappyeyeballs>=2.4.3",
+    "aiohttp>=3.10.11",
+    "fastapi>=0.115.4",
+    "numpy>=2.1.3",
+    "pandas>=2.2.3",
+    "redis>=5.2.0",
+    "hiredis>=3.1.0",
+    "requests>=2.32.3",
+    "uvicorn>=0.32.0",
+    "cython>=3.0.11",
+    "setuptools>=61.0",
+    "fastapi-injectable>=0.4.1",
+    "algoliasearch==3.0.0",
+    "lxml>=4.9.4",
+    "mangum>=0.19.0",
+    "orjson>=3.10.11",
+    "pydantic>=2.9.2",
+    "python-dotenv>=1.0.1",
+    "pyyaml>=6.0.2",
+    "requests-futures>=1.0.1",
+    "tqdm>=4.66.6",
+    "psutil>=7.0.0",
+]
+
+[tool.poetry]
 packages = [
-    {include = "connections", from = "src"},
-    {include = "models", from = "src"},
-    {include = "routes", from = "src"},
-    {include = "security", from = "src"},
-    {include = "services", from = "src"}
+    { include = "connections", from = "src" },
+    { include = "models", from = "src" },
+    { include = "routes", from = "src" },
+    { include = "security", from = "src" },
+    { include = "services", from = "src" }
 ]
 include = ["src/*.py"]
 
@@ -39,17 +72,15 @@ requests-futures = ">=1.0.1"
 tqdm = ">=4.66.6"
 psutil = "^7.0.0"
 
-[tool.poetry.group.test.dependencies]
+[tool.poetry.group.dev.dependencies]
 freezegun = "^1.5.1"
 httpx = "^0.28.1"
 pytest = "^8.3.4"
 pytest-asyncio = "^0.25.3"
 pytest-cov = "^6.1.1"
-coverage = "^7.8.0"
-
-[build-system]
-requires = ["poetry-core>=1.0.0", "setuptools>=61.0", "wheel", "numpy>=2.1.3", "Cython>=3.0.11"]
-build-backend = "poetry.core.masonry.api"
+coverage = { extras = ["toml"], version = "^7.8.0" }
+ruff = "^0.1.14"
+pre-commit = "^3.6.2"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "session"
@@ -71,3 +102,30 @@ omit = [
 [tool.coverage.report]
 show_missing = true
 fail_under = 95
+
+[tool.ruff]
+target-version = "py311"
+line-length = 160
+select = [
+    "E", # pycodestyle errors
+    "F", # pyflakes
+    "I", # isort
+    "B", # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "N", # pep8-naming
+    "UP", # pyupgrade
+]
+ignore = [
+    "B008", # Ignore "Do not perform function call in argument defaults"
+    "N806", # Ignore "Variable in function call should be lowercase"
+    "UP007"  # Ignore "Use `X | Y` for type annotations"
+]
+exclude = ["__init__.py"]
+
+[tool.ruff.isort]
+known-first-party = ["financequery"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
