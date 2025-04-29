@@ -18,7 +18,7 @@ def test_market_hours_endpoint(test_client):
     assert "timestamp" in data
 
     # Verify timestamp format and timezone
-    timestamp = datetime.fromisoformat(data["timestamp"].replace('Z', '+00:00'))
+    timestamp = datetime.fromisoformat(data["timestamp"].replace("Z", "+00:00"))
 
     # Convert to pytz timezone for comparison
     utc_timestamp = timestamp.astimezone(pytz.UTC)
@@ -37,31 +37,31 @@ class TestMarketSchedule:
         assert isinstance(schedule.full_holidays, dict)
         assert isinstance(schedule.early_close_dates, dict)
 
-    @pytest.mark.parametrize("test_datetime,expected_status,expected_reason", [
-        # Weekend tests
-        ("2024-03-23 12:00:00", MarketStatus.CLOSED, "Weekend"),  # Saturday
-        ("2024-03-24 12:00:00", MarketStatus.CLOSED, "Weekend"),  # Sunday
-
-        # Regular trading day tests
-        ("2024-03-22 09:29:00", MarketStatus.CLOSED, "Pre-market"),  # Before open
-        ("2024-03-22 09:30:00", MarketStatus.OPEN, "Regular trading hours"),  # At open
-        ("2024-03-22 12:00:00", MarketStatus.OPEN, "Regular trading hours"),  # During day
-        ("2024-03-22 16:00:00", MarketStatus.CLOSED, "After-hours"),  # At close
-        ("2024-03-22 16:01:00", MarketStatus.CLOSED, "After-hours"),  # After close
-
-        # Holiday tests
-        ("2024-01-01 12:00:00", MarketStatus.CLOSED, "Holiday: New Year's Day"),
-        ("2024-12-25 12:00:00", MarketStatus.CLOSED, "Holiday: Christmas Day"),
-
-        # Early close day tests
-        ("2024-12-24 09:29:00", MarketStatus.CLOSED, "Pre-market"),  # Christmas Eve before open
-        ("2024-12-24 10:00:00", MarketStatus.EARLY_CLOSE, "Early Close Day: Christmas Eve"),  # During trading
-        ("2024-12-24 13:00:00", MarketStatus.CLOSED, "Early Close: Christmas Eve"),  # After early close
-    ])
+    @pytest.mark.parametrize(
+        "test_datetime,expected_status,expected_reason",
+        [
+            # Weekend tests
+            ("2024-03-23 12:00:00", MarketStatus.CLOSED, "Weekend"),  # Saturday
+            ("2024-03-24 12:00:00", MarketStatus.CLOSED, "Weekend"),  # Sunday
+            # Regular trading day tests
+            ("2024-03-22 09:29:00", MarketStatus.CLOSED, "Pre-market"),  # Before open
+            ("2024-03-22 09:30:00", MarketStatus.OPEN, "Regular trading hours"),  # At open
+            ("2024-03-22 12:00:00", MarketStatus.OPEN, "Regular trading hours"),  # During day
+            ("2024-03-22 16:00:00", MarketStatus.CLOSED, "After-hours"),  # At close
+            ("2024-03-22 16:01:00", MarketStatus.CLOSED, "After-hours"),  # After close
+            # Holiday tests
+            ("2024-01-01 12:00:00", MarketStatus.CLOSED, "Holiday: New Year's Day"),
+            ("2024-12-25 12:00:00", MarketStatus.CLOSED, "Holiday: Christmas Day"),
+            # Early close day tests
+            ("2024-12-24 09:29:00", MarketStatus.CLOSED, "Pre-market"),  # Christmas Eve before open
+            ("2024-12-24 10:00:00", MarketStatus.EARLY_CLOSE, "Early Close Day: Christmas Eve"),  # During trading
+            ("2024-12-24 13:00:00", MarketStatus.CLOSED, "Early Close: Christmas Eve"),  # After early close
+        ],
+    )
     def test_market_status(self, test_datetime, expected_status, expected_reason):
         """Test market status determination for various scenarios"""
         dt = datetime.fromisoformat(test_datetime)
-        et_tz = pytz.timezone('America/New_York')
+        et_tz = pytz.timezone("America/New_York")
 
         # Create a localized datetime in Eastern Time
         localized_dt = et_tz.localize(dt)
@@ -86,7 +86,6 @@ class TestMarketSchedule:
             assert datetime(2024, 7, 4).date() in schedule.full_holidays  # Independence Day
             assert datetime(2024, 9, 2).date() in schedule.full_holidays  # Labor Day
             assert datetime(2024, 11, 28).date() in schedule.full_holidays  # Thanksgiving
-
 
     def test_early_close_dates(self):
         """Test early close date calculations"""

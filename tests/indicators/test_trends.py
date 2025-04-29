@@ -1,10 +1,7 @@
 from unittest.mock import AsyncMock
 
 from src.models import TimeRange, Interval, Indicator
-from src.services import (
-    get_adx, get_macd, get_aroon, get_ichimoku,
-    get_super_trend, get_obv, get_bbands
-)
+from src.services import get_adx, get_macd, get_aroon, get_ichimoku, get_super_trend, get_obv, get_bbands
 
 
 class TestTrends:

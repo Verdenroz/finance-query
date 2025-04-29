@@ -78,33 +78,36 @@ class TestRedisCacheHandler:
 
             # string key
             redis.exists.return_value = True
-            redis.type.return_value = b'string'
+            redis.type.return_value = b"string"
             q = SimpleQuote(symbol="AAPL", name="Apple", price="150.0", change="+1.00", percent_change="+0.69%")
             ser = handler.serialize_data(
-                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)})
+                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)}
+            )
             redis.get.return_value = ser
             out = await handler.get("str", SimpleQuote)
             assert isinstance(out, SimpleQuote)
             assert out.symbol == "AAPL"
 
             # list key
-            redis.type.return_value = b'list'
+            redis.type.return_value = b"list"
             ser1 = handler.serialize_data(
-                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)})
+                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)}
+            )
             ser2 = handler.serialize_data(
-                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)})
+                {"__type__": "SimpleQuote", "data": q.model_dump(by_alias=True, exclude_none=True)}
+            )
             redis.lrange.return_value = [ser1, ser2]
             lst = await handler.get("lst", list[SimpleQuote])
             assert isinstance(lst, list)
             assert all(isinstance(i, SimpleQuote) for i in lst)
 
             # redis error on string path
-            redis.type.return_value = b'string'
+            redis.type.return_value = b"string"
             redis.get.side_effect = RedisError("boom")
             assert await handler.get("err", SimpleQuote) is None
 
             # Case 5: Redis error on list path
-            redis.type.return_value = b'list'
+            redis.type.return_value = b"list"
             redis.lrange.side_effect = RedisError("boom")
             assert await handler.get("err_list", list[SimpleQuote]) is None
         finally:
@@ -201,13 +204,13 @@ class TestCacheDecoratorRedis:
         yield redis
         request_context.reset(token)
 
-    @patch('src.cache.RedisCacheHandler.get')
-    @patch('src.cache.RedisCacheHandler.set')
+    @patch("src.cache.RedisCacheHandler.get")
+    @patch("src.cache.RedisCacheHandler.set")
     async def test_redis_cache(self, mock_set, mock_get, mock_redis_env, setup_context, market_schedule):
-        mock_get.side_effect = [None,
-                                SimpleQuote(symbol="AAPL", name="Apple", price="150.0", change="+1.00",
-                                            percent_change="+0.69%")
-                                ]
+        mock_get.side_effect = [
+            None,
+            SimpleQuote(symbol="AAPL", name="Apple", price="150.0", change="+1.00", percent_change="+0.69%"),
+        ]
 
         @cache(expire=60, market_closed_expire=300, market_schedule=market_schedule)
         async def get_quote(symbol: str) -> SimpleQuote:
@@ -226,7 +229,7 @@ class TestCacheDecoratorRedis:
         mock_get.assert_called_once()
         mock_set.assert_not_called()
 
-    @patch('asyncio.Lock')
+    @patch("asyncio.Lock")
     async def test_cache_concurrency(self, mock_lock, mock_redis_env):
         # Ensure we stub Redis branch too
         redis = MagicMock()

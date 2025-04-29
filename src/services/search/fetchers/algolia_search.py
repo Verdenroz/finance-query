@@ -21,14 +21,14 @@ async def fetch_algolia_search_results(query: str, hits: int, type: Optional[Typ
     If you would like your own personal index, email me and I can send you a json of all tradeable stocks
     """
     client = SearchClient.create(
-        app_id=os.environ.get('ALGOLIA_APP_ID', "ZTZOECLXBC"),
-        api_key=os.environ.get('ALGOLIA_API_KEY', 'a3882d6ec31c0b1063ede94374616d8a')
+        app_id=os.environ.get("ALGOLIA_APP_ID", "ZTZOECLXBC"),
+        api_key=os.environ.get("ALGOLIA_API_KEY", "a3882d6ec31c0b1063ede94374616d8a"),
     )
     index = client.init_index("stocks")
 
     # Search parameters
     params = {
-        "attributesToRetrieve": ['name', 'symbol', 'exchangeShortName', 'type'],
+        "attributesToRetrieve": ["name", "symbol", "exchangeShortName", "type"],
         "hitsPerPage": hits,
     }
 
@@ -39,13 +39,10 @@ async def fetch_algolia_search_results(query: str, hits: int, type: Optional[Typ
     results = index.search(query, params)
 
     stocks = []
-    for result in results['hits']:
+    for result in results["hits"]:
         stocks.append(
             SearchResult(
-                name=result['name'],
-                symbol=result['symbol'],
-                exchange=result['exchangeShortName'],
-                type=result['type']
+                name=result["name"], symbol=result["symbol"], exchange=result["exchangeShortName"], type=result["type"]
             )
         )
 

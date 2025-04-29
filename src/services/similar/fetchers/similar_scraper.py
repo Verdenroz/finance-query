@@ -13,7 +13,7 @@ async def scrape_similar_quotes(symbol: str, limit: int = 10) -> list[SimpleQuot
     :return: a list of SimpleQuote objects
     """
     try:
-        url = 'https://finance.yahoo.com/quote/' + symbol
+        url = "https://finance.yahoo.com/quote/" + symbol
         html = await fetch(url=url)
         tree = etree.HTML(html)
 
@@ -33,10 +33,10 @@ async def parse_stocks(tree: etree.ElementTree, symbol: str, limit: int) -> list
     quotes = []
 
     for section in stock_sections:
-        symbol_xpath = './/span/text()'
-        name_xpath = './/div/div[1]/a/div/div/text()'
-        price_xpath = './/div/div[2]/div/span/text()'
-        percent_change_xpath = './/div/div[2]/div/div/span/text()'
+        symbol_xpath = ".//span/text()"
+        name_xpath = ".//div/div[1]/a/div/div/text()"
+        price_xpath = ".//div/div[2]/div/span/text()"
+        percent_change_xpath = ".//div/div[2]/div/div/span/text()"
 
         symbol_elements = section.xpath(symbol_xpath)
         name_elements = section.xpath(name_xpath)
@@ -51,16 +51,16 @@ async def parse_stocks(tree: etree.ElementTree, symbol: str, limit: int) -> list
             continue
 
         name = name_elements[0].strip()
-        price_text = price_elements[0].strip().replace(',', '')
+        price_text = price_elements[0].strip().replace(",", "")
         price = price_text
         percent_change = percent_change_elements[0].strip()
 
-        change = float(price) / (1 + float(percent_change.strip('%')) / 100) - float(price)
+        change = float(price) / (1 + float(percent_change.strip("%")) / 100) - float(price)
         change = round(change, 2)
-        if percent_change.startswith('-'):
-            change_str = '-' + str(abs(change))
+        if percent_change.startswith("-"):
+            change_str = "-" + str(abs(change))
         else:
-            change_str = '+' + str(abs(change))
+            change_str = "+" + str(abs(change))
 
         stock = SimpleQuote(
             symbol=parsed_symbol,

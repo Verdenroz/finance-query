@@ -26,14 +26,13 @@ async def get_indices(cookies: str, crumb: str, indices: list[Index] = None) -> 
         indices = list(Index)
 
     chunk_size = get_adaptive_chunk_size()
-    chunks = [indices[i:i + chunk_size] for i in range(0, len(indices), chunk_size)]
+    chunks = [indices[i : i + chunk_size] for i in range(0, len(indices), chunk_size)]
 
     async def fetch_index_data(index: Index) -> MarketIndex:
         return await fetch_index(index, cookies, crumb)
 
-    all_indices = await asyncio.gather(*(
-        asyncio.gather(*(fetch_index_data(index) for index in chunk))
-        for chunk in chunks
-    ))
+    all_indices = await asyncio.gather(
+        *(asyncio.gather(*(fetch_index_data(index) for index in chunk)) for chunk in chunks)
+    )
 
     return [index for indices in all_indices for index in indices if not isinstance(index, Exception)]

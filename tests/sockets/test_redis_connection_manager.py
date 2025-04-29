@@ -19,7 +19,6 @@ class DummyPubSub:
 
 
 class TestRedisConnectionManager:
-
     async def test_redis_connection_manager_connect(self, redis_connection_manager, mock_websocket):
         """Test Redis connection manager connect method"""
         channel = "test_channel"
@@ -70,11 +69,7 @@ class TestRedisConnectionManager:
         """
         channel = "test_channel"
         # Prepare a valid message (the channel is encoded and the data is JSON bytes).
-        message = {
-            'type': 'message',
-            'channel': channel.encode('utf-8'),
-            'data': orjson.dumps({"test": "value"})
-        }
+        message = {"type": "message", "channel": channel.encode("utf-8"), "data": orjson.dumps({"test": "value"})}
         # Inject a DummyOncePubSub that returns the message only once.
         dummy_pubsub = DummyPubSub(message)
         redis_connection_manager.pubsub = {channel: dummy_pubsub}

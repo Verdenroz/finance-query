@@ -17,7 +17,7 @@ from src.market import MarketSchedule, MarketStatus
 from src.models import HistoricalData, SimpleQuote, Quote, MarketMover, MarketIndex, News, MarketSector
 from src.models.sector import MarketSectorDetails
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class BaseCacheHandler:
@@ -92,9 +92,9 @@ class RedisCacheHandler(BaseCacheHandler):
             if not redis.exists(key):
                 return None
             kt = redis.type(key)
-            if kt == b'string':
+            if kt == b"string":
                 return self.deserialize_data(redis.get(key), return_type)
-            if kt == b'list':
+            if kt == b"list":
                 items = redis.lrange(key, 0, -1)
                 if not items:
                     return None
@@ -111,10 +111,15 @@ class RedisCacheHandler(BaseCacheHandler):
             if isinstance(result, dict):
                 pipe.set(key, self.serialize_data(result))
             elif isinstance(result, BaseModel):
-                pipe.set(key, self.serialize_data({
-                    "__type__": result.__class__.__name__,
-                    "data": result.model_dump(by_alias=True, exclude_none=True)
-                }))
+                pipe.set(
+                    key,
+                    self.serialize_data(
+                        {
+                            "__type__": result.__class__.__name__,
+                            "data": result.model_dump(by_alias=True, exclude_none=True),
+                        }
+                    ),
+                )
             elif isinstance(result, list):
                 pipe.delete(key)
                 for item in result:
@@ -151,12 +156,11 @@ class MemCacheHandler(BaseCacheHandler):
 
 
 def cache(
-        expire: int = 0,
-        market_closed_expire: Optional[int] = None,
-        memcache: bool = False,
-        market_schedule: MarketSchedule = MarketSchedule()
+    expire: int = 0,
+    market_closed_expire: Optional[int] = None,
+    memcache: bool = False,
+    market_schedule: MarketSchedule = MarketSchedule(),
 ) -> Callable[..., Any]:
-
     # Use memcache if specified or Redis is not available
     HandlerClass = MemCacheHandler if memcache or not os.getenv("REDIS_URL") else RedisCacheHandler
     handler = HandlerClass(expire, market_closed_expire, market_schedule)

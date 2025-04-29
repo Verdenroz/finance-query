@@ -29,13 +29,7 @@ async def fetch_movers(url: str) -> list[MarketMover]:
         change = get_fmt(item, "regularMarketChange")
         percent_change = get_fmt(item, "regularMarketChangePercent")
 
-        mover = MarketMover(
-            symbol=symbol,
-            name=name,
-            price=price,
-            change=change,
-            percent_change=percent_change
-        )
+        mover = MarketMover(symbol=symbol, name=name, price=price, change=change, percent_change=percent_change)
         movers.append(mover)
 
     return movers

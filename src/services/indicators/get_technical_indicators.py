@@ -3,20 +3,48 @@ import asyncio
 import numpy as np
 
 from src.models.historical_data import Interval, TimeRange
-from src.models.indicators import (MACDData, AROONData, BBANDSData, SuperTrendData, IchimokuData,
-                                   SRSIData, STOCHData, SMAData, EMAData, WMAData, VWMAData, RSIData, CCIData, ADXData,
-                                   Indicator, IndicatorData)
+from src.models.indicators import (
+    MACDData,
+    AROONData,
+    BBANDSData,
+    SuperTrendData,
+    IchimokuData,
+    SRSIData,
+    STOCHData,
+    SMAData,
+    EMAData,
+    WMAData,
+    VWMAData,
+    RSIData,
+    CCIData,
+    ADXData,
+    Indicator,
+    IndicatorData,
+)
 from src.services.historical.get_historical import get_historical
-from src.services.indicators.core import (prepare_price_data, calculate_sma, calculate_ema, calculate_wma,
-                                          calculate_vwma, calculate_rsi, calculate_stoch_rsi, calculate_stoch,
-                                          calculate_cci, calculate_macd, calculate_adx,
-                                          calculate_aroon, calculate_bbands, calculate_supertrend, calculate_ichimoku)
+from src.services.indicators.core import (
+    prepare_price_data,
+    calculate_sma,
+    calculate_ema,
+    calculate_wma,
+    calculate_vwma,
+    calculate_rsi,
+    calculate_stoch_rsi,
+    calculate_stoch,
+    calculate_cci,
+    calculate_macd,
+    calculate_adx,
+    calculate_aroon,
+    calculate_bbands,
+    calculate_supertrend,
+    calculate_ichimoku,
+)
 
 
 async def get_technical_indicators(
-        symbol: str,
-        interval: Interval,
-        indicators: list[Indicator] = None,
+    symbol: str,
+    interval: Interval,
+    indicators: list[Indicator] = None,
 ) -> dict[str, IndicatorData]:
     # Default to all indicators if none specified
     if not indicators:
@@ -104,7 +132,7 @@ async def get_srsi_data(prices):
     k_values, d_values = calculate_stoch_rsi(prices, rsi_period=14, stoch_period=14, smooth=3, signal_period=3)
     return SRSIData(
         k=round(float(k_values[-1]), 2) if not np.isnan(k_values[-1]) else None,
-        d=round(float(d_values[-1]), 2) if not np.isnan(d_values[-1]) else None
+        d=round(float(d_values[-1]), 2) if not np.isnan(d_values[-1]) else None,
     )
 
 
@@ -112,7 +140,7 @@ async def get_stoch_data(high_prices, low_prices, prices):
     k_values, d_values = calculate_stoch(high_prices, low_prices, prices, period=14, smooth=3, signal_period=3)
     return STOCHData(
         k=round(float(k_values[-1]), 2) if not np.isnan(k_values[-1]) else None,
-        d=round(float(d_values[-1]), 2) if not np.isnan(d_values[-1]) else None
+        d=round(float(d_values[-1]), 2) if not np.isnan(d_values[-1]) else None,
     )
 
 
@@ -125,7 +153,7 @@ async def get_macd_data(prices):
     macd_line, signal_line = calculate_macd(prices, fast_period=12, slow_period=26, signal_period=9)
     return MACDData(
         value=round(float(macd_line[-1]), 2) if not np.isnan(macd_line[-1]) else None,
-        signal=round(float(signal_line[-1]), 2) if not np.isnan(signal_line[-1]) else None
+        signal=round(float(signal_line[-1]), 2) if not np.isnan(signal_line[-1]) else None,
     )
 
 
@@ -138,7 +166,7 @@ async def get_aroon_data(high_prices, low_prices):
     aroon_up, aroon_down = calculate_aroon(high_prices, low_prices, period=25)
     return AROONData(
         aroon_up=round(float(aroon_up[-1]), 2) if not np.isnan(aroon_up[-1]) else None,
-        aroon_down=round(float(aroon_down[-1]), 2) if not np.isnan(aroon_down[-1]) else None
+        aroon_down=round(float(aroon_down[-1]), 2) if not np.isnan(aroon_down[-1]) else None,
     )
 
 
@@ -147,7 +175,7 @@ async def get_bbands_data(prices):
     return BBANDSData(
         upper_band=round(float(upper_band[-1]), 2) if not np.isnan(upper_band[-1]) else None,
         middle_band=round(float(middle_band[-1]), 2) if not np.isnan(middle_band[-1]) else None,
-        lower_band=round(float(lower_band[-1]), 2) if not np.isnan(lower_band[-1]) else None
+        lower_band=round(float(lower_band[-1]), 2) if not np.isnan(lower_band[-1]) else None,
     )
 
 
@@ -155,7 +183,7 @@ async def get_supertrend_data(high_prices, low_prices, prices):
     supertrend_values, trend = calculate_supertrend(high_prices, low_prices, prices, period=10, multiplier=3)
     return SuperTrendData(
         value=round(float(supertrend_values[-1]), 2) if not np.isnan(supertrend_values[-1]) else None,
-        trend="UP" if trend[-1] > 0 else "DOWN"
+        trend="UP" if trend[-1] > 0 else "DOWN",
     )
 
 
@@ -168,5 +196,5 @@ async def get_ichimoku_data(high_prices, low_prices, prices):
         kijun_sen=round(float(kijun_sen[-1]), 2) if not np.isnan(kijun_sen[-1]) else prices[-1],
         senkou_span_a=round(float(senkou_span_a[-1]), 2) if not np.isnan(senkou_span_a[-1]) else prices[-1],
         senkou_span_b=round(float(senkou_span_b[-1]), 2) if not np.isnan(senkou_span_b[-1]) else prices[-1],
-        chikou_span=round(float(chikou_span[-1]), 2) if not np.isnan(chikou_span[-1]) else prices[-1]
+        chikou_span=round(float(chikou_span[-1]), 2) if not np.isnan(chikou_span[-1]) else prices[-1],
     )

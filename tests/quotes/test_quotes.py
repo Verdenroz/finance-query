@@ -38,7 +38,7 @@ MOCK_QUOTE_RESPONSE = {
     "industry": "Semiconductors",
     "about": "NVIDIA Corporation provides graphics...",
     "employees": "29600",
-    "logo": "https://logo.clearbit.com/nvidia.com"
+    "logo": "https://logo.clearbit.com/nvidia.com",
 }
 
 MOCK_SIMPLE_QUOTE_RESPONSE = {
@@ -48,7 +48,7 @@ MOCK_SIMPLE_QUOTE_RESPONSE = {
     "afterHoursPrice": "138.46",
     "change": "+3.56",
     "percentChange": "+2.63%",
-    "logo": "https://logo.clearbit.com/nvidia.com"
+    "logo": "https://logo.clearbit.com/nvidia.com",
 }
 
 
@@ -72,12 +72,12 @@ class TestQuotes:
             cache_file = cache_dir / f"{filename}.html"
 
             if cache_file.exists():
-                with open(cache_file, 'r', encoding='utf-8') as f:
+                with open(cache_file, "r", encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
                 html_content = response.text
-                with open(cache_file, 'w', encoding='utf-8') as f:
+                with open(cache_file, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
             html_cache[url] = html_content
@@ -95,6 +95,7 @@ class TestQuotes:
         """
         Fixture that provides mock Yahoo Finance API responses for quotes.
         """
+
         def get_mock_response():
             return {
                 "quoteSummary": {
@@ -107,7 +108,7 @@ class TestQuotes:
                                 "regularMarketChange": {"fmt": "+3.56"},
                                 "regularMarketChangePercent": {"raw": 0.0263},
                                 "preMarketPrice": {"fmt": "138.46"},
-                                "postMarketPrice": {"fmt": "138.46"}
+                                "postMarketPrice": {"fmt": "138.46"},
                             },
                             "summaryDetail": {
                                 "open": {"fmt": "136.41"},
@@ -122,13 +123,9 @@ class TestQuotes:
                                 "trailingPE": {"fmt": "54.88"},
                                 "dividendRate": {"fmt": "0.04"},
                                 "dividendYield": {"fmt": "0.03%"},
-                                "exDividendDate": {"fmt": "Dec 05, 2024"}
+                                "exDividendDate": {"fmt": "Dec 05, 2024"},
                             },
-                            "calendarEvents": {
-                                "earnings": {
-                                    "earningsDate": [{"fmt": "2025-04-23"}]
-                                }
-                            },
+                            "calendarEvents": {"earnings": {"earningsDate": [{"fmt": "2025-04-23"}]}},
                             "defaultKeyStatistics": {
                                 "trailingEps": {"fmt": "2.53"},
                                 "annualReportExpenseRatio": {"fmt": "0.04"},
@@ -136,14 +133,14 @@ class TestQuotes:
                                 "morningStarRiskRating": {"raw": 3},
                                 "annualHoldingsTurnover": {"fmt": "10%"},
                                 "lastCapGain": {"fmt": "0.01"},
-                                "fundInceptionDate": {"raw": 946684800}
+                                "fundInceptionDate": {"raw": 946684800},
                             },
                             "assetProfile": {
                                 "sector": "Technology",
                                 "industry": "Semiconductors",
                                 "longBusinessSummary": "NVIDIA Corporation provides graphics...",
                                 "fullTimeEmployees": 29600,
-                                "website": "https://www.nvidia.com"
+                                "website": "https://www.nvidia.com",
                             },
                             "quoteUnadjustedPerformanceOverview": {
                                 "performanceOverview": {
@@ -156,9 +153,9 @@ class TestQuotes:
                                     "threeYearTotalReturn": {"fmt": "30.0%"},
                                     "fiveYearTotalReturn": {"fmt": "50.0%"},
                                     "tenYearTotalReturn": {"fmt": "100.0%"},
-                                    "maxReturn": {"fmt": "200.0%"}
+                                    "maxReturn": {"fmt": "200.0%"},
                                 }
-                            }
+                            },
                         }
                     ]
                 }
@@ -180,9 +177,9 @@ class TestQuotes:
                 self.status = status_code
 
             async def text(self):
-                return orjson.dumps(self._json_data).decode('utf-8')
+                return orjson.dumps(self._json_data).decode("utf-8")
 
-        with patch('src.services.quotes.fetchers.quote_api.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.quotes.fetchers.quote_api.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = MockResponse(mock_response, 200)
 
             result = await fetch_quotes(symbols, test_cookies, test_crumb)
@@ -199,7 +196,7 @@ class TestQuotes:
 
         html_content = quote_html(test_url)
 
-        with patch('src.services.quotes.fetchers.quote_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
 
             result = await scrape_quotes(symbols)
@@ -223,9 +220,9 @@ class TestQuotes:
                 self.status = status_code
 
             async def text(self):
-                return orjson.dumps(self._json_data).decode('utf-8')
+                return orjson.dumps(self._json_data).decode("utf-8")
 
-        with patch('src.services.quotes.fetchers.quote_api.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.quotes.fetchers.quote_api.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = MockResponse(mock_response, 200)
 
             result = await fetch_simple_quotes(symbols, test_cookies, test_crumb)
@@ -242,7 +239,7 @@ class TestQuotes:
 
         html_content = quote_html(test_url)
 
-        with patch('src.services.quotes.fetchers.quote_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
 
             result = await scrape_simple_quotes(symbols)
@@ -282,8 +279,9 @@ class TestQuotes:
 
     def test_scrape_quotes_fallback(self, test_client, mock_yahoo_auth):
         """Test failure case when quotes cannot be fetched and fallback to scraping"""
-        with patch('src.services.quotes.get_quotes.fetch_quotes', new_callable=AsyncMock) as fetch_mock, \
-                patch('src.services.quotes.get_quotes.scrape_quotes', new_callable=AsyncMock) as scrape_mock:
+        with patch("src.services.quotes.get_quotes.fetch_quotes", new_callable=AsyncMock) as fetch_mock, patch(
+            "src.services.quotes.get_quotes.scrape_quotes", new_callable=AsyncMock
+        ) as scrape_mock:
             fetch_mock.side_effect = ValueError("Error with Yahoo Finance credentials")
             scrape_mock.return_value = [Quote(**MOCK_QUOTE_RESPONSE)]
 
@@ -299,8 +297,9 @@ class TestQuotes:
 
     def test_scrape_simple_quotes_fallback(self, test_client, mock_yahoo_auth):
         """Test failure case when simple quotes cannot be fetched and fallback to scraping"""
-        with patch('src.services.quotes.get_quotes.fetch_simple_quotes', new_callable=AsyncMock) as fetch_mock, \
-                patch('src.services.quotes.get_quotes.scrape_simple_quotes', new_callable=AsyncMock) as scrape_mock:
+        with patch("src.services.quotes.get_quotes.fetch_simple_quotes", new_callable=AsyncMock) as fetch_mock, patch(
+            "src.services.quotes.get_quotes.scrape_simple_quotes", new_callable=AsyncMock
+        ) as scrape_mock:
             fetch_mock.side_effect = ValueError("Error with Yahoo Finance credentials")
             scrape_mock.return_value = [SimpleQuote(**MOCK_SIMPLE_QUOTE_RESPONSE)]
 
@@ -316,12 +315,12 @@ class TestQuotes:
 
     def test_invalid_symbol(self, test_client, mock_yahoo_auth):
         """Test invalid symbol"""
-        with patch('src.services.quotes.get_quotes.fetch_quotes', new_callable=AsyncMock) as fetch_mock:
+        with patch("src.services.quotes.get_quotes.fetch_quotes", new_callable=AsyncMock) as fetch_mock:
             fetch_mock.side_effect = HTTPException(404, "Symbol not found")
             response = test_client.get(f"{VERSION}/quotes?symbols=INVALID")
             assert response.status_code == 404
 
-        with patch('src.services.quotes.get_quotes.fetch_simple_quotes', new_callable=AsyncMock) as fetch_mock:
+        with patch("src.services.quotes.get_quotes.fetch_simple_quotes", new_callable=AsyncMock) as fetch_mock:
             fetch_mock.side_effect = HTTPException(404, "Symbol not found")
             response = test_client.get(f"{VERSION}/simple-quotes?symbols=INVALID")
             assert response.status_code == 404

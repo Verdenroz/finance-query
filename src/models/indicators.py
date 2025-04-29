@@ -7,21 +7,21 @@ from typing_extensions import Optional, Annotated
 
 
 class Indicator(Enum):
-    SMA = 'SMA'
-    EMA = 'EMA'
-    WMA = 'WMA'
-    VWMA = 'VWMA'
-    RSI = 'RSI'
-    SRSI = 'SRSI'
-    STOCH = 'STOCH'
-    CCI = 'CCI'
-    OBV = 'OBV'
-    BBANDS = 'BBANDS'
-    AROON = 'AROON'
-    ADX = 'ADX'
-    MACD = 'MACD'
-    SUPER_TREND = 'SUPERTREND'
-    ICHIMOKU = 'ICHIMOKU'
+    SMA = "SMA"
+    EMA = "EMA"
+    WMA = "WMA"
+    VWMA = "VWMA"
+    RSI = "RSI"
+    SRSI = "SRSI"
+    STOCH = "STOCH"
+    CCI = "CCI"
+    OBV = "OBV"
+    BBANDS = "BBANDS"
+    AROON = "AROON"
+    ADX = "ADX"
+    MACD = "MACD"
+    SUPER_TREND = "SUPERTREND"
+    ICHIMOKU = "ICHIMOKU"
 
 
 class IndicatorData(BaseModel):
@@ -62,9 +62,7 @@ class RSIData(IndicatorData):
 
 
 class SRSIData(IndicatorData):
-    k: Optional[float] = Field(
-        None, examples=[30.00], description="Stochastic RSI value", serialization_alias="%K"
-    )
+    k: Optional[float] = Field(None, examples=[30.00], description="Stochastic RSI value", serialization_alias="%K")
     d: Optional[float] = Field(
         None, examples=[30.00], description="Stochastic RSI Signal value", serialization_alias="%D"
     )
@@ -156,37 +154,35 @@ DateType = Annotated[Union[date, datetime, str], Field(description="Date in any 
 
 
 class TechnicalIndicator(BaseModel):
-    type: Indicator = Field(
-        default=...,
-        examples=["SMA"],
-        description="The type of technical indicator"
-    )
+    type: Indicator = Field(default=..., examples=["SMA"], description="The type of technical indicator")
     indicators: dict[DateType, SerializeAsAny[IndicatorData]] = Field(
         default=...,
         serialization_alias="Technical Analysis",
         validation_alias=AliasChoices("Technical Analysis", "indicators"),
-        examples=[{
-            "2021-07-09": {
-                "value": 30.00,
+        examples=[
+            {
+                "2021-07-09": {
+                    "value": 30.00,
+                }
             }
-        }],
-        description="Dates with indicators for the stock"
+        ],
+        description="Dates with indicators for the stock",
     )
 
     def model_dump(self, *args, **kwargs) -> dict:
         base_dict = super().model_dump(*args, **kwargs)
 
         # Format the date keys based on their type
-        for field_name in ['Technical Analysis', 'indicators']:
+        for field_name in ["Technical Analysis", "indicators"]:
             if field_name in base_dict:
                 formatted_dict = {}
                 for k, v in base_dict[field_name].items():
                     if isinstance(k, datetime):
                         # For datetime, keep full timestamp
-                        formatted_dict[k.strftime('%Y-%m-%d %H:%M:%S')] = v
+                        formatted_dict[k.strftime("%Y-%m-%d %H:%M:%S")] = v
                     elif isinstance(k, date):
                         # For date, use date-only format
-                        formatted_dict[k.strftime('%Y-%m-%d')] = v
+                        formatted_dict[k.strftime("%Y-%m-%d")] = v
                     else:
                         # For strings, keep as is
                         formatted_dict[str(k)] = v

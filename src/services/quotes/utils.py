@@ -47,7 +47,7 @@ def format_percent(value) -> str | None:
 
 
 def format_change(value: str) -> str:
-    if value and value[0] not in {'-', '+'}:
+    if value and value[0] not in {"-", "+"}:
         return f"+{value}"
     return value
 
@@ -112,8 +112,9 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
         # Format values
         regular_price = regular_price[0].strip() if regular_price else None
         regular_change = regular_change[0].strip() if regular_change else None
-        regular_percent_change = regular_percent_change[0].strip().replace('(', '').replace(')',
-                                                                                            '') if regular_percent_change else None
+        regular_percent_change = (
+            regular_percent_change[0].strip().replace("(", "").replace(")", "") if regular_percent_change else None
+        )
         post_price = post_price[0].strip() if post_price else None
         pre_price = pre_price[0].strip() if pre_price else None
 
@@ -133,9 +134,11 @@ async def _scrape_general_info(tree: etree.ElementTree):
     """
     try:
         ul_xpath = './/div[@data-testid="quote-statistics"]/ul'
-        list_items_xpath = './/li'
+        list_items_xpath = ".//li"
         label_xpath = './/span[contains(@class, "label")]/text()'
-        value_xpath = './/span[contains(@class, "value")]/fin-streamer/@data-value | .//span[contains(@class, "value")]/text()'
+        value_xpath = (
+            './/span[contains(@class, "value")]/fin-streamer/@data-value | .//span[contains(@class, "value")]/text()'
+        )
 
         ul_element = tree.xpath(ul_xpath)
         if not ul_element:
@@ -153,52 +156,56 @@ async def _scrape_general_info(tree: etree.ElementTree):
             data[label] = value
 
         # Process the extracted data
-        days_range = data.get("Day's Range", '')
-        low, high = days_range.split(' - ') if ' - ' in days_range else (None, None)
+        days_range = data.get("Day's Range", "")
+        low, high = days_range.split(" - ") if " - " in days_range else (None, None)
 
-        fifty_two_week_range = data.get("52 Week Range", '')
-        year_low, year_high = fifty_two_week_range.split(' - ') if ' - ' in fifty_two_week_range else (None, None)
+        fifty_two_week_range = data.get("52 Week Range", "")
+        year_low, year_high = fifty_two_week_range.split(" - ") if " - " in fifty_two_week_range else (None, None)
 
-        volume_str = data.get("Volume", '')
-        avg_volume_str = data.get("Avg. Volume", '')
+        volume_str = data.get("Volume", "")
+        avg_volume_str = data.get("Avg. Volume", "")
 
-        volume = int(volume_str.replace(',', '')) if volume_str and volume_str.replace(',', '').isdigit() else None
-        avg_volume = int(avg_volume_str.replace(',', '')) if avg_volume_str and avg_volume_str.replace(',',
-                                                                                                       '').isdigit() else None
+        volume = int(volume_str.replace(",", "")) if volume_str and volume_str.replace(",", "").isdigit() else None
+        avg_volume = (
+            int(avg_volume_str.replace(",", ""))
+            if avg_volume_str and avg_volume_str.replace(",", "").isdigit()
+            else None
+        )
 
-        forward_dividend_yield = data.get("Forward Dividend & Yield", '')
+        forward_dividend_yield = data.get("Forward Dividend & Yield", "")
         if forward_dividend_yield and any(char.isdigit() for char in forward_dividend_yield):
             dividend, yield_percent = forward_dividend_yield.replace("(", "").replace(")", "").split()
         else:
             dividend, yield_percent = None, data.get("Yield")
 
         return {
-            'open': data.get("Open"),
-            'high': high,
-            'low': low,
-            'year_high': year_high,
-            'year_low': year_low,
-            'volume': volume,
-            'avg_volume': avg_volume,
-            'market_cap': data.get("Market Cap (intraday)"),
-            'beta': data.get("Beta (5Y Monthly)"),
-            'pe': data.get("PE Ratio (TTM)"),
-            'eps': data.get("EPS (TTM)"),
-            'earnings_date': data.get("Earnings Date"),
-            'dividend': dividend,
-            'dividend_yield': yield_percent,
-            'ex_dividend': data.get("Ex-Dividend Date") if data.get("Ex-Dividend Date") != "--" else None,
-            'net_assets': data.get("Net Assets"),
-            'nav': data.get("NAV"),
-            'expense_ratio': data.get("Expense Ratio (net)"),
-            'category': data.get("Category"),
-            'last_capital_gain': data.get("Last Cap Gain"),
-            'morningstar_rating': data.get("Morningstar Rating", "").split()[0] if data.get(
-                "Morningstar Rating") else None,
-            'morningstar_risk_rating': data.get("Morningstar Risk Rating"),
-            'holdings_turnover': data.get("Holdings Turnover"),
-            'last_dividend': data.get("Last Dividend"),
-            'inception_date': data.get("Inception Date")
+            "open": data.get("Open"),
+            "high": high,
+            "low": low,
+            "year_high": year_high,
+            "year_low": year_low,
+            "volume": volume,
+            "avg_volume": avg_volume,
+            "market_cap": data.get("Market Cap (intraday)"),
+            "beta": data.get("Beta (5Y Monthly)"),
+            "pe": data.get("PE Ratio (TTM)"),
+            "eps": data.get("EPS (TTM)"),
+            "earnings_date": data.get("Earnings Date"),
+            "dividend": dividend,
+            "dividend_yield": yield_percent,
+            "ex_dividend": data.get("Ex-Dividend Date") if data.get("Ex-Dividend Date") != "--" else None,
+            "net_assets": data.get("Net Assets"),
+            "nav": data.get("NAV"),
+            "expense_ratio": data.get("Expense Ratio (net)"),
+            "category": data.get("Category"),
+            "last_capital_gain": data.get("Last Cap Gain"),
+            "morningstar_rating": data.get("Morningstar Rating", "").split()[0]
+            if data.get("Morningstar Rating")
+            else None,
+            "morningstar_risk_rating": data.get("Morningstar Risk Rating"),
+            "holdings_turnover": data.get("Holdings Turnover"),
+            "last_dividend": data.get("Last Dividend"),
+            "inception_date": data.get("Inception Date"),
         }
 
     except Exception as e:
@@ -213,13 +220,13 @@ async def _scrape_company_info(tree: etree.ElementTree, symbol: str):
     :return: sector, industry, about, employees, logo as a tuple
     """
     try:
-        container_xpath = '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div'
+        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div"
         xpaths = {
-            'about': './/div[contains(@class, "description")]/p/text()',
-            'website': './/div[contains(@class, "description")]/a[contains(@data-ylk, "business-url")]/@href',
-            'sector': './/div[contains(@class, "infoSection")][h3[text()="Sector"]]/p/a/text()',
-            'industry': './/div[contains(@class, "infoSection")][h3[text()="Industry"]]/p/a/text()',
-            'employees': './/div[contains(@class, "infoSection")][h3[text()="Full Time Employees"]]/p/text()'
+            "about": './/div[contains(@class, "description")]/p/text()',
+            "website": './/div[contains(@class, "description")]/a[contains(@data-ylk, "business-url")]/@href',
+            "sector": './/div[contains(@class, "infoSection")][h3[text()="Sector"]]/p/a/text()',
+            "industry": './/div[contains(@class, "infoSection")][h3[text()="Industry"]]/p/a/text()',
+            "employees": './/div[contains(@class, "infoSection")][h3[text()="Full Time Employees"]]/p/text()',
         }
 
         container_element = tree.xpath(container_xpath)
@@ -234,14 +241,14 @@ async def _scrape_company_info(tree: etree.ElementTree, symbol: str):
             results[key] = elements[0].strip() if elements else None
 
         # Get logo asynchronously if website exists
-        logo = await get_logo(symbol=symbol, url=results['website']) if results.get('website') else None
+        logo = await get_logo(symbol=symbol, url=results["website"]) if results.get("website") else None
 
         return {
-            'sector': results['sector'],
-            'industry': results['industry'],
-            'about': results['about'],
-            'employees': results['employees'],
-            'logo': logo
+            "sector": results["sector"],
+            "industry": results["industry"],
+            "about": results["about"],
+            "employees": results["employees"],
+            "logo": logo,
         }
 
     except Exception as e:
@@ -257,12 +264,12 @@ async def _scrape_performance(tree: etree.ElementTree):
     :return: YTD, 1 year, 3 year, and 5 year returns as a tuple
     """
     try:
-        container_xpath = '/html/body/div[2]/main/section/section/section/article/section[5]'
+        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[5]"
         return_xpaths = {
-            'ytd_return': './/section[1]//div[contains(@class, "perf")]/text()',
-            'year_return': './/section[2]//div[contains(@class, "perf")]/text()',
-            'three_year_return': './/section[3]//div[contains(@class, "perf")]/text()',
-            'five_year_return': './/section[4]//div[contains(@class, "perf")]/text()'
+            "ytd_return": './/section[1]//div[contains(@class, "perf")]/text()',
+            "year_return": './/section[2]//div[contains(@class, "perf")]/text()',
+            "three_year_return": './/section[3]//div[contains(@class, "perf")]/text()',
+            "five_year_return": './/section[4]//div[contains(@class, "perf")]/text()',
         }
 
         container_element = tree.xpath(container_xpath)

@@ -34,8 +34,8 @@ class TestSimilarQuotesHandler:
                 return html_cache[url]
 
             # Extract symbol from URL for filename
-            if 'quote/' in url:
-                symbol = url.split('quote/')[1].strip('/')
+            if "quote/" in url:
+                symbol = url.split("quote/")[1].strip("/")
                 cache_file = cache_dir / f"{symbol}_page.html"
             else:
                 # For any other URL, use a hash of the URL as filename
@@ -44,7 +44,7 @@ class TestSimilarQuotesHandler:
 
             # Check if we have cached HTML
             if cache_file.exists():
-                with open(cache_file, 'r', encoding='utf-8') as f:
+                with open(cache_file, "r", encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 # Fetch real content if no cache exists (only for first run)
@@ -52,7 +52,7 @@ class TestSimilarQuotesHandler:
                 html_content = response.text
 
                 # Save for future test runs
-                with open(cache_file, 'w', encoding='utf-8') as f:
+                with open(cache_file, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
             # Store HTML in our cache dictionary
@@ -89,8 +89,9 @@ class TestSimilarQuotesHandler:
 
             # Check if we have cached data
             if cache_file.exists():
-                with open(cache_file, 'r') as f:
+                with open(cache_file, "r") as f:
                     import json
+
                     yahoo_data = json.load(f)
             else:
                 # Create mock data if no cache exists
@@ -98,32 +99,25 @@ class TestSimilarQuotesHandler:
 
                 # Sample recommended symbols based on the input symbol
                 sample_recommendations = {
-                    'AAPL': ['MSFT', 'GOOGL', 'META', 'AMZN', 'NVDA'],
-                    'MSFT': ['AAPL', 'GOOGL', 'META', 'AMZN', 'ORCL'],
-                    'NVDA': ['AMD', 'INTC', 'TSM', 'MU', 'AVGO'],
-                    'JPM': ['BAC', 'C', 'WFC', 'GS', 'MS'],
-                    'META': ['GOOGL', 'SNAP', 'PINS', 'TWTR', 'TTD']
+                    "AAPL": ["MSFT", "GOOGL", "META", "AMZN", "NVDA"],
+                    "MSFT": ["AAPL", "GOOGL", "META", "AMZN", "ORCL"],
+                    "NVDA": ["AMD", "INTC", "TSM", "MU", "AVGO"],
+                    "JPM": ["BAC", "C", "WFC", "GS", "MS"],
+                    "META": ["GOOGL", "SNAP", "PINS", "TWTR", "TTD"],
                 }
 
                 # Get recommendations for the symbol or use a default set
-                recommended_symbols = sample_recommendations.get(symbol, ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'META'])
+                recommended_symbols = sample_recommendations.get(symbol, ["AAPL", "MSFT", "GOOGL", "AMZN", "META"])
 
                 for rec_symbol in recommended_symbols:
                     recommendations.append({"symbol": rec_symbol})
 
-                yahoo_data = {
-                    "finance": {
-                        "result": [
-                            {
-                                "recommendedSymbols": recommendations
-                            }
-                        ]
-                    }
-                }
+                yahoo_data = {"finance": {"result": [{"recommendedSymbols": recommendations}]}}
 
                 # Save for future test runs
-                with open(cache_file, 'w') as f:
+                with open(cache_file, "w") as f:
                     import json
+
                     json.dump(yahoo_data, f)
 
             # Store data in our cache dictionary
@@ -163,54 +157,100 @@ class TestSimilarQuotesHandler:
 
             # Check if we have cached data
             if cache_file.exists():
-                with open(cache_file, 'r') as f:
+                with open(cache_file, "r") as f:
                     import json
+
                     quotes_data = json.load(f)
             else:
                 # Create mock data if no cache exists
                 sample_quotes = {
-                    'AAPL': {'name': 'Apple Inc.', 'price': '176.43', 'change': '0.51', 'percentChange': '+0.29%'},
-                    'MSFT': {'name': 'Microsoft Corporation', 'price': '385.22', 'change': '-3.17',
-                             'percentChange': '-0.82%'},
-                    'GOOGL': {'name': 'Alphabet Inc.', 'price': '142.65', 'change': '1.23', 'percentChange': '+0.87%'},
-                    'META': {'name': 'Meta Platforms, Inc.', 'price': '485.58', 'change': '5.37',
-                             'percentChange': '+1.12%'},
-                    'AMZN': {'name': 'Amazon.com, Inc.', 'price': '179.56', 'change': '-0.76', 'percentChange': '-0.42%'},
-                    'NVDA': {'name': 'NVIDIA Corporation', 'price': '860.28', 'change': '15.37', 'percentChange': '+1.82%'},
-                    'AMD': {'name': 'Advanced Micro Devices, Inc.', 'price': '146.88', 'change': '2.35',
-                            'percentChange': '+1.63%'},
-                    'INTC': {'name': 'Intel Corporation', 'price': '33.94', 'change': '-0.38', 'percentChange': '-1.11%'},
-                    'TSM': {'name': 'Taiwan Semiconductor Manufacturing Co. Ltd.', 'price': '174.25', 'change': '3.75',
-                            'percentChange': '+2.20%'},
-                    'JPM': {'name': 'JPMorgan Chase & Co.', 'price': '198.52', 'change': '1.43', 'percentChange': '+0.73%'},
-                    'BAC': {'name': 'Bank of America Corporation', 'price': '37.41', 'change': '0.24',
-                            'percentChange': '+0.65%'}
+                    "AAPL": {"name": "Apple Inc.", "price": "176.43", "change": "0.51", "percentChange": "+0.29%"},
+                    "MSFT": {
+                        "name": "Microsoft Corporation",
+                        "price": "385.22",
+                        "change": "-3.17",
+                        "percentChange": "-0.82%",
+                    },
+                    "GOOGL": {"name": "Alphabet Inc.", "price": "142.65", "change": "1.23", "percentChange": "+0.87%"},
+                    "META": {
+                        "name": "Meta Platforms, Inc.",
+                        "price": "485.58",
+                        "change": "5.37",
+                        "percentChange": "+1.12%",
+                    },
+                    "AMZN": {
+                        "name": "Amazon.com, Inc.",
+                        "price": "179.56",
+                        "change": "-0.76",
+                        "percentChange": "-0.42%",
+                    },
+                    "NVDA": {
+                        "name": "NVIDIA Corporation",
+                        "price": "860.28",
+                        "change": "15.37",
+                        "percentChange": "+1.82%",
+                    },
+                    "AMD": {
+                        "name": "Advanced Micro Devices, Inc.",
+                        "price": "146.88",
+                        "change": "2.35",
+                        "percentChange": "+1.63%",
+                    },
+                    "INTC": {
+                        "name": "Intel Corporation",
+                        "price": "33.94",
+                        "change": "-0.38",
+                        "percentChange": "-1.11%",
+                    },
+                    "TSM": {
+                        "name": "Taiwan Semiconductor Manufacturing Co. Ltd.",
+                        "price": "174.25",
+                        "change": "3.75",
+                        "percentChange": "+2.20%",
+                    },
+                    "JPM": {
+                        "name": "JPMorgan Chase & Co.",
+                        "price": "198.52",
+                        "change": "1.43",
+                        "percentChange": "+0.73%",
+                    },
+                    "BAC": {
+                        "name": "Bank of America Corporation",
+                        "price": "37.41",
+                        "change": "0.24",
+                        "percentChange": "+0.65%",
+                    },
                 }
 
                 quotes_data = []
                 for symbol in symbols:
                     if symbol in sample_quotes:
                         quote = sample_quotes[symbol]
-                        quotes_data.append({
-                            'symbol': symbol,
-                            'name': quote['name'],
-                            'price': quote['price'],
-                            'change': quote['change'],
-                            'percentChange': quote['percentChange']
-                        })
+                        quotes_data.append(
+                            {
+                                "symbol": symbol,
+                                "name": quote["name"],
+                                "price": quote["price"],
+                                "change": quote["change"],
+                                "percentChange": quote["percentChange"],
+                            }
+                        )
                     else:
                         # Generate mock data for unknown symbols
-                        quotes_data.append({
-                            'symbol': symbol,
-                            'name': f'{symbol} Corporation',
-                            'price': '100.00',
-                            'change': '0.00',
-                            'percentChange': '0.00%'
-                        })
+                        quotes_data.append(
+                            {
+                                "symbol": symbol,
+                                "name": f"{symbol} Corporation",
+                                "price": "100.00",
+                                "change": "0.00",
+                                "percentChange": "0.00%",
+                            }
+                        )
 
                 # Save for future test runs
-                with open(cache_file, 'w') as f:
+                with open(cache_file, "w") as f:
                     import json
+
                     json.dump(quotes_data, f)
 
             # Store data in our cache dictionary
@@ -234,21 +274,21 @@ class TestSimilarQuotesHandler:
                 "name": "Advanced Micro Devices, Inc.",
                 "price": "146.88",
                 "change": "2.35",
-                "percentChange": "+1.63%"
+                "percentChange": "+1.63%",
             },
             {
                 "symbol": "INTC",
                 "name": "Intel Corporation",
                 "price": "33.94",
                 "change": "-0.38",
-                "percentChange": "-1.11%"
-            }
+                "percentChange": "-1.11%",
+            },
         ]
 
         async def mock_get_similar(symbol, cookies, crumb, limit):
             return [SimpleQuote(**quote) for quote in mock_quotes[:limit]]
 
-        monkeypatch.setattr('src.routes.similar.get_similar_quotes', mock_get_similar)
+        monkeypatch.setattr("src.routes.similar.get_similar_quotes", mock_get_similar)
 
         # Test default limit
         response = test_client.get(f"/{VERSION}/similar?symbol={test_symbol}")
@@ -269,7 +309,7 @@ class TestSimilarQuotesHandler:
     async def test_fetch_yahoo_recommended_symbols(self, yahoo_recommendations, bypass_cache):
         """Test _fetch_yahoo_recommended_symbols function with cached data"""
 
-        test_symbols = ['AAPL', 'MSFT', 'NVDA', 'JPM']
+        test_symbols = ["AAPL", "MSFT", "NVDA", "JPM"]
         test_limit = 3
 
         for symbol in test_symbols:
@@ -281,7 +321,7 @@ class TestSimilarQuotesHandler:
             expected_symbols = [rec["symbol"] for rec in recommendations]  # Get all symbols, not just limited ones
 
             # Mock the fetch function to return our cached data
-            with patch('src.services.similar.fetchers.similar_api.fetch', new_callable=AsyncMock) as mock_fetch:
+            with patch("src.services.similar.fetchers.similar_api.fetch", new_callable=AsyncMock) as mock_fetch:
                 mock_fetch.return_value = orjson.dumps(yahoo_data)
 
                 # Call the function with test parameters
@@ -293,16 +333,18 @@ class TestSimilarQuotesHandler:
                 # Verify fetch was called with correct parameters
                 mock_fetch.assert_called_once()
                 call_args = mock_fetch.call_args[1]
-                assert call_args["url"] == f"https://query1.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
+                assert (
+                    call_args["url"] == f"https://query1.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
+                )
                 assert call_args["params"] == {"count": test_limit}  # Verify limit is passed to API
 
     async def test_fetch_similar(self, yahoo_recommendations, cached_quote_data, bypass_cache):
         """Test fetch_similar function with cached data"""
 
-        test_symbol = 'NVDA'
+        test_symbol = "NVDA"
         test_limit = 3
-        test_cookies = 'test_cookies'
-        test_crumb = 'test_crumb'
+        test_cookies = "test_cookies"
+        test_crumb = "test_crumb"
 
         # Get cached recommendation data
         yahoo_data = yahoo_recommendations(test_symbol)
@@ -313,10 +355,11 @@ class TestSimilarQuotesHandler:
         quote_data = cached_quote_data(recommended_symbols)
 
         # Mock the necessary functions
-        with patch('src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols',
-                   new_callable=AsyncMock) as mock_fetch_symbols, \
-             patch('src.services.similar.fetchers.similar_api.get_simple_quotes',
-                   new_callable=AsyncMock) as mock_get_quotes:
+        with patch(
+            "src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock
+        ) as mock_fetch_symbols, patch(
+            "src.services.similar.fetchers.similar_api.get_simple_quotes", new_callable=AsyncMock
+        ) as mock_get_quotes:
             mock_fetch_symbols.return_value = recommended_symbols
             mock_get_quotes.return_value = [SimpleQuote(**quote) for quote in quote_data]
 
@@ -335,14 +378,15 @@ class TestSimilarQuotesHandler:
     async def test_fetch_similar_not_found(self, bypass_cache):
         """Test fetch_similar when no recommendations are found"""
 
-        test_symbol = 'INVALID'
+        test_symbol = "INVALID"
         test_limit = 5
-        test_cookies = 'test_cookies'
-        test_crumb = 'test_crumb'
+        test_cookies = "test_cookies"
+        test_crumb = "test_crumb"
 
         # Mock _fetch_yahoo_recommended_symbols to raise HTTPException
-        with patch('src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols',
-                   new_callable=AsyncMock) as mock_fetch:
+        with patch(
+            "src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock
+        ) as mock_fetch:
             mock_fetch.side_effect = HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
 
             # Verify that HTTPException is re-raised
@@ -355,16 +399,16 @@ class TestSimilarQuotesHandler:
 
     async def test_scrape_similar_quotes(self, similar_quotes_html, bypass_cache):
         """Test scrape_similar_quotes function with cached HTML content"""
-        test_symbols = ['AAPL', 'MSFT', 'NVDA', 'JPM', 'TQQQ', 'SPY']
+        test_symbols = ["AAPL", "MSFT", "NVDA", "JPM", "TQQQ", "SPY"]
         test_limit = 5
 
         for symbol in test_symbols:
             # Get cached HTML for this symbol
-            url = f'https://finance.yahoo.com/quote/{symbol}'
+            url = f"https://finance.yahoo.com/quote/{symbol}"
             html_content = similar_quotes_html(url)
 
             # Mock the fetch function
-            with patch('src.services.similar.fetchers.similar_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
+            with patch("src.services.similar.fetchers.similar_scraper.fetch", new_callable=AsyncMock) as mock_fetch:
                 mock_fetch.return_value = html_content
 
                 # Call the function
@@ -390,19 +434,23 @@ class TestSimilarQuotesHandler:
                     assert quote.percent_change
 
                     # Verify percent_change format
-                    assert quote.percent_change.endswith('%')
-                    assert quote.percent_change.startswith('+') or quote.percent_change.startswith('-') or quote.percent_change.startswith('0')
+                    assert quote.percent_change.endswith("%")
+                    assert (
+                        quote.percent_change.startswith("+")
+                        or quote.percent_change.startswith("-")
+                        or quote.percent_change.startswith("0")
+                    )
 
                 # Verify fetch was called with correct parameters
                 mock_fetch.assert_called_once_with(url=url)
 
     async def test_scrape_similar_quotes_invalid_symbol(self, bypass_cache):
         """Test scrape_similar_quotes with an invalid symbol"""
-        test_symbol = 'INVALID_SYMBOL_12345'
+        test_symbol = "INVALID_SYMBOL_12345"
         test_limit = 5
 
         # Mock fetch to simulate a failed request
-        with patch('src.services.similar.fetchers.similar_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.similar.fetchers.similar_scraper.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = Exception("Failed to fetch data")
 
             # Verify that HTTPException is raised
@@ -415,20 +463,23 @@ class TestSimilarQuotesHandler:
 
     async def test_get_similar_quotes_success(self, bypass_cache):
         """Test get_similar_quotes with successful API fetch"""
-        test_symbol = 'AAPL'
-        test_cookies = 'test_cookies'
-        test_crumb = 'test_crumb'
+        test_symbol = "AAPL"
+        test_cookies = "test_cookies"
+        test_crumb = "test_crumb"
         test_limit = 3
 
         mock_quotes = [
-            SimpleQuote(symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17",
-                        percent_change="-0.82%"),
+            SimpleQuote(
+                symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17", percent_change="-0.82%"
+            ),
             SimpleQuote(symbol="GOOGL", name="Alphabet Inc.", price="142.65", change="1.23", percent_change="+0.87%"),
-            SimpleQuote(symbol="META", name="Meta Platforms, Inc.", price="485.58", change="5.37", percent_change="+1.12%")
+            SimpleQuote(
+                symbol="META", name="Meta Platforms, Inc.", price="485.58", change="5.37", percent_change="+1.12%"
+            ),
         ]
 
         # Mock fetch_similar to return our test quotes
-        with patch('src.services.similar.get_similar_quotes.fetch_similar', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = mock_quotes
 
             # Call the function
@@ -440,21 +491,24 @@ class TestSimilarQuotesHandler:
 
     async def test_get_similar_quotes_fallback(self, bypass_cache):
         """Test get_similar_quotes fallback to scraper when API fails"""
-        test_symbol = 'NVDA'
-        test_cookies = 'test_cookies'
-        test_crumb = 'test_crumb'
+        test_symbol = "NVDA"
+        test_cookies = "test_cookies"
+        test_crumb = "test_crumb"
         test_limit = 3
 
         mock_quotes = [
-            SimpleQuote(symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17",
-                        percent_change="-0.82%"),
-            SimpleQuote(symbol="GOOGL", name="Alphabet Inc.", price="142.65", change="1.23", percent_change="+0.87%")
+            SimpleQuote(
+                symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17", percent_change="-0.82%"
+            ),
+            SimpleQuote(symbol="GOOGL", name="Alphabet Inc.", price="142.65", change="1.23", percent_change="+0.87%"),
         ]
 
         # Mock fetch_similar to raise a generic exception
-        with patch('src.services.similar.get_similar_quotes.fetch_similar', new_callable=AsyncMock) as mock_fetch, \
-             patch('src.services.similar.get_similar_quotes.scrape_similar_quotes',
-                   new_callable=AsyncMock) as mock_scrape:
+        with patch(
+            "src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock
+        ) as mock_fetch, patch(
+            "src.services.similar.get_similar_quotes.scrape_similar_quotes", new_callable=AsyncMock
+        ) as mock_scrape:
             mock_fetch.return_value = []
             mock_scrape.return_value = mock_quotes
 
@@ -468,13 +522,13 @@ class TestSimilarQuotesHandler:
 
     async def test_get_similar_quotes_http_exception(self, bypass_cache):
         """Test get_similar_quotes propagates HTTPException from fetch_similar"""
-        test_symbol = 'INVALID'
-        test_cookies = 'test_cookies'
-        test_crumb = 'test_crumb'
+        test_symbol = "INVALID"
+        test_cookies = "test_cookies"
+        test_crumb = "test_crumb"
         test_limit = 3
 
         # Mock fetch_similar to raise an HTTPException
-        with patch('src.services.similar.get_similar_quotes.fetch_similar', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
 
             # Verify that HTTPException is re-raised

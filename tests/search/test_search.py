@@ -10,33 +10,19 @@ from tests.conftest import VERSION
 
 # Mock search response data for all three supported types
 MOCK_SEARCH_RESPONSE = [
-    {
-        "name": "Amazon.com, Inc.",
-        "symbol": "AMZN",
-        "exchange": "NASDAQ",
-        "type": "stock"
-    },
-    {
-        "name": "Amazon ETF",
-        "symbol": "AMZN-ETF",
-        "exchange": "NYSE",
-        "type": "etf"
-    },
-    {
-        "name": "Amazon Trust",
-        "symbol": "AMZN-TRUST",
-        "exchange": "NYSE",
-        "type": "trust"
-    }
+    {"name": "Amazon.com, Inc.", "symbol": "AMZN", "exchange": "NASDAQ", "type": "stock"},
+    {"name": "Amazon ETF", "symbol": "AMZN-ETF", "exchange": "NYSE", "type": "etf"},
+    {"name": "Amazon Trust", "symbol": "AMZN-TRUST", "exchange": "NYSE", "type": "trust"},
 ]
 
-class TestSearch:
 
+class TestSearch:
     @pytest.fixture
     def mock_api_response(self):
         """
         Fixture that provides a function to get a mock API response for search queries.
         """
+
         def get_mock_response(url, params=None):
             # Define mock response data based on the query
             if "query1.finance.yahoo.com/v1/finance/search" in url:
@@ -46,30 +32,21 @@ class TestSearch:
                             "shortname": "Amazon.com, Inc.",
                             "symbol": "AMZN",
                             "exchange": "NASDAQ",
-                            "quoteType": "EQUITY"
+                            "quoteType": "EQUITY",
                         },
-                        {
-                            "shortname": "Amazon ETF",
-                            "symbol": "AMZN-ETF",
-                            "exchange": "NYSE",
-                            "quoteType": "ETF"
-                        },
+                        {"shortname": "Amazon ETF", "symbol": "AMZN-ETF", "exchange": "NYSE", "quoteType": "ETF"},
                         {
                             "shortname": "Amazon Trust",
                             "symbol": "AMZN-TRUST",
                             "exchange": "NYSE",
-                            "quoteType": "MUTUALFUND"
+                            "quoteType": "MUTUALFUND",
                         },
-                        {
-                            "shortname": "Amazon Futures",
-                            "symbol": "AMZN-FUT",
-                            "exchange": "CME",
-                            "quoteType": "FUTURE"
-                        }
+                        {"shortname": "Amazon Futures", "symbol": "AMZN-FUT", "exchange": "CME", "quoteType": "FUTURE"},
                     ]
                 }
-                return orjson.dumps(mock_data).decode('utf-8')
-            return orjson.dumps({}).decode('utf-8')
+                return orjson.dumps(mock_data).decode("utf-8")
+            return orjson.dumps({}).decode("utf-8")
+
         return get_mock_response
 
     def test_search_success(self, test_client, mock_yahoo_auth, monkeypatch):
@@ -109,11 +86,9 @@ class TestSearch:
         error_detail = response.json()["errors"]
         assert "type" in error_detail
 
-    @pytest.mark.parametrize("type_value, expected_type", [
-        ("stock", Type.STOCK),
-        ("etf", Type.ETF),
-        ("trust", Type.TRUST)
-    ])
+    @pytest.mark.parametrize(
+        "type_value, expected_type", [("stock", Type.STOCK), ("etf", Type.ETF), ("trust", Type.TRUST)]
+    )
     def test_search_with_type_filter(self, test_client, mock_yahoo_auth, monkeypatch, type_value, expected_type):
         """Test search with different type filters"""
         # Mock the search service function with filtering
@@ -133,23 +108,29 @@ class TestSearch:
         # Verify mock was called with correct type
         mock_fetch_search_results.assert_awaited_once_with("AMZN", 50, expected_type)
 
-    @pytest.mark.parametrize("query, hits, type_filter, expected_count", [
-        ("AMZN", 10, None, 3),  # All types
-        ("AMZN", 10, Type.STOCK, 1),
-        ("AMZN", 10, Type.ETF, 1),
-        ("AMZN", 10, Type.TRUST, 1)
-    ])
+    @pytest.mark.parametrize(
+        "query, hits, type_filter, expected_count",
+        [
+            ("AMZN", 10, None, 3),  # All types
+            ("AMZN", 10, Type.STOCK, 1),
+            ("AMZN", 10, Type.ETF, 1),
+            ("AMZN", 10, Type.TRUST, 1),
+        ],
+    )
     async def test_get_search_yahoo(self, mock_api_response, query, hits, type_filter, expected_count):
         """Test get_search function with mocked Yahoo API response"""
         # Mock the Algolia search to fail
-        with patch('src.services.search.get_search.fetch_algolia_search_results',
-                   side_effect=Exception("Algolia failed")) as mock_algolia:
-            filtered_response = [item for item in MOCK_SEARCH_RESPONSE
-                                 if type_filter is None or item["type"] == type_filter.value]
+        with patch(
+            "src.services.search.get_search.fetch_algolia_search_results", side_effect=Exception("Algolia failed")
+        ) as mock_algolia:
+            filtered_response = [
+                item for item in MOCK_SEARCH_RESPONSE if type_filter is None or item["type"] == type_filter.value
+            ]
 
             # Mock the Yahoo search
-            with patch('src.services.search.get_search.fetch_yahoo_search_results',
-                       new_callable=AsyncMock) as mock_yahoo:
+            with patch(
+                "src.services.search.get_search.fetch_yahoo_search_results", new_callable=AsyncMock
+            ) as mock_yahoo:
                 mock_yahoo.return_value = filtered_response
 
                 # Call the function
@@ -164,26 +145,32 @@ class TestSearch:
                 assert mock_yahoo.called
                 mock_yahoo.assert_called_once_with(query, hits, type_filter)
 
-    @pytest.mark.parametrize("query, hits, type_filter, expected_count", [
-        ("AMZN", 10, None, 3),  # All types
-        ("AMZN", 10, Type.STOCK, 1),
-        ("AMZN", 10, Type.ETF, 1),
-        ("AMZN", 10, Type.TRUST, 1)
-    ])
+    @pytest.mark.parametrize(
+        "query, hits, type_filter, expected_count",
+        [
+            ("AMZN", 10, None, 3),  # All types
+            ("AMZN", 10, Type.STOCK, 1),
+            ("AMZN", 10, Type.ETF, 1),
+            ("AMZN", 10, Type.TRUST, 1),
+        ],
+    )
     async def test_get_search_algolia(self, query, hits, type_filter, expected_count):
         """Test get_search function with mocked Algolia API response"""
         # Create filtered responses based on type filter
-        filtered_response = [item for item in MOCK_SEARCH_RESPONSE
-                             if type_filter is None or item["type"] == type_filter.value]
+        filtered_response = [
+            item for item in MOCK_SEARCH_RESPONSE if type_filter is None or item["type"] == type_filter.value
+        ]
 
         # Mock the Algolia search to succeed
-        with patch('src.services.search.get_search.fetch_algolia_search_results',
-                   new_callable=AsyncMock) as mock_algolia:
+        with patch(
+            "src.services.search.get_search.fetch_algolia_search_results", new_callable=AsyncMock
+        ) as mock_algolia:
             mock_algolia.return_value = filtered_response
 
             # Mock the Yahoo search as fallback (should not be called)
-            with patch('src.services.search.get_search.fetch_yahoo_search_results',
-                       new_callable=AsyncMock) as mock_yahoo:
+            with patch(
+                "src.services.search.get_search.fetch_yahoo_search_results", new_callable=AsyncMock
+            ) as mock_yahoo:
                 # Call the function
                 result = await get_search(query, hits, type_filter)
 
@@ -202,7 +189,7 @@ class TestSearch:
         hits = 10
 
         # Mock the fetch function
-        with patch('src.services.search.fetchers.yahoo_search.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.search.fetchers.yahoo_search.fetch", new_callable=AsyncMock) as mock_fetch:
             # Return JSON string directly instead of using mock_api_response
             mock_fetch.return_value = mock_api_response("https://query1.finance.yahoo.com/v1/finance/search")
 
@@ -219,19 +206,24 @@ class TestSearch:
             # Verify no future type is included (should be filtered out)
             assert not any(result.type == "future" for result in results)
 
-    @pytest.mark.parametrize("type_filter, expected_count, expected_type", [
-        (None, 3, None),  # All recognized types (stock, etf, trust)
-        (Type.STOCK, 1, "stock"),
-        (Type.ETF, 1, "etf"),
-        (Type.TRUST, 1, "trust")
-    ])
-    async def test_fetch_yahoo_search_results_with_filters(self, mock_api_response, type_filter, expected_count, expected_type):
+    @pytest.mark.parametrize(
+        "type_filter, expected_count, expected_type",
+        [
+            (None, 3, None),  # All recognized types (stock, etf, trust)
+            (Type.STOCK, 1, "stock"),
+            (Type.ETF, 1, "etf"),
+            (Type.TRUST, 1, "trust"),
+        ],
+    )
+    async def test_fetch_yahoo_search_results_with_filters(
+        self, mock_api_response, type_filter, expected_count, expected_type
+    ):
         """Test fetch_yahoo_search_results function with different type filters"""
         query = "AMZN"
         hits = 10
 
         # Mock the fetch function
-        with patch('src.services.search.fetchers.yahoo_search.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.search.fetchers.yahoo_search.fetch", new_callable=AsyncMock) as mock_fetch:
             # Return the serialized JSON directly
             mock_fetch.return_value = mock_api_response("https://query1.finance.yahoo.com/v1/finance/search")
 
@@ -246,15 +238,14 @@ class TestSearch:
                 assert all(result.type == expected_type for result in results)
 
             # Verify that the fetch function was called with the right parameters
-            mock_fetch.assert_called_once_with(url="https://query1.finance.yahoo.com/v1/finance/search",
-                                               params={"q": query, "quotesCount": hits})
+            mock_fetch.assert_called_once_with(
+                url="https://query1.finance.yahoo.com/v1/finance/search", params={"q": query, "quotesCount": hits}
+            )
 
-    @pytest.mark.parametrize("type_filter, facet_filter", [
-        (None, None),
-        (Type.STOCK, ["type:stock"]),
-        (Type.ETF, ["type:etf"]),
-        (Type.TRUST, ["type:trust"])
-    ])
+    @pytest.mark.parametrize(
+        "type_filter, facet_filter",
+        [(None, None), (Type.STOCK, ["type:stock"]), (Type.ETF, ["type:etf"]), (Type.TRUST, ["type:trust"])],
+    )
     async def test_fetch_algolia_search_results(self, type_filter, facet_filter):
         """Test fetch_algolia_search_results function with appropriate facet filters"""
         query = "AMZN"
@@ -262,40 +253,25 @@ class TestSearch:
 
         # Create appropriate mock response based on type filter
         mock_hits = [
-            {
-                'name': 'Amazon.com, Inc.',
-                'symbol': 'AMZN',
-                'exchangeShortName': 'NASDAQ',
-                'type': 'stock'
-            },
-            {
-                'name': 'Amazon ETF',
-                'symbol': 'AMZN-ETF',
-                'exchangeShortName': 'NYSE',
-                'type': 'etf'
-            },
-            {
-                'name': 'Amazon Trust',
-                'symbol': 'AMZN-TRUST',
-                'exchangeShortName': 'NYSE',
-                'type': 'trust'
-            }
+            {"name": "Amazon.com, Inc.", "symbol": "AMZN", "exchangeShortName": "NASDAQ", "type": "stock"},
+            {"name": "Amazon ETF", "symbol": "AMZN-ETF", "exchangeShortName": "NYSE", "type": "etf"},
+            {"name": "Amazon Trust", "symbol": "AMZN-TRUST", "exchangeShortName": "NYSE", "type": "trust"},
         ]
 
         # Filter hits based on type_filter for realistic return values
         if type_filter:
-            filtered_hits = [hit for hit in mock_hits if hit['type'] == type_filter.value]
+            filtered_hits = [hit for hit in mock_hits if hit["type"] == type_filter.value]
         else:
             filtered_hits = mock_hits
 
         # Create mock Algolia search client
         mock_index = MagicMock()
-        mock_index.search.return_value = {'hits': filtered_hits}
+        mock_index.search.return_value = {"hits": filtered_hits}
 
         mock_client = MagicMock()
         mock_client.init_index.return_value = mock_index
 
-        with patch('algoliasearch.search_client.SearchClient.create', return_value=mock_client):
+        with patch("algoliasearch.search_client.SearchClient.create", return_value=mock_client):
             # Call the function with the specified filter
             results = await fetch_algolia_search_results(query, hits, type_filter)
 
@@ -315,14 +291,14 @@ class TestSearch:
                 assert all(r.type == type_filter.value for r in results)
 
             # Check that params were passed correctly to search
-            if 'params' in kwargs:
-                params = kwargs['params']
+            if "params" in kwargs:
+                params = kwargs["params"]
 
                 # Verify hits parameter
-                assert params['hitsPerPage'] == hits
+                assert params["hitsPerPage"] == hits
 
                 # Verify facet filters if type_filter is provided
                 if type_filter:
-                    assert params['facetFilters'] == facet_filter
+                    assert params["facetFilters"] == facet_filter
                 else:
-                    assert 'facetFilters' not in params
+                    assert "facetFilters" not in params

@@ -42,7 +42,7 @@ def test_client(mock_redis, mock_session):
 @pytest.fixture(scope="session")
 def mock_request_context():
     """Mock request context"""
-    with patch('src.dependencies.request_context', MagicMock()) as mock:
+    with patch("src.dependencies.request_context", MagicMock()) as mock:
         mock.get.return_value.app.state.cookies = "mock_cookies"
         mock.get.return_value.app.state.crumb = "mock_crumb"
         yield mock
@@ -51,7 +51,7 @@ def mock_request_context():
 @pytest.fixture(scope="session")
 def mock_yahoo_auth(mock_request_context):
     """Mock Yahoo authentication data"""
-    with patch('src.dependencies.get_auth_data', new_callable=AsyncMock) as mock:
+    with patch("src.dependencies.get_auth_data", new_callable=AsyncMock) as mock:
         mock.return_value = ("mock_cookies", "mock_crumb")
         yield mock
 
@@ -64,10 +64,7 @@ def historical_quotes():
         raw_data = orjson.loads(file.read())
 
     # Convert each date entry to a HistoricalData object
-    return {
-        date: HistoricalData(**quote_data)
-        for date, quote_data in raw_data.items()
-    }
+    return {date: HistoricalData(**quote_data) for date, quote_data in raw_data.items()}
 
 
 @pytest.fixture
@@ -87,7 +84,7 @@ def mock_websocket():
 
 @pytest.fixture
 async def redis_connection_manager(mock_redis):
-    with patch('redis.Redis', return_value=mock_redis):
+    with patch("redis.Redis", return_value=mock_redis):
         mock_redis.publish = MagicMock(return_value=None)
         manager = RedisConnectionManager(mock_redis)
         return manager
@@ -125,7 +122,7 @@ def bypass_cache(monkeypatch):
         return decorator
 
     # Patch the cache decorator in the src.cache module
-    monkeypatch.setattr('src.cache.cache', bypass_decorator)
+    monkeypatch.setattr("src.cache.cache", bypass_decorator)
 
     # Clean up the context variable after the test
     yield

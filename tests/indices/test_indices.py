@@ -25,7 +25,7 @@ MOCK_INDICES_RESPONSE = [
         "threeYearReturn": None,
         "fiveYearReturn": None,
         "tenYearReturn": None,
-        "maxReturn": None
+        "maxReturn": None,
     },
     {
         "name": "Dow Jones Industrial Average",
@@ -41,7 +41,7 @@ MOCK_INDICES_RESPONSE = [
         "threeYearReturn": None,
         "fiveYearReturn": None,
         "tenYearReturn": None,
-        "maxReturn": None
+        "maxReturn": None,
     },
     {
         "name": "NASDAQ Composite",
@@ -57,7 +57,7 @@ MOCK_INDICES_RESPONSE = [
         "threeYearReturn": None,
         "fiveYearReturn": None,
         "tenYearReturn": None,
-        "maxReturn": None
+        "maxReturn": None,
     },
     {
         "name": "Russell 2000",
@@ -73,8 +73,8 @@ MOCK_INDICES_RESPONSE = [
         "threeYearReturn": None,
         "fiveYearReturn": None,
         "tenYearReturn": None,
-        "maxReturn": None
-    }
+        "maxReturn": None,
+    },
 ]
 
 
@@ -94,63 +94,67 @@ class TestIndices:
             mock_responses = {
                 "https://query2.finance.yahoo.com/v10/finance/quoteSummary/GSPC": {
                     "quoteSummary": {
-                        "result": [{
-                            "price": {
-                                "regularMarketPrice": {"raw": 5234.32},
-                                "regularMarketChange": {"fmt": "+15.29"},
-                                "regularMarketChangePercent": {"fmt": "+0.29%"},
-                                "longName": "S&P 500",
-                                "shortName": "S&P 500"
-                            },
-                            "quoteUnadjustedPerformanceOverview": {
-                                "performanceOverview": {
-                                    "fiveDaysReturn": {"fmt": "+1.23%"},
-                                    "oneMonthReturn": {"fmt": "-2.34%"},
-                                    "threeMonthReturn": {"fmt": "+3.45%"},
-                                    "sixMonthReturn": {"fmt": "-4.56%"},
-                                    "ytdReturnPct": {"fmt": "+5.67%"},
-                                    "oneYearTotalReturn": {"fmt": "-6.78%"},
-                                    "threeYearTotalReturn": {"fmt": "+7.89%"},
-                                    "fiveYearTotalReturn": {"fmt": "-8.90%"},
-                                    "tenYearTotalReturn": {"fmt": "+9.01%"},
-                                    "maxReturn": {"fmt": "-10.12%"}
-                                }
+                        "result": [
+                            {
+                                "price": {
+                                    "regularMarketPrice": {"raw": 5234.32},
+                                    "regularMarketChange": {"fmt": "+15.29"},
+                                    "regularMarketChangePercent": {"fmt": "+0.29%"},
+                                    "longName": "S&P 500",
+                                    "shortName": "S&P 500",
+                                },
+                                "quoteUnadjustedPerformanceOverview": {
+                                    "performanceOverview": {
+                                        "fiveDaysReturn": {"fmt": "+1.23%"},
+                                        "oneMonthReturn": {"fmt": "-2.34%"},
+                                        "threeMonthReturn": {"fmt": "+3.45%"},
+                                        "sixMonthReturn": {"fmt": "-4.56%"},
+                                        "ytdReturnPct": {"fmt": "+5.67%"},
+                                        "oneYearTotalReturn": {"fmt": "-6.78%"},
+                                        "threeYearTotalReturn": {"fmt": "+7.89%"},
+                                        "fiveYearTotalReturn": {"fmt": "-8.90%"},
+                                        "tenYearTotalReturn": {"fmt": "+9.01%"},
+                                        "maxReturn": {"fmt": "-10.12%"},
+                                    }
+                                },
                             }
-                        }],
-                        "error": None
+                        ],
+                        "error": None,
                     }
                 },
                 "https://query2.finance.yahoo.com/v10/finance/quoteSummary/DJI": {
                     "quoteSummary": {
-                        "result": [{
-                            "price": {
-                                "regularMarketPrice": {"raw": 39127.14},
-                                "regularMarketChange": {"fmt": "+62.39"},
-                                "regularMarketChangePercent": {"fmt": "+0.16%"},
-                                "longName": "Dow Jones Industrial Average",
-                                "shortName": "Dow Jones Industrial Average"
-                            },
-                            "quoteUnadjustedPerformanceOverview": {
-                                "performanceOverview": {
-                                    "fiveDaysReturn": {"fmt": "+1.23%"},
-                                    "oneMonthReturn": {"fmt": "-2.34%"},
-                                    "threeMonthReturn": {"fmt": "+3.45%"},
-                                    "sixMonthReturn": {"fmt": "-4.56%"},
-                                    "ytdReturnPct": {"fmt": "+5.67%"},
-                                    "oneYearTotalReturn": {"fmt": "-6.78%"},
-                                    "threeYearTotalReturn": {"fmt": "+7.89%"},
-                                    "fiveYearTotalReturn": {"fmt": "-8.90%"},
-                                    "tenYearTotalReturn": {"fmt": "+9.01%"},
-                                    "maxReturn": {"fmt": "-10.12%"}
-                                }
+                        "result": [
+                            {
+                                "price": {
+                                    "regularMarketPrice": {"raw": 39127.14},
+                                    "regularMarketChange": {"fmt": "+62.39"},
+                                    "regularMarketChangePercent": {"fmt": "+0.16%"},
+                                    "longName": "Dow Jones Industrial Average",
+                                    "shortName": "Dow Jones Industrial Average",
+                                },
+                                "quoteUnadjustedPerformanceOverview": {
+                                    "performanceOverview": {
+                                        "fiveDaysReturn": {"fmt": "+1.23%"},
+                                        "oneMonthReturn": {"fmt": "-2.34%"},
+                                        "threeMonthReturn": {"fmt": "+3.45%"},
+                                        "sixMonthReturn": {"fmt": "-4.56%"},
+                                        "ytdReturnPct": {"fmt": "+5.67%"},
+                                        "oneYearTotalReturn": {"fmt": "-6.78%"},
+                                        "threeYearTotalReturn": {"fmt": "+7.89%"},
+                                        "fiveYearTotalReturn": {"fmt": "-8.90%"},
+                                        "tenYearTotalReturn": {"fmt": "+9.01%"},
+                                        "maxReturn": {"fmt": "-10.12%"},
+                                    }
+                                },
                             }
-                        }],
-                        "error": None
+                        ],
+                        "error": None,
                     }
-                }
+                },
             }
 
-            response_content = orjson.dumps(mock_responses[url]).decode('utf-8')
+            response_content = orjson.dumps(mock_responses[url]).decode("utf-8")
             response_cache[url] = response_content
             return response_content
 
@@ -252,7 +256,7 @@ class TestIndices:
             percent_change="+1.0%",
         )
 
-        with patch('src.services.indices.get_indices.fetch_index', new_callable=AsyncMock) as mock_fetch_index:
+        with patch("src.services.indices.get_indices.fetch_index", new_callable=AsyncMock) as mock_fetch_index:
             mock_fetch_index.return_value = mock_index_data
             indices = list(Index)
             result = await get_indices(test_cookies, test_crumb, None)
@@ -266,19 +270,14 @@ class TestIndices:
         test_cookies = "mock_cookies"
         test_crumb = "mock_crumb"
 
-        mock_index_data = MarketIndex(
-            name="Test Index",
-            value=1000.0,
-            change="+10.0",
-            percent_change="+1.0%"
-        )
+        mock_index_data = MarketIndex(name="Test Index", value=1000.0, change="+10.0", percent_change="+1.0%")
 
         async def mock_fetch_side_effect(index, *args, **kwargs):
             if index == Index.GDAXI:
                 return Exception("Failed to fetch index")
             return mock_index_data
 
-        with patch('src.services.indices.get_indices.fetch_index', new_callable=AsyncMock) as mock_fetch_index:
+        with patch("src.services.indices.get_indices.fetch_index", new_callable=AsyncMock) as mock_fetch_index:
             mock_fetch_index.side_effect = mock_fetch_side_effect
             test_indices = [Index.GSPC, Index.DJI, Index.GDAXI, Index.IXIC]
             result = await get_indices(test_cookies, test_crumb, test_indices)
@@ -306,14 +305,14 @@ class TestIndices:
                 self.status = status_code
 
             async def text(self):
-                return orjson.dumps(self._json_data).decode('utf-8')
+                return orjson.dumps(self._json_data).decode("utf-8")
 
-        with patch('src.services.indices.fetchers.fetch_index.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.indices.fetchers.fetch_index.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = MockResponse(mock_response_data, 200)
             result = await fetch_index(index, test_cookies, test_crumb)
             assert isinstance(result, MarketIndex)
-            assert result.change.startswith(('+', '-'))
-            assert result.percent_change.startswith(('+', '-'))
+            assert result.change.startswith(("+", "-"))
+            assert result.percent_change.startswith(("+", "-"))
 
     @pytest.mark.parametrize("index", [Index.GSPC, Index.DJI])
     async def test_fetch_index_failure(self, mock_api_response, index):
@@ -328,9 +327,9 @@ class TestIndices:
                 self.status = status_code
 
             async def text(self):
-                return orjson.dumps(self._json_data).decode('utf-8')
+                return orjson.dumps(self._json_data).decode("utf-8")
 
-        with patch('src.services.indices.fetchers.fetch_index.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.indices.fetchers.fetch_index.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = MockResponse(error_response_data, 500)
             with pytest.raises(HTTPException) as exc_info:
                 await fetch_index(index, test_cookies, test_crumb)

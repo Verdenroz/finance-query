@@ -18,8 +18,9 @@ MOCK_MOVER_RESPONSE_TWENTY_FIVE = [
         "name": f"Company {i}",
         "price": f"{100 + i:.2f}",
         "change": f"+{i * 0.5:.2f}",
-        "percentChange": f"+{i * 0.5:.2f}%"
-    } for i in range(1, 26)
+        "percentChange": f"+{i * 0.5:.2f}%",
+    }
+    for i in range(1, 26)
 ]
 
 MOCK_MOVER_RESPONSE_FIFTY = [
@@ -28,8 +29,9 @@ MOCK_MOVER_RESPONSE_FIFTY = [
         "name": f"Company {i}",
         "price": f"{100 + i:.2f}",
         "change": f"+{i * 0.5:.2f}",
-        "percentChange": f"+{i * 0.5:.2f}%"
-    } for i in range(1, 51)
+        "percentChange": f"+{i * 0.5:.2f}%",
+    }
+    for i in range(1, 51)
 ]
 
 MOCK_MOVER_RESPONSE_HUNDRED = [
@@ -38,15 +40,16 @@ MOCK_MOVER_RESPONSE_HUNDRED = [
         "name": f"Company {i}",
         "price": f"{100 + i:.2f}",
         "change": f"+{i * 0.5:.2f}",
-        "percentChange": f"+{i * 0.5:.2f}%"
-    } for i in range(1, 101)
+        "percentChange": f"+{i * 0.5:.2f}%",
+    }
+    for i in range(1, 101)
 ]
 
 # Test data mapping count values to responses
 COUNT_RESPONSE_MAP = {
     "25": MOCK_MOVER_RESPONSE_TWENTY_FIVE,
     "50": MOCK_MOVER_RESPONSE_FIFTY,
-    "100": MOCK_MOVER_RESPONSE_HUNDRED
+    "100": MOCK_MOVER_RESPONSE_HUNDRED,
 }
 
 # Test data for endpoints
@@ -68,25 +71,25 @@ class TestMovers:
                 return html_cache[url]
 
             filename = hashlib.md5(url.encode()).hexdigest()
-            if 'most-active' in url:
-                endpoint = 'actives'
-            elif 'gainers' in url:
-                endpoint = 'gainers'
-            elif 'losers' in url:
-                endpoint = 'losers'
+            if "most-active" in url:
+                endpoint = "actives"
+            elif "gainers" in url:
+                endpoint = "gainers"
+            elif "losers" in url:
+                endpoint = "losers"
             else:
-                endpoint = 'unknown'
+                endpoint = "unknown"
 
-            count = url.split('count=')[-1]
+            count = url.split("count=")[-1]
             cache_file = cache_dir / f"{endpoint}_{count}_{filename}.html"
 
             if cache_file.exists():
-                with open(cache_file, 'r', encoding='utf-8') as f:
+                with open(cache_file, "r", encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
                 html_content = response.text
-                with open(cache_file, 'w', encoding='utf-8') as f:
+                with open(cache_file, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
             html_cache[url] = html_content
@@ -108,21 +111,17 @@ class TestMovers:
         def get_mock_response(count=50):
             mock_items = []
             for i in range(1, count + 1):
-                mock_items.append({
-                    "symbol": f"SYM{i}",
-                    "longName": f"Company {i} Long",
-                    "shortName": f"Company {i}",
-                    "regularMarketPrice": {"fmt": f"{100 + i:.2f}"},
-                    "regularMarketChange": {"fmt": f"+{i * 0.5:.2f}"},
-                    "regularMarketChangePercent": {"fmt": f"+{i * 0.5:.2f}%"}
-                })
-            return {
-                "finance": {
-                    "result": [
-                        {"quotes": mock_items}
-                    ]
-                }
-            }
+                mock_items.append(
+                    {
+                        "symbol": f"SYM{i}",
+                        "longName": f"Company {i} Long",
+                        "shortName": f"Company {i}",
+                        "regularMarketPrice": {"fmt": f"{100 + i:.2f}"},
+                        "regularMarketChange": {"fmt": f"+{i * 0.5:.2f}"},
+                        "regularMarketChangePercent": {"fmt": f"+{i * 0.5:.2f}%"},
+                    }
+                )
+            return {"finance": {"result": [{"quotes": mock_items}]}}
 
         return get_mock_response
 
@@ -192,11 +191,11 @@ class TestMovers:
                 name=item["longName"],
                 price=item["regularMarketPrice"]["fmt"],
                 change=item["regularMarketChange"]["fmt"],
-                percent_change=item["regularMarketChangePercent"]["fmt"]
+                percent_change=item["regularMarketChangePercent"]["fmt"],
             )
             expected_movers.append(mover)
 
-        with patch('src.services.movers.fetchers.movers_api.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.movers.fetchers.movers_api.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = orjson.dumps(mock_response)
             result = await fetch_movers(test_url)
 
@@ -205,8 +204,7 @@ class TestMovers:
         assert all(isinstance(m, MarketMover) for m in result)
         expected_params = {
             "fields": (
-                "symbol,longName,shortName,regularMarketPrice,"
-                "regularMarketChange,regularMarketChangePercent"
+                "symbol,longName,shortName,regularMarketPrice," "regularMarketChange,regularMarketChangePercent"
             ),
         }
         mock_fetch.assert_called_once_with(url=test_url, params=expected_params)
@@ -219,41 +217,48 @@ class TestMovers:
 
     async def test_scrape_movers(self, movers_html, bypass_cache):
         """Test scrape_movers function with cached HTML content"""
-        test_url = (
-            "https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50"
-        )
+        test_url = "https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50"
         html_content = movers_html(test_url)
-        with patch('src.services.movers.fetchers.movers_scraper.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.movers.fetchers.movers_scraper.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
             result = await scrape_movers(test_url)
 
         assert isinstance(result, list)
         assert len(result) == 50
         assert all(isinstance(m, MarketMover) for m in result)
-        assert all(m.change.startswith(('+', '-', '0')) for m in result)
-        assert all(m.percent_change.endswith('%') for m in result)
+        assert all(m.change.startswith(("+", "-", "0")) for m in result)
+        assert all(m.percent_change.endswith("%") for m in result)
         mock_fetch.assert_called_once_with(url=test_url)
 
-    @pytest.mark.parametrize("service_func,api_url,scrape_url", [
-        (get_actives,
-         "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=MOST_ACTIVES",
-         "https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50"),
-        (get_gainers,
-         "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=DAY_GAINERS",
-         "https://finance.yahoo.com/markets/stocks/gainers/?start=0&count=50"),
-        (get_losers,
-         "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=DAY_LOSERS",
-         "https://finance.yahoo.com/markets/stocks/losers/?start=0&count=50")
-    ])
-    async def test_get_movers_services_fallback(self, service_func, api_url, scrape_url, bypass_cache,
-                                                movers_html):
+    @pytest.mark.parametrize(
+        "service_func,api_url,scrape_url",
+        [
+            (
+                get_actives,
+                "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=MOST_ACTIVES",
+                "https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50",
+            ),
+            (
+                get_gainers,
+                "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=DAY_GAINERS",
+                "https://finance.yahoo.com/markets/stocks/gainers/?start=0&count=50",
+            ),
+            (
+                get_losers,
+                "https://query1.finance.yahoo.com/v1/finance/screener/predefined/saved?count=50&formatted=true&scrIds=DAY_LOSERS",
+                "https://finance.yahoo.com/markets/stocks/losers/?start=0&count=50",
+            ),
+        ],
+    )
+    async def test_get_movers_services_fallback(self, service_func, api_url, scrape_url, bypass_cache, movers_html):
         """Test get_movers service functions when API fetch fails and falls back to scraping"""
         test_count = MoverCount.FIFTY
-        with patch('src.services.movers.get_movers.fetch_movers', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.movers.get_movers.fetch_movers", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = Exception("API failure")
             html_content = movers_html(scrape_url)
-            with patch('src.services.movers.fetchers.movers_scraper.fetch',
-                       new_callable=AsyncMock) as mock_scrape_fetch:
+            with patch(
+                "src.services.movers.fetchers.movers_scraper.fetch", new_callable=AsyncMock
+            ) as mock_scrape_fetch:
                 mock_scrape_fetch.return_value = html_content
                 result = await service_func(test_count)
 

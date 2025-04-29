@@ -17,7 +17,7 @@ MOCK_NEWS_RESPONSE = {
     "link": "https://example.com/news1",
     "source": "Test Source",
     "img": "https://example.com/image1.jpg",
-    "time": "1 hour ago"
+    "time": "1 hour ago",
 }
 
 MOCK_SYMBOL_NEWS_RESPONSE = [
@@ -26,15 +26,15 @@ MOCK_SYMBOL_NEWS_RESPONSE = [
         link="https://example.com/news1",
         source="Test Source",
         img="https://example.com/image1.jpg",
-        time="1 hour ago"
+        time="1 hour ago",
     ),
     News(
         title="Test News 2",
         link="https://example.com/news2",
         source="Test Source",
         img="https://example.com/image2.jpg",
-        time="2 hours ago"
-    )
+        time="2 hours ago",
+    ),
 ]
 
 
@@ -57,12 +57,12 @@ class TestNews:
             cache_file = cache_dir / f"{symbol}.html"
 
             if cache_file.exists():
-                with open(cache_file, 'r', encoding='utf-8') as f:
+                with open(cache_file, "r", encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
                 html_content = response.text
-                with open(cache_file, 'w', encoding='utf-8') as f:
+                with open(cache_file, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
             html_cache[url] = html_content
@@ -75,31 +75,37 @@ class TestNews:
         if cache_dir.exists():
             cache_dir.rmdir()
 
-    @pytest.mark.parametrize("symbol,expected_base,expected_exchange", [
-        ("AAPL", "AAPL", None),
-        ("AAPL.US", "AAPL", None),
-        ("VOD.L", "VOD", "LON"),
-        ("INVALID.XX", "INVALID", None),
-        ("NVDA.TO", "NVDA", "TSX"),
-    ])
+    @pytest.mark.parametrize(
+        "symbol,expected_base,expected_exchange",
+        [
+            ("AAPL", "AAPL", None),
+            ("AAPL.US", "AAPL", None),
+            ("VOD.L", "VOD", "LON"),
+            ("INVALID.XX", "INVALID", None),
+            ("NVDA.TO", "NVDA", "TSX"),
+        ],
+    )
     def test_parse_symbol_exchange(self, symbol, expected_base, expected_exchange):
         """Test parse_symbol_exchange function with different symbols"""
         base_symbol, exchange = parse_symbol_exchange(symbol)
         assert base_symbol == expected_base
         assert exchange == expected_exchange
 
-    @pytest.mark.parametrize("symbol,test_url", [
-        ("AAPL", "https://stockanalysis.com/stocks/AAPL"),
-        ("MSFT", "https://stockanalysis.com/stocks/MSFT"),
-        ("QQQ", "https://stockanalysis.com/etf/QQQ"),
-        ("TQQQ", "https://stockanalysis.com/etf/TQQQ"),
-        ("NVDA.TO", "https://stockanalysis.com/quote/tsx/NVDA"),  # should be verified from last test
-    ])
+    @pytest.mark.parametrize(
+        "symbol,test_url",
+        [
+            ("AAPL", "https://stockanalysis.com/stocks/AAPL"),
+            ("MSFT", "https://stockanalysis.com/stocks/MSFT"),
+            ("QQQ", "https://stockanalysis.com/etf/QQQ"),
+            ("TQQQ", "https://stockanalysis.com/etf/TQQQ"),
+            ("NVDA.TO", "https://stockanalysis.com/quote/tsx/NVDA"),  # should be verified from last test
+        ],
+    )
     async def test_scrape_news_for_quote(self, news_html, symbol, test_url, bypass_cache):
         """Test scrape_news_for_quote function with cached HTML content"""
         html_content = news_html(test_url, symbol=symbol)
 
-        with patch('src.services.news.get_news.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.news.get_news.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
 
             result = await scrape_news_for_quote(symbol)
@@ -115,7 +121,7 @@ class TestNews:
         test_url = "https://stockanalysis.com/news/"
         html_content = news_html(test_url)
 
-        with patch('src.services.news.get_news.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.news.get_news.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
 
             result = await scrape_general_news()

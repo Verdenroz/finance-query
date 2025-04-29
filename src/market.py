@@ -72,14 +72,12 @@ class MarketSchedule:
             date(self.year, 6, 19): "Juneteenth",
             date(self.year, 7, 4): "Independence Day",
             date(self.year, 12, 25): "Christmas Day",
-
             # Weekday-based holidays
             self._get_nth_weekday_of_month(self.year, 1, 0, 3): "Martin Luther King Jr. Day",  # 3rd Monday in January
             self._get_nth_weekday_of_month(self.year, 2, 0, 3): "Presidents Day",  # 3rd Monday in February
             self._get_last_monday_of_month(self.year, 5): "Memorial Day",  # Last Monday in May
             self._get_nth_weekday_of_month(self.year, 9, 0, 1): "Labor Day",  # 1st Monday in September
             self._get_nth_weekday_of_month(self.year, 11, 3, 4): "Thanksgiving Day",  # 4th Thursday in November
-
             self._get_good_friday(self.year): "Good Friday",
         }
 
@@ -113,9 +111,14 @@ class MarketSchedule:
 
         for holiday_date, holiday_name in self.full_holidays.items():
             # Skip holidays that are already calculated to avoid weekends
-            if holiday_name in ["Martin Luther King Jr. Day", "Presidents Day",
-                                "Memorial Day", "Labor Day", "Thanksgiving Day",
-                                "Good Friday"]:
+            if holiday_name in [
+                "Martin Luther King Jr. Day",
+                "Presidents Day",
+                "Memorial Day",
+                "Labor Day",
+                "Thanksgiving Day",
+                "Good Friday",
+            ]:
                 continue
 
             weekday = holiday_date.weekday()
@@ -132,7 +135,7 @@ class MarketSchedule:
         self.full_holidays.update(weekend_adjustments)
 
     def get_market_status(self) -> tuple[MarketStatus, Optional[str]]:
-        et_tz = pytz.timezone('America/New_York')
+        et_tz = pytz.timezone("America/New_York")
         current_et = datetime.now(et_tz)
         current_date = current_et.date()
         current_time = current_et.time()

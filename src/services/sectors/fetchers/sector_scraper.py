@@ -15,8 +15,8 @@ async def parse_sector(html: str, sector: str) -> MarketSector:
     """
     try:
         tree = etree.HTML(html)
-        container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/section[2]'
-        card_xpath = './/section'
+        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[1]/section[2]"
+        card_xpath = ".//section"
         sector_perf_xpath = './/div[contains(@class, "perf")]/text()'
         perf_class_xpath = './/div/div[contains(@class, "perf")]/@class'
 
@@ -38,7 +38,7 @@ async def parse_sector(html: str, sector: str) -> MarketSector:
             ytdReturn=performance_data[1],
             yearReturn=performance_data[2],
             threeYearReturn=performance_data[3],
-            fiveYearReturn=performance_data[4]
+            fiveYearReturn=performance_data[4],
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse sector data: {e}")
@@ -58,11 +58,11 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: a list of the parsed data
         """
-        container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/div/section/div[2]/div[2]'
-        market_cap_xpath = './/div[1]/div[2]/text()'
-        market_weight_xpath = './/div[2]/div[2]/text()'
-        industries_xpath = './/div[3]/div[2]/text()'
-        companies_xpath = './/div[4]/div[2]/text()'
+        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[1]/div/section/div[2]/div[2]"
+        market_cap_xpath = ".//div[1]/div[2]/text()"
+        market_weight_xpath = ".//div[2]/div[2]/text()"
+        industries_xpath = ".//div[3]/div[2]/text()"
+        companies_xpath = ".//div[4]/div[2]/text()"
 
         container = tree.xpath(container_xpath)[0]
         market_cap_text = container.xpath(market_cap_xpath)[0].strip()
@@ -78,8 +78,8 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: the returns data as a list
         """
-        container_xpath = '/html/body/div[2]/main/section/section/section/article/section[1]/section[2]'
-        card_xpath = './/section'
+        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[1]/section[2]"
+        card_xpath = ".//section"
         sector_perf_xpath = './/div[div[text()="Sector"]]/div[2]/text()'
         positive_xpath = './/div[contains(@class, "positive")]/text()'
         negative_xpath = './/div[contains(@class, "negative")]/text()'
@@ -105,9 +105,11 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: the top industries as a list
         """
-        container_xpath = '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[1]/div/div[2]/table/tbody/tr'
-        industry_name_xpath = './td[1]/text()'
-        market_weight_xpath = './td[2]/span/text()'
+        container_xpath = (
+            "/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[1]/div/div[2]/table/tbody/tr"
+        )
+        industry_name_xpath = "./td[1]/text()"
+        market_weight_xpath = "./td[2]/span/text()"
 
         rows = tree.xpath(container_xpath)
         parsed_industries = []
@@ -125,8 +127,8 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: the top companies as a list
         """
-        container_xpath = '/html/body/div[2]/main/section/section/section/article/section[3]/div[2]/div/table/tbody/tr'
-        symbol_xpath = './td[1]//a/div/span[1]/text()'
+        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[3]/div[2]/div/table/tbody/tr"
+        symbol_xpath = "./td[1]//a/div/span[1]/text()"
 
         rows = tree.xpath(container_xpath)
         companies = []
@@ -144,8 +146,9 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         industries_task = parse_industries(tree)
         companies_task = parse_companies(tree)
 
-        info, returns, industries, companies = await asyncio.gather(info_task, returns_task, industries_task,
-                                                                    companies_task)
+        info, returns, industries, companies = await asyncio.gather(
+            info_task, returns_task, industries_task, companies_task
+        )
 
         data = returns + info + industries
 
@@ -172,7 +175,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
             industries=num_industries,
             companies=num_companies,
             topIndustries=industries,
-            topCompanies=companies
+            topCompanies=companies,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to parse sector details: {e}")

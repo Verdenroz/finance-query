@@ -29,9 +29,7 @@ async def _fetch_yahoo_recommended_symbols(symbol: str, limit: int) -> list[str]
     :return: a list of symbols recommended by Yahoo Finance
     """
     YAHOO_RECOMMENDATION_URL = f"https://query1.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
-    params = {
-        "count": limit
-    }
+    params = {"count": limit}
     response = await fetch(url=YAHOO_RECOMMENDATION_URL, params=params)
     response = orjson.loads(response)
 

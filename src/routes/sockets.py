@@ -11,10 +11,17 @@ from src.market import MarketSchedule
 from src.models import SimpleQuote, MarketSector
 from src.security import validate_websocket
 from src.services import (
-    get_quotes, get_similar_quotes, get_actives,
-    scrape_news_for_quote, get_losers, get_gainers,
-    get_simple_quotes, get_indices, scrape_general_news,
-    get_sectors, get_sector_for_symbol
+    get_quotes,
+    get_similar_quotes,
+    get_actives,
+    scrape_news_for_quote,
+    get_losers,
+    get_gainers,
+    get_simple_quotes,
+    get_indices,
+    scrape_general_news,
+    get_sectors,
+    get_sector_for_symbol,
 )
 
 router = APIRouter()
@@ -38,18 +45,16 @@ def safe_convert_to_dict(items: list, default=None):
         return default
 
     return [
-        item if isinstance(item, dict) else
-        item.model_dump() if hasattr(item, 'model_dump') else
-        default
+        item if isinstance(item, dict) else item.model_dump() if hasattr(item, "model_dump") else default
         for item in items
     ]
 
 
 async def handle_websocket_connection(
-        websocket: WebSocket,
-        channel: str,
-        data_fetcher: callable,
-        connection_manager: RedisConnectionManager | ConnectionManager
+    websocket: WebSocket,
+    channel: str,
+    data_fetcher: callable,
+    connection_manager: RedisConnectionManager | ConnectionManager,
 ):
     """
     A generalized WebSocket connection handler.
@@ -107,11 +112,11 @@ async def handle_websocket_connection(
 
 @router.websocket("/profile/{symbol}")
 async def websocket_profile(
-        websocket: WebSocket,
-        symbol: str,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb)
+    websocket: WebSocket,
+    symbol: str,
+    connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
+    cookies: str = Depends(get_yahoo_cookies),
+    crumb: str = Depends(get_yahoo_crumb),
 ):
     async def get_profile():
         """
@@ -134,7 +139,7 @@ async def websocket_profile(
             "quote": quotes[0] if quotes else None,
             "similar": similar_quotes,
             "sectorPerformance": sector_performance.dict() if isinstance(sector_performance, MarketSector) else None,
-            "news": news
+            "news": news,
         }
 
     channel = f"profile:{symbol}"
@@ -143,10 +148,10 @@ async def websocket_profile(
 
 @router.websocket("/quotes")
 async def websocket_quotes(
-        websocket: WebSocket,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb)
+    websocket: WebSocket,
+    connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
+    cookies: str = Depends(get_yahoo_cookies),
+    crumb: str = Depends(get_yahoo_crumb),
 ):
     is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
@@ -172,7 +177,7 @@ async def websocket_quotes(
                     "name": quote.name,
                     "price": str(quote.price),
                     "change": quote.change,
-                    "percentChange": quote.percent_change
+                    "percentChange": quote.percent_change,
                 }
 
                 # Add optional fields if they exist
@@ -227,10 +232,10 @@ async def websocket_quotes(
 
 @router.websocket("/market")
 async def websocket_market(
-        websocket: WebSocket,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb)
+    websocket: WebSocket,
+    connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
+    cookies: str = Depends(get_yahoo_cookies),
+    crumb: str = Depends(get_yahoo_crumb),
 ):
     async def get_market_info():
         """
@@ -253,7 +258,7 @@ async def websocket_market(
             "losers": safe_convert_to_dict(losers),
             "indices": safe_convert_to_dict(indices),
             "headlines": safe_convert_to_dict(news),
-            "sectors": safe_convert_to_dict(sectors)
+            "sectors": safe_convert_to_dict(sectors),
         }
 
     channel = "market"
@@ -262,20 +267,16 @@ async def websocket_market(
 
 @router.websocket("/hours")
 async def market_status_websocket(
-        websocket: WebSocket,
-        connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
-        market_schedule: MarketSchedule = Depends(MarketSchedule)
+    websocket: WebSocket,
+    connection_manager: RedisConnectionManager | ConnectionManager = Depends(get_connection_manager),
+    market_schedule: MarketSchedule = Depends(MarketSchedule),
 ):
     async def get_market_status_info():
         """
         Fetches the market status information.
         """
         current_status, reason = market_schedule.get_market_status()
-        return {
-            "status": current_status,
-            "reason": reason,
-            "timestamp": datetime.now(pytz.UTC).isoformat()
-        }
+        return {"status": current_status, "reason": reason, "timestamp": datetime.now(pytz.UTC).isoformat()}
 
     channel = "hours"
     await handle_websocket_connection(websocket, channel, get_market_status_info, connection_manager)

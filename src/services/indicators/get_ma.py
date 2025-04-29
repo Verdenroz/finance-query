@@ -3,16 +3,18 @@ from typing_extensions import OrderedDict
 from src.models.indicators import SMAData, TechnicalIndicator, EMAData, WMAData, VWMAData, Indicator
 from src.models.historical_data import TimeRange, Interval
 from src.services.historical.get_historical import get_historical
-from src.services.indicators.core import (calculate_sma, calculate_ema, calculate_wma, calculate_vwma,
-                                          prepare_price_data, create_indicator_dict)
+from src.services.indicators.core import (
+    calculate_sma,
+    calculate_ema,
+    calculate_wma,
+    calculate_vwma,
+    prepare_price_data,
+    create_indicator_dict,
+)
 
 
 async def get_sma(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        period: int = 10,
-        epoch: bool = False
+    symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False
 ) -> dict:
     """
     Get the Simple Moving Average (SMA) for a symbol.
@@ -33,24 +35,16 @@ async def get_sma(
 
     sma_values = calculate_sma(prices, period=period)
 
-    indicator_data = {
-        date: SMAData(value=value)
-        for date, value in create_indicator_dict(dates, sma_values).items()
-    }
+    indicator_data = {date: SMAData(value=value) for date, value in create_indicator_dict(dates, sma_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.SMA,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.SMA, indicators=indicator_data).model_dump(
+        exclude_none=True, by_alias=True, serialize_as_any=True
+    )
 
 
 async def get_ema(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        period: int = 10,
-        epoch: bool = False
+    symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False
 ) -> dict:
     """
     Get the Exponential Moving Average (EMA) for a symbol.
@@ -68,24 +62,16 @@ async def get_ema(
     dates, prices, _, _, _ = prepare_price_data(quotes)
     ema_values = calculate_ema(prices, period=period)
 
-    indicator_data = {
-        date: EMAData(value=value)
-        for date, value in create_indicator_dict(dates, ema_values).items()
-    }
+    indicator_data = {date: EMAData(value=value) for date, value in create_indicator_dict(dates, ema_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.EMA,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.EMA, indicators=indicator_data).model_dump(
+        exclude_none=True, by_alias=True, serialize_as_any=True
+    )
 
 
 async def get_wma(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        period: int = 10,
-        epoch: bool = False
+    symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False
 ) -> dict:
     """
     Get the Weighted Moving Average (WMA) for a symbol.
@@ -105,24 +91,16 @@ async def get_wma(
     dates, prices, _, _, _ = prepare_price_data(quotes)
     wma_values = calculate_wma(prices, period=period)
 
-    indicator_data = {
-        date: WMAData(value=value)
-        for date, value in create_indicator_dict(dates, wma_values).items()
-    }
+    indicator_data = {date: WMAData(value=value) for date, value in create_indicator_dict(dates, wma_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.WMA,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.WMA, indicators=indicator_data).model_dump(
+        exclude_none=True, by_alias=True, serialize_as_any=True
+    )
 
 
 async def get_vwma(
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        period: int = 20,
-        epoch: bool = False
+    symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False
 ) -> dict:
     """
     Get the Volume Weighted Moving Average (VWMA) for a symbol.
@@ -143,13 +121,9 @@ async def get_vwma(
     dates, prices, _, _, volumes = prepare_price_data(quotes)
     vwma_values = calculate_vwma(prices, volumes, period=period)
 
-    indicator_data = {
-        date: VWMAData(value=value)
-        for date, value in create_indicator_dict(dates, vwma_values).items()
-    }
+    indicator_data = {date: VWMAData(value=value) for date, value in create_indicator_dict(dates, vwma_values).items()}
 
     indicator_data = OrderedDict(sorted(indicator_data.items(), reverse=True))
-    return TechnicalIndicator(
-        type=Indicator.VWMA,
-        indicators=indicator_data
-    ).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
+    return TechnicalIndicator(type=Indicator.VWMA, indicators=indicator_data).model_dump(
+        exclude_none=True, by_alias=True, serialize_as_any=True
+    )

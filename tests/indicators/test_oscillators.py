@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock
 from src.models import TimeRange, Interval, Indicator
 from src.services import get_rsi, get_srsi, get_stoch, get_cci
 
+
 class TestOscillators:
     async def test_get_rsi(self, historical_quotes, monkeypatch):
         """Test the get_rsi function with real data from fixture"""

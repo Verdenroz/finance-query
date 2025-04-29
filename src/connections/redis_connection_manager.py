@@ -69,10 +69,10 @@ class RedisConnectionManager:
         self.pubsub[channel].subscribe(channel)
         while True:
             message = self.pubsub[channel].get_message(ignore_subscribe_messages=True)
-            if message and message['type'] == 'message':
-                message_channel = message['channel'].decode('utf-8')
+            if message and message["type"] == "message":
+                message_channel = message["channel"].decode("utf-8")
                 if message_channel == channel:
-                    data = orjson.loads(message['data'])
+                    data = orjson.loads(message["data"])
                     await self._broadcast(channel, data)
             await asyncio.sleep(0.1)
 

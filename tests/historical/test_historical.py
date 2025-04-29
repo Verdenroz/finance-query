@@ -8,25 +8,12 @@ from src.models import TimeRange, Interval, HistoricalData
 from src.services import get_historical
 from tests.conftest import VERSION
 
+
 class TestHistorical:
     # Sample mock response for historical data
     MOCK_HISTORICAL_DATA = {
-        "2025-01-01": HistoricalData(
-            open=150.0,
-            high=155.0,
-            low=149.0,
-            close=153.5,
-            adj_close=153.5,
-            volume=10000000
-        ),
-        "2025-01-02": HistoricalData(
-            open=153.5,
-            high=158.0,
-            low=152.0,
-            close=157.0,
-            adj_close=157.0,
-            volume=12000000
-        )
+        "2025-01-01": HistoricalData(open=150.0, high=155.0, low=149.0, close=153.5, adj_close=153.5, volume=10000000),
+        "2025-01-02": HistoricalData(open=153.5, high=158.0, low=152.0, close=157.0, adj_close=157.0, volume=12000000),
     }
 
     @pytest.fixture
@@ -37,48 +24,52 @@ class TestHistorical:
         MOCK_HISTORICAL_API_RESPONSES = {
             "AAPL": {
                 "chart": {
-                    "result": [{
-                        "timestamp": [1672531200, 1672617600],
-                        "indicators": {
-                            "quote": [{
-                                "open": [150.0, 153.5],
-                                "high": [155.0, 158.0],
-                                "low": [149.0, 152.0],
-                                "close": [153.5, 157.0],
-                                "volume": [10000000, 12000000]
-                            }],
-                            "adjclose": [{
-                                "adjclose": [153.5, 157.0]
-                            }]
+                    "result": [
+                        {
+                            "timestamp": [1672531200, 1672617600],
+                            "indicators": {
+                                "quote": [
+                                    {
+                                        "open": [150.0, 153.5],
+                                        "high": [155.0, 158.0],
+                                        "low": [149.0, 152.0],
+                                        "close": [153.5, 157.0],
+                                        "volume": [10000000, 12000000],
+                                    }
+                                ],
+                                "adjclose": [{"adjclose": [153.5, 157.0]}],
+                            },
                         }
-                    }],
-                    "error": None
+                    ],
+                    "error": None,
                 }
             },
             "GOOGL": {
                 "chart": {
-                    "result": [{
-                        "timestamp": [1672531200, 1672617600],
-                        "indicators": {
-                            "quote": [{
-                                "open": [2800.0, 2850.0],
-                                "high": [2850.0, 2900.0],
-                                "low": [2750.0, 2800.0],
-                                "close": [2850.0, 2900.0],
-                                "volume": [1500000, 1600000]
-                            }],
-                            "adjclose": [{
-                                "adjclose": [2850.0, 2900.0]
-                            }]
+                    "result": [
+                        {
+                            "timestamp": [1672531200, 1672617600],
+                            "indicators": {
+                                "quote": [
+                                    {
+                                        "open": [2800.0, 2850.0],
+                                        "high": [2850.0, 2900.0],
+                                        "low": [2750.0, 2800.0],
+                                        "close": [2850.0, 2900.0],
+                                        "volume": [1500000, 1600000],
+                                    }
+                                ],
+                                "adjclose": [{"adjclose": [2850.0, 2900.0]}],
+                            },
                         }
-                    }],
-                    "error": None
+                    ],
+                    "error": None,
                 }
-            }
+            },
         }
 
         def get_mock_response(ticker):
-            response_content = orjson.dumps(MOCK_HISTORICAL_API_RESPONSES[ticker]).decode('utf-8')
+            response_content = orjson.dumps(MOCK_HISTORICAL_API_RESPONSES[ticker]).decode("utf-8")
             return response_content
 
         return get_mock_response
@@ -100,9 +91,7 @@ class TestHistorical:
         assert data["2025-01-01"]["open"] == 150.0
         assert data["2025-01-02"]["close"] == 157.0
 
-        mock_get_historical.assert_awaited_once_with(
-            symbol, TimeRange.ONE_MONTH, Interval.DAILY, False
-        )
+        mock_get_historical.assert_awaited_once_with(symbol, TimeRange.ONE_MONTH, Interval.DAILY, False)
 
     def test_get_historical_with_epoch(self, test_client, mock_yahoo_auth, monkeypatch):
         """Test historical data retrieval with epoch timestamps"""
@@ -119,9 +108,7 @@ class TestHistorical:
         assert response.status_code == 200
         assert "1672531200" in response.json()
 
-        mock_get_historical.assert_awaited_once_with(
-            "AAPL", TimeRange.ONE_MONTH, Interval.DAILY, True
-        )
+        mock_get_historical.assert_awaited_once_with("AAPL", TimeRange.ONE_MONTH, Interval.DAILY, True)
 
     def test_get_historical_symbol_not_found(self, test_client, mock_yahoo_auth, monkeypatch):
         """Test when symbol is not found"""
@@ -153,20 +140,27 @@ class TestHistorical:
             details = error_data["detail"]
             assert any("interval" in str(item.get("loc", [])) for item in details)
 
-    @pytest.mark.parametrize("interval,time_range,expected_error", [
-        (Interval.ONE_MINUTE, TimeRange.ONE_MONTH, "If interval is 1m, range must be 1d, 5d"),
-        (Interval.ONE_MINUTE, TimeRange.THREE_MONTHS, "If interval is 1m, range must be 1d, 5d"),
-        (Interval.ONE_MINUTE, TimeRange.YEAR, "If interval is 1m, range must be 1d, 5d"),
-        (Interval.FIVE_MINUTES, TimeRange.THREE_MONTHS, "If interval is 5m, range must be 1d, 5d, 1mo"),
-        (Interval.FIVE_MINUTES, TimeRange.YEAR, "If interval is 5m, range must be 1d, 5d, 1mo"),
-        (Interval.FIFTEEN_MINUTES, TimeRange.THREE_MONTHS, "If interval is 15m, range must be 1d, 5d, 1mo"),
-        (Interval.FIFTEEN_MINUTES, TimeRange.YEAR, "If interval is 15m, range must be 1d, 5d, 1mo"),
-        (Interval.THIRTY_MINUTES, TimeRange.THREE_MONTHS, "If interval is 30m, range must be 1d, 5d, 1mo"),
-        (Interval.THIRTY_MINUTES, TimeRange.YEAR, "If interval is 30m, range must be 1d, 5d, 1mo"),
-        (Interval.ONE_HOUR, TimeRange.FIVE_YEARS, "If interval is 1h, range must be 1d, 5d, 1mo, 3mo, 6mo, ytd, 1y"),
-        (Interval.DAILY, TimeRange.MAX, "If range is max, interval must be 1mo"),
-        (Interval.WEEKLY, TimeRange.MAX, "If range is max, interval must be 1mo")
-    ])
+    @pytest.mark.parametrize(
+        "interval,time_range,expected_error",
+        [
+            (Interval.ONE_MINUTE, TimeRange.ONE_MONTH, "If interval is 1m, range must be 1d, 5d"),
+            (Interval.ONE_MINUTE, TimeRange.THREE_MONTHS, "If interval is 1m, range must be 1d, 5d"),
+            (Interval.ONE_MINUTE, TimeRange.YEAR, "If interval is 1m, range must be 1d, 5d"),
+            (Interval.FIVE_MINUTES, TimeRange.THREE_MONTHS, "If interval is 5m, range must be 1d, 5d, 1mo"),
+            (Interval.FIVE_MINUTES, TimeRange.YEAR, "If interval is 5m, range must be 1d, 5d, 1mo"),
+            (Interval.FIFTEEN_MINUTES, TimeRange.THREE_MONTHS, "If interval is 15m, range must be 1d, 5d, 1mo"),
+            (Interval.FIFTEEN_MINUTES, TimeRange.YEAR, "If interval is 15m, range must be 1d, 5d, 1mo"),
+            (Interval.THIRTY_MINUTES, TimeRange.THREE_MONTHS, "If interval is 30m, range must be 1d, 5d, 1mo"),
+            (Interval.THIRTY_MINUTES, TimeRange.YEAR, "If interval is 30m, range must be 1d, 5d, 1mo"),
+            (
+                Interval.ONE_HOUR,
+                TimeRange.FIVE_YEARS,
+                "If interval is 1h, range must be 1d, 5d, 1mo, 3mo, 6mo, ytd, 1y",
+            ),
+            (Interval.DAILY, TimeRange.MAX, "If range is max, interval must be 1mo"),
+            (Interval.WEEKLY, TimeRange.MAX, "If range is max, interval must be 1mo"),
+        ],
+    )
     async def test_all_invalid_combinations(self, bypass_cache, interval, time_range, expected_error):
         """Test all invalid combinations of interval and time range"""
         with pytest.raises(HTTPException) as exc_info:
@@ -175,16 +169,17 @@ class TestHistorical:
         assert exc_info.value.status_code == 400
         assert exc_info.value.detail == expected_error
 
-    @pytest.mark.parametrize("symbol, expected_open, expected_close", [
-        ("AAPL", 150.0, 157.0),
-        ("GOOGL", 2800.0, 2900.0)
-    ])
-    async def test_get_historical_api_success(self, bypass_cache, mock_api_response, symbol, expected_open, expected_close):
+    @pytest.mark.parametrize(
+        "symbol, expected_open, expected_close", [("AAPL", 150.0, 157.0), ("GOOGL", 2800.0, 2900.0)]
+    )
+    async def test_get_historical_api_success(
+        self, bypass_cache, mock_api_response, symbol, expected_open, expected_close
+    ):
         """Test successful historical data retrieval with mocked API response"""
         time_range = TimeRange.ONE_MONTH
         interval = Interval.DAILY
 
-        with patch('src.services.historical.get_historical.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.historical.get_historical.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = mock_api_response(symbol)
 
             result = await get_historical(symbol, time_range, interval)
@@ -200,49 +195,46 @@ class TestHistorical:
             )
             mock_fetch.assert_called_once_with(url=expected_url)
 
-    @pytest.mark.parametrize("test_case", [
-        {
-            "response": {},
-            "expected_status": 500,
-            "expected_detail": "Invalid response structure from Yahoo Finance API"
-        },
-        {
-            "response": {"chart": {"result": None}},
-            "expected_status": 404,
-            "expected_detail": "No data returned for symbol"
-        },
-        {
-            "response": {"chart": {"result": []}},
-            "expected_status": 404,
-            "expected_detail": "No data returned for symbol"
-        },
-        {
-            "response": {
-                "chart": {
-                    "error": {"code": "Not Found", "description": "Symbol AAPL not found"}
-                }
+    @pytest.mark.parametrize(
+        "test_case",
+        [
+            {
+                "response": {},
+                "expected_status": 500,
+                "expected_detail": "Invalid response structure from Yahoo Finance API",
             },
-            "expected_status": 404,
-            "expected_detail": "Symbol AAPL not found"
-        },
-        {
-            "response": {
-                "chart": {
-                    "error": {"code": "Internal Server Error", "description": "Yahoo API unavailable"}
-                }
+            {
+                "response": {"chart": {"result": None}},
+                "expected_status": 404,
+                "expected_detail": "No data returned for symbol",
             },
-            "expected_status": 500,
-            "expected_detail": "Failed to retrieve historical data: Yahoo API unavailable"
-        }
-    ])
+            {
+                "response": {"chart": {"result": []}},
+                "expected_status": 404,
+                "expected_detail": "No data returned for symbol",
+            },
+            {
+                "response": {"chart": {"error": {"code": "Not Found", "description": "Symbol AAPL not found"}}},
+                "expected_status": 404,
+                "expected_detail": "Symbol AAPL not found",
+            },
+            {
+                "response": {
+                    "chart": {"error": {"code": "Internal Server Error", "description": "Yahoo API unavailable"}}
+                },
+                "expected_status": 500,
+                "expected_detail": "Failed to retrieve historical data: Yahoo API unavailable",
+            },
+        ],
+    )
     async def test_get_historical_yahoo_errors(self, bypass_cache, test_case):
         """Test handling of various Yahoo Finance API error responses"""
         symbol = "NVDA"
         time_range = TimeRange.ONE_MONTH
         interval = Interval.DAILY
 
-        with patch('src.services.historical.get_historical.fetch', new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = orjson.dumps(test_case["response"]).decode('utf-8')
+        with patch("src.services.historical.get_historical.fetch", new_callable=AsyncMock) as mock_fetch:
+            mock_fetch.return_value = orjson.dumps(test_case["response"]).decode("utf-8")
 
             with pytest.raises(HTTPException) as exc_info:
                 await get_historical(symbol, time_range, interval)
@@ -256,7 +248,7 @@ class TestHistorical:
         time_range = TimeRange.ONE_MONTH
         interval = Interval.DAILY
 
-        with patch('src.services.historical.get_historical.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.historical.get_historical.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = "invalid json response"
 
             with pytest.raises(HTTPException) as exc_info:

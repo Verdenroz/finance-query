@@ -30,12 +30,13 @@ class TestSSE:
                 after_hours_price="298.00",
                 change="-2.00",
                 percent_change="-0.67%",
-            )
+            ),
         ]
 
         # Patch dependencies
-        with patch('src.routes.stream.get_simple_quotes', return_value=mock_quotes), \
-             patch('asyncio.sleep', AsyncMock()):
+        with patch("src.routes.stream.get_simple_quotes", return_value=mock_quotes), patch(
+            "asyncio.sleep", AsyncMock()
+        ):
             # Mock cookies and crumb
             mock_cookies = "mock_cookies"
             mock_crumb = "mock_crumb"
@@ -84,13 +85,16 @@ class TestSSE:
 
         # Mock the generator function directly to return only one item
         async def mock_quotes_generator(symbols):
-            quotes = [quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True) for quote in mock_quotes]
-            data = orjson.dumps(quotes).decode('utf-8')
+            quotes = [
+                quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True)
+                for quote in mock_quotes
+            ]
+            data = orjson.dumps(quotes).decode("utf-8")
             yield f"quote: {data}\n\n"
             # No sleep or infinite loop here
 
         # Patch the generator function and the get_simple_quotes function
-        with patch('src.routes.stream.quotes_generator', return_value=mock_quotes_generator(["AAPL"])):
+        with patch("src.routes.stream.quotes_generator", return_value=mock_quotes_generator(["AAPL"])):
             # Make request
             response = test_client.get(f"{VERSION}/stream/quotes?symbols={symbols_str}")
 
@@ -100,14 +104,14 @@ class TestSSE:
 
             # Read the response content
             content = response.read()
-            data_str = content.decode('utf-8')
+            data_str = content.decode("utf-8")
 
             # Verify data contains expected format
             assert data_str.startswith("quote: ")
             assert "\n\n" in data_str
 
             # Parse JSON data
-            json_str = data_str[7:data_str.find("\n\n")]
+            json_str = data_str[7 : data_str.find("\n\n")]
             data = orjson.loads(json_str)
 
             # Verify data structure

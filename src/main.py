@@ -20,17 +20,47 @@ from starlette.responses import Response, JSONResponse
 from src.connections import RedisConnectionManager, ConnectionManager
 from src.constants import headers
 from src.context import RequestContextMiddleware
-from src.dependencies import (get_redis, get_auth_data, get_yahoo_cookies, get_yahoo_crumb, setup_proxy_whitelist,
-                              refresh_yahoo_auth, remove_proxy_whitelist)
+from src.dependencies import (
+    get_redis,
+    get_auth_data,
+    get_yahoo_cookies,
+    get_yahoo_crumb,
+    setup_proxy_whitelist,
+    refresh_yahoo_auth,
+    remove_proxy_whitelist,
+)
 from src.models import ValidationErrorResponse, Sector, TimeRange, Interval
-from src.routes import (quotes_router, indices_router, movers_router, historical_prices_router,
-                        similar_quotes_router, finance_news_router, indicators_router, search_router,
-                        sectors_router, sockets_router, stream_router, hours_router)
+from src.routes import (
+    quotes_router,
+    indices_router,
+    movers_router,
+    historical_prices_router,
+    similar_quotes_router,
+    finance_news_router,
+    indicators_router,
+    search_router,
+    sectors_router,
+    sockets_router,
+    stream_router,
+    hours_router,
+)
 from src.security import RateLimitMiddleware
 from src.services import (
-    get_indices, get_actives, get_losers, get_gainers, get_sectors,
-    get_sector_for_symbol, get_sector_details, scrape_general_news, scrape_news_for_quote, get_quotes,
-    get_similar_quotes, get_historical, get_search, get_simple_quotes, get_technical_indicators
+    get_indices,
+    get_actives,
+    get_losers,
+    get_gainers,
+    get_sectors,
+    get_sector_for_symbol,
+    get_sector_details,
+    scrape_general_news,
+    scrape_news_for_quote,
+    get_quotes,
+    get_similar_quotes,
+    get_historical,
+    get_search,
+    get_simple_quotes,
+    get_technical_indicators,
 )
 
 load_dotenv()
@@ -57,12 +87,12 @@ async def lifespan(app: FastAPI):
 
     try:
         # Setup proxy if needed
-        if os.getenv('PROXY_TOKEN') and os.getenv('USE_PROXY', 'False') == 'True':
+        if os.getenv("PROXY_TOKEN") and os.getenv("USE_PROXY", "False") == "True":
             proxy_data = await setup_proxy_whitelist()
 
         # Setup Redis if configured
-        if os.getenv('REDIS_URL'):
-            redis = Redis.from_url(os.getenv('REDIS_URL'))
+        if os.getenv("REDIS_URL"):
+            redis = Redis.from_url(os.getenv("REDIS_URL"))
             redis_connection_manager = RedisConnectionManager(redis)
             app.state.redis = redis
             app.state.connection_manager = redis_connection_manager
@@ -104,21 +134,18 @@ app = FastAPI(
     title="FinanceQuery",
     version="1.6.4",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & "
-                "Yahoo Finance's Unofficial API.",
+    "Yahoo Finance's Unofficial API.",
     servers=[
         {"url": "https://finance-query.onrender.com", "description": "Render server"},
         {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "AWS server"},
-        {"url": "http://127.0.0.1:8000", "description": "Local server"}
+        {"url": "http://127.0.0.1:8000", "description": "Local server"},
     ],
-    contact={
-        "name": "Harvey Tseng",
-        "email": "harveytseng2@gmail.com"
-    },
+    contact={"name": "Harvey Tseng", "email": "harveytseng2@gmail.com"},
     license_info={
         "name": "MIT License",
         "identifier": "MIT",
     },
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -127,12 +154,12 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],  # Allows all methods
     allow_headers=["*"],  # Allows all headers
-    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"]
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
 app.add_middleware(RequestContextMiddleware)
 
-if os.getenv('USE_SECURITY', 'False') == 'True':
+if os.getenv("USE_SECURITY", "False") == "True":
     app.add_middleware(RateLimitMiddleware)
 
 
@@ -147,10 +174,7 @@ async def request_validation_error_formatter(request, exc):
 
     error_response = ValidationErrorResponse(errors=reformatted_message)
 
-    return JSONResponse(
-        status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
-        content=jsonable_encoder(error_response)
-    )
+    return JSONResponse(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, content=jsonable_encoder(error_response))
 
 
 @app.get(
@@ -165,91 +189,44 @@ async def request_validation_error_formatter(request, exc):
                     "example": {
                         "status": "healthy",
                         "timestamp": "2025-02-13T18:27:37.508568",
-                        "redis": {
-                            "status": "healthy",
-                            "latency_ms": 13.1
-                        },
+                        "redis": {"status": "healthy", "latency_ms": 13.1},
                         "services": {
                             "status": "20/20 succeeded",
-                            "Indices": {
-                                "status": "succeeded"
-                            },
-                            "Market Actives": {
-                                "status": "succeeded"
-                            },
-                            "Market Losers": {
-                                "status": "succeeded"
-                            },
-                            "Market Gainers": {
-                                "status": "succeeded"
-                            },
-                            "Market Sectors": {
-                                "status": "succeeded"
-                            },
-                            "Sector for a symbol": {
-                                "status": "succeeded"
-                            },
-                            "Detailed Sector": {
-                                "status": "succeeded"
-                            },
-                            "General News": {
-                                "status": "succeeded"
-                            },
-                            "News for equity": {
-                                "status": "succeeded"
-                            },
-                            "News for ETF": {
-                                "status": "succeeded"
-                            },
-                            "Full Quotes": {
-                                "status": "succeeded"
-                            },
-                            "Simple Quotes": {
-                                "status": "succeeded"
-                            },
-                            "Similar Equities": {
-                                "status": "succeeded"
-                            },
-                            "Similar ETFs": {
-                                "status": "succeeded"
-                            },
-                            "Historical day prices": {
-                                "status": "succeeded"
-                            },
-                            "Historical month prices": {
-                                "status": "succeeded"
-                            },
-                            "Historical year prices": {
-                                "status": "succeeded"
-                            },
-                            "Historical five year prices": {
-                                "status": "succeeded"
-                            },
-                            "Search": {
-                                "status": "succeeded"
-                            },
-                            "Summary Analysis": {
-                                "status": "succeeded"
-                            }
-                        }
+                            "Indices": {"status": "succeeded"},
+                            "Market Actives": {"status": "succeeded"},
+                            "Market Losers": {"status": "succeeded"},
+                            "Market Gainers": {"status": "succeeded"},
+                            "Market Sectors": {"status": "succeeded"},
+                            "Sector for a symbol": {"status": "succeeded"},
+                            "Detailed Sector": {"status": "succeeded"},
+                            "General News": {"status": "succeeded"},
+                            "News for equity": {"status": "succeeded"},
+                            "News for ETF": {"status": "succeeded"},
+                            "Full Quotes": {"status": "succeeded"},
+                            "Simple Quotes": {"status": "succeeded"},
+                            "Similar Equities": {"status": "succeeded"},
+                            "Similar ETFs": {"status": "succeeded"},
+                            "Historical day prices": {"status": "succeeded"},
+                            "Historical month prices": {"status": "succeeded"},
+                            "Historical year prices": {"status": "succeeded"},
+                            "Historical five year prices": {"status": "succeeded"},
+                            "Search": {"status": "succeeded"},
+                            "Summary Analysis": {"status": "succeeded"},
+                        },
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
-async def health(
-        r=Depends(get_redis),
-        cookies=Depends(get_yahoo_cookies),
-        crumb=Depends(get_yahoo_crumb)
-):
+async def health(r=Depends(get_redis), cookies=Depends(get_yahoo_cookies), crumb=Depends(get_yahoo_crumb)):
     """
-        Comprehensive health check endpoint that verifies:
-        - Basic API health
-        - Redis connectivity
-        - System time
-        - Service dependencies
-        """
+    Comprehensive health check endpoint that verifies:
+    - Basic API health
+    - Redis connectivity
+    - System time
+    - Service dependencies
+    """
     indices_task = get_indices(cookies, crumb)
     actives_task = get_actives()
     losers_task = get_losers()
@@ -291,7 +268,7 @@ async def health(
         ("Historical year prices", historical_data_task_year),
         ("Historical five year prices", historical_data_task_five_years),
         ("Search", search_task),
-        ("Summary Analysis", summary_analysis_task)
+        ("Summary Analysis", summary_analysis_task),
     ]
 
     results = await asyncio.gather(*[task for _, task in tasks], return_exceptions=True)
@@ -299,13 +276,10 @@ async def health(
     health_report = {
         "status": "healthy",
         "timestamp": datetime.datetime.now().isoformat(),
-        "redis": {
-            "status": "healthy",
-            "latency_ms": 0
-        },
+        "redis": {"status": "healthy", "latency_ms": 0},
         "services": {
             "status": "20/20 succeeded",
-        }
+        },
     }
 
     # Check Redis
@@ -315,15 +289,10 @@ async def health(
             redis_ping = r.ping()
             health_report["redis"] = {
                 "status": "healthy" if redis_ping else "unhealthy",
-                "latency_ms": round((time.time() - start_time) * 1000, 2)
+                "latency_ms": round((time.time() - start_time) * 1000, 2),
             }
         except Exception as e:
-            health_report["dependencies"] = {
-                "redis": {
-                    "status": "unhealthy",
-                    "error": str(e)
-                }
-            }
+            health_report["dependencies"] = {"redis": {"status": "unhealthy", "error": str(e)}}
             health_report["status"] = "degraded"
 
     if not r:
@@ -352,15 +321,10 @@ async def health(
         200: {
             "description": "Successful Response",
             "content": {
-                "application/json": {
-                    "example": {
-                        "status": "healthy",
-                        "timestamp": "2023-10-01T12:34:56.789Z"
-                    }
-                }
-            }
+                "application/json": {"example": {"status": "healthy", "timestamp": "2023-10-01T12:34:56.789Z"}}
+            },
         }
-    }
+    },
 )
 async def ping(response: Response):
     """
@@ -368,10 +332,7 @@ async def ping(response: Response):
     Returns timestamp and status.
     """
     response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate"
-    return {
-        "status": "healthy",
-        "timestamp": datetime.datetime.now().isoformat()
-    }
+    return {"status": "healthy", "timestamp": datetime.datetime.now().isoformat()}
 
 
 app.include_router(sockets_router)

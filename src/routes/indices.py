@@ -19,20 +19,24 @@ router = APIRouter()
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {"model": list[MarketIndex], "description": "Successfully retrieved indices"},
-    }
+    },
 )
 async def market_indices(
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb),
-        index: Annotated[list[Index] | None, Query(description="Specific indices to include")] = None,
-        region: Annotated[Region | None, Query(description="Filter indices by region")] = None
+    cookies: str = Depends(get_yahoo_cookies),
+    crumb: str = Depends(get_yahoo_crumb),
+    index: Annotated[list[Index] | None, Query(description="Specific indices to include")] = None,
+    region: Annotated[Region | None, Query(description="Filter indices by region")] = None,
 ) -> list[MarketIndex]:
     selected_indices = set(index or [])
 
     # Add indices from selected region to the set
     if region:
-        region_indices = [idx for idx in Index if INDEX_REGIONS.get(idx) == region or
-                          (INDEX_REGIONS.get(idx) == Region.UNITED_STATES and region == Region.NORTH_AMERICA)]
+        region_indices = [
+            idx
+            for idx in Index
+            if INDEX_REGIONS.get(idx) == region
+            or (INDEX_REGIONS.get(idx) == Region.UNITED_STATES and region == Region.NORTH_AMERICA)
+        ]
         selected_indices.update(region_indices)
 
     # If nothing was selected, use all indices

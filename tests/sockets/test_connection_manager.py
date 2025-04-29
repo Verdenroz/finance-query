@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+
 class TestConnectionManager:
     async def test_connection_manager_connect(self, connection_manager, mock_websocket):
         """Test the connect method of ConnectionManager."""

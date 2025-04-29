@@ -21,8 +21,10 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
     """
     while True:
         quotes = await get_simple_quotes(symbols, cookies, crumb)
-        quotes = [quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True) for quote in quotes]
-        data = orjson.dumps(quotes).decode('utf-8')
+        quotes = [
+            quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True) for quote in quotes
+        ]
+        data = orjson.dumps(quotes).decode("utf-8")
         yield f"quote: {data}\n\n"
         await asyncio.sleep(10)
 
@@ -31,7 +33,7 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
     path="/stream/quotes",
     summary="Stream stock quotes by SSE",
     description="Stream stock quotes via SSE for the given symbols every 10 seconds. Response format: 'quote: {"
-                "json_data}\\n\\n' with text/event-stream content type.",
+    "json_data}\\n\\n' with text/event-stream content type.",
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     tags=["SSE"],
     responses={
@@ -40,35 +42,30 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
             "content": {
                 "text/event-stream": {
                     "example": 'quote: [{"symbol":"NVDA","name":"NVIDIA Corporation","price":"142.62",'
-                               '"change":"-4.60","percentChange":"-3.12%",'
-                               '"logo":"https://logo.clearbit.com/https://www.nvidia.com"}]\n\n'
+                    '"change":"-4.60","percentChange":"-3.12%",'
+                    '"logo":"https://logo.clearbit.com/https://www.nvidia.com"}]\n\n'
                 }
-            }
+            },
         },
         404: {
             "description": "Symbol not found",
-            "content": {"application/json": {"example": {"detail": "Symbol not found"}}}
+            "content": {"application/json": {"example": {"detail": "Symbol not found"}}},
         },
         422: {
             "model": ValidationErrorResponse,
             "description": "Validation error of query parameters",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Invalid request",
-                        "errors": {
-                            "symbols": ["Field required"]
-                        }
-                    }
+                    "example": {"detail": "Invalid request", "errors": {"symbols": ["Field required"]}}
                 }
-            }
+            },
         },
-    }
+    },
 )
 async def stream_quotes(
-        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
-        cookies: str = Depends(get_yahoo_cookies),
-        crumb: str = Depends(get_yahoo_crumb)
+    symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
+    cookies: str = Depends(get_yahoo_cookies),
+    crumb: str = Depends(get_yahoo_crumb),
 ):
-    symbols = list(set(symbols.upper().replace(' ', '').split(',')))
+    symbols = list(set(symbols.upper().replace(" ", "").split(",")))
     return StreamingResponse(quotes_generator(symbols, cookies, crumb), media_type="text/event-stream")

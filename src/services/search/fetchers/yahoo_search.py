@@ -7,11 +7,7 @@ from src.dependencies import fetch
 from src.models import Type, SearchResult
 
 
-async def fetch_yahoo_search_results(
-        query: str,
-        hits: int,
-        type: Optional[Type]
-) -> list[SearchResult]:
+async def fetch_yahoo_search_results(query: str, hits: int, type: Optional[Type]) -> list[SearchResult]:
     """
     Fetch search results from Yahoo Finance
     :param query: the search query
@@ -60,7 +56,7 @@ async def fetch_yahoo_search_results(
             name=item.get("shortname", item.get("longname")),
             symbol=item.get("symbol"),
             exchange=item.get("exchange"),
-            type=yf_to_type.get(item.get("quoteType"), Type.STOCK.value)
+            type=yf_to_type.get(item.get("quoteType"), Type.STOCK.value),
         )
         results.append(result)
 

@@ -5,8 +5,15 @@ from fastapi import HTTPException
 from src.cache import cache
 from src.dependencies import get_logo, fetch
 from src.models import Quote, SimpleQuote
-from src.services.quotes.utils import (thread_pool, get_adaptive_chunk_size, _scrape_price_data, _scrape_general_info,
-                                       parse_tree, _scrape_company_info, _scrape_performance)
+from src.services.quotes.utils import (
+    thread_pool,
+    get_adaptive_chunk_size,
+    _scrape_price_data,
+    _scrape_general_info,
+    parse_tree,
+    _scrape_company_info,
+    _scrape_performance,
+)
 
 
 async def scrape_quotes(symbols: list[str]):
@@ -17,11 +24,11 @@ async def scrape_quotes(symbols: list[str]):
     :raises HTTPException: with code 500 if scraping fails
     """
     chunk_size = get_adaptive_chunk_size()
-    chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
+    chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = await asyncio.gather(*(
-        asyncio.gather(*(_scrape_quote(symbol) for symbol in chunk)) for chunk in chunks
-    ))
+    all_quotes = await asyncio.gather(
+        *(asyncio.gather(*(_scrape_quote(symbol) for symbol in chunk)) for chunk in chunks)
+    )
 
     return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
 
@@ -32,11 +39,11 @@ async def scrape_simple_quotes(symbols: list[str]):
     :param symbols: the list of symbols to scrape
     """
     chunk_size = get_adaptive_chunk_size()
-    chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
+    chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = await asyncio.gather(*(
-        asyncio.gather(*(_scrape_simple_quote(symbol) for symbol in chunk)) for chunk in chunks
-    ))
+    all_quotes = await asyncio.gather(
+        *(asyncio.gather(*(_scrape_simple_quote(symbol) for symbol in chunk)) for chunk in chunks)
+    )
 
     return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
 
@@ -48,7 +55,7 @@ async def _scrape_quote(symbol: str) -> Quote:
     :param symbol: Quote symbol
     """
     try:
-        url = f'https://finance.yahoo.com/quote/{symbol}/'
+        url = f"https://finance.yahoo.com/quote/{symbol}/"
         html_content = await fetch(url=url)
 
         # Parse HTML in a separate thread
@@ -56,8 +63,8 @@ async def _scrape_quote(symbol: str) -> Quote:
         tree = await loop.run_in_executor(thread_pool, parse_tree, html_content)
 
         # Get company name
-        name_elements = tree.xpath('.//h1/text()')
-        name = name_elements[1].split('(')[0].strip()
+        name_elements = tree.xpath(".//h1/text()")
+        name = name_elements[1].split("(")[0].strip()
 
         # Execute all scraping tasks in parallel
         prices_task = asyncio.create_task(_scrape_price_data(tree))
@@ -81,7 +88,7 @@ async def _scrape_quote(symbol: str) -> Quote:
             percent_change=regular_percent_change,
             **general_info,
             **company_info,
-            **performance
+            **performance,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error scraping quote for {symbol}: {e}")
@@ -94,7 +101,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
     :param symbol: Quote symbol
     """
     try:
-        url = f'https://finance.yahoo.com/quote/{symbol}/'
+        url = f"https://finance.yahoo.com/quote/{symbol}/"
         html_content = await fetch(url=url)
 
         # Parse HTML in a separate thread
@@ -102,8 +109,8 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
         tree = await loop.run_in_executor(thread_pool, parse_tree, html_content)
 
         # Get company name
-        name_elements = tree.xpath('.//h1/text()')
-        name = name_elements[1].split('(')[0].strip()
+        name_elements = tree.xpath(".//h1/text()")
+        name = name_elements[1].split("(")[0].strip()
 
         # Get price data
         prices = await _scrape_price_data(tree)
@@ -111,7 +118,8 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
 
         # Get logo asynchronously
         website_elements = tree.xpath(
-            '/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href')
+            "/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href"
+        )
         website = website_elements[0].strip() if website_elements else None
         logo = await get_logo(symbol=symbol, url=website) if website else None
 
@@ -123,7 +131,7 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
             after_hours_price=post_price,
             change=regular_change,
             percent_change=regular_percent_change,
-            logo=logo
+            logo=logo,
         )
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error scraping simple quote for {symbol}: {e}")

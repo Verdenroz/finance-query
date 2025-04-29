@@ -14,10 +14,10 @@ async def scrape_movers(url: str) -> list[MarketMover]:
     html = await fetch(url=url)
     tree = etree.HTML(html)
 
-    tbody_xpath = './/tbody'
-    row_xpath = './/tr'
+    tbody_xpath = ".//tbody"
+    row_xpath = ".//tr"
     symbol_xpath = './/span[contains(@class, "symbol")]/text()'
-    name_xpath = './/td[2]/div/text()'
+    name_xpath = ".//td[2]/div/text()"
     price_xpath = './/fin-streamer[@data-field="regularMarketPrice"]/text()'
     change_xpath = './/fin-streamer[@data-field="regularMarketChange"]//text()'
     percent_change_xpath = './/fin-streamer[@data-field="regularMarketChangePercent"]//text()'
@@ -38,18 +38,12 @@ async def scrape_movers(url: str) -> list[MarketMover]:
             name = name_elements[0].strip()
             price = price_elements[0].strip()
             change = change_elements[0].strip()
-            percent_change = percent_change_elements[0].strip('()')
+            percent_change = percent_change_elements[0].strip("()")
 
-            mover = MarketMover(
-                symbol=symbol,
-                name=name,
-                price=price,
-                change=change,
-                percent_change=percent_change
-            )
+            mover = MarketMover(symbol=symbol, name=name, price=price, change=change, percent_change=percent_change)
             movers.append(mover)
 
     if not movers:
-        raise HTTPException(status_code=500, detail='Failed to parse market movers')
+        raise HTTPException(status_code=500, detail="Failed to parse market movers")
 
     return movers

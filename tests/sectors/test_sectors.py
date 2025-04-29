@@ -32,12 +32,12 @@ class TestSectors:
                 return html_cache[url]
 
             # Extract sector path from URL for filename
-            sector_path = url.split('sectors/')[1].strip('/')
+            sector_path = url.split("sectors/")[1].strip("/")
             cache_file = cache_dir / f"{sector_path}.html"
 
             # Check if we have cached HTML
             if cache_file.exists():
-                with open(cache_file, 'r', encoding='utf-8') as f:
+                with open(cache_file, "r", encoding="utf-8") as f:
                     html_content = f.read()
             else:
                 # Fetch real content if no cache exists (only for first run)
@@ -45,7 +45,7 @@ class TestSectors:
                 html_content = response.text
 
                 # Save for future test runs
-                with open(cache_file, 'w', encoding='utf-8') as f:
+                with open(cache_file, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
             # Store HTML in our cache dictionary
@@ -83,43 +83,35 @@ class TestSectors:
             # Check if we have cached data
             if cache_file.exists():
                 import json
-                with open(cache_file, 'r') as f:
+
+                with open(cache_file, "r") as f:
                     yahoo_data = json.load(f)
             else:
                 # Create mock data if no cache exists
                 sectors = {
-                    'AAPL': 'Technology',
-                    'MSFT': 'Technology',
-                    'JPM': 'Financial Services',
-                    'PFE': 'Healthcare',
-                    'XOM': 'Energy',
-                    'KO': 'Consumer Defensive',
-                    'HD': 'Consumer Cyclical',
-                    'VZ': 'Communication Services',
-                    'NEE': 'Utilities',
-                    'AMT': 'Real Estate',
-                    'BHP': 'Basic Materials',
-                    'BA': 'Industrials'
+                    "AAPL": "Technology",
+                    "MSFT": "Technology",
+                    "JPM": "Financial Services",
+                    "PFE": "Healthcare",
+                    "XOM": "Energy",
+                    "KO": "Consumer Defensive",
+                    "HD": "Consumer Cyclical",
+                    "VZ": "Communication Services",
+                    "NEE": "Utilities",
+                    "AMT": "Real Estate",
+                    "BHP": "Basic Materials",
+                    "BA": "Industrials",
                 }
 
                 # Get sector for the symbol or use a default
-                sector = sectors.get(symbol, 'Technology')
+                sector = sectors.get(symbol, "Technology")
 
-                yahoo_data = {
-                    'quoteSummary': {
-                        'result': [
-                            {
-                                'assetProfile': {
-                                    'sector': sector
-                                }
-                            }
-                        ]
-                    }
-                }
+                yahoo_data = {"quoteSummary": {"result": [{"assetProfile": {"sector": sector}}]}}
 
                 # Save for future test runs
-                with open(cache_file, 'w') as f:
+                with open(cache_file, "w") as f:
                     import json
+
                     json.dump(yahoo_data, f)
 
             # Store data in our cache dictionary
@@ -144,11 +136,11 @@ class TestSectors:
                     "ytdReturn": "+12.34%",
                     "yearReturn": "+23.45%",
                     "threeYearReturn": "+34.56%",
-                    "fiveYearReturn": "+45.67%"
+                    "fiveYearReturn": "+45.67%",
                 }
             ]
 
-        monkeypatch.setattr('src.routes.sectors.get_sectors', mock_get_sectors)
+        monkeypatch.setattr("src.routes.sectors.get_sectors", mock_get_sectors)
 
         response = test_client.get(f"/{VERSION}/sectors")
 
@@ -170,11 +162,11 @@ class TestSectors:
                     "ytdReturn": "+12.34%",
                     "yearReturn": "+23.45%",
                     "threeYearReturn": "+34.56%",
-                    "fiveYearReturn": "+45.67%"
+                    "fiveYearReturn": "+45.67%",
                 }
             raise HTTPException(status_code=404, detail=f"Sector for {symbol} not found.")
 
-        monkeypatch.setattr('src.routes.sectors.get_sector_for_symbol', mock_get_sector_for_symbol)
+        monkeypatch.setattr("src.routes.sectors.get_sector_for_symbol", mock_get_sector_for_symbol)
 
         # Test successful request
         response = test_client.get(f"/{VERSION}/sectors/symbol/AAPL")
@@ -205,10 +197,10 @@ class TestSectors:
                 "industries": 12,
                 "companies": 815,
                 "topIndustries": ["Semiconductors: 29.04%", "Software - Infrastructure: 26.44%"],
-                "topCompanies": ["NVDA", "AAPL"]
+                "topCompanies": ["NVDA", "AAPL"],
             }
 
-        monkeypatch.setattr('src.routes.sectors.get_sector_details', mock_get_sector_details)
+        monkeypatch.setattr("src.routes.sectors.get_sector_details", mock_get_sector_details)
 
         response = test_client.get(f"/{VERSION}/sectors/details/Technology")
 
@@ -238,9 +230,10 @@ class TestSectors:
             return html_cache[url]
 
         # Patch the fetch function
-        with patch('src.services.sectors.get_sectors.fetch', mock_fetch):
+        with patch("src.services.sectors.get_sectors.fetch", mock_fetch):
             # Run the function with our patched fetch
             from src.services.sectors.get_sectors import get_sectors
+
             result = await get_sectors()
 
         # Verify the results
@@ -253,7 +246,9 @@ class TestSectors:
             assert isinstance(sector_data.sector, str)
 
             # Verify that the sector string matches one of the Sector enum values
-            assert sector_data.sector in [s.value for s in Sector], f"{sector_data.sector} is not a valid Sector enum value"
+            assert sector_data.sector in [
+                s.value for s in Sector
+            ], f"{sector_data.sector} is not a valid Sector enum value"
 
             assert sector_data.day_return.startswith("+") or sector_data.day_return.startswith("-")
             assert sector_data.ytd_return.startswith("+") or sector_data.ytd_return.startswith("-")
@@ -270,37 +265,37 @@ class TestSectors:
     async def test_get_yahoo_sector(self, yahoo_sectors, bypass_cache):
         """Test the get_yahoo_sector function with cached Yahoo API data"""
         # Get test symbols
-        test_symbols = ['AAPL', 'MSFT', 'JPM', 'PFE']
+        test_symbols = ["AAPL", "MSFT", "JPM", "PFE"]
 
         for symbol in test_symbols:
             # Get cached data for this symbol
             yahoo_data = yahoo_sectors(symbol)
 
             # Expected sector from the cached data
-            expected_sector = yahoo_data['quoteSummary']['result'][0]['assetProfile']['sector']
+            expected_sector = yahoo_data["quoteSummary"]["result"][0]["assetProfile"]["sector"]
 
             # Mock the _fetch_yahoo_data function to return our cached data
-            with patch('src.services.sectors.utils._fetch_yahoo_data', new_callable=AsyncMock) as mock_fetch:
+            with patch("src.services.sectors.utils._fetch_yahoo_data", new_callable=AsyncMock) as mock_fetch:
                 mock_fetch.return_value = yahoo_data
 
                 # Call the function with test parameters
-                result = await get_yahoo_sector(symbol, 'test_cookies', 'test_crumb')
+                result = await get_yahoo_sector(symbol, "test_cookies", "test_crumb")
 
                 # Verify the result
                 assert result == expected_sector
 
                 # Verify the fetch function was called with correct parameters
-                mock_fetch.assert_called_once_with(symbol, 'test_cookies', 'test_crumb')
+                mock_fetch.assert_called_once_with(symbol, "test_cookies", "test_crumb")
 
     async def test_get_sector_for_symbol(self, yahoo_sectors, sector_html, bypass_cache):
         """Test the get_sector_for_symbol function with cached data"""
         # Set up test symbols
-        test_symbols = ['AAPL', 'MSFT', 'JPM', 'PFE']
+        test_symbols = ["AAPL", "MSFT", "JPM", "PFE"]
 
         for symbol in test_symbols:
             # Get cached Yahoo data for this symbol
             yahoo_data = yahoo_sectors(symbol)
-            expected_sector = yahoo_data['quoteSummary']['result'][0]['assetProfile']['sector']
+            expected_sector = yahoo_data["quoteSummary"]["result"][0]["assetProfile"]["sector"]
 
             # Get the sector URL
             sector_url = urls[Sector(expected_sector)]
@@ -309,14 +304,15 @@ class TestSectors:
             html_content = sector_html(sector_url)
 
             # Mock the necessary functions
-            with patch('src.services.sectors.get_sectors.get_yahoo_sector', new_callable=AsyncMock) as mock_get_sector, \
-                 patch('src.services.sectors.get_sectors.fetch', new_callable=AsyncMock) as mock_fetch:
+            with patch(
+                "src.services.sectors.get_sectors.get_yahoo_sector", new_callable=AsyncMock
+            ) as mock_get_sector, patch("src.services.sectors.get_sectors.fetch", new_callable=AsyncMock) as mock_fetch:
                 # Set up the mocks to return our cached data
                 mock_get_sector.return_value = expected_sector
                 mock_fetch.return_value = html_content
 
                 # Call the function
-                result = await get_sector_for_symbol(symbol, 'test_cookies', 'test_crumb')
+                result = await get_sector_for_symbol(symbol, "test_cookies", "test_crumb")
 
                 # Verify the result
                 assert isinstance(result, MarketSector)
@@ -336,18 +332,18 @@ class TestSectors:
                 assert result.five_year_return.startswith("+") or result.five_year_return.startswith("-")
 
                 # Verify the mocks were called correctly
-                mock_get_sector.assert_called_once_with(symbol, 'test_cookies', 'test_crumb')
+                mock_get_sector.assert_called_once_with(symbol, "test_cookies", "test_crumb")
                 mock_fetch.assert_called_once_with(url=sector_url)
 
     async def test_get_sector_for_symbol_not_found(self, bypass_cache):
         """Test the get_sector_for_symbol function when sector is not found"""
         # Mock get_yahoo_sector to return None
-        with patch('src.services.sectors.get_sectors.get_yahoo_sector', new_callable=AsyncMock) as mock_get_sector:
+        with patch("src.services.sectors.get_sectors.get_yahoo_sector", new_callable=AsyncMock) as mock_get_sector:
             mock_get_sector.return_value = None
 
             # Verify that HTTPException is raised
             with pytest.raises(HTTPException) as excinfo:
-                await get_sector_for_symbol('UNKNOWN', 'test_cookies', 'test_crumb')
+                await get_sector_for_symbol("UNKNOWN", "test_cookies", "test_crumb")
 
             # Verify the exception details
             assert excinfo.value.status_code == 404
@@ -364,7 +360,7 @@ class TestSectors:
             html_content = sector_html(url)
 
             # Mock the fetch function
-            with patch('src.services.sectors.get_sectors.fetch', new_callable=AsyncMock) as mock_fetch:
+            with patch("src.services.sectors.get_sectors.fetch", new_callable=AsyncMock) as mock_fetch:
                 mock_fetch.return_value = html_content
 
                 # Call the function
@@ -407,21 +403,13 @@ class TestSectors:
         from src.services.sectors.utils import _fetch_yahoo_data
 
         # Test successful response
-        mock_successful_data = {
-            "quoteSummary": {
-                "result": [{
-                    "assetProfile": {
-                        "sector": "Technology"
-                    }
-                }]
-            }
-        }
+        mock_successful_data = {"quoteSummary": {"result": [{"assetProfile": {"sector": "Technology"}}]}}
 
         mock_response = AsyncMock(spec=ClientResponse)
         mock_response.status = 200
         mock_response.text.return_value = orjson.dumps(mock_successful_data).decode()
 
-        with patch('src.services.sectors.utils.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.sectors.utils.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = mock_response
 
             result = await _fetch_yahoo_data("AAPL", "test_cookies", "test_crumb")
@@ -431,18 +419,18 @@ class TestSectors:
                 url="https://query2.finance.yahoo.com/v10/finance/quoteSummary/AAPL",
                 params={"modules": "assetProfile", "crumb": "test_crumb"},
                 headers={
-                    'Cookie': 'test_cookies',
-                    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
-                    'Accept': 'application/json'
+                    "Cookie": "test_cookies",
+                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+                    "Accept": "application/json",
                 },
-                return_response=True
+                return_response=True,
             )
 
         # Test 404 response
         mock_error_response = AsyncMock(spec=ClientResponse)
         mock_error_response.status = 404
 
-        with patch('src.services.sectors.utils.fetch', new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.sectors.utils.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = mock_error_response
 
             with pytest.raises(HTTPException) as excinfo:

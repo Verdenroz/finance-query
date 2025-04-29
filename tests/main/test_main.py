@@ -47,7 +47,7 @@ async def test_health_endpoint(test_client):
         "Historical year prices",
         "Historical five year prices",
         "Search",
-        "Summary Analysis"
+        "Summary Analysis",
     }
 
     # Every service should have a status

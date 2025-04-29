@@ -26,51 +26,43 @@ router = APIRouter()
                             "value": {
                                 "status": "open",
                                 "reason": "Regular trading hours.",
-                                "timestamp": "2021-09-22T14:00:00.000Z"
-                            }
+                                "timestamp": "2021-09-22T14:00:00.000Z",
+                            },
                         },
                         "closed": {
                             "summary": "Market is closed",
-                            "value": {
-                                "status": "closed",
-                                "reason": "Weekend",
-                                "timestamp": "2021-09-25T14:00:00.000Z"
-                            }
+                            "value": {"status": "closed", "reason": "Weekend", "timestamp": "2021-09-25T14:00:00.000Z"},
                         },
                         "early_close": {
                             "summary": "Market closed early",
                             "value": {
                                 "status": "early_close",
                                 "reason": "Early Close: Christmas Eve",
-                                "timestamp": "2021-12-24T18:00:00.000Z"
-                            }
+                                "timestamp": "2021-12-24T18:00:00.000Z",
+                            },
                         },
                         "pre_market": {
                             "summary": "Pre-market hours",
                             "value": {
                                 "status": "closed",
                                 "reason": "Pre-market",
-                                "timestamp": "2021-09-22T12:00:00.000Z"
-                            }
+                                "timestamp": "2021-09-22T12:00:00.000Z",
+                            },
                         },
                         "after_market": {
                             "summary": "After-market hours",
                             "value": {
                                 "status": "closed",
                                 "reason": "After-hours",
-                                "timestamp": "2021-09-22T22:00:00.000Z"
-                            }
-                        }
+                                "timestamp": "2021-09-22T22:00:00.000Z",
+                            },
+                        },
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def get_market_hours(market_schedule: MarketSchedule = Depends(MarketSchedule)):
     status, reason = market_schedule.get_market_status()
-    return {
-        "status": status,
-        "reason": reason,
-        "timestamp": datetime.now(pytz.UTC).isoformat()
-    }
+    return {"status": status, "reason": reason, "timestamp": datetime.now(pytz.UTC).isoformat()}

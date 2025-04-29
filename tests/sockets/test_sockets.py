@@ -38,12 +38,12 @@ class TestSocketsHandler:
             return []
 
         # Apply monkey patches
-        monkeypatch.setattr(sockets, 'get_quotes', mock_get_quotes)
-        monkeypatch.setattr(sockets, 'get_similar_quotes', mock_get_similar_quotes)
-        monkeypatch.setattr(sockets, 'get_sector_for_symbol', mock_get_sector_for_symbol)
-        monkeypatch.setattr(sockets, 'scrape_news_for_quote', mock_scrape_news_for_quote)
+        monkeypatch.setattr(sockets, "get_quotes", mock_get_quotes)
+        monkeypatch.setattr(sockets, "get_similar_quotes", mock_get_similar_quotes)
+        monkeypatch.setattr(sockets, "get_sector_for_symbol", mock_get_sector_for_symbol)
+        monkeypatch.setattr(sockets, "scrape_news_for_quote", mock_scrape_news_for_quote)
 
-        with patch('src.routes.sockets.validate_websocket', return_value=(True, {})):
+        with patch("src.routes.sockets.validate_websocket", return_value=(True, {})):
             # Connect to the websocket
             with test_client.websocket_connect(f"/profile/{symbol}") as websocket:
                 # Receive the response
@@ -81,7 +81,7 @@ class TestSocketsHandler:
                 after_hours_price="149.75",
                 change="+1.25",
                 percent_change="+0.84%",
-                logo="https://logo.clearbit.com/apple.com"
+                logo="https://logo.clearbit.com/apple.com",
             ),
             {
                 "symbol": "NVDA",
@@ -91,17 +91,14 @@ class TestSocketsHandler:
                 "afterHoursPrice": "298.00",
                 "change": "-2.00",
                 "percentChange": "-0.67%",
-                "logo": "https://logo.clearbit.com/nvidia.com"
-            }
+                "logo": "https://logo.clearbit.com/nvidia.com",
+            },
         ]
-        metadata = {
-            "rate_limit": 2000,
-            "remaining_requests": 1999,
-            "reset": 86400
-        }
+        metadata = {"rate_limit": 2000, "remaining_requests": 1999, "reset": 86400}
 
-        with patch('src.routes.sockets.get_simple_quotes', return_value=mock_quotes), \
-             patch('src.routes.sockets.validate_websocket', return_value=(True, metadata)):
+        with patch("src.routes.sockets.get_simple_quotes", return_value=mock_quotes), patch(
+            "src.routes.sockets.validate_websocket", return_value=(True, metadata)
+        ):
             with test_client.websocket_connect("/quotes") as websocket:
                 websocket.send_text(symbols_str)
                 response = websocket.receive_json()
@@ -138,37 +135,77 @@ class TestSocketsHandler:
         """Test the websocket_market endpoint"""
         # Mock data for each function that get_market_info calls
         mock_actives = [
-            {"symbol": "AAPL", "name": "Apple Inc.", "price": 150.0, "change": 2.0, "percentChange": 1.35,
-             "volume": 75000000},
-            {"symbol": "MSFT", "name": "Microsoft Corp", "price": 305.0, "change": 3.5, "percentChange": 1.16,
-             "volume": 45000000}
+            {
+                "symbol": "AAPL",
+                "name": "Apple Inc.",
+                "price": 150.0,
+                "change": 2.0,
+                "percentChange": 1.35,
+                "volume": 75000000,
+            },
+            {
+                "symbol": "MSFT",
+                "name": "Microsoft Corp",
+                "price": 305.0,
+                "change": 3.5,
+                "percentChange": 1.16,
+                "volume": 45000000,
+            },
         ]
 
         mock_gainers = [
-            {"symbol": "XYZ", "name": "XYZ Corp", "price": 45.0, "change": 5.0, "percentChange": 12.5, "volume": 3000000},
-            {"symbol": "ABC", "name": "ABC Tech", "price": 78.0, "change": 7.8, "percentChange": 11.1, "volume": 2500000}
+            {
+                "symbol": "XYZ",
+                "name": "XYZ Corp",
+                "price": 45.0,
+                "change": 5.0,
+                "percentChange": 12.5,
+                "volume": 3000000,
+            },
+            {
+                "symbol": "ABC",
+                "name": "ABC Tech",
+                "price": 78.0,
+                "change": 7.8,
+                "percentChange": 11.1,
+                "volume": 2500000,
+            },
         ]
 
         mock_losers = [
-            {"symbol": "DEF", "name": "DEF Inc", "price": 30.0, "change": -4.0, "percentChange": -11.76, "volume": 1800000},
-            {"symbol": "GHI", "name": "GHI Corp", "price": 25.0, "change": -3.0, "percentChange": -10.71, "volume": 1500000}
+            {
+                "symbol": "DEF",
+                "name": "DEF Inc",
+                "price": 30.0,
+                "change": -4.0,
+                "percentChange": -11.76,
+                "volume": 1800000,
+            },
+            {
+                "symbol": "GHI",
+                "name": "GHI Corp",
+                "price": 25.0,
+                "change": -3.0,
+                "percentChange": -10.71,
+                "volume": 1500000,
+            },
         ]
 
         mock_indices = [
             {"symbol": "^GSPC", "name": "S&P 500", "price": 4500.0, "change": 25.0, "percentChange": 0.56},
             {"symbol": "^DJI", "name": "Dow Jones", "price": 35000.0, "change": 150.0, "percentChange": 0.43},
-            {"symbol": "^IXIC", "name": "NASDAQ", "price": 14000.0, "change": 100.0, "percentChange": 0.72}
+            {"symbol": "^IXIC", "name": "NASDAQ", "price": 14000.0, "change": 100.0, "percentChange": 0.72},
         ]
 
         mock_news = [
             {"title": "Market News 1", "link": "https://example.com/news1", "source": "Example News"},
-            {"title": "Market News 2", "link": "https://example.com/news2", "source": "Example News"}
+            {"title": "Market News 2", "link": "https://example.com/news2", "source": "Example News"},
         ]
 
         mock_sectors = [
             {"name": "Technology", "percentChange": 1.2},
             {"name": "Healthcare", "percentChange": -0.3},
-            {"name": "Financials", "percentChange": 0.8}
+            {"name": "Financials", "percentChange": 0.8},
         ]
 
         # Mock functions
@@ -191,14 +228,14 @@ class TestSocketsHandler:
             return mock_sectors
 
         # Apply the monkeypatches
-        monkeypatch.setattr(sockets, 'get_actives', mock_get_actives)
-        monkeypatch.setattr(sockets, 'get_gainers', mock_get_gainers)
-        monkeypatch.setattr(sockets, 'get_losers', mock_get_losers)
-        monkeypatch.setattr(sockets, 'get_indices', mock_get_indices)
-        monkeypatch.setattr(sockets, 'scrape_general_news', mock_scrape_general_news)
-        monkeypatch.setattr(sockets, 'get_sectors', mock_get_sectors)
+        monkeypatch.setattr(sockets, "get_actives", mock_get_actives)
+        monkeypatch.setattr(sockets, "get_gainers", mock_get_gainers)
+        monkeypatch.setattr(sockets, "get_losers", mock_get_losers)
+        monkeypatch.setattr(sockets, "get_indices", mock_get_indices)
+        monkeypatch.setattr(sockets, "scrape_general_news", mock_scrape_general_news)
+        monkeypatch.setattr(sockets, "get_sectors", mock_get_sectors)
 
-        with patch('src.routes.sockets.validate_websocket', return_value=(True, {})):
+        with patch("src.routes.sockets.validate_websocket", return_value=(True, {})):
             # Connect to the websocket and test
             with test_client.websocket_connect("/market") as websocket:
                 # Receive the response
@@ -236,26 +273,23 @@ class TestSocketsHandler:
             @staticmethod
             def now(tz=None):
                 from datetime import datetime, timezone
-                return datetime.fromisoformat(mock_timestamp.replace('+00:00', '')).replace(tzinfo=timezone.utc)
+
+                return datetime.fromisoformat(mock_timestamp.replace("+00:00", "")).replace(tzinfo=timezone.utc)
 
         from src.market import MarketSchedule
 
         # Patches
-        monkeypatch.setattr(MarketSchedule, 'get_market_status', mock_get_market_status)
-        monkeypatch.setattr('src.routes.sockets.datetime', MockDateTime)
+        monkeypatch.setattr(MarketSchedule, "get_market_status", mock_get_market_status)
+        monkeypatch.setattr("src.routes.sockets.datetime", MockDateTime)
 
-        with patch('src.routes.sockets.validate_websocket', return_value=(True, {})):
+        with patch("src.routes.sockets.validate_websocket", return_value=(True, {})):
             # Connect to the websocket
             with test_client.websocket_connect("/hours") as websocket:
                 # Receive the response
                 response = websocket.receive_json()
 
                 # Expected response
-                expected_response = {
-                    "status": mock_status,
-                    "reason": mock_reason,
-                    "timestamp": mock_timestamp
-                }
+                expected_response = {"status": mock_status, "reason": mock_reason, "timestamp": mock_timestamp}
 
                 # Verify the response
                 assert response == expected_response
@@ -275,25 +309,13 @@ class TestSocketsHandler:
         assert safe_convert_to_dict(input_dicts) == input_dicts
 
         # Test case 3: List with Pydantic models
-        sample_objects = [
-            SampleModel(name="test1", value=1),
-            SampleModel(name="test2", value=2)
-        ]
-        expected_dicts = [
-            {"name": "test1", "value": 1},
-            {"name": "test2", "value": 2}
-        ]
+        sample_objects = [SampleModel(name="test1", value=1), SampleModel(name="test2", value=2)]
+        expected_dicts = [{"name": "test1", "value": 1}, {"name": "test2", "value": 2}]
         assert safe_convert_to_dict(sample_objects) == expected_dicts
 
         # Test case 4: Mixed list with dicts and Pydantic models
-        mixed_list = [
-            {"a": 1},
-            SampleModel(name="test", value=2)
-        ]
-        expected_mixed = [
-            {"a": 1},
-            {"name": "test", "value": 2}
-        ]
+        mixed_list = [{"a": 1}, SampleModel(name="test", value=2)]
+        expected_mixed = [{"a": 1}, {"name": "test", "value": 2}]
         assert safe_convert_to_dict(mixed_list) == expected_mixed
 
         # Test case 5: List with items that can't be converted
@@ -305,7 +327,7 @@ class TestSocketsHandler:
         assert safe_convert_to_dict([1, 2, 3], default=custom_default) == [
             custom_default,
             custom_default,
-            custom_default
+            custom_default,
         ]
 
         # Test case 7: None input
@@ -324,7 +346,7 @@ class TestSocketsHandler:
         regular_connection_manager.active_connections = {}
 
         # Mock validate_websocket to return valid response
-        with patch('src.routes.sockets.validate_websocket', return_value=(True, {})):
+        with patch("src.routes.sockets.validate_websocket", return_value=(True, {})):
             # Mock data fetcher
             async def mock_data_fetcher():
                 return {"data": "test"}
@@ -336,7 +358,7 @@ class TestSocketsHandler:
                 websocket=websocket,
                 channel="test_channel",
                 data_fetcher=mock_data_fetcher,
-                connection_manager=regular_connection_manager
+                connection_manager=regular_connection_manager,
             )
 
             # Verify disconnect was called
@@ -350,12 +372,12 @@ class TestSocketsHandler:
         connection_manager = AsyncMock()
 
         # Mock validate_websocket to return invalid response
-        with patch('src.routes.sockets.validate_websocket', return_value=(False, {})):
+        with patch("src.routes.sockets.validate_websocket", return_value=(False, {})):
             await handle_websocket_connection(
                 websocket=websocket,
                 channel="test_channel",
                 data_fetcher=data_fetcher,
-                connection_manager=connection_manager
+                connection_manager=connection_manager,
             )
 
             # Verify accept was not called
@@ -374,11 +396,7 @@ class TestSocketsHandler:
         initial_data = {"quote": "AAPL", "price": 150.0}
 
         # Mock metadata
-        metadata = {
-            "rate_limit": 2000,
-            "remaining_requests": 1999,
-            "reset": 86400
-        }
+        metadata = {"rate_limit": 2000, "remaining_requests": 1999, "reset": 86400}
 
         async def mock_data_fetcher():
             return initial_data
@@ -387,12 +405,12 @@ class TestSocketsHandler:
         websocket.receive_text.side_effect = WebSocketDisconnect()
 
         # Mock validate_websocket to return valid response with metadata
-        with patch('src.routes.sockets.validate_websocket', return_value=(True, metadata)):
+        with patch("src.routes.sockets.validate_websocket", return_value=(True, metadata)):
             await handle_websocket_connection(
                 websocket=websocket,
                 channel="test_channel",
                 data_fetcher=mock_data_fetcher,
-                connection_manager=connection_manager
+                connection_manager=connection_manager,
             )
 
             # Verify metadata was merged with the result and sent
@@ -427,13 +445,14 @@ class TestSocketsHandler:
         websocket.receive_text.side_effect = WebSocketDisconnect()
 
         # Patch sleep to avoid waiting and validate_websocket to return valid
-        with patch('src.routes.sockets.validate_websocket', return_value=(True, {})), \
-             patch('asyncio.sleep', AsyncMock()):
+        with patch("src.routes.sockets.validate_websocket", return_value=(True, {})), patch(
+            "asyncio.sleep", AsyncMock()
+        ):
             await handle_websocket_connection(
                 websocket=websocket,
                 channel="test_channel",
                 data_fetcher=mock_data_fetcher,
-                connection_manager=connection_manager
+                connection_manager=connection_manager,
             )
 
             # Verify disconnect was called from within fetch_data exception handler

@@ -119,10 +119,8 @@ INDEX_REGIONS = {
     Index.XAX: Region.UNITED_STATES,
     Index.RUT: Region.UNITED_STATES,
     Index.VIX: Region.UNITED_STATES,
-
     # North America (excluding US)
     Index.GSPTSE: Region.NORTH_AMERICA,
-
     # South America
     Index.BVSP: Region.SOUTH_AMERICA,
     Index.MXX: Region.SOUTH_AMERICA,
@@ -130,7 +128,6 @@ INDEX_REGIONS = {
     Index.MERV: Region.SOUTH_AMERICA,
     Index.IVBX: Region.SOUTH_AMERICA,
     Index.IBRX_50: Region.SOUTH_AMERICA,
-
     # Europe
     Index.FTSE: Region.EUROPE,
     Index.GDAXI: Region.EUROPE,
@@ -151,7 +148,6 @@ INDEX_REGIONS = {
     Index.BUX: Region.EUROPE,
     Index.IMOEX: Region.EUROPE,
     Index.RTSI: Region.EUROPE,
-
     # Asia
     Index.HSI: Region.ASIA,
     Index.STI: Region.ASIA,
@@ -170,7 +166,6 @@ INDEX_REGIONS = {
     Index.CHINA_A50: Region.ASIA,
     Index.DJSH: Region.ASIA,
     Index.INDIAVIX: Region.ASIA,
-
     # Africa
     Index.CASE30: Region.AFRICA,
     Index.JN0U_JO: Region.AFRICA,
@@ -179,19 +174,16 @@ INDEX_REGIONS = {
     Index.SA40: Region.AFRICA,
     Index.RAF40: Region.AFRICA,
     Index.ALT15: Region.AFRICA,
-
     # Middle East
     Index.TA125_TA: Region.MIDDLE_EAST,
     Index.TA35: Region.MIDDLE_EAST,
     Index.TASI: Region.MIDDLE_EAST,
     Index.TAMAYUZ: Region.MIDDLE_EAST,
     Index.BIST100: Region.MIDDLE_EAST,
-
     # Oceania
     Index.AXJO: Region.OCEANIA,
     Index.AORD: Region.OCEANIA,
     Index.NZ50: Region.OCEANIA,
-
     # Global/Currency
     Index.DX_Y_NYB: Region.GLOBAL,
     Index.USD_STRD: Region.GLOBAL,
@@ -205,94 +197,83 @@ INDEX_REGIONS = {
 
 
 class MarketIndex(BaseModel):
-    name: str = Field(
-        default=...,
-        examples=["S&P 500"],
-        description="Name of the index"
-    )
-    value: float = Field(
-        default=...,
-        examples=[4300.00],
-        description="Current value of the index"
-    )
-    change: str = Field(
-        default=...,
-        examples=["+10.00"],
-        description="Change in the index value"
-    )
+    name: str = Field(default=..., examples=["S&P 500"], description="Name of the index")
+    value: float = Field(default=..., examples=[4300.00], description="Current value of the index")
+    change: str = Field(default=..., examples=["+10.00"], description="Change in the index value")
     percent_change: str = Field(
         default=...,
         examples=["+0.23%"],
         description="Percentage change in the index value",
         serialization_alias="percentChange",
-        validation_alias=AliasChoices("percentChange", "percent_change"))
+        validation_alias=AliasChoices("percentChange", "percent_change"),
+    )
     five_days_return: Optional[str] = Field(
         default=None,
         examples=["-19.35%"],
         description="Five days return of the company",
         serialization_alias="fiveDaysReturn",
-        validation_alias=AliasChoices("fiveDaysReturn", "five_days_return")
+        validation_alias=AliasChoices("fiveDaysReturn", "five_days_return"),
     )
     one_month_return: Optional[str] = Field(
         default=None,
         examples=["-28.48%"],
         description="One month return of the company",
         serialization_alias="oneMonthReturn",
-        validation_alias=AliasChoices("oneMonthReturn", "one_month_return")
+        validation_alias=AliasChoices("oneMonthReturn", "one_month_return"),
     )
     three_month_return: Optional[str] = Field(
         default=None,
         examples=["-14.02%"],
         description="Three month return of the company",
         serialization_alias="threeMonthReturn",
-        validation_alias=AliasChoices("threeMonthReturn", "three_month_return")
+        validation_alias=AliasChoices("threeMonthReturn", "three_month_return"),
     )
     six_month_return: Optional[str] = Field(
         default=None,
         examples=["36.39%"],
         description="Six month return of the company",
         serialization_alias="sixMonthReturn",
-        validation_alias=AliasChoices("sixMonthReturn", "six_month_return")
+        validation_alias=AliasChoices("sixMonthReturn", "six_month_return"),
     )
     ytd_return: Optional[str] = Field(
         default=None,
         examples=["+10.00%"],
         description="Year to date return of the company",
         serialization_alias="ytdReturn",
-        validation_alias=AliasChoices("ytdReturn", "ytd_return")
+        validation_alias=AliasChoices("ytdReturn", "ytd_return"),
     )
     year_return: Optional[str] = Field(
         default=None,
         examples=["+20.00%"],
         description="One year return of the company",
         serialization_alias="yearReturn",
-        validation_alias=AliasChoices("yearReturn", "year_return")
+        validation_alias=AliasChoices("yearReturn", "year_return"),
     )
     three_year_return: Optional[str] = Field(
         default=None,
         examples=["+30.00%"],
         description="Three year return of the company",
         serialization_alias="threeYearReturn",
-        validation_alias=AliasChoices("threeYearReturn", "three_year_return")
+        validation_alias=AliasChoices("threeYearReturn", "three_year_return"),
     )
     five_year_return: Optional[str] = Field(
         default=None,
         examples=["+40.00%"],
         description="Five year return of the company",
         serialization_alias="fiveYearReturn",
-        validation_alias=AliasChoices("fiveYearReturn", "five_year_return")
+        validation_alias=AliasChoices("fiveYearReturn", "five_year_return"),
     )
     ten_year_return: Optional[str] = Field(
         default=None,
         examples=["2,005.31%"],
         description="Ten year return of the company",
         serialization_alias="tenYearReturn",
-        validation_alias=AliasChoices("tenYearReturn", "ten_year_return")
+        validation_alias=AliasChoices("tenYearReturn", "ten_year_return"),
     )
     max_return: Optional[str] = Field(
         default=None,
         examples=["22,857.89%"],
         description="Maximum return of the company",
         serialization_alias="maxReturn",
-        validation_alias=AliasChoices("maxReturn", "max_return")
+        validation_alias=AliasChoices("maxReturn", "max_return"),
     )
