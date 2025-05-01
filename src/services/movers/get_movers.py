@@ -1,7 +1,9 @@
+from src.cache import cache
 from src.models.marketmover import MoverCount
 from src.services.movers.fetchers import fetch_movers, scrape_movers
 
 
+@cache(expire=15, market_closed_expire=3600)
 async def get_actives(count: MoverCount = MoverCount.FIFTY):
     """
     Scrape the most active stocks from Yahoo Finance
@@ -16,6 +18,7 @@ async def get_actives(count: MoverCount = MoverCount.FIFTY):
         return await scrape_movers(scrape_url)
 
 
+@cache(expire=15, market_closed_expire=3600)
 async def get_gainers(count: MoverCount = MoverCount.FIFTY):
     """
     Scrape the top gaining stocks from Yahoo Finance
@@ -30,6 +33,7 @@ async def get_gainers(count: MoverCount = MoverCount.FIFTY):
         return await scrape_movers(scrape_url)
 
 
+@cache(expire=15, market_closed_expire=3600)
 async def get_losers(count: MoverCount = MoverCount.FIFTY):
     """
     Scrape the top losing stocks from Yahoo Finance
