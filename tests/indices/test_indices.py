@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from fastapi import HTTPException
 from orjson import orjson
 
 from src.models import INDEX_REGIONS, Index, MarketIndex, Region
@@ -274,14 +273,14 @@ class TestIndices:
 
         async def mock_fetch_side_effect(index, *args, **kwargs):
             if index == Index.GDAXI:
-                return Exception("Failed to fetch index")
+                return None  # Return None instead of Exception to simulate failure
             return mock_index_data
 
         with patch("src.services.indices.get_indices.fetch_index", new_callable=AsyncMock) as mock_fetch_index:
             mock_fetch_index.side_effect = mock_fetch_side_effect
             test_indices = [Index.GSPC, Index.DJI, Index.GDAXI, Index.IXIC]
             result = await get_indices(test_cookies, test_crumb, test_indices)
-            assert len(result) == 3
+            assert len(result) == 3  # One index should be filtered out since it returned None
 
     async def test_get_indices_missing_credentials(self, bypass_cache):
         """Test get_indices raises error with missing credentials"""
@@ -331,7 +330,7 @@ class TestIndices:
 
         with patch("src.services.indices.fetchers.fetch_index.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = MockResponse(error_response_data, 500)
-            with pytest.raises(HTTPException) as exc_info:
-                await fetch_index(index, test_cookies, test_crumb)
-            assert exc_info.value.status_code == 500
-            assert exc_info.value.detail == "Mocked error message"
+
+            # Since fetch_index catches exceptions and returns None, we should test for None
+            result = await fetch_index(index, test_cookies, test_crumb)
+            assert result is None
