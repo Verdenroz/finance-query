@@ -218,7 +218,7 @@ async def request_validation_error_formatter(request, exc):
         }
     },
 )
-async def health(r: RedisClient, cookies=YahooCookies, crumb=YahooCrumb):
+async def health(r: RedisClient, cookies: YahooCookies, crumb: YahooCrumb):
     """
     Comprehensive health check endpoint that verifies:
     - Basic API health
