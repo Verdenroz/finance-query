@@ -92,6 +92,7 @@ async def _fetch_yahoo_index(index: Index, cookies: str, crumb: str) -> dict:
         raise HTTPException(status_code=summary_response.status, detail=error_description or f"Failed to fetch index data for {index}")
 
     response_text = await summary_response.text()
+    print(f"Response text: {response_text}")
     summary_data = orjson.loads(response_text)
     return summary_data
 
