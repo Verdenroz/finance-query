@@ -27,7 +27,7 @@ async def market_indices(
     region: Annotated[Region | None, Query(description="Filter indices by region")] = None,
 ) -> list[MarketIndex]:
     selected_indices = set(index or [])
-
+    print("Cookies:", cookies, "Crumb:", crumb)
     # Add indices from selected region to the set
     if region:
         region_indices = [
