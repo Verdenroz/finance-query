@@ -12,7 +12,7 @@ from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
 
-from constants import default_headers
+from src.constants import default_headers
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.constants import proxy, proxy_auth
 from src.context import request_context
