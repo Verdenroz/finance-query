@@ -18,7 +18,7 @@ from starlette import status
 from starlette.responses import JSONResponse, Response
 
 from src.connections import ConnectionManager, RedisConnectionManager
-from src.constants import headers
+from src.constants import default_headers
 from src.context import RequestContextMiddleware
 from src.dependencies import (
     RedisClient,
@@ -79,7 +79,7 @@ async def lifespan(app: FastAPI):
     proxy_data = None
 
     # Set up HTTP session
-    app.state.session = ClientSession(headers=headers, max_field_size=30000)
+    app.state.session = ClientSession(headers=default_headers, max_field_size=30000)
 
     # Set up auth refresh configuration
     app.state.auth_refresh_interval = 86400  # 24 hours in seconds
@@ -132,7 +132,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.6.4",
+    version="1.7.1",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & Yahoo Finance's Unofficial API.",
     servers=[
         {"url": "https://finance-query.onrender.com", "description": "Render server"},

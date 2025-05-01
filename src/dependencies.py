@@ -13,7 +13,7 @@ from redis import Redis
 from starlette.websockets import WebSocket
 
 from src.connections import ConnectionManager, RedisConnectionManager
-from src.constants import proxy, proxy_auth
+from src.constants import default_headers, proxy, proxy_auth
 from src.context import request_context
 from src.market import MarketSchedule
 
@@ -82,17 +82,26 @@ async def fetch(
     if not url:
         return None
 
+    # Remove None values and merge with user-provided headers (user headers take precedence)
+    final_headers = {k: v for k, v in default_headers.items() if v is not None} | (headers or {})
+    final_headers["Referer"] = "https://finance.yahoo.com/" if "yahoo.com" in url else "https://www.google.com/"
+
     if use_proxy:
         if not proxy or not proxy_auth:
             raise HTTPException(status_code=500, detail="Proxy configuration is missing")
 
     for attempt in range(max_retries):
         try:
+            # Use exponential backoff for retries
+            if attempt > 0:
+                backoff_time = retry_delay * (2 ** (attempt - 1))
+                await asyncio.sleep(backoff_time)
+
             async with session.request(
                 method=method,
                 url=url,
                 params=params,
-                headers=headers,
+                headers=final_headers,
                 proxy=proxy if use_proxy else None,
                 proxy_auth=proxy_auth if use_proxy else None,
                 timeout=5,
@@ -107,7 +116,6 @@ async def fetch(
         except (TimeoutError, ClientPayloadError, ClientError) as e:
             if attempt == max_retries - 1:
                 raise HTTPException(status_code=500, detail=f"Request failed after {max_retries} attempts: {str(e)}") from e
-            await asyncio.sleep(retry_delay)
 
     return None
 
@@ -224,9 +232,8 @@ async def setup_proxy_whitelist() -> dict | None:
     api_url = "https://api.brightdata.com/zone/whitelist"
     proxy_header_token = {"Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}", "Content-Type": "application/json"}
     payload = {"ip": ip}
-
     response = requests.post(api_url, headers=proxy_header_token, json=payload)
-    if response.status_code != 200:
+    if 200 < response.status_code >= 300:
         print(f"Proxy whitelist setup failed: {response.text}")
         return None
 

@@ -1,22 +1,28 @@
-from fastapi import HTTPException
 from orjson import orjson
 
 from src.dependencies import fetch
 from src.models.index import Index, MarketIndex
 
 
-async def fetch_index(index: Index, cookies: str, crumb: str) -> MarketIndex:
+async def fetch_index(index: Index, cookies: str, crumb: str) -> MarketIndex | None:
     """
-    Fetches the index data from the Yahoo Finance and returns a MarketIndex object.
+    Fetches the index data from the Yahoo Finance and returns a MarketIndex object or None if an error occurs.
     :param index: the index to retrieve data for
     :param cookies: the cookies required for Yahoo Finance API
     :param crumb: the crumb required for Yahoo Finance API
     """
     if not cookies or not crumb:
-        raise ValueError("Cookies and crumb are required for Yahoo Finance API")
+        return None
 
-    summary_data = await _fetch_yahoo_index(index, cookies, crumb)
-    return await _parse_yahoo_index(summary_data, index)
+    try:
+        summary_data = await _fetch_yahoo_index(index, cookies, crumb)
+        if not summary_data:
+            return None
+
+        return await _parse_yahoo_index(summary_data, index)
+    except Exception as e:
+        print(f"Error processing {index.name}: {str(e)}")
+        return None
 
 
 def _get_yahoo_index_symbol(index: Index) -> str:
@@ -71,29 +77,27 @@ def _get_formatted_index_name(index: Index, default_name: str) -> str:
     return formatted_names.get(index, default_name)
 
 
-async def _fetch_yahoo_index(index: Index, cookies: str, crumb: str) -> dict:
+async def _fetch_yahoo_index(index: Index, cookies: str, crumb: str) -> dict | None:
     """Fetch raw index data from Yahoo Finance API using cookies and crumb."""
-    symbol = _get_yahoo_index_symbol(index)
-    summary_url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}"
+    try:
+        symbol = _get_yahoo_index_symbol(index)
+        summary_url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}"
 
-    summary_params = {"modules": "price,quoteUnadjustedPerformanceOverview", "crumb": crumb}
-    headers = {
-        "Cookie": cookies,
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-    }
+        summary_params = {"modules": "price,quoteUnadjustedPerformanceOverview", "crumb": crumb}
+        headers = {
+            "Cookie": cookies,
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+            "Accept": "application/json",
+        }
 
-    summary_response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
-
-    if summary_response.status != 200:
+        summary_response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
         response_text = await summary_response.text()
-        response_data = orjson.loads(response_text)
-        error_description = response_data.get("quoteSummary", {}).get("error", {}).get("description")
-        raise HTTPException(status_code=summary_response.status, detail=error_description or f"Failed to fetch index data for {index}")
+        summary_data = orjson.loads(response_text)
+        return summary_data
 
-    response_text = await summary_response.text()
-    summary_data = orjson.loads(response_text)
-    return summary_data
+    except Exception as e:
+        print(f"Error fetching {index.name}: {str(e)}")
+        return None
 
 
 async def _parse_yahoo_index(summary_data: dict, index: Index) -> MarketIndex:
