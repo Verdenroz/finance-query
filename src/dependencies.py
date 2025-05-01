@@ -224,9 +224,8 @@ async def setup_proxy_whitelist() -> dict | None:
     api_url = "https://api.brightdata.com/zone/whitelist"
     proxy_header_token = {"Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}", "Content-Type": "application/json"}
     payload = {"ip": ip}
-
     response = requests.post(api_url, headers=proxy_header_token, json=payload)
-    if response.status_code != 200:
+    if 200 < response.status_code >= 300:
         print(f"Proxy whitelist setup failed: {response.text}")
         return None
 
