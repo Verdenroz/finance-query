@@ -5,7 +5,7 @@ on:
     branches: [ "master" ]
 
 jobs:
-  ci:
+  render-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
