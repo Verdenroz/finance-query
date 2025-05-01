@@ -31,4 +31,4 @@ async def get_indices(cookies: str, crumb: str, indices: list[Index] = None) -> 
 
     all_indices = await asyncio.gather(*(asyncio.gather(*(fetch_index_data(index) for index in chunk)) for chunk in chunks))
 
-    return [index for indices in all_indices for index in indices if not isinstance(index, Exception)]
+    return [index for indices in all_indices for index in indices if index is not None]
