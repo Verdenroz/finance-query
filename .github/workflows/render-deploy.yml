@@ -2,7 +2,7 @@ name: Render Deploy
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "staging" ]
 
 jobs:
   render-deploy:
