@@ -320,6 +320,11 @@ class TestIndices:
         test_crumb = "mock_crumb"
         error_response_data = {"quoteSummary": {"error": {"description": "Mocked error message"}}}
 
+        no_cookies_response = await fetch_index(index, "", test_crumb)
+        assert no_cookies_response is None
+        no_crumb_response = await fetch_index(index, test_cookies, "")
+        assert no_crumb_response is None
+
         class MockResponse:
             def __init__(self, json_data, status_code):
                 self._json_data = json_data
