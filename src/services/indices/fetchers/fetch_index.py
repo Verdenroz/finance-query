@@ -1,10 +1,11 @@
+from curl_cffi import requests
 from orjson import orjson
 
 from utils.dependencies import fetch
 from src.models.index import Index, MarketIndex
 
 
-async def fetch_index(index: Index, cookies: str, crumb: str) -> MarketIndex | None:
+async def fetch_index(index: Index, cookies: dict, crumb: str) -> MarketIndex | None:
     """
     Fetches the index data from the Yahoo Finance and returns a MarketIndex object or None if an error occurs.
     :param index: the index to retrieve data for
@@ -77,7 +78,7 @@ def _get_formatted_index_name(index: Index, default_name: str) -> str:
     return formatted_names.get(index, default_name)
 
 
-async def _fetch_yahoo_index(index: Index, cookies: str, crumb: str) -> dict | None:
+async def _fetch_yahoo_index(index: Index, cookies: dict, crumb: str) -> dict | None:
     """Fetch raw index data from Yahoo Finance API using cookies and crumb."""
     try:
         symbol = _get_yahoo_index_symbol(index)
@@ -85,13 +86,13 @@ async def _fetch_yahoo_index(index: Index, cookies: str, crumb: str) -> dict | N
 
         summary_params = {"modules": "price,quoteUnadjustedPerformanceOverview", "crumb": crumb}
         headers = {
-            "Cookie": cookies,
+            "Cookie": "; ".join(f"{k}={v}" for k, v in cookies.items()),
             "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
             "Accept": "application/json",
         }
 
-        summary_response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
-        response_text = await summary_response.text()
+        summary_response: requests.Response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
+        response_text = summary_response.text
         summary_data = orjson.loads(response_text)
         return summary_data
 
