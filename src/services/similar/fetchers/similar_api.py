@@ -6,7 +6,7 @@ from src.models import SimpleQuote
 from src.services import get_simple_quotes
 
 
-async def fetch_similar(symbol: str, limit: int, cookies: str, crumb: str) -> list[SimpleQuote]:
+async def fetch_similar(symbol: str, limit: int, cookies: dict, crumb: str) -> list[SimpleQuote]:
     """
     Get similar stocks by API
     :param symbol: the symbol of the stock to find similar stocks around

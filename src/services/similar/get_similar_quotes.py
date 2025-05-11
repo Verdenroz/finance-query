@@ -4,7 +4,7 @@ from src.services.similar.fetchers import fetch_similar, scrape_similar_quotes
 
 
 @cache(expire=15, market_closed_expire=600)
-async def get_similar_quotes(symbol: str, cookies: str, crumb: str, limit: int = 10) -> list[SimpleQuote]:
+async def get_similar_quotes(symbol: str, cookies: dict, crumb: str, limit: int = 10) -> list[SimpleQuote]:
     """
     Get similar stocks by API or scrape if API fails
     :param cookies: authentication cookies for Yahoo Finance
