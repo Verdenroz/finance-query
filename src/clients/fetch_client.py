@@ -64,8 +64,8 @@ class CurlFetchClient:
     async def fetch(
             self,
             url: str,
+            method: Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"] = "GET",
             *,
-            method: Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"],
             params: Dict[str, Any] | None = None,
             data: Dict[str, Any] | None = None,
             headers: Dict[str, str] | None = None,
