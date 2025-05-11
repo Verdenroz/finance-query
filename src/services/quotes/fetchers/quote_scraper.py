@@ -2,8 +2,8 @@ import asyncio
 
 from fastapi import HTTPException
 
-from src.cache import cache
-from src.dependencies import fetch, get_logo
+from utils.cache import cache
+from utils.dependencies import fetch, get_logo
 from src.models import Quote, SimpleQuote
 from src.services.quotes.utils import (
     _scrape_company_info,

@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from lxml import etree
 
-from src.dependencies import fetch
+from utils.dependencies import fetch
 from src.models import SimpleQuote
 
 

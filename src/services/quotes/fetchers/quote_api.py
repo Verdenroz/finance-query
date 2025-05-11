@@ -3,7 +3,7 @@ import asyncio
 from fastapi import HTTPException
 from orjson import orjson
 
-from src.dependencies import fetch, get_logo
+from utils.dependencies import fetch, get_logo
 from src.models import Quote, SimpleQuote
 from src.services.quotes.utils import (
     format_change,

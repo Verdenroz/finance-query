@@ -4,7 +4,7 @@ import pytest
 import pytz
 from freezegun import freeze_time
 
-from src.market import MarketSchedule, MarketStatus
+from utils.market import MarketSchedule, MarketStatus
 
 
 def test_market_hours_endpoint(test_client):

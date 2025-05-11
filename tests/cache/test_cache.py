@@ -5,9 +5,9 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from redis import RedisError
 
-from src.cache import MemCacheHandler, RedisCacheHandler, cache
+from utils.cache import MemCacheHandler, RedisCacheHandler, cache
 from src.context import request_context
-from src.market import MarketSchedule, MarketStatus
+from utils.market import MarketSchedule, MarketStatus
 from src.models import SimpleQuote
 
 

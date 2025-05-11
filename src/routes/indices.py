@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import YahooCookies, YahooCrumb
+from utils.dependencies import YahooCookies, YahooCrumb
 from src.models import INDEX_REGIONS, Index, MarketIndex, Region
 from src.services import get_indices
 

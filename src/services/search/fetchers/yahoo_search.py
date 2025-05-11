@@ -3,7 +3,7 @@ from typing import Optional
 
 from orjson import orjson
 
-from src.dependencies import fetch
+from utils.dependencies import fetch
 from src.models import SearchResult, Type
 
 

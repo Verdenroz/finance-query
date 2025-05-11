@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from orjson import orjson
 
-from src.dependencies import fetch
+from utils.dependencies import fetch
 
 
 async def get_yahoo_sector(symbol: str, cookies: str, crumb: str) -> str | None:

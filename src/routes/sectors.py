@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import YahooCookies, YahooCrumb
+from utils.dependencies import YahooCookies, YahooCrumb
 from src.models import ValidationErrorResponse
 from src.models.sector import MarketSector, MarketSectorDetails, Sector
 from src.services import get_sector_details, get_sector_for_symbol, get_sectors

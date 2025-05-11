@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from orjson import orjson
 
-from src.dependencies import fetch
+from utils.dependencies import fetch
 from src.models import SimpleQuote
 from src.services import get_simple_quotes
 

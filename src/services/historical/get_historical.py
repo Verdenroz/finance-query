@@ -2,8 +2,8 @@ import pandas as pd
 from fastapi import HTTPException
 from orjson import orjson
 
-from src.cache import cache
-from src.dependencies import fetch
+from utils.cache import cache
+from utils.dependencies import fetch
 from src.models import HistoricalData, Interval, TimeRange
 
 

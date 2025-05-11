@@ -1,6 +1,6 @@
 import asyncio
 
-from src.cache import cache
+from utils.cache import cache
 from src.models import MarketIndex
 from src.models.index import Index
 from src.services.indices.fetchers import fetch_index

@@ -2,8 +2,8 @@ import asyncio
 
 from fastapi import HTTPException
 
-from src.cache import cache
-from src.dependencies import fetch
+from utils.cache import cache
+from utils.dependencies import fetch
 from src.models import MarketSector, MarketSectorDetails, Sector
 from src.services.sectors.fetchers import parse_sector, parse_sector_details
 from src.services.sectors.utils import get_yahoo_sector

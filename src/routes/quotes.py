@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import YahooCookies, YahooCrumb
+from utils.dependencies import YahooCookies, YahooCrumb
 from src.models import Quote, SimpleQuote, ValidationErrorResponse
 from src.services import get_quotes, get_simple_quotes
 

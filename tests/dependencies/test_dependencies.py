@@ -7,7 +7,7 @@ from starlette.websockets import WebSocket
 
 from src.connections import RedisConnectionManager
 from src.context import request_context
-from src.dependencies import (
+from utils.dependencies import (
     fetch,
     get_auth_data,
     get_connection_manager,
@@ -77,7 +77,7 @@ class TestDependencies:
         # Need to patch the decorated function to bypass @injectable
         with patch("src.dependencies.get_request_context", AsyncMock(return_value=mock_request)):
             with patch("src.dependencies.get_redis.__wrapped__", AsyncMock(return_value=mock_redis)):
-                from src.dependencies import get_redis
+                from utils.dependencies import get_redis
 
                 result = await get_redis.__wrapped__(mock_request)
                 assert result == mock_redis
@@ -94,7 +94,7 @@ class TestDependencies:
         # Need to patch the decorated function to bypass @injectable
         with patch("src.dependencies.get_request_context", AsyncMock(return_value=mock_request)):
             with patch("src.dependencies.get_yahoo_cookies.__wrapped__", AsyncMock(return_value="test_cookies")):
-                from src.dependencies import get_yahoo_cookies
+                from utils.dependencies import get_yahoo_cookies
 
                 result = await get_yahoo_cookies.__wrapped__(mock_request)
                 assert result == "test_cookies"
@@ -111,7 +111,7 @@ class TestDependencies:
         # Need to patch the decorated function to bypass @injectable
         with patch("src.dependencies.get_request_context", AsyncMock(return_value=mock_request)):
             with patch("src.dependencies.get_yahoo_crumb.__wrapped__", AsyncMock(return_value="test_crumb")):
-                from src.dependencies import get_yahoo_crumb
+                from utils.dependencies import get_yahoo_crumb
 
                 result = await get_yahoo_crumb.__wrapped__(mock_request)
                 assert result == "test_crumb"

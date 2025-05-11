@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from redis import RedisError
 
 from src.context import request_context
-from src.market import MarketSchedule, MarketStatus
+from utils.market import MarketSchedule, MarketStatus
 from src.models import HistoricalData, MarketIndex, MarketMover, MarketSector, News, Quote, SimpleQuote
 from src.models.sector import MarketSectorDetails
 
