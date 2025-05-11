@@ -1,3 +1,4 @@
+from curl_cffi import requests
 from fastapi import HTTPException
 from orjson import orjson
 
@@ -25,11 +26,11 @@ async def _fetch_yahoo_data(symbol: str, cookies: dict, crumb: str) -> dict:
         "Accept": "application/json",
     }
 
-    summary_response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
+    summary_response: requests.Response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
 
-    if summary_response.status == 404:
+    if summary_response.status_code == 404:
         raise HTTPException(status_code=404, detail=f"Symbol not found: {symbol}")
 
-    response_text = await summary_response.text()
+    response_text = summary_response.text
     summary_data = orjson.loads(response_text)
     return summary_data
