@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from aiohttp import ClientSession
+from curl_cffi import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
@@ -18,17 +18,7 @@ from starlette import status
 from starlette.responses import JSONResponse, Response
 
 from src.connections import ConnectionManager, RedisConnectionManager
-from src.constants import default_headers
 from src.context import RequestContextMiddleware
-from src.dependencies import (
-    RedisClient,
-    YahooCookies,
-    YahooCrumb,
-    get_auth_data,
-    refresh_yahoo_auth,
-    remove_proxy_whitelist,
-    setup_proxy_whitelist,
-)
 from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
 from src.routes import (
     finance_news_router,
@@ -62,6 +52,15 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
+from utils.constants import default_headers
+from utils.dependencies import (
+    RedisClient,
+    YahooCookies,
+    YahooCrumb,
+    remove_proxy_whitelist,
+    setup_proxy_whitelist,
+)
+from utils.yahoo_auth import setup_yahoo_auth, cleanup_yahoo_auth
 
 load_dotenv()
 
@@ -71,53 +70,49 @@ async def lifespan(app: FastAPI):
     """
     FastAPI lifespan context manager that handles setup and cleanup.
     """
-
     await register_app(app)
     redis = None
-    redis_connection_manager = None
-    auth_refresh_task = None
     proxy_data = None
 
-    # Set up HTTP session
-    app.state.session = ClientSession(headers=default_headers, max_field_size=30000)
+    # Set up curl_cffi session with Chrome impersonation
+    app.state.session = requests.Session(impersonate="chrome")
+    if default_headers:
+        for key, value in default_headers.items():
+            if value is not None:
+                app.state.session.headers[key] = value
 
     # Set up auth refresh configuration
     app.state.auth_refresh_interval = 86400  # 24 hours in seconds
-    app.state.auth_expiry = None
 
     try:
         # Setup proxy if needed
         if os.getenv("PROXY_TOKEN") and os.getenv("USE_PROXY", "False") == "True":
             proxy_data = await setup_proxy_whitelist()
+            # Configure proxy for the curl_cffi session
+            if os.getenv("PROXY_URL"):
+                app.state.session.proxies = {
+                    "http": os.getenv("PROXY_URL"),
+                    "https": os.getenv("PROXY_URL")
+                }
 
         # Setup Redis if configured
         if os.getenv("REDIS_URL"):
             redis = Redis.from_url(os.getenv("REDIS_URL"))
-            redis_connection_manager = RedisConnectionManager(redis)
             app.state.redis = redis
-            app.state.connection_manager = redis_connection_manager
+            app.state.connection_manager = RedisConnectionManager(redis)
         else:
             app.state.redis = None
             app.state.connection_manager = ConnectionManager()
 
-        # Initial auth data fetch
-        cookies, crumb = await get_auth_data()
-        app.state.cookies = cookies
-        app.state.crumb = crumb
-        app.state.auth_expiry = time.time() + app.state.auth_refresh_interval
-
-        # Start background task for Yahoo auth refresh
-        auth_refresh_task = asyncio.create_task(refresh_yahoo_auth(app))
+        # Setup Yahoo Finance authentication
+        await setup_yahoo_auth(app)
 
         yield
     finally:
-        # Cancel the auth refresh task
-        if auth_refresh_task:
-            auth_refresh_task.cancel()
-            try:
-                await auth_refresh_task
-            except asyncio.CancelledError:
-                pass
+        app.state.connection_manager.close()
+
+        # Clean up Yahoo authentication
+        await cleanup_yahoo_auth(app)
 
         # Clean up proxy configuration
         await remove_proxy_whitelist(proxy_data)
@@ -125,7 +120,6 @@ async def lifespan(app: FastAPI):
         # Clean up Redis
         if redis:
             redis.close()
-            await redis_connection_manager.close()
 
         await cleanup_all_exit_stacks()
 
