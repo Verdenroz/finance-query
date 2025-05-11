@@ -43,7 +43,7 @@ async def get_sectors() -> list[MarketSector]:
 
 
 @cache(expire=60, market_closed_expire=600)
-async def get_sector_for_symbol(symbol: str, cookies: str, crumb: str) -> MarketSector:
+async def get_sector_for_symbol(symbol: str, cookies: dict, crumb: str) -> MarketSector:
     """
     Fetches and parses sector data for a specific stock symbol.
     :param symbol: the stock symbol
