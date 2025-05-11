@@ -1,10 +1,12 @@
 import asyncio
+from typing import AsyncGenerator
 
 from fastapi import APIRouter, Query, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from orjson import orjson
 
+from models import SimpleQuote
 from utils.dependencies import YahooCookies, YahooCrumb
 from src.models import ValidationErrorResponse
 from src.services import get_simple_quotes
@@ -12,12 +14,15 @@ from src.services import get_simple_quotes
 router = APIRouter()
 
 
-async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
+async def quotes_generator(symbols: list[str], cookies: dict, crumb: str) -> AsyncGenerator[str, None]:
     """
     Stream simplified quotes by SSE (Server Sent Events) for the given symbols every 10 seconds
     Data is sent in the format of "quote: {json_data}\n\n"
     :param symbols: the list of stock symbols
-    :return:
+    :param cookies: authentication cookies for Yahoo Finance
+    :param crumb: authentication crumb for Yahoo Finance
+
+    :return: AsyncGenerator yielding the quotes in the format of "quote: {json_data}\n\n"
     """
     while True:
         quotes = await get_simple_quotes(symbols, cookies, crumb)
@@ -31,7 +36,7 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
     path="/stream/quotes",
     summary="Stream stock quotes by SSE",
     description="Stream stock quotes via SSE for the given symbols every 10 seconds. Response format: 'quote: {"
-    "json_data}\\n\\n' with text/event-stream content type.",
+                "json_data}\\n\\n' with text/event-stream content type.",
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
         200: {
@@ -39,8 +44,8 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
             "content": {
                 "text/event-stream": {
                     "example": 'quote: [{"symbol":"NVDA","name":"NVIDIA Corporation","price":"142.62",'
-                    '"change":"-4.60","percentChange":"-3.12%",'
-                    '"logo":"https://img.logo.dev/nvidia.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"}]\n\n'
+                               '"change":"-4.60","percentChange":"-3.12%",'
+                               '"logo":"https://img.logo.dev/nvidia.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true"}]\n\n'
                 }
             },
         },
@@ -56,9 +61,9 @@ async def quotes_generator(symbols: list[str], cookies: str, crumb: str):
     },
 )
 async def stream_quotes(
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
-    symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
+        cookies: YahooCookies,
+        crumb: YahooCrumb,
+        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
     return StreamingResponse(quotes_generator(symbols, cookies, crumb), media_type="text/event-stream")
