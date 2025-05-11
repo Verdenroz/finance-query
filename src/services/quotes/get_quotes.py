@@ -2,7 +2,7 @@ from src.models import Quote, SimpleQuote
 from src.services.quotes.fetchers import fetch_quotes, fetch_simple_quotes, scrape_quotes, scrape_simple_quotes
 
 
-async def get_quotes(symbols: list[str], cookies: str, crumb: str) -> list[Quote]:
+async def get_quotes(symbols: list[str], cookies: dict, crumb: str) -> list[Quote]:
     """
     Asynchronously scrapes multiple quotes from a list of symbols and returns a list of Quote objects.
 
@@ -25,7 +25,7 @@ async def get_quotes(symbols: list[str], cookies: str, crumb: str) -> list[Quote
     return await scrape_quotes(symbols)
 
 
-async def get_simple_quotes(symbols: list[str], cookies: str, crumb: str) -> list[SimpleQuote]:
+async def get_simple_quotes(symbols: list[str], cookies: dict, crumb: str) -> list[SimpleQuote]:
     """
     Asynchronously fetches multiple simple quotes from a list of symbols and returns a list of SimpleQuote objects.
 

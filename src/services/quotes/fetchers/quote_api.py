@@ -1,5 +1,6 @@
 import asyncio
 
+from curl_cffi import requests
 from fastapi import HTTPException
 from orjson import orjson
 
@@ -18,7 +19,7 @@ from src.services.quotes.utils import (
 )
 
 
-async def fetch_quotes(symbols: list[str], cookies: str, crumb: str) -> list[Quote]:
+async def fetch_quotes(symbols: list[str], cookies: dict, crumb: str) -> list[Quote]:
     """Fetch quotes using Yahoo Finance API"""
     if not cookies or not crumb:
         raise ValueError("Cookies and crumb are required for Yahoo Finance API")
@@ -28,10 +29,10 @@ async def fetch_quotes(symbols: list[str], cookies: str, crumb: str) -> list[Quo
 
     all_quotes = await asyncio.gather(*(asyncio.gather(*(_get_quote_from_yahoo(symbol, cookies, crumb) for symbol in chunk)) for chunk in chunks))
 
-    return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
+    return [quote for quotes in all_quotes for quote in quotes if isinstance(quote, Quote)]
 
 
-async def fetch_simple_quotes(symbols: list[str], cookies: str, crumb: str) -> list[SimpleQuote]:
+async def fetch_simple_quotes(symbols: list[str], cookies: dict, crumb: str) -> list[SimpleQuote]:
     """Fetch quotes using Yahoo Finance API"""
     if not cookies or not crumb:
         raise ValueError("Cookies and crumb are required for Yahoo Finance API")
@@ -41,22 +42,22 @@ async def fetch_simple_quotes(symbols: list[str], cookies: str, crumb: str) -> l
 
     all_quotes = await asyncio.gather(*(asyncio.gather(*(_get_simple_quote_from_yahoo(symbol, cookies, crumb) for symbol in chunk)) for chunk in chunks))
 
-    return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
+    return [quote for quotes in all_quotes for quote in quotes if isinstance(quote, SimpleQuote)]
 
 
-async def _get_quote_from_yahoo(symbol: str, cookies: str, crumb: str) -> Quote:
+async def _get_quote_from_yahoo(symbol: str, cookies: dict, crumb: str) -> Quote:
     """Get individual quote data from Yahoo Finance API."""
     summary_data = await _fetch_yahoo_data(symbol, cookies, crumb)
     return await _parse_yahoo_quote_data(summary_data)
 
 
-async def _get_simple_quote_from_yahoo(symbol: str, cookies: str, crumb: str) -> SimpleQuote:
+async def _get_simple_quote_from_yahoo(symbol: str, cookies: dict, crumb: str) -> SimpleQuote:
     """Get individual simplified quote data from Yahoo Finance API."""
     summary_data = await _fetch_yahoo_data(symbol, cookies, crumb)
     return await _parse_yahoo_simple_quote_data(summary_data)
 
 
-async def _fetch_yahoo_data(symbol: str, cookies: str, crumb: str) -> dict:
+async def _fetch_yahoo_data(symbol: str, cookies: dict, crumb: str) -> dict:
     """
     Fetch raw data from Yahoo Finance API using cookies and crumb.
 
@@ -68,17 +69,17 @@ async def _fetch_yahoo_data(symbol: str, cookies: str, crumb: str) -> dict:
         "crumb": crumb,
     }
     headers = {
-        "Cookie": cookies,
+        "Cookie": "; ".join(f"{k}={v}" for k, v in cookies.items()),
         "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
         "Accept": "application/json",
     }
 
-    summary_response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
+    summary_response: requests.Response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
 
-    if summary_response.status == 404:
+    if summary_response.status_code == 404:
         raise HTTPException(status_code=404, detail=f"Symbol not found: {symbol}")
 
-    response_text = await summary_response.text()
+    response_text = summary_response.text
     summary_data = orjson.loads(response_text)
     return summary_data
 
