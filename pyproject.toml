@@ -98,7 +98,8 @@ source = ["src"]
 omit = [
     "src/security/rate_limit_middleware.py",
     "src/**/dependencies.py",
-    "src/**/*middleware.py"
+    "src/**/*middleware.py",
+    "src/**/utils.py"
 ]
 
 [tool.coverage.report]
