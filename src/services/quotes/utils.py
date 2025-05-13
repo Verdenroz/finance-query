@@ -40,9 +40,27 @@ def format_date(date_string: str) -> str | None:
 
 
 def format_percent(value) -> str | None:
-    if not value or not isinstance(value, dict) or "raw" not in value:
+    """
+    Accepts either the usual Yahoo dict **or** a bare float / int.
+    Converts 0.1234 → '12.34%' and 12.34 → '12.34%'.
+    """
+    if value is None:
         return None
-    return f"{value['raw'] * 100:.2f}%"
+
+    # Yahoo’s structured form: {"raw": 0.1234, "fmt": "12.34%"}
+    if isinstance(value, dict):
+        raw = value.get("raw")
+        if raw is None:
+            return None
+        # raw is a *fraction* (0.1234) → multiply by 100
+        return f"{raw * 100:.2f}%"
+
+    # Bare numeric from quote endpoint (already in percent units)
+    if isinstance(value, (int, float)):
+        return f"{value:.2f}%"
+
+    # Already a string
+    return str(value)
 
 
 def format_change(value: str) -> str:

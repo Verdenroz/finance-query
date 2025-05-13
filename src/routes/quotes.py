@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from utils.dependencies import YahooCookies, YahooCrumb
 from src.models import Quote, SimpleQuote, ValidationErrorResponse
 from src.services import get_quotes, get_simple_quotes
+from utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -29,12 +29,11 @@ router = APIRouter()
     },
 )
 async def get_quote(
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
-    symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
+        finance_client: FinanceClient,
+        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
-    return await get_quotes(symbols, cookies, crumb)
+    return await get_quotes(finance_client, symbols)
 
 
 @router.get(
@@ -58,9 +57,8 @@ async def get_quote(
     },
 )
 async def get_simple_quote(
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
-    symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
+        finance_client: FinanceClient,
+        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
-    return await get_simple_quotes(symbols, cookies, crumb)
+    return await get_simple_quotes(finance_client, symbols)
