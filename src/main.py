@@ -192,7 +192,7 @@ async def request_validation_error_formatter(request, exc):
         }
     },
 )
-async def health(r: RedisClient, cookies: YahooCookies, crumb: YahooCrumb):
+async def health(r: RedisClient, finance_client: FinanceClient):
     """
     Comprehensive health check endpoint that verifies:
     - Basic API health
@@ -200,20 +200,20 @@ async def health(r: RedisClient, cookies: YahooCookies, crumb: YahooCrumb):
     - System time
     - Service dependencies
     """
-    indices_task = get_indices(cookies, crumb)
+    indices_task = get_indices(finance_client)
     actives_task = get_actives()
     losers_task = get_losers()
     gainers_task = get_gainers()
     sectors_task = get_sectors()
-    sector_by_symbol_task = get_sector_for_symbol("NVDA", cookies, crumb)
+    sector_by_symbol_task = get_sector_for_symbol(finance_client, "NVDA")
     sector_by_name_task = get_sector_details(Sector.TECHNOLOGY)
     news_task = scrape_general_news()
     news_by_symbol_task = scrape_news_for_quote("NVDA")
     scrape_etf_news_task = scrape_news_for_quote("QQQ")
-    quotes_task = get_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
-    simple_quotes_task = get_simple_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
-    similar_equity_task = get_similar_quotes("NVDA", cookies, crumb)
-    similar_etf_task = get_similar_quotes("QQQ", cookies, crumb)
+    quotes_task = get_quotes(finance_client, ["NVDA", "QQQ", "GTLOX"])
+    simple_quotes_task = get_simple_quotes(finance_client, ["NVDA", "QQQ", "GTLOX"])
+    similar_equity_task = get_similar_quotes(finance_client, "NVDA")
+    similar_etf_task = get_similar_quotes(finance_client, "QQQ")
     historical_data_task_day = get_historical("NVDA", TimeRange.DAY, Interval.ONE_MINUTE)
     historical_data_task_month = get_historical("NVDA", TimeRange.YTD, Interval.DAILY)
     historical_data_task_year = get_historical("NVDA", TimeRange.YEAR, Interval.DAILY)
