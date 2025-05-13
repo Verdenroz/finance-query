@@ -1,29 +1,61 @@
-from curl_cffi import requests
-from orjson import orjson
-
-from utils.dependencies import fetch
+from src.services.quotes.get_quotes import get_quotes
 from src.models.index import Index, MarketIndex
+from utils.dependencies import FinanceClient
 
 
-async def fetch_index(index: Index, cookies: dict, crumb: str) -> MarketIndex | None:
+async def fetch_index(
+        finance_client: FinanceClient,
+        index: Index,
+) -> MarketIndex:
     """
-    Fetches the index data from the Yahoo Finance and returns a MarketIndex object or None if an error occurs.
-    :param index: the index to retrieve data for
-    :param cookies: the cookies required for Yahoo Finance API
-    :param crumb: the crumb required for Yahoo Finance API
+    Try the rich quote-summary endpoint first; on any failure fall back to
+    the lightweight batch-quote endpoint so we still return the core data.
+
+    :param finance_client: The Yahoo Finance client for API requests
+    :param index: The index to fetch data for
+    :return: MarketIndex object with the index data
     """
-    if not cookies or not crumb:
-        return None
+    symbol = _get_yahoo_index_symbol(index)
 
-    try:
-        summary_data = await _fetch_yahoo_index(index, cookies, crumb)
-        if not summary_data:
-            return None
+    # Try the full quote-summary
+    quote_data = await finance_client.get_quote(symbol)
+    if quote_data:
+        return await _parse_yahoo_index(quote_data, index)
 
-        return await _parse_yahoo_index(summary_data, index)
-    except Exception as e:
-        print(f"Error processing {index.name}: {str(e)}")
-        return None
+    # If that fails, try the simple quotes endpoint
+    batch = await finance_client.get_simple_quotes([symbol])
+    result = batch.get("quoteResponse", {}).get("result", [])
+    if result:
+        return await _parse_yahoo_index(result[0], index)
+
+    # As last resort, try get_quotes which might use scraping
+    quotes_data = await get_quotes(finance_client, [symbol])
+    if quotes_data:
+        quote = quotes_data[0]
+        return MarketIndex(
+            name=quote.name or index.value,
+            value=float(quote.price),
+            change=quote.change,
+            percent_change=quote.change_percent,
+            five_days_return=quote.five_days_return,
+            one_month_return=quote.one_month_return,
+            three_month_return=quote.three_month_return,
+            six_month_return=quote.six_month_return,
+            ytd_return=quote.ytd_return,
+            year_return=quote.year_return,
+            three_year_return=quote.three_year_return,
+            five_year_return=quote.five_year_return,
+            ten_year_return=quote.ten_year_return,
+            max_return=quote.max_return,
+        )
+
+    # If all else fails, create a minimal MarketIndex with just the name
+    return MarketIndex(
+        name=index.value,
+        value=0.0,
+        change="",
+        percent_change=""
+    )
 
 
 def _get_yahoo_index_symbol(index: Index) -> str:
@@ -78,29 +110,6 @@ def _get_formatted_index_name(index: Index, default_name: str) -> str:
     return formatted_names.get(index, default_name)
 
 
-async def _fetch_yahoo_index(index: Index, cookies: dict, crumb: str) -> dict | None:
-    """Fetch raw index data from Yahoo Finance API using cookies and crumb."""
-    try:
-        symbol = _get_yahoo_index_symbol(index)
-        summary_url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}"
-
-        summary_params = {"modules": "price,quoteUnadjustedPerformanceOverview", "crumb": crumb}
-        headers = {
-            "Cookie": "; ".join(f"{k}={v}" for k, v in cookies.items()),
-            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-            "Accept": "application/json",
-        }
-
-        summary_response: requests.Response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
-        response_text = summary_response.text
-        summary_data = orjson.loads(response_text)
-        return summary_data
-
-    except Exception as e:
-        print(f"Error fetching {index.name}: {str(e)}")
-        return None
-
-
 async def _parse_yahoo_index(summary_data: dict, index: Index) -> MarketIndex:
     """Parse Yahoo Finance API response into MarketIndex object."""
     summary_result = summary_data.get("quoteSummary", {}).get("result", [{}])[0]
@@ -124,9 +133,9 @@ async def _parse_yahoo_index(summary_data: dict, index: Index) -> MarketIndex:
 
     return MarketIndex(
         name=formatted_name,
-        value=round(price_data["regularMarketPrice"]["raw"], 2),
-        change=price_data["regularMarketChange"]["fmt"],
-        percent_change=price_data["regularMarketChangePercent"]["fmt"],
+        value=round(price_data["regularMarketPrice"]["raw"], 2) if "regularMarketPrice" in price_data and "raw" in price_data["regularMarketPrice"] else None,
+        change=price_data.get("regularMarketChange", {}).get("fmt"),
+        percent_change=price_data.get("regularMarketChangePercent", {}).get("fmt"),
         five_days_return=format_return(performance_data.get("fiveDaysReturn")),
         one_month_return=format_return(performance_data.get("oneMonthReturn")),
         three_month_return=format_return(performance_data.get("threeMonthReturn")),
