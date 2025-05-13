@@ -22,7 +22,6 @@ class YahooFinanceClient(CurlFetchClient):
         self.session.cookies.update(cookies)
         self.crumb = crumb
 
-    # -------------------------------------------------------------------------
     async def _yahoo_request(self, url: str, **kw):
         kw.setdefault("params", {})["crumb"] = self.crumb
         kw.setdefault("headers", {})[
@@ -59,8 +58,6 @@ class YahooFinanceClient(CurlFetchClient):
                 detail=f"Failed to parse JSON response from {url}: {str(e)}"
             )
 
-    # ---------- public helpers ------------------------------------------------
-
     async def get_quote(self, symbol: str):
         """
         Fetch detailed quote summary data for a single symbol.
@@ -91,13 +88,13 @@ class YahooFinanceClient(CurlFetchClient):
             params={"interval": interval, "range": range_},
         )
 
-    async def search(self, query: str, quotes_count: int = 6, news_count: int = 4):
+    async def search(self, query: str, hits: int = 6):
         """
         Search for quotes and news.
         """
         return await self._json(
             "https://query1.finance.yahoo.com/v1/finance/search",
-            params={"q": query, "quotesCount": quotes_count, "newsCount": news_count},
+            params={"q": query, "quotesCount": hits},
         )
 
     async def get_similar_quotes(self, symbol: str, limit: int):
