@@ -9,14 +9,14 @@ from datetime import date
 from typing import Any, Optional, TypeVar, get_args, get_type_hints
 
 import orjson
-from aiohttp import ClientSession
 from pydantic import BaseModel
 from redis import RedisError
 
+from clients.fetch_client import CurlFetchClient
 from src.context import request_context
-from utils.market import MarketSchedule, MarketStatus
 from src.models import HistoricalData, MarketIndex, MarketMover, MarketSector, News, Quote, SimpleQuote
 from src.models.sector import MarketSectorDetails
+from utils.market import MarketSchedule, MarketStatus
 
 T = TypeVar("T")
 
@@ -177,8 +177,8 @@ def cache(
                 return await func(*args, **kwargs)
 
             # Build cache key from serializable args
-            filtered_args = [a for a in args if not isinstance(a, ClientSession)]
-            filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, ClientSession)}
+            filtered_args = [a for a in args if not isinstance(a, CurlFetchClient)]
+            filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, CurlFetchClient)}
             key_raw = orjson.dumps((filtered_args, filtered_kwargs))
             key = f"{func.__name__}:{hashlib.sha256(key_raw).hexdigest()}"
 
