@@ -52,76 +52,56 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
-from utils.constants import default_headers
 from utils.dependencies import (
     RedisClient,
-    YahooCookies,
-    YahooCrumb,
-    remove_proxy_whitelist,
-    setup_proxy_whitelist,
+    setup_proxy_whitelist, remove_proxy_whitelist, FinanceClient,
 )
-from utils.yahoo_auth import setup_yahoo_auth, cleanup_yahoo_auth
+from utils.yahoo_auth import YahooAuthManager
 
 load_dotenv()
+yahoo_auth_manager = YahooAuthManager()
+curl_session = requests.Session(impersonate="chrome")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    FastAPI lifespan context manager that handles setup and cleanup.
+    Creates shared resources (curl session, Redis, Yahoo auth) and
+    ensures they are cleaned up when the server stops.
     """
     await register_app(app)
-    redis = None
+
+    app.state.session = curl_session
+    app.state.yahoo_auth_manager = yahoo_auth_manager
+
     proxy_data = None
+    if os.getenv("PROXY_URL") and os.getenv("USE_PROXY", "False") == "True":
+        proxy_data = await setup_proxy_whitelist()
+        curl_session.proxies = {"http": os.getenv("PROXY_URL"),
+                                "https": os.getenv("PROXY_URL")}
 
-    # Set up curl_cffi session with Chrome impersonation
-    app.state.session = requests.Session(impersonate="chrome")
-    if default_headers:
-        for key, value in default_headers.items():
-            if value is not None:
-                app.state.session.headers[key] = value
+    # Redis (optional)
+    if os.getenv("REDIS_URL"):
+        redis = Redis.from_url(os.getenv("REDIS_URL"))
+        app.state.redis = redis
+        app.state.connection_manager = RedisConnectionManager(redis)
+    else:
+        redis = None
+        app.state.redis = None
+        app.state.connection_manager = ConnectionManager()
 
-    # Set up auth refresh configuration
-    app.state.auth_refresh_interval = 86400  # 24 hours in seconds
+    # Prime Yahoo auth once so the first user request is fast
+    await yahoo_auth_manager.refresh(proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None)
 
     try:
-        # Setup proxy if needed
-        if os.getenv("PROXY_TOKEN") and os.getenv("USE_PROXY", "False") == "True":
-            proxy_data = await setup_proxy_whitelist()
-            # Configure proxy for the curl_cffi session
-            if os.getenv("PROXY_URL"):
-                app.state.session.proxies = {
-                    "http": os.getenv("PROXY_URL"),
-                    "https": os.getenv("PROXY_URL")
-                }
-
-        # Setup Redis if configured
-        if os.getenv("REDIS_URL"):
-            redis = Redis.from_url(os.getenv("REDIS_URL"))
-            app.state.redis = redis
-            app.state.connection_manager = RedisConnectionManager(redis)
-        else:
-            app.state.redis = None
-            app.state.connection_manager = ConnectionManager()
-
-        # Setup Yahoo Finance authentication
-        await setup_yahoo_auth(app)
-
         yield
     finally:
-        app.state.connection_manager.close()
-
-        # Clean up Yahoo authentication
-        await cleanup_yahoo_auth(app)
-
-        # Clean up proxy configuration
-        await remove_proxy_whitelist(proxy_data)
-
-        # Clean up Redis
+        await cleanup_all_exit_stacks()
+        await app.state.connection_manager.close()
+        if proxy_data:
+            await remove_proxy_whitelist(proxy_data)
         if redis:
             redis.close()
-
-        await cleanup_all_exit_stacks()
 
 
 app = FastAPI(
