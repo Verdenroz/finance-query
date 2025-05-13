@@ -3,7 +3,7 @@ import asyncio
 from fastapi import HTTPException
 
 from utils.cache import cache
-from utils.dependencies import fetch
+from utils.dependencies import fetch, FinanceClient
 from src.models import MarketSector, MarketSectorDetails, Sector
 from src.services.sectors.fetchers import parse_sector, parse_sector_details
 from src.services.sectors.utils import get_yahoo_sector
@@ -43,17 +43,16 @@ async def get_sectors() -> list[MarketSector]:
 
 
 @cache(expire=60, market_closed_expire=600)
-async def get_sector_for_symbol(symbol: str, cookies: dict, crumb: str) -> MarketSector:
+async def get_sector_for_symbol(finance_client: FinanceClient, symbol: str) -> MarketSector:
     """
     Fetches and parses sector data for a specific stock symbol.
+    :param finance_client: The Yahoo Finance client to use for API requests
     :param symbol: the stock symbol
-    :param cookies: authentication cookies
-    :param crumb: authentication crumb
     :return: a single MarketSector object
 
     :raises HTTPException: with code 404 if the sector for the symbol is not found
     """
-    sector = await get_yahoo_sector(symbol, cookies, crumb)
+    sector = await get_yahoo_sector(finance_client, symbol)
     if not sector:
         raise HTTPException(status_code=404, detail=f"Sector for {symbol} not found.")
 

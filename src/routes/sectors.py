@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 
-from utils.dependencies import YahooCookies, YahooCrumb
 from src.models import ValidationErrorResponse
 from src.models.sector import MarketSector, MarketSectorDetails, Sector
 from src.services import get_sector_details, get_sector_for_symbol, get_sectors
+from utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -154,18 +154,17 @@ async def sectors():
     },
 )
 async def sector_by_symbol(
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
-    symbol: str,
+        finance_client: FinanceClient,
+        symbol: str,
 ):
-    return await get_sector_for_symbol(symbol, cookies, crumb)
+    return await get_sector_for_symbol(finance_client, symbol)
 
 
 @router.get(
     path="/sectors/details/{sector}",
     summary="Get a more comprehensive summary of an individual sector",
     description="Returns the quote's sector performance details, including its returns, market cap, market weight, "
-    "number of industries, number of companies, top industries, and top companies",
+                "number of industries, number of companies, top industries, and top companies",
     response_model=MarketSectorDetails,
     dependencies=[Security(APIKeyHeader(name="x-api-key", auto_error=False))],
     responses={
