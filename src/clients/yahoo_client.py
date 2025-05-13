@@ -37,6 +37,8 @@ class YahooFinanceClient(CurlFetchClient):
 
         if resp.status_code == 401:
             raise HTTPException(401, "Yahoo auth failed")
+        if resp.status_code == 404:
+            raise HTTPException(404, "Yahoo symbol not found")
         if resp.status_code == 429:
             raise HTTPException(429, "Yahoo rate-limit exceeded")
         if resp.status_code >= 400:
@@ -74,7 +76,10 @@ class YahooFinanceClient(CurlFetchClient):
         Fetch simplified quotes for multiple symbols in batch.
         """
         url = "https://query1.finance.yahoo.com/v7/finance/quote"
-        params = {"symbols": ",".join(symbols)}
+        params = {
+            "symbols": ",".join(symbols),
+            "modules": "assetProfile,price,summaryDetail,defaultKeyStatistics,calendarEvents,quoteUnadjustedPerformanceOverview"
+        }
         return await self._json(url, params=params)
 
     async def get_chart(self, symbol: str, interval: str, range_: str):
@@ -95,10 +100,11 @@ class YahooFinanceClient(CurlFetchClient):
             params={"q": query, "quotesCount": quotes_count, "newsCount": news_count},
         )
 
-    async def get_similar_quotes(self, symbol: str):
+    async def get_similar_quotes(self, symbol: str, limit: int):
         """
         Get similar quotes for a symbol.
         """
         return await self._json(
-            f"https://query2.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
+            f"https://query2.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}",
+            params={"count": limit}
         )

@@ -12,12 +12,15 @@ from redis import Redis
 from starlette.websockets import WebSocket
 
 from clients.fetch_client import CurlFetchClient
+from clients.yahoo_client import YahooFinanceClient
 from connections import ConnectionManager
 from src.connections import RedisConnectionManager
 from src.context import request_context
 from utils.constants import default_headers
 from utils.market import MarketSchedule
 from utils.yahoo_auth import YahooAuthManager
+
+Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
 
 
 @injectable
@@ -62,11 +65,22 @@ Session = Annotated[requests.Session, Depends(get_session)]
 
 
 @injectable
+async def get_proxy() -> str | None:
+    """
+    Return the proxy URL if set, otherwise None.
+    """
+    return os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None
+
+
+Proxy = Annotated[str | None, Depends(get_proxy)]
+
+
+@injectable
 async def get_fetch_client(
         session: Session,
+        proxy: Proxy,
 ) -> CurlFetchClient:
     """ Returns a fetch client from the shared session """
-    proxy = os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None
     return CurlFetchClient(
         session=session, proxy=proxy, default_headers=default_headers
     )
@@ -88,43 +102,39 @@ AuthManager = Annotated[YahooAuthManager, Depends(_get_auth_manager)]
 
 
 @injectable
-async def get_yahoo_cookies(mgr: AuthManager) -> dict:
-    """ Return current yahoo cookies, attempting refresh if not found """
-    if mgr.is_expired() or mgr.cookie is None:
-        await mgr.refresh_auth()
-    if mgr.cookie is None:
-        raise HTTPException(500, "Failed to obtain Yahoo cookies")
-    return mgr.cookie
+async def get_yahoo_auth(mgr: AuthManager) -> tuple[dict, str]:
+    """
+    Returns ``(cookies, crumb)``.  Serialises refreshes so that at most
+    one coroutine hits Yahoo at a time; subsequent concurrent calls get
+    the freshly cached pair.
+    """
+    cookies, crumb = await mgr.get_or_refresh(
+        proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None
+    )
+    return cookies, crumb
 
 
-@injectable
-async def get_yahoo_crumb(mgr: AuthManager) -> str:
-    """ Return current yahoo crumb, attempting refresh if not found """
-    if mgr.is_expired() or mgr.crumb is None:
-        await mgr.refresh_auth()
-    if mgr.crumb is None:
-        raise HTTPException(500, "Failed to obtain Yahoo crumb")
-    return mgr.crumb
+YahooAuth = Annotated[tuple[dict, str], Depends(get_yahoo_auth)]
 
-
-YahooCookies = Annotated[dict, Depends(get_yahoo_cookies)]
-YahooCrumb = Annotated[str, Depends(get_yahoo_crumb)]
-Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
-
+YahooCookies = Annotated[dict, Depends(get_yahoo_auth)]
+YahooCrumb = Annotated[str, Depends(get_yahoo_auth)]
 
 @injectable
-async def get_auth_data(
-        cookies: YahooCookies, crumb: YahooCrumb
-) -> dict:
-    """ Return current pair of cookie and crumb """
-    return {"cookies": cookies, "crumb": crumb}
+async def get_yahoo_finance_client(
+        auth: YahooAuth,
+        proxy: Proxy
+) -> CurlFetchClient:
+    """
+    Returns a YahooFinanceClient with the given auth and fetch client.
+    """
+    cookies, crumb = auth
+    return YahooFinanceClient(
+        cookies=cookies,
+        crumb=crumb,
+        proxy=proxy,
+    )
 
-
-@injectable
-async def refresh_yahoo_auth(manager: AuthManager) -> bool:
-    """ Quick util to force auth refresh """
-    return await manager.refresh_auth()
-
+FinanceClient = Annotated[YahooFinanceClient, Depends(get_yahoo_finance_client)]
 
 @injectable
 async def fetch(
