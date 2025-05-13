@@ -2,10 +2,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
+from utils.dependencies import FinanceClient
 
 from src.models import SearchResult, Type, ValidationErrorResponse
 from src.services import get_search
-from utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -57,9 +57,9 @@ router = APIRouter()
     },
 )
 async def search(
-        finance_client: FinanceClient,
-        query: str,
-        hits: int = Query(default=50, ge=1, le=100),
-        type: Optional[Type] = None,
+    finance_client: FinanceClient,
+    query: str,
+    hits: int = Query(default=50, ge=1, le=100),
+    type: Optional[Type] = None,
 ):
     return await get_search(finance_client, query, hits, type)

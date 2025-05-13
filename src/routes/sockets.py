@@ -4,9 +4,9 @@ from datetime import datetime
 import pytz
 from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
+from utils.dependencies import FinanceClient, Schedule, WebsocketConnectionManager
 
 from src.connections import ConnectionManager, RedisConnectionManager
-from utils.dependencies import FinanceClient, Schedule, WebsocketConnectionManager
 from src.models import MarketSector, SimpleQuote
 from src.security import validate_websocket
 from src.services import (

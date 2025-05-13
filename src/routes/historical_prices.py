@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
+from utils.dependencies import FinanceClient
 
 from src.models import HistoricalData, Interval, TimeRange, ValidationErrorResponse
 from src.services import get_historical
-from utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -32,7 +32,7 @@ router = APIRouter()
     },
 )
 async def get_time_series(
-        finance_client: FinanceClient,
+    finance_client: FinanceClient,
     symbol: str = Query(..., description="The symbol of the stock to get historical data for."),
     time_range: TimeRange = Query(..., description="The range of time for the historical data.", alias="range"),
     interval: Interval = Query(..., description="The interval for the historical data."),

@@ -3,7 +3,6 @@ from datetime import datetime
 
 import psutil
 from lxml import etree, html
-
 from utils.dependencies import get_logo
 
 # Initialize thread pool
@@ -56,7 +55,7 @@ def format_percent(value) -> str | None:
         return f"{raw * 100:.2f}%"
 
     # Bare numeric from quote endpoint (already in percent units)
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         return f"{value:.2f}%"
 
     # Already a string

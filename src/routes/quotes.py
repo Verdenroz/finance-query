@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
+from utils.dependencies import FinanceClient
 
 from src.models import Quote, SimpleQuote, ValidationErrorResponse
 from src.services import get_quotes, get_simple_quotes
-from utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -29,8 +29,8 @@ router = APIRouter()
     },
 )
 async def get_quote(
-        finance_client: FinanceClient,
-        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
+    finance_client: FinanceClient,
+    symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
     return await get_quotes(finance_client, symbols)
@@ -57,8 +57,8 @@ async def get_quote(
     },
 )
 async def get_simple_quote(
-        finance_client: FinanceClient,
-        symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
+    finance_client: FinanceClient,
+    symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
     return await get_simple_quotes(finance_client, symbols)

@@ -1,7 +1,7 @@
 from fastapi import HTTPException
 from lxml import etree
-
 from utils.dependencies import fetch
+
 from src.models import MarketMover
 
 

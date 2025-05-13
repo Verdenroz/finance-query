@@ -1,24 +1,22 @@
 import asyncio
 import os
-from typing import (
-    Annotated, Any, Dict, Optional, Union, cast, Literal
-)
+from typing import Annotated, Any, Literal, Optional, Union, cast
 from urllib.parse import urlparse
 
+from clients.fetch_client import CurlFetchClient
+from clients.yahoo_client import YahooFinanceClient
+from connections import ConnectionManager
 from curl_cffi import requests
 from fastapi import Depends, HTTPException, Request
 from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
-
-from clients.fetch_client import CurlFetchClient
-from clients.yahoo_client import YahooFinanceClient
-from connections import ConnectionManager
-from src.connections import RedisConnectionManager
-from src.context import request_context
 from utils.constants import default_headers
 from utils.market import MarketSchedule
 from utils.yahoo_auth import YahooAuthManager
+
+from src.connections import RedisConnectionManager
+from src.context import request_context
 
 Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
 
@@ -34,9 +32,9 @@ RequestContext = Annotated[Request | WebSocket, Depends(get_request_context)]
 
 @injectable
 async def get_connection_manager(
-        websocket: WebSocket,
+    websocket: WebSocket,
 ) -> RedisConnectionManager | ConnectionManager:
-    """ Return the current connection manager based on if redis is enabled """
+    """Return the current connection manager based on if redis is enabled"""
     return websocket.app.state.connection_manager
 
 
@@ -45,7 +43,7 @@ WebsocketConnectionManager = Annotated[RedisConnectionManager, ConnectionManager
 
 @injectable
 async def get_redis(request: RequestContext) -> Redis:
-    """ Return shared redis client """
+    """Return shared redis client"""
     return cast(Redis, request.app.state.redis)
 
 
@@ -77,13 +75,11 @@ Proxy = Annotated[str | None, Depends(get_proxy)]
 
 @injectable
 async def get_fetch_client(
-        session: Session,
-        proxy: Proxy,
+    session: Session,
+    proxy: Proxy,
 ) -> CurlFetchClient:
-    """ Returns a fetch client from the shared session """
-    return CurlFetchClient(
-        session=session, proxy=proxy, default_headers=default_headers
-    )
+    """Returns a fetch client from the shared session"""
+    return CurlFetchClient(session=session, proxy=proxy, default_headers=default_headers)
 
 
 FetchClient = Annotated[CurlFetchClient, Depends(get_fetch_client)]
@@ -91,7 +87,7 @@ FetchClient = Annotated[CurlFetchClient, Depends(get_fetch_client)]
 
 @injectable
 async def _get_auth_manager(req: RequestContext) -> YahooAuthManager:
-    """ Return the auth manager saved in lifespan """
+    """Return the auth manager saved in lifespan"""
     mgr = getattr(req.app.state, "yahoo_auth_manager", None)
     if mgr is None:
         raise HTTPException(500, "Yahoo auth manager not initialised")
@@ -108,9 +104,7 @@ async def get_yahoo_auth(mgr: AuthManager) -> tuple[dict, str]:
     one coroutine hits Yahoo at a time; subsequent concurrent calls get
     the freshly cached pair.
     """
-    cookies, crumb = await mgr.get_or_refresh(
-        proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None
-    )
+    cookies, crumb = await mgr.get_or_refresh(proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None)
     return cookies, crumb
 
 
@@ -119,11 +113,9 @@ YahooAuth = Annotated[tuple[dict, str], Depends(get_yahoo_auth)]
 YahooCookies = Annotated[dict, Depends(get_yahoo_auth)]
 YahooCrumb = Annotated[str, Depends(get_yahoo_auth)]
 
+
 @injectable
-async def get_yahoo_finance_client(
-        auth: YahooAuth,
-        proxy: Proxy
-) -> CurlFetchClient:
+async def get_yahoo_finance_client(auth: YahooAuth, proxy: Proxy) -> CurlFetchClient:
     """
     Returns a YahooFinanceClient with the given auth and fetch client.
     """
@@ -134,20 +126,22 @@ async def get_yahoo_finance_client(
         proxy=proxy,
     )
 
+
 FinanceClient = Annotated[YahooFinanceClient, Depends(get_yahoo_finance_client)]
+
 
 @injectable
 async def fetch(
-        client: FetchClient,
-        url: str = "",
-        method: Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"] = "GET",
-        params: Optional[Dict[str, Any]] = None,
-        data: Optional[Dict[str, Any]] = None,
-        headers: Optional[Dict[str, str]] = None,
-        *,
-        return_response: bool = False,
-        max_retries: int = 3,
-        retry_delay: float = 1.0,
+    client: FetchClient,
+    url: str = "",
+    method: Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"] = "GET",
+    params: Optional[dict[str, Any]] = None,
+    data: Optional[dict[str, Any]] = None,
+    headers: Optional[dict[str, str]] = None,
+    *,
+    return_response: bool = False,
+    max_retries: int = 3,
+    retry_delay: float = 1.0,
 ) -> Optional[Union[str, requests.Response]]:
     """
     A thin async wrapper that delegates to CurlFetchClient.fetch
@@ -165,14 +159,9 @@ async def fetch(
                 merged_headers[k] = str(v) if not isinstance(v, str) else v
 
     if "Referer" not in merged_headers:
-        merged_headers["Referer"] = (
-            "https://finance.yahoo.com/"
-            if "yahoo.com" in url
-            else "https://www.google.com/"
-        )
+        merged_headers["Referer"] = "https://finance.yahoo.com/" if "yahoo.com" in url else "https://www.google.com/"
 
     # Basic retry loop (exponential back-off)
-    last_exc: Exception | None = None
     for attempt in range(max_retries):
         try:
             return await client.fetch(
@@ -185,9 +174,8 @@ async def fetch(
             )
         except Exception as exc:
             print(f"Attempt {attempt + 1} failed: {exc}, {str(exc)}")
-            last_exc = exc
             if attempt < max_retries - 1:
-                await asyncio.sleep(retry_delay * 2 ** attempt)
+                await asyncio.sleep(retry_delay * 2**attempt)
             else:
                 raise HTTPException(
                     500,
@@ -198,10 +186,10 @@ async def fetch(
 
 @injectable
 async def get_logo(
-        client: FetchClient,
-        *,
-        symbol: str = "",
-        url: str | None = None,
+    client: FetchClient,
+    *,
+    symbol: str = "",
+    url: str | None = None,
 ) -> str | None:
     """
     Try logo.dev with the ticker first, fall back to domain icon.

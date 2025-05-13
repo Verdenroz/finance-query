@@ -1,5 +1,5 @@
 import asyncio
-from typing import Optional, Dict, Any, Literal
+from typing import Any, Literal, Optional
 
 from curl_cffi import requests
 from fastapi import HTTPException
@@ -14,12 +14,12 @@ class CurlFetchClient:
     """
 
     def __init__(
-            self,
-            *,
-            session: Optional[requests.Session] = None,
-            timeout: int = DEFAULT_TIMEOUT,
-            proxy: Optional[str] = None,
-            default_headers: Optional[Dict[str, str]] = None,
+        self,
+        *,
+        session: Optional[requests.Session] = None,
+        timeout: int = DEFAULT_TIMEOUT,
+        proxy: Optional[str] = None,
+        default_headers: Optional[dict[str, str]] = None,
     ) -> None:
         self.session = session or requests.Session(impersonate="chrome")
         self.timeout = timeout
@@ -28,13 +28,13 @@ class CurlFetchClient:
             self.session.proxies = {"http": proxy, "https": proxy}
 
     def request(
-            self,
-            url: str,
-            method: Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"] = "GET",
-            *,
-            params: Dict[str, Any] | None = None,
-            data: Dict[str, Any] | None = None,
-            headers: Dict[str, str] | None = None,
+        self,
+        url: str,
+        method: Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"] = "GET",
+        *,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
     ) -> requests.Response:
         """
         Synchronous wrapper for the request method.
@@ -62,14 +62,14 @@ class CurlFetchClient:
             raise HTTPException(500, f"HTTP request failed: {exc}") from exc
 
     async def fetch(
-            self,
-            url: str,
-            method: Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"] = "GET",
-            *,
-            params: Dict[str, Any] | None = None,
-            data: Dict[str, Any] | None = None,
-            headers: Dict[str, str] | None = None,
-            return_response: bool = False,
+        self,
+        url: str,
+        method: Literal["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "TRACE", "PATCH", "QUERY"] = "GET",
+        *,
+        params: dict[str, Any] | None = None,
+        data: dict[str, Any] | None = None,
+        headers: dict[str, str] | None = None,
+        return_response: bool = False,
     ):
         """
         Asynchronous wrapper for the request method.
@@ -82,7 +82,5 @@ class CurlFetchClient:
 
         :return: the response text or the response object.
         """
-        resp: requests.Response = await asyncio.to_thread(
-            self.request, url, method=method, params=params, data=data, headers=headers
-        )
+        resp: requests.Response = await asyncio.to_thread(self.request, url, method=method, params=params, data=data, headers=headers)
         return resp if return_response else resp.text

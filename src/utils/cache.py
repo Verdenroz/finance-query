@@ -9,14 +9,14 @@ from datetime import date
 from typing import Any, Optional, TypeVar, get_args, get_type_hints
 
 import orjson
+from clients.fetch_client import CurlFetchClient
 from pydantic import BaseModel
 from redis import RedisError
+from utils.market import MarketSchedule, MarketStatus
 
-from clients.fetch_client import CurlFetchClient
 from src.context import request_context
 from src.models import HistoricalData, MarketIndex, MarketMover, MarketSector, News, Quote, SimpleQuote
 from src.models.sector import MarketSectorDetails
-from utils.market import MarketSchedule, MarketStatus
 
 T = TypeVar("T")
 

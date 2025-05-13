@@ -1,6 +1,7 @@
+from utils.dependencies import FinanceClient
+
 from src.models import SearchResult, Type
 from src.services.search.fetchers import fetch_algolia_search_results, fetch_yahoo_search_results
-from utils.dependencies import FinanceClient
 
 
 async def get_search(finance_client: FinanceClient, query: str, hits: int = 10, type: Type = None) -> list[SearchResult]:

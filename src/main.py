@@ -16,6 +16,13 @@ from mangum import Mangum
 from redis import Redis
 from starlette import status
 from starlette.responses import JSONResponse, Response
+from utils.dependencies import (
+    FinanceClient,
+    RedisClient,
+    remove_proxy_whitelist,
+    setup_proxy_whitelist,
+)
+from utils.yahoo_auth import YahooAuthManager
 
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import RequestContextMiddleware
@@ -52,11 +59,6 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
-from utils.dependencies import (
-    RedisClient,
-    setup_proxy_whitelist, remove_proxy_whitelist, FinanceClient,
-)
-from utils.yahoo_auth import YahooAuthManager
 
 load_dotenv()
 yahoo_auth_manager = YahooAuthManager()
@@ -77,8 +79,7 @@ async def lifespan(app: FastAPI):
     proxy_data = None
     if os.getenv("PROXY_URL") and os.getenv("USE_PROXY", "False") == "True":
         proxy_data = await setup_proxy_whitelist()
-        curl_session.proxies = {"http": os.getenv("PROXY_URL"),
-                                "https": os.getenv("PROXY_URL")}
+        curl_session.proxies = {"http": os.getenv("PROXY_URL"), "https": os.getenv("PROXY_URL")}
 
     # Redis (optional)
     if os.getenv("REDIS_URL"):

@@ -3,7 +3,6 @@ from datetime import datetime, time
 import pytest
 import pytz
 from freezegun import freeze_time
-
 from utils.market import MarketSchedule, MarketStatus
 
 

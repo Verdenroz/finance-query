@@ -2,10 +2,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
+from utils.dependencies import FinanceClient
 
 from src.models import INDEX_REGIONS, Index, MarketIndex, Region
 from src.services import get_indices
-from utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -21,9 +21,9 @@ router = APIRouter()
     },
 )
 async def market_indices(
-        finance_client: FinanceClient,
-        index: Annotated[list[Index] | None, Query(description="Specific indices to include")] = None,
-        region: Annotated[Region | None, Query(description="Filter indices by region")] = None,
+    finance_client: FinanceClient,
+    index: Annotated[list[Index] | None, Query(description="Specific indices to include")] = None,
+    region: Annotated[Region | None, Query(description="Filter indices by region")] = None,
 ) -> list[MarketIndex]:
     selected_indices = set(index or [])
     # Add indices from selected region to the set

@@ -1,5 +1,6 @@
 import asyncio
-from typing import List
+
+from utils.dependencies import FinanceClient, get_logo
 
 from src.models import Quote, SimpleQuote
 from src.services.quotes.utils import (
@@ -13,16 +14,12 @@ from src.services.quotes.utils import (
     is_within_post_market_time,
     is_within_pre_market_time,
 )
-from utils.dependencies import get_logo, FinanceClient
 
 
-async def fetch_quotes(
-        finance_client: FinanceClient,
-        symbols: List[str]
-) -> List[Quote]:
+async def fetch_quotes(finance_client: FinanceClient, symbols: list[str]) -> list[Quote]:
     """Fetch quotes using Yahoo Finance API"""
     chunk_size = get_adaptive_chunk_size()
-    chunks = [symbols[i:i + chunk_size] for i in range(0, len(symbols), chunk_size)]
+    chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
     # Process each chunk in parallel
     all_quotes_tasks = []
@@ -38,10 +35,7 @@ async def fetch_quotes(
     return [quote for quotes in all_quotes for quote in quotes]
 
 
-async def fetch_simple_quotes(
-        finance_client: FinanceClient,
-        symbols: List[str]
-) -> List[SimpleQuote]:
+async def fetch_simple_quotes(finance_client: FinanceClient, symbols: list[str]) -> list[SimpleQuote]:
     """Fetch simplified quotes for multiple symbols in batch."""
     # Get batch response for all symbols
     batch_data = await finance_client.get_simple_quotes(symbols)
@@ -62,19 +56,11 @@ async def _get_quote_from_yahoo(finance_client: FinanceClient, symbol: str) -> Q
 
 
 async def _parse_simple_quote(quote_data: dict) -> SimpleQuote:
-    pre_market_price = (
-        get_fmt(quote_data, "preMarketPrice")
-        if is_within_pre_market_time(quote_data.get("preMarketTime", 0))
-        else None
-    )
-    post_market_price = (
-        get_fmt(quote_data, "postMarketPrice")
-        if is_within_post_market_time(quote_data.get("postMarketTime", 0))
-        else None
-    )
+    pre_market_price = get_fmt(quote_data, "preMarketPrice") if is_within_pre_market_time(quote_data.get("preMarketTime", 0)) else None
+    post_market_price = get_fmt(quote_data, "postMarketPrice") if is_within_post_market_time(quote_data.get("postMarketTime", 0)) else None
 
     def _to_str(val):
-        return f"{val:.2f}" if isinstance(val, (int, float)) else val
+        return f"{val:.2f}" if isinstance(val, int | float) else val
 
     price = _to_str(get_fmt(quote_data, "regularMarketPrice"))
     pre_market_price = _to_str(pre_market_price)
@@ -82,7 +68,7 @@ async def _parse_simple_quote(quote_data: dict) -> SimpleQuote:
 
     # regular change
     raw_change = get_fmt(quote_data, "regularMarketChange")
-    if isinstance(raw_change, (int, float)):
+    if isinstance(raw_change, int | float):
         raw_change = f"{raw_change:.2f}"
 
     percent_change = format_percent(quote_data.get("regularMarketChangePercent"))

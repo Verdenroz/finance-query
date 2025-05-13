@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Optional
 
 from fastapi import HTTPException
 from orjson import orjson
@@ -12,11 +12,11 @@ class YahooFinanceClient(CurlFetchClient):
     """
 
     def __init__(
-            self,
-            cookies: Dict[str, str],
-            crumb: str,
-            proxy: Optional[str] = None,
-            timeout: int = 10,
+        self,
+        cookies: dict[str, str],
+        crumb: str,
+        proxy: Optional[str] = None,
+        timeout: int = 10,
     ):
         super().__init__(timeout=timeout, proxy=proxy)
         self.session.cookies.update(cookies)
@@ -25,7 +25,8 @@ class YahooFinanceClient(CurlFetchClient):
     async def _yahoo_request(self, url: str, **kw):
         kw.setdefault("params", {})["crumb"] = self.crumb
         kw.setdefault("headers", {})[
-            "User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
+            "User-Agent"
+        ] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
 
         # Ensure cookies are properly formatted if they're provided as a dictionary
         if "cookies" in kw and isinstance(kw["cookies"], dict):
@@ -53,10 +54,7 @@ class YahooFinanceClient(CurlFetchClient):
             return orjson.loads(resp.text)
         except Exception as e:
             # If parsing fails, raise a more informative exception
-            raise HTTPException(
-                status_code=500,
-                detail=f"Failed to parse JSON response from {url}: {str(e)}"
-            )
+            raise HTTPException(status_code=500, detail=f"Failed to parse JSON response from {url}: {str(e)}") from e
 
     async def get_quote(self, symbol: str):
         """
@@ -68,14 +66,14 @@ class YahooFinanceClient(CurlFetchClient):
         }
         return await self._json(summary_url, params=summary_params)
 
-    async def get_simple_quotes(self, symbols: List[str]):
+    async def get_simple_quotes(self, symbols: list[str]):
         """
         Fetch simplified quotes for multiple symbols in batch.
         """
         url = "https://query1.finance.yahoo.com/v7/finance/quote"
         params = {
             "symbols": ",".join(symbols),
-            "modules": "assetProfile,price,summaryDetail,defaultKeyStatistics,calendarEvents,quoteUnadjustedPerformanceOverview"
+            "modules": "assetProfile,price,summaryDetail,defaultKeyStatistics,calendarEvents,quoteUnadjustedPerformanceOverview",
         }
         return await self._json(url, params=params)
 
@@ -101,7 +99,4 @@ class YahooFinanceClient(CurlFetchClient):
         """
         Get similar quotes for a symbol.
         """
-        return await self._json(
-            f"https://query2.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}",
-            params={"count": limit}
-        )
+        return await self._json(f"https://query2.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}", params={"count": limit})

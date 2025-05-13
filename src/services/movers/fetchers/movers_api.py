@@ -1,6 +1,6 @@
 from orjson import orjson
-
 from utils.dependencies import fetch
+
 from src.models import MarketMover
 
 

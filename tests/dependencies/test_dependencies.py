@@ -4,9 +4,6 @@ import pytest
 from aiohttp import ClientError, ClientPayloadError, ClientSession
 from fastapi import FastAPI, HTTPException
 from starlette.websockets import WebSocket
-
-from src.connections import RedisConnectionManager
-from src.context import request_context
 from utils.dependencies import (
     fetch,
     get_auth_data,
@@ -19,6 +16,9 @@ from utils.dependencies import (
     remove_proxy_whitelist,
     setup_proxy_whitelist,
 )
+
+from src.connections import RedisConnectionManager
+from src.context import request_context
 
 
 class TestDependencies:

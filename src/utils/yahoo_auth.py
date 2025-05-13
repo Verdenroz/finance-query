@@ -1,13 +1,14 @@
 import asyncio
 import datetime as dt
 import re
-from typing import Dict, Optional, Tuple
+from typing import Optional
 
 from curl_cffi import requests
 
 
 class YahooAuthError(RuntimeError):
     """Raised when we fail to obtain a valid cookie + crumb pair."""
+
     pass
 
 
@@ -26,7 +27,7 @@ class YahooAuthManager:
 
     def __init__(self) -> None:
         self._crumb: Optional[str] = None
-        self._cookie: Optional[Dict[str, str]] = None
+        self._cookie: Optional[dict[str, str]] = None
         self._last_update: Optional[dt.datetime] = None
         self._lock = asyncio.Lock()
 
@@ -35,7 +36,7 @@ class YahooAuthManager:
         return self._crumb
 
     @property
-    def cookie(self) -> Dict[str, str] | None:
+    def cookie(self) -> dict[str, str] | None:
         return self._cookie
 
     @property
@@ -62,9 +63,7 @@ class YahooAuthManager:
 
         if not crumb or "<html" in crumb:
             # fallback to csrf token method
-            csrf_token, session_id = self._extract_csrf(
-                session.get("https://guce.yahoo.com/consent", timeout=10).text
-            )
+            csrf_token, session_id = self._extract_csrf(session.get("https://guce.yahoo.com/consent", timeout=10).text)
             if not csrf_token or not session_id:
                 raise YahooAuthError("Failed to extract CSRF token and session id")
 
@@ -88,9 +87,7 @@ class YahooAuthManager:
                 timeout=10,
             )
 
-            crumb = session.get(
-                "https://query2.finance.yahoo.com/v1/test/getcrumb", timeout=10
-            ).text.strip()
+            crumb = session.get("https://query2.finance.yahoo.com/v1/test/getcrumb", timeout=10).text.strip()
 
             if not crumb or "<html" in crumb:
                 raise YahooAuthError("Yahoo returned an invalid crumb")
@@ -101,8 +98,8 @@ class YahooAuthManager:
         self._last_update = dt.datetime.utcnow()
 
     @staticmethod
-    def _extract_csrf(html: str) -> Tuple[Optional[str], Optional[str]]:
-        """ Extract CSRF token and session ID from the HTML response."""
+    def _extract_csrf(html: str) -> tuple[Optional[str], Optional[str]]:
+        """Extract CSRF token and session ID from the HTML response."""
         csrf_match = re.search(r'name="csrfToken"[^>]*value="([^"]+)"', html)
         sess_match = re.search(r'name="sessionId"[^>]*value="([^"]+)"', html)
         return (
@@ -110,7 +107,7 @@ class YahooAuthManager:
             sess_match.group(1) if sess_match else None,
         )
 
-    async def get_or_refresh(self, proxy: str | None = None) -> Tuple[Dict, str]:
+    async def get_or_refresh(self, proxy: str | None = None) -> tuple[dict, str]:
         """
         Return a valid cookie/crumb pair, refreshing if necessary.
 
@@ -119,11 +116,10 @@ class YahooAuthManager:
         """
         async with self._lock:
             if (
-                    self._cookie is None
-                    or self._crumb is None
-                    or self._last_update is None
-                    or (dt.datetime.utcnow() - self._last_update).total_seconds()
-                    > self._MIN_REFRESH_INTERVAL
+                self._cookie is None
+                or self._crumb is None
+                or self._last_update is None
+                or (dt.datetime.utcnow() - self._last_update).total_seconds() > self._MIN_REFRESH_INTERVAL
             ):
                 await self.refresh(proxy)
             # guaranteed non-None here

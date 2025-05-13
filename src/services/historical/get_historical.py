@@ -1,15 +1,16 @@
 import pandas as pd
 from fastapi import HTTPException
 from orjson import orjson
-
-from src.models import HistoricalData, Interval, TimeRange
 from utils.cache import cache
 from utils.dependencies import FinanceClient
 
+from src.models import HistoricalData, Interval, TimeRange
+
 
 @cache(expire=60, market_closed_expire=600)
-async def get_historical(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict[
-    str, HistoricalData]:
+async def get_historical(
+    finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False
+) -> dict[str, HistoricalData]:
     """
     Get historical data for a stock symbol based on the time period and interval provided.
     :param finance_client: the finance client to use for fetching data

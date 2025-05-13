@@ -1,7 +1,8 @@
 from typing import Optional
 
-from src.models import SearchResult, Type
 from utils.dependencies import FinanceClient
+
+from src.models import SearchResult, Type
 
 
 async def fetch_yahoo_search_results(finance_client: FinanceClient, query: str, hits: int, type: Optional[Type]) -> list[SearchResult]:

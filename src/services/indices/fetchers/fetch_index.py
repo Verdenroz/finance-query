@@ -1,11 +1,12 @@
-from src.services.quotes.get_quotes import get_quotes
-from src.models.index import Index, MarketIndex
 from utils.dependencies import FinanceClient
+
+from src.models.index import Index, MarketIndex
+from src.services.quotes.get_quotes import get_quotes
 
 
 async def fetch_index(
-        finance_client: FinanceClient,
-        index: Index,
+    finance_client: FinanceClient,
+    index: Index,
 ) -> MarketIndex:
     """
     Try the rich quote-summary endpoint first; on any failure fall back to
@@ -50,12 +51,7 @@ async def fetch_index(
         )
 
     # If all else fails, create a minimal MarketIndex with just the name
-    return MarketIndex(
-        name=index.value,
-        value=0.0,
-        change="",
-        percent_change=""
-    )
+    return MarketIndex(name=index.value, value=0.0, change="", percent_change="")
 
 
 def _get_yahoo_index_symbol(index: Index) -> str:
