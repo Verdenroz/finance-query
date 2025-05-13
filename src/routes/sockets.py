@@ -6,7 +6,7 @@ from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
 from src.connections import ConnectionManager, RedisConnectionManager
-from utils.dependencies import Schedule, WebsocketConnectionManager, YahooCookies, YahooCrumb
+from utils.dependencies import FinanceClient, Schedule, WebsocketConnectionManager
 from src.models import MarketSector, SimpleQuote
 from src.security import validate_websocket
 from src.services import (
@@ -111,16 +111,15 @@ async def websocket_profile(
     websocket: WebSocket,
     symbol: str,
     connection_manager: WebsocketConnectionManager,
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
+    finance_client: FinanceClient,
 ):
     async def get_profile():
         """
         Fetches the profile data for a symbol.
         """
-        quotes_task = get_quotes([symbol], cookies, crumb)
-        similar_quotes_task = get_similar_quotes(symbol, cookies, crumb)
-        sector_performance_task = get_sector_for_symbol(symbol, cookies, crumb)
+        quotes_task = get_quotes(finance_client, [symbol])
+        similar_quotes_task = get_similar_quotes(finance_client, symbol)
+        sector_performance_task = get_sector_for_symbol(finance_client, symbol)
         news_task = scrape_news_for_quote(symbol)
 
         quotes, similar_quotes, sector_performance, news = await asyncio.gather(
@@ -146,8 +145,7 @@ async def websocket_profile(
 async def websocket_quotes(
     websocket: WebSocket,
     connection_manager: WebsocketConnectionManager,
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
+    finance_client: FinanceClient,
 ):
     is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
@@ -161,7 +159,7 @@ async def websocket_quotes(
             """
             Fetches quotes for a list of symbols.
             """
-            result = await get_simple_quotes(symbols, cookies, crumb)
+            result = await get_simple_quotes(finance_client, symbols)
             quotes = []
             for quote in result:
                 if not isinstance(quote, SimpleQuote):
@@ -230,8 +228,7 @@ async def websocket_quotes(
 async def websocket_market(
     websocket: WebSocket,
     connection_manager: WebsocketConnectionManager,
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
+    finance_client: FinanceClient,
 ):
     async def get_market_info():
         """
@@ -240,7 +237,7 @@ async def websocket_market(
         actives_task = get_actives()
         gainers_task = get_gainers()
         losers_task = get_losers()
-        indices_task = get_indices(cookies, crumb)
+        indices_task = get_indices(finance_client)
         news_task = scrape_general_news()
         sectors_task = get_sectors()
 

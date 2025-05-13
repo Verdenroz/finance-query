@@ -6,26 +6,24 @@ from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from orjson import orjson
 
-from models import SimpleQuote
-from utils.dependencies import YahooCookies, YahooCrumb
 from src.models import ValidationErrorResponse
 from src.services import get_simple_quotes
+from utils.dependencies import FinanceClient
 
 router = APIRouter()
 
 
-async def quotes_generator(symbols: list[str], cookies: dict, crumb: str) -> AsyncGenerator[str, None]:
+async def quotes_generator(finance_client: FinanceClient, symbols: list[str]) -> AsyncGenerator[str, None]:
     """
     Stream simplified quotes by SSE (Server Sent Events) for the given symbols every 10 seconds
     Data is sent in the format of "quote: {json_data}\n\n"
+    :param finance_client: The Yahoo Finance client to use for API requests
     :param symbols: the list of stock symbols
-    :param cookies: authentication cookies for Yahoo Finance
-    :param crumb: authentication crumb for Yahoo Finance
 
     :return: AsyncGenerator yielding the quotes in the format of "quote: {json_data}\n\n"
     """
     while True:
-        quotes = await get_simple_quotes(symbols, cookies, crumb)
+        quotes = await get_simple_quotes(finance_client, symbols)
         quotes = [quote if isinstance(quote, dict) else quote.model_dump(by_alias=True, exclude_none=True) for quote in quotes]
         data = orjson.dumps(quotes).decode("utf-8")
         yield f"quote: {data}\n\n"
@@ -61,9 +59,8 @@ async def quotes_generator(symbols: list[str], cookies: dict, crumb: str) -> Asy
     },
 )
 async def stream_quotes(
-        cookies: YahooCookies,
-        crumb: YahooCrumb,
+        finance_client: FinanceClient,
         symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
-    return StreamingResponse(quotes_generator(symbols, cookies, crumb), media_type="text/event-stream")
+    return StreamingResponse(quotes_generator(finance_client, symbols), media_type="text/event-stream")
