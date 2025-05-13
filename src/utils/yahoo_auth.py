@@ -1,205 +1,130 @@
 import asyncio
-import datetime
-import os
+import datetime as dt
 import re
-import threading
 from typing import Dict, Optional, Tuple
 
 from curl_cffi import requests
 
 
+class YahooAuthError(RuntimeError):
+    """Raised when we fail to obtain a valid cookie + crumb pair."""
+    pass
+
+
 class YahooAuthManager:
     """
-    Manager for Yahoo Finance authentication (cookies and crumb)
+    Fetches and caches Yahoo Finance auth (cookie jar + crumb).
+
+    A single instance is created at app start and stored on ``app.state``.
+    Every request that needs Yahoo data calls :func:`get_yahoo_auth` in
+    ``dependencies.py`` which, under an *asyncio* lock, either returns the
+    still-fresh pair or calls :meth:`refresh`.
     """
 
-    def __init__(self, refresh_interval: int = 86400):
-        """
-        Initialize Yahoo authentication manager
+    # How many seconds we keep using an existing pair before refreshing
+    _MIN_REFRESH_INTERVAL = 30
 
-        Args:
-            refresh_interval: Auth refresh interval in seconds (default: 24 hours)
-        """
-        self._crumb = None
-        self._cookie = None
-        self._last_update = None
-        self._lock = threading.Lock()
-        self._refresh_interval = refresh_interval
-        self._refresh_task = None
+    def __init__(self) -> None:
+        self._crumb: Optional[str] = None
+        self._cookie: Optional[Dict[str, str]] = None
+        self._last_update: Optional[dt.datetime] = None
+        self._lock = asyncio.Lock()
 
     @property
-    def crumb(self) -> Optional[str]:
+    def crumb(self) -> str | None:
         return self._crumb
 
     @property
-    def cookie(self) -> Optional[Dict]:
+    def cookie(self) -> Dict[str, str] | None:
         return self._cookie
 
     @property
-    def last_update(self) -> Optional[datetime.datetime]:
+    def last_update(self) -> dt.datetime | None:
         return self._last_update
 
-    def update(self, crumb: str, cookie: Dict) -> None:
-        """Update authentication data"""
-        with self._lock:
-            print(f"Updating Yahoo auth data: Crumb:{crumb}, Cookie:{cookie}")
-            self._crumb = crumb
-            self._cookie = cookie
-            self._last_update = datetime.datetime.now()
-
-    def is_expired(self) -> bool:
-        """Check if the cached auth data is expired"""
-        if self._last_update is None:
-            return True
-        delta = datetime.datetime.now() - self._last_update
-        return delta.total_seconds() > self._refresh_interval
-
-    async def start_refresh_task(self):
-        """Start background task to refresh auth periodically"""
-        if self._refresh_task is not None:
-            # Cancel existing task if it's running
-            self._refresh_task.cancel()
-            try:
-                await self._refresh_task
-            except asyncio.CancelledError:
-                pass
-
-        # Start new refresh task
-        self._refresh_task = asyncio.create_task(self._refresh_loop())
-
-    async def _refresh_loop(self):
-        """Background task to refresh auth periodically"""
-        while True:
-            try:
-                await asyncio.sleep(self._refresh_interval)
-                await self.refresh_auth()
-            except asyncio.CancelledError:
-                break
-            except Exception as e:
-                print(f"Error refreshing Yahoo auth: {str(e)}")
-                # Shorter retry interval on failure
-                await asyncio.sleep(300)  # 5 minutes
-
-    async def shutdown(self):
-        """Shut down the refresh task"""
-        if self._refresh_task:
-            self._refresh_task.cancel()
-            try:
-                await self._refresh_task
-            except asyncio.CancelledError:
-                pass
-
-    def _get_csrf_token_regex(self, html_content: str) -> Tuple[Optional[str], Optional[str]]:
-        """Extract CSRF token and session ID using regex """
-        csrf_match = re.search(r'<input[^>]*name="csrfToken"[^>]*value="([^"]*)"', html_content)
-        session_match = re.search(r'<input[^>]*name="sessionId"[^>]*value="([^"]*)"', html_content)
-
-        csrf_token = csrf_match.group(1) if csrf_match else None
-        session_id = session_match.group(1) if session_match else None
-
-        return csrf_token, session_id
-
-    async def refresh_auth(self, proxy: Optional[str] = None) -> bool:
+    async def refresh(self, proxy: str | None = None) -> None:
         """
-        Refresh Yahoo Finance authentication
+        Always fetch a *new* cookie/crumb pair and cache it.
 
-        Args:
-            proxy: Optional proxy URL
-
-        Returns:
-            Success status (True/False)
+        Must be executed under ``self._lock`` by the caller.
+        Raises :class:`YahooAuthError` on failure.
         """
-        # Don't use asyncio here as curl_cffi is already non-blocking
-        try:
-            # Use context manager to ensure proper cleanup
-            session = requests.Session(impersonate="chrome")
+        session = requests.Session(impersonate="chrome")
+        if proxy:
+            session.proxies = {"http": proxy, "https": proxy}
 
-            if proxy:
-                session.proxies = {"http": proxy, "https": proxy}
+        session.get("https://fc.yahoo.com", timeout=10, allow_redirects=True)
+        crumb = session.get(
+            "https://query1.finance.yahoo.com/v1/test/getcrumb",
+            timeout=10,
+            allow_redirects=True,
+        ).text.strip()
 
-            # Try basic strategy first (usually works and is simpler)
-            # Get cookies
-            session.get(
-                url='https://fc.yahoo.com',
-                timeout=10,
-                allow_redirects=True
+        if not crumb or "<html" in crumb:
+            # fallback to csrf token method
+            csrf_token, session_id = self._extract_csrf(
+                session.get("https://guce.yahoo.com/consent", timeout=10).text
             )
-
-            # Get crumb using cookies
-            crumb_response = session.get(
-                url="https://query1.finance.yahoo.com/v1/test/getcrumb",
-                timeout=10,
-                allow_redirects=True
-            )
-
-            crumb = crumb_response.text
-
-            if crumb and '<html>' not in crumb and crumb.strip():
-                self.update(crumb, dict(session.cookies))
-                return True
-
-            # Basic strategy failed, try CSRF strategy
-            response = session.get(
-                url='https://guce.yahoo.com/consent',
-                timeout=10
-            )
-
-            # Extract CSRF token and session ID using regex
-            csrf_token, session_id = self._get_csrf_token_regex(response.text)
-
             if not csrf_token or not session_id:
-                return False
+                raise YahooAuthError("Failed to extract CSRF token and session id")
 
             data = {
-                'agree': ['agree', 'agree'],
-                'consentUUID': 'default',
-                'sessionId': session_id,
-                'csrfToken': csrf_token,
-                'originalDoneUrl': 'https://finance.yahoo.com/',
-                'namespace': 'yahoo',
+                "agree": ["agree", "agree"],
+                "consentUUID": "default",
+                "sessionId": session_id,
+                "csrfToken": csrf_token,
+                "originalDoneUrl": "https://finance.yahoo.com/",
+                "namespace": "yahoo",
             }
 
             session.post(
-                url=f'https://consent.yahoo.com/v2/collectConsent?sessionId={session_id}',
+                f"https://consent.yahoo.com/v2/collectConsent?sessionId={session_id}",
                 data=data,
-                timeout=10
+                timeout=10,
             )
-
             session.get(
-                url=f'https://guce.yahoo.com/copyConsent?sessionId={session_id}',
+                f"https://guce.yahoo.com/copyConsent?sessionId={session_id}",
                 data=data,
-                timeout=10
+                timeout=10,
             )
 
-            crumb_response = session.get(
-                url='https://query2.finance.yahoo.com/v1/test/getcrumb',
-                timeout=10
-            )
+            crumb = session.get(
+                "https://query2.finance.yahoo.com/v1/test/getcrumb", timeout=10
+            ).text.strip()
 
-            crumb = crumb_response.text
+            if not crumb or "<html" in crumb:
+                raise YahooAuthError("Yahoo returned an invalid crumb")
 
-            if not crumb or '<html>' in crumb or crumb == '':
-                return False
+        # Successfully obtained a cookie/crumb pair
+        self._crumb = crumb
+        self._cookie = dict(session.cookies)
+        self._last_update = dt.datetime.utcnow()
 
-            self.update(crumb, dict(session.cookies))
-            return True
+    @staticmethod
+    def _extract_csrf(html: str) -> Tuple[Optional[str], Optional[str]]:
+        """ Extract CSRF token and session ID from the HTML response."""
+        csrf_match = re.search(r'name="csrfToken"[^>]*value="([^"]+)"', html)
+        sess_match = re.search(r'name="sessionId"[^>]*value="([^"]+)"', html)
+        return (
+            csrf_match.group(1) if csrf_match else None,
+            sess_match.group(1) if sess_match else None,
+        )
 
-        except Exception as e:
-            print(f"Yahoo auth refresh error: {str(e)}")
-            return False
+    async def get_or_refresh(self, proxy: str | None = None) -> Tuple[Dict, str]:
+        """
+        Return a valid cookie/crumb pair, refreshing if necessary.
 
-
-async def setup_yahoo_auth(app) -> None:
-    """Create `YahooAuthManager`, stash it on `app.state`, start auto‑refresh."""
-    mgr = YahooAuthManager(refresh_interval=getattr(app.state, "auth_refresh_interval", 86_400))
-    proxy = os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None
-    await mgr.refresh_auth(proxy)  # prime the cache
-    app.state.yahoo_auth_manager = mgr
-    await mgr.start_refresh_task()
-
-
-async def cleanup_yahoo_auth(app) -> None:
-    """Shut the background refresh loop down cleanly."""
-    mgr: YahooAuthManager | None = getattr(app.state, "yahoo_auth_manager", None)
-    if mgr:
-        await mgr.shutdown()
+        Ensures at most one concurrent refresh and throttles to one refresh
+        every ``_MIN_REFRESH_INTERVAL`` seconds.
+        """
+        async with self._lock:
+            if (
+                    self._cookie is None
+                    or self._crumb is None
+                    or self._last_update is None
+                    or (dt.datetime.utcnow() - self._last_update).total_seconds()
+                    > self._MIN_REFRESH_INTERVAL
+            ):
+                await self.refresh(proxy)
+            # guaranteed non-None here
+            return self._cookie, self._crumb
