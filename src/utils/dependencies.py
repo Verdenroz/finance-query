@@ -11,7 +11,6 @@ from fastapi import Depends, HTTPException, Request
 from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
-from utils.constants import default_headers
 from utils.market import MarketSchedule
 from utils.yahoo_auth import YahooAuthManager
 
@@ -79,7 +78,7 @@ async def get_fetch_client(
     proxy: Proxy,
 ) -> CurlFetchClient:
     """Returns a fetch client from the shared session"""
-    return CurlFetchClient(session=session, proxy=proxy, default_headers=default_headers)
+    return CurlFetchClient(session=session, proxy=proxy)
 
 
 FetchClient = Annotated[CurlFetchClient, Depends(get_fetch_client)]
