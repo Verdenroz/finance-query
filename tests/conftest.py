@@ -11,6 +11,7 @@ from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import request_context
 from src.main import app
 from src.models import HistoricalData
+from utils.yahoo_auth import YahooAuthManager
 
 VERSION = "v1"
 
@@ -31,12 +32,54 @@ def mock_session():
 
 
 @pytest.fixture(scope="session")
-def test_client(mock_redis, mock_session):
-    """Create TestClient with mocked dependencies"""
-    app.state.redis = mock_redis
-    app.state.session = mock_session
-    with TestClient(app) as client:
-        yield client
+def yahoo_auth_manager():
+    """
+    Real instance (so internals are exercised) but patched so that
+    .get_or_refresh() never reaches out to Yahoo.
+    """
+    mgr = YahooAuthManager()
+
+    # Use patch as a context manager inside the fixture
+    original_get_or_refresh = mgr.get_or_refresh
+
+    # Create the mock function
+    async def _fake_get_or_refresh(*_, **__):
+        return {"B": "fake_cookie"}, "fake_crumb"
+
+    # Replace the real method with the mock
+    mgr.get_or_refresh = AsyncMock(side_effect=_fake_get_or_refresh)
+
+    yield mgr
+
+    # Restore the original after tests
+    mgr.get_or_refresh = original_get_or_refresh
+
+
+@pytest.fixture
+def mock_finance_client(monkeypatch):
+    """
+    The object FastAPI will get back from utils.dependencies.get_yahoo_finance_client.
+    You can preset return values (or side_effects) per-test.
+    """
+    client = AsyncMock(name="FinanceClient")
+    client.get_quote = AsyncMock()
+    client.get_simple_quotes = AsyncMock()
+    # Patch the dependency-provider so every request/route gets *this* client.
+    monkeypatch.setattr("utils.dependencies.get_yahoo_finance_client", lambda *_, **__: client)
+    return client
+
+
+@pytest.fixture(scope="session")
+def test_client(yahoo_auth_manager):
+    """
+    Starts the app with a working YahooAuthManager and a dummy Redis / aiohttp
+    session that the rest of the suite already expects.
+    """
+    app.state.yahoo_auth_manager = yahoo_auth_manager
+    app.state.redis = MagicMock(name="redis")        # if anything still touches app.state.redis
+    app.state.session = MagicMock(name="curl_session")
+    with TestClient(app) as c:
+        yield c
 
 
 @pytest.fixture(scope="session")
@@ -45,14 +88,6 @@ def mock_request_context():
     with patch("src.dependencies.request_context", MagicMock()) as mock:
         mock.get.return_value.app.state.cookies = "mock_cookies"
         mock.get.return_value.app.state.crumb = "mock_crumb"
-        yield mock
-
-
-@pytest.fixture(scope="session")
-def mock_yahoo_auth(mock_request_context):
-    """Mock Yahoo authentication data"""
-    with patch("src.dependencies.get_auth_data", new_callable=AsyncMock) as mock:
-        mock.return_value = ("mock_cookies", "mock_crumb")
         yield mock
 
 
@@ -122,7 +157,7 @@ def bypass_cache(monkeypatch):
         return decorator
 
     # Patch the cache decorator in the src.cache module
-    monkeypatch.setattr("src.cache.cache", bypass_decorator)
+    monkeypatch.setattr("src.utils.cache.cache", bypass_decorator)
 
     # Clean up the context variable after the test
     yield
