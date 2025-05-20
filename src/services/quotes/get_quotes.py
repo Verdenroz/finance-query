@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+
 from utils.dependencies import FinanceClient
 
 from src.models import Quote, SimpleQuote
@@ -20,6 +22,8 @@ async def get_quotes(finance_client: FinanceClient, symbols: list[str]) -> list[
             return quotes
     except Exception as e:
         print(f"Error with Yahoo Finance API {e}")
+        if issubclass(type(e), HTTPException):
+            raise e
 
     # Fallback to scraping if API fails or credentials aren't available
     return await scrape_quotes(symbols)
@@ -41,6 +45,8 @@ async def get_simple_quotes(finance_client: FinanceClient, symbols: list[str]) -
             return quotes
     except Exception as e:
         print(f"Error with Yahoo Finance API {e}")
+        if issubclass(type(e), HTTPException):
+            raise e
 
     # Fallback to scraping if API fails or credentials aren't available
     return await scrape_simple_quotes(symbols)
