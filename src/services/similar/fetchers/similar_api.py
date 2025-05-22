@@ -41,4 +41,4 @@ async def _fetch_yahoo_recommended_symbols(finance_client: FinanceClient, symbol
         if symbol:
             symbols.append(symbol)
 
-    return symbols
+    return symbols[:limit]
