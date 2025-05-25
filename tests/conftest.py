@@ -1,4 +1,4 @@
-import functools
+import os
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -8,7 +8,6 @@ from orjson import orjson
 from starlette.websockets import WebSocket
 
 from src.connections import ConnectionManager, RedisConnectionManager
-from src.context import request_context
 from src.main import app
 from src.models import HistoricalData
 from utils.yahoo_auth import YahooAuthManager
@@ -64,6 +63,9 @@ def mock_finance_client(monkeypatch):
     client = AsyncMock(name="FinanceClient")
     client.get_quote = AsyncMock()
     client.get_simple_quotes = AsyncMock()
+    client.get_chart = AsyncMock()
+    client.search = AsyncMock()
+    client.get_similar_quotes = AsyncMock()
     # Patch the dependency-provider so every request/route gets *this* client.
     monkeypatch.setattr("utils.dependencies.get_yahoo_finance_client", lambda *_, **__: client)
     return client
@@ -76,7 +78,7 @@ def test_client(yahoo_auth_manager):
     session that the rest of the suite already expects.
     """
     app.state.yahoo_auth_manager = yahoo_auth_manager
-    app.state.redis = MagicMock(name="redis")        # if anything still touches app.state.redis
+    app.state.redis = MagicMock(name="redis")  # if anything still touches app.state.redis
     app.state.session = MagicMock(name="curl_session")
     with TestClient(app) as c:
         yield c
@@ -134,36 +136,8 @@ def connection_manager():
 @pytest.fixture
 def bypass_cache(monkeypatch):
     """
-    Fixture to bypass both Redis and in-memory caching.
-    Works regardless of whether REDIS_URL is set or not.
+    Bypass the cache decorator for testing.
     """
-    mock_request = MagicMock()
-    mock_redis = MagicMock()
-    mock_redis.exists.return_value = False  # Always return cache miss
-    mock_request.app.state.redis = mock_redis
-
-    # Set the context variable
-    token = request_context.set(mock_request)
-
-    # Define a pass-through decorator to replace cache
-    def bypass_decorator(*args, **kwargs):
-        def decorator(func):
-            @functools.wraps(func)
-            async def wrapper(*fn_args, **fn_kwargs):
-                return await func(*fn_args, **fn_kwargs)
-
-            return wrapper
-
-        return decorator
-
-    # Patch the cache decorator in the src.cache module
-    monkeypatch.setattr("src.utils.cache.cache", bypass_decorator)
-
-    # Clean up the context variable after the test
+    os.environ["BYPASS_CACHE"] = "1"
     yield
-
-    try:
-        request_context.reset(token)
-    except ValueError:
-        # Context may already be reset
-        pass
+    del os.environ["BYPASS_CACHE"]
