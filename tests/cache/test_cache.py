@@ -198,8 +198,8 @@ class TestCacheDecoratorRedis:
         yield redis
         request_context.reset(token)
 
-    @patch("src.cache.RedisCacheHandler.get")
-    @patch("src.cache.RedisCacheHandler.set")
+    @patch("utils.cache.RedisCacheHandler.get")
+    @patch("utils.cache.RedisCacheHandler.set")
     async def test_redis_cache(self, mock_set, mock_get, mock_redis_env, setup_context, market_schedule):
         mock_get.side_effect = [
             None,
