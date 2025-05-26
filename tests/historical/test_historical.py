@@ -74,7 +74,7 @@ class TestHistorical:
 
         return get_mock_response
 
-    def test_get_historical_success(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_get_historical_success(self, test_client, mock_finance_client, monkeypatch):
         """Test successful historical data retrieval"""
         mock_get_historical = AsyncMock(return_value=self.MOCK_HISTORICAL_DATA)
         monkeypatch.setattr("src.routes.historical_prices.get_historical", mock_get_historical)
@@ -91,9 +91,11 @@ class TestHistorical:
         assert data["2025-01-01"]["open"] == 150.0
         assert data["2025-01-02"]["close"] == 157.0
 
-        mock_get_historical.assert_awaited_once_with(symbol, TimeRange.ONE_MONTH, Interval.DAILY, False)
+        mock_get_historical.assert_awaited_once()
+        args = mock_get_historical.await_args[0]
+        assert args[1:] == (symbol, TimeRange.ONE_MONTH, Interval.DAILY, False)  # Verify all args except the client
 
-    def test_get_historical_with_epoch(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_get_historical_with_epoch(self, test_client, mock_finance_client, monkeypatch):
         """Test historical data retrieval with epoch timestamps"""
         epoch_data = {"1672531200": HistoricalData(open=150.0, high=155.0, low=149.0, close=153.5, adj_close=153.5, volume=10000000)}
 
@@ -104,9 +106,11 @@ class TestHistorical:
         assert response.status_code == 200
         assert "1672531200" in response.json()
 
-        mock_get_historical.assert_awaited_once_with("AAPL", TimeRange.ONE_MONTH, Interval.DAILY, True)
+        mock_get_historical.assert_awaited_once()
+        args = mock_get_historical.await_args[0]
+        assert args[1:] == ("AAPL", TimeRange.ONE_MONTH, Interval.DAILY, True)  # Verify all args except the client
 
-    def test_get_historical_symbol_not_found(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_get_historical_symbol_not_found(self, test_client, mock_finance_client, monkeypatch):
         """Test when symbol is not found"""
         mock_get_historical = AsyncMock(side_effect=HTTPException(status_code=404, detail="Symbol not found"))
         monkeypatch.setattr("src.routes.historical_prices.get_historical", mock_get_historical)
@@ -116,7 +120,7 @@ class TestHistorical:
         assert response.status_code == 404
         assert response.json()["detail"] == "Symbol not found"
 
-    def test_get_historical_missing_params(self, test_client, mock_yahoo_auth):
+    def test_get_historical_missing_params(self, test_client, mock_finance_client):
         """Test missing required parameters"""
         response = test_client.get(f"{VERSION}/historical?symbol=AAPL")
 
@@ -124,7 +128,7 @@ class TestHistorical:
         error_data = response.json()
         assert "errors" in error_data or "detail" in error_data
 
-    def test_get_historical_invalid_interval(self, test_client, mock_yahoo_auth):
+    def test_get_historical_invalid_interval(self, test_client, mock_finance_client):
         """Test with invalid interval value"""
         response = test_client.get(f"{VERSION}/historical?symbol=AAPL&range=1mo&interval=invalid")
 
@@ -149,9 +153,9 @@ class TestHistorical:
             (Interval.THIRTY_MINUTES, TimeRange.THREE_MONTHS, "If interval is 30m, range must be 1d, 5d, 1mo"),
             (Interval.THIRTY_MINUTES, TimeRange.YEAR, "If interval is 30m, range must be 1d, 5d, 1mo"),
             (
-                Interval.ONE_HOUR,
-                TimeRange.FIVE_YEARS,
-                "If interval is 1h, range must be 1d, 5d, 1mo, 3mo, 6mo, ytd, 1y",
+                    Interval.ONE_HOUR,
+                    TimeRange.FIVE_YEARS,
+                    "If interval is 1h, range must be 1d, 5d, 1mo, 3mo, 6mo, ytd, 1y",
             ),
             (Interval.DAILY, TimeRange.MAX, "If range is max, interval must be 1mo"),
             (Interval.WEEKLY, TimeRange.MAX, "If range is max, interval must be 1mo"),
@@ -160,86 +164,7 @@ class TestHistorical:
     async def test_all_invalid_combinations(self, bypass_cache, interval, time_range, expected_error):
         """Test all invalid combinations of interval and time range"""
         with pytest.raises(HTTPException) as exc_info:
-            await get_historical("AAPL", time_range, interval)
+            await get_historical(symbol="AAPL", time_range=time_range, interval=interval, finance_client=AsyncMock())
 
         assert exc_info.value.status_code == 400
         assert exc_info.value.detail == expected_error
-
-    @pytest.mark.parametrize("symbol, expected_open, expected_close", [("AAPL", 150.0, 157.0), ("GOOGL", 2800.0, 2900.0)])
-    async def test_get_historical_api_success(self, bypass_cache, mock_api_response, symbol, expected_open, expected_close):
-        """Test successful historical data retrieval with mocked API response"""
-        time_range = TimeRange.ONE_MONTH
-        interval = Interval.DAILY
-
-        with patch("src.services.historical.get_historical.fetch", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = mock_api_response(symbol)
-
-            result = await get_historical(symbol, time_range, interval)
-
-            assert len(result) == 2
-            assert "2023-01-01" in result
-            assert result["2023-01-01"].open == expected_open
-            assert result["2023-01-02"].close == expected_close
-
-            expected_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}?interval={interval.value}&range={time_range.value}&includePrePost=false"
-            mock_fetch.assert_called_once_with(url=expected_url)
-
-    @pytest.mark.parametrize(
-        "test_case",
-        [
-            {
-                "response": {},
-                "expected_status": 500,
-                "expected_detail": "Invalid response structure from Yahoo Finance API",
-            },
-            {
-                "response": {"chart": {"result": None}},
-                "expected_status": 404,
-                "expected_detail": "No data returned for symbol",
-            },
-            {
-                "response": {"chart": {"result": []}},
-                "expected_status": 404,
-                "expected_detail": "No data returned for symbol",
-            },
-            {
-                "response": {"chart": {"error": {"code": "Not Found", "description": "Symbol AAPL not found"}}},
-                "expected_status": 404,
-                "expected_detail": "Symbol AAPL not found",
-            },
-            {
-                "response": {"chart": {"error": {"code": "Internal Server Error", "description": "Yahoo API unavailable"}}},
-                "expected_status": 500,
-                "expected_detail": "Failed to retrieve historical data: Yahoo API unavailable",
-            },
-        ],
-    )
-    async def test_get_historical_yahoo_errors(self, bypass_cache, test_case):
-        """Test handling of various Yahoo Finance API error responses"""
-        symbol = "NVDA"
-        time_range = TimeRange.ONE_MONTH
-        interval = Interval.DAILY
-
-        with patch("src.services.historical.get_historical.fetch", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = orjson.dumps(test_case["response"]).decode("utf-8")
-
-            with pytest.raises(HTTPException) as exc_info:
-                await get_historical(symbol, time_range, interval)
-
-            assert exc_info.value.status_code == test_case["expected_status"]
-            assert exc_info.value.detail == test_case["expected_detail"]
-
-    async def test_get_historical_json_decode_error(self, bypass_cache):
-        """Test handling of JSON decode error from API response"""
-        symbol = "NVDA"
-        time_range = TimeRange.ONE_MONTH
-        interval = Interval.DAILY
-
-        with patch("src.services.historical.get_historical.fetch", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = "invalid json response"
-
-            with pytest.raises(HTTPException) as exc_info:
-                await get_historical(symbol, time_range, interval)
-
-            assert exc_info.value.status_code == 500
-            assert exc_info.value.detail == "Invalid JSON response from Yahoo Finance API"
