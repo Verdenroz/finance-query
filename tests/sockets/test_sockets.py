@@ -13,7 +13,7 @@ symbol = "NVDA"
 
 
 class TestSocketsHandler:
-    async def test_websocket_profile(self, test_client, mock_yahoo_auth, monkeypatch):
+    async def test_websocket_profile(self, test_client, monkeypatch):
         """Test the websocket_profile endpoint using the TestClient and monkeypatch"""
         mock_quote_data = {
             "symbol": "NVDA",
@@ -69,7 +69,7 @@ class TestSocketsHandler:
                 assert response["news"] == []
                 assert response["sectorPerformance"] is None
 
-    async def test_websocket_quotes(self, test_client, mock_yahoo_auth):
+    async def test_websocket_quotes(self, test_client):
         """Test the websocket_quotes endpoint using the TestClient"""
         # Mock data
         symbols_str = "AAPL,NVDA,MSFT"
@@ -133,7 +133,7 @@ class TestSocketsHandler:
                 assert "AAPL" in symbols
                 assert "NVDA" in symbols
 
-    async def test_websocket_market(self, test_client, mock_yahoo_auth, monkeypatch):
+    async def test_websocket_market(self, test_client, monkeypatch):
         """Test the websocket_market endpoint"""
         # Mock data for each function that get_market_info calls
         mock_actives = [
@@ -259,7 +259,7 @@ class TestSocketsHandler:
                 assert response["headlines"] == mock_news
                 assert response["sectors"] == mock_sectors
 
-    async def test_market_status_websocket(self, test_client, mock_yahoo_auth, monkeypatch):
+    async def test_market_status_websocket(self, test_client, monkeypatch):
         """Test the market_status_websocket endpoint using TestClient"""
         # Mock market status data
         mock_status = "Closed"
