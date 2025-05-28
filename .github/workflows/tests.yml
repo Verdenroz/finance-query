@@ -1,9 +1,6 @@
 name: Run tests, linting and upload coverage
 
 on:
-  push:
-    branches:
-      - master
   pull_request:
 
 permissions:
