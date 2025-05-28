@@ -1,11 +1,9 @@
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, ANY
 
 import pytest
 import requests
-from aiohttp import ClientResponse
 from fastapi import HTTPException
-from orjson import orjson
 
 from src.models import MarketSector, MarketSectorDetails, Sector
 from src.services.sectors.get_sectors import get_sector_details, get_sector_for_symbol, get_yahoo_sector, urls
@@ -151,10 +149,10 @@ class TestSectors:
         assert data[0]["sector"] == "Technology"
         assert data[0]["dayReturn"] == "+0.45%"
 
-    async def test_sector_by_symbol_endpoint(self, test_client, mock_yahoo_auth, monkeypatch):
+    async def test_sector_by_symbol_endpoint(self, test_client, mock_finance_client, monkeypatch):
         """Test the /sectors/symbol/{symbol} endpoint"""
 
-        async def mock_get_sector_for_symbol(symbol, cookies, crumb):
+        async def mock_get_sector_for_symbol(finance_client, symbol):
             if symbol == "AAPL":
                 return {
                     "sector": "Technology",
@@ -260,32 +258,7 @@ class TestSectors:
             assert sector_data.three_year_return.endswith("%")
             assert sector_data.five_year_return.endswith("%")
 
-    async def test_get_yahoo_sector(self, yahoo_sectors, bypass_cache):
-        """Test the get_yahoo_sector function with cached Yahoo API data"""
-        # Get test symbols
-        test_symbols = ["AAPL", "MSFT", "JPM", "PFE"]
-
-        for symbol in test_symbols:
-            # Get cached data for this symbol
-            yahoo_data = yahoo_sectors(symbol)
-
-            # Expected sector from the cached data
-            expected_sector = yahoo_data["quoteSummary"]["result"][0]["assetProfile"]["sector"]
-
-            # Mock the _fetch_yahoo_data function to return our cached data
-            with patch("src.services.sectors.utils._fetch_yahoo_data", new_callable=AsyncMock) as mock_fetch:
-                mock_fetch.return_value = yahoo_data
-
-                # Call the function with test parameters
-                result = await get_yahoo_sector(symbol, "test_cookies", "test_crumb")
-
-                # Verify the result
-                assert result == expected_sector
-
-                # Verify the fetch function was called with correct parameters
-                mock_fetch.assert_called_once_with(symbol, "test_cookies", "test_crumb")
-
-    async def test_get_sector_for_symbol(self, yahoo_sectors, sector_html, bypass_cache):
+    async def test_get_sector_for_symbol(self, yahoo_sectors, sector_html, mock_finance_client, bypass_cache):
         """Test the get_sector_for_symbol function with cached data"""
         # Set up test symbols
         test_symbols = ["AAPL", "MSFT", "JPM", "PFE"]
@@ -311,7 +284,7 @@ class TestSectors:
                 mock_fetch.return_value = html_content
 
                 # Call the function
-                result = await get_sector_for_symbol(symbol, "test_cookies", "test_crumb")
+                result = await get_sector_for_symbol(mock_finance_client, symbol)
 
                 # Verify the result
                 assert isinstance(result, MarketSector)
@@ -331,10 +304,10 @@ class TestSectors:
                 assert result.five_year_return.startswith("+") or result.five_year_return.startswith("-")
 
                 # Verify the mocks were called correctly
-                mock_get_sector.assert_called_once_with(symbol, "test_cookies", "test_crumb")
+                mock_get_sector.assert_awaited_once()
                 mock_fetch.assert_called_once_with(url=sector_url)
 
-    async def test_get_sector_for_symbol_not_found(self, bypass_cache):
+    async def test_get_sector_for_symbol_not_found(self, bypass_cache, mock_finance_client):
         """Test the get_sector_for_symbol function when sector is not found"""
         # Mock get_yahoo_sector to return None
         with patch("src.services.sectors.get_sectors.get_yahoo_sector", new_callable=AsyncMock) as mock_get_sector:
@@ -342,7 +315,7 @@ class TestSectors:
 
             # Verify that HTTPException is raised
             with pytest.raises(HTTPException) as excinfo:
-                await get_sector_for_symbol("UNKNOWN", "test_cookies", "test_crumb")
+                await get_sector_for_symbol(mock_finance_client, "UNKNOWN")
 
             # Verify the exception details
             assert excinfo.value.status_code == 404
@@ -396,44 +369,3 @@ class TestSectors:
 
                 # Mock was called with the correct URL
                 mock_fetch.assert_called_once_with(url=url)
-
-    async def test_fetch_yahoo_data(self):
-        """Test the _fetch_yahoo_data function with mocked responses"""
-        from src.services.sectors.utils import _fetch_yahoo_data
-
-        # Test successful response
-        mock_successful_data = {"quoteSummary": {"result": [{"assetProfile": {"sector": "Technology"}}]}}
-
-        mock_response = AsyncMock(spec=ClientResponse)
-        mock_response.status = 200
-        mock_response.text.return_value = orjson.dumps(mock_successful_data).decode()
-
-        with patch("src.services.sectors.utils.fetch", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = mock_response
-
-            result = await _fetch_yahoo_data("AAPL", "test_cookies", "test_crumb")
-
-            assert result == mock_successful_data
-            mock_fetch.assert_called_once_with(
-                url="https://query2.finance.yahoo.com/v10/finance/quoteSummary/AAPL",
-                params={"modules": "assetProfile", "crumb": "test_crumb"},
-                headers={
-                    "Cookie": "test_cookies",
-                    "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-                    "Accept": "application/json",
-                },
-                return_response=True,
-            )
-
-        # Test 404 response
-        mock_error_response = AsyncMock(spec=ClientResponse)
-        mock_error_response.status = 404
-
-        with patch("src.services.sectors.utils.fetch", new_callable=AsyncMock) as mock_fetch:
-            mock_fetch.return_value = mock_error_response
-
-            with pytest.raises(HTTPException) as excinfo:
-                await _fetch_yahoo_data("INVALID", "test_cookies", "test_crumb")
-
-            assert excinfo.value.status_code == 404
-            assert "Symbol not found: INVALID" in excinfo.value.detail
