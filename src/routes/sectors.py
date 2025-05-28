@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
-from utils.dependencies import FinanceClient
 
 from src.models import ValidationErrorResponse
 from src.models.sector import MarketSector, MarketSectorDetails, Sector
 from src.services import get_sector_details, get_sector_for_symbol, get_sectors
+from utils.dependencies import FinanceClient
 
 router = APIRouter()
 

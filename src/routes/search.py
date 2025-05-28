@@ -2,10 +2,10 @@ from typing import Optional
 
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
-from utils.dependencies import FinanceClient
 
 from src.models import SearchResult, Type, ValidationErrorResponse
 from src.services import get_search
+from utils.dependencies import FinanceClient
 
 router = APIRouter()
 

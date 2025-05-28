@@ -1,8 +1,6 @@
 import asyncio
 
 from fastapi import HTTPException
-from utils.cache import cache
-from utils.dependencies import fetch, get_logo
 
 from src.models import Quote, SimpleQuote
 from src.services.quotes.utils import (
@@ -14,6 +12,8 @@ from src.services.quotes.utils import (
     parse_tree,
     thread_pool,
 )
+from utils.cache import cache
+from utils.dependencies import fetch, get_logo
 
 
 async def scrape_quotes(symbols: list[str]):

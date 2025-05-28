@@ -16,13 +16,6 @@ from mangum import Mangum
 from redis import Redis
 from starlette import status
 from starlette.responses import JSONResponse, Response
-from utils.dependencies import (
-    FinanceClient,
-    RedisClient,
-    remove_proxy_whitelist,
-    setup_proxy_whitelist,
-)
-from utils.yahoo_auth import YahooAuthManager
 
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import RequestContextMiddleware
@@ -59,6 +52,13 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
+from utils.dependencies import (
+    FinanceClient,
+    RedisClient,
+    remove_proxy_whitelist,
+    setup_proxy_whitelist,
+)
+from utils.yahoo_auth import YahooAuthManager
 
 load_dotenv()
 yahoo_auth_manager = YahooAuthManager()

@@ -1,10 +1,10 @@
 import pandas as pd
 from fastapi import HTTPException
 from orjson import orjson
-from utils.cache import cache
-from utils.dependencies import FinanceClient
 
 from src.models import HistoricalData, Interval, TimeRange
+from utils.cache import cache
+from utils.dependencies import FinanceClient
 
 
 @cache(expire=60, market_closed_expire=600)

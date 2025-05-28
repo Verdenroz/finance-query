@@ -1,7 +1,5 @@
 from collections import OrderedDict
 
-from utils.dependencies import FinanceClient
-
 from src.models.historical_data import Interval, TimeRange
 from src.models.indicators import EMAData, Indicator, SMAData, TechnicalIndicator, VWMAData, WMAData
 from src.services.historical.get_historical import get_historical
@@ -13,6 +11,7 @@ from src.services.indicators.core import (
     create_indicator_dict,
     prepare_price_data,
 )
+from utils.dependencies import FinanceClient
 
 
 async def get_sma(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:

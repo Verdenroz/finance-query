@@ -5,10 +5,10 @@ from fastapi import APIRouter, Query, Security
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader
 from orjson import orjson
-from utils.dependencies import FinanceClient
 
 from src.models import ValidationErrorResponse
 from src.services import get_simple_quotes
+from utils.dependencies import FinanceClient
 
 router = APIRouter()
 

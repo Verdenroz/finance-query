@@ -193,9 +193,10 @@ class TestQuotes:
         """Test scraping simple quotes"""
         url = f"https://finance.yahoo.com/quote/{symbols[0]}/"
         html = quote_html(url)
-        with patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch, patch(
-            "src.services.quotes.fetchers.quote_scraper.get_logo", new_callable=AsyncMock
-        ) as mock_logo:
+        with (
+            patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch,
+            patch("src.services.quotes.fetchers.quote_scraper.get_logo", new_callable=AsyncMock) as mock_logo,
+        ):
             mock_fetch.return_value = html
             mock_logo.return_value = "https://logo.clearbit.com/example.com"
             result = await scrape_simple_quotes(symbols)

@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
-from utils.dependencies import FinanceClient
 
 from src.models import Quote, SimpleQuote, ValidationErrorResponse
 from src.services import get_quotes, get_simple_quotes
+from utils.dependencies import FinanceClient
 
 router = APIRouter()
 

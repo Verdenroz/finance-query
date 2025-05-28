@@ -3,19 +3,19 @@ import os
 from typing import Annotated, Any, Literal, Optional, Union, cast
 from urllib.parse import urlparse
 
-from clients.fetch_client import CurlFetchClient
-from clients.yahoo_client import YahooFinanceClient
-from connections import ConnectionManager
 from curl_cffi import requests
 from fastapi import Depends, HTTPException, Request
 from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
-from utils.market import MarketSchedule
-from utils.yahoo_auth import YahooAuthManager
 
+from clients.fetch_client import CurlFetchClient
+from clients.yahoo_client import YahooFinanceClient
+from connections import ConnectionManager
 from src.connections import RedisConnectionManager
 from src.context import request_context
+from utils.market import MarketSchedule
+from utils.yahoo_auth import YahooAuthManager
 
 Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
 

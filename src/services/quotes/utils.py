@@ -3,6 +3,7 @@ from datetime import datetime
 
 import psutil
 from lxml import etree, html
+
 from utils.dependencies import get_logo
 
 # Initialize thread pool

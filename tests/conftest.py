@@ -6,12 +6,12 @@ import pytest
 from fastapi.testclient import TestClient
 from orjson import orjson
 from starlette.websockets import WebSocket
-from utils.dependencies import FinanceClient
-from utils.yahoo_auth import YahooAuthManager
 
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.main import app
 from src.models import HistoricalData
+from utils.dependencies import FinanceClient
+from utils.yahoo_auth import YahooAuthManager
 
 VERSION = "v1"
 

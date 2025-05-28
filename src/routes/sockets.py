@@ -4,7 +4,6 @@ from datetime import datetime
 import pytz
 from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
-from utils.dependencies import FinanceClient, Schedule, WebsocketConnectionManager
 
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.models import MarketSector, SimpleQuote
@@ -22,6 +21,7 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
+from utils.dependencies import FinanceClient, Schedule, WebsocketConnectionManager
 
 router = APIRouter()
 

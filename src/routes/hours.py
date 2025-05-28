@@ -3,6 +3,7 @@ from datetime import datetime
 import pytz
 from fastapi import APIRouter, Depends, Security
 from fastapi.security import APIKeyHeader
+
 from utils.market import MarketSchedule
 
 router = APIRouter()

@@ -4,11 +4,11 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from redis import RedisError
-from utils.cache import MemCacheHandler, RedisCacheHandler, cache
-from utils.market import MarketSchedule, MarketStatus
 
 from src.context import request_context
 from src.models import SimpleQuote
+from utils.cache import MemCacheHandler, RedisCacheHandler, cache
+from utils.market import MarketSchedule, MarketStatus
 
 
 class TestRedisCacheHandler:

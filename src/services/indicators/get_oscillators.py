@@ -1,7 +1,6 @@
 from collections import OrderedDict
 
 import numpy as np
-from utils.dependencies import FinanceClient
 
 from src.models.historical_data import Interval, TimeRange
 from src.models.indicators import CCIData, Indicator, RSIData, SRSIData, STOCHData, TechnicalIndicator
@@ -14,6 +13,7 @@ from src.services.indicators.core import (
     create_indicator_dict,
     prepare_price_data,
 )
+from utils.dependencies import FinanceClient
 
 
 async def get_rsi(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False):
