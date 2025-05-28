@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+from utils.dependencies import FinanceClient
+
 from src.models.historical_data import Interval, TimeRange
 from src.models.indicators import EMAData, Indicator, SMAData, TechnicalIndicator, VWMAData, WMAData
 from src.services.historical.get_historical import get_historical
@@ -11,17 +13,9 @@ from src.services.indicators.core import (
     create_indicator_dict,
     prepare_price_data,
 )
-from utils.dependencies import FinanceClient
 
 
-async def get_sma(
-    finance_client: FinanceClient,
-    symbol: str,
-    time_range: TimeRange,
-    interval: Interval,
-    period: int = 10,
-    epoch: bool = False
-) -> dict:
+async def get_sma(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
     """
     Get the Simple Moving Average (SMA) for a symbol.
     :param finance_client: the finance client to use for fetching data
@@ -48,14 +42,7 @@ async def get_sma(
     return TechnicalIndicator(type=Indicator.SMA, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_ema(
-    finance_client: FinanceClient,
-    symbol: str,
-    time_range: TimeRange,
-    interval: Interval,
-    period: int = 10,
-    epoch: bool = False
-) -> dict:
+async def get_ema(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
     """
     Get the Exponential Moving Average (EMA) for a symbol.
     :param finance_client: the finance client to use for fetching data
@@ -79,14 +66,7 @@ async def get_ema(
     return TechnicalIndicator(type=Indicator.EMA, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_wma(
-    finance_client: FinanceClient,
-    symbol: str,
-    time_range: TimeRange,
-    interval: Interval,
-    period: int = 10,
-    epoch: bool = False
-) -> dict:
+async def get_wma(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
     """
     Get the Weighted Moving Average (WMA) for a symbol.
     :param finance_client: the finance client to use for fetching data
@@ -112,14 +92,7 @@ async def get_wma(
     return TechnicalIndicator(type=Indicator.WMA, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_vwma(
-    finance_client: FinanceClient,
-    symbol: str,
-    time_range: TimeRange,
-    interval: Interval,
-    period: int = 20,
-    epoch: bool = False
-) -> dict:
+async def get_vwma(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False) -> dict:
     """
     Get the Volume Weighted Moving Average (VWMA) for a symbol.
     :param finance_client: the finance client to use for fetching data

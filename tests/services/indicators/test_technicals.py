@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch, ANY
+from unittest.mock import ANY, AsyncMock, patch
 
 import src.routes.technicals
 from src.models import Indicator, Interval, TechnicalIndicator, TimeRange
@@ -147,8 +147,8 @@ class TestTechnicals:
             await self._test_interval_time_ranges(historical_quotes, mock_finance_client)
 
             with patch(
-                    "src.services.indicators.get_technical_indicators.get_historical",
-                    AsyncMock(return_value=historical_quotes),
+                "src.services.indicators.get_technical_indicators.get_historical",
+                AsyncMock(return_value=historical_quotes),
             ):
                 result = await get_technical_indicators(mock_finance_client, "AAPL", Interval.DAILY, [])
                 assert len(result) > 10
@@ -189,8 +189,8 @@ class TestTechnicals:
 
         for interval in intervals:
             with patch(
-                    "src.services.indicators.get_technical_indicators.get_historical",
-                    AsyncMock(return_value=historical_quotes),
+                "src.services.indicators.get_technical_indicators.get_historical",
+                AsyncMock(return_value=historical_quotes),
             ) as mock_get_historical:
                 subset_indicators = [Indicator.SMA, Indicator.RSI, Indicator.MACD]
                 await get_technical_indicators(mock_finance_client, "AAPL", interval, subset_indicators)

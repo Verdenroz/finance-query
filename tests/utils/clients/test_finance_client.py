@@ -16,7 +16,6 @@ def yahoo_client():
 
 @pytest.mark.asyncio
 class TestYahooFinanceClient:
-
     async def test_init(self, yahoo_client):
         """Test the client initialization."""
         # Check that cookies were set
@@ -129,7 +128,7 @@ class TestYahooFinanceClient:
         """Test _json with JSON parsing error."""
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.text = 'invalid json'
+        mock_response.text = "invalid json"
         mock_fetch.return_value = mock_response
         mock_loads.side_effect = Exception("JSON parse error")
 

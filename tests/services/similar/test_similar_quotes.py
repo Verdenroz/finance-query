@@ -478,4 +478,3 @@ class TestSimilarQuotesHandler:
             # Verify the exception details
             assert excinfo.value.status_code == 404
             assert "No similar stocks found or invalid symbol" in excinfo.value.detail
-

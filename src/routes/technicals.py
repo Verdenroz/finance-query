@@ -2,6 +2,7 @@ from typing import Optional
 
 from fastapi import APIRouter, HTTPException, Query, Security
 from fastapi.security import APIKeyHeader
+from utils.dependencies import FinanceClient
 
 from src.models import Indicator, Interval, TechnicalIndicator, TimeRange, ValidationErrorResponse
 from src.services.indicators import (
@@ -22,7 +23,6 @@ from src.services.indicators import (
     get_vwma,
     get_wma,
 )
-from utils.dependencies import FinanceClient
 
 router = APIRouter()
 

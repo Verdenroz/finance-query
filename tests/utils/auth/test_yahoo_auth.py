@@ -1,10 +1,10 @@
 import asyncio
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from src.utils.yahoo_auth import YahooAuthManager, YahooAuthError
+from src.utils.yahoo_auth import YahooAuthError, YahooAuthManager
 
 
 @pytest.fixture
@@ -15,7 +15,6 @@ def yahoo_auth_manager():
 
 @pytest.mark.asyncio
 class TestYahooAuthManager:
-
     @patch("src.utils.yahoo_auth.requests.Session")
     async def test_refresh_success(self, mock_session_class, yahoo_auth_manager):
         """Test successful refresh."""
@@ -30,7 +29,7 @@ class TestYahooAuthManager:
         # Set up the session get calls
         mock_session.get.side_effect = [
             MagicMock(),  # First call to fc.yahoo.com
-            mock_crumb_response  # Second call to get crumb
+            mock_crumb_response,  # Second call to get crumb
         ]
 
         # Set up session cookies
@@ -42,8 +41,7 @@ class TestYahooAuthManager:
         # Verify the calls
         assert mock_session.get.call_count == 2
         mock_session.get.assert_any_call("https://fc.yahoo.com", timeout=10, allow_redirects=True)
-        mock_session.get.assert_any_call("https://query1.finance.yahoo.com/v1/test/getcrumb",
-                                         timeout=10, allow_redirects=True)
+        mock_session.get.assert_any_call("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=10, allow_redirects=True)
 
         # Verify the values were set
         assert yahoo_auth_manager._crumb == "abc123"
@@ -64,15 +62,14 @@ class TestYahooAuthManager:
         # Set up the session get calls
         mock_session.get.side_effect = [
             MagicMock(),  # First call to fc.yahoo.com
-            mock_crumb_response  # Second call to get crumb
+            mock_crumb_response,  # Second call to get crumb
         ]
 
         # Call refresh with proxy
         await yahoo_auth_manager.refresh(proxy="http://proxy.example.com:8080")
 
         # Verify proxy was set
-        assert mock_session.proxies == {"http": "http://proxy.example.com:8080",
-                                       "https": "http://proxy.example.com:8080"}
+        assert mock_session.proxies == {"http": "http://proxy.example.com:8080", "https": "http://proxy.example.com:8080"}
 
     @patch("src.utils.yahoo_auth.requests.Session")
     async def test_refresh_fallback_to_csrf(self, mock_session_class, yahoo_auth_manager):
@@ -86,12 +83,12 @@ class TestYahooAuthManager:
         mock_initial_crumb.text = "<html>invalid</html>"  # Invalid crumb requiring fallback
 
         mock_consent_response = MagicMock()
-        mock_consent_response.text = '''
+        mock_consent_response.text = """
             <html>
                 <input type="hidden" name="csrfToken" value="test-csrf-token">
                 <input type="hidden" name="sessionId" value="test-session-id">
             </html>
-        '''
+        """
 
         mock_final_crumb = MagicMock()
         mock_final_crumb.text = "valid-crumb-123"
@@ -102,7 +99,7 @@ class TestYahooAuthManager:
             mock_initial_crumb,  # First invalid crumb
             mock_consent_response,  # Consent page with CSRF and session ID
             MagicMock(),  # Copy consent call
-            mock_final_crumb  # Final valid crumb
+            mock_final_crumb,  # Final valid crumb
         ]
 
         # Call refresh
@@ -133,7 +130,7 @@ class TestYahooAuthManager:
         mock_session.get.side_effect = [
             MagicMock(),  # First call to fc.yahoo.com
             mock_initial_crumb,  # First invalid crumb
-            mock_consent_response  # Consent page without CSRF
+            mock_consent_response,  # Consent page without CSRF
         ]
 
         # Check that YahooAuthError is raised
@@ -152,12 +149,12 @@ class TestYahooAuthManager:
         mock_initial_crumb.text = "<html>invalid</html>"  # Invalid initial crumb
 
         mock_consent_response = MagicMock()
-        mock_consent_response.text = '''
+        mock_consent_response.text = """
             <html>
                 <input type="hidden" name="csrfToken" value="test-csrf-token">
                 <input type="hidden" name="sessionId" value="test-session-id">
             </html>
-        '''
+        """
 
         mock_final_crumb = MagicMock()
         mock_final_crumb.text = "<html>still invalid</html>"  # Invalid final crumb
@@ -168,7 +165,7 @@ class TestYahooAuthManager:
             mock_initial_crumb,  # First invalid crumb
             mock_consent_response,  # Consent page with CSRF
             MagicMock(),  # Copy consent call
-            mock_final_crumb  # Final invalid crumb
+            mock_final_crumb,  # Final invalid crumb
         ]
 
         # Check that YahooAuthError is raised
@@ -179,32 +176,32 @@ class TestYahooAuthManager:
     async def test_extract_csrf(self, mock_session_class, yahoo_auth_manager):
         """Test _extract_csrf method."""
         # HTML with both CSRF token and session ID
-        html_with_both = '''
+        html_with_both = """
             <html>
                 <input type="hidden" name="csrfToken" value="csrf-value">
                 <input type="hidden" name="sessionId" value="session-value">
             </html>
-        '''
+        """
         csrf, session = yahoo_auth_manager._extract_csrf(html_with_both)
         assert csrf == "csrf-value"
         assert session == "session-value"
 
         # HTML with only CSRF token
-        html_with_csrf = '''
+        html_with_csrf = """
             <html>
                 <input type="hidden" name="csrfToken" value="csrf-only">
             </html>
-        '''
+        """
         csrf, session = yahoo_auth_manager._extract_csrf(html_with_csrf)
         assert csrf == "csrf-only"
         assert session is None
 
         # HTML with only session ID
-        html_with_session = '''
+        html_with_session = """
             <html>
                 <input type="hidden" name="sessionId" value="session-only">
             </html>
-        '''
+        """
         csrf, session = yahoo_auth_manager._extract_csrf(html_with_session)
         assert csrf is None
         assert session == "session-only"
@@ -251,7 +248,7 @@ class TestYahooAuthManager:
         # Setup cached data that's recent
         yahoo_auth_manager._cookie = {"cached": "cookie"}
         yahoo_auth_manager._crumb = "cached-crumb"
-        yahoo_auth_manager._last_update = datetime.now(timezone.utc)
+        yahoo_auth_manager._last_update = datetime.now(UTC)
 
         # Call get_or_refresh
         cookie, crumb = await yahoo_auth_manager.get_or_refresh()
@@ -267,13 +264,13 @@ class TestYahooAuthManager:
         # Setup cached data that's old
         yahoo_auth_manager._cookie = {"old": "cookie"}
         yahoo_auth_manager._crumb = "old-crumb"
-        yahoo_auth_manager._last_update = datetime.now(timezone.utc) - timedelta(seconds=35)  # Older than 30s
+        yahoo_auth_manager._last_update = datetime.now(UTC) - timedelta(seconds=35)  # Older than 30s
 
         # Setup new values after refresh
         def side_effect(proxy=None):
             yahoo_auth_manager._cookie = {"new": "cookie"}
             yahoo_auth_manager._crumb = "new-crumb"
-            yahoo_auth_manager._last_update = datetime.now(timezone.utc)
+            yahoo_auth_manager._last_update = datetime.now(UTC)
 
         mock_refresh.side_effect = side_effect
 

@@ -1,12 +1,12 @@
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, ANY
+from unittest.mock import AsyncMock, patch
 
 import pytest
 import requests
 from fastapi import HTTPException
 
 from src.models import MarketSector, MarketSectorDetails, Sector
-from src.services.sectors.get_sectors import get_sector_details, get_sector_for_symbol, get_yahoo_sector, urls
+from src.services.sectors.get_sectors import get_sector_details, get_sector_for_symbol, urls
 from tests.conftest import VERSION
 
 

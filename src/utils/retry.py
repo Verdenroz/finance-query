@@ -1,7 +1,8 @@
 import inspect
 import logging
+from collections.abc import Awaitable, Callable
 from functools import wraps
-from typing import Awaitable, Callable, ParamSpec, TypeVar
+from typing import ParamSpec, TypeVar
 
 from fastapi import HTTPException
 
@@ -59,9 +60,7 @@ def retry(
                         if k in _fallback_params and k not in fallback_kwargs:
                             fallback_kwargs[k] = v
 
-                    logger.info(
-                        "Switching to fallback %s with kwargs %s", fallback.__name__, fallback_kwargs
-                    )
+                    logger.info("Switching to fallback %s with kwargs %s", fallback.__name__, fallback_kwargs)
                     return await fallback(**fallback_kwargs)
 
         return wrapper

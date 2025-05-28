@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import orjson
 import pytest
@@ -153,9 +153,9 @@ class TestHistorical:
             (Interval.THIRTY_MINUTES, TimeRange.THREE_MONTHS, "If interval is 30m, range must be 1d, 5d, 1mo"),
             (Interval.THIRTY_MINUTES, TimeRange.YEAR, "If interval is 30m, range must be 1d, 5d, 1mo"),
             (
-                    Interval.ONE_HOUR,
-                    TimeRange.FIVE_YEARS,
-                    "If interval is 1h, range must be 1d, 5d, 1mo, 3mo, 6mo, ytd, 1y",
+                Interval.ONE_HOUR,
+                TimeRange.FIVE_YEARS,
+                "If interval is 1h, range must be 1d, 5d, 1mo, 3mo, 6mo, ytd, 1y",
             ),
             (Interval.DAILY, TimeRange.MAX, "If range is max, interval must be 1mo"),
             (Interval.WEEKLY, TimeRange.MAX, "If range is max, interval must be 1mo"),

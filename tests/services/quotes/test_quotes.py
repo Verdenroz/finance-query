@@ -1,6 +1,6 @@
 import hashlib
 from pathlib import Path
-from unittest.mock import AsyncMock, patch, ANY
+from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
 import requests
@@ -124,9 +124,7 @@ class TestQuotes:
                                 "dividendYield": {"fmt": "0.03%"},
                                 "exDividendDate": {"fmt": "Dec 05 2024"},
                             },
-                            "calendarEvents": {
-                                "earnings": {"earningsDate": [{"fmt": "2025-04-23"}]}
-                            },
+                            "calendarEvents": {"earnings": {"earningsDate": [{"fmt": "2025-04-23"}]}},
                             "assetProfile": {
                                 "sector": "Technology",
                                 "industry": "Semiconductors",
@@ -195,8 +193,9 @@ class TestQuotes:
         """Test scraping simple quotes"""
         url = f"https://finance.yahoo.com/quote/{symbols[0]}/"
         html = quote_html(url)
-        with patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch, \
-                patch("src.services.quotes.fetchers.quote_scraper.get_logo", new_callable=AsyncMock) as mock_logo:
+        with patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch, patch(
+            "src.services.quotes.fetchers.quote_scraper.get_logo", new_callable=AsyncMock
+        ) as mock_logo:
             mock_fetch.return_value = html
             mock_logo.return_value = "https://logo.clearbit.com/example.com"
             result = await scrape_simple_quotes(symbols)
@@ -221,7 +220,7 @@ class TestQuotes:
             svc.assert_awaited_once_with(ANY, ["NVDA"])
 
     def test_unknown_symbol(self, test_client):
-        """ Test for unknown symbols """
+        """Test for unknown symbols"""
         with patch("src.services.quotes.get_quotes.fetch_quotes", new=AsyncMock(side_effect=HTTPException(404, "Symbol not found"))):
             r = test_client.get(f"{VERSION}/quotes?symbols=BAD")
             assert r.status_code == 404

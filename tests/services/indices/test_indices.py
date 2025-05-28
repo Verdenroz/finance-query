@@ -376,17 +376,15 @@ class TestIndices:
                                         "regularMarketChange": {"fmt": "+10.0"},
                                         "regularMarketChangePercent": {"fmt": "+1.0%"},
                                         "longName": f"{index.value} Index",
-                                        "shortName": f"{index.value} Index"
+                                        "shortName": f"{index.value} Index",
                                     },
-                                    "quoteUnadjustedPerformanceOverview": {
-                                        "performanceOverview": {}
-                                    }
+                                    "quoteUnadjustedPerformanceOverview": {"performanceOverview": {}},
                                 }
                             ]
-                        }
+                        },
                     }
                 ],
-                "error": None
+                "error": None,
             }
         }
 
@@ -462,13 +460,16 @@ class TestIndices:
             mock_finance_client.get_simple_quotes.assert_called_once_with([yahoo_symbol])
             mock_get_quotes_fallback.assert_called_once_with(mock_finance_client, [yahoo_symbol])
 
-    @pytest.mark.parametrize("index, expected_symbol", [
-        (Index.GSPC, "^GSPC"),
-        (Index.DJI, "^DJI"),
-        (Index.MOEX_ME, "MOEX.ME"),
-        (Index.SHANGHAI, "000001.SS"),
-        (Index.PSI, "PSI20.LS"),
-    ])
+    @pytest.mark.parametrize(
+        "index, expected_symbol",
+        [
+            (Index.GSPC, "^GSPC"),
+            (Index.DJI, "^DJI"),
+            (Index.MOEX_ME, "MOEX.ME"),
+            (Index.SHANGHAI, "000001.SS"),
+            (Index.PSI, "PSI20.LS"),
+        ],
+    )
     async def test_get_yahoo_index_symbol(self, index, expected_symbol):
         """Test _get_yahoo_index_symbol function with various indices"""
         from src.services.indices.fetchers.fetch_index import _get_yahoo_index_symbol
@@ -476,13 +477,16 @@ class TestIndices:
         symbol = _get_yahoo_index_symbol(index)
         assert symbol == expected_symbol
 
-    @pytest.mark.parametrize("index, default_name, expected_name", [
-        (Index.GDAXI, "German DAX", "DAX Performance Index"),
-        (Index.STOXX50E, "Euro Stoxx", "EURO STOXX 50"),
-        (Index.NZ50, "NZ Index", "S&P/NZX 50 Index"),
-        (Index.GSPC, "S&P 500", "S&P 500"),
-        (Index.DJI, "Dow Jones", "Dow Jones")
-    ])
+    @pytest.mark.parametrize(
+        "index, default_name, expected_name",
+        [
+            (Index.GDAXI, "German DAX", "DAX Performance Index"),
+            (Index.STOXX50E, "Euro Stoxx", "EURO STOXX 50"),
+            (Index.NZ50, "NZ Index", "S&P/NZX 50 Index"),
+            (Index.GSPC, "S&P 500", "S&P 500"),
+            (Index.DJI, "Dow Jones", "Dow Jones"),
+        ],
+    )
     async def test_get_formatted_index_name(self, index, default_name, expected_name):
         """Test _get_formatted_index_name function with various indices"""
         from src.services.indices.fetchers.fetch_index import _get_formatted_index_name

@@ -1,10 +1,10 @@
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from curl_cffi import requests
 from fastapi import HTTPException
 
-from src.clients.fetch_client import CurlFetchClient, DEFAULT_TIMEOUT
+from src.clients.fetch_client import DEFAULT_TIMEOUT, CurlFetchClient
 
 
 @pytest.fixture
@@ -23,10 +23,9 @@ def fetch_client(mock_session):
 
 
 class TestCurlFetchClient:
-
     def test_init_default(self):
         """Test initialization with default parameters."""
-        with patch('src.clients.fetch_client.requests.Session') as mock_session_cls:
+        with patch("src.clients.fetch_client.requests.Session") as mock_session_cls:
             mock_session = MagicMock()
             mock_session.headers = {}
             mock_session_cls.return_value = mock_session
@@ -45,12 +44,7 @@ class TestCurlFetchClient:
     def test_init_with_params(self, mock_session):
         """Test initialization with custom parameters."""
         custom_headers = {"Custom-Header": "test-value"}
-        client = CurlFetchClient(
-            session=mock_session,
-            timeout=20,
-            proxy="http://proxy.example.com",
-            default_headers=custom_headers
-        )
+        client = CurlFetchClient(session=mock_session, timeout=20, proxy="http://proxy.example.com", default_headers=custom_headers)
 
         assert client.timeout == 20
         assert mock_session.proxies == {"http": "http://proxy.example.com", "https": "http://proxy.example.com"}
@@ -62,11 +56,7 @@ class TestCurlFetchClient:
         mock_session.request.return_value = mock_response
 
         response = fetch_client.request(
-            url="https://example.com",
-            method="GET",
-            params={"key": "value"},
-            data={"data_key": "data_value"},
-            headers={"Header": "Value"}
+            url="https://example.com", method="GET", params={"key": "value"}, data={"data_key": "data_value"}, headers={"Header": "Value"}
         )
 
         mock_session.request.assert_called_once_with(
@@ -75,7 +65,7 @@ class TestCurlFetchClient:
             params={"key": "value"},
             json={"data_key": "data_value"},
             headers={"Header": "Value"},
-            timeout=DEFAULT_TIMEOUT
+            timeout=DEFAULT_TIMEOUT,
         )
         assert response == mock_response
 
@@ -96,15 +86,11 @@ class TestCurlFetchClient:
         mock_response.text = "Response Text"
         mock_session.request.return_value = mock_response
 
-        with patch('asyncio.to_thread', new_callable=AsyncMock) as mock_to_thread:
+        with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
             mock_to_thread.return_value = mock_response
 
             result = await fetch_client.fetch(
-                url="https://example.com",
-                method="POST",
-                params={"key": "value"},
-                data={"data_key": "data_value"},
-                headers={"Header": "Value"}
+                url="https://example.com", method="POST", params={"key": "value"}, data={"data_key": "data_value"}, headers={"Header": "Value"}
             )
 
             mock_to_thread.assert_called_once_with(
@@ -113,7 +99,7 @@ class TestCurlFetchClient:
                 method="POST",
                 params={"key": "value"},
                 data={"data_key": "data_value"},
-                headers={"Header": "Value"}
+                headers={"Header": "Value"},
             )
             assert result == "Response Text"
 
@@ -123,22 +109,19 @@ class TestCurlFetchClient:
         mock_response.text = "Response Text"
         mock_session.request.return_value = mock_response
 
-        with patch('asyncio.to_thread', new_callable=AsyncMock) as mock_to_thread:
+        with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
             mock_to_thread.return_value = mock_response
 
-            result = await fetch_client.fetch(
-                url="https://example.com",
-                return_response=True
-            )
+            result = await fetch_client.fetch(url="https://example.com", return_response=True)
 
             assert result == mock_response
 
     async def test_fetch_error_propagation(self, fetch_client):
         """Test that fetch propagates errors from request."""
-        with patch.object(fetch_client, 'request') as mock_request:
+        with patch.object(fetch_client, "request") as mock_request:
             mock_request.side_effect = HTTPException(500, "Test error")
 
-            with patch('asyncio.to_thread', new_callable=AsyncMock) as mock_to_thread:
+            with patch("asyncio.to_thread", new_callable=AsyncMock) as mock_to_thread:
                 mock_to_thread.side_effect = HTTPException(500, "Test error")
 
                 with pytest.raises(HTTPException) as exc_info:

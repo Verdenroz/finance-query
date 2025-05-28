@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, MagicMock, patch, ANY
+from unittest.mock import ANY, AsyncMock, MagicMock, patch
 
 import pytest
 from orjson import orjson
@@ -320,4 +320,3 @@ class TestSearch:
         # Count recognized types
         recognized_types = [r for r in results if r.type in [t.value for t in Type]]
         assert len(recognized_types) == len(results)
-

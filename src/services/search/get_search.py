@@ -1,8 +1,8 @@
 from utils.dependencies import FinanceClient
+from utils.retry import retry
 
 from src.models import SearchResult, Type
 from src.services.search.fetchers import fetch_algolia_search_results, fetch_yahoo_search_results
-from utils.retry import retry
 
 
 @retry(fetch_yahoo_search_results)

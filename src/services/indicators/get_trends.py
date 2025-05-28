@@ -1,5 +1,7 @@
 from collections import OrderedDict
 
+from utils.dependencies import FinanceClient
+
 from src.models.historical_data import Interval, TimeRange
 from src.models.indicators import (
     ADXData,
@@ -24,7 +26,6 @@ from src.services.indicators.core import (
     create_indicator_dict,
     prepare_price_data,
 )
-from utils.dependencies import FinanceClient
 
 
 async def get_macd(
@@ -71,14 +72,7 @@ async def get_macd(
     return TechnicalIndicator(type=Indicator.MACD, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_adx(
-    finance_client: FinanceClient,
-    symbol: str,
-    time_range: TimeRange,
-    interval: Interval,
-    period: int = 14,
-    epoch: bool = False
-) -> dict:
+async def get_adx(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False) -> dict:
     """
     Get the Average Directional Index (ADX) for a symbol.
     The ADX is a trend strength indicator that quantifies the strength of a trend without indicating its direction.
@@ -107,14 +101,7 @@ async def get_adx(
     return TechnicalIndicator(type=Indicator.ADX, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_aroon(
-    finance_client: FinanceClient,
-    symbol: str,
-    time_range: TimeRange,
-    interval: Interval,
-    period: int = 25,
-    epoch: bool = False
-) -> dict:
+async def get_aroon(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 25, epoch: bool = False) -> dict:
     """
     Get the Aroon indicator for a symbol.
     The Aroon indicator consists of two lines: Aroon Up and Aroon Down. Aroon Up measures the number of periods
@@ -149,13 +136,7 @@ async def get_aroon(
 
 
 async def get_bbands(
-        finance_client: FinanceClient,
-        symbol: str,
-        time_range: TimeRange,
-        interval: Interval,
-        period: int = 20,
-        std_dev: int = 2,
-        epoch: bool = False
+    finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, std_dev: int = 2, epoch: bool = False
 ) -> dict:
     """
     Get the Bollinger Bands (BBands) for a symbol.
@@ -195,13 +176,7 @@ async def get_bbands(
     return TechnicalIndicator(type=Indicator.BBANDS, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_obv(
-    finance_client: FinanceClient,
-    symbol: str,
-    time_range: TimeRange,
-    interval: Interval,
-    epoch: bool = False
-) -> dict:
+async def get_obv(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict:
     """
     Get the On-Balance Volume (OBV) for a symbol.
     The OBV is a volume-based indicator that uses volume flow to predict changes in stock price. It works on the
@@ -229,13 +204,7 @@ async def get_obv(
 
 
 async def get_super_trend(
-    finance_client: FinanceClient,
-    symbol: str,
-    time_range: TimeRange,
-    interval: Interval,
-    period: int = 10,
-    multiplier: int = 3,
-    epoch: bool = False
+    finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, multiplier: int = 3, epoch: bool = False
 ) -> dict:
     """
     Get the Super Trend indicator for a symbol.

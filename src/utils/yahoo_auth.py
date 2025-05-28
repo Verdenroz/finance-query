@@ -1,6 +1,6 @@
 import asyncio
-from datetime import datetime, timezone
 import re
+from datetime import UTC, datetime
 from typing import Optional
 
 from curl_cffi import requests
@@ -95,7 +95,7 @@ class YahooAuthManager:
         # Successfully obtained a cookie/crumb pair
         self._crumb = crumb
         self._cookie = dict(session.cookies)
-        self._last_update = datetime.now(timezone.utc)
+        self._last_update = datetime.now(UTC)
 
     @staticmethod
     def _extract_csrf(html: str) -> tuple[Optional[str], Optional[str]]:
@@ -116,10 +116,10 @@ class YahooAuthManager:
         """
         async with self._lock:
             if (
-                    self._cookie is None
-                    or self._crumb is None
-                    or self._last_update is None
-                    or (datetime.now(timezone.utc) - self._last_update).total_seconds() > self._MIN_REFRESH_INTERVAL
+                self._cookie is None
+                or self._crumb is None
+                or self._last_update is None
+                or (datetime.now(UTC) - self._last_update).total_seconds() > self._MIN_REFRESH_INTERVAL
             ):
                 await self.refresh(proxy)
             # guaranteed non-None here

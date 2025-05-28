@@ -109,6 +109,7 @@ async def get_yahoo_auth(mgr: AuthManager) -> tuple[dict, str]:
 
 YahooAuth = Annotated[tuple[dict, str], Depends(get_yahoo_auth)]
 
+
 @injectable
 async def get_yahoo_finance_client(auth: YahooAuth, proxy: Proxy) -> CurlFetchClient:
     """

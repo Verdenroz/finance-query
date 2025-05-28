@@ -1,8 +1,8 @@
 from utils.cache import cache
-
-from src.models.marketmover import MoverCount, MarketMover
-from src.services.movers.fetchers import fetch_movers, scrape_movers
 from utils.retry import retry
+
+from src.models.marketmover import MarketMover, MoverCount
+from src.services.movers.fetchers import fetch_movers, scrape_movers
 
 
 @cache(expire=15, market_closed_expire=3600)
