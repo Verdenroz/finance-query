@@ -10,6 +10,7 @@ from starlette.websockets import WebSocket
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.main import app
 from src.models import HistoricalData
+from utils.dependencies import FinanceClient
 from utils.yahoo_auth import YahooAuthManager
 
 VERSION = "v1"
@@ -54,11 +55,13 @@ def yahoo_auth_manager():
     mgr.get_or_refresh = original_get_or_refresh
 
 
-@pytest.fixture
-def mock_finance_client(monkeypatch):
+@pytest.fixture(autouse=True)
+def mock_finance_client():
     """
     The object FastAPI will get back from utils.dependencies.get_yahoo_finance_client.
     You can preset return values (or side_effects) per-test.
+
+    This fixture uses FastAPI's dependency_overrides to properly replace the dependency.
     """
     client = AsyncMock(name="FinanceClient")
     client.get_quote = AsyncMock()
@@ -66,9 +69,17 @@ def mock_finance_client(monkeypatch):
     client.get_chart = AsyncMock()
     client.search = AsyncMock()
     client.get_similar_quotes = AsyncMock()
-    # Patch the dependency-provider so every request/route gets *this* client.
-    monkeypatch.setattr("utils.dependencies.get_yahoo_finance_client", lambda *_, **__: client)
-    return client
+
+    # Store the original overrides
+    original_overrides = app.dependency_overrides.copy()
+
+    # Set the override for the dependency
+    app.dependency_overrides[FinanceClient] = client
+
+    yield client
+
+    # Restore original overrides after the test
+    app.dependency_overrides = original_overrides
 
 
 @pytest.fixture(scope="session")
