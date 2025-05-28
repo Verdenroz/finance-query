@@ -8,7 +8,7 @@ from tests.conftest import VERSION
 
 
 class TestSSE:
-    async def test_quotes_generator(self):
+    async def test_quotes_generator(self, mock_finance_client):
         """Test the quotes_generator function"""
         # Mock data
         symbols = ["AAPL", "NVDA"]
@@ -35,12 +35,8 @@ class TestSSE:
 
         # Patch dependencies
         with patch("src.routes.stream.get_simple_quotes", return_value=mock_quotes), patch("asyncio.sleep", AsyncMock()):
-            # Mock cookies and crumb
-            mock_cookies = "mock_cookies"
-            mock_crumb = "mock_crumb"
-
             # Get generator
-            generator = stream.quotes_generator(symbols, mock_cookies, mock_crumb)
+            generator = stream.quotes_generator(mock_finance_client, symbols)
 
             # Get first response
             response = await anext(generator)
@@ -65,7 +61,7 @@ class TestSSE:
                 assert "change" in quote
                 assert "percentChange" in quote
 
-    async def test_stream_quotes_endpoint(self, test_client, mock_yahoo_auth):
+    async def test_stream_quotes_endpoint(self, test_client):
         """Test the stream_quotes endpoint"""
         # Test data
         symbols_str = "AAPL,NVDA"
