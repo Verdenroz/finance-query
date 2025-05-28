@@ -9,8 +9,8 @@ from fastapi_injectable import injectable
 from redis import Redis
 from starlette.websockets import WebSocket
 
-from clients.fetch_client import CurlFetchClient
-from clients.yahoo_client import YahooFinanceClient
+from src.clients.fetch_client import CurlFetchClient
+from src.clients.yahoo_client import YahooFinanceClient
 from connections import ConnectionManager
 from src.connections import RedisConnectionManager
 from src.context import request_context

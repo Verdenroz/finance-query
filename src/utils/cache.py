@@ -12,7 +12,7 @@ import orjson
 from pydantic import BaseModel
 from redis import RedisError
 
-from clients.fetch_client import CurlFetchClient
+from src.clients.fetch_client import CurlFetchClient
 from src.context import request_context
 from src.models import HistoricalData, MarketIndex, MarketMover, MarketSector, News, Quote, SimpleQuote
 from src.models.sector import MarketSectorDetails
