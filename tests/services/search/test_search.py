@@ -15,6 +15,27 @@ MOCK_SEARCH_RESPONSE = [
     {"name": "Amazon Trust", "symbol": "AMZN-TRUST", "exchange": "NYSE", "type": "trust"},
 ]
 
+# Mock Yahoo Finance response for search tests
+MOCK_YAHOO_SEARCH_RESPONSE = {
+    "quotes": [
+        {
+            "shortname": "Amazon.com, Inc.",
+            "symbol": "AMZN",
+            "exchange": "NASDAQ",
+            "quoteType": "EQUITY",
+        },
+        {"shortname": "Amazon ETF", "symbol": "AMZN-ETF", "exchange": "NYSE", "quoteType": "ETF"},
+        {
+            "shortname": "Amazon Trust",
+            "symbol": "AMZN-TRUST",
+            "exchange": "NYSE",
+            "quoteType": "MUTUALFUND",
+        },
+        {"shortname": "Amazon Futures", "symbol": "AMZN-FUT", "exchange": "CME", "quoteType": "FUTURE"},
+        {"longname": "Amazon No Shortname", "symbol": "AMZN-NS", "exchange": "NYSE", "quoteType": "EQUITY"},
+    ]
+}
+
 
 class TestSearch:
     @pytest.fixture
@@ -199,3 +220,104 @@ class TestSearch:
                     assert params["facetFilters"] == facet_filter
                 else:
                     assert "facetFilters" not in params
+
+    @pytest.mark.parametrize(
+        "type_filter, expected_count",
+        [
+            (None, 4),  # All types (3 recognized types + 1 with longname)
+            (Type.STOCK, 2),  # 2 stocks (one with shortname, one with longname)
+            (Type.ETF, 1),
+            (Type.TRUST, 1),
+        ],
+    )
+    async def test_fetch_yahoo_search_results(self, mock_finance_client, type_filter, expected_count):
+        """Test fetch_yahoo_search_results function"""
+        query = "AMZN"
+        hits = 10
+
+        # Setup mock finance client with search response
+        mock_finance_client.search = AsyncMock(return_value=MOCK_YAHOO_SEARCH_RESPONSE)
+
+        # Call the function with the specified filter
+        results = await fetch_yahoo_search_results(mock_finance_client, query, hits, type_filter)
+
+        # Verify finance client search was called with correct parameters
+        mock_finance_client.search.assert_awaited_once_with(query, hits)
+
+        # Verify expected number of results based on filter
+        assert len(results) == expected_count
+
+        # Check that items have the correct properties
+        for result in results:
+            assert isinstance(result, SearchResult)
+            assert result.symbol is not None
+            assert result.name is not None
+            assert result.exchange is not None
+
+            # If type filter provided, verify all results have that type
+            if type_filter:
+                assert result.type == type_filter.value
+
+    async def test_fetch_yahoo_search_results_empty(self, mock_finance_client):
+        """Test fetch_yahoo_search_results with empty response"""
+        query = "NONEXISTENT"
+        hits = 10
+
+        # Setup mock finance client with empty search response
+        mock_finance_client.search = AsyncMock(return_value={"quotes": []})
+
+        # Call the function
+        results = await fetch_yahoo_search_results(mock_finance_client, query, hits, None)
+
+        # Verify results
+        assert len(results) == 0
+
+    async def test_fetch_yahoo_search_results_limit(self, mock_finance_client):
+        """Test fetch_yahoo_search_results respects the hits limit"""
+        query = "AMZN"
+        hits = 2  # Only want 2 results
+
+        # Setup mock finance client with search response
+        mock_finance_client.search = AsyncMock(return_value=MOCK_YAHOO_SEARCH_RESPONSE)
+
+        # Call the function
+        results = await fetch_yahoo_search_results(mock_finance_client, query, hits, None)
+
+        # Verify that only the requested number of results is returned
+        assert len(results) == hits
+
+    async def test_fetch_yahoo_search_results_name_fallback(self, mock_finance_client):
+        """Test fetch_yahoo_search_results name fallback (longname when shortname is missing)"""
+        query = "AMZN"
+
+        # Setup mock finance client with search response
+        mock_finance_client.search = AsyncMock(return_value=MOCK_YAHOO_SEARCH_RESPONSE)
+
+        # Call the function with filter for stock (to get the item with longname)
+        results = await fetch_yahoo_search_results(mock_finance_client, query, 10, Type.STOCK)
+
+        # Find the result with AMZN-NS symbol
+        result_with_longname = next((r for r in results if r.symbol == "AMZN-NS"), None)
+
+        # Verify the name was set using longname
+        assert result_with_longname is not None
+        assert result_with_longname.name == "Amazon No Shortname"
+
+    async def test_fetch_yahoo_search_results_skip_unknown_types(self, mock_finance_client):
+        """Test fetch_yahoo_search_results skips unknown quote types"""
+        query = "AMZN"
+
+        # Setup mock finance client with search response
+        mock_finance_client.search = AsyncMock(return_value=MOCK_YAHOO_SEARCH_RESPONSE)
+
+        # Call the function
+        results = await fetch_yahoo_search_results(mock_finance_client, query, 10, None)
+
+        # Verify that the FUTURE type was skipped
+        future_result = next((r for r in results if r.symbol == "AMZN-FUT"), None)
+        assert future_result is None
+
+        # Count recognized types
+        recognized_types = [r for r in results if r.type in [t.value for t in Type]]
+        assert len(recognized_types) == len(results)
+
