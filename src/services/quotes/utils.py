@@ -4,7 +4,7 @@ from datetime import datetime
 import psutil
 from lxml import etree, html
 
-from utils.dependencies import get_logo
+from src.utils.dependencies import get_logo
 
 # Initialize thread pool
 thread_pool = ThreadPoolExecutor(max_workers=psutil.cpu_count(logical=True) * 2)

@@ -8,7 +8,7 @@ from orjson import orjson
 
 from src.models import ValidationErrorResponse
 from src.services import get_simple_quotes
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 

@@ -3,7 +3,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models import HistoricalData, Interval, TimeRange, ValidationErrorResponse
 from src.services import get_historical
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 

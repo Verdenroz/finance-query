@@ -52,13 +52,13 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
-from utils.dependencies import (
+from src.utils.dependencies import (
     FinanceClient,
     RedisClient,
     remove_proxy_whitelist,
     setup_proxy_whitelist,
 )
-from utils.yahoo_auth import YahooAuthManager
+from src.utils.yahoo_auth import YahooAuthManager
 
 load_dotenv()
 yahoo_auth_manager = YahooAuthManager()

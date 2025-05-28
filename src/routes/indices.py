@@ -5,7 +5,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models import INDEX_REGIONS, Index, MarketIndex, Region
 from src.services import get_indices
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 

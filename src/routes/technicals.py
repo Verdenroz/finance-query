@@ -22,7 +22,7 @@ from src.services.indicators import (
     get_vwma,
     get_wma,
 )
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 

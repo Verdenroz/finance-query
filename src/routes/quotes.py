@@ -3,7 +3,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models import Quote, SimpleQuote, ValidationErrorResponse
 from src.services import get_quotes, get_simple_quotes
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 

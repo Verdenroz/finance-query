@@ -2,7 +2,7 @@ from fastapi import HTTPException
 
 from src.models import SimpleQuote
 from src.services import get_simple_quotes
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 
 async def fetch_similar(finance_client: FinanceClient, symbol: str, limit: int) -> list[SimpleQuote]:

@@ -12,7 +12,7 @@ from src.services.quotes.utils import (
     is_within_post_market_time,
     is_within_pre_market_time,
 )
-from utils.dependencies import FinanceClient, get_logo
+from src.utils.dependencies import FinanceClient, get_logo
 
 
 async def fetch_quotes(finance_client: FinanceClient, symbols: list[str]) -> list[Quote]:

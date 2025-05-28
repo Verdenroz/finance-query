@@ -278,7 +278,7 @@ class TestSocketsHandler:
 
                 return datetime.fromisoformat(mock_timestamp.replace("+00:00", "")).replace(tzinfo=UTC)
 
-        from utils.dependencies import Schedule
+        from src.utils.dependencies import Schedule
 
         # Patches
         monkeypatch.setattr(Schedule, "get_market_status", mock_get_market_status)

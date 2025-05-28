@@ -21,7 +21,7 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
-from utils.dependencies import FinanceClient, Schedule, WebsocketConnectionManager
+from src.utils.dependencies import FinanceClient, Schedule, WebsocketConnectionManager
 
 router = APIRouter()
 

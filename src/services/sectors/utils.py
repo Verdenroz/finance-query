@@ -1,4 +1,4 @@
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 
 async def get_yahoo_sector(finance_client: FinanceClient, symbol: str) -> str | None:

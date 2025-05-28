@@ -1,7 +1,7 @@
 from src.models import Quote, SimpleQuote
 from src.services.quotes.fetchers import fetch_quotes, fetch_simple_quotes, scrape_quotes, scrape_simple_quotes
-from utils.dependencies import FinanceClient
-from utils.retry import retry
+from src.utils.dependencies import FinanceClient
+from src.utils.retry import retry
 
 
 @retry(scrape_quotes)

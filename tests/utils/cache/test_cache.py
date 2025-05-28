@@ -7,8 +7,8 @@ from redis import RedisError
 
 from src.context import request_context
 from src.models import SimpleQuote
-from utils.cache import MemCacheHandler, RedisCacheHandler, cache
-from utils.market import MarketSchedule, MarketStatus
+from src.utils.cache import MemCacheHandler, RedisCacheHandler, cache
+from src.utils.market import MarketSchedule, MarketStatus
 
 
 class TestRedisCacheHandler:

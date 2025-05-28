@@ -13,7 +13,7 @@ from src.services.indicators.core import (
     create_indicator_dict,
     prepare_price_data,
 )
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 
 async def get_rsi(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False):

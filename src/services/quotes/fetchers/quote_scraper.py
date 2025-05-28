@@ -12,8 +12,8 @@ from src.services.quotes.utils import (
     parse_tree,
     thread_pool,
 )
-from utils.cache import cache
-from utils.dependencies import fetch, get_logo
+from src.utils.cache import cache
+from src.utils.dependencies import fetch, get_logo
 
 
 async def scrape_quotes(symbols: list[str]):

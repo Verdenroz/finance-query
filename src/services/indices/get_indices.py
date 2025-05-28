@@ -4,8 +4,8 @@ from src.models import MarketIndex
 from src.models.index import Index
 from src.services.indices.fetchers import fetch_index
 from src.services.quotes import get_adaptive_chunk_size
-from utils.cache import cache
-from utils.dependencies import FinanceClient
+from src.utils.cache import cache
+from src.utils.dependencies import FinanceClient
 
 
 @cache(expire=15, market_closed_expire=180)

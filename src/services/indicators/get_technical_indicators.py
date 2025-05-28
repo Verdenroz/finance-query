@@ -39,7 +39,7 @@ from src.services.indicators.core import (
     calculate_wma,
     prepare_price_data,
 )
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 
 async def get_technical_indicators(

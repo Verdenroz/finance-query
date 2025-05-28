@@ -3,7 +3,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models import SimpleQuote
 from src.services import get_similar_quotes
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 

@@ -1,8 +1,8 @@
 from src.models import SimpleQuote
 from src.services.similar.fetchers import fetch_similar, scrape_similar_quotes
-from utils.cache import cache
-from utils.dependencies import FinanceClient
-from utils.retry import retry
+from src.utils.cache import cache
+from src.utils.dependencies import FinanceClient
+from src.utils.retry import retry
 
 
 @cache(expire=15, market_closed_expire=600)

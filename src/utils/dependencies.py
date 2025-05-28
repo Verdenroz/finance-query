@@ -14,8 +14,8 @@ from clients.yahoo_client import YahooFinanceClient
 from connections import ConnectionManager
 from src.connections import RedisConnectionManager
 from src.context import request_context
-from utils.market import MarketSchedule
-from utils.yahoo_auth import YahooAuthManager
+from src.utils.market import MarketSchedule
+from src.utils.yahoo_auth import YahooAuthManager
 
 Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
 

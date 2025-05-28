@@ -1,6 +1,6 @@
 from src.models.index import Index, MarketIndex
 from src.services.quotes.get_quotes import get_quotes
-from utils.dependencies import FinanceClient
+from src.utils.dependencies import FinanceClient
 
 
 async def fetch_index(
