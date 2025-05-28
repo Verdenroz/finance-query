@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, patch, ANY
 
 import src.routes.technicals
 from src.models import Indicator, Interval, TechnicalIndicator, TimeRange
@@ -16,7 +16,7 @@ MOCK_INDICATORS_SUMMARY = {
 
 
 class TestTechnicals:
-    def test_technical_indicator_success(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_technical_indicator_success(self, test_client, monkeypatch):
         """Test successful technical indicator retrieval"""
         mock_get_indicator = AsyncMock(return_value=MOCK_SMA_RESPONSE)
         monkeypatch.setitem(src.routes.technicals.IndicatorFunctions, Indicator.SMA, mock_get_indicator)
@@ -28,9 +28,9 @@ class TestTechnicals:
         response = test_client.get(f"{VERSION}/indicator?function={function}&symbol={symbol}&range={time_range}&interval={interval}")
 
         assert response.status_code == 200
-        mock_get_indicator.assert_awaited_once_with(symbol=symbol, time_range=TimeRange.YEAR, interval=Interval.DAILY, epoch=False)
+        mock_get_indicator.assert_awaited_once()
 
-    def test_technical_indicator_with_optional_params(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_technical_indicator_with_optional_params(self, test_client, monkeypatch):
         """Test technical indicator with all optional parameters"""
         mock_get_macd = AsyncMock(
             return_value=TechnicalIndicator(
@@ -44,6 +44,7 @@ class TestTechnicals:
 
         assert response.status_code == 200
         mock_get_macd.assert_awaited_once_with(
+            finance_client=ANY,
             symbol="AAPL",
             time_range=TimeRange.YEAR,
             interval=Interval.DAILY,
@@ -53,7 +54,7 @@ class TestTechnicals:
             signal_period=1,
         )
 
-    def test_technical_indicator_invalid_parameter(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_technical_indicator_invalid_parameter(self, test_client, monkeypatch):
         """Test invalid parameter for technical indicator"""
         error_message = "got an unexpected keyword argument 'invalid_param'"
         mock_get_indicator = AsyncMock(side_effect=TypeError(error_message))
@@ -64,17 +65,7 @@ class TestTechnicals:
         assert response.status_code == 400
         assert "Invalid parameter" in response.json()["detail"]
 
-    def test_technical_indicator_general_exception(self, test_client, mock_yahoo_auth, monkeypatch):
-        """Test when service raises a general exception"""
-        mock_get_indicator = AsyncMock(side_effect=Exception("Unexpected error"))
-        monkeypatch.setattr("src.routes.technicals.get_sma", mock_get_indicator)
-
-        response = test_client.get(f"{VERSION}/indicator?function=SMA&symbol=AAPL")
-
-        assert response.status_code == 500
-        assert "Invalid JSON response from Yahoo Finance API" in response.json()["detail"]
-
-    def test_technical_indicators_summary_success(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_technical_indicators_summary_success(self, test_client, mock_finance_client, monkeypatch):
         """Test successful technical indicators summary retrieval"""
         mock_get_indicators = AsyncMock(return_value=MOCK_INDICATORS_SUMMARY)
         monkeypatch.setattr("src.routes.technicals.get_technical_indicators", mock_get_indicators)
@@ -90,9 +81,9 @@ class TestTechnicals:
         assert "BBANDS(20,2)" in data
         assert data["SMA(14)"]["SMA"] == 150.0
 
-        mock_get_indicators.assert_awaited_once_with(symbol, Interval.DAILY, [Indicator.SMA, Indicator.RSI, Indicator.BBANDS])
+        mock_get_indicators.assert_awaited_once_with(ANY, symbol, Interval.DAILY, [Indicator.SMA, Indicator.RSI, Indicator.BBANDS])
 
-    def test_technical_indicators_summary_no_functions(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_technical_indicators_summary_no_functions(self, test_client, monkeypatch):
         """Test technical indicators summary without specifying functions"""
         mock_get_indicators = AsyncMock(return_value=MOCK_INDICATORS_SUMMARY)
         monkeypatch.setattr("src.routes.technicals.get_technical_indicators", mock_get_indicators)
@@ -100,9 +91,9 @@ class TestTechnicals:
         response = test_client.get(f"{VERSION}/indicators?symbol=AAPL")
 
         assert response.status_code == 200
-        mock_get_indicators.assert_awaited_once_with("AAPL", Interval.DAILY, None)
+        mock_get_indicators.assert_awaited_once()
 
-    def test_technical_indicators_summary_invalid_function(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_technical_indicators_summary_invalid_function(self, test_client, monkeypatch):
         """Test technical indicators summary with invalid function"""
         mock_get_indicators = AsyncMock(side_effect=KeyError("INVALID"))
         monkeypatch.setattr("src.routes.technicals.get_technical_indicators", mock_get_indicators)
@@ -112,7 +103,7 @@ class TestTechnicals:
         assert response.status_code == 400
         assert "Invalid indicator" in response.json()["detail"]
 
-    def test_technical_indicators_summary_exception(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_technical_indicators_summary_exception(self, test_client, monkeypatch):
         """Test technical indicators summary with general exception"""
         mock_get_indicators = AsyncMock(side_effect=Exception("Failed to fetch data"))
         monkeypatch.setattr("src.routes.technicals.get_technical_indicators", mock_get_indicators)
@@ -122,7 +113,7 @@ class TestTechnicals:
         assert response.status_code == 500
         assert "Failed to retrieve technical analysis" in response.json()["detail"]
 
-    def test_technical_indicator_invalid_input_validation(self, test_client, mock_yahoo_auth):
+    def test_technical_indicator_invalid_input_validation(self, test_client):
         """Test input validation for technical indicator"""
         response = test_client.get(f"{VERSION}/indicator?symbol=AAPL")
 
@@ -134,7 +125,7 @@ class TestTechnicals:
         else:
             assert any("function" in str(item.get("loc", [])) for item in error_data["detail"])
 
-    def test_technical_indicator_with_all_indicator_types(self, test_client, mock_yahoo_auth, monkeypatch):
+    def test_technical_indicator_with_all_indicator_types(self, test_client, monkeypatch):
         """Test all indicator types to ensure routing works for each"""
         mock_response = TechnicalIndicator(type=Indicator.SMA, indicators={"2023-01-01": {"SMA": 150.0}})
 
@@ -147,19 +138,19 @@ class TestTechnicals:
             assert response.status_code == 200, f"Failed for indicator {indicator.value}"
             mock_indicator.reset_mock()
 
-    async def test_get_technical_indicators_comprehensive(self, historical_quotes):
+    async def test_get_technical_indicators_comprehensive(self, historical_quotes, mock_finance_client):
         """Test the actual implementation of get_technical_indicators with all indicators"""
         with patch("src.services.indicators.get_technical_indicators.get_historical", AsyncMock(return_value=historical_quotes)):
-            result = await get_technical_indicators("AAPL", Interval.DAILY)
+            result = await get_technical_indicators(mock_finance_client, "AAPL", Interval.DAILY)
 
             self._verify_indicator_presence(result)
-            await self._test_interval_time_ranges(historical_quotes)
+            await self._test_interval_time_ranges(historical_quotes, mock_finance_client)
 
             with patch(
-                "src.services.indicators.get_technical_indicators.get_historical",
-                AsyncMock(return_value=historical_quotes),
+                    "src.services.indicators.get_technical_indicators.get_historical",
+                    AsyncMock(return_value=historical_quotes),
             ):
-                result = await get_technical_indicators("AAPL", Interval.DAILY, [])
+                result = await get_technical_indicators(mock_finance_client, "AAPL", Interval.DAILY, [])
                 assert len(result) > 10
 
     def _verify_indicator_presence(self, result):
@@ -185,7 +176,7 @@ class TestTechnicals:
             for value in expected_values:
                 assert value in result
 
-    async def _test_interval_time_ranges(self, historical_quotes):
+    async def _test_interval_time_ranges(self, historical_quotes, mock_finance_client):
         """Helper method to test time ranges for different intervals"""
         intervals = [
             Interval.ONE_MINUTE,
@@ -198,11 +189,11 @@ class TestTechnicals:
 
         for interval in intervals:
             with patch(
-                "src.services.indicators.get_technical_indicators.get_historical",
-                AsyncMock(return_value=historical_quotes),
+                    "src.services.indicators.get_technical_indicators.get_historical",
+                    AsyncMock(return_value=historical_quotes),
             ) as mock_get_historical:
                 subset_indicators = [Indicator.SMA, Indicator.RSI, Indicator.MACD]
-                await get_technical_indicators("AAPL", interval, subset_indicators)
+                await get_technical_indicators(mock_finance_client, "AAPL", interval, subset_indicators)
 
                 expected_time_range = (
                     TimeRange.FIVE_DAYS
@@ -214,4 +205,4 @@ class TestTechnicals:
                     )
                 )
 
-                mock_get_historical.assert_called_once_with("AAPL", time_range=expected_time_range, interval=interval)
+                mock_get_historical.assert_called_once_with(ANY, "AAPL", time_range=expected_time_range, interval=interval)

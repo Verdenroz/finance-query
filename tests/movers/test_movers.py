@@ -127,7 +127,7 @@ class TestMovers:
 
     @pytest.mark.parametrize("count", ["25", "50", "100"])
     @pytest.mark.parametrize("endpoint", ENDPOINTS)
-    def test_get_movers_success(self, test_client, count, endpoint, mock_yahoo_auth, monkeypatch):
+    def test_get_movers_success(self, test_client, count, endpoint, mock_finance_client, monkeypatch):
         """Test successful movers retrieval with different count values"""
         mock_service = AsyncMock(return_value=COUNT_RESPONSE_MAP[count])
         if endpoint == "actives":
@@ -146,7 +146,7 @@ class TestMovers:
         mock_service.assert_awaited_once_with(MoverCount(count))
 
     @pytest.mark.parametrize("endpoint", ENDPOINTS)
-    def test_get_movers_default_count(self, test_client, endpoint, mock_yahoo_auth, monkeypatch):
+    def test_get_movers_default_count(self, test_client, endpoint, mock_finance_client, monkeypatch):
         """Test movers retrieval with default count (50)"""
         mock_service = AsyncMock(return_value=MOCK_MOVER_RESPONSE_FIFTY)
         if endpoint == "actives":
@@ -165,7 +165,7 @@ class TestMovers:
         mock_service.assert_awaited_once_with(MoverCount.FIFTY)
 
     @pytest.mark.parametrize("endpoint", ENDPOINTS)
-    def test_get_movers_invalid_count(self, test_client, endpoint, mock_yahoo_auth):
+    def test_get_movers_invalid_count(self, test_client, endpoint, mock_finance_client):
         """Test movers retrieval with invalid count value"""
         response = test_client.get(f"{VERSION}/{endpoint}?count=42")
         data = response.json()
