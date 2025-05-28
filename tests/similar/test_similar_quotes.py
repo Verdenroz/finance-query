@@ -1,8 +1,8 @@
 import hashlib
+import random
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
-import orjson
 import pytest
 import requests
 from fastapi import HTTPException
@@ -264,7 +264,7 @@ class TestSimilarQuotesHandler:
         if cache_dir.exists():
             cache_dir.rmdir()
 
-    async def test_similar_quotes_endpoint(self, test_client, monkeypatch, mock_yahoo_auth):
+    async def test_similar_quotes_endpoint(self, test_client, monkeypatch):
         """Test the /similar endpoint"""
 
         test_symbol = "NVDA"
@@ -285,7 +285,7 @@ class TestSimilarQuotesHandler:
             },
         ]
 
-        async def mock_get_similar(symbol, cookies, crumb, limit):
+        async def mock_get_similar(finance_client, symbol, limit):
             return [SimpleQuote(**quote) for quote in mock_quotes[:limit]]
 
         monkeypatch.setattr("src.routes.similar.get_similar_quotes", mock_get_similar)
@@ -306,48 +306,40 @@ class TestSimilarQuotesHandler:
         assert len(data) == 1
         assert data[0]["symbol"] == "AMD"
 
-    async def test_fetch_yahoo_recommended_symbols(self, yahoo_recommendations, bypass_cache):
+    async def test_fetch_yahoo_recommended_symbols(self, yahoo_recommendations, bypass_cache, mock_finance_client):
         """Test _fetch_yahoo_recommended_symbols function with cached data"""
 
         test_symbols = ["AAPL", "MSFT", "NVDA", "JPM"]
-        test_limit = 3
 
         for symbol in test_symbols:
+            # random limit
+            test_limit = random.randint(1, 5)
+
             # Get cached recommendation data
             yahoo_data = yahoo_recommendations(symbol)
 
             # Expected recommendations from the cached data
-            recommendations = yahoo_data["finance"]["result"][0]["recommendedSymbols"]
-            expected_symbols = [rec["symbol"] for rec in recommendations]  # Get all symbols, not just limited ones
+            mock_finance_client.get_similar_quotes.return_value = yahoo_data
+            recommended_symbols = [rec["symbol"] for rec in yahoo_data["finance"]["result"][0]["recommendedSymbols"]][:test_limit]
 
-            # Mock the fetch function to return our cached data
-            with patch("src.services.similar.fetchers.similar_api.fetch", new_callable=AsyncMock) as mock_fetch:
-                mock_fetch.return_value = orjson.dumps(yahoo_data)
+            # Call the function with test parameters
+            result = await _fetch_yahoo_recommended_symbols(mock_finance_client, symbol, test_limit)
 
-                # Call the function with test parameters
-                result = await _fetch_yahoo_recommended_symbols(symbol, test_limit)
+            # Verify the result matches all recommendations and is limited to the specified count
+            assert result == recommended_symbols
+            assert len(result) == test_limit
 
-                # Verify the result matches all recommendations (function ignores limit)
-                assert result == expected_symbols
-
-                # Verify fetch was called with correct parameters
-                mock_fetch.assert_called_once()
-                call_args = mock_fetch.call_args[1]
-                assert call_args["url"] == f"https://query1.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
-                assert call_args["params"] == {"count": test_limit}  # Verify limit is passed to API
-
-    async def test_fetch_similar(self, yahoo_recommendations, cached_quote_data, bypass_cache):
+    async def test_fetch_similar(self, yahoo_recommendations, cached_quote_data, bypass_cache, mock_finance_client):
         """Test fetch_similar function with cached data"""
 
         test_symbol = "NVDA"
-        test_limit = 3
-        test_cookies = "test_cookies"
-        test_crumb = "test_crumb"
+        test_limit = random.randint(1, 5)
 
         # Get cached recommendation data
         yahoo_data = yahoo_recommendations(test_symbol)
-        recommendations = yahoo_data["finance"]["result"][0]["recommendedSymbols"]
-        recommended_symbols = [rec["symbol"] for rec in recommendations[:test_limit]]
+        # Expected recommendations from the cached data
+        mock_finance_client.get_similar_quotes.return_value = yahoo_data
+        recommended_symbols = [rec["symbol"] for rec in yahoo_data["finance"]["result"][0]["recommendedSymbols"]][:test_limit]
 
         # Get cached quote data
         quote_data = cached_quote_data(recommended_symbols)
@@ -361,24 +353,21 @@ class TestSimilarQuotesHandler:
             mock_get_quotes.return_value = [SimpleQuote(**quote) for quote in quote_data]
 
             # Call the function
-            result = await fetch_similar(test_symbol, test_limit, test_cookies, test_crumb)
+            result = await fetch_similar(mock_finance_client, test_symbol, test_limit)
 
             # Verify the result
-            assert len(result) == len(recommended_symbols)
+            assert len(result) == len(recommended_symbols) == test_limit
             assert all(isinstance(quote, SimpleQuote) for quote in result)
             assert [quote.symbol for quote in result] == recommended_symbols
 
             # Verify mocks were called correctly
-            mock_fetch_symbols.assert_called_once_with(test_symbol, test_limit)
-            mock_get_quotes.assert_called_once_with(recommended_symbols, test_cookies, test_crumb)
+            mock_fetch_symbols.assert_called_once_with(mock_finance_client, test_symbol, test_limit)
+            mock_get_quotes.assert_called_once_with(mock_finance_client, recommended_symbols)
 
-    async def test_fetch_similar_not_found(self, bypass_cache):
+    async def test_fetch_similar_not_found(self, bypass_cache, mock_finance_client):
         """Test fetch_similar when no recommendations are found"""
-
         test_symbol = "INVALID"
         test_limit = 5
-        test_cookies = "test_cookies"
-        test_crumb = "test_crumb"
 
         # Mock _fetch_yahoo_recommended_symbols to raise HTTPException
         with patch("src.services.similar.fetchers.similar_api._fetch_yahoo_recommended_symbols", new_callable=AsyncMock) as mock_fetch:
@@ -386,7 +375,7 @@ class TestSimilarQuotesHandler:
 
             # Verify that HTTPException is re-raised
             with pytest.raises(HTTPException) as excinfo:
-                await fetch_similar(test_symbol, test_limit, test_cookies, test_crumb)
+                await fetch_similar(mock_finance_client, test_symbol, test_limit)
 
             # Verify the exception details
             assert excinfo.value.status_code == 404
@@ -452,11 +441,9 @@ class TestSimilarQuotesHandler:
             assert excinfo.value.status_code == 500
             assert "No similar stocks found or invalid symbol" in excinfo.value.detail
 
-    async def test_get_similar_quotes_success(self, bypass_cache):
+    async def test_get_similar_quotes_success(self, bypass_cache, mock_finance_client):
         """Test get_similar_quotes with successful API fetch"""
         test_symbol = "AAPL"
-        test_cookies = "test_cookies"
-        test_crumb = "test_crumb"
         test_limit = 3
 
         mock_quotes = [
@@ -470,55 +457,25 @@ class TestSimilarQuotesHandler:
             mock_fetch.return_value = mock_quotes
 
             # Call the function
-            result = await get_similar_quotes(test_symbol, test_cookies, test_crumb, test_limit)
+            result = await get_similar_quotes(mock_finance_client, test_symbol, test_limit)
 
             # Verify the result
             assert result == mock_quotes
-            mock_fetch.assert_called_once_with(test_symbol, test_limit, test_cookies, test_crumb)
+            mock_fetch.assert_called_once_with(mock_finance_client, test_symbol, test_limit)
 
-    async def test_get_similar_quotes_fallback(self, bypass_cache):
-        """Test get_similar_quotes fallback to scraper when API fails"""
-        test_symbol = "NVDA"
-        test_cookies = "test_cookies"
-        test_crumb = "test_crumb"
-        test_limit = 3
-
-        mock_quotes = [
-            SimpleQuote(symbol="MSFT", name="Microsoft Corporation", price="385.22", change="-3.17", percent_change="-0.82%"),
-            SimpleQuote(symbol="GOOGL", name="Alphabet Inc.", price="142.65", change="1.23", percent_change="+0.87%"),
-        ]
-
-        # Mock fetch_similar to raise a generic exception
-        with (
-            patch("src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock) as mock_fetch,
-            patch("src.services.similar.get_similar_quotes.scrape_similar_quotes", new_callable=AsyncMock) as mock_scrape,
-        ):
-            mock_fetch.return_value = []
-            mock_scrape.return_value = mock_quotes
-
-            # Call the function
-            result = await get_similar_quotes(test_symbol, test_cookies, test_crumb, test_limit)
-
-            # Verify the result
-            assert result == mock_quotes
-            mock_fetch.assert_called_once_with(test_symbol, test_limit, test_cookies, test_crumb)
-            mock_scrape.assert_called_once_with(test_symbol, test_limit)
-
-    async def test_get_similar_quotes_http_exception(self, bypass_cache):
+    async def test_get_similar_quotes_http_exception(self, bypass_cache, mock_finance_client):
         """Test get_similar_quotes propagates HTTPException from fetch_similar"""
         test_symbol = "INVALID"
-        test_cookies = "test_cookies"
-        test_crumb = "test_crumb"
         test_limit = 3
 
-        # Mock fetch_similar to raise an HTTPException
         with patch("src.services.similar.get_similar_quotes.fetch_similar", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = HTTPException(status_code=404, detail="No similar stocks found or invalid symbol.")
 
             # Verify that HTTPException is re-raised
             with pytest.raises(HTTPException) as excinfo:
-                await get_similar_quotes(test_symbol, test_cookies, test_crumb, test_limit)
+                await get_similar_quotes(mock_finance_client, test_symbol, test_limit)
 
             # Verify the exception details
             assert excinfo.value.status_code == 404
             assert "No similar stocks found or invalid symbol" in excinfo.value.detail
+
