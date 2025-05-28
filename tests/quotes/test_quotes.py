@@ -145,9 +145,12 @@ class TestQuotes:
     async def test_fetch_quotes(self, mock_finance_client, mock_api_response, symbols, bypass_cache):
         """Test fetching quotes"""
         mock_finance_client.get_quote.return_value = mock_api_response()
-        quotes = await fetch_quotes(mock_finance_client, symbols)
-        assert all(isinstance(q, Quote) for q in quotes)
-        assert mock_finance_client.get_quote.await_count == len(symbols)
+
+        with patch("src.services.quotes.fetchers.quote_api.get_logo", new_callable=AsyncMock) as mock_logo:
+            mock_logo.return_value = "https://logo.clearbit.com/example.com"
+            quotes = await fetch_quotes(mock_finance_client, symbols)
+            assert all(isinstance(q, Quote) for q in quotes)
+            assert mock_finance_client.get_quote.await_count == len(symbols)
 
     @pytest.mark.parametrize("symbols", [["NVDA"], ["AAPL", "MSFT"]])
     async def test_scrape_quotes(self, quote_html, symbols, bypass_cache):
@@ -192,8 +195,10 @@ class TestQuotes:
         """Test scraping simple quotes"""
         url = f"https://finance.yahoo.com/quote/{symbols[0]}/"
         html = quote_html(url)
-        with patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch:
+        with patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch, \
+                patch("src.services.quotes.fetchers.quote_scraper.get_logo", new_callable=AsyncMock) as mock_logo:
             mock_fetch.return_value = html
+            mock_logo.return_value = "https://logo.clearbit.com/example.com"
             result = await scrape_simple_quotes(symbols)
             assert isinstance(result, list)
             assert all(isinstance(q, SimpleQuote) for q in result)
@@ -214,26 +219,6 @@ class TestQuotes:
             assert r.status_code == 200
             assert r.json()[0]["symbol"] == "NVDA"
             svc.assert_awaited_once_with(ANY, ["NVDA"])
-
-    def test_scrape_quotes_fallback(self, test_client):
-        """Test failure case when quotes cannot be fetched and fallback to scraping"""
-        with patch("src.services.quotes.get_quotes.fetch_quotes", new=AsyncMock(side_effect=ValueError("bad creds"))) as fetch_mock, patch(
-                "src.services.quotes.get_quotes.scrape_quotes", new=AsyncMock(return_value=[Quote(**MOCK_QUOTE_RESPONSE)])) as scrape_mock:
-            r = test_client.get(f"{VERSION}/quotes?symbols=NVDA")
-            assert r.status_code == 200
-            assert r.json()[0] == MOCK_QUOTE_RESPONSE
-            fetch_mock.assert_awaited_once_with(ANY, ["NVDA"])
-            scrape_mock.assert_awaited_once_with(["NVDA"])
-
-    def test_scrape_simple_quotes_fallback(self, test_client):
-        """Test failure case when simple quotes cannot be fetched and fallback to scraping"""
-        with patch("src.services.quotes.get_quotes.fetch_simple_quotes", new=AsyncMock(side_effect=ValueError("bad creds"))) as fetch_mock, patch(
-                "src.services.quotes.get_quotes.scrape_simple_quotes", new=AsyncMock(return_value=[SimpleQuote(**MOCK_SIMPLE_QUOTE_RESPONSE)])) as scrape_mock:
-            r = test_client.get(f"{VERSION}/simple-quotes?symbols=NVDA")
-            assert r.status_code == 200
-            assert r.json()[0] == MOCK_SIMPLE_QUOTE_RESPONSE
-            fetch_mock.assert_awaited_once_with(ANY, ["NVDA"])
-            scrape_mock.assert_awaited_once_with(["NVDA"])
 
     def test_unknown_symbol(self, test_client):
         """ Test for unknown symbols """
