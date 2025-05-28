@@ -47,10 +47,18 @@ def retry(
                     # ---- build args/kwargs for the fallback ----
                     bound = primary_sig.bind_partial(*args, **kwargs)
                     bound.apply_defaults()
-                    # keep only those kwargs the fallback expects
-                    fallback_kwargs = {
-                        k: v for k, v in bound.arguments.items() if k in _fallback_params
-                    }
+
+                    # Pass original kwargs directly if they're in fallback parameters
+                    fallback_kwargs = {}
+                    # First add parameters from bound arguments
+                    for k, v in bound.arguments.items():
+                        if k in _fallback_params:
+                            fallback_kwargs[k] = v
+                    # Then add any kwargs that might be directly usable by fallback
+                    for k, v in kwargs.items():
+                        if k in _fallback_params and k not in fallback_kwargs:
+                            fallback_kwargs[k] = v
+
                     logger.info(
                         "Switching to fallback %s with kwargs %s", fallback.__name__, fallback_kwargs
                     )
