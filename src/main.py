@@ -215,12 +215,12 @@ async def health(r: RedisClient, finance_client: FinanceClient):
     simple_quotes_task = get_simple_quotes(finance_client, ["NVDA", "QQQ", "GTLOX"])
     similar_equity_task = get_similar_quotes(finance_client, "NVDA")
     similar_etf_task = get_similar_quotes(finance_client, "QQQ")
-    historical_data_task_day = get_historical("NVDA", TimeRange.DAY, Interval.ONE_MINUTE)
-    historical_data_task_month = get_historical("NVDA", TimeRange.YTD, Interval.DAILY)
-    historical_data_task_year = get_historical("NVDA", TimeRange.YEAR, Interval.DAILY)
-    historical_data_task_five_years = get_historical("NVDA", TimeRange.FIVE_YEARS, Interval.MONTHLY)
-    search_task = get_search("NVDA")
-    summary_analysis_task = get_technical_indicators("NVDA", Interval.DAILY)
+    historical_data_task_day = get_historical(finance_client,"NVDA", TimeRange.DAY, Interval.ONE_MINUTE)
+    historical_data_task_month = get_historical(finance_client,"NVDA", TimeRange.YTD, Interval.DAILY)
+    historical_data_task_year = get_historical(finance_client, "NVDA", TimeRange.YEAR, Interval.DAILY)
+    historical_data_task_five_years = get_historical(finance_client, "NVDA", TimeRange.FIVE_YEARS, Interval.MONTHLY)
+    search_task = get_search(finance_client, "NVDA")
+    summary_analysis_task = get_technical_indicators(finance_client, "NVDA", Interval.DAILY)
 
     tasks = [
         ("Indices", indices_task),
