@@ -11,8 +11,7 @@ from starlette.websockets import WebSocket
 
 from src.clients.fetch_client import CurlFetchClient
 from src.clients.yahoo_client import YahooFinanceClient
-from src.connections import ConnectionManager
-from src.connections import RedisConnectionManager
+from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import request_context
 from src.utils.market import MarketSchedule
 from src.utils.yahoo_auth import YahooAuthManager
