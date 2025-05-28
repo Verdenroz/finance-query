@@ -47,9 +47,6 @@ class YahooFinanceClient(CurlFetchClient):
 
     async def _json(self, url: str, **kw):
         resp = await self._yahoo_request(url, **kw)
-        if kw.get("return_response", False):
-            return resp
-
         try:
             return orjson.loads(resp.text)
         except Exception as e:
