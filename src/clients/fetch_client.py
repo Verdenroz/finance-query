@@ -56,9 +56,6 @@ class CurlFetchClient:
 
         :return: a requests.Response object.
         """
-        if not url:
-            raise ValueError("Missing URL")
-
         try:
             return self.session.request(
                 method=method,
