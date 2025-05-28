@@ -13,14 +13,16 @@ from src.services.indicators.core import (
     create_indicator_dict,
     prepare_price_data,
 )
+from src.utils.dependencies import FinanceClient
 
 
-async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False):
+async def get_rsi(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False):
     """
     Get the Relative Strength Index (RSI) for a symbol. RSI measures the speed and magnitude of recent price
     changes to evaluate overbought or oversold conditions. It oscillates between 0 and 100, with traditional
     overbought levels at 70 and oversold levels at 30.
 
+    :param finance_client: the finance client to use for fetching data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -35,7 +37,7 @@ async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
     or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     rsi_values = calculate_rsi(prices, period=period)
@@ -47,6 +49,7 @@ async def get_rsi(symbol: str, time_range: TimeRange, interval: Interval, period
 
 
 async def get_srsi(
+    finance_client: FinanceClient,
     symbol: str,
     time_range: TimeRange,
     interval: Interval,
@@ -61,6 +64,7 @@ async def get_srsi(
     instead of price data, resulting in an indicator that measures the relative position of RSI within its
     historical range.
 
+    :param finance_client: the finance client to use for fetching data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -77,7 +81,7 @@ async def get_srsi(
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
     or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     k_values, d_values = calculate_stoch_rsi(prices, rsi_period=period, stoch_period=stoch_period, smooth=smooth, signal_period=signal_period)
@@ -92,6 +96,7 @@ async def get_srsi(
 
 
 async def get_stoch(
+    finance_client: FinanceClient,
     symbol: str,
     time_range: TimeRange,
     interval: Interval,
@@ -121,7 +126,7 @@ async def get_stoch(
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found,
     or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, highs, lows, _ = prepare_price_data(quotes)
 
@@ -136,12 +141,13 @@ async def get_stoch(
     return TechnicalIndicator(type=Indicator.STOCH, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_cci(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False):
+async def get_cci(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False):
     """
     Get the Commodity Channel Index (CCI) for a symbol. CCI measures the current price level relative to an
     average price level over a given period of time. The indicator oscillates above and below zero, with
     readings above +100 suggesting overbought conditions and below -100 suggesting oversold conditions.
 
+    :param finance_client: the finance client to use for fetching data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)

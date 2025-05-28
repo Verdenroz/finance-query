@@ -22,6 +22,7 @@ from src.services.indicators import (
     get_vwma,
     get_wma,
 )
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -108,6 +109,7 @@ IndicatorFunctions = {
     },
 )
 async def technical_indicator(
+    finance_client: FinanceClient,
     function: Indicator = Query(
         ...,
         description="The technical indicator to get.",
@@ -136,6 +138,7 @@ async def technical_indicator(
     senkou_period: Optional[int] = Query(None, description="The look-back period for the Senkou span in Ichimoku.", alias="senkouPeriod"),
 ):
     params = {
+        "finance_client": finance_client,
         "symbol": symbol,
         "time_range": time_range,
         "interval": interval,
@@ -243,13 +246,14 @@ async def technical_indicator(
     },
 )
 async def technical_indicators(
+    finance_client: FinanceClient,
     symbol: str = Query(..., description="The symbol of the stock to get technical indicators for."),
     interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
     functions: Optional[str] = Query(None, description="Comma-separated list of technical indicators to calculate."),
 ):
     try:
         indicator_list = [Indicator[ind.strip()] for ind in functions.split(",")] if functions else None
-        return await get_technical_indicators(symbol, interval, indicator_list)
+        return await get_technical_indicators(finance_client, symbol, interval, indicator_list)
     except KeyError as ke:
         raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(ke)}") from ke
     except Exception as e:

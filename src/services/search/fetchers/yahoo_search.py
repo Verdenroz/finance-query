@@ -1,27 +1,19 @@
-from pprint import pprint
 from typing import Optional
 
-from orjson import orjson
-
-from src.dependencies import fetch
 from src.models import SearchResult, Type
+from src.utils.dependencies import FinanceClient
 
 
-async def fetch_yahoo_search_results(query: str, hits: int, type: Optional[Type]) -> list[SearchResult]:
+async def fetch_yahoo_search_results(finance_client: FinanceClient, query: str, hits: int, type: Optional[Type]) -> list[SearchResult]:
     """
     Fetch search results from Yahoo Finance
+    :param finance_client: the finance client to use for fetching data
     :param query: the search query
     :param hits: the number of hits to return
     :param type: the type of security to filter by
 
     :return: a list of search results
     """
-    url = "https://query1.finance.yahoo.com/v1/finance/search"
-    params = {
-        "q": query,
-        "quotesCount": hits,
-    }
-
     type_to_yf = {
         Type.STOCK: "EQUITY",
         Type.ETF: "ETF",
@@ -34,10 +26,8 @@ async def fetch_yahoo_search_results(query: str, hits: int, type: Optional[Type]
         "MUTUALFUND": Type.TRUST,
     }
 
-    response = await fetch(url=url, params=params)
-    response = orjson.loads(response)
+    response = await finance_client.search(query, hits)
     data = response.get("quotes", [])
-    pprint(data)
     results = []
     for item in data:
         if len(results) >= hits:

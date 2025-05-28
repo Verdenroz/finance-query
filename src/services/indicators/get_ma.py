@@ -11,11 +11,13 @@ from src.services.indicators.core import (
     create_indicator_dict,
     prepare_price_data,
 )
+from src.utils.dependencies import FinanceClient
 
 
-async def get_sma(symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
+async def get_sma(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
     """
     Get the Simple Moving Average (SMA) for a symbol.
+    :param finance_client: the finance client to use for fetching data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -27,7 +29,7 @@ async def get_sma(symbol: str, time_range: TimeRange, interval: Interval, period
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
 
@@ -39,9 +41,10 @@ async def get_sma(symbol: str, time_range: TimeRange, interval: Interval, period
     return TechnicalIndicator(type=Indicator.SMA, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_ema(symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
+async def get_ema(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
     """
     Get the Exponential Moving Average (EMA) for a symbol.
+    :param finance_client: the finance client to use for fetching data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -51,7 +54,7 @@ async def get_ema(symbol: str, time_range: TimeRange, interval: Interval, period
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     ema_values = calculate_ema(prices, period=period)
@@ -62,9 +65,10 @@ async def get_ema(symbol: str, time_range: TimeRange, interval: Interval, period
     return TechnicalIndicator(type=Indicator.EMA, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_wma(symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
+async def get_wma(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, epoch: bool = False) -> dict:
     """
     Get the Weighted Moving Average (WMA) for a symbol.
+    :param finance_client: the finance client to use for fetching data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: The timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -76,7 +80,7 @@ async def get_wma(symbol: str, time_range: TimeRange, interval: Interval, period
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, _ = prepare_price_data(quotes)
     wma_values = calculate_wma(prices, period=period)
@@ -87,9 +91,10 @@ async def get_wma(symbol: str, time_range: TimeRange, interval: Interval, period
     return TechnicalIndicator(type=Indicator.WMA, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_vwma(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False) -> dict:
+async def get_vwma(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, epoch: bool = False) -> dict:
     """
     Get the Volume Weighted Moving Average (VWMA) for a symbol.
+    :param finance_client: the finance client to use for fetching data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -102,7 +107,7 @@ async def get_vwma(symbol: str, time_range: TimeRange, interval: Interval, perio
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, prices, _, _, volumes = prepare_price_data(quotes)
     vwma_values = calculate_vwma(prices, volumes, period=period)

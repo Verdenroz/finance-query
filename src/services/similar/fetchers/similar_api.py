@@ -1,37 +1,33 @@
 from fastapi import HTTPException
-from orjson import orjson
 
-from src.dependencies import fetch
 from src.models import SimpleQuote
 from src.services import get_simple_quotes
+from src.utils.dependencies import FinanceClient
 
 
-async def fetch_similar(symbol: str, limit: int, cookies: str, crumb: str) -> list[SimpleQuote]:
+async def fetch_similar(finance_client: FinanceClient, symbol: str, limit: int) -> list[SimpleQuote]:
     """
     Get similar stocks by API
+    :param finance_client: The Yahoo Finance client to use for API requests
     :param symbol: the symbol of the stock to find similar stocks around
     :param limit: the maximum number of results to return
-    :param cookies: authentication cookies for Yahoo Finance
-    :param crumb: authentication crumb for Yahoo Finance
 
     :return: a list of SimpleQuote objects
     """
-    symbols = await _fetch_yahoo_recommended_symbols(symbol, limit)
-    return await get_simple_quotes(symbols, cookies, crumb)
+    symbols = await _fetch_yahoo_recommended_symbols(finance_client, symbol, limit)
+    return await get_simple_quotes(finance_client, symbols)
 
 
-async def _fetch_yahoo_recommended_symbols(symbol: str, limit: int) -> list[str]:
+async def _fetch_yahoo_recommended_symbols(finance_client: FinanceClient, symbol: str, limit: int) -> list[str]:
     """
     Fetch similar symbols from Yahoo Finance API
+    :param finance_client: The Yahoo Finance client to use for API requests
     :param symbol: the symbol of the stock to find similar stocks around
     :param limit: the maximum number of results to return
 
     :return: a list of symbols recommended by Yahoo Finance
     """
-    YAHOO_RECOMMENDATION_URL = f"https://query1.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}"
-    params = {"count": limit}
-    response = await fetch(url=YAHOO_RECOMMENDATION_URL, params=params)
-    response = orjson.loads(response)
+    response = await finance_client.get_similar_quotes(symbol, limit)
 
     data = response.get("finance", {}).get("result", [{}])[0]
     recommendations = data.get("recommendedSymbols", [])
@@ -45,4 +41,4 @@ async def _fetch_yahoo_recommended_symbols(symbol: str, limit: int) -> list[str]
         if symbol:
             symbols.append(symbol)
 
-    return symbols
+    return symbols[:limit]

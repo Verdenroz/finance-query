@@ -1,8 +1,8 @@
 from fastapi import HTTPException
 from lxml import etree
 
-from src.dependencies import fetch
 from src.models import MarketMover
+from src.utils.dependencies import fetch
 
 
 async def scrape_movers(url: str) -> list[MarketMover]:

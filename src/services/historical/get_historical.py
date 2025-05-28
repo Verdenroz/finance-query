@@ -2,15 +2,18 @@ import pandas as pd
 from fastapi import HTTPException
 from orjson import orjson
 
-from src.cache import cache
-from src.dependencies import fetch
 from src.models import HistoricalData, Interval, TimeRange
+from src.utils.cache import cache
+from src.utils.dependencies import FinanceClient
 
 
 @cache(expire=60, market_closed_expire=600)
-async def get_historical(symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict[str, HistoricalData]:
+async def get_historical(
+    finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False
+) -> dict[str, HistoricalData]:
     """
     Get historical data for a stock symbol based on the time period and interval provided.
+    :param finance_client: the finance client to use for fetching data
     :param symbol: the symbol of the stock to get historical data for
     :param time_range: the time range for the historical data (e.g. 1d, 5d, 7d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the time interval between data points (e.g. 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -45,17 +48,8 @@ async def get_historical(symbol: str, time_range: TimeRange, interval: Interval,
             detail=f"If interval is {interval.value}, range must be {', '.join([r.value for r in valid_ranges[interval]])}",
         )
 
-    base_url = f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
-
-    # Setup request parameters
-    params = {"interval": interval.value, "range": time_range.value, "includePrePost": "false"}
-
-    # Construct URL with parameters
-    url = f"{base_url}?{'&'.join(f'{k}={v}' for k, v in params.items())}"
-
     try:
-        response_text = await fetch(url=url)
-        data = orjson.loads(response_text)
+        data = await finance_client.get_chart(symbol, interval.value, time_range.value)
 
         # Validate response structure
         if "chart" not in data:

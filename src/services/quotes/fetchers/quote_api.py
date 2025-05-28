@@ -1,9 +1,5 @@
 import asyncio
 
-from fastapi import HTTPException
-from orjson import orjson
-
-from src.dependencies import fetch, get_logo
 from src.models import Quote, SimpleQuote
 from src.services.quotes.utils import (
     format_change,
@@ -16,71 +12,79 @@ from src.services.quotes.utils import (
     is_within_post_market_time,
     is_within_pre_market_time,
 )
+from src.utils.dependencies import FinanceClient, get_logo
 
 
-async def fetch_quotes(symbols: list[str], cookies: str, crumb: str) -> list[Quote]:
+async def fetch_quotes(finance_client: FinanceClient, symbols: list[str]) -> list[Quote]:
     """Fetch quotes using Yahoo Finance API"""
-    if not cookies or not crumb:
-        raise ValueError("Cookies and crumb are required for Yahoo Finance API")
-
     chunk_size = get_adaptive_chunk_size()
     chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
 
-    all_quotes = await asyncio.gather(*(asyncio.gather(*(_get_quote_from_yahoo(symbol, cookies, crumb) for symbol in chunk)) for chunk in chunks))
+    # Process each chunk in parallel
+    all_quotes_tasks = []
+    for chunk in chunks:
+        # Process each symbol in the chunk in parallel
+        tasks = [_get_quote_from_yahoo(finance_client, symbol) for symbol in chunk]
+        all_quotes_tasks.append(asyncio.gather(*tasks))
 
-    return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
+    # Wait for all chunks to complete
+    all_quotes = await asyncio.gather(*all_quotes_tasks)
 
-
-async def fetch_simple_quotes(symbols: list[str], cookies: str, crumb: str) -> list[SimpleQuote]:
-    """Fetch quotes using Yahoo Finance API"""
-    if not cookies or not crumb:
-        raise ValueError("Cookies and crumb are required for Yahoo Finance API")
-
-    chunk_size = get_adaptive_chunk_size()
-    chunks = [symbols[i : i + chunk_size] for i in range(0, len(symbols), chunk_size)]
-
-    all_quotes = await asyncio.gather(*(asyncio.gather(*(_get_simple_quote_from_yahoo(symbol, cookies, crumb) for symbol in chunk)) for chunk in chunks))
-
-    return [quote for quotes in all_quotes for quote in quotes if not isinstance(quote, Exception)]
+    # Flatten the results
+    return [quote for quotes in all_quotes for quote in quotes]
 
 
-async def _get_quote_from_yahoo(symbol: str, cookies: str, crumb: str) -> Quote:
+async def fetch_simple_quotes(finance_client: FinanceClient, symbols: list[str]) -> list[SimpleQuote]:
+    """Fetch simplified quotes for multiple symbols in batch."""
+    # Get batch response for all symbols
+    batch_data = await finance_client.get_simple_quotes(symbols)
+    # Extract the quotes from the response
+    quotes_data = batch_data.get("quoteResponse", {}).get("result", [])
+
+    # Parse each quote in parallel
+    parsing_tasks = [_parse_simple_quote(quote_data) for quote_data in quotes_data]
+    quotes = await asyncio.gather(*parsing_tasks)
+
+    return quotes
+
+
+async def _get_quote_from_yahoo(finance_client: FinanceClient, symbol: str) -> Quote:
     """Get individual quote data from Yahoo Finance API."""
-    summary_data = await _fetch_yahoo_data(symbol, cookies, crumb)
+    summary_data = await finance_client.get_quote(symbol)
     return await _parse_yahoo_quote_data(summary_data)
 
 
-async def _get_simple_quote_from_yahoo(symbol: str, cookies: str, crumb: str) -> SimpleQuote:
-    """Get individual simplified quote data from Yahoo Finance API."""
-    summary_data = await _fetch_yahoo_data(symbol, cookies, crumb)
-    return await _parse_yahoo_simple_quote_data(summary_data)
+async def _parse_simple_quote(quote_data: dict) -> SimpleQuote:
+    pre_market_price = get_fmt(quote_data, "preMarketPrice") if is_within_pre_market_time(quote_data.get("preMarketTime", 0)) else None
+    post_market_price = get_fmt(quote_data, "postMarketPrice") if is_within_post_market_time(quote_data.get("postMarketTime", 0)) else None
 
+    def _to_str(val):
+        return f"{val:.2f}" if isinstance(val, int | float) else val
 
-async def _fetch_yahoo_data(symbol: str, cookies: str, crumb: str) -> dict:
-    """
-    Fetch raw data from Yahoo Finance API using cookies and crumb.
+    price = _to_str(get_fmt(quote_data, "regularMarketPrice"))
+    pre_market_price = _to_str(pre_market_price)
+    post_market_price = _to_str(post_market_price)
 
-    :raises HTTPException: with code 404 if symbol is not found
-    """
-    summary_url = f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}"
-    summary_params = {
-        "modules": "assetProfile,price,summaryDetail,defaultKeyStatistics,calendarEvents,quoteUnadjustedPerformanceOverview",
-        "crumb": crumb,
+    # regular change
+    raw_change = get_fmt(quote_data, "regularMarketChange")
+    if isinstance(raw_change, int | float):
+        raw_change = f"{raw_change:.2f}"
+
+    percent_change = format_percent(quote_data.get("regularMarketChangePercent"))
+    percent_change = format_change(percent_change)
+
+    payload = {
+        "symbol": quote_data.get("symbol"),
+        "name": quote_data.get("longName") or quote_data.get("shortName"),
+        "price": price,
+        "pre_market_price": pre_market_price,
+        "after_hours_price": post_market_price,
+        "change": format_change(raw_change),
+        "percent_change": percent_change,
     }
-    headers = {
-        "Cookie": cookies,
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-        "Accept": "application/json",
-    }
 
-    summary_response = await fetch(url=summary_url, params=summary_params, headers=headers, return_response=True)
-
-    if summary_response.status == 404:
-        raise HTTPException(status_code=404, detail=f"Symbol not found: {symbol}")
-
-    response_text = await summary_response.text()
-    summary_data = orjson.loads(response_text)
-    return summary_data
+    logo = await get_logo(symbol=payload["symbol"])
+    return SimpleQuote(**payload, logo=logo)
 
 
 async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
@@ -153,26 +157,4 @@ async def _parse_yahoo_quote_data(summary_data: dict) -> Quote:
         "max_return": performance_overview.get("maxReturn", {}).get("fmt"),
     }
 
-    return Quote(**quote_data, logo=await get_logo(symbol=price_data.get("symbol"), url=profile.get("website")))
-
-
-async def _parse_yahoo_simple_quote_data(summary_data: dict) -> SimpleQuote:
-    """Parse Yahoo Finance API response into SimpleQuote object."""
-    summary_result = summary_data.get("quoteSummary", {}).get("result", [{}])[0]
-    price_data = summary_result.get("price", {})
-    profile = summary_result.get("assetProfile", {})
-
-    # Get pre- and post-market prices if within timeframe
-    pre_market_price = get_fmt(price_data, "preMarketPrice") if is_within_pre_market_time(price_data.get("preMarketTime", 0)) else None
-    post_market_price = get_fmt(price_data, "postMarketPrice") if is_within_post_market_time(price_data.get("postMarketTime", 0)) else None
-
-    quote_data = {
-        "symbol": price_data.get("symbol"),
-        "name": price_data.get("longName"),
-        "price": get_fmt(price_data, "regularMarketPrice"),
-        "pre_market_price": pre_market_price,
-        "after_hours_price": post_market_price,
-        "change": format_change(get_fmt(price_data, "regularMarketChange")),
-        "percent_change": format_change(format_percent(price_data.get("regularMarketChangePercent"))),
-    }
-    return SimpleQuote(**quote_data, logo=await get_logo(symbol=price_data.get("symbol"), url=profile.get("website")))
+    return Quote(**quote_data, logo=await get_logo(symbol=price_data.get("symbol")))

@@ -1,10 +1,10 @@
 from fastapi import APIRouter, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import YahooCookies, YahooCrumb
 from src.models import ValidationErrorResponse
 from src.models.sector import MarketSector, MarketSectorDetails, Sector
 from src.services import get_sector_details, get_sector_for_symbol, get_sectors
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -154,11 +154,10 @@ async def sectors():
     },
 )
 async def sector_by_symbol(
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
+    finance_client: FinanceClient,
     symbol: str,
 ):
-    return await get_sector_for_symbol(symbol, cookies, crumb)
+    return await get_sector_for_symbol(finance_client, symbol)
 
 
 @router.get(

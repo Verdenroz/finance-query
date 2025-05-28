@@ -12,7 +12,7 @@ _all__ = [
     "get_historical",
     "get_quotes",
     "get_simple_quotes",
-    "scrape_indices",
+    "get_indices",
     "get_actives",
     "get_gainers",
     "get_losers",
@@ -37,5 +37,6 @@ _all__ = [
     "get_bbands",
     "get_obv",
     "get_super_trend",
-    "get_ichimoku" "get_technical_indicators",
+    "get_ichimoku"
+    "get_technical_indicators",
 ]
