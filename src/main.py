@@ -5,7 +5,7 @@ import time
 from collections import defaultdict
 from contextlib import asynccontextmanager
 
-from aiohttp import ClientSession
+from curl_cffi import requests
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from fastapi.encoders import jsonable_encoder
@@ -18,17 +18,7 @@ from starlette import status
 from starlette.responses import JSONResponse, Response
 
 from src.connections import ConnectionManager, RedisConnectionManager
-from src.constants import default_headers
 from src.context import RequestContextMiddleware
-from src.dependencies import (
-    RedisClient,
-    YahooCookies,
-    YahooCrumb,
-    get_auth_data,
-    refresh_yahoo_auth,
-    remove_proxy_whitelist,
-    setup_proxy_whitelist,
-)
 from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
 from src.routes import (
     finance_news_router,
@@ -62,77 +52,62 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
+from utils.dependencies import (
+    FinanceClient,
+    RedisClient,
+    remove_proxy_whitelist,
+    setup_proxy_whitelist,
+)
+from utils.yahoo_auth import YahooAuthManager
 
 load_dotenv()
+yahoo_auth_manager = YahooAuthManager()
+curl_session = requests.Session(impersonate="chrome")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """
-    FastAPI lifespan context manager that handles setup and cleanup.
+    Creates shared resources (curl session, Redis, Yahoo auth) and
+    ensures they are cleaned up when the server stops.
     """
-
     await register_app(app)
-    redis = None
-    redis_connection_manager = None
-    auth_refresh_task = None
+
+    app.state.session = curl_session
+    app.state.yahoo_auth_manager = yahoo_auth_manager
+
     proxy_data = None
+    if os.getenv("PROXY_URL") and os.getenv("USE_PROXY", "False") == "True":
+        proxy_data = await setup_proxy_whitelist()
+        curl_session.proxies = {"http": os.getenv("PROXY_URL"), "https": os.getenv("PROXY_URL")}
 
-    # Set up HTTP session
-    app.state.session = ClientSession(headers=default_headers, max_field_size=30000)
+    # Redis (optional)
+    if os.getenv("REDIS_URL"):
+        redis = Redis.from_url(os.getenv("REDIS_URL"))
+        app.state.redis = redis
+        app.state.connection_manager = RedisConnectionManager(redis)
+    else:
+        redis = None
+        app.state.redis = None
+        app.state.connection_manager = ConnectionManager()
 
-    # Set up auth refresh configuration
-    app.state.auth_refresh_interval = 86400  # 24 hours in seconds
-    app.state.auth_expiry = None
+    # Prime Yahoo auth once so the first user request is fast
+    await yahoo_auth_manager.refresh(proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None)
 
     try:
-        # Setup proxy if needed
-        if os.getenv("PROXY_TOKEN") and os.getenv("USE_PROXY", "False") == "True":
-            proxy_data = await setup_proxy_whitelist()
-
-        # Setup Redis if configured
-        if os.getenv("REDIS_URL"):
-            redis = Redis.from_url(os.getenv("REDIS_URL"))
-            redis_connection_manager = RedisConnectionManager(redis)
-            app.state.redis = redis
-            app.state.connection_manager = redis_connection_manager
-        else:
-            app.state.redis = None
-            app.state.connection_manager = ConnectionManager()
-
-        # Initial auth data fetch
-        cookies, crumb = await get_auth_data()
-        app.state.cookies = cookies
-        app.state.crumb = crumb
-        app.state.auth_expiry = time.time() + app.state.auth_refresh_interval
-
-        # Start background task for Yahoo auth refresh
-        auth_refresh_task = asyncio.create_task(refresh_yahoo_auth(app))
-
         yield
     finally:
-        # Cancel the auth refresh task
-        if auth_refresh_task:
-            auth_refresh_task.cancel()
-            try:
-                await auth_refresh_task
-            except asyncio.CancelledError:
-                pass
-
-        # Clean up proxy configuration
-        await remove_proxy_whitelist(proxy_data)
-
-        # Clean up Redis
+        await cleanup_all_exit_stacks()
+        await app.state.connection_manager.close()
+        if proxy_data:
+            await remove_proxy_whitelist(proxy_data)
         if redis:
             redis.close()
-            await redis_connection_manager.close()
-
-        await cleanup_all_exit_stacks()
 
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.7.1",
+    version="1.8.0",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & Yahoo Finance's Unofficial API.",
     servers=[
         {"url": "https://finance-query.onrender.com", "description": "Render server"},
@@ -218,7 +193,7 @@ async def request_validation_error_formatter(request, exc):
         }
     },
 )
-async def health(r: RedisClient, cookies: YahooCookies, crumb: YahooCrumb):
+async def health(r: RedisClient, finance_client: FinanceClient):
     """
     Comprehensive health check endpoint that verifies:
     - Basic API health
@@ -226,26 +201,26 @@ async def health(r: RedisClient, cookies: YahooCookies, crumb: YahooCrumb):
     - System time
     - Service dependencies
     """
-    indices_task = get_indices(cookies, crumb)
+    indices_task = get_indices(finance_client)
     actives_task = get_actives()
     losers_task = get_losers()
     gainers_task = get_gainers()
     sectors_task = get_sectors()
-    sector_by_symbol_task = get_sector_for_symbol("NVDA", cookies, crumb)
+    sector_by_symbol_task = get_sector_for_symbol(finance_client, "NVDA")
     sector_by_name_task = get_sector_details(Sector.TECHNOLOGY)
     news_task = scrape_general_news()
     news_by_symbol_task = scrape_news_for_quote("NVDA")
     scrape_etf_news_task = scrape_news_for_quote("QQQ")
-    quotes_task = get_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
-    simple_quotes_task = get_simple_quotes(["NVDA", "QQQ", "GTLOX"], cookies, crumb)
-    similar_equity_task = get_similar_quotes("NVDA", cookies, crumb)
-    similar_etf_task = get_similar_quotes("QQQ", cookies, crumb)
-    historical_data_task_day = get_historical("NVDA", TimeRange.DAY, Interval.ONE_MINUTE)
-    historical_data_task_month = get_historical("NVDA", TimeRange.YTD, Interval.DAILY)
-    historical_data_task_year = get_historical("NVDA", TimeRange.YEAR, Interval.DAILY)
-    historical_data_task_five_years = get_historical("NVDA", TimeRange.FIVE_YEARS, Interval.MONTHLY)
-    search_task = get_search("NVDA")
-    summary_analysis_task = get_technical_indicators("NVDA", Interval.DAILY)
+    quotes_task = get_quotes(finance_client, ["NVDA", "QQQ", "GTLOX"])
+    simple_quotes_task = get_simple_quotes(finance_client, ["NVDA", "QQQ", "GTLOX"])
+    similar_equity_task = get_similar_quotes(finance_client, "NVDA")
+    similar_etf_task = get_similar_quotes(finance_client, "QQQ")
+    historical_data_task_day = get_historical(finance_client, "NVDA", TimeRange.DAY, Interval.ONE_MINUTE)
+    historical_data_task_month = get_historical(finance_client, "NVDA", TimeRange.YTD, Interval.DAILY)
+    historical_data_task_year = get_historical(finance_client, "NVDA", TimeRange.YEAR, Interval.DAILY)
+    historical_data_task_five_years = get_historical(finance_client, "NVDA", TimeRange.FIVE_YEARS, Interval.MONTHLY)
+    search_task = get_search(finance_client, "NVDA")
+    summary_analysis_task = get_technical_indicators(finance_client, "NVDA", Interval.DAILY)
 
     tasks = [
         ("Indices", indices_task),

@@ -4,7 +4,7 @@ import pytz
 from fastapi import APIRouter, Depends, Security
 from fastapi.security import APIKeyHeader
 
-from src.market import MarketSchedule
+from utils.market import MarketSchedule
 
 router = APIRouter()
 

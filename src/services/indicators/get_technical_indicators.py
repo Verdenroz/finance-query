@@ -39,9 +39,11 @@ from src.services.indicators.core import (
     calculate_wma,
     prepare_price_data,
 )
+from utils.dependencies import FinanceClient
 
 
 async def get_technical_indicators(
+    finance_client: FinanceClient,
     symbol: str,
     interval: Interval,
     indicators: list[Indicator] = None,
@@ -61,7 +63,7 @@ async def get_technical_indicators(
 
     time_range = interval_to_range.get(interval, TimeRange.FIVE_YEARS)
 
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval)
     dates, prices, high_prices, low_prices, volumes = prepare_price_data(quotes)
     tasks = []
 

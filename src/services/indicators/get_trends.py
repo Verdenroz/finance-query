@@ -24,9 +24,11 @@ from src.services.indicators.core import (
     create_indicator_dict,
     prepare_price_data,
 )
+from utils.dependencies import FinanceClient
 
 
 async def get_macd(
+    finance_client: FinanceClient,
     symbol: str,
     time_range: TimeRange,
     interval: Interval,
@@ -43,6 +45,7 @@ async def get_macd(
     The result of this calculation is the MACD line. A nine-day EMA of the MACD called the "signal line," is then
     plotted above the MACD line, which can act as a trigger for buy and sell signals.
 
+    :param finance_client: The FinanceClient instance to use for fetching historical data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -53,7 +56,7 @@ async def get_macd(
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
     dates, prices, _, _, _ = prepare_price_data(quotes)
     macd_line, signal_line = calculate_macd(prices, fast_period=fast_period, slow_period=slow_period, signal_period=signal_period)
 
@@ -68,13 +71,14 @@ async def get_macd(
     return TechnicalIndicator(type=Indicator.MACD, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_adx(symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False) -> dict:
+async def get_adx(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 14, epoch: bool = False) -> dict:
     """
     Get the Average Directional Index (ADX) for a symbol.
     The ADX is a trend strength indicator that quantifies the strength of a trend without indicating its direction.
     It is derived from the smoothed moving average of the difference between +DI and -DI, which are directional
     movement indicators. The ADX ranges from 0 to 100, with readings above 20 or 25 typically indicating a strong trend.
 
+    :param finance_client: The FinanceClient instance to use for fetching historical data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -85,7 +89,7 @@ async def get_adx(symbol: str, time_range: TimeRange, interval: Interval, period
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, closes, highs, lows, _ = prepare_price_data(quotes)
     adx_values = calculate_adx(highs, lows, closes, period=period)
@@ -96,7 +100,7 @@ async def get_adx(symbol: str, time_range: TimeRange, interval: Interval, period
     return TechnicalIndicator(type=Indicator.ADX, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_aroon(symbol: str, time_range: TimeRange, interval: Interval, period: int = 25, epoch: bool = False) -> dict:
+async def get_aroon(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 25, epoch: bool = False) -> dict:
     """
     Get the Aroon indicator for a symbol.
     The Aroon indicator consists of two lines: Aroon Up and Aroon Down. Aroon Up measures the number of periods
@@ -104,6 +108,7 @@ async def get_aroon(symbol: str, time_range: TimeRange, interval: Interval, peri
     the lowest low within the same period. The Aroon indicator oscillates between 0 and 100, with readings above
     70 indicating a strong trend.
 
+    :param finance_client: The FinanceClient instance to use for fetching historical data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -114,7 +119,7 @@ async def get_aroon(symbol: str, time_range: TimeRange, interval: Interval, peri
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, _, highs, lows, _ = prepare_price_data(quotes)
     aroon_up, aroon_down = calculate_aroon(highs, lows, period=period)
@@ -129,12 +134,15 @@ async def get_aroon(symbol: str, time_range: TimeRange, interval: Interval, peri
     return TechnicalIndicator(type=Indicator.AROON, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_bbands(symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, std_dev: int = 2, epoch: bool = False) -> dict:
+async def get_bbands(
+    finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 20, std_dev: int = 2, epoch: bool = False
+) -> dict:
     """
     Get the Bollinger Bands (BBands) for a symbol.
     Bollinger Bands consist of a middle band (SMA) and two outer bands (standard deviations from the SMA).
     The bands expand and contract based on market volatility, with wider bands indicating higher volatility.
 
+    :param finance_client: The FinanceClient instance to use for fetching historical data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -147,7 +155,7 @@ async def get_bbands(symbol: str, time_range: TimeRange, interval: Interval, per
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, closes, _, _, _ = prepare_price_data(quotes)
     upper_band, middle_band, lower_band = calculate_bbands(closes, period=period, std_dev=std_dev)
@@ -167,7 +175,7 @@ async def get_bbands(symbol: str, time_range: TimeRange, interval: Interval, per
     return TechnicalIndicator(type=Indicator.BBANDS, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict:
+async def get_obv(finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, epoch: bool = False) -> dict:
     """
     Get the On-Balance Volume (OBV) for a symbol.
     The OBV is a volume-based indicator that uses volume flow to predict changes in stock price. It works on the
@@ -183,7 +191,7 @@ async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch:
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, closes, _, _, volumes = prepare_price_data(quotes)
     obv_values = calculate_obv(closes, volumes)
@@ -194,7 +202,9 @@ async def get_obv(symbol: str, time_range: TimeRange, interval: Interval, epoch:
     return TechnicalIndicator(type=Indicator.OBV, indicators=indicator_data).model_dump(exclude_none=True, by_alias=True, serialize_as_any=True)
 
 
-async def get_super_trend(symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, multiplier: int = 3, epoch: bool = False) -> dict:
+async def get_super_trend(
+    finance_client: FinanceClient, symbol: str, time_range: TimeRange, interval: Interval, period: int = 10, multiplier: int = 3, epoch: bool = False
+) -> dict:
     """
     Get the Super Trend indicator for a symbol.
     The Super Trend indicator is a trend-following indicator that uses the Average True Range (ATR) to determine
@@ -213,7 +223,7 @@ async def get_super_trend(symbol: str, time_range: TimeRange, interval: Interval
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
 
     dates, closes, highs, lows, _ = prepare_price_data(quotes)
     supertrend_values, trend = calculate_supertrend(highs, lows, closes, period=period, multiplier=multiplier)
@@ -234,6 +244,7 @@ async def get_super_trend(symbol: str, time_range: TimeRange, interval: Interval
 
 
 async def get_ichimoku(
+    finance_client: FinanceClient,
     symbol: str,
     time_range: TimeRange,
     interval: Interval,
@@ -253,6 +264,7 @@ async def get_ichimoku(
     line is used to confirm the trend direction. The Ichimoku Cloud is best suited for identifying trends and
     potential reversals in trending markets.
 
+    :param finance_client: The FinanceClient instance to use for fetching historical data
     :param symbol: the stock symbol
     :param time_range: the time range of the data (1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max)
     :param interval: the timeframe between each data point (1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo)
@@ -266,7 +278,7 @@ async def get_ichimoku(
 
     :raises HTTPException: with status code 400 on invalid range or interval, 404 if the symbol cannot be found, or 500 for any other error
     """
-    quotes = await get_historical(symbol, time_range=time_range, interval=interval, epoch=epoch)
+    quotes = await get_historical(finance_client, symbol, time_range=time_range, interval=interval, epoch=epoch)
     dates, closes, highs, lows, _ = prepare_price_data(quotes)
     tenkan_sen, kijun_sen, senkou_span_a, senkou_span_b, chikou_span = calculate_ichimoku(
         highs, lows, closes, tenkan_period=tenkan_period, kijun_period=kijun_period, senkou_period=senkou_period

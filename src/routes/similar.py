@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from src.dependencies import YahooCookies, YahooCrumb
 from src.models import SimpleQuote
 from src.services import get_similar_quotes
+from utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -34,9 +34,8 @@ router = APIRouter()
     },
 )
 async def similar_quotes(
-    cookies: YahooCookies,
-    crumb: YahooCrumb,
+    finance_client: FinanceClient,
     symbol: str = Query(..., title="Symbol", description="Stock to find similar stocks around"),
     limit: int = Query(default=10, title="Limit", description="Number of similar stocks to return", ge=1, le=20),
 ):
-    return await get_similar_quotes(symbol.upper(), cookies, crumb, limit)
+    return await get_similar_quotes(finance_client, symbol.upper(), limit)

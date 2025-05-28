@@ -1,9 +1,9 @@
 from fastapi import HTTPException
 from lxml import etree
 
-from src.cache import cache
-from src.dependencies import fetch
 from src.models import News
+from utils.cache import cache
+from utils.dependencies import fetch
 
 
 def parse_symbol_exchange(yahoo_symbol: str):
