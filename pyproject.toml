@@ -79,6 +79,9 @@ pytest-cov = "^6.1.1"
 coverage = { extras = ["toml"], version = "^7.8.0" }
 ruff = "^0.1.14"
 pre-commit = "^3.6.2"
+mkdocs = "^1.6.1"
+mkdocs-material = "^9.6.14"
+mkdocstrings = {extras = ["python"], version = "^0.29.1"}
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "session"
