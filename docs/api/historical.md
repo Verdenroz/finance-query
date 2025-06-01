@@ -99,5 +99,3 @@ Optional authentication via `x-api-key` header token
 | `close`    | number  | Closing price          | ✓        |
 | `adjClose` | number  | Adjusted closing price |          |
 | `volume`   | integer | Volume traded          | ✓        |
-
-
