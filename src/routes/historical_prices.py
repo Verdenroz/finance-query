@@ -25,10 +25,6 @@ router = APIRouter()
             "content": {"application/json": {"example": {"detail": "Symbol not found"}}},
         },
         422: {"model": ValidationErrorResponse, "description": "Validation error of query parameters"},
-        500: {
-            "description": "Internal server error",
-            "content": {"application/json": {"example": {"detail": "Failed to retrieve historical data"}}},
-        },
     },
 )
 async def get_time_series(
