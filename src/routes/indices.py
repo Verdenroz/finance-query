@@ -28,7 +28,15 @@ router = APIRouter()
                         "detail": "Invalid request",
                         "errors": {
                             "index.0": [
-                                "Input should be 'snp', 'djia', 'nasdaq', 'nyse-composite', 'nyse-amex', 'rut', 'vix', 'tsx-composite', 'ibovespa', 'ipc-mexico', 'ipsa', 'merval', 'ivbx', 'ibrx-50', 'ftse-100', 'dax', 'cac-40', 'euro-stoxx-50', 'euronext-100', 'bel-20', 'moex', 'aex', 'ibex-35', 'ftse-mib', 'smi', 'psi', 'atx', 'omxs30', 'omxc25', 'wig20', 'budapest-se', 'moex-russia', 'rtsi', 'hang-seng', 'sti', 'sensex', 'idx-composite', 'ftse-bursa', 'kospi', 'twse', 'nikkei-225', 'shanghai', 'szse-component', 'set', 'nifty-50', 'nifty-200', 'psei-composite', 'china-a50', 'dj-shanghai', 'india-vix', 'egx-30', 'jse-40', 'ftse-jse', 'afr-40', 'raf-40', 'sa-40', 'alt-15', 'ta-125', 'ta-35', 'tadawul-all-share', 'tamayuz', 'bist-100', 'asx-200', 'all-ordinaries', 'nzx-50', 'usd', 'msci-europe', 'gbp', 'euro', 'yen', 'australian', 'msci-world' or 'cboe-uk-100'"
+                                """
+                                Input should be 'snp', 'djia', 'nasdaq', 'nyse-composite', 'nyse-amex', 'rut', 'vix', 'tsx-composite', 'ibovespa',
+                                'ipc-mexico', 'ipsa', 'merval', 'ivbx', 'ibrx-50', 'ftse-100', 'dax', 'cac-40', 'euro-stoxx-50', 'euronext-100', 'bel-20',
+                                'moex', 'aex', 'ibex-35', 'ftse-mib', 'smi', 'psi', 'atx', 'omxs30', 'omxc25', 'wig20', 'budapest-se', 'moex-russia', 'rtsi',
+                                'hang-seng', 'sti', 'sensex', 'idx-composite', 'ftse-bursa', 'kospi', 'twse', 'nikkei-225', 'shanghai', 'szse-component',
+                                'set', 'nifty-50', 'nifty-200', 'psei-composite', 'china-a50', 'dj-shanghai', 'india-vix', 'egx-30', 'jse-40', 'ftse-jse',
+                                'afr-40', 'raf-40', 'sa-40', 'alt-15', 'ta-125', 'ta-35', 'tadawul-all-share', 'tamayuz', 'bist-100', 'asx-200',
+                                'all-ordinaries', 'nzx-50', 'usd', 'msci-europe', 'gbp', 'euro', 'yen', 'australian', 'msci-world' or 'cboe-uk-100'
+                                """
                             ],
                             "region": ["Input should be 'US', 'NA', 'SA', 'EU', 'AS', 'AF', 'ME', 'OCE' or 'global'"],
                         },
