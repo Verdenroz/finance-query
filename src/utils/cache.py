@@ -172,7 +172,7 @@ def cache(
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Skip caching if bypass is enabled or expire_time <= 0
-            if os.getenv("BYPASS_CACHE") or handler.get_expire_time() <= 0:
+            if os.getenv("BYPASS_CACHE").lower() == "true" or handler.get_expire_time() <= 0:
                 return await func(*args, **kwargs)
 
             # Build cache key from serializable args
