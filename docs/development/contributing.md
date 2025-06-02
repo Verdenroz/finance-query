@@ -7,12 +7,14 @@ welcomes contributions in the form of bug reports, feature requests, and pull re
 Here is a list of important resources for contributors:
 
 - [Source Code]
+- [Demo]
 - [Documentation]
 - [Issue Tracker]
 - [Code of Conduct]
 
 [mit license]: https://opensource.org/licenses/MIT
 [documentation]: https://verdenroz.github.io/finance-query/
+[demo]: https://financequery.apidocumentation.com/reference
 [source code]: https://github.com/Verdenroz/finance-query
 [issue tracker]: https://github.com/Verdenroz/finance-query/issues
 [code of conduct]: https://github.com/Verdenroz/finance-query/CODE_OF_CONDUCT.md
