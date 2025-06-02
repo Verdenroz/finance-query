@@ -21,21 +21,17 @@ COPY requirements.txt .
 # Install Python packages
 RUN pip install -r requirements.txt
 
-# Copy the project content to the Lambda root
+# Copy the 'src' directory itself, not just its contents
 COPY src ${LAMBDA_TASK_ROOT}/src
-COPY setup.py ${LAMBDA_TASK_ROOT}
 
-# Create an __init__.py file in the src directory to make it a proper package
-RUN touch ${LAMBDA_TASK_ROOT}/src/__init__.py
+# Copy setup.py
+COPY setup.py ${LAMBDA_TASK_ROOT}
 
 # Set the working directory
 WORKDIR ${LAMBDA_TASK_ROOT}
 
 # Run setup.py to cythonize the files
 RUN python setup.py build_ext --inplace
-
-# Add the current directory to PYTHONPATH
-ENV PYTHONPATH=${LAMBDA_TASK_ROOT}
 
 # Set the entry point for the AWS Lambda function
 CMD ["src/main.handler"]
