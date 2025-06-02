@@ -118,4 +118,3 @@ The WebSocket sends JSON arrays with simplified quote objects:
 
 - **Channel**: Uses the exact symbol list as channel name
 - **Example**: `"AAPL,GOOGL,MSFT"` becomes channel `AAPL,GOOGL,MSFT`
-
