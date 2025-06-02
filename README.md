@@ -1,86 +1,66 @@
 # FinanceQuery
 
-FinanceQuery is a free and open-source API to query financial data. It provides endpoints to get quotes, historical
-prices, indices, market movers, similar stocks, finance news, indicators, search, and sectors. Data is acquired through
-web scraping and the unofficial Yahoo Finance API. It is the successor to
-the [GoogleFinanceAPI](https://github.com/Verdenroz/GoogleFinanceAPI).
+[![Tests](https://github.com/Verdenroz/finance-query/actions/workflows/tests.yml/badge.svg)](https://github.com/Verdenroz/finance-query/actions/workflows/tests.yml)
+[![codecov](https://codecov.io/gh/Verdenroz/finance-query/graph/badge.svg?token=0S3003BAZY)](https://codecov.io/gh/Verdenroz/finance-query)
+[![AWS Deploy](https://img.shields.io/github/actions/workflow/status/Verdenroz/finance-query/aws-deploy.yml?branch=master&logo=amazon-aws&label=AWS%20Deploy)](https://github.com/Verdenroz/finance-query/actions/workflows/aws-deploy.yml)
+[![Render Deploy](https://img.shields.io/github/actions/workflow/status/Verdenroz/finance-query/render-deploy.yml?branch=master&logo=render&label=Render%20Deploy)](https://github.com/Verdenroz/finance-query/actions/workflows/render-deploy.yml)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+**FinanceQuery** is a modern, fast (high-performance), web framework for building financial APIs with Python based on FastAPI and standard Python type hints. It provides endpoints to get quotes, historical prices, indices, market movers, similar stocks, finance news, indicators, search, and sectors. Data is acquired through web scraping and the unofficial Yahoo Finance API. It is the successor to the [GoogleFinanceAPI](https://github.com/Verdenroz/GoogleFinanceAPI).
 
 ## Documentation
 
-[Documentation](https://financequery.apidocumentation.com/)
+[Interactive API Documentation](https://financequery.apidocumentation.com/reference)
 
 ## Run Locally
 
 Clone the project
 
 ```bash
-  git clone https://github.com/Verdenroz/finance-query.git
+git clone https://github.com/Verdenroz/finance-query.git
 ```
 
 Go to the project directory
 
 ```bash
-  cd finance-query
+cd finance-query
 ```
 
 Install dependencies
 
 ```bash
- pip install -r requirements.txt
+# Using Poetry (recommended)
+poetry install
+
+# Using pip
+pip install -r requirements.txt
 ```
 
 Cythonize files
 
 ```bash
-  python setup.py build_ext --inplace
+python setup.py build_ext --inplace
 ```
 
 Start the server
 
 ```bash
-  python -m uvicorn src.main:app --reload
+python -m uvicorn src.main:app --reload
 ```
-
-## Deployment
-
-#### AWS Lambda
-
-- Follow
-  the [AWS Lambda Deployment Guide](https://docs.aws.amazon.com/lambda/latest/dg/python-image.html#python-image-instructions)
-- Remember to add the environment variables to the Lambda function
-- Alternatively use the [AWS Deployment Workflow](.github/workflows/aws-deploy.yml), providing repository secrets
-  for `AWS_SECRET_ID` and `AWS_SECRET_KEY`.
-    - Also edit the `AWS_REGION`, `ECR_REPOSITORY`, and `FUNCTION_NAME` in the workflow file
-
-#### Render
-
-- Follow the [Render Deployment Guide](https://render.com/docs/deploy-fastapi)
-- The deployment should use the `Dockerfile` file in the repository
-- Be sure to override the CMD in the Dockerfile in your Render project settings
-  to `python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT`
-- Alternatively use the [Render Deployment Workflow](.github/workflows/render-deploy.yml), providing repository secrets
-  for `RENDER_DEPLOY_HOOK_URL`.
-    - The deploy hook url can be found in the settings of your Render project
 
 ## Usage/Examples
 
-The exposed endpoints to the API is
+The exposed endpoints to the API are:
 
 - https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod
 - https://finance-query.onrender.com
 
-There are two workflows that will automatically deploy to render and AWS, but they will require repository secrets
-for `AWS_SECRET_ID`, `AWS_SECRET_KEY`, and `RENDER_DEPLOY_HOOK_URL`. Quite frankly, render is easier to work with since
-it enables the websockets, but will require the paid Starter Plan as this API requires extensive memory. If you are
-tight on cash, consider Lambda.
+An `x-api-key` header can be added if you have enabled security and rate limiting. If a key is not provided, or an invalid key is used, a rate limit of 2000 requests/day is applied to the request's ip address.
 
-An `x-api-key` header can be added if you have enabled security and rate limiting. If a key is not provided, or an
-invalid key is used, a rate limit of 2000 requests/day is applied to the request's ip address.
-
-> If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See
-> the [.env template](.env.template).
-> Again, remember the websockets above are not available through Lambda. If you deploy to Render instead, you will be
-> able to connect to the websockets through a request that looks like `wss://finance-query.onrender.com/...`
+> If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See the [.env template](.env.template).
 
 ### Example REST Request
 
@@ -136,18 +116,18 @@ curl -X GET 'https://finance-query.onrender.com/v1/quotes?symbols=nvda' \
 ### Example WebSocket Connection
 
 ```javascript
-// Connect to WebSocket and subscribe to Tesla stock updates
+// Connect to WebSocket for real-time updates
 const ws = new WebSocket('wss://finance-query.onrender.com/quotes');
 
 ws.onopen = () => {
-    console.log('Connected to WebSocket');
+    console.log('Connected to FinanceQuery WebSocket');
     // Send symbol to subscribe to updates
     ws.send('TSLA');
 };
 
 ws.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    console.log('Received update:', data);
+    console.log('Real-time update:', data);
 };
 ```
 
@@ -166,12 +146,111 @@ ws.onmessage = (event) => {
 ]
 ```
 
-## Feedback
+## Available REST Endpoints
 
-*As most data is scraped, some endpoints may break*
+| Endpoint                     | Description                                    |
+|------------------------------|------------------------------------------------|
+| `/health`, `/ping`           | API status and health monitoring               |
+| `/hours`                     | Trading hours and market status                |
+| `/v1/quotes`                 | Detailed quotes and information                |
+| `/v1/simple-quotes`          | Simplified quotes with summary information     |
+| `/v1/similar`                | Find similar quotes to queried symbol          |
+| `/v1/historical`             | Historical price data with customizable ranges |
+| `/v1/movers`                 | Market gainers, losers, and most active stocks |
+| `/v1/news`                   | Financial news and market updates              |
+| `/v1/indices`                | Major market indices (S&P 500, NASDAQ, DOW)    |
+| `/v1/sectors`                | Market sector performance and analysis         |
+| `/v1/search`                 | Search for securities with filters             |
+| `/v1/indicator`              | Get specific indicator history over time       |
+| `/v1/indicators`             | Technical indicators summary for interval      |
+| `/v1/stream`                 | SSE for real-time quote updates                |
 
-If something is not working or if you have any suggestions, contact me at harveytseng2@gmail.com
+## Available WebSocket Endpoints
+
+| Endpoint   | Description                                               |
+|------------|-----------------------------------------------------------|
+| `/quotes`  | Real-time quotes updates                                  |
+| `/profile` | Real-time detailed ticker updates (quote, news, similar)  |
+| `/market`  | Real-time market updates (indices, news, movers, sectors) |
+| `/hours`   | Real-time market hour updates                             |
+
+## Deployment
+
+### AWS Lambda
+Perfect for serverless applications with automatic scaling:
+- Follow the [AWS Lambda Deployment Guide](https://docs.aws.amazon.com/lambda/latest/dg/python-image.html#python-image-instructions)
+- Remember to add the environment variables to the Lambda function
+- Alternatively use the [AWS Deployment Workflow](.github/workflows/aws-deploy.yml), providing repository secrets for `AWS_SECRET_ID` and `AWS_SECRET_KEY`.
+- Also edit the `AWS_REGION`, `ECR_REPOSITORY`, and `FUNCTION_NAME` in the workflow file
+
+### Render
+Easy deployment with WebSocket support:
+- Follow the [Render Deployment Guide](https://render.com/docs/deploy-fastapi)
+- The deployment should use the `Dockerfile` file in the repository
+- Be sure to override the CMD in the Dockerfile in your Render project settings to `python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT`
+- Alternatively use the [Render Deployment Workflow](.github/workflows/render-deploy.yml), providing repository secrets for `RENDER_DEPLOY_HOOK_URL`.
+- The deploy hook url can be found in the settings of your Render project
+
+### Docker
+Deploy anywhere with Docker:
+```bash
+docker build -t financequery .
+docker run -p 8000:8000 financequery
+```
+
+> **Note**: There are two workflows that will automatically deploy to render and AWS, but they will require repository secrets for `AWS_SECRET_ID`, `AWS_SECRET_KEY`, and `RENDER_DEPLOY_HOOK_URL`. Quite frankly, render is easier to work with since it enables the websockets, but will require the paid Starter Plan as this API requires extensive memory. If you are tight on cash, consider Lambda.
+
+> **WebSocket Support**: Remember the websockets above are not available through Lambda. If you deploy to Render instead, you will be able to connect to the websockets through a request that looks like `wss://finance-query.onrender.com/...`
+
+## Configuration
+
+Customize FinanceQuery with environment variables. These environment variables are optional. The API will function with default settings if not provided.
+
+### Security Configuration
+```env
+USE_SECURITY=true
+ADMIN_API_KEY=your-secret-admin-key
+```
+
+### Proxy Configuration
+```env
+USE_PROXY=true
+PROXY_URL=your-proxy-url
+PROXY_TOKEN=your-proxy-token
+```
+
+### Redis Caching
+```env
+REDIS_URL=redis://localhost:6379
+```
+
+### Algolia Search
+```env
+ALGOLIA_APP_ID=your-algolia-app-id
+ALGOLIA_API_KEY=your-algolia-api-key
+```
+
+## Performance
+
+FinanceQuery leverages:
+
+- **[FastAPI](https://fastapi.tiangolo.com)** for lightning-fast HTTP performance
+- **[fastapi-injectable](https://github.com/JasperSui/fastapi-injectable)** for efficient dependency injection
+- **[curl_cffi](https://github.com/yifeikong/curl_cffi)** for async browser curl impersonation
+- **[lxml](https://lxml.de)** for fast and reliable web scraping
+- **[Cython](https://cython.org)** for accelerated technical indicator calculations
+- **[Redis](https://redis.io)** for intelligent caching of market data
+- **[logo.dev](https://logo.dev)** for fetching stock logos
 
 ## License
 
-[MIT](https://opensource.org/license/MIT)
+This project is licensed under the terms of the **[MIT License](https://opensource.org/licenses/MIT)**.
+
+## Support & Feedback
+
+**Need Help?**
+* 📧 **Email**: harveytseng2@gmail.com
+* 🐛 **Issues**: [GitHub Issues](https://github.com/Verdenroz/finance-query/issues)
+* 📖 **OpenAPI Documentation**: [OpenAPI Documentation](https://financequery.apidocumentation.com/)
+
+*As most data is scraped, some endpoints may break. If something is not working or if you have any suggestions, please reach out!*
