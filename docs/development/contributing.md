@@ -156,6 +156,24 @@ $ pre-commit run --all-files
 It is recommended to open an issue before starting work on anything.
 This will allow a chance to talk it over with the owners and validate your approach.
 
+### Branch Workflow
+
+FinanceQuery follows a structured branch workflow:
+
+1. **Feature branches**: Create a branch for your feature or bugfix. Branch names should be descriptive and follow this format: `feat/your-feature-name` or `fix/issue-description`.
+
+2. **Staging branch**: All feature branches must be merged into the `staging` branch first for integration testing.
+
+3. **Master branch**: The `master` branch contains production-ready code. Pull requests to `master` are only accepted from the `staging` branch and are automatically restricted by our CI workflow.
+
+This workflow ensures that code in the master branch has been properly reviewed and tested in staging before deployment to production.
+
+```
+feature/your-feature --> staging --> master
+```
+
+Please do not attempt to merge feature branches directly to master as these pull requests will be automatically rejected.
+
 ## Project architecture
 
 Please review the [architecture document](architecture.md) to understand the project's structure before contributing.
