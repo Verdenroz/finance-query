@@ -1,0 +1,81 @@
+site_name: Finance Query
+site_url: https://verdenroz.github.io/finance-query/
+site_author: Harvey Tseng
+site_description: A FastAPI service for fetching financial data from various sources
+
+repo_url: https://github.com/Verdenroz/finance-query
+repo_name: Verdenroz/finance-query
+
+theme:
+  favicon: assets/logo.png
+  name: material
+  palette:
+    - scheme: default
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: teal
+      accent: teal
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.indexes
+    - content.code.copy
+    - content.code.annotate
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist
+  - admonition
+  - footnotes
+  - toc:
+      permalink: true
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [ src ]
+          options:
+            show_source: true
+
+nav:
+  - Home: index.md
+  - Getting Started: getting-started.md
+  - Deployment: deployment.md
+  - API Reference:
+      - Health Check: api/health.md
+      - Market Hours: api/hours.md
+      - Quotes: api/quotes.md
+      - Historical Data: api/historical.md
+      - Market Movers: api/movers.md
+      - News: api/news.md
+      - Indices: api/indices.md
+      - Sectors: api/sectors.md
+      - Search: api/search.md
+      - Technical Indicators: api/indicators.md
+      - SSE Stream: api/stream.md
+  - Websockets:
+      - Overview: websockets.md
+      - Profile: websockets/profile.md
+      - Quotes: websockets/quotes.md
+      - Market: websockets/market.md
+      - Hours: websockets/hours.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Architecture: development/architecture.md

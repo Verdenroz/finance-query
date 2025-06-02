@@ -84,7 +84,7 @@ IndicatorFunctions = {
                                 "'BBANDS', 'AROON', 'ADX', 'MACD', 'SUPERTREND' or 'ICHIMOKU'",
                             ],
                             "symbol": ["Field required"],
-                            "interval": ["Input should be '1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo' or '3mo'"],
+                            "interval": ["Input should be '1m', '5m', '15m', '30m', '1h', '1d', '1wk', or '1mo'"],
                             "period": ["Input should be a valid integer, unable to parse string as an integer"],
                             "stoch_period": ["Input should be a valid integer, unable to parse string as an integer"],
                             "signal_period": ["Input should be a valid integer, unable to parse string as an integer"],
@@ -101,10 +101,6 @@ IndicatorFunctions = {
                     }
                 }
             },
-        },
-        500: {
-            "description": "Failed to retrieve technical indicators.",
-            "content": {"application/json": {"example": {"detail": "Failed to retrieve technical indicators"}}},
         },
     },
 )
@@ -233,15 +229,11 @@ async def technical_indicator(
                         "detail": "Invalid request",
                         "errors": {
                             "symbol": ["Field required"],
-                            "interval": ["Input should be '1m', '5m', '15m', '30m', '1h', '1d', '1wk', '1mo' or '3mo'"],
+                            "interval": ["Input should be '1m', '5m', '15m', '30m', '1h', '1d', '1wk', or '1mo'"],
                         },
                     }
                 }
             },
-        },
-        500: {
-            "description": "Failed to retrieve technical analysis",
-            "content": {"application/json": {"example": {"detail": "Failed to retrieve technical analysis"}}},
         },
     },
 )

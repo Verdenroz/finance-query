@@ -39,8 +39,8 @@ async def check_health_rate_limit(
 
 @injectable
 async def validate_websocket(
-    rate_limit_manager: Annotated[RateLimitManager, Depends(get_rate_limit_manager)],
     websocket: WebSocket,
+    rate_limit_manager: Annotated[RateLimitManager, Depends(get_rate_limit_manager)],
 ) -> tuple[bool, dict]:
     """
     Backwards compatible wrapper for websocket validation

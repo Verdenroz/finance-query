@@ -47,6 +47,7 @@ router = APIRouter()
                                 "errors": {
                                     "type": ["Input should be 'stock', 'etf', or 'trust'"],
                                     "hits": ["Input should be a valid integer, unable to parse string as an integer"],
+                                    "yahoo": ["Input should be a valid boolean, unable to interpret input"],
                                 },
                             },
                         },
@@ -61,5 +62,6 @@ async def search(
     query: str,
     hits: int = Query(default=50, ge=1, le=100),
     type: Optional[Type] = None,
+    yahoo: bool = Query(default=False, description="Use Yahoo Finance for search results"),
 ):
-    return await get_search(finance_client, query, hits, type)
+    return await get_search(finance_client, query, hits, type, yahoo)
