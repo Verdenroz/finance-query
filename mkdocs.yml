@@ -56,6 +56,7 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Deployment: deployment.md
   - API Reference:
       - Health Check: api/health.md
       - Market Hours: api/hours.md
@@ -77,4 +78,3 @@ nav:
   - Development:
       - Contributing: development/contributing.md
       - Architecture: development/architecture.md
-  - Changelog: changelog.md
