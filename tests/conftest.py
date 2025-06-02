@@ -149,6 +149,6 @@ def bypass_cache(monkeypatch):
     """
     Bypass the cache decorator for testing.
     """
-    os.environ["BYPASS_CACHE"] = "1"
+    os.environ["BYPASS_CACHE"] = "true"
     yield
     del os.environ["BYPASS_CACHE"]
