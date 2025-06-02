@@ -69,11 +69,11 @@ Optional authentication via `x-api-key` header token
 ### MarketIndex Schema
 
 | Field              | Type   | Description                | Required |
-|:-------------------|:-------|:---------------------------|:---------|
-| `name`             | string | Name of the index          | ✓        |
-| `value`            | number | Current value of the index | ✓        |
-| `change`           | string | Change in the index        | ✓        |
-| `percentChange`    | string | Percentage change          | ✓        |
+|:-------------------|:-------|:---------------------------|:--------:|
+| `name`             | string | Name of the index          |    ✓     |
+| `value`            | number | Current value of the index |    ✓     |
+| `change`           | string | Change in the index        |    ✓     |
+| `percentChange`    | string | Percentage change          |    ✓     |
 | `fiveDaysReturn`   | string | 5-day return               |          |
 | `oneMonthReturn`   | string | 1-month return             |          |
 | `threeMonthReturn` | string | 3-month return             |          |

@@ -161,27 +161,27 @@ Optional authentication via `x-api-key` header token
 ### MarketSector Schema
 
 | Field           | Type   | Description                            | Required |
-|-----------------|--------|----------------------------------------|----------|
-| sector          | string | Sector name (e.g., "Technology")       | ✓        |
-| dayReturn       | string | Day change percentage (e.g., "-0.69%") | ✓        |
-| ytdReturn       | string | Year-to-date return (e.g., "-2.36%")   | ✓        |
-| yearReturn      | string | 1-year return (e.g., "+24.00%")        | ✓        |
-| threeYearReturn | string | 3-year return (e.g., "+50.20%")        | ✓        |
-| fiveYearReturn  | string | 5-year return (e.g., "+158.41%")       | ✓        |
+|-----------------|--------|----------------------------------------|:--------:|
+| sector          | string | Sector name (e.g., "Technology")       |    ✓     |
+| dayReturn       | string | Day change percentage (e.g., "-0.69%") |    ✓     |
+| ytdReturn       | string | Year-to-date return (e.g., "-2.36%")   |    ✓     |
+| yearReturn      | string | 1-year return (e.g., "+24.00%")        |    ✓     |
+| threeYearReturn | string | 3-year return (e.g., "+50.20%")        |    ✓     |
+| fiveYearReturn  | string | 5-year return (e.g., "+158.41%")       |    ✓     |
 
 ### MarketSectorDetails Schema
 
 | Field           | Type     | Description                                        | Required |
-|-----------------|----------|----------------------------------------------------|----------|
-| sector          | string   | Sector name (e.g., "Technology")                   | ✓        |
-| dayReturn       | string   | Day change percentage (e.g., "+0.97%")             | ✓        |
-| ytdReturn       | string   | Year-to-date return (e.g., "+3.35%")               | ✓        |
-| yearReturn      | string   | 1-year return (e.g., "+32.59%")                    | ✓        |
-| threeYearReturn | string   | 3-year return (e.g., "+66.92%")                    | ✓        |
-| fiveYearReturn  | string   | 5-year return (e.g., "+179.23%")                   | ✓        |
-| marketCap       | string   | Total market capitalization (e.g., "20.196T")      | ✓        |
-| marketWeight    | string   | Sector's weight in overall market (e.g., "29.28%") | ✓        |
-| industries      | integer  | Number of industries in the sector                 | ✓        |
-| companies       | integer  | Number of companies in the sector                  | ✓        |
-| topIndustries   | string[] | List of top industries with percentages            | ✓        |
-| topCompanies    | string[] | List of top company symbols in the sector          | ✓        |
+|-----------------|----------|----------------------------------------------------|:--------:|
+| sector          | string   | Sector name (e.g., "Technology")                   |    ✓     |
+| dayReturn       | string   | Day change percentage (e.g., "+0.97%")             |    ✓     |
+| ytdReturn       | string   | Year-to-date return (e.g., "+3.35%")               |    ✓     |
+| yearReturn      | string   | 1-year return (e.g., "+32.59%")                    |    ✓     |
+| threeYearReturn | string   | 3-year return (e.g., "+66.92%")                    |    ✓     |
+| fiveYearReturn  | string   | 5-year return (e.g., "+179.23%")                   |    ✓     |
+| marketCap       | string   | Total market capitalization (e.g., "20.196T")      |    ✓     |
+| marketWeight    | string   | Sector's weight in overall market (e.g., "29.28%") |    ✓     |
+| industries      | integer  | Number of industries in the sector                 |    ✓     |
+| companies       | integer  | Number of companies in the sector                  |    ✓     |
+| topIndustries   | string[] | List of top industries with percentages            |    ✓     |
+| topCompanies    | string[] | List of top company symbols in the sector          |    ✓     |

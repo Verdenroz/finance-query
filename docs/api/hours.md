@@ -29,7 +29,7 @@ Optional authentication via `x-api-key` header token
 ### MarketStatus Schema
 
 | Field      | Type   | Description                                     | Required |
-|------------|--------|-------------------------------------------------|----------|
-| status     | string | Current market status ("open", "closed", etc.)  | ✓        |
-| reason     | string | Explanation for the current status              | ✓        |
-| timestamp  | string | ISO timestamp of the status check               | ✓        |
+|------------|--------|-------------------------------------------------|:--------:|
+| status     | string | Current market status ("open", "closed", etc.)  |    ✓     |
+| reason     | string | Explanation for the current status              |    ✓     |
+| timestamp  | string | ISO timestamp of the status check               |    ✓     |

@@ -64,10 +64,10 @@ Optional authentication via `x-api-key` header token
 ### SimpleQuote Schema
 
 | Field            | Type   | Description                | Required |
-|------------------|--------|----------------------------|----------|
-| symbol           | string | Stock symbol               | ✓        |
-| name             | string | Company name               | ✓        |
-| price            | string | Last traded price          | ✓        |
-| change           | string | Change in price            | ✓        |
-| percentChange    | string | Percentage change          | ✓        |
+|------------------|--------|----------------------------|:--------:|
+| symbol           | string | Stock symbol               |    ✓     |
+| name             | string | Company name               |    ✓     |
+| price            | string | Last traded price          |    ✓     |
+| change           | string | Change in price            |    ✓     |
+| percentChange    | string | Percentage change          |    ✓     |
 | logo             | string | URL to company logo        |          |

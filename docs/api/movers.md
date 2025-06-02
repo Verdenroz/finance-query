@@ -14,8 +14,8 @@ Optional authentication via `x-api-key` header token
 ### Request Parameters
 
 | Parameter | Type   | Required | Description                                 | Example |
-|-----------|--------|:--------:|---------------------------------------------|---------|
-| `count`   | string |          | Number of actives to retrieve (default: 50) | `25`    |
+|-----------|--------|:--------:|---------------------------------------------|:-------:|
+| `count`   | string |          | Number of actives to retrieve (default: 50) |  `25`   |
 
 #### Available Count Options
 
@@ -68,8 +68,8 @@ Optional authentication via `x-api-key` header token
 ### Request Parameters
 
 | Parameter | Type   | Required | Description                                 | Example |
-|-----------|--------|:--------:|---------------------------------------------|---------|
-| `count`   | string |          | Number of gainers to retrieve (default: 50) | `25`    |
+|-----------|--------|:--------:|---------------------------------------------|:-------:|
+| `count`   | string |          | Number of gainers to retrieve (default: 50) |  `25`   |
 
 #### Available Count Options
 
@@ -122,8 +122,8 @@ Optional authentication via `x-api-key` header token
 ### Request Parameters
 
 | Parameter | Type   | Required | Description                                | Example |
-|-----------|--------|:--------:|--------------------------------------------|---------|
-| `count`   | string |          | Number of losers to retrieve (default: 50) | `25`    |
+|-----------|--------|:--------:|--------------------------------------------|:-------:|
+| `count`   | string |          | Number of losers to retrieve (default: 50) |  `25`   |
 
 #### Available Count Options
 
@@ -167,9 +167,9 @@ curl -X GET "https://finance-query.onrender.com/v1/losers?count=25" \
 ### MarketMover Schema
 
 | Field           | Type   | Description       | Required |
-|:----------------|:-------|:------------------|:---------|
-| `symbol`        | string | Stock symbol      | ✓        |
-| `name`          | string | Company name      | ✓        |
-| `price`         | string | Last traded price | ✓        |
-| `change`        | string | Change in price   | ✓        |
-| `percentChange` | string | Percentage change | ✓        |
+|:----------------|:-------|:------------------|:--------:|
+| `symbol`        | string | Stock symbol      |    ✓     |
+| `name`          | string | Company name      |    ✓     |
+| `price`         | string | Last traded price |    ✓     |
+| `change`        | string | Change in price   |    ✓     |
+| `percentChange` | string | Percentage change |    ✓     |

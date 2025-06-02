@@ -122,16 +122,16 @@ None
 
 ### HealthStatus Schema
 
-| Field     | Type   | Description                           | Required |
-|-----------|--------|---------------------------------------|----------|
-| status    | string | Overall health status of the API      | ✓        |
-| timestamp | string | ISO timestamp of the health check     | ✓        |
-| redis     | object | Redis service status and metrics      |          |
-| services  | object | Individual service statuses and checks|          |
+| Field     | Type   | Description                            | Required |
+|-----------|--------|----------------------------------------|:--------:|
+| status    | string | Overall health status of the API       |    ✓     |
+| timestamp | string | ISO timestamp of the health check      |    ✓     |
+| redis     | object | Redis service status and metrics       |          |
+| services  | object | Individual service statuses and checks |          |
 
 ### PingStatus Schema
 
 | Field     | Type   | Description                       | Required |
-|-----------|--------|-----------------------------------|----------|
-| status    | string | Health status of the API          | ✓        |
-| timestamp | string | ISO timestamp of the ping request | ✓        |
+|-----------|--------|-----------------------------------|:--------:|
+| status    | string | Health status of the API          |    ✓     |
+| timestamp | string | ISO timestamp of the ping request |    ✓     |

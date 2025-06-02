@@ -253,84 +253,84 @@ Optional authentication via `x-api-key` header token
 ### TechnicalIndicator Schema
 
 | Field              | Type   | Description                           | Required |
-|--------------------|--------|---------------------------------------|----------|
-| type               | string | The technical indicator (e.g., "SMA") | ✓        |
-| Technical Analysis | object | Dates mapped to indicator values      | ✓        |
+|--------------------|--------|---------------------------------------|:--------:|
+| type               | string | The technical indicator (e.g., "SMA") |    ✓     |
+| Technical Analysis | object | Dates mapped to indicator values      |    ✓     |
 
 ### SMAData Schema
 
 | Field | Type  | Description                                                   | Required |
-|-------|-------|---------------------------------------------------------------|----------|
+|-------|-------|---------------------------------------------------------------|:--------:|
 | value | float | Average price over a specified period, smoothing price action |          |
 
 ### EMAData Schema
 
 | Field | Type  | Description                                              | Required |
-|-------|-------|----------------------------------------------------------|----------|
+|-------|-------|----------------------------------------------------------|:--------:|
 | value | float | Weighted average giving more importance to recent prices |          |
 
 ### WMAData Schema
 
 | Field | Type  | Description                                                     | Required |
-|-------|-------|-----------------------------------------------------------------|----------|
+|-------|-------|-----------------------------------------------------------------|:--------:|
 | value | float | Average where recent prices carry more weight than older prices |          |
 
 ### VWMAData Schema
 
 | Field | Type  | Description                                                                    | Required |
-|-------|-------|--------------------------------------------------------------------------------|----------|
+|-------|-------|--------------------------------------------------------------------------------|:--------:|
 | value | float | Price average weighted by volume, showing where most trading activity occurred |          |
 
 ### RSIData Schema
 
 | Field | Type  | Description                                                           | Required |
-|-------|-------|-----------------------------------------------------------------------|----------|
+|-------|-------|-----------------------------------------------------------------------|:--------:|
 | value | float | Momentum oscillator (0-100) indicating overbought/oversold conditions |          |
 
 ### SRSIData Schema
 
 | Field | Type  | Description                                | Required |
-|-------|-------|--------------------------------------------|----------|
+|-------|-------|--------------------------------------------|:--------:|
 | k     | float | Fast stochastic line applied to RSI values |          |
 | d     | float | Smoothed signal line of the stochastic RSI |          |
 
 ### STOCHData Schema
 
 | Field | Type  | Description                                                  | Required |
-|-------|-------|--------------------------------------------------------------|----------|
+|-------|-------|--------------------------------------------------------------|:--------:|
 | k     | float | Fast line showing current price position within recent range |          |
 | d     | float | Smoothed signal line of the stochastic oscillator            |          |
 
 ### CCIData Schema
 
 | Field | Type  | Description                                                        | Required |
-|-------|-------|--------------------------------------------------------------------|----------|
+|-------|-------|--------------------------------------------------------------------|:--------:|
 | value | float | Measures price deviation from statistical average to spot extremes |          |
 
 ### MACDData Schema
 
 | Field  | Type  | Description                                            | Required |
-|--------|-------|--------------------------------------------------------|----------|
+|--------|-------|--------------------------------------------------------|:--------:|
 | value  | float | Difference between fast and slow moving averages       |          |
 | signal | float | Smoothed MACD line used for buy/sell signal generation |          |
 
 ### ADXData Schema
 
 | Field | Type  | Description                                             | Required |
-|-------|-------|---------------------------------------------------------|----------|
+|-------|-------|---------------------------------------------------------|:--------:|
 | value | float | Strength of price trend regardless of direction (0-100) |          |
 
 ### AROONData Schema
 
 | Field      | Type  | Description                                    | Required |
-|------------|-------|------------------------------------------------|----------|
+|------------|-------|------------------------------------------------|:--------:|
 | aroon_up   | float | Time since highest high within lookback period |          |
 | aroon_down | float | Time since lowest low within lookback period   |          |
 
 ### BBANDSData Schema
 
 | Field       | Type  | Description                                          | Required |
-|-------------|-------|------------------------------------------------------|----------|
+|-------------|-------|------------------------------------------------------|:--------:|
 | upper_band  | float | Price ceiling based on standard deviations above SMA |          |
 | middle_band | float | Simple moving average serving as the centerline      |          |
 | lower_band  | float | Price floor based on standard deviations below SMA   |          |
@@ -338,20 +338,20 @@ Optional authentication via `x-api-key` header token
 ### OBVData Schema
 
 | Field | Type  | Description                                                     | Required |
-|-------|-------|-----------------------------------------------------------------|----------|
+|-------|-------|-----------------------------------------------------------------|:--------:|
 | value | float | Running total of volume based on price direction (up/down days) |          |
 
 ### SuperTrendData Schema
 
 | Field | Type   | Description                                        | Required |
-|-------|--------|----------------------------------------------------|----------|
+|-------|--------|----------------------------------------------------|:--------:|
 | value | float  | Dynamic support/resistance level based on ATR      |          |
-| trend | string | Current market direction ("up", "down", "neutral") | ✓        |
+| trend | string | Current market direction ("up", "down", "neutral") |    ✓     |
 
 ### IchimokuData Schema
 
 | Field         | Type  | Description                                                   | Required |
-|---------------|-------|---------------------------------------------------------------|----------|
+|---------------|-------|---------------------------------------------------------------|:--------:|
 | tenkan_sen    | float | Conversion line - short-term momentum and support/resistance  |          |
 | kijun_sen     | float | Base line - medium-term momentum and major support/resistance |          |
 | chikou_span   | float | Lagging span - current price plotted 26 periods back          |          |

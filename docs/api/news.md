@@ -14,7 +14,7 @@ Optional authentication via `x-api-key` header token
 ### Request Parameters
 
 | Parameter | Type   | Required | Description                                     | Example |
-|-----------|--------|:--------:|-------------------------------------------------|---------|
+|-----------|--------|:--------:|-------------------------------------------------|:-------:|
 | `symbol`  | string |          | Ticker symbol (returns general news if omitted) | `AAPL`  |
 
 **Responses:**
@@ -49,10 +49,10 @@ Optional authentication via `x-api-key` header token
 
 ### News Schema
 
-| Field    | Type   | Description               | Required |
-|:---------|:-------|:--------------------------|:---------|
-| `title`  | string | Title of the news article | ✓        |
-| `link`   | string | URL to the full article   | ✓        |
-| `source` | string | News source               | ✓        |
-| `img`    | string | URL to accompanying image | ✓        |
-| `time`   | string | Time relative to now      | ✓        |
+| Field  | Type   | Description               | Required |
+|:-------|:-------|:--------------------------|:--------:|
+| title  | string | Title of the news article |    ✓     |
+| link   | string | URL to the full article   |    ✓     |
+| source | string | News source               |    ✓     |
+| img    | string | URL to accompanying image |    ✓     |
+| time   | string | Time relative to now      |    ✓     |

@@ -74,8 +74,8 @@ Optional authentication via `x-api-key` header token
 ### SearchResult Schema
 
 | Field    | Type   | Description                                     | Required |
-|----------|--------|-------------------------------------------------|----------|
-| name     | string | Full company name (e.g., "Apple Inc.")          | ✓        |
-| symbol   | string | Stock symbol (e.g., "AAPL")                     | ✓        |
-| exchange | string | Exchange where security trades (e.g., "NASDAQ") | ✓        |
-| type     | string | Security type (e.g., "stock", "etf", "trust")   | ✓        |
+|----------|--------|-------------------------------------------------|:--------:|
+| name     | string | Full company name (e.g., "Apple Inc.")          |    ✓     |
+| symbol   | string | Stock symbol (e.g., "AAPL")                     |    ✓     |
+| exchange | string | Exchange where security trades (e.g., "NASDAQ") |    ✓     |
+| type     | string | Security type (e.g., "stock", "etf", "trust")   |    ✓     |

@@ -92,10 +92,10 @@ Optional authentication via `x-api-key` header token
 ### HistoricalData Schema
 
 | Field      | Type    | Description            | Required |
-|:-----------|:--------|:-----------------------|:---------|
-| `open`     | number  | Opening price          | ✓        |
-| `high`     | number  | Highest price          | ✓        |
-| `low`      | number  | Lowest price           | ✓        |
-| `close`    | number  | Closing price          | ✓        |
+|:-----------|:--------|:-----------------------|:--------:|
+| `open`     | number  | Opening price          |    ✓     |
+| `high`     | number  | Highest price          |    ✓     |
+| `low`      | number  | Lowest price           |    ✓     |
+| `close`    | number  | Closing price          |    ✓     |
 | `adjClose` | number  | Adjusted closing price |          |
-| `volume`   | integer | Volume traded          | ✓        |
+| `volume`   | integer | Volume traded          |    ✓     |

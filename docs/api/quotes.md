@@ -198,14 +198,14 @@ Optional authentication via `x-api-key` header token
 ### Quote Schema
 
 | Field                 | Type    | Description                                | Required |
-|-----------------------|---------|--------------------------------------------|----------|
-| symbol                | string  | Stock symbol (e.g., "AAPL")                | ✓        |
-| name                  | string  | Company name (e.g., "Apple Inc.")          | ✓        |
-| price                 | string  | Last traded price (e.g., "145.00")         | ✓        |
+|-----------------------|---------|--------------------------------------------|:--------:|
+| symbol                | string  | Stock symbol (e.g., "AAPL")                |    ✓     |
+| name                  | string  | Company name (e.g., "Apple Inc.")          |    ✓     |
+| price                 | string  | Last traded price (e.g., "145.00")         |    ✓     |
 | preMarketPrice        | string  | Pre-market price (if available)            |          |
 | afterHoursPrice       | string  | After-hours price (if available)           |          |
-| change                | string  | Change in price (e.g., "+1.00")            | ✓        |
-| percentChange         | string  | Percentage change (e.g., "+0.69%")         | ✓        |
+| change                | string  | Change in price (e.g., "+1.00")            |    ✓     |
+| percentChange         | string  | Percentage change (e.g., "+0.69%")         |    ✓     |
 | open                  | string  | Opening price of the stock                 |          |
 | high                  | string  | Highest price of the trading day           |          |
 | low                   | string  | Lowest price of the trading day            |          |
@@ -250,12 +250,12 @@ Optional authentication via `x-api-key` header token
 ### SimpleQuote Schema
 
 | Field           | Type   | Description                | Required |
-|-----------------|--------|----------------------------|----------|
-| symbol          | string | Stock symbol               | ✓        |
-| name            | string | Company name               | ✓        |
-| price           | string | Last traded price          | ✓        |
-| preMarketPrice  | string | Pre-market price (if any)  |        |
-| afterHoursPrice | string | After-hours price (if any) |        |
-| change          | string | Change in price            | ✓        |
-| percentChange   | string | Percentage change          | ✓        |
-| logo            | string | URL to company logo        |        |
+|-----------------|--------|----------------------------|:--------:|
+| symbol          | string | Stock symbol               |    ✓     |
+| name            | string | Company name               |    ✓     |
+| price           | string | Last traded price          |    ✓     |
+| preMarketPrice  | string | Pre-market price (if any)  |          |
+| afterHoursPrice | string | After-hours price (if any) |          |
+| change          | string | Change in price            |    ✓     |
+| percentChange   | string | Percentage change          |    ✓     |
+| logo            | string | URL to company logo        |          |
