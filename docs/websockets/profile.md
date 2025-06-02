@@ -114,22 +114,10 @@ The WebSocket sends JSON responses with the following structure:
 
 | Field             | Type   | Description                               | Required |
 |-------------------|--------|-------------------------------------------|:--------:|
-| metadata          | object | API rate limit and usage information      |          |
 | quote             | object | Comprehensive quote data for the symbol   |    ✓     |
 | similar           | array  | List of similar stocks with basic quotes  |    ✓     |
 | sectorPerformance | object | Performance data for the stock's sector   |    ✓     |
 | news              | array  | Recent news articles related to the stock |    ✓     |
-
-#### Metadata Schema
-
-!!! info
-Only included in the first message after connection and if security is enabled.
-
-| Field              | Type   | Description                             | Required |
-|--------------------|--------|-----------------------------------------|:--------:|
-| rate_limit         | number | Maximum requests allowed in time period |    ✓     |
-| remaining_requests | number | Requests remaining in current period    |    ✓     |
-| reset              | number | Seconds until rate limit resets         |    ✓     |
 
 #### Quote Schema
 
