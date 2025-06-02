@@ -1,4 +1,8 @@
-# FinanceQuery
+<h1 align="center">FinanceQuery</h1>
+
+<p align="center">
+  <img src=".github/assets/logo.png" alt="FinanceQuery" width="187">
+</p>
 
 [![Tests](https://github.com/Verdenroz/finance-query/actions/workflows/tests.yml/badge.svg)](https://github.com/Verdenroz/finance-query/actions/workflows/tests.yml)
 [![codecov](https://codecov.io/gh/Verdenroz/finance-query/graph/badge.svg?token=0S3003BAZY)](https://codecov.io/gh/Verdenroz/finance-query)
@@ -9,7 +13,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**FinanceQuery** is a modern, fast (high-performance), web framework for building financial APIs with Python based on FastAPI and standard Python type hints. It provides endpoints to get quotes, historical prices, indices, market movers, similar stocks, finance news, indicators, search, and sectors. Data is acquired through web scraping and the unofficial Yahoo Finance API. It is the successor to the [GoogleFinanceAPI](https://github.com/Verdenroz/GoogleFinanceAPI).
+**FinanceQuery** is a modern web framework for building financial APIs with Python based on FastAPI and standard Python type hints. It provides endpoints to get quotes, historical prices, indices, market movers, similar stocks, finance news, indicators, search, and sectors. Data is acquired through web scraping and the unofficial Yahoo Finance API. It is the successor to the [GoogleFinanceAPI](https://github.com/Verdenroz/GoogleFinanceAPI).
 
 ## Documentation
 
