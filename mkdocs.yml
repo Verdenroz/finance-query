@@ -68,6 +68,12 @@ nav:
       - Search: api/search.md
       - Technical Indicators: api/indicators.md
       - SSE Stream: api/stream.md
+  - Websockets:
+      - Overview: websockets.md
+      - Profile: websockets/profile.md
+      - Quotes: websockets/quotes.md
+      - Market: websockets/market.md
+      - Hours: websockets/hours.md
   - Development:
       - Contributing: development/contributing.md
       - Architecture: development/architecture.md
