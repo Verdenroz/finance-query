@@ -4,7 +4,7 @@ build-backend = "poetry.core.masonry.api"
 
 [project]
 name = "financequery"
-version = "1.8.0"
+version = "1.8.1"
 description = "A free and open-source financial data API for pricing, fundamentals, and technical indicators."
 license = "MIT"
 authors = [
@@ -98,7 +98,8 @@ omit = [
     "src/security/rate_limit_middleware.py",
     "src/**/dependencies.py",
     "src/**/*middleware.py",
-    "src/**/utils.py"
+    "src/**/utils.py",
+    "docs/*",
 ]
 
 [tool.coverage.report]
