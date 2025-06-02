@@ -3,8 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Query, Security
 from fastapi.security import APIKeyHeader
 
-from models import ValidationErrorResponse
-from src.models import INDEX_REGIONS, Index, MarketIndex, Region
+from src.models import INDEX_REGIONS, Index, MarketIndex, Region, ValidationErrorResponse
 from src.services import get_indices
 from src.utils.dependencies import FinanceClient
 
