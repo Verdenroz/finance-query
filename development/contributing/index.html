@@ -950,6 +950,24 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#installation-with-poetry-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation with Poetry (recommended)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#installation-with-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation with pip
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#setting-up-environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
       Setting up environment variables
@@ -987,6 +1005,21 @@
       How to submit changes
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="How to submit changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#branch-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Branch Workflow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1093,6 +1126,24 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
+  <a href="#installation-with-poetry-recommended" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation with Poetry (recommended)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#installation-with-pip" class="md-nav__link">
+    <span class="md-ellipsis">
+      Installation with pip
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
   <a href="#setting-up-environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
       Setting up environment variables
@@ -1130,6 +1181,21 @@
       How to submit changes
     </span>
   </a>
+  
+    <nav class="md-nav" aria-label="How to submit changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#branch-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      Branch Workflow
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
   
 </li>
       
@@ -1192,42 +1258,55 @@ and/or steps to reproduce the issue.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate<span class="w">  </span><span class="c1"># On Windows: venv\Scripts\activate</span>
 </code></pre></div>
+<h3 id="installation-with-poetry-recommended">Installation with Poetry (recommended)<a class="headerlink" href="#installation-with-poetry-recommended" title="Permanent link">&para;</a></h3>
+<p>Alternatively, you can use <a href="https://python-poetry.org/">Poetry</a> for dependency management:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>poetry
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="gp">$ </span>poetry<span class="w"> </span>install<span class="w"> </span>--with<span class="w"> </span>dev
+</code></pre></div>
+<p>This will install all dependencies defined in the pyproject.toml file, including development dependencies.</p>
+<p>To activate the Poetry virtual environment:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="gp">$ </span><span class="nb">eval</span><span class="w"> </span><span class="k">$(</span>poetry<span class="w"> </span>env<span class="w"> </span>activate<span class="k">)</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="gp"># </span>Or<span class="w"> </span>on<span class="w"> </span>Windows:
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="go">Invoke-Expression (poetry env activate)</span>
+</code></pre></div>
+<h3 id="installation-with-pip">Installation with pip<a class="headerlink" href="#installation-with-pip" title="Permanent link">&para;</a></h3>
 <p>Install the project dependencies:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements.txt
 </code></pre></div>
 <p>For development, you'll also need the development dependencies:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements/dev.txt
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-r<span class="w"> </span>requirements/dev.txt
 </code></pre></div>
 <h3 id="setting-up-environment-variables">Setting up environment variables<a class="headerlink" href="#setting-up-environment-variables" title="Permanent link">&para;</a></h3>
 <p>Create a <code>.env</code> file in the project root with the following variables:
 See the <code>.env.template</code> file for an example.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a># Basic configuration
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>REDIS_URL=redis://localhost:6379  # Optional, for caching and WebSocket support
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>USE_SECURITY=True  # Enable rate limiting
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>BYPASS_CACHE=False  # Set to True to disable caching during development
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
-<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a># Proxy configuration (optional)
-<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>USE_PROXY=False
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>PROXY_URL=
-<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>PROXY_TOKEN=
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a># Basic configuration
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>REDIS_URL=redis://localhost:6379  # Optional, for caching and WebSocket support
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>USE_SECURITY=True  # Enable rate limiting
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a>BYPASS_CACHE=False  # Set to True to disable caching during development
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a># Proxy configuration (optional)
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a>USE_PROXY=False
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>PROXY_URL=
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a>PROXY_TOKEN=
 </code></pre></div>
 <h2 id="how-to-test-the-project">How to test the project<a class="headerlink" href="#how-to-test-the-project" title="Permanent link">&para;</a></h2>
 <p>Run the full test suite:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="gp">$ </span>pytest
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="gp">$ </span>pytest
 </code></pre></div>
 <p>You can also run specific test files:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="gp">$ </span>pytest<span class="w"> </span>tests/test_quotes.py
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="gp">$ </span>pytest<span class="w"> </span>tests/test_quotes.py
 </code></pre></div>
 <p>Unit tests are located in the <em>tests</em> directory,
 and are written using the <a href="https://pytest.readthedocs.io/">pytest</a> testing framework.</p>
 <h2 id="local-development">Local development<a class="headerlink" href="#local-development" title="Permanent link">&para;</a></h2>
 <p>To run the application locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>uvicorn<span class="w"> </span>src.main:app<span class="w"> </span>--reload
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>uvicorn<span class="w"> </span>src.main:app<span class="w"> </span>--reload
 </code></pre></div>
 <p>This will start the API server at <code>http://localhost:8000</code> with automatic reloading enabled.</p>
 <p>You can also use Docker:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="gp">$ </span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>finance-query<span class="w"> </span>.
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="gp">$ </span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>finance-query
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="gp">$ </span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>finance-query<span class="w"> </span>.
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="gp">$ </span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>finance-query
 </code></pre></div>
 <h2 id="how-to-submit-changes">How to submit changes<a class="headerlink" href="#how-to-submit-changes" title="Permanent link">&para;</a></h2>
 <p>Open a <a href="https://github.com/Verdenroz/finance-query/pulls">pull request</a> to submit changes to this project.</p>
@@ -1240,10 +1319,27 @@ and are written using the <a href="https://pytest.readthedocs.io/">pytest</a> te
 </ul>
 <p>Feel free to submit early, though—we can always iterate on this.</p>
 <p>To run linting and code formatting checks before committing your change, you can use:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="gp">$ </span>pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="gp">$ </span>pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files
 </code></pre></div>
 <p>It is recommended to open an issue before starting work on anything.
 This will allow a chance to talk it over with the owners and validate your approach.</p>
+<h3 id="branch-workflow">Branch Workflow<a class="headerlink" href="#branch-workflow" title="Permanent link">&para;</a></h3>
+<p>FinanceQuery follows a structured branch workflow:</p>
+<ol>
+<li>
+<p><strong>Feature branches</strong>: Create a branch for your feature or bugfix. Branch names should be descriptive and follow this format: <code>feat/your-feature-name</code> or <code>fix/issue-description</code>.</p>
+</li>
+<li>
+<p><strong>Staging branch</strong>: All feature branches must be merged into the <code>staging</code> branch first for integration testing.</p>
+</li>
+<li>
+<p><strong>Master branch</strong>: The <code>master</code> branch contains production-ready code. Pull requests to <code>master</code> are only accepted from the <code>staging</code> branch and are automatically restricted by our CI workflow.</p>
+</li>
+</ol>
+<p>This workflow ensures that code in the master branch has been properly reviewed and tested in staging before deployment to production.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>feature/your-feature --&gt; staging --&gt; master
+</code></pre></div>
+<p>Please do not attempt to merge feature branches directly to master as these pull requests will be automatically rejected.</p>
 <h2 id="project-architecture">Project architecture<a class="headerlink" href="#project-architecture" title="Permanent link">&para;</a></h2>
 <p>Please review the <a href="../architecture/">architecture document</a> to understand the project's structure before contributing.</p>
 
