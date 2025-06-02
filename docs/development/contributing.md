@@ -47,6 +47,28 @@ $ python -m venv venv
 $ source venv/bin/activate  # On Windows: venv\Scripts\activate
 ```
 
+### Installation with Poetry (recommended)
+
+Alternatively, you can use [Poetry](https://python-poetry.org/) for dependency management:
+
+```console
+$ pip install poetry
+$ poetry install --with dev
+```
+
+This will install all dependencies defined in the pyproject.toml file, including development dependencies.
+
+To activate the Poetry virtual environment:
+
+```console
+$ eval $(poetry env activate)
+
+# Or on Windows:
+Invoke-Expression (poetry env activate)
+```
+
+### Installation with pip
+
 Install the project dependencies:
 
 ```console
