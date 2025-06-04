@@ -13,8 +13,9 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**FinanceQuery** is a modern web framework for building financial APIs with Python based on
-FastAPI and standard Python type hints.
+**FinanceQuery** is an open-source API for financial data that provides real-time quotes, market data, news, and
+technical indicators.
+It sources data from the unofficial Yahoo Finance API, web scraping, and other financial data providers.
 
 The key features are:
 
@@ -188,28 +189,28 @@ Customize FinanceQuery with environment variables:
 These environment variables are optional. The API will function with default settings if not provided.
 
 !!! settings "**Security Configuration**"
-    ```env
-    USE_SECURITY=true
-    ADMIN_API_KEY=your-secret-admin-key
-    ```
+```env
+USE_SECURITY=true
+ADMIN_API_KEY=your-secret-admin-key
+```
 
 !!! settings "**Proxy Configuration**"
-    ```env
-    USE_PROXY=true
-    PROXY_URL=your-proxy-url
-    PROXY_TOKEN=your-proxy-token
-    ```
+```env
+USE_PROXY=true
+PROXY_URL=your-proxy-url
+PROXY_TOKEN=your-proxy-token
+```
 
 !!! settings "**Redis Caching**"
-    ```env
-    REDIS_URL=redis://localhost:6379
-    ```
+```env
+REDIS_URL=redis://localhost:6379
+```
 
 !!! settings "**Algolia Search**"
-    ```env
-    ALGOLIA_APP_ID=your-algolia-app-id
-    ALGOLIA_API_KEY=your-algolia-api-key
-    ```
+```env
+ALGOLIA_APP_ID=your-algolia-app-id
+ALGOLIA_API_KEY=your-algolia-api-key
+```
 
 ---
 
@@ -236,6 +237,7 @@ This project is licensed under the terms of the **MIT License**.
 ## Support & Feedback
 
 !!! question "**Need Help?**"
+
 * 📧 **Email**: harveytseng2@gmail.com
 * 🐛 **Issues**: [GitHub Issues](https://github.com/Verdenroz/finance-query/issues)
 * 📖 **Documentation**: [OpenAPI Documentation](https://financequery.apidocumentation.com/)
