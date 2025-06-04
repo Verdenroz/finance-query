@@ -13,7 +13,9 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**FinanceQuery** is a modern web framework for building financial APIs with Python based on FastAPI and standard Python type hints. It provides endpoints to get quotes, historical prices, indices, market movers, similar stocks, finance news, indicators, search, and sectors. Data is acquired through web scraping and the unofficial Yahoo Finance API. It is the successor to the [GoogleFinanceAPI](https://github.com/Verdenroz/GoogleFinanceAPI).
+**FinanceQuery** is an open-source API for financial data that provides real-time quotes, market data, news, and
+technical indicators. It sources data from the unofficial Yahoo Finance API, web scraping, and other financial data
+providers.
 
 ## Documentation
 
@@ -62,9 +64,11 @@ The exposed endpoints to the API are:
 - https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod
 - https://finance-query.onrender.com
 
-An `x-api-key` header can be added if you have enabled security and rate limiting. If a key is not provided, or an invalid key is used, a rate limit of 2000 requests/day is applied to the request's ip address.
+An `x-api-key` header can be added if you have enabled security and rate limiting. If a key is not provided, or an
+invalid key is used, a rate limit of 2000 requests/day is applied to the request's ip address.
 
-> If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See the [.env template](.env.template).
+> If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See
+> the [.env template](.env.template).
 
 ### Example REST Request
 
@@ -152,22 +156,22 @@ ws.onmessage = (event) => {
 
 ## Available REST Endpoints
 
-| Endpoint                     | Description                                    |
-|------------------------------|------------------------------------------------|
-| `/health`, `/ping`           | API status and health monitoring               |
-| `/hours`                     | Trading hours and market status                |
-| `/v1/quotes`                 | Detailed quotes and information                |
-| `/v1/simple-quotes`          | Simplified quotes with summary information     |
-| `/v1/similar`                | Find similar quotes to queried symbol          |
-| `/v1/historical`             | Historical price data with customizable ranges |
-| `/v1/movers`                 | Market gainers, losers, and most active stocks |
-| `/v1/news`                   | Financial news and market updates              |
-| `/v1/indices`                | Major market indices (S&P 500, NASDAQ, DOW)    |
-| `/v1/sectors`                | Market sector performance and analysis         |
-| `/v1/search`                 | Search for securities with filters             |
-| `/v1/indicator`              | Get specific indicator history over time       |
-| `/v1/indicators`             | Technical indicators summary for interval      |
-| `/v1/stream`                 | SSE for real-time quote updates                |
+| Endpoint            | Description                                    |
+|---------------------|------------------------------------------------|
+| `/health`, `/ping`  | API status and health monitoring               |
+| `/hours`            | Trading hours and market status                |
+| `/v1/quotes`        | Detailed quotes and information                |
+| `/v1/simple-quotes` | Simplified quotes with summary information     |
+| `/v1/similar`       | Find similar quotes to queried symbol          |
+| `/v1/historical`    | Historical price data with customizable ranges |
+| `/v1/movers`        | Market gainers, losers, and most active stocks |
+| `/v1/news`          | Financial news and market updates              |
+| `/v1/indices`       | Major market indices (S&P 500, NASDAQ, DOW)    |
+| `/v1/sectors`       | Market sector performance and analysis         |
+| `/v1/search`        | Search for securities with filters             |
+| `/v1/indicator`     | Get specific indicator history over time       |
+| `/v1/indicators`    | Technical indicators summary for interval      |
+| `/v1/stream`        | SSE for real-time quote updates                |
 
 ## Available WebSocket Endpoints
 
@@ -181,42 +185,60 @@ ws.onmessage = (event) => {
 ## Deployment
 
 ### AWS Lambda
+
 Perfect for serverless applications with automatic scaling:
-- Follow the [AWS Lambda Deployment Guide](https://docs.aws.amazon.com/lambda/latest/dg/python-image.html#python-image-instructions)
+
+- Follow
+  the [AWS Lambda Deployment Guide](https://docs.aws.amazon.com/lambda/latest/dg/python-image.html#python-image-instructions)
 - Remember to add the environment variables to the Lambda function
-- Alternatively use the [AWS Deployment Workflow](.github/workflows/aws-deploy.yml), providing repository secrets for `AWS_SECRET_ID` and `AWS_SECRET_KEY`.
+- Alternatively use the [AWS Deployment Workflow](.github/workflows/aws-deploy.yml), providing repository secrets for
+  `AWS_SECRET_ID` and `AWS_SECRET_KEY`.
 - Also edit the `AWS_REGION`, `ECR_REPOSITORY`, and `FUNCTION_NAME` in the workflow file
 
 ### Render
+
 Easy deployment with WebSocket support:
+
 - Follow the [Render Deployment Guide](https://render.com/docs/deploy-fastapi)
 - The deployment should use the `Dockerfile` file in the repository
-- Be sure to override the CMD in the Dockerfile in your Render project settings to `python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT`
-- Alternatively use the [Render Deployment Workflow](.github/workflows/render-deploy.yml), providing repository secrets for `RENDER_DEPLOY_HOOK_URL`.
+- Be sure to override the CMD in the Dockerfile in your Render project settings to
+  `python -m uvicorn src.main:app --host 0.0.0.0 --port $PORT`
+- Alternatively use the [Render Deployment Workflow](.github/workflows/render-deploy.yml), providing repository secrets
+  for `RENDER_DEPLOY_HOOK_URL`.
 - The deploy hook url can be found in the settings of your Render project
 
 ### Docker
+
 Deploy anywhere with Docker:
+
 ```bash
 docker build -t financequery .
 docker run -p 8000:8000 financequery
 ```
 
-> **Note**: There are two workflows that will automatically deploy to render and AWS, but they will require repository secrets for `AWS_SECRET_ID`, `AWS_SECRET_KEY`, and `RENDER_DEPLOY_HOOK_URL`. Quite frankly, render is easier to work with since it enables the websockets, but will require the paid Starter Plan as this API requires extensive memory. If you are tight on cash, consider Lambda.
+> **Note**: There are two workflows that will automatically deploy to render and AWS, but they will require repository
+> secrets for `AWS_SECRET_ID`, `AWS_SECRET_KEY`, and `RENDER_DEPLOY_HOOK_URL`. Quite frankly, render is easier to work
+> with since it enables the websockets, but will require the paid Starter Plan as this API requires extensive memory. If
+> you are tight on cash, consider Lambda.
 
-> **WebSocket Support**: Remember the websockets above are not available through Lambda. If you deploy to Render instead, you will be able to connect to the websockets through a request that looks like `wss://finance-query.onrender.com/...`
+> **WebSocket Support**: Remember the websockets above are not available through Lambda. If you deploy to Render
+> instead, you will be able to connect to the websockets through a request that looks like
+`wss://finance-query.onrender.com/...`
 
 ## Configuration
 
-Customize FinanceQuery with environment variables. These environment variables are optional. The API will function with default settings if not provided.
+Customize FinanceQuery with environment variables. These environment variables are optional. The API will function with
+default settings if not provided.
 
 ### Security Configuration
+
 ```env
 USE_SECURITY=true
 ADMIN_API_KEY=your-secret-admin-key
 ```
 
 ### Proxy Configuration
+
 ```env
 USE_PROXY=true
 PROXY_URL=your-proxy-url
@@ -224,11 +246,13 @@ PROXY_TOKEN=your-proxy-token
 ```
 
 ### Redis Caching
+
 ```env
 REDIS_URL=redis://localhost:6379
 ```
 
 ### Algolia Search
+
 ```env
 ALGOLIA_APP_ID=your-algolia-app-id
 ALGOLIA_API_KEY=your-algolia-api-key
@@ -253,8 +277,10 @@ This project is licensed under the terms of the **[MIT License](https://opensour
 ## Support & Feedback
 
 **Need Help?**
+
 * 📧 **Email**: harveytseng2@gmail.com
 * 🐛 **Issues**: [GitHub Issues](https://github.com/Verdenroz/finance-query/issues)
 * 📖 **OpenAPI Documentation**: [OpenAPI Documentation](https://financequery.apidocumentation.com/)
 
-*As most data is scraped, some endpoints may break. If something is not working or if you have any suggestions, please reach out!*
+*As most data is scraped, some endpoints may break. If something is not working or if you have any suggestions, please
+reach out!*
