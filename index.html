@@ -1275,8 +1275,9 @@
 <a href="https://www.python.org/downloads/"><img alt="Python 3.11+" src="https://img.shields.io/badge/python-3.11+-blue.svg" /></a>
 <a href="https://fastapi.tiangolo.com"><img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-005571?style=flat&amp;logo=fastapi" /></a>
 <a href="https://opensource.org/licenses/MIT"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" /></a></p>
-<p><strong>FinanceQuery</strong> is a modern web framework for building financial APIs with Python based on
-FastAPI and standard Python type hints.</p>
+<p><strong>FinanceQuery</strong> is an open-source API for financial data that provides real-time quotes, market data, news, and
+technical indicators.
+It sources data from the unofficial Yahoo Finance API, web scraping, and other financial data providers.</p>
 <p>The key features are:</p>
 <ul>
 <li><strong>Fast</strong>: Very high performance, on par with NodeJS and Go (thanks to FastAPI and Starlette). One of the fastest
@@ -1508,28 +1509,28 @@ visit <a href="https://financequery.apidocumentation.com/reference">Scalar Finan
 <p>These environment variables are optional. The API will function with default settings if not provided.</p>
 <div class="admonition settings">
 <p class="admonition-title"><strong>Security Configuration</strong></p>
+</div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>USE_SECURITY=true
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>ADMIN_API_KEY=your-secret-admin-key
 </code></pre></div>
-</div>
 <div class="admonition settings">
 <p class="admonition-title"><strong>Proxy Configuration</strong></p>
+</div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>USE_PROXY=true
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>PROXY_URL=your-proxy-url
 <a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>PROXY_TOKEN=your-proxy-token
 </code></pre></div>
-</div>
 <div class="admonition settings">
 <p class="admonition-title"><strong>Redis Caching</strong></p>
+</div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>REDIS_URL=redis://localhost:6379
 </code></pre></div>
-</div>
 <div class="admonition settings">
 <p class="admonition-title"><strong>Algolia Search</strong></p>
+</div>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>ALGOLIA_APP_ID=your-algolia-app-id
 <a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>ALGOLIA_API_KEY=your-algolia-api-key
 </code></pre></div>
-</div>
 <hr />
 <h2 id="performance">Performance<a class="headerlink" href="#performance" title="Permanent link">&para;</a></h2>
 <p>FinanceQuery leverages:</p>
