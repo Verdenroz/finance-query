@@ -43,7 +43,7 @@ def safe_convert_to_dict(items: list, default=None):
     if not isinstance(items, list | tuple) or items is None:
         return default
 
-    return [item if isinstance(item, dict) else item.model_dump() if hasattr(item, "model_dump") else default for item in items]
+    return [item if isinstance(item, dict) else item.model_dump(by_alias=True) if hasattr(item, "model_dump") else default for item in items]
 
 
 async def handle_websocket_connection(
