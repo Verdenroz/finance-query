@@ -1,3 +1,5 @@
+from zoneinfo import ZoneInfo
+
 import pandas as pd
 from fastapi import HTTPException
 from orjson import orjson
@@ -88,6 +90,10 @@ async def get_historical(
         # Add adjusted close if available
         if "adjclose" in chart_data["indicators"]:
             df["adjclose"] = chart_data["indicators"]["adjclose"][0]["adjclose"]
+
+        # Localize index to US/Eastern
+        eastern = ZoneInfo("America/New_York")
+        df.index = df.index.tz_localize("UTC").tz_convert(eastern)
 
         # Clean and format data
         df.dropna(inplace=True)
