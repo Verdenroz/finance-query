@@ -110,7 +110,6 @@ class TestSSE:
             assert len(data) == 1
 
             quote = data[0]
-            print(quote)
             assert quote["symbol"] == "AAPL"
             assert quote["name"] == "Apple Inc."
             assert quote["price"] == "150.00"

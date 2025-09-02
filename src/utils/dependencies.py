@@ -13,10 +13,12 @@ from src.clients.fetch_client import CurlFetchClient
 from src.clients.yahoo_client import YahooFinanceClient
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import request_context
+from src.utils.logging import get_logger
 from src.utils.market import MarketSchedule
 from src.utils.yahoo_auth import YahooAuthManager
 
 Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
+logger = get_logger(__name__)
 
 
 @injectable
@@ -178,10 +180,23 @@ async def fetch(
                 return_response=return_response,
             )
         except Exception as exc:
-            print(f"Attempt {attempt + 1} failed: {exc}, {str(exc)}")
+            logger.warning(
+                "Request attempt failed", 
+                extra={
+                    "attempt": attempt + 1, 
+                    "max_retries": max_retries, 
+                    "error": str(exc),
+                    "error_type": type(exc).__name__
+                }
+            )
             if attempt < max_retries - 1:
                 await asyncio.sleep(retry_delay * 2**attempt)
             else:
+                logger.error(
+                    "All request attempts failed",
+                    extra={"max_retries": max_retries, "final_error": str(exc)},
+                    exc_info=True
+                )
                 raise HTTPException(
                     500,
                     f"Request failed after {max_retries} attempts: {exc}",
@@ -238,7 +253,13 @@ async def setup_proxy_whitelist() -> dict | None:
     payload = {"ip": ip}
     response = requests.post(api_url, headers=proxy_header_token, json=payload)
     if 200 < response.status_code >= 300:
-        print(f"Proxy whitelist setup failed: {response.text}")
+        logger.error(
+            "Proxy whitelist setup failed", 
+            extra={
+                "status_code": response.status_code, 
+                "response_text": response.text
+            }
+        )
         return None
 
     return {"api_url": api_url, "headers": proxy_header_token, "payload": payload}

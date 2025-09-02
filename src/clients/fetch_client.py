@@ -34,8 +34,7 @@ class CurlFetchClient:
         self.session = session or requests.Session(impersonate="chrome")
         self.timeout = timeout
         self.session.headers.update(default_headers or {})
-        if proxy:
-            self.session.proxies = {"http": proxy, "https": proxy}
+        self.proxies = {"http": proxy, "https": proxy} if proxy else None
 
     def request(
         self,
@@ -64,6 +63,7 @@ class CurlFetchClient:
                 json=data,
                 headers=headers,
                 timeout=self.timeout,
+                proxies=self.proxies,
             )
         except requests.RequestsError as exc:
             raise HTTPException(500, f"HTTP request failed: {exc}") from exc

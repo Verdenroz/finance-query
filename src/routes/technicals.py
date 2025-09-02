@@ -23,8 +23,10 @@ from src.services.indicators import (
     get_wma,
 )
 from src.utils.dependencies import FinanceClient
+from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 IndicatorFunctions = {
     Indicator.SMA: get_sma,
@@ -160,8 +162,17 @@ async def technical_indicator(
 
     except TypeError as te:
         param_name = str(te).split("'")[1]
+        logger.error(
+            "Invalid parameter for technical indicator",
+            extra={"function": function.name, "param_name": param_name, "error": str(te)}
+        )
         raise HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.") from te
     except Exception as e:
+        logger.error(
+            "Failed to retrieve technical indicators",
+            extra={"function": function.name, "error": str(e)},
+            exc_info=True
+        )
         raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}") from e
 
 
@@ -243,10 +254,16 @@ async def technical_indicators(
     interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
     functions: Optional[str] = Query(None, description="Comma-separated list of technical indicators to calculate."),
 ):
+    log_route_request(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value, "functions": functions})
+    
     try:
         indicator_list = [Indicator[ind.strip()] for ind in functions.split(",")] if functions else None
-        return await get_technical_indicators(finance_client, symbol, interval, indicator_list)
+        result = await get_technical_indicators(finance_client, symbol, interval, indicator_list)
+        log_route_success(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value}, {"indicators_count": len(result) if result else 0})
+        return result
     except KeyError as ke:
+        logger.error("Invalid technical indicator specified", extra={"symbol": symbol, "invalid_indicator": str(ke)})
         raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(ke)}") from ke
     except Exception as e:
+        log_route_error(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value}, e)
         raise HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}") from e
