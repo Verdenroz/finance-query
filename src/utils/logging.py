@@ -6,7 +6,7 @@ import uuid
 from contextvars import ContextVar
 from typing import Any, Dict, Optional
 
-from pythonjsonlogger import jsonlogger
+from pythonjsonlogger.json import JsonFormatter
 
 # Context variable to store request correlation ID
 request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
@@ -20,7 +20,7 @@ class CorrelationFilter(logging.Filter):
         return True
 
 
-class CustomJSONFormatter(jsonlogger.JsonFormatter):
+class CustomJSONFormatter(JsonFormatter):
     """Custom JSON formatter with additional context."""
     
     def add_fields(self, log_record: Dict[str, Any], record: logging.LogRecord, message_dict: Dict[str, Any]) -> None:
@@ -149,10 +149,25 @@ def log_api_response(logger: logging.Logger, method: str, path: str, status_code
 def log_cache_operation(logger: logging.Logger, operation: str, key: str, hit: Optional[bool] = None) -> None:
     """Log cache operations."""
     extra = {"operation": operation, "cache_key": key}
-    if hit is not None:
+    
+    if operation == "get":
+        if hit is True:
+            message = "Cache HIT - Data retrieved from cache"
+            extra["cache_hit"] = True
+        elif hit is False:
+            message = "Cache MISS - Data not found in cache"
+            extra["cache_hit"] = False
+        else:
+            message = "Cache GET operation"
+    elif operation == "set":
+        message = "Cache SET - Data stored in cache"
+    else:
+        message = f"Cache {operation.upper()} operation"
+    
+    if hit is not None and operation != "get":
         extra["cache_hit"] = hit
     
-    logger.debug("Cache operation", extra=extra)
+    logger.debug(message, extra=extra)
 
 
 def log_external_api_call(logger: logging.Logger, service: str, endpoint: str, duration_ms: float, success: bool = True) -> None:
