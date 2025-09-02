@@ -4,7 +4,7 @@ from fastapi.security import APIKeyHeader
 from src.models import HistoricalData, Interval, TimeRange, ValidationErrorResponse
 from src.services import get_historical
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger
+from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -36,39 +36,20 @@ async def get_time_series(
     interval: Interval = Query(..., description="The interval for the historical data."),
     epoch: bool = Query(False, description="Whether to format dates as strings or use epoch timestamps."),
 ):
-    logger.info(
-        "Fetching historical data", 
-        extra={
-            "symbol": symbol.upper(), 
-            "time_range": time_range.value, 
-            "interval": interval.value,
-            "epoch": epoch
-        }
-    )
+    params = {
+        "symbol": symbol.upper(), 
+        "time_range": time_range.value, 
+        "interval": interval.value,
+        "epoch": epoch
+    }
+    log_route_request(logger, "historical", params)
     
     try:
         result = await get_historical(finance_client, symbol, time_range, interval, epoch)
         # Log result count if result is a dict with historical data
         data_points = len(result.get(symbol.upper(), {}).get("data", [])) if isinstance(result, dict) else 0
-        logger.info(
-            "Successfully fetched historical data",
-            extra={
-                "symbol": symbol.upper(),
-                "time_range": time_range.value,
-                "interval": interval.value,
-                "data_points": data_points
-            }
-        )
+        log_route_success(logger, "historical", params, {"data_points": data_points})
         return result
     except Exception as e:
-        logger.error(
-            "Failed to fetch historical data",
-            extra={
-                "symbol": symbol.upper(),
-                "time_range": time_range.value,
-                "interval": interval.value,
-                "error": str(e)
-            },
-            exc_info=True
-        )
+        log_route_error(logger, "historical", params, e)
         raise

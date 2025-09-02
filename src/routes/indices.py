@@ -6,8 +6,10 @@ from fastapi.security import APIKeyHeader
 from src.models import INDEX_REGIONS, Index, MarketIndex, Region, ValidationErrorResponse
 from src.services import get_indices
 from src.utils.dependencies import FinanceClient
+from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 
 @router.get(
@@ -61,5 +63,14 @@ async def market_indices(
     # Convert back to ordered list by iterating through the original enum order
     # Only include indices that were selected
     ordered_indices = [idx for idx in Index if idx in selected_indices]
-
-    return await get_indices(finance_client, ordered_indices)
+    
+    params = {"index": [idx.value for idx in (index or [])], "region": region.value if region else None}
+    log_route_request(logger, "indices", params)
+    
+    try:
+        result = await get_indices(finance_client, ordered_indices)
+        log_route_success(logger, "indices", params, {"result_count": len(result)})
+        return result
+    except Exception as e:
+        log_route_error(logger, "indices", params, e)
+        raise

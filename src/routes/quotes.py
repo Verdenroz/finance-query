@@ -4,7 +4,7 @@ from fastapi.security import APIKeyHeader
 from src.models import Quote, SimpleQuote, ValidationErrorResponse
 from src.services import get_quotes, get_simple_quotes
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger
+from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -35,14 +35,15 @@ async def get_quote(
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
-    logger.info("Fetching detailed quotes", extra={"symbols": symbols, "symbol_count": len(symbols)})
+    params = {"symbols": symbols, "symbol_count": len(symbols)}
+    log_route_request(logger, "quotes", params)
     
     try:
         result = await get_quotes(finance_client, symbols)
-        logger.info("Successfully fetched detailed quotes", extra={"symbols": symbols, "result_count": len(result)})
+        log_route_success(logger, "quotes", params, {"result_count": len(result)})
         return result
     except Exception as e:
-        logger.error("Failed to fetch detailed quotes", extra={"symbols": symbols, "error": str(e)}, exc_info=True)
+        log_route_error(logger, "quotes", params, e)
         raise
 
 
@@ -71,12 +72,13 @@ async def get_simple_quote(
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
-    logger.info("Fetching simple quotes", extra={"symbols": symbols, "symbol_count": len(symbols)})
+    params = {"symbols": symbols, "symbol_count": len(symbols)}
+    log_route_request(logger, "simple_quotes", params)
     
     try:
         result = await get_simple_quotes(finance_client, symbols)
-        logger.info("Successfully fetched simple quotes", extra={"symbols": symbols, "result_count": len(result)})
+        log_route_success(logger, "simple_quotes", params, {"result_count": len(result)})
         return result
     except Exception as e:
-        logger.error("Failed to fetch simple quotes", extra={"symbols": symbols, "error": str(e)}, exc_info=True)
+        log_route_error(logger, "simple_quotes", params, e)
         raise

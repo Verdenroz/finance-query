@@ -135,6 +135,29 @@ async def technical_indicator(
     kijun_period: Optional[int] = Query(None, description="The look-back period for the Kijun line in Ichimoku.", alias="kijunPeriod"),
     senkou_period: Optional[int] = Query(None, description="The look-back period for the Senkou span in Ichimoku.", alias="senkouPeriod"),
 ):
+    route_params = {
+        "function": function.value,
+        "symbol": symbol,
+        "time_range": time_range.value if time_range else None,
+        "interval": interval.value if interval else None,
+        "epoch": epoch,
+        "period": period,
+        "stoch_period": stoch_period,
+        "signal_period": signal_period,
+        "smooth": smooth,
+        "fast_period": fast_period,
+        "slow_period": slow_period,
+        "std_dev": std_dev,
+        "sma_periods": sma_periods,
+        "multiplier": multiplier,
+        "tenkan_period": tenkan_period,
+        "kijun_period": kijun_period,
+        "senkou_period": senkou_period,
+    }
+    # Filter out None values for logging
+    filtered_route_params = {k: v for k, v in route_params.items() if v is not None}
+    log_route_request(logger, "technical_indicator", filtered_route_params)
+
     params = {
         "finance_client": finance_client,
         "symbol": symbol,
@@ -158,22 +181,19 @@ async def technical_indicator(
     params = {k: v for k, v in params.items() if v is not None}
 
     try:
-        return await IndicatorFunctions[function](**params)
+        result = await IndicatorFunctions[function](**params)
+        log_route_success(logger, "technical_indicator", filtered_route_params, {"function": function.value, "data_points": len(result.data) if hasattr(result, 'data') else 0})
+        return result
 
     except TypeError as te:
         param_name = str(te).split("'")[1]
-        logger.error(
-            "Invalid parameter for technical indicator",
-            extra={"function": function.name, "param_name": param_name, "error": str(te)}
-        )
-        raise HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.") from te
+        error_details = HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.")
+        log_route_error(logger, "technical_indicator", filtered_route_params, error_details)
+        raise error_details from te
     except Exception as e:
-        logger.error(
-            "Failed to retrieve technical indicators",
-            extra={"function": function.name, "error": str(e)},
-            exc_info=True
-        )
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}") from e
+        error_details = HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}")
+        log_route_error(logger, "technical_indicator", filtered_route_params, error_details)
+        raise error_details from e
 
 
 @router.get(
@@ -262,8 +282,9 @@ async def technical_indicators(
         log_route_success(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value}, {"indicators_count": len(result) if result else 0})
         return result
     except KeyError as ke:
-        logger.error("Invalid technical indicator specified", extra={"symbol": symbol, "invalid_indicator": str(ke)})
-        raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(ke)}") from ke
+        error_details = HTTPException(status_code=400, detail=f"Invalid indicator: {str(ke)}")
+        log_route_error(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value, "functions": functions}, error_details)
+        raise error_details from ke
     except Exception as e:
-        log_route_error(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value}, e)
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}") from e
+        log_route_error(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value, "functions": functions}, e)
+        raise
