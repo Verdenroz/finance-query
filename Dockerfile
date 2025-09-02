@@ -32,6 +32,14 @@ WORKDIR /app
 # Run setup.py to cythonize the files
 RUN python setup.py build_ext --inplace
 
+# Build arguments for logging configuration
+ARG LOG_LEVEL=INFO
+ARG LOG_FORMAT=json
+
+# Set environment variables with defaults
+ENV LOG_LEVEL=${LOG_LEVEL}
+ENV LOG_FORMAT=${LOG_FORMAT}
+
 # Expose the port FastAPI will run on
 EXPOSE 8000
 
