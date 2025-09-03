@@ -35,10 +35,12 @@ RUN python setup.py build_ext --inplace
 # Build arguments for logging configuration
 ARG LOG_LEVEL=INFO
 ARG LOG_FORMAT=json
+ARG PERFORMANCE_THRESHOLD_MS=2000
 
 # Set environment variables with defaults
 ENV LOG_LEVEL=${LOG_LEVEL}
 ENV LOG_FORMAT=${LOG_FORMAT}
+ENV PERFORMANCE_THRESHOLD_MS=${PERFORMANCE_THRESHOLD_MS}
 
 # Expose the port FastAPI will run on
 EXPOSE 8000
