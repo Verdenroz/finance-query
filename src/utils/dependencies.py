@@ -1,5 +1,6 @@
 import asyncio
 import os
+import time
 from typing import Annotated, Any, Literal, Optional, Union, cast
 from urllib.parse import urlparse
 
@@ -13,7 +14,7 @@ from src.clients.fetch_client import CurlFetchClient
 from src.clients.yahoo_client import YahooFinanceClient
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import request_context
-from src.utils.logging import get_logger
+from src.utils.logging import get_logger, log_external_api_call
 from src.utils.market import MarketSchedule
 from src.utils.yahoo_auth import YahooAuthManager
 
@@ -219,21 +220,39 @@ async def get_logo(
         return None
 
     if symbol:
-        maybe = await client.fetch(
-            f"https://img.logo.dev/ticker/{symbol}?token={token}&retina=true",
-            return_response=True,
-        )
-        if isinstance(maybe, requests.Response) and maybe.status_code == 200:
-            return str(maybe.url)
+        start_time = time.perf_counter()
+        try:
+            maybe = await client.fetch(
+                f"https://img.logo.dev/ticker/{symbol}?token={token}&retina=true",
+                return_response=True,
+            )
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            success = isinstance(maybe, requests.Response) and maybe.status_code == 200
+            log_external_api_call(logger, "Logo.dev", "ticker", duration_ms, success=success)
+            if success:
+                return str(maybe.url)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_external_api_call(logger, "Logo.dev", "ticker", duration_ms, success=False)
+            # Don't re-raise, fall through to domain lookup
 
     if url:
         domain = urlparse(url).netloc.replace("www.", "")
-        maybe = await client.fetch(
-            f"https://img.logo.dev/{domain}?token={token}&retina=true",
-            return_response=True,
-        )
-        if isinstance(maybe, requests.Response) and maybe.status_code == 200:
-            return str(maybe.url)
+        start_time = time.perf_counter()
+        try:
+            maybe = await client.fetch(
+                f"https://img.logo.dev/{domain}?token={token}&retina=true",
+                return_response=True,
+            )
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            success = isinstance(maybe, requests.Response) and maybe.status_code == 200
+            log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=success)
+            if success:
+                return str(maybe.url)
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=False)
+            # Don't re-raise, return None
 
     return None
 
@@ -246,13 +265,37 @@ async def setup_proxy_whitelist() -> dict | None:
     if not os.getenv("PROXY_TOKEN") or os.getenv("USE_PROXY", "False") != "True":
         raise ValueError("Proxy configuration is missing")
 
-    ip_response = requests.get("https://api.ipify.org/")
-    ip = ip_response.text
+    # Get IP address
+    start_time = time.perf_counter()
+    try:
+        ip_response = requests.get("https://api.ipify.org/")
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        success = ip_response.status_code == 200
+        log_external_api_call(logger, "ipify", "get_ip", duration_ms, success=success)
+        if not success:
+            return None
+        ip = ip_response.text
+    except Exception as e:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "ipify", "get_ip", duration_ms, success=False)
+        return None
+    
+    # Setup proxy whitelist
     api_url = "https://api.brightdata.com/zone/whitelist"
     proxy_header_token = {"Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}", "Content-Type": "application/json"}
     payload = {"ip": ip}
-    response = requests.post(api_url, headers=proxy_header_token, json=payload)
-    if 200 < response.status_code >= 300:
+    
+    start_time = time.perf_counter()
+    try:
+        response = requests.post(api_url, headers=proxy_header_token, json=payload)
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        success = 200 <= response.status_code < 300
+        log_external_api_call(logger, "BrightData", "whitelist_add", duration_ms, success=success)
+    except Exception as e:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "BrightData", "whitelist_add", duration_ms, success=False)
+        return None
+    if not success:
         logger.error(
             "Proxy whitelist setup failed", 
             extra={
@@ -271,4 +314,13 @@ async def remove_proxy_whitelist(proxy_data: dict) -> None:
     """
     if not proxy_data:
         return
-    requests.delete(proxy_data["api_url"], headers=proxy_data["headers"], json=proxy_data["payload"])
+    
+    start_time = time.perf_counter()
+    try:
+        response = requests.delete(proxy_data["api_url"], headers=proxy_data["headers"], json=proxy_data["payload"])
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        success = 200 <= response.status_code < 300
+        log_external_api_call(logger, "BrightData", "whitelist_remove", duration_ms, success=success)
+    except Exception as e:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "BrightData", "whitelist_remove", duration_ms, success=False)

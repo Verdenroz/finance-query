@@ -172,15 +172,19 @@ def log_cache_operation(logger: logging.Logger, operation: str, key: str, hit: O
 
 def log_external_api_call(logger: logging.Logger, service: str, endpoint: str, duration_ms: float, success: bool = True) -> None:
     """Log external API calls."""
-    log_level = logging.INFO if success else logging.ERROR
+    log_level = logging.DEBUG if success else logging.ERROR
+    status = "SUCCESS" if success else "FAILED"
+    message = f"External API {status} - {service} {endpoint} ({duration_ms:.1f}ms)"
+    
     logger.log(
         log_level,
-        "External API call",
+        message,
         extra={
             "service": service,
             "endpoint": endpoint,
             "duration_ms": duration_ms,
-            "success": success
+            "success": success,
+            "external_api": True
         }
     )
 
