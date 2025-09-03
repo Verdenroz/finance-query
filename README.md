@@ -212,8 +212,45 @@ Easy deployment with WebSocket support:
 Deploy anywhere with Docker:
 
 ```bash
+# Basic deployment
 docker build -t financequery .
 docker run -p 8000:8000 financequery
+```
+
+#### Docker with Custom Logging Configuration
+
+Configure logging at build time:
+
+```bash
+# Build with custom logging settings
+docker build \
+  --build-arg LOG_LEVEL=DEBUG \
+  --build-arg LOG_FORMAT=text \
+  --build-arg PERFORMANCE_THRESHOLD_MS=1000 \
+  -t financequery .
+```
+
+Or configure at runtime:
+
+```bash
+# Run with environment variables
+docker run -p 8000:8000 \
+  -e LOG_LEVEL=WARNING \
+  -e LOG_FORMAT=json \
+  -e PERFORMANCE_THRESHOLD_MS=5000 \
+  financequery
+```
+
+#### Production Docker Example
+
+```bash
+# Production deployment with structured logging
+docker run -p 8000:8000 \
+  -e LOG_LEVEL=INFO \
+  -e LOG_FORMAT=json \
+  -e PERFORMANCE_THRESHOLD_MS=2000 \
+  -e REDIS_URL=redis://redis:6379 \
+  financequery
 ```
 
 > **Note**: There are two workflows that will automatically deploy to render and AWS, but they will require repository
@@ -257,6 +294,41 @@ REDIS_URL=redis://localhost:6379
 ALGOLIA_APP_ID=your-algolia-app-id
 ALGOLIA_API_KEY=your-algolia-api-key
 ```
+
+### Logging Configuration
+
+Control logging behavior for debugging, monitoring, and production deployments:
+
+```env
+# Log level - controls verbosity
+LOG_LEVEL=INFO  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# Log format - structured vs human-readable
+LOG_FORMAT=json  # Options: json, text
+
+# Performance monitoring threshold in milliseconds
+PERFORMANCE_THRESHOLD_MS=2000  # Operations taking longer than this trigger warnings
+```
+
+#### Log Levels
+
+- **DEBUG**: Detailed information, including cache hits/misses and operation details
+- **INFO**: General information about requests, responses, and external API calls  
+- **WARNING**: Performance issues and slow operations
+- **ERROR**: Error conditions and failed operations
+- **CRITICAL**: System-level failures that require immediate attention
+
+#### Log Formats
+
+- **JSON** (`LOG_FORMAT=json`): Structured logging for production monitoring systems
+- **Text** (`LOG_FORMAT=text`): Human-readable format for development and debugging
+
+#### Performance Monitoring
+
+Adjust `PERFORMANCE_THRESHOLD_MS` based on your requirements:
+- **Development**: `500` - Strict performance monitoring
+- **Production**: `2000` - Balanced monitoring (default)
+- **High-load**: `5000` - Relaxed monitoring for systems under heavy load
 
 ## Performance
 
