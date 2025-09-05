@@ -4,7 +4,7 @@ import os
 import sys
 import uuid
 from contextvars import ContextVar
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 from pythonjsonlogger.json import JsonFormatter
 
@@ -23,7 +23,7 @@ class CorrelationFilter(logging.Filter):
 class CustomJSONFormatter(JsonFormatter):
     """Custom JSON formatter with additional context."""
 
-    def add_fields(self, log_record: Dict[str, Any], record: logging.LogRecord, message_dict: Dict[str, Any]) -> None:
+    def add_fields(self, log_record: dict[str, Any], record: logging.LogRecord, message_dict: dict[str, Any]) -> None:
         super().add_fields(log_record, record, message_dict)
         log_record["level"] = record.levelname
         log_record["logger"] = record.name
@@ -45,15 +45,9 @@ def configure_logging() -> None:
 
     # Configure formatters
     if log_format == "json":
-        formatter = CustomJSONFormatter(
-            "%(asctime)s %(level)s %(logger)s %(module)s %(correlation_id)s %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        )
+        formatter = CustomJSONFormatter("%(asctime)s %(level)s %(logger)s %(module)s %(correlation_id)s %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
     else:
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - [%(correlation_id)s] - %(message)s",
-            datefmt="%Y-%m-%d %H:%M:%S"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - [%(correlation_id)s] - %(message)s", datefmt="%Y-%m-%d %H:%M:%S")
 
     # Create console handler
     console_handler = logging.StreamHandler(sys.stdout)
@@ -103,38 +97,21 @@ def log_performance(logger: logging.Logger, operation: str, duration_ms: float, 
     if threshold_ms is None:
         # Get threshold from environment variable, default to 2000ms (2 seconds)
         threshold_ms = float(os.getenv("PERFORMANCE_THRESHOLD_MS", "2000"))
-    
+
     if duration_ms > threshold_ms:
         logger.warning(
             f"Slow operation detected - {operation} ({duration_ms:.1f}ms)",
-            extra={
-                "operation": operation,
-                "duration_ms": duration_ms,
-                "threshold_ms": threshold_ms,
-                "performance": True
-            }
+            extra={"operation": operation, "duration_ms": duration_ms, "threshold_ms": threshold_ms, "performance": True},
         )
     else:
         logger.debug(
-            f"Operation completed - {operation} ({duration_ms:.1f}ms)",
-            extra={
-                "operation": operation,
-                "duration_ms": duration_ms,
-                "performance": True
-            }
+            f"Operation completed - {operation} ({duration_ms:.1f}ms)", extra={"operation": operation, "duration_ms": duration_ms, "performance": True}
         )
 
 
-def log_api_request(logger: logging.Logger, method: str, path: str, query_params: Optional[Dict[str, Any]] = None) -> None:
+def log_api_request(logger: logging.Logger, method: str, path: str, query_params: Optional[dict[str, Any]] = None) -> None:
     """Log incoming API request."""
-    logger.info(
-        "API request received",
-        extra={
-            "method": method,
-            "path": path,
-            "query_params": query_params or {}
-        }
-    )
+    logger.info("API request received", extra={"method": method, "path": path, "query_params": query_params or {}})
 
 
 def log_api_response(logger: logging.Logger, method: str, path: str, status_code: int, duration_ms: float) -> None:
@@ -143,13 +120,7 @@ def log_api_response(logger: logging.Logger, method: str, path: str, status_code
     logger.log(
         log_level,
         f"API response sent - {method} {path} ({status_code}) [{duration_ms:.1f}ms]",
-        extra={
-            "method": method,
-            "path": path,
-            "status_code": status_code,
-            "duration_ms": duration_ms,
-            "api_response": True
-        }
+        extra={"method": method, "path": path, "status_code": status_code, "duration_ms": duration_ms, "api_response": True},
     )
 
 
@@ -183,17 +154,7 @@ def log_external_api_call(logger: logging.Logger, service: str, endpoint: str, d
     status = "SUCCESS" if success else "FAILED"
     message = f"External API {status} - {service} {endpoint} ({duration_ms:.1f}ms)"
 
-    logger.log(
-        log_level,
-        message,
-        extra={
-            "service": service,
-            "endpoint": endpoint,
-            "duration_ms": duration_ms,
-            "success": success,
-            "external_api": True
-        }
-    )
+    logger.log(log_level, message, extra={"service": service, "endpoint": endpoint, "duration_ms": duration_ms, "success": success, "external_api": True})
 
 
 def log_route_request(logger: logging.Logger, route_name: str, params: dict) -> None:
@@ -212,29 +173,14 @@ def log_route_success(logger: logging.Logger, route_name: str, params: dict, res
 def log_route_error(logger: logging.Logger, route_name: str, params: dict, error: Exception) -> None:
     """Log route error."""
     logger.error(
-        f"{route_name} request failed",
-        extra={
-            "route": route_name,
-            "params": params,
-            "error": str(error),
-            "error_type": type(error).__name__
-        },
-        exc_info=True
+        f"{route_name} request failed", extra={"route": route_name, "params": params, "error": str(error), "error_type": type(error).__name__}, exc_info=True
     )
 
 
 def log_critical_system_failure(logger: logging.Logger, operation: str, error: Exception, context: dict = None) -> None:
     """Log critical system failures that indicate the application cannot continue."""
-    extra = {
-        "operation": operation,
-        "error": str(error),
-        "error_type": type(error).__name__
-    }
+    extra = {"operation": operation, "error": str(error), "error_type": type(error).__name__}
     if context:
         extra.update(context)
 
-    logger.critical(
-        f"CRITICAL SYSTEM FAILURE: {operation}",
-        extra=extra,
-        exc_info=True
-    )
+    logger.critical(f"CRITICAL SYSTEM FAILURE: {operation}", extra=extra, exc_info=True)

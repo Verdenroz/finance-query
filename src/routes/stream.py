@@ -9,7 +9,7 @@ from orjson import orjson
 from src.models import ValidationErrorResponse
 from src.services import get_simple_quotes
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
+from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -67,7 +67,7 @@ async def stream_quotes(
     symbols_list = list(set(symbols.upper().replace(" ", "").split(",")))
     params = {"symbols": symbols_list}
     log_route_request(logger, "stream_quotes", params)
-    
+
     try:
         log_route_success(logger, "stream_quotes", params, {"symbols_count": len(symbols_list), "streaming": True})
         return StreamingResponse(quotes_generator(finance_client, symbols_list), media_type="text/event-stream")

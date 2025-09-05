@@ -182,22 +182,12 @@ async def fetch(
             )
         except Exception as exc:
             logger.warning(
-                "Request attempt failed", 
-                extra={
-                    "attempt": attempt + 1, 
-                    "max_retries": max_retries, 
-                    "error": str(exc),
-                    "error_type": type(exc).__name__
-                }
+                "Request attempt failed", extra={"attempt": attempt + 1, "max_retries": max_retries, "error": str(exc), "error_type": type(exc).__name__}
             )
             if attempt < max_retries - 1:
                 await asyncio.sleep(retry_delay * 2**attempt)
             else:
-                logger.error(
-                    "All request attempts failed",
-                    extra={"max_retries": max_retries, "final_error": str(exc)},
-                    exc_info=True
-                )
+                logger.error("All request attempts failed", extra={"max_retries": max_retries, "final_error": str(exc)}, exc_info=True)
                 raise HTTPException(
                     500,
                     f"Request failed after {max_retries} attempts: {exc}",
@@ -231,7 +221,7 @@ async def get_logo(
             log_external_api_call(logger, "Logo.dev", "ticker", duration_ms, success=success)
             if success:
                 return str(maybe.url)
-        except Exception as e:
+        except Exception:
             duration_ms = (time.perf_counter() - start_time) * 1000
             log_external_api_call(logger, "Logo.dev", "ticker", duration_ms, success=False)
             # Don't re-raise, fall through to domain lookup
@@ -249,7 +239,7 @@ async def get_logo(
             log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=success)
             if success:
                 return str(maybe.url)
-        except Exception as e:
+        except Exception:
             duration_ms = (time.perf_counter() - start_time) * 1000
             log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=False)
             # Don't re-raise, return None
@@ -275,34 +265,28 @@ async def setup_proxy_whitelist() -> dict | None:
         if not success:
             return None
         ip = ip_response.text
-    except Exception as e:
+    except Exception:
         duration_ms = (time.perf_counter() - start_time) * 1000
         log_external_api_call(logger, "ipify", "get_ip", duration_ms, success=False)
         return None
-    
+
     # Setup proxy whitelist
     api_url = "https://api.brightdata.com/zone/whitelist"
     proxy_header_token = {"Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}", "Content-Type": "application/json"}
     payload = {"ip": ip}
-    
+
     start_time = time.perf_counter()
     try:
         response = requests.post(api_url, headers=proxy_header_token, json=payload)
         duration_ms = (time.perf_counter() - start_time) * 1000
         success = 200 <= response.status_code < 300
         log_external_api_call(logger, "BrightData", "whitelist_add", duration_ms, success=success)
-    except Exception as e:
+    except Exception:
         duration_ms = (time.perf_counter() - start_time) * 1000
         log_external_api_call(logger, "BrightData", "whitelist_add", duration_ms, success=False)
         return None
     if not success:
-        logger.error(
-            "Proxy whitelist setup failed", 
-            extra={
-                "status_code": response.status_code, 
-                "response_text": response.text
-            }
-        )
+        logger.error("Proxy whitelist setup failed", extra={"status_code": response.status_code, "response_text": response.text})
         return None
 
     return {"api_url": api_url, "headers": proxy_header_token, "payload": payload}
@@ -314,13 +298,13 @@ async def remove_proxy_whitelist(proxy_data: dict) -> None:
     """
     if not proxy_data:
         return
-    
+
     start_time = time.perf_counter()
     try:
         response = requests.delete(proxy_data["api_url"], headers=proxy_data["headers"], json=proxy_data["payload"])
         duration_ms = (time.perf_counter() - start_time) * 1000
         success = 200 <= response.status_code < 300
         log_external_api_call(logger, "BrightData", "whitelist_remove", duration_ms, success=success)
-    except Exception as e:
+    except Exception:
         duration_ms = (time.perf_counter() - start_time) * 1000
         log_external_api_call(logger, "BrightData", "whitelist_remove", duration_ms, success=False)

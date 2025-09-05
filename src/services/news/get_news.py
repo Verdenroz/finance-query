@@ -119,11 +119,11 @@ async def scrape_news_for_quote(symbol: str) -> list[News]:
                 html = await fetch(url=url)
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 log_external_api_call(logger, "StockAnalysis", "news", duration_ms, success=True)
-            except Exception as e:
+            except Exception:
                 duration_ms = (time.perf_counter() - start_time) * 1000
                 log_external_api_call(logger, "StockAnalysis", "news", duration_ms, success=False)
                 raise
-                
+
             news_list = await _parse_news(html, container_xpath)
 
             if news_list:
@@ -139,17 +139,17 @@ async def scrape_news_for_quote(symbol: str) -> list[News]:
 @cache(expire=900)
 async def scrape_general_news():
     url = "https://stockanalysis.com/news/"
-    
+
     start_time = time.perf_counter()
     try:
         html = await fetch(url=url)
         duration_ms = (time.perf_counter() - start_time) * 1000
         log_external_api_call(logger, "StockAnalysis", "general_news", duration_ms, success=True)
-    except Exception as e:
+    except Exception:
         duration_ms = (time.perf_counter() - start_time) * 1000
         log_external_api_call(logger, "StockAnalysis", "general_news", duration_ms, success=False)
         raise
-        
+
     container_xpath = "/html/body/div/div[1]/div[2]/main/div[2]/div/div"
     news_list = await _parse_news(html, container_xpath)
     # If no news was found, raise an error

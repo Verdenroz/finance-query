@@ -313,7 +313,7 @@ PERFORMANCE_THRESHOLD_MS=2000  # Operations taking longer than this trigger warn
 #### Log Levels
 
 - **DEBUG**: Detailed information, including cache hits/misses and operation details
-- **INFO**: General information about requests, responses, and external API calls  
+- **INFO**: General information about requests, responses, and external API calls
 - **WARNING**: Performance issues and slow operations
 - **ERROR**: Error conditions and failed operations
 - **CRITICAL**: System-level failures that require immediate attention

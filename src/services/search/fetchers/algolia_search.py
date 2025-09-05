@@ -46,7 +46,7 @@ async def fetch_algolia_search_results(query: str, hits: int, type: Optional[Typ
         results = index.search(query, params)
         duration_ms = (time.perf_counter() - start_time) * 1000
         log_external_api_call(logger, "Algolia", "search", duration_ms, success=True)
-    except Exception as e:
+    except Exception:
         duration_ms = (time.perf_counter() - start_time) * 1000
         log_external_api_call(logger, "Algolia", "search", duration_ms, success=False)
         raise

@@ -153,10 +153,10 @@ async def websocket_quotes(
     if not is_valid:
         logger.warning("WebSocket validation failed for quotes endpoint")
         return
-    
+
     await websocket.accept()
     logger.info("WebSocket connection established for quotes endpoint")
-    
+
     try:
         channel = await websocket.receive_text()
         symbols = list({symbol.upper() for symbol in channel.split(",")})

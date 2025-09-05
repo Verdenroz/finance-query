@@ -23,7 +23,7 @@ from src.services.indicators import (
     get_wma,
 )
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
+from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -182,7 +182,12 @@ async def technical_indicator(
 
     try:
         result = await IndicatorFunctions[function](**params)
-        log_route_success(logger, "technical_indicator", filtered_route_params, {"function": function.value, "data_points": len(result.data) if hasattr(result, 'data') else 0})
+        log_route_success(
+            logger,
+            "technical_indicator",
+            filtered_route_params,
+            {"function": function.value, "data_points": len(result.data) if hasattr(result, "data") else 0},
+        )
         return result
 
     except TypeError as te:
@@ -275,7 +280,7 @@ async def technical_indicators(
     functions: Optional[str] = Query(None, description="Comma-separated list of technical indicators to calculate."),
 ):
     log_route_request(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value, "functions": functions})
-    
+
     try:
         indicator_list = [Indicator[ind.strip()] for ind in functions.split(",")] if functions else None
         result = await get_technical_indicators(finance_client, symbol, interval, indicator_list)

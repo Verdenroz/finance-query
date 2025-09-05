@@ -123,20 +123,16 @@ async def lifespan(app: FastAPI):
         except Exception as e:
             logger.critical("Failed to initialize Yahoo authentication", extra={"error": str(e)}, exc_info=True)
             raise
-            
+
     except Exception as e:
         logger.critical("Critical failure during application startup", extra={"error": str(e)}, exc_info=True)
         raise
-    
+
     logger.info("Application startup completed")
     try:
         yield
     except Exception as e:
-        logger.critical(
-            "Critical application failure during lifespan", 
-            extra={"error": str(e), "error_type": type(e).__name__},
-            exc_info=True
-        )
+        logger.critical("Critical application failure during lifespan", extra={"error": str(e), "error_type": type(e).__name__}, exc_info=True)
         raise
     finally:
         logger.info("Application shutdown initiated")
@@ -149,11 +145,7 @@ async def lifespan(app: FastAPI):
                 redis.close()
             logger.info("Application shutdown completed")
         except Exception as e:
-            logger.critical(
-                "Critical failure during application shutdown",
-                extra={"error": str(e), "error_type": type(e).__name__},
-                exc_info=True
-            )
+            logger.critical("Critical failure during application shutdown", extra={"error": str(e), "error_type": type(e).__name__}, exc_info=True)
 
 
 app = FastAPI(
@@ -336,7 +328,7 @@ async def health(r: RedisClient, finance_client: FinanceClient):
 
     service_status = f"{succeeded}/{total} succeeded"
     health_report["services"]["status"] = service_status
-    
+
     logger.info("Health check completed", extra={"status": health_report["status"], "services": service_status})
     return health_report
 

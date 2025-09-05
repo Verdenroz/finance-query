@@ -6,7 +6,7 @@ from fastapi.security import APIKeyHeader
 from src.models import SearchResult, Type, ValidationErrorResponse
 from src.services import get_search
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
+from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -68,7 +68,7 @@ async def search(
 ):
     params = {"query": query, "hits": hits, "type": type.value if type else None, "yahoo": yahoo}
     log_route_request(logger, "search", params)
-    
+
     try:
         result = await get_search(finance_client, query, hits, type, yahoo)
         log_route_success(logger, "search", params, {"result_count": len(result)})

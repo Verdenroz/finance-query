@@ -4,7 +4,7 @@ from fastapi.security import APIKeyHeader
 from src.models import MarketMover, ValidationErrorResponse
 from src.models.marketmover import MoverCount
 from src.services import get_actives, get_gainers, get_losers
-from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
+from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
 logger = get_logger(__name__)

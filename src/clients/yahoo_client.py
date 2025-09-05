@@ -40,13 +40,13 @@ class YahooFinanceClient(CurlFetchClient):
         # Extract endpoint from URL for logging
         endpoint = url.split("/")[-1] if "/" in url else url
         start_time = time.perf_counter()
-        
+
         try:
             resp = await self.fetch(url, **kw, return_response=True)
             duration_ms = (time.perf_counter() - start_time) * 1000
             success = resp.status_code < 400
             log_external_api_call(logger, "Yahoo Finance", endpoint, duration_ms, success=success)
-        except Exception as e:
+        except Exception:
             duration_ms = (time.perf_counter() - start_time) * 1000
             log_external_api_call(logger, "Yahoo Finance", endpoint, duration_ms, success=False)
             raise

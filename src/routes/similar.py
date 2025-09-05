@@ -4,7 +4,7 @@ from fastapi.security import APIKeyHeader
 from src.models import SimpleQuote
 from src.services import get_similar_quotes
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
+from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -42,7 +42,7 @@ async def similar_quotes(
 ):
     params = {"symbol": symbol.upper(), "limit": limit}
     log_route_request(logger, "similar", params)
-    
+
     try:
         result = await get_similar_quotes(finance_client, symbol.upper(), limit)
         log_route_success(logger, "similar", params, {"result_count": len(result)})

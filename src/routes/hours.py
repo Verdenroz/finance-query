@@ -4,7 +4,7 @@ import pytz
 from fastapi import APIRouter, Depends, Security
 from fastapi.security import APIKeyHeader
 
-from src.utils.logging import get_logger, log_route_request, log_route_success, log_route_error
+from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 from src.utils.market import MarketSchedule
 
 router = APIRouter()
@@ -67,7 +67,7 @@ logger = get_logger(__name__)
 async def get_market_hours(market_schedule: MarketSchedule = Depends(MarketSchedule)):
     params = {}
     log_route_request(logger, "hours", params)
-    
+
     try:
         status, reason = market_schedule.get_market_status()
         result = {"status": status, "reason": reason, "timestamp": datetime.now(pytz.UTC).isoformat()}

@@ -177,9 +177,12 @@ def cache(
             bypass_cache = os.getenv("BYPASS_CACHE")
             if (bypass_cache is not None and bypass_cache.lower() == "true") or handler.get_expire_time() <= 0:
                 if bypass_cache and bypass_cache.lower() == "true":
-                    logger.debug(f"Cache BYPASS - caching disabled via BYPASS_CACHE", extra={"function": func.__name__, "bypass_reason": "BYPASS_CACHE=true"})
+                    logger.debug("Cache BYPASS - caching disabled via BYPASS_CACHE", extra={"function": func.__name__, "bypass_reason": "BYPASS_CACHE=true"})
                 else:
-                    logger.debug(f"Cache BYPASS - expire time is zero", extra={"function": func.__name__, "bypass_reason": "expire_time <= 0", "expire_time": handler.get_expire_time()})
+                    logger.debug(
+                        "Cache BYPASS - expire time is zero",
+                        extra={"function": func.__name__, "bypass_reason": "expire_time <= 0", "expire_time": handler.get_expire_time()},
+                    )
                 return await func(*args, **kwargs)
 
             # Build cache key from serializable args
