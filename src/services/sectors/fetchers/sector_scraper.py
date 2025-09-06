@@ -15,7 +15,7 @@ async def parse_sector(html: str, sector: str) -> MarketSector:
     """
     try:
         tree = etree.HTML(html)
-        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[1]/section[2]"
+        container_xpath = "/html/body/div[2]/main/section/section/section/section/section[1]/section[2]/div"
         card_xpath = ".//section"
         sector_perf_xpath = './/div[contains(@class, "perf")]/text()'
         perf_class_xpath = './/div/div[contains(@class, "perf")]/@class'
@@ -58,7 +58,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: a list of the parsed data
         """
-        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[1]/div/section/div[2]/div[2]"
+        container_xpath = "/html/body/div[2]/main/section/section/section/section/section[1]/div/section/div[2]/div[2]"
         market_cap_xpath = ".//div[1]/div[2]/text()"
         market_weight_xpath = ".//div[2]/div[2]/text()"
         industries_xpath = ".//div[3]/div[2]/text()"
@@ -78,7 +78,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: the returns data as a list
         """
-        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[1]/section[2]"
+        container_xpath = "/html/body/div[2]/main/section/section/section/section/section[1]/section[2]/div"
         card_xpath = ".//section"
         sector_perf_xpath = './/div[div[text()="Sector"]]/div[2]/text()'
         positive_xpath = './/div[contains(@class, "positive")]/text()'
@@ -105,7 +105,7 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: the top industries as a list
         """
-        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[1]/div/div[2]/table/tbody/tr"
+        container_xpath = "/html/body/div[2]/main/section/section/section/section/section[2]/div/div/div[1]/div/div[2]/table/tbody/tr"
         industry_name_xpath = "./td[1]/text()"
         market_weight_xpath = "./td[2]/span/text()"
 
@@ -125,9 +125,8 @@ async def parse_sector_details(html: str, sector_name: str) -> MarketSectorDetai
         :param tree: the lxml tree
         :return: the top companies as a list
         """
-        container_xpath = "/html/body/div[2]/main/section/section/section/article/section[3]/div[2]/div/table/tbody/tr"
-        symbol_xpath = "./td[1]//a/div/span[1]/text()"
-
+        container_xpath = "/html/body/div[2]/main/section/section/section/section/section[3]/div[2]/div/table/tbody/tr"
+        symbol_xpath = "./td[1]/span/div/span/a/div/span[1]/text()"
         rows = tree.xpath(container_xpath)
         companies = []
 
