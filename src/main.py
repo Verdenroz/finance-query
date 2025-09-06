@@ -19,7 +19,7 @@ from starlette.responses import JSONResponse, Response
 
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import RequestContextMiddleware
-from src.middleware import LoggingMiddleware
+from src.middleware import LoggingMiddleware, RateLimitMiddleware
 from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
 from src.routes import (
     finance_news_router,
@@ -35,7 +35,6 @@ from src.routes import (
     sockets_router,
     stream_router,
 )
-from src.security import RateLimitMiddleware
 from src.services import (
     get_actives,
     get_gainers,

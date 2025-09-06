@@ -4,8 +4,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from src.security.dependencies import check_health_rate_limit, increment_and_check
-
-from .rate_limit_manager import SecurityConfig
+from src.security.rate_limit_manager import SecurityConfig
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
