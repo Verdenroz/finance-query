@@ -4,10 +4,8 @@ from fastapi.security import APIKeyHeader
 from src.models import SimpleQuote
 from src.services import get_similar_quotes
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
-logger = get_logger(__name__)
 
 
 @router.get(
@@ -40,13 +38,5 @@ async def similar_quotes(
     symbol: str = Query(..., title="Symbol", description="Stock to find similar stocks around"),
     limit: int = Query(default=10, title="Limit", description="Number of similar stocks to return", ge=1, le=20),
 ):
-    params = {"symbol": symbol.upper(), "limit": limit}
-    log_route_request(logger, "similar", params)
-
-    try:
-        result = await get_similar_quotes(finance_client, symbol.upper(), limit)
-        log_route_success(logger, "similar", params, {"result_count": len(result)})
-        return result
-    except Exception as e:
-        log_route_error(logger, "similar", params, e)
-        raise
+    result = await get_similar_quotes(finance_client, symbol.upper(), limit)
+    return result

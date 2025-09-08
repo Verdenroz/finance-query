@@ -4,10 +4,8 @@ from fastapi.security import APIKeyHeader
 from src.models import MarketMover, ValidationErrorResponse
 from src.models.marketmover import MoverCount
 from src.services import get_actives, get_gainers, get_losers
-from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
-logger = get_logger(__name__)
 
 
 @router.get(
@@ -34,14 +32,8 @@ logger = get_logger(__name__)
     },
 )
 async def actives(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    log_route_request(logger, "actives", {"count": count.value})
-    try:
-        result = await get_actives(count)
-        log_route_success(logger, "actives", {"count": count.value}, {"result_count": len(result)})
-        return result
-    except Exception as e:
-        log_route_error(logger, "actives", {"count": count.value}, e)
-        raise
+    result = await get_actives(count)
+    return result
 
 
 @router.get(
@@ -67,14 +59,8 @@ async def actives(count: MoverCount = Query(MoverCount.FIFTY, description="Numbe
     },
 )
 async def gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    log_route_request(logger, "gainers", {"count": count.value})
-    try:
-        result = await get_gainers(count)
-        log_route_success(logger, "gainers", {"count": count.value}, {"result_count": len(result)})
-        return result
-    except Exception as e:
-        log_route_error(logger, "gainers", {"count": count.value}, e)
-        raise
+    result = await get_gainers(count)
+    return result
 
 
 @router.get(
@@ -100,11 +86,5 @@ async def gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Numbe
     },
 )
 async def losers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    log_route_request(logger, "losers", {"count": count.value})
-    try:
-        result = await get_losers(count)
-        log_route_success(logger, "losers", {"count": count.value}, {"result_count": len(result)})
-        return result
-    except Exception as e:
-        log_route_error(logger, "losers", {"count": count.value}, e)
-        raise
+    result = await get_losers(count)
+    return result

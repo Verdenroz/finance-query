@@ -89,6 +89,7 @@ class TestMovers:
             else:
                 response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
                 html_content = response.text
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(cache_file, "w", encoding="utf-8") as f:
                     f.write(html_content)
 

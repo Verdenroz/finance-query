@@ -43,6 +43,7 @@ class TestSectors:
                 html_content = response.text
 
                 # Save for future test runs
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(cache_file, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
@@ -107,6 +108,7 @@ class TestSectors:
                 yahoo_data = {"quoteSummary": {"result": [{"assetProfile": {"sector": sector}}]}}
 
                 # Save for future test runs
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(cache_file, "w") as f:
                     import json
 

@@ -5,10 +5,8 @@ from src.models import ValidationErrorResponse
 from src.models.sector import MarketSector, MarketSectorDetails, Sector
 from src.services import get_sector_details, get_sector_for_symbol, get_sectors
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
-logger = get_logger(__name__)
 
 
 @router.get(
@@ -118,16 +116,8 @@ logger = get_logger(__name__)
     },
 )
 async def sectors():
-    params = {}
-    log_route_request(logger, "sectors", params)
-
-    try:
-        result = await get_sectors()
-        log_route_success(logger, "sectors", params, {"result_count": len(result)})
-        return result
-    except Exception as e:
-        log_route_error(logger, "sectors", params, e)
-        raise
+    result = await get_sectors()
+    return result
 
 
 @router.get(
@@ -168,16 +158,8 @@ async def sector_by_symbol(
     finance_client: FinanceClient,
     symbol: str,
 ):
-    params = {"symbol": symbol.upper()}
-    log_route_request(logger, "sector_by_symbol", params)
-
-    try:
-        result = await get_sector_for_symbol(finance_client, symbol)
-        log_route_success(logger, "sector_by_symbol", params, {"sector": result.sector if result else None})
-        return result
-    except Exception as e:
-        log_route_error(logger, "sector_by_symbol", params, e)
-        raise
+    result = await get_sector_for_symbol(finance_client, symbol)
+    return result
 
 
 @router.get(
@@ -244,13 +226,5 @@ async def sector_by_symbol(
     },
 )
 async def sector_details(sector: Sector):
-    params = {"sector": sector.value}
-    log_route_request(logger, "sector_details", params)
-
-    try:
-        result = await get_sector_details(sector)
-        log_route_success(logger, "sector_details", params, {"sector": result.sector, "companies": result.companies})
-        return result
-    except Exception as e:
-        log_route_error(logger, "sector_details", params, e)
-        raise
+    result = await get_sector_details(sector)
+    return result

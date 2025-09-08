@@ -5,10 +5,8 @@ from fastapi.security import APIKeyHeader
 
 from src.models import News, ValidationErrorResponse
 from src.services import scrape_general_news, scrape_news_for_quote
-from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
-logger = get_logger(__name__)
 
 
 @router.get(
@@ -36,17 +34,9 @@ logger = get_logger(__name__)
 async def get_news(
     symbol: Optional[str] = Query(None, description="Optional symbol to get news for. If not provided, general market news is returned"),
 ):
-    params = {"symbol": symbol or "general"}
-    log_route_request(logger, "news", params)
-
-    try:
-        if not symbol:
-            result = await scrape_general_news()
-        else:
-            result = await scrape_news_for_quote(symbol)
-
-        log_route_success(logger, "news", params, {"news_count": len(result)})
-        return result
-    except Exception as e:
-        log_route_error(logger, "news", params, e)
-        raise
+    if not symbol:
+        result = await scrape_general_news()
+    else:
+        result = await scrape_news_for_quote(symbol)
+    
+    return result

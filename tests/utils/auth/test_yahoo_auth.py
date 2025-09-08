@@ -40,8 +40,8 @@ class TestYahooAuthManager:
 
         # Verify the calls
         assert mock_session.get.call_count == 2
-        mock_session.get.assert_any_call("https://fc.yahoo.com", timeout=10, allow_redirects=True)
-        mock_session.get.assert_any_call("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=10, allow_redirects=True)
+        mock_session.get.assert_any_call("https://fc.yahoo.com", timeout=10, allow_redirects=True, proxies={'http': None, 'https': None})
+        mock_session.get.assert_any_call("https://query1.finance.yahoo.com/v1/test/getcrumb", timeout=10, allow_redirects=True, proxies={'http': None, 'https': None})
 
         # Verify the values were set
         assert yahoo_auth_manager._crumb == "abc123"

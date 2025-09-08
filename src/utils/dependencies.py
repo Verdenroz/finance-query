@@ -22,19 +22,17 @@ Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
 logger = get_logger(__name__)
 
 
-@injectable
-async def get_request_context() -> Request | WebSocket:
+async def get_request_context() -> Union[Request, WebSocket]:
     """Return whichever object (Request / WebSocket) is active on this task."""
     return request_context.get()
 
 
-RequestContext = Annotated[Request | WebSocket, Depends(get_request_context)]
+RequestContext = Annotated[Union[Request, WebSocket], Depends(get_request_context)]
 
 
-@injectable
 async def get_connection_manager(
     websocket: WebSocket,
-) -> RedisConnectionManager | ConnectionManager:
+) -> Union[RedisConnectionManager, ConnectionManager]:
     """Return the current connection manager based on if redis is enabled"""
     return websocket.app.state.connection_manager
 
@@ -42,7 +40,6 @@ async def get_connection_manager(
 WebsocketConnectionManager = Annotated[RedisConnectionManager, ConnectionManager, Depends(get_connection_manager)]
 
 
-@injectable
 async def get_redis(request: RequestContext) -> Redis:
     """Return shared redis client"""
     return cast(Redis, request.app.state.redis)
@@ -51,7 +48,6 @@ async def get_redis(request: RequestContext) -> Redis:
 RedisClient = Annotated[Redis, Depends(get_redis)]
 
 
-@injectable
 async def get_session(req: RequestContext) -> requests.Session:
     """
     Return the *shared* curl_cffi session placed on `app.state.session`
@@ -64,17 +60,16 @@ Session = Annotated[requests.Session, Depends(get_session)]
 
 
 @injectable
-async def get_proxy() -> str | None:
+async def get_proxy() -> Optional[str]:
     """
     Return the proxy URL if set, otherwise None.
     """
     return os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None
 
 
-Proxy = Annotated[str | None, Depends(get_proxy)]
+Proxy = Annotated[Optional[str], Depends(get_proxy)]
 
 
-@injectable
 async def get_fetch_client(
     session: Session,
     proxy: Proxy,
@@ -86,7 +81,6 @@ async def get_fetch_client(
 FetchClient = Annotated[CurlFetchClient, Depends(get_fetch_client)]
 
 
-@injectable
 async def _get_auth_manager(req: RequestContext) -> YahooAuthManager:
     """Return the auth manager saved in lifespan"""
     mgr = getattr(req.app.state, "yahoo_auth_manager", None)
@@ -112,7 +106,6 @@ async def get_yahoo_auth(mgr: AuthManager) -> tuple[dict, str]:
 YahooAuth = Annotated[tuple[dict, str], Depends(get_yahoo_auth)]
 
 
-@injectable
 async def get_yahoo_finance_client(auth: YahooAuth, proxy: Proxy) -> CurlFetchClient:
     """
     Returns a YahooFinanceClient with the given auth and fetch client.

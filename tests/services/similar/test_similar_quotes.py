@@ -52,6 +52,7 @@ class TestSimilarQuotesHandler:
                 html_content = response.text
 
                 # Save for future test runs
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(cache_file, "w", encoding="utf-8") as f:
                     f.write(html_content)
 
@@ -115,6 +116,7 @@ class TestSimilarQuotesHandler:
                 yahoo_data = {"finance": {"result": [{"recommendedSymbols": recommendations}]}}
 
                 # Save for future test runs
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(cache_file, "w") as f:
                     import json
 
@@ -248,6 +250,7 @@ class TestSimilarQuotesHandler:
                         )
 
                 # Save for future test runs
+                cache_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(cache_file, "w") as f:
                     import json
 

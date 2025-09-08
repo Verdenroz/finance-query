@@ -23,10 +23,8 @@ from src.services.indicators import (
     get_wma,
 )
 from src.utils.dependencies import FinanceClient
-from src.utils.logging import get_logger, log_route_error, log_route_request, log_route_success
 
 router = APIRouter()
-logger = get_logger(__name__)
 
 IndicatorFunctions = {
     Indicator.SMA: get_sma,
@@ -154,10 +152,6 @@ async def technical_indicator(
         "kijun_period": kijun_period,
         "senkou_period": senkou_period,
     }
-    # Filter out None values for logging
-    filtered_route_params = {k: v for k, v in route_params.items() if v is not None}
-    log_route_request(logger, "technical_indicator", filtered_route_params)
-
     params = {
         "finance_client": finance_client,
         "symbol": symbol,
@@ -182,22 +176,14 @@ async def technical_indicator(
 
     try:
         result = await IndicatorFunctions[function](**params)
-        log_route_success(
-            logger,
-            "technical_indicator",
-            filtered_route_params,
-            {"function": function.value, "data_points": len(result.data) if hasattr(result, "data") else 0},
-        )
         return result
 
     except TypeError as te:
         param_name = str(te).split("'")[1]
         error_details = HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.")
-        log_route_error(logger, "technical_indicator", filtered_route_params, error_details)
         raise error_details from te
     except Exception as e:
         error_details = HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}")
-        log_route_error(logger, "technical_indicator", filtered_route_params, error_details)
         raise error_details from e
 
 
@@ -279,17 +265,13 @@ async def technical_indicators(
     interval: Interval = Query(Interval.DAILY, description="The interval to get historical data for."),
     functions: Optional[str] = Query(None, description="Comma-separated list of technical indicators to calculate."),
 ):
-    log_route_request(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value, "functions": functions})
-
     try:
         indicator_list = [Indicator[ind.strip()] for ind in functions.split(",")] if functions else None
         result = await get_technical_indicators(finance_client, symbol, interval, indicator_list)
-        log_route_success(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value}, {"indicators_count": len(result) if result else 0})
         return result
     except KeyError as ke:
         error_details = HTTPException(status_code=400, detail=f"Invalid indicator: {str(ke)}")
-        log_route_error(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value, "functions": functions}, error_details)
         raise error_details from ke
     except Exception as e:
-        log_route_error(logger, "technical_indicators", {"symbol": symbol, "interval": interval.value, "functions": functions}, e)
-        raise
+        error_details = HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}")
+        raise error_details from e

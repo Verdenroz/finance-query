@@ -28,9 +28,9 @@ class YahooFinanceClient(CurlFetchClient):
 
     async def _yahoo_request(self, url: str, **kw):
         kw.setdefault("params", {})["crumb"] = self.crumb
-        kw.setdefault("headers", {})["User-Agent"] = (
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
-        )
+        kw.setdefault("headers", {})[
+            "User-Agent"
+        ] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36"
 
         # Ensure cookies are properly formatted if they're provided as a dictionary
         if "cookies" in kw and isinstance(kw["cookies"], dict):
