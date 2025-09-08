@@ -38,5 +38,5 @@ async def get_news(
         result = await scrape_general_news()
     else:
         result = await scrape_news_for_quote(symbol)
-    
+
     return result

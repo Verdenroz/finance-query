@@ -133,25 +133,6 @@ async def technical_indicator(
     kijun_period: Optional[int] = Query(None, description="The look-back period for the Kijun line in Ichimoku.", alias="kijunPeriod"),
     senkou_period: Optional[int] = Query(None, description="The look-back period for the Senkou span in Ichimoku.", alias="senkouPeriod"),
 ):
-    route_params = {
-        "function": function.value,
-        "symbol": symbol,
-        "time_range": time_range.value if time_range else None,
-        "interval": interval.value if interval else None,
-        "epoch": epoch,
-        "period": period,
-        "stoch_period": stoch_period,
-        "signal_period": signal_period,
-        "smooth": smooth,
-        "fast_period": fast_period,
-        "slow_period": slow_period,
-        "std_dev": std_dev,
-        "sma_periods": sma_periods,
-        "multiplier": multiplier,
-        "tenkan_period": tenkan_period,
-        "kijun_period": kijun_period,
-        "senkou_period": senkou_period,
-    }
     params = {
         "finance_client": finance_client,
         "symbol": symbol,

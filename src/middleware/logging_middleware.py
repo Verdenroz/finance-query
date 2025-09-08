@@ -4,8 +4,17 @@ from collections.abc import Callable
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware
 
-from src.utils.logging import get_logger, log_api_request, log_api_response, log_critical_system_failure, log_performance, log_route_request, log_route_success, \
-    log_route_error, set_request_id
+from src.utils.logging import (
+    get_logger,
+    log_api_request,
+    log_api_response,
+    log_critical_system_failure,
+    log_performance,
+    log_route_error,
+    log_route_request,
+    log_route_success,
+    set_request_id,
+)
 
 logger = get_logger(__name__)
 
@@ -30,7 +39,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         log_api_request(logger, method, path, query_params)
 
         # Log route-specific request if this is an API route
-        if route_name and path.startswith('/v1/'):
+        if route_name and path.startswith("/v1/"):
             log_route_request(logger, route_name, route_params)
 
         # Process request and measure time
@@ -47,7 +56,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             log_api_response(logger, method, path, response.status_code, duration_ms)
 
             # Log route-specific success if this is an API route
-            if route_name and path.startswith('/v1/') and 200 <= response.status_code < 300:
+            if route_name and path.startswith("/v1/") and 200 <= response.status_code < 300:
                 log_route_success(logger, route_name, route_params)
 
             # Add correlation ID to response headers
@@ -63,7 +72,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
             log_performance(logger, operation, duration_ms)
 
             # Log route-specific error if this is an API route
-            if route_name and path.startswith('/v1/'):
+            if route_name and path.startswith("/v1/"):
                 log_route_error(logger, route_name, route_params, e)
 
             # Check if this is a system-level critical failure
@@ -71,7 +80,7 @@ class LoggingMiddleware(BaseHTTPMiddleware):
                 log_critical_system_failure(logger, "request_processing", e, {"method": method, "path": path, "duration_ms": duration_ms})
             else:
                 # General error logging for non-API routes or additional context
-                if not route_name or not path.startswith('/v1/'):
+                if not route_name or not path.startswith("/v1/"):
                     logger.error(
                         "Request failed with exception",
                         extra={"method": method, "path": path, "duration_ms": duration_ms, "error": str(e), "error_type": type(e).__name__},
@@ -84,9 +93,9 @@ class LoggingMiddleware(BaseHTTPMiddleware):
         try:
             if "route" in request.scope:
                 route = request.scope["route"]
-                if hasattr(route, 'endpoint') and hasattr(route.endpoint, '__name__'):
+                if hasattr(route, "endpoint") and hasattr(route.endpoint, "__name__"):
                     return route.endpoint.__name__
-                elif hasattr(route, 'name') and route.name:
+                elif hasattr(route, "name") and route.name:
                     return route.name
         except (KeyError, AttributeError):
             pass
@@ -95,13 +104,13 @@ class LoggingMiddleware(BaseHTTPMiddleware):
     def _extract_route_params(self, request: Request) -> dict:
         """Extract route parameters from path and query parameters."""
         params = {}
-        
+
         # Add path parameters
-        if hasattr(request, 'path_params') and request.path_params:
+        if hasattr(request, "path_params") and request.path_params:
             params.update(request.path_params)
-            
+
         # Add query parameters
         if request.query_params:
             params.update(dict(request.query_params))
-            
+
         return params
