@@ -186,8 +186,11 @@ def cache(
                 return await func(*args, **kwargs)
 
             # Build cache key from serializable args
-            filtered_args = [a for a in args if not isinstance(a, CurlFetchClient)]
-            filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, CurlFetchClient)}
+            from unittest.mock import AsyncMock, MagicMock, Mock
+            
+            mock_types = (CurlFetchClient, AsyncMock, MagicMock, Mock)
+            filtered_args = [a for a in args if not isinstance(a, mock_types)]
+            filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, mock_types)}
             key_raw = orjson.dumps((filtered_args, filtered_kwargs))
             key = f"{func.__name__}:{hashlib.sha256(key_raw).hexdigest()}"
 

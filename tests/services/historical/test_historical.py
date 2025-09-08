@@ -168,3 +168,110 @@ class TestHistorical:
 
         assert exc_info.value.status_code == 400
         assert exc_info.value.detail == expected_error
+
+    async def test_get_historical_service_success(self, bypass_cache, mock_finance_client):
+        """Test get_historical service function with successful response"""
+        # Mock successful API response
+        mock_chart_data = {
+            "chart": {
+                "result": [
+                    {
+                        "timestamp": [1672531200, 1672617600],
+                        "indicators": {
+                            "quote": [
+                                {"open": [150.0, 153.5], "high": [155.0, 158.0], "low": [149.0, 152.0], "close": [153.5, 157.0], "volume": [10000000, 12000000]}
+                            ],
+                            "adjclose": [{"adjclose": [153.5, 157.0]}],
+                        },
+                    }
+                ],
+                "error": None,
+            }
+        }
+        mock_finance_client.get_chart.return_value = mock_chart_data
+
+        result = await get_historical(symbol="AAPL", time_range=TimeRange.ONE_MONTH, interval=Interval.DAILY, finance_client=mock_finance_client, epoch=False)
+
+        assert isinstance(result, dict)
+        assert len(result) == 2
+        # Verify the service was called with correct parameters
+        mock_finance_client.get_chart.assert_called_once_with("AAPL", "1d", "1mo")
+
+    async def test_get_historical_service_with_epoch(self, bypass_cache, mock_finance_client):
+        """Test get_historical service function with epoch timestamps"""
+        mock_chart_data = {
+            "chart": {
+                "result": [
+                    {
+                        "timestamp": [1672531200, 1672617600],
+                        "indicators": {
+                            "quote": [
+                                {"open": [150.0, 153.5], "high": [155.0, 158.0], "low": [149.0, 152.0], "close": [153.5, 157.0], "volume": [10000000, 12000000]}
+                            ],
+                            "adjclose": [{"adjclose": [153.5, 157.0]}],
+                        },
+                    }
+                ]
+            }
+        }
+        mock_finance_client.get_chart.return_value = mock_chart_data
+
+        result = await get_historical(symbol="AAPL", time_range=TimeRange.ONE_MONTH, interval=Interval.DAILY, finance_client=mock_finance_client, epoch=True)
+
+        assert isinstance(result, dict)
+        assert "1672531200" in result
+        assert "1672617600" in result
+
+    async def test_get_historical_service_invalid_response_structure(self, bypass_cache, mock_finance_client):
+        """Test get_historical service function with invalid response structure"""
+        mock_finance_client.get_chart.return_value = {"invalid": "structure"}
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_historical(symbol="AAPL", time_range=TimeRange.ONE_MONTH, interval=Interval.DAILY, finance_client=mock_finance_client)
+
+        assert exc_info.value.status_code == 500
+        assert "Invalid response structure" in exc_info.value.detail
+
+    async def test_get_historical_service_api_error_not_found(self, bypass_cache, mock_finance_client):
+        """Test get_historical service function with API error - Not Found"""
+        mock_chart_data = {"chart": {"error": {"code": "Not Found", "description": "Symbol INVALID not found"}}}
+        mock_finance_client.get_chart.return_value = mock_chart_data
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_historical(symbol="INVALID", time_range=TimeRange.ONE_MONTH, interval=Interval.DAILY, finance_client=mock_finance_client)
+
+        assert exc_info.value.status_code == 404
+        assert "Symbol INVALID not found" in exc_info.value.detail
+
+    async def test_get_historical_service_api_error_other(self, bypass_cache, mock_finance_client):
+        """Test get_historical service function with other API error"""
+        mock_chart_data = {"chart": {"error": {"code": "Server Error", "description": "Internal server error"}}}
+        mock_finance_client.get_chart.return_value = mock_chart_data
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_historical(symbol="AAPL", time_range=TimeRange.ONE_MONTH, interval=Interval.DAILY, finance_client=mock_finance_client)
+
+        assert exc_info.value.status_code == 500
+        assert "Failed to retrieve historical data: Internal server error" in exc_info.value.detail
+
+    async def test_get_historical_service_empty_results(self, bypass_cache, mock_finance_client):
+        """Test get_historical service function with empty results"""
+        mock_chart_data = {"chart": {"result": None, "error": None}}
+        mock_finance_client.get_chart.return_value = mock_chart_data
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_historical(symbol="AAPL", time_range=TimeRange.ONE_MONTH, interval=Interval.DAILY, finance_client=mock_finance_client)
+
+        assert exc_info.value.status_code == 404
+        assert "No data returned for symbol" in exc_info.value.detail
+
+    async def test_get_historical_service_empty_result_array(self, bypass_cache, mock_finance_client):
+        """Test get_historical service function with empty result array"""
+        mock_chart_data = {"chart": {"result": [], "error": None}}
+        mock_finance_client.get_chart.return_value = mock_chart_data
+
+        with pytest.raises(HTTPException) as exc_info:
+            await get_historical(symbol="AAPL", time_range=TimeRange.ONE_MONTH, interval=Interval.DAILY, finance_client=mock_finance_client)
+
+        assert exc_info.value.status_code == 404
+        assert "No data returned for symbol" in exc_info.value.detail
