@@ -187,7 +187,7 @@ def cache(
 
             # Build cache key from serializable args
             from unittest.mock import AsyncMock, MagicMock, Mock
-            
+
             mock_types = (CurlFetchClient, AsyncMock, MagicMock, Mock)
             filtered_args = [a for a in args if not isinstance(a, mock_types)]
             filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, mock_types)}

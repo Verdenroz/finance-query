@@ -1,6 +1,7 @@
 import asyncio
 import os
 import time
+from datetime import datetime, timedelta
 from typing import Annotated, Any, Literal, Optional, Union, cast
 from urllib.parse import urlparse
 
@@ -14,12 +15,58 @@ from src.clients.fetch_client import CurlFetchClient
 from src.clients.yahoo_client import YahooFinanceClient
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import request_context
+from src.utils.cache import cache
 from src.utils.logging import get_logger, log_external_api_call
 from src.utils.market import MarketSchedule
 from src.utils.yahoo_auth import YahooAuthManager
 
 Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
 logger = get_logger(__name__)
+
+
+class CircuitBreaker:
+    """Simple circuit breaker for external API calls."""
+
+    def __init__(self, failure_threshold: int = 5, timeout_duration: int = 300):
+        self.failure_threshold = failure_threshold
+        self.timeout_duration = timeout_duration  # seconds
+        self.failure_count = 0
+        self.last_failure_time: Optional[datetime] = None
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+
+    def is_available(self) -> bool:
+        """Check if the circuit breaker allows calls."""
+        if self.state == "CLOSED":
+            return True
+
+        if self.state == "OPEN":
+            if self.last_failure_time and datetime.now() - self.last_failure_time > timedelta(seconds=self.timeout_duration):
+                self.state = "HALF_OPEN"
+                return True
+            return False
+
+        return True  # HALF_OPEN allows one call
+
+    def record_success(self):
+        """Record a successful call."""
+        self.failure_count = 0
+        self.state = "CLOSED"
+        self.last_failure_time = None
+
+    def record_failure(self):
+        """Record a failed call."""
+        self.failure_count += 1
+        self.last_failure_time = datetime.now()
+
+        if self.failure_count >= self.failure_threshold:
+            self.state = "OPEN"
+            logger.warning(f"Circuit breaker OPEN after {self.failure_count} failures")
+
+
+# Global circuit breaker for Logo.dev API
+logo_circuit_breaker = CircuitBreaker(
+    failure_threshold=int(os.getenv("LOGO_CIRCUIT_BREAKER_THRESHOLD", "5")), timeout_duration=int(os.getenv("LOGO_CIRCUIT_BREAKER_TIMEOUT", "300"))
+)
 
 
 async def get_request_context() -> Union[Request, WebSocket]:
@@ -188,6 +235,7 @@ async def fetch(
     return None  # (never reached)
 
 
+@cache(expire=86400)  # Cache for 24 hours
 @injectable
 async def get_logo(
     client: FetchClient,
@@ -197,44 +245,81 @@ async def get_logo(
 ) -> str | None:
     """
     Try logo.dev with the ticker first, fall back to domain icon.
+    Cached for 24 hours to prevent repeated expensive calls.
+    Uses circuit breaker to prevent cascading failures.
     """
+    # Check if logo fetching is disabled
+    if os.getenv("DISABLE_LOGO_FETCHING", "false").lower() == "true":
+        return None
+
+    # Check circuit breaker
+    if not logo_circuit_breaker.is_available():
+        logger.debug(f"Logo.dev circuit breaker is OPEN, skipping logo fetch for {symbol or 'domain'}")
+        return None
+
     token = "pk_Xd1Cdye3QYmCOXzcvxhxyw"  # personal public key
     if not symbol and not url:
         return None
 
+    # Set timeout for logo requests (default 1 seconds)
+    logo_timeout = float(os.getenv("LOGO_TIMEOUT_SECONDS", "1"))
+
     if symbol:
         start_time = time.perf_counter()
         try:
-            maybe = await client.fetch(
-                f"https://img.logo.dev/ticker/{symbol}?token={token}&retina=true",
-                return_response=True,
+            maybe = await asyncio.wait_for(
+                client.fetch(
+                    f"https://img.logo.dev/ticker/{symbol}?token={token}&retina=true",
+                    return_response=True,
+                ),
+                timeout=logo_timeout,
             )
             duration_ms = (time.perf_counter() - start_time) * 1000
             success = isinstance(maybe, requests.Response) and maybe.status_code == 200
             log_external_api_call(logger, "Logo.dev", "ticker", duration_ms, success=success)
+
             if success:
+                logo_circuit_breaker.record_success()
                 return str(maybe.url)
+            else:
+                logo_circuit_breaker.record_failure()
         except Exception:
             duration_ms = (time.perf_counter() - start_time) * 1000
             log_external_api_call(logger, "Logo.dev", "ticker", duration_ms, success=False)
+            logo_circuit_breaker.record_failure()
             # Don't re-raise, fall through to domain lookup
 
     if url:
         domain = urlparse(url).netloc.replace("www.", "")
         start_time = time.perf_counter()
         try:
-            maybe = await client.fetch(
-                f"https://img.logo.dev/{domain}?token={token}&retina=true",
-                return_response=True,
+            maybe = await asyncio.wait_for(
+                client.fetch(
+                    f"https://img.logo.dev/{domain}?token={token}&retina=true",
+                    return_response=True,
+                ),
+                timeout=logo_timeout,
             )
             duration_ms = (time.perf_counter() - start_time) * 1000
             success = isinstance(maybe, requests.Response) and maybe.status_code == 200
             log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=success)
+
             if success:
+                logo_circuit_breaker.record_success()
                 return str(maybe.url)
+            else:
+                logo_circuit_breaker.record_failure()
+
+        except TimeoutError:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=False)
+            logger.warning(f"Logo fetch timeout for domain {domain} after {logo_timeout}s")
+            logo_circuit_breaker.record_failure()
+            # Don't re-raise, return None
         except Exception:
             duration_ms = (time.perf_counter() - start_time) * 1000
             log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=False)
+            logo_circuit_breaker.record_failure()
             # Don't re-raise, return None
 
     return None

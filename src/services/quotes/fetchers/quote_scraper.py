@@ -106,14 +106,20 @@ async def _scrape_simple_quote(symbol: str) -> SimpleQuote:
         name_elements = tree.xpath(".//h1/text()")
         name = name_elements[1].split("(")[0].strip()
 
-        # Get price data
-        prices = await _scrape_price_data(tree)
-        regular_price, regular_change, regular_percent_change, pre_price, post_price = prices
+        # Execute price scraping and logo fetching concurrently
+        prices_task = asyncio.create_task(_scrape_price_data(tree))
 
-        # Get logo asynchronously
+        # Get logo asynchronously - extract website first, then fetch logo
         website_elements = tree.xpath("/html/body/div[2]/main/section/section/section/article/section[2]/div/div/div[2]/div/div[1]/div[1]/a/@href")
         website = website_elements[0].strip() if website_elements else None
-        logo = await get_logo(symbol=symbol, url=website) if website else None
+
+        async def get_logo_or_none():
+            return await get_logo(symbol=symbol, url=website) if website else None
+
+        logo_task = asyncio.create_task(get_logo_or_none())
+
+        prices, logo = await asyncio.gather(prices_task, logo_task)
+        regular_price, regular_change, regular_percent_change, pre_price, post_price = prices
 
         return SimpleQuote(
             symbol=symbol.upper(),

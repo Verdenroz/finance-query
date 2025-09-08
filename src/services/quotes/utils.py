@@ -249,8 +249,13 @@ async def _scrape_company_info(tree: etree.ElementTree, symbol: str):
             elements = container_element.xpath(xpath)
             results[key] = elements[0].strip() if elements else None
 
-        # Get logo asynchronously if website exists
-        logo = await get_logo(symbol=symbol, url=results["website"]) if results.get("website") else None
+        # Get logo asynchronously if website exists, but don't block if it fails
+        logo = None
+        if results.get("website"):
+            try:
+                logo = await get_logo(symbol=symbol, url=results["website"])
+            except Exception as e:
+                logger.debug(f"Logo fetch failed for {symbol}: {str(e)}")
 
         return {
             "sector": results["sector"],
