@@ -35,6 +35,7 @@ from src.routes import (
     stream_router,
 )
 from src.routes.financials import router as financials_router
+from src.routes.holders import router as holders_router
 from src.security import RateLimitMiddleware
 from src.services import (
     get_actives,
@@ -321,5 +322,6 @@ app.include_router(search_router, prefix="/v1", tags=["Search"])
 app.include_router(indicators_router, prefix="/v1", tags=["Technical Indicators"])
 app.include_router(stream_router, prefix="/v1", tags=["SSE"])
 app.include_router(financials_router, prefix="/v1", tags=["Financials"])
+app.include_router(holders_router, prefix="/v1", tags=["Holders"])
 
 handler = Mangum(app)
