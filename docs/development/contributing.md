@@ -40,45 +40,54 @@ Request features on the [Issue Tracker].
 
 ## How to set up your development environment
 
-You need Python 3.11 or newer. We recommend using a virtual environment:
+You need Python 3.11 or newer. We recommend using a virtual environment.
+
+### Quick Setup with Makefile (Recommended)
+
+For the fastest setup, use the provided Makefile:
+
+```console
+$ make install-dev
+```
+
+This will:
+- Install all dependencies using `uv`
+- Build required Cython extensions for technical indicators
+- Set up pre-commit hooks automatically
+
+Then you can use these commands for development:
+
+```console
+$ make help        # Show all available commands
+$ make build       # Build Cython extensions (required for technical indicators)
+$ make serve       # Start development server at http://localhost:8000
+$ make test        # Run tests with coverage
+$ make lint        # Run linting and formatting (pre-commit hooks)
+$ make docs        # Serve documentation at http://localhost:8001
+$ make clean       # Clean build artifacts
+```
+
+### Manual Setup
+
+If you prefer manual setup, you'll need [uv](https://docs.astral.sh/uv/) for dependency management:
+
+```console
+$ pip install uv
+$ uv sync --all-groups
+$ python setup.py build_ext --inplace  # Required for technical indicators
+$ pre-commit install
+```
+
+### Legacy Setup with pip
+
+For environments without `uv`, you can still use pip:
 
 ```console
 $ python -m venv venv
 $ source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-### Installation with Poetry (recommended)
-
-Alternatively, you can use [Poetry](https://python-poetry.org/) for dependency management:
-
-```console
-$ pip install poetry
-$ poetry install --with dev
-```
-
-This will install all dependencies defined in the pyproject.toml file, including development dependencies.
-
-To activate the Poetry virtual environment:
-
-```console
-$ eval $(poetry env activate)
-
-# Or on Windows:
-Invoke-Expression (poetry env activate)
-```
-
-### Installation with pip
-
-Install the project dependencies:
-
-```console
 $ pip install -r requirements.txt
-```
-
-For development, you'll also need the development dependencies:
-
-```console
 $ pip install -r requirements/dev.txt
+$ python setup.py build_ext --inplace  # Required for technical indicators
 ```
 
 ### Setting up environment variables
@@ -89,13 +98,29 @@ See the `.env.template` file for an example.
 ```
 # Basic configuration
 REDIS_URL=redis://localhost:6379  # Optional, for caching and WebSocket support
-USE_SECURITY=True  # Enable rate limiting
+USE_SECURITY=True  # Enable rate limiting and API key authentication
+ADMIN_API_KEY=your-admin-key-here  # Admin key that bypasses rate limits
 BYPASS_CACHE=False  # Set to True to disable caching during development
 
-# Proxy configuration (optional)
+# Proxy configuration (optional, recommended for production)
 USE_PROXY=False
 PROXY_URL=
-PROXY_TOKEN=
+PROXY_TOKEN=  # For whitelisting IPs in proxy service
+
+# Algolia search (optional, uses default public credentials)
+ALGOLIA_APP_ID=ZTZOECLXBC
+ALGOLIA_API_KEY=a3882d6ec31c0b1063ede94374616d8a
+
+# Logging configuration
+LOG_LEVEL=DEBUG  # DEBUG, INFO, WARNING, ERROR, CRITICAL
+LOG_FORMAT=text  # json or text
+PERFORMANCE_THRESHOLD_MS=2000  # Slow operation warning threshold
+
+# Logo fetching configuration
+DISABLE_LOGO_FETCHING=false  # Set to true to disable logo fetching
+LOGO_TIMEOUT_SECONDS=1  # Timeout for logo requests
+LOGO_CIRCUIT_BREAKER_THRESHOLD=5  # Failures before circuit breaker opens
+LOGO_CIRCUIT_BREAKER_TIMEOUT=300  # Circuit breaker timeout in seconds
 ```
 
 ## How to test the project
@@ -119,6 +144,14 @@ and are written using the [pytest] testing framework.
 
 ## Local development
 
+### Using Makefile (Recommended)
+
+```console
+$ make serve
+```
+
+### Manual Development Server
+
 To run the application locally:
 
 ```console
@@ -127,11 +160,63 @@ $ python -m uvicorn src.main:app --reload
 
 This will start the API server at `http://localhost:8000` with automatic reloading enabled.
 
+### Docker Development
+
 You can also use Docker:
 
 ```console
+$ make docker
+# Or manually:
 $ docker build -t finance-query .
 $ docker run -p 8000:8000 finance-query
+```
+
+#### Docker with Environment Variables
+
+**Build-time configuration** (baked into image):
+```console
+$ docker build \
+  --build-arg LOG_LEVEL=DEBUG \
+  --build-arg LOG_FORMAT=text \
+  --build-arg DISABLE_LOGO_FETCHING=true \
+  --build-arg LOGO_TIMEOUT_SECONDS=2 \
+  -t finance-query .
+```
+
+**Runtime configuration** (can be changed when running):
+```console
+$ docker run -p 8000:8000 \
+  -e LOG_LEVEL=DEBUG \
+  -e LOG_FORMAT=text \
+  -e REDIS_URL=redis://host.docker.internal:6379 \
+  -e USE_SECURITY=true \
+  -e ADMIN_API_KEY=your-admin-key \
+  -e USE_PROXY=true \
+  -e PROXY_URL=http://proxy:8080 \
+  -e PROXY_TOKEN=your-proxy-token \
+  finance-query
+```
+
+**Docker Compose example**:
+```yaml
+version: '3.8'
+services:
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - REDIS_URL=redis://redis:6379
+      - USE_SECURITY=true
+      - ADMIN_API_KEY=your-admin-key
+      - DISABLE_LOGO_FETCHING=false
+      - LOGO_TIMEOUT_SECONDS=1
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
 ```
 
 ## How to submit changes
@@ -143,11 +228,27 @@ Your pull request needs to meet the following guidelines for acceptance:
 - The test suite must pass without errors and warnings.
 - Include unit tests for new functionality.
 - If your changes add functionality, update the documentation accordingly.
-- Follow the existing code style (Black formatting, isort imports).
+- Follow the existing code style (Ruff formatting and linting).
 
 Feel free to submit early, though—we can always iterate on this.
 
-To run linting and code formatting checks before committing your change, you can use:
+### Code Quality Checks
+
+#### Using Makefile (Recommended)
+
+```console
+$ make lint
+```
+
+This runs all pre-commit hooks including:
+- Ruff linting with auto-fixes
+- Ruff formatting
+- TOML/YAML validation
+- Trailing whitespace removal
+
+#### Manual Code Quality
+
+To run linting and code formatting checks before committing your change:
 
 ```console
 $ pre-commit run --all-files

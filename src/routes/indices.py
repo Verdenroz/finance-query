@@ -62,4 +62,5 @@ async def market_indices(
     # Only include indices that were selected
     ordered_indices = [idx for idx in Index if idx in selected_indices]
 
-    return await get_indices(finance_client, ordered_indices)
+    result = await get_indices(finance_client, ordered_indices)
+    return result

@@ -47,7 +47,7 @@ class TestCurlFetchClient:
         client = CurlFetchClient(session=mock_session, timeout=20, proxy="http://proxy.example.com", default_headers=custom_headers)
 
         assert client.timeout == 20
-        assert mock_session.proxies == {"http": "http://proxy.example.com", "https": "http://proxy.example.com"}
+        assert client.proxies == {"http": "http://proxy.example.com", "https": "http://proxy.example.com"}
         assert mock_session.headers == custom_headers
 
     def test_request_success(self, fetch_client, mock_session):
@@ -66,6 +66,7 @@ class TestCurlFetchClient:
             json={"data_key": "data_value"},
             headers={"Header": "Value"},
             timeout=DEFAULT_TIMEOUT,
+            proxies=None,
         )
         assert response == mock_response
 

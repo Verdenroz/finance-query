@@ -64,4 +64,5 @@ router = APIRouter()
 )
 async def get_market_hours(market_schedule: MarketSchedule = Depends(MarketSchedule)):
     status, reason = market_schedule.get_market_status()
-    return {"status": status, "reason": reason, "timestamp": datetime.now(pytz.UTC).isoformat()}
+    result = {"status": status, "reason": reason, "timestamp": datetime.now(pytz.UTC).isoformat()}
+    return result

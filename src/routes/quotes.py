@@ -33,7 +33,8 @@ async def get_quote(
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
-    return await get_quotes(finance_client, symbols)
+    result = await get_quotes(finance_client, symbols)
+    return result
 
 
 @router.get(
@@ -61,4 +62,5 @@ async def get_simple_quote(
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
     symbols = list(set(symbols.upper().replace(" ", "").split(",")))
-    return await get_simple_quotes(finance_client, symbols)
+    result = await get_simple_quotes(finance_client, symbols)
+    return result

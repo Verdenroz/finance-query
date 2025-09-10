@@ -34,7 +34,7 @@ async def fetch_index(
         quote = quotes_data[0]
         return MarketIndex(
             name=quote.name or index.value,
-            value=float(quote.price),
+            value=float(str(quote.price).replace(",", "")) if quote.price else 0.0,
             change=quote.change,
             percent_change=quote.change_percent,
             five_days_return=quote.five_days_return,
