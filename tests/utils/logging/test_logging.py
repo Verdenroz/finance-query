@@ -244,10 +244,10 @@ class TestLogPerformance:
 
     def test_log_performance_slow_operation_default_threshold(self):
         """Test log_performance for slow operation with default threshold."""
-        log_performance(self.logger, "slow_operation", 3000.0)
+        log_performance(self.logger, "slow_operation", 6000.0)
 
         output = self.stream.getvalue()
-        assert "Slow operation detected - slow_operation (3000.0ms)" in output
+        assert "Slow operation detected - slow_operation (6000.0ms)" in output
 
     def test_log_performance_slow_operation_custom_threshold(self):
         """Test log_performance for slow operation with custom threshold."""
