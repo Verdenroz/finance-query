@@ -63,6 +63,7 @@ nav:
       - Market Hours: api/hours.md
       - Quotes: api/quotes.md
       - Historical Data: api/historical.md
+      - Financials: api/financials.md
       - Market Movers: api/movers.md
       - News: api/news.md
       - Indices: api/indices.md

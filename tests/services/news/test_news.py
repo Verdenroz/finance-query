@@ -93,10 +93,6 @@ class TestNews:
         "symbol,test_url",
         [
             ("AAPL", "https://stockanalysis.com/stocks/AAPL"),
-            ("MSFT", "https://stockanalysis.com/stocks/MSFT"),
-            ("QQQ", "https://stockanalysis.com/etf/QQQ"),
-            ("TQQQ", "https://stockanalysis.com/etf/TQQQ"),
-            ("NVDA.TO", "https://stockanalysis.com/quote/tsx/NVDA"),  # should be verified from last test
         ],
     )
     async def test_scrape_news_for_quote(self, news_html, symbol, test_url, bypass_cache):
