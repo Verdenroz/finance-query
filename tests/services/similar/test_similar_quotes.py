@@ -1,10 +1,8 @@
-import hashlib
 import random
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-import requests
 from fastapi import HTTPException
 
 from src.models import SimpleQuote
@@ -15,58 +13,6 @@ from tests.conftest import VERSION
 
 
 class TestSimilarQuotesHandler:
-    @pytest.fixture
-    def similar_quotes_html(self):
-        """
-        Fixture that provides a function to get cached HTML content for URLs.
-        If the HTML is not cached, it will fetch and cache it.
-        """
-        # Path for storing cached HTML responses
-        cache_dir = Path(__file__).resolve().parent.parent / "data" / "similar"
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        # Create a dictionary to store HTML content by URL
-        html_cache = {}
-
-        def get_cached_html(url):
-            # Check if we already have this URL in our in-memory cache
-            if url in html_cache:
-                return html_cache[url]
-
-            # Extract symbol from URL for filename
-            if "quote/" in url:
-                symbol = url.split("quote/")[1].strip("/")
-                cache_file = cache_dir / f"{symbol}_page.html"
-            else:
-                # For any other URL, use a hash of the URL as filename
-                filename = hashlib.md5(url.encode()).hexdigest()
-                cache_file = cache_dir / f"{filename}.html"
-
-            # Check if we have cached HTML
-            if cache_file.exists():
-                with open(cache_file, encoding="utf-8") as f:
-                    html_content = f.read()
-            else:
-                # Fetch real content if no cache exists (only for first run)
-                response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                html_content = response.text
-
-                # Save for future test runs
-                cache_file.parent.mkdir(parents=True, exist_ok=True)
-                with open(cache_file, "w", encoding="utf-8") as f:
-                    f.write(html_content)
-
-            # Store HTML in our cache dictionary
-            html_cache[url] = html_content
-            return html_content
-
-        yield get_cached_html
-        # Cleanup on teardown
-        for file in cache_dir.glob("*.html"):
-            file.unlink()
-        if cache_dir.exists():
-            cache_dir.rmdir()
-
     @pytest.fixture
     def yahoo_recommendations(self):
         """
@@ -384,7 +330,7 @@ class TestSimilarQuotesHandler:
             assert excinfo.value.status_code == 404
             assert "No similar stocks found or invalid symbol" in excinfo.value.detail
 
-    async def test_scrape_similar_quotes(self, similar_quotes_html, bypass_cache):
+    async def test_scrape_similar_quotes(self, html_cache_manager, bypass_cache):
         """Test scrape_similar_quotes function with cached HTML content"""
         test_symbols = ["AAPL", "MSFT", "NVDA", "JPM", "TQQQ", "SPY"]
         test_limit = 5
@@ -392,7 +338,8 @@ class TestSimilarQuotesHandler:
         for symbol in test_symbols:
             # Get cached HTML for this symbol
             url = f"https://finance.yahoo.com/quote/{symbol}"
-            html_content = similar_quotes_html(url)
+            context = f"similar_{symbol}"
+            html_content = html_cache_manager(url, context=context)
 
             # Mock the fetch function
             with patch("src.services.similar.fetchers.similar_scraper.fetch", new_callable=AsyncMock) as mock_fetch:

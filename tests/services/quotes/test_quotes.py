@@ -1,9 +1,6 @@
-import hashlib
-from pathlib import Path
 from unittest.mock import ANY, AsyncMock, patch
 
 import pytest
-import requests
 from fastapi import HTTPException
 
 from src.models import Quote, SimpleQuote
@@ -56,44 +53,6 @@ MOCK_SIMPLE_QUOTE_RESPONSE = {
 
 
 class TestQuotes:
-    @pytest.fixture
-    def quote_html(self):
-        """
-        Fixture that provides a function to get cached HTML content for URLs.
-        If the HTML is not cached, it will fetch and cache it from the real URL.
-        """
-        cache_dir = Path(__file__).resolve().parent.parent / "data" / "quotes"
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        html_cache = {}
-
-        def get_cached_html(url):
-            if url in html_cache:
-                return html_cache[url]
-
-            filename = hashlib.md5(url.encode()).hexdigest()
-            cache_file = cache_dir / f"{filename}.html"
-
-            if cache_file.exists():
-                with open(cache_file, encoding="utf-8") as f:
-                    html_content = f.read()
-            else:
-                response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                html_content = response.text
-                cache_file.parent.mkdir(parents=True, exist_ok=True)
-                with open(cache_file, "w", encoding="utf-8") as f:
-                    f.write(html_content)
-
-            html_cache[url] = html_content
-            return html_content
-
-        yield get_cached_html
-        # Cleanup on teardown
-        for file in cache_dir.glob("*.html"):
-            file.unlink()
-        if cache_dir.exists():
-            cache_dir.rmdir()
-
     @pytest.fixture
     def mock_api_response(self):
         def _make():
@@ -152,10 +111,10 @@ class TestQuotes:
             assert mock_finance_client.get_quote.await_count == len(symbols)
 
     @pytest.mark.parametrize("symbols", [["NVDA"], ["AAPL", "MSFT"]])
-    async def test_scrape_quotes(self, quote_html, symbols, bypass_cache):
+    async def test_scrape_quotes(self, html_cache_manager, symbols, bypass_cache):
         """Test scraping quotes"""
         url = f"https://finance.yahoo.com/quote/{symbols[0]}/"
-        html = quote_html(url)
+        html = html_cache_manager(url, context="quotes")
         with patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html
             result = await scrape_quotes(symbols)
@@ -190,10 +149,10 @@ class TestQuotes:
             mock_finance_client.get_simple_quotes.assert_awaited_once_with(symbols)
 
     @pytest.mark.parametrize("symbols", [["NVDA"], ["AAPL", "MSFT"]])
-    async def test_scrape_simple_quotes(self, quote_html, symbols, bypass_cache):
+    async def test_scrape_simple_quotes(self, html_cache_manager, symbols, bypass_cache):
         """Test scraping simple quotes"""
         url = f"https://finance.yahoo.com/quote/{symbols[0]}/"
-        html = quote_html(url)
+        html = html_cache_manager(url, context="quotes")
         with (
             patch("src.services.quotes.fetchers.quote_scraper.fetch", new_callable=AsyncMock) as mock_fetch,
             patch("src.services.quotes.fetchers.quote_scraper.get_logo", new_callable=AsyncMock) as mock_logo,
