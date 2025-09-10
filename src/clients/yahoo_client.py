@@ -5,6 +5,7 @@ from fastapi import HTTPException
 from orjson import orjson
 
 from src.utils.logging import get_logger, log_external_api_call
+
 from .fetch_client import CurlFetchClient
 
 logger = get_logger(__name__)

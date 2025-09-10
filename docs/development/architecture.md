@@ -1,358 +1,286 @@
 # FinanceQuery API Architecture
 
-## 1. Overview
+## Overview
 
-FinanceQuery is a FastAPI-based application designed to provide financial data by scraping web sources and interacting with Yahoo Finance's unofficial API. It offers RESTful endpoints for various financial data points and WebSocket support for real-time data streaming. The architecture emphasizes modularity, asynchronous operations, and resilience.
+FinanceQuery is a FastAPI-based financial data API that aggregates data from Yahoo Finance API and web scraping. The architecture follows a service-oriented design with clear separation of concerns, emphasizing modularity, asynchronous operations, and resilience.
 
-## 2. Core Components
+## Core Components
 
-### 2.1. FastAPI Application (`main.py`)
+### FastAPI Application (`src/main.py`)
 
-The core of the application is a FastAPI instance.
-- **Initialization**: Sets up metadata like title, version, description, server URLs, contact, and license information.
+The main application handles:
 
-- **Lifespan Management**: A `lifespan` asynchronous context manager handles the initialization and cleanup of shared resources:
-    - `fastapi_injectable` registration.
-    - Shared `curl_cffi.requests.Session` for HTTP requests.
-    - `YahooAuthManager` instance for managing Yahoo Finance authentication.
-    - Optional proxy setup (`PROXY_URL`, `USE_PROXY`).
-    - Optional Redis client (`REDIS_URL`) for caching and WebSocket message brokering.
-    - WebSocket `ConnectionManager` (defaults to in-memory, or `RedisConnectionManager` if Redis is enabled).
-    - Primes Yahoo authentication on startup for faster initial user requests.
-    - Ensures cleanup of resources (exit stacks, connection manager, proxy whitelist, Redis connection) on shutdown.
+- **Lifespan Management**: Initializes shared resources (HTTP sessions, Redis, authentication, proxy setup)
+- **Middleware Stack**: CORS, request context, logging, and optional rate limiting
+- **Error Handling**: Custom validation error formatting
+- **Routing**: API endpoints under `/v1/` prefix with Pydantic validation
+- **Health Checks**: `/ping` (basic) and `/health` (comprehensive service validation)
+- **AWS Lambda Support**: Via Mangum adapter
 
-- **Middleware**:
-    - `CORSMiddleware`: Configured to allow all origins, methods, and headers, and exposes rate limit headers.
-    - `RequestContextMiddleware`: Makes the `Request` or `WebSocket` object accessible throughout the application via a context variable. This is crucial for dependency injection and accessing request-specific state.
-    - `RateLimitMiddleware`: (Optional, enabled by `USE_SECURITY` env var) Provides rate limiting capabilities.
-  
-- **Error Handling**:
-    - A custom exception handler for `RequestValidationError` formats Pydantic validation errors into a more user-friendly JSON structure.
-  
-- **Routing**:
-    - Includes various routers for different API functionalities (e.g., quotes, historical prices, news, WebSockets). Routers are typically prefixed with `/v1`. Each router groups related endpoints and utilizes Pydantic models for request and response validation and serialization.
-  
-- **Deployment**:
-    - `Mangum` adapter is used to allow deployment as an AWS Lambda function.
+### Data Models (`src/models/`)
 
-### 2.2. Health Checks (`main.py`)
+Pydantic models provide:
+- **API Contract Definition**: Consistent request/response structures
+- **Input Validation**: Automatic parameter validation
+- **Documentation Generation**: OpenAPI schema generation
+- **Type Safety**: Runtime type checking and IDE support
 
-- **`/ping`**: A simple endpoint to check if the server is alive and responding. Returns status and current timestamp.
-- **`/health`**: A detailed health check endpoint that verifies:
-    - Basic API health.
-    - Redis connectivity and latency (if configured).
-    - Status of various internal services by making sample calls (e.g., fetching indices, market movers, news, quotes). Reports success/failure for each service.
+### Routing System (`src/routes/`)
 
-### 2.3. Models and Routers
+Modular routers organize endpoints by domain:
+- `quotes` - Stock quotes and company information
+- `historical_prices` - Historical price data
+- `indices` - Market indices (S&P 500, NASDAQ, DOW)
+- `sectors` - Industry sector performance
+- `movers` - Market gainers/losers/most active
+- `finance_news` - Financial news aggregation
+- `search` - Symbol search functionality
+- `hours` - Market hours status
+- `similar` - Similar securities lookup
+- `stream` - Server-sent events
+- `sockets` - WebSocket connections
 
-#### Pydantic Models (`src/models`)
+## Logging & Middleware Architecture
 
-Pydantic models are extensively used throughout the application, primarily defined in `src/models.py` (or similar modules within a `models` directory). Their roles include:
+### Logging System (`src/utils/logging.py`)
 
--   **Data Validation**: Defining the expected structure, data types, and validation rules for incoming request data (path parameters, query parameters, request bodies). FastAPI automatically uses these models to validate incoming data.
--   **Data Serialization**: Defining the structure and data types for outgoing API responses. FastAPI uses these models to serialize response data into JSON.
--   **API Contract**: Serving as a clear and enforceable contract for API inputs and outputs.
--   **OpenAPI Schema Generation**: FastAPI leverages these Pydantic models to automatically generate the OpenAPI (Swagger) documentation, providing interactive API docs.
--   **Error Reporting**: When validation fails, FastAPI (in conjunction with the custom `RequestValidationError` handler) uses the model definitions to provide detailed error messages.
+Comprehensive logging with configurable levels and formats:
 
-#### Routers (`src/routes`)
+- **Environment Configuration**:
+  - `LOG_LEVEL`: DEBUG/INFO/WARNING/ERROR/CRITICAL
+  - `LOG_FORMAT`: JSON (production) or text (development)
+  - `PERFORMANCE_THRESHOLD_MS`: Slow operation warning threshold (default: 2000ms)
+  - `DISABLE_LOGO_FETCHING`: Disable logo fetching entirely (default: false)
+  - `LOGO_TIMEOUT_SECONDS`: Logo request timeout (default: 1s)
+  - `LOGO_CIRCUIT_BREAKER_THRESHOLD`: Failures before circuit breaker opens (default: 5)
+  - `LOGO_CIRCUIT_BREAKER_TIMEOUT`: Circuit breaker timeout in seconds (default: 300)
 
-The API's functionality is organized into modular routers, typically with each file in the `src/routes/` directory representing a distinct set of related endpoints or a microservice.
+- **Correlation Tracking**: Every request gets a unique correlation ID for distributed tracing
+- **Structured Logging**: JSON format with contextual metadata
+- **Performance Monitoring**: Automatic slow operation detection and logging
+- **External Library Filtering**: Reduced noise from urllib3, curl_cffi, Redis
 
--   **Modular Design**: Each router (e.g., `quotes_router.py`, `historical_prices_router.py`) encapsulates the logic for a specific feature (e.g., fetching quotes, retrieving historical data).
--   **Endpoint Definition**: Routers define API path operations (e.g., `@router.get("/symbols")`) along with their associated HTTP methods.
--   **Model Integration**:
-    -   Path operation functions use Pydantic models as type hints for request bodies, query parameters, and path parameters. This enables FastAPI's automatic validation.
-    -   The `response_model` parameter in path operation decorators is set to a Pydantic model to define the structure of the response, ensuring consistent output and enabling automatic serialization and documentation.
--   **Dependency Injection**: Routers utilize FastAPI's dependency injection system to obtain necessary services, clients (like `FinanceClient`), and other resources.
--   **Inclusion in Main App**: These individual routers are then included in the main FastAPI application instance in `main.py` (e.g., `app.include_router(quotes_router)`), often with a common prefix (like `/v1`).
+- **Specialized Logging Functions**:
+  - `log_api_request/response()` - HTTP request/response logging
+  - `log_route_request/success/error()` - Route-specific logging
+  - `log_cache_operation()` - Cache hit/miss tracking
+  - `log_external_api_call()` - Third-party API monitoring
+  - `log_performance()` - Operation timing with threshold warnings
+  - `log_critical_system_failure()` - System-level error handling
 
-## 3. Routes, Models, and Services Architecture
+### Middleware Stack
 
-### 3.1. Models (`src/models`)
+#### LoggingMiddleware (`src/middleware/logging_middleware.py`)
 
-The application's data structures are defined as Pydantic models, which serve multiple purposes:
+- **Request Correlation**: Sets unique correlation ID for each request
+- **Comprehensive Logging**: Logs all HTTP requests/responses with timing
+- **Route-Aware Logging**: Enhanced logging for API routes vs. static content
+- **Performance Tracking**: Automatic operation timing and slow request warnings
+- **Error Context**: Detailed error logging with stack traces and request context
+- **Response Headers**: Adds `X-Correlation-ID` header for client tracking
 
-- **API Contract Definition**: Models like `Quote`, `SimpleQuote`, `MarketIndex` define the structure of API responses, ensuring consistency and type safety.
-- **Input Validation**: Models validate incoming request parameters.
-- **Documentation Generation**: FastAPI uses these models to generate OpenAPI documentation.
-- **Serialization/Deserialization**: Converting between Python objects and JSON for API interactions.
+#### RateLimitMiddleware (`src/middleware/rate_limit_middleware.py`)
 
-### 3.2. Routes (`src/routes`)
+- **IP-Based Limiting**: Configurable daily request limits per client IP
+- **API Key Bypass**: Admin keys bypass all rate limits
+- **Open Paths**: Documentation and health endpoints exempt from limits
+- **Health Check Throttling**: Special rate limiting for `/health` endpoint
+- **Response Headers**: Rate limit status in `X-RateLimit-*` headers
 
-Routes are organized into logical modules, each responsible for a specific domain:
+## Service Layer Architecture
 
-- **`quotes_router`**: Endpoints for retrieving stock quotes
-- **`historical_prices_router`**: Historical price data
-- **`indices_router`**: Market indices data
-- **`sectors_router`**: Industry sector performance
-- **`movers_router`**: Market movers (gainers/losers)
-- **`finance_news_router`**: Financial news
-- **`search_router`**: Symbol search functionality
-- **`hours_router`**: Market hours status
-- **`similar_quotes_router`**: Similar securities
-- **`stream_router`**: Server-sent events
-- **`sockets_router`**: WebSocket connections
+### Service Organization (`src/services/`)
 
-Each router defines endpoints with:
-- Path and HTTP method
-- Parameter and response type definitions
-- Documentation and examples
-- Security requirements
-- Error handling specifications
+Services implement business logic with a consistent pattern:
 
-### 3.3. Services (`src/services`)
+```
+src/services/
+├── quotes/
+│   ├── fetchers/
+│   │   ├── quote_api.py      # Primary Yahoo Finance API
+│   │   └── quote_scraper.py  # Fallback web scraping
+│   ├── get_quotes.py         # Main service with retry logic
+│   └── utils.py             # Helper functions
+├── indicators/
+│   └── core/                # Cython-compiled calculations
+└── ...
+```
 
-Services implement the business logic for the API, acting as an intermediary between routes and data sources:
+### Multi-Source Strategy
 
-#### Service Organization
+Each service implements dual-fetching for resilience:
 
-Services are organized by domain (quotes, news, sectors, etc.), with each service implementing a specific data retrieval function:
+1. **Primary Source** (Yahoo Finance API): Fast, reliable when available
+2. **Fallback Source** (Web scraping): Resilient to API changes
 
-!!! info
-    Example directory structure:
-    ```
-    src/services/
-    ├── quotes/
-    │   ├── fetchers/
-    │   │   ├── quote_api.py    # Primary API-based fetchers
-    │   │   └── quote_scraper.py  # Fallback web scraping implementation
-    │   ├── get_quotes.py       # Main service functions with retry logic
-    │   └── utils.py           # Helper functions for fetchers
-    ├── news/
-    ├── sectors/
-    └── ...
-    ```
+The `@retry` decorator automatically falls back from API to scraping on failure.
 
-#### Multi-Source Strategy Pattern
+### Technical Indicators (`src/services/indicators/core/`)
 
-Many services implement a dual-fetching strategy:
+High-performance numerical computations using Cython:
 
-1. **Primary Source** (usually Yahoo Finance API):
-   - Faster and more reliable when available
-   - Used as the first attempt
+- **Cython Modules**: `moving_averages.pyx`, `oscillators.pyx`, `trends.pyx`, `utils.pyx`
+- **Build Requirement**: `python setup.py build_ext --inplace` compiles .pyx → .so files
+- **Performance**: Significant speed improvements for mathematical calculations
+- **NumPy Integration**: Optimized array operations with NumPy C API
 
-2. **Fallback Source** (usually web scraping):
-   - More resilient to API changes
-   - Used when primary source fails
+## Development Workflow
 
-For example, quote data has:
-- `fetch_quotes()`: Primary API-based implementation in `quote_api.py`
-- `scrape_quotes()`: Fallback web scraping implementation in `quote_scraper.py`
+### Package Management
 
-The main service function (e.g., `get_quotes()`) uses the `@retry` decorator to attempt the primary source first and fall back to web scraping if needed.
+- **Primary**: `uv` for fast dependency resolution and virtual environment management
+- **Commands**: `uv sync --all-groups` for development setup
+- **Fallback**: Traditional pip with requirements.txt files
 
-### 3.4. Caching Strategy (`src/utils/cache.py`)
+### Build Process
 
-The application implements a flexible caching system:
+Essential for technical indicators:
+```bash
+make build                              # Recommended
+python setup.py build_ext --inplace   # Manual
+```
+
+### Development Commands
+
+```bash
+make help        # Show all commands
+make install-dev # Install dependencies + pre-commit hooks
+make serve       # Start development server
+make test        # Run tests with coverage
+make lint        # Run pre-commit hooks (ruff check/format)
+make docs        # Serve documentation
+make clean       # Clean build artifacts
+```
+
+## Data Persistence & Caching
+
+### Caching Strategy (`src/utils/cache.py`)
+
+Flexible caching with market-aware expiration:
 
 - **Cache Handlers**:
-    - `RedisCacheHandler`: Distributed caching when Redis is available.
-    - `MemCacheHandler`: Local in-memory caching when Redis is unavailable.
+  - `RedisCacheHandler`: Distributed caching (when Redis available)
+  - `MemCacheHandler`: Local in-memory fallback
 
 - **Smart Expiration**:
-    - Standard TTL for normal market hours.
-    - Extended TTL when market is closed (`market_closed_expire`).
-    - Uses `MarketSchedule` to determine market open/closed status.
+  - Standard TTL during market hours
+  - Extended TTL when markets closed
+  - Market schedule awareness via `MarketSchedule`
 
-- **Cache Key Generation**:
-    - Generated from function name and SHA-256 hash of arguments.
-    - Excludes non-serializable objects like HTTP clients.
+- **Cache Key Generation**: SHA-256 hash of function name + arguments
+- **Type Preservation**: Maintains Pydantic model types after retrieval
 
-- **Type-Aware Deserialization**:
-    - Maintains Pydantic model types after retrieval.
-    - Special handling for collections (lists, dicts).
+### Retry Mechanism (`src/utils/retry.py`)
 
-- **Environment Controls**:
-    - `BYPASS_CACHE` environment variable to disable caching.
-    - Redis connection driven by `REDIS_URL` availability.
+Sophisticated retry with fallback capability:
 
-### 3.5. Retry Mechanism (`src/utils/retry.py`)
+- **Configurable Retries**: Attempts primary function with exponential backoff
+- **Intelligent Fallback**: Analyzes function signatures for parameter compatibility
+- **Error Propagation**: Preserves HTTP exceptions while retrying network errors
 
-A sophisticated retry decorator provides resilience for data fetching:
+## Authentication & HTTP Clients
 
-- **Configurable Retries**:
-    - Attempts primary function up to specified number of times
-    - Falls back to alternative implementation after exhausting retries
+### Yahoo Authentication (`src/utils/yahoo_auth.py`)
 
-- **Intelligent Fallback**:
-    - Analyzes function signatures to pass only compatible parameters
-    - Logs exceptions and retry attempts
+Manages Yahoo Finance API access:
 
-- **Error Handling**:
-    - Propagates `HTTPException` directly (don't retry client errors)
-    - Captures other exceptions for retry logic
+- **Cookie/Crumb Management**: Handles CSRF tokens and session cookies
+- **Automatic Refresh**: Maintains valid authentication credentials
+- **Consent Flow Handling**: Navigates Yahoo's consent requirements
+- **Thread Safety**: Async lock prevents concurrent refresh attempts
 
+### HTTP Client Architecture
 
-**Usage Pattern**:
-  ```python
-  @retry(fallback=scrape_quotes, retries=2)
-  async def get_quotes(finance_client, symbols):
-      # Primary implementation using Yahoo Finance API
-      return await fetch_quotes(finance_client, symbols)
-  ```
+#### FetchClient (`src/clients/fetch_client.py`)
 
-## 4. Dependency Injection (`src/utils/dependencies.py`)
+General-purpose async HTTP client:
+- **curl_cffi Integration**: Browser impersonation for web scraping
+- **Proxy Support**: Configurable proxy routing
+- **Async/Await**: Non-blocking operations via `asyncio.to_thread`
 
-The application heavily utilizes `fastapi_injectable` for managing dependencies. This promotes modularity and testability by decoupling components.
+#### YahooFinanceClient (`src/clients/yahoo_client.py`)
 
-- **Shared Resources**: Provides injectable dependencies for:
-    - `RequestContext`: The current `Request` or `WebSocket` object, made available via `RequestContextMiddleware`.
-    - `WebsocketConnectionManager`: The active WebSocket connection manager, which can be either `ConnectionManager` (in-memory) or `RedisConnectionManager` (if Redis is enabled).
-    - `RedisClient`: The shared Redis client instance, available if `REDIS_URL` is configured.
-    - `Session`: The shared `curl_cffi.requests.Session` for making HTTP requests, initialized during application lifespan.
-    - `Proxy`: The proxy URL string, configured via environment variables.
-    - `AuthManager`: The shared `YahooAuthManager` instance for handling Yahoo Finance authentication.
-    - `YahooAuth`: A tuple of `(cookies, crumb)` obtained from `YahooAuthManager`, representing the current authentication credentials.
-    - `MarketSchedule`: Provides information about market open/closed status and upcoming holidays.
+Specialized Yahoo Finance API client:
+- **Auto-Authentication**: Injects cookies/crumb automatically
+- **Error Handling**: Yahoo-specific HTTP status code handling
+- **API Methods**: `get_quote()`, `get_chart()`, `search()`, etc.
 
-- **Client Abstractions**:
-    - `FetchClient`: An instance of `CurlFetchClient`, a general-purpose asynchronous HTTP client built on `curl_cffi`.
-    - `FinanceClient`: An instance of `YahooFinanceClient`, a specialized client for interacting with the Yahoo Finance API, pre-configured with authentication details.
+## Real-Time Data Architecture
 
-- **Utility Functions as Dependencies**:
-    - `fetch`: A generic async function to perform HTTP requests using the `FetchClient`, including built-in retry logic. This is injectable and used by various services.
-    - `get_logo`: A utility to fetch company logos, attempting `logo.dev` first and falling back to domain icons.
+### WebSocket Connection Management
 
-- **How it Works**:
-    - Dependencies are defined as functions decorated with `@injectable`.
-    - FastAPI automatically resolves and injects these dependencies into route handlers and other dependent functions based on type hints.
-    - For example, a route handler can request a `FinanceClient` by simply type-hinting a parameter: `async def my_route(client: FinanceClient): ...`
+#### ConnectionManager (`src/connections/connection_manager.py`)
 
-## 5. Yahoo Authentication (`src/utils/yahoo_auth.py`)
+In-memory WebSocket management:
+- **Channel-Based**: Groups connections by symbol/topic
+- **Task Management**: Per-channel data fetching tasks
+- **Auto-Cleanup**: Removes inactive connections and cancels unused tasks
 
-Authentication with Yahoo Finance is crucial for accessing their unofficial API. The `YahooAuthManager` class handles this process:
+#### RedisConnectionManager (`src/connections/redis_connection_manager.py`)
 
-- **Cookie and Crumb**: Yahoo Finance API requests require a valid cookie and a "crumb" (a type of CSRF token).
-- **`YahooAuthManager`**:
-    - Manages fetching and caching of the cookie and crumb.
-    - A single instance is created at application startup and shared.
-    - Uses an `asyncio.Lock` to prevent concurrent refresh attempts.
-    - **`refresh()` method**: Fetches a new cookie/crumb pair. It first tries a direct crumb endpoint. If that fails (e.g., due to consent requirements), it navigates the Yahoo consent flow to obtain a CSRF token and session ID, then uses these to get a valid crumb.
-    - **`get_or_refresh()` method**: Provides the cached cookie/crumb if still valid (within `_MIN_REFRESH_INTERVAL`), otherwise triggers a refresh. This is the primary method used by dependencies.
-- **Error Handling**: Raises `YahooAuthError` if it fails to obtain a valid cookie/crumb after attempting all methods.
-- **Integration**: The `YahooAuth` dependency in `dependencies.py` uses `YahooAuthManager` to provide the auth details to `YahooFinanceClient`.
+Distributed WebSocket support:
+- **Redis Pub/Sub**: Multi-instance message broadcasting
+- **Load Distribution**: Data fetching tasks distributed across instances
+- **Scalability**: Supports horizontal scaling of WebSocket connections
 
-## 6. HTTP Clients
+## Security & Rate Limiting
 
-The application uses `curl_cffi` for HTTP requests, wrapped in custom client classes for better organization and specific functionalities.
+### Security Configuration (`src/security/rate_limit_manager.py`)
 
-### 6.1. `CurlFetchClient` (`src/clients/fetch_client.py`)
+- **Admin API Keys**: `ADMIN_API_KEY` bypasses all rate limits
+- **Daily Limits**: Configurable requests per IP per day
+- **Open Paths**: `/docs`, `/ping`, `/health` exempt from limits
+- **Health Check Throttling**: Separate rate limiting for health checks
+- **Security Toggle**: `USE_SECURITY` environment variable enables/disables rate limiting
 
-This is a general-purpose asynchronous HTTP client.
+### Implementation
 
-- **Core Functionality**:
-    - Wraps `curl_cffi.requests.Session`.
-    - Provides `request()` (synchronous) and `fetch()` (asynchronous) methods.
-    - Handles common HTTP methods (GET, POST, etc.).
-    - Manages default headers (e.g., User-Agent) which can be overridden.
-    - Supports proxy configuration.
-    - Includes basic error handling, raising `HTTPException` on request failures.
-- **Asynchronous Operations**: The `fetch()` method uses `asyncio.to_thread` to run synchronous `curl_cffi` calls in a separate thread, making them non-blocking for the asyncio event loop.
+- **In-Memory Storage**: Rate limit counters with automatic cleanup
+- **IP-Based Tracking**: Client identification via request IP
+- **Header Communication**: Rate limit status via response headers
 
-### 6.2. `YahooFinanceClient` (`src/clients/yahoo_client.py`)
+## Dependency Injection (`src/utils/dependencies.py`)
 
-This client inherits from `CurlFetchClient` and is specialized for Yahoo Finance API interactions.
+FastAPI-injectable dependencies provide:
 
-- **Initialization**: Takes Yahoo cookies and crumb as arguments, which are automatically injected via the `FinanceClient` dependency.
-- **`_yahoo_request()`**: A private helper method that:
-    - Adds the `crumb` to request parameters.
-    - Sets a specific User-Agent.
-    - Handles Yahoo-specific HTTP error codes (401 for auth failure, 404 for not found, 429 for rate limits) by raising appropriate `HTTPException`.
-- **`_json()`**: A helper to make a request using `_yahoo_request()` and parse the JSON response, with error handling for parsing failures.
-- **API-Specific Methods**: Provides methods like `get_quote()`, `get_simple_quotes()`, `get_chart()`, `search()`, and `get_similar_quotes()`, each corresponding to a specific Yahoo Finance API endpoint.
+- **Shared Resources**: Session objects, Redis clients, authentication
+- **Client Abstractions**: Pre-configured HTTP clients
+- **Utility Functions**: Reusable async operations
+- **Context Management**: Request-specific state and correlation
 
-## 7. WebSocket Connection Management
+## Deployment Architecture
 
-The API supports real-time data streaming via WebSockets. Connection management is handled by classes in `src/connections/`.
+- **AWS Lambda**: Mangum adapter for serverless deployment
+- **Docker**: Multi-stage builds with optimized images  
+- **Environment Configuration**: 12-factor app principles with comprehensive environment variables
+- **Health Monitoring**: Comprehensive health checks for all services
+- **Logging Integration**: Structured logs for observability platforms
 
-### 7.1. `ConnectionManager` (`src/connections/connection_manager.py`)
+### Key Environment Variables
 
-This is the default in-memory WebSocket connection manager.
+| Variable | Purpose | Default | Required | Docker Config |
+|----------|---------|---------|----------|---------------|
+| `REDIS_URL` | Redis connection for caching/WebSockets | None | No | Runtime |
+| `USE_SECURITY` | Enable rate limiting and API authentication | False | No | Runtime |
+| `ADMIN_API_KEY` | Admin key bypassing rate limits | None | No | Runtime |
+| `USE_PROXY` | Enable proxy for web scraping | False | No | Runtime |
+| `PROXY_URL` | Proxy server URL | None | No | Runtime |
+| `PROXY_TOKEN` | Proxy authentication token | None | No | Runtime |
+| `LOG_LEVEL` | Logging level | INFO | No | Build + Runtime |
+| `LOG_FORMAT` | Log format (json/text) | json | No | Build + Runtime |
+| `BYPASS_CACHE` | Disable caching | False | No | Runtime |
+| `ALGOLIA_APP_ID` | Algolia search app ID | Public default | No | Runtime |
+| `ALGOLIA_API_KEY` | Algolia search API key | Public default | No | Runtime |
+| `DISABLE_LOGO_FETCHING` | Disable logo fetching | false | No | Build + Runtime |
+| `LOGO_TIMEOUT_SECONDS` | Logo request timeout | 1 | No | Build + Runtime |
+| `LOGO_CIRCUIT_BREAKER_THRESHOLD` | Circuit breaker failure threshold | 5 | No | Build + Runtime |
+| `LOGO_CIRCUIT_BREAKER_TIMEOUT` | Circuit breaker timeout (seconds) | 300 | No | Build + Runtime |
+| `PERFORMANCE_THRESHOLD_MS` | Slow operation warning threshold | 2000 | No | Build + Runtime |
 
-- **`active_connections`**: A dictionary mapping channel names (e.g., a stock symbol) to a list of active `WebSocket` objects subscribed to that channel.
-- **`tasks`**: A dictionary mapping channel names to `asyncio.Task` objects that are responsible for fetching and broadcasting data for that channel.
-- **`connect()`**:
-    - Adds a new WebSocket to the specified channel.
-    - If it's the first connection for a channel, it creates and starts a new data-fetching task for that channel.
-- **`disconnect()`**:
-    - Removes a WebSocket from a channel.
-    - If a channel has no more active connections, it cancels the associated data-fetching task.
-- **`broadcast()`**: Sends a message (JSON) to all WebSockets connected to a specific channel.
-- **`close()`**: Cleans up all connections and cancels all tasks, typically called during application shutdown.
+### Docker Configuration
 
-### 7.2. `RedisConnectionManager` (`src/connections/redis_connection_manager.py`)
+Both `Dockerfile` and `Dockerfile.aws` support all environment variables:
 
-If Redis is configured (`REDIS_URL` is set), this manager is used to enable multi-instance WebSocket support.
-
-- **Leverages Redis Pub/Sub**:
-    - **`active_connections`**: Similar to `ConnectionManager`, but stores local connections for the current instance.
-    - **`pubsub`**: A dictionary mapping channel names to Redis `PubSub` objects.
-    - **`listen_tasks`**: Tasks that listen for messages on Redis Pub/Sub channels.
-    - **`tasks`**: Data-fetching tasks, similar to `ConnectionManager`. One instance of the application will typically run the data fetching task for a given channel.
-- **`connect()`**:
-    - Subscribes the local WebSocket.
-    - If not already listening, creates a `_listen_to_channel` task that subscribes to the Redis channel.
-    - If no data-fetching task exists for this channel (across all instances, implicitly coordinated or by convention), it starts one.
-- **`disconnect()`**:
-    - Removes local WebSocket.
-    - If no local connections remain for a channel, cancels the Redis listener task and the data-fetching task for that channel *on this instance*.
-    - Unsubscribes from the Redis channel.
-- **`_listen_to_channel()`**: Continuously polls the Redis Pub/Sub channel for messages and uses `_broadcast()` to send them to locally connected WebSockets.
-- **`_broadcast()`**: Sends messages to WebSockets connected to the channel *on the current instance*.
-- **`publish()`**: Publishes a message to a Redis channel. The data-fetching task uses this method to send data, which is then picked up by `_listen_to_channel()` on all instances (including the publishing one) that have subscribers for that channel.
-- **`close()`**: Cleans up local connections, tasks, and Redis Pub/Sub subscriptions.
-
-This architecture allows multiple instances of the application to share WebSocket load. A data-fetching task for a symbol might run on one instance, publish its data to Redis, and then all instances with clients interested in that symbol will receive the data via Redis Pub/Sub and forward it to their respective clients.
-
-## 8. Rate Limiting and Security (`src/security/`)
-
-The application implements rate limiting and basic API key security.
-
-### 8.1. `SecurityConfig` (`src/security/rate_limit_manager.py`)
-
-- Defines constants for security settings:
-    - `ADMIN_API_KEY`: An API key that bypasses rate limits.
-    - `RATE_LIMIT`: Default requests per day for normal users.
-    - `HEALTH_CHECK_INTERVAL`: Cooldown period for the `/health` endpoint per IP.
-    - `OPEN_PATHS`: A set of paths (like `/docs`, `/ping`) that bypass all security checks.
-
-### 8.2. `RateLimitManager` (`src/security/rate_limit_manager.py`)
-
-This class manages rate limit counts and health check access, stored in memory.
-
-- **Storage**: Uses dictionaries (`rate_limits`, `health_checks`) to store `RateLimitEntry` (count, expiration) and health check timestamps per IP.
-- **`_clean_expired()`**: Periodically removes stale entries.
-- **`get_rate_limit_info()`**: Returns current rate limit status for an IP (count, remaining, reset time).
-- **`get_health_check_info()`**: Returns whether an IP can access `/health` and when the cooldown resets.
-- **`check_health_rate_limit()`**: Enforces the cooldown for the `/health` endpoint. Admin key bypasses this.
-- **`increment_and_check()`**: Increments the request count for an IP and checks if the limit is exceeded. Admin key bypasses this. Returns `(is_allowed, rate_limit_info)`.
-- **`validate_websocket()`**: Checks rate limits for WebSocket connections. If exceeded, the connection is closed.
-- **`cleanup()`**: Clears all stored rate limit data.
-
-### 8.3. `RateLimitMiddleware` (`src/security/rate_limit_middleware.py`)
-
-This FastAPI middleware enforces the rate limits.
-
-- **Dispatch Logic**:
-    - Skips security for paths in `SecurityConfig.OPEN_PATHS`.
-    - For `/health` path: Uses `check_health_rate_limit`. If denied, returns 429. Otherwise, adds `X-RateLimit-Reset` header for health check cooldown.
-    - For other paths: Uses `increment_and_check`. If denied, returns 429. Otherwise, adds `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers to the response.
-- **API Key**: Reads `x-api-key` header to identify admin users.
-- **Client IP**: Uses `request.client.host` for rate limiting.
-
-This setup provides a basic but effective way to protect the API from abuse while allowing administrative access and open access to documentation.
-
-## 9. Authentication (`src/utils/yahoo_auth.py`)
-
-Authentication with Yahoo Finance is crucial for accessing their unofficial API. The `YahooAuthManager` class handles this process:
-
-- **Cookie and Crumb**: Yahoo Finance API requests require a valid cookie and a "crumb" (a type of CSRF token).
-- **`YahooAuthManager`**:
-    - Manages fetching and caching of the cookie and crumb.
-    - A single instance is created at application startup and shared.
-    - Uses an `asyncio.Lock` to prevent concurrent refresh attempts.
-    - **`refresh()` method**: Fetches a new cookie/crumb pair. It first tries a direct crumb endpoint. If that fails (e.g., due to consent requirements), it navigates the Yahoo consent flow to obtain a CSRF token and session ID, then uses these to get a valid crumb.
-    - **`get_or_refresh()` method**: Provides the cached cookie/crumb if still valid (within `_MIN_REFRESH_INTERVAL`), otherwise triggers a refresh. This is the primary method used by dependencies.
-- **Error Handling**: Raises `YahooAuthError` if it fails to obtain a valid cookie/crumb after attempting all methods.
-- **Integration**: The `YahooAuth` dependency in `dependencies.py` uses `YahooAuthManager` to provide the auth details to `YahooFinanceClient`.
+- **Build-time**: Logo fetching and logging configs can be baked into image
+- **Runtime**: All variables can be overridden when running containers
+- **Compose Ready**: All variables work with docker-compose configurations
