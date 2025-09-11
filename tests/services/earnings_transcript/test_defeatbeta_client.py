@@ -80,22 +80,27 @@ class TestDefeatBetaClient:
         """Test with invalid symbol"""
         symbol = "INVALID_SYMBOL_12345"
         
-        # Should either return empty transcripts or handle gracefully
-        result = await client.get_earnings_transcript(symbol)
-        assert result["symbol"] == symbol.upper()
-        # Could be empty or have sample data depending on implementation
+        # Should raise HTTPException for invalid symbol
+        with pytest.raises(HTTPException) as exc_info:
+            await client.get_earnings_transcript(symbol)
+        assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
     async def test_format_transcript_data_structure(self, client):
         """Test the data formatting functionality"""
-        # Test with mock data to verify formatting
-        mock_data = {
-            "transcript": "Sample transcript text",
-            "quarter": "Q1",
-            "year": 2024,
-            "date": "2024-01-15",
-            "participants": ["CEO", "CFO"]
-        }
+        import pandas as pd
+        
+        # Create mock DataFrame that matches defeatbeta-api structure
+        mock_data = pd.DataFrame({
+            'symbol': ['AAPL'],
+            'fiscal_year': [2024],
+            'fiscal_quarter': [1],
+            'transcripts': [[
+                {'speaker': 'CEO', 'content': 'Sample transcript text', 'paragraph_number': 1},
+                {'speaker': 'CFO', 'content': 'Financial results', 'paragraph_number': 2}
+            ]],
+            'transcripts_id': [12345]
+        })
         
         formatted = client._format_transcript_data(mock_data, "AAPL")
         
@@ -104,22 +109,29 @@ class TestDefeatBetaClient:
         assert len(formatted["transcripts"]) > 0
 
     @pytest.mark.asyncio
-    async def test_process_transcript_item(self, client):
-        """Test processing individual transcript items"""
-        mock_item = MagicMock()
-        mock_item.quarter = "Q2"
-        mock_item.year = 2024
-        mock_item.date = datetime(2024, 4, 15)
-        mock_item.transcript = "Sample transcript"
-        mock_item.participants = ["CEO", "CFO"]
+    async def test_process_transcript_row(self, client):
+        """Test processing individual transcript rows"""
+        import pandas as pd
         
-        result = client._process_transcript_item(mock_item)
+        # Create mock row that matches DataFrame structure
+        mock_row = pd.Series({
+            'symbol': 'AAPL',
+            'fiscal_year': 2024,
+            'fiscal_quarter': 2,
+            'transcripts': [
+                {'speaker': 'CEO', 'content': 'Sample transcript', 'paragraph_number': 1},
+                {'speaker': 'CFO', 'content': 'Financial data', 'paragraph_number': 2}
+            ],
+            'transcripts_id': 12345
+        })
+        
+        result = client._process_transcript_row(mock_row, "Q2", 2024)
         
         assert result is not None
         assert result["quarter"] == "Q2"
         assert result["year"] == 2024
         assert isinstance(result["date"], datetime)
-        assert result["transcript"] == "Sample transcript"
+        assert "CEO: Sample transcript" in result["transcript"]
 
     @pytest.mark.asyncio
     async def test_filter_transcripts(self, client):
@@ -213,13 +225,11 @@ class TestDefeatBetaClient:
         with patch.dict('sys.modules', {'defeatbeta_api': None, 'defeatbeta_api.data': None, 'defeatbeta_api.data.ticker': None}):
             client = DefeatBetaClient()
             
-            # Should return sample data instead of raising exception
-            result = await client.get_earnings_transcript("AAPL")
-            
-            assert result["symbol"] == "AAPL"
-            assert "transcripts" in result
-            assert len(result["transcripts"]) > 0
-            assert result["transcripts"][0]["metadata"]["source"] == "defeatbeta-api-sample"
+            # Should raise HTTPException for import error
+            with pytest.raises(HTTPException) as exc_info:
+                await client.get_earnings_transcript("AAPL")
+            assert exc_info.value.status_code == 500
+            assert "defeatbeta-api package not properly installed" in str(exc_info.value.detail)
 
     @pytest.mark.asyncio
     async def test_error_handling_general_exception(self):
@@ -227,14 +237,13 @@ class TestDefeatBetaClient:
         # Mock the Ticker to raise a general exception
         with patch('defeatbeta_api.data.ticker.Ticker') as mock_ticker_class:
             mock_ticker = MagicMock()
-            mock_ticker.earnings_transcript.side_effect = Exception("General error")
+            mock_ticker.earning_call_transcripts.side_effect = Exception("General error")
             mock_ticker_class.return_value = mock_ticker
             
             client = DefeatBetaClient()
             
-            # Should return sample data as fallback instead of raising exception
-            result = await client.get_earnings_transcript("ERROR")
-            
-            assert result["symbol"] == "ERROR"
-            assert "transcripts" in result
-            assert len(result["transcripts"]) > 0
+            # Should raise HTTPException for general errors
+            with pytest.raises(HTTPException) as exc_info:
+                await client.get_earnings_transcript("ERROR")
+            assert exc_info.value.status_code == 500
+            assert "Failed to fetch earnings transcript" in str(exc_info.value.detail)

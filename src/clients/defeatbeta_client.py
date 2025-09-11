@@ -29,39 +29,42 @@ class DefeatBetaClient:
             Dictionary containing transcript data
         """
         try:
-            # Import defeatbeta_api inside the method to handle import errors gracefully
-            try:
-                from defeatbeta_api.data.ticker import Ticker
-                
-                # Create ticker instance
-                ticker = Ticker(symbol.upper())
-                
-                # Get earnings transcript data
-                # Note: The actual method name might differ - this is based on the API documentation
-                transcript_data = await self._run_sync_method(ticker.earnings_transcript)
-                
-                if not transcript_data:
-                    raise HTTPException(
-                        status_code=404, 
-                        detail=f"No earnings transcript found for symbol {symbol}"
-                    )
-                
-                # Process and format the data
-                formatted_data = self._format_transcript_data(transcript_data, symbol, quarter, year)
-                
-                return formatted_data
-                
-            except ImportError:
-                # If defeatbeta-api is not available, return sample data for development
-                logger.warning(f"defeatbeta-api not available, returning sample data for {symbol}")
-                return self._get_sample_transcript_data(symbol, quarter, year)
+            from defeatbeta_api.data.ticker import Ticker
             
+            # Create ticker instance
+            ticker = Ticker(symbol.upper())
+            
+            # Get earnings transcript data using the correct method name
+            transcripts_obj = await self._run_sync_method(ticker.earning_call_transcripts)
+            
+            # Get the transcripts list as DataFrame
+            transcripts_df = await self._run_sync_method(transcripts_obj.get_transcripts_list)
+            
+            if transcripts_df.empty:
+                raise HTTPException(
+                    status_code=404, 
+                    detail=f"No earnings transcripts found for symbol {symbol}"
+                )
+            
+            # Process and format the data
+            formatted_data = self._format_transcript_data(transcripts_df, symbol, quarter, year)
+            
+            return formatted_data
+                
+        except ImportError as e:
+            logger.error(f"defeatbeta-api import error: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="defeatbeta-api package not properly installed"
+            )
         except HTTPException:
             raise
         except Exception as e:
             logger.error(f"Error fetching earnings transcript for {symbol}: {e}")
-            # Return sample data as fallback
-            return self._get_sample_transcript_data(symbol, quarter, year)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to fetch earnings transcript: {str(e)}"
+            )
 
     async def _run_sync_method(self, sync_method):
         """
@@ -70,81 +73,141 @@ class DefeatBetaClient:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, sync_method)
 
-    def _format_transcript_data(self, raw_data: Any, symbol: str, quarter: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Any]:
+    def _format_transcript_data(self, transcripts_df: Any, symbol: str, quarter: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Any]:
         """
-        Format raw transcript data into standardized structure
+        Format DataFrame transcript data into standardized structure
         """
         try:
-            # Handle different possible data formats from defeatbeta-api
-            if hasattr(raw_data, 'to_dict'):
-                data = raw_data.to_dict()
-            elif hasattr(raw_data, '__dict__'):
-                data = raw_data.__dict__
-            else:
-                data = raw_data
+            import pandas as pd
+            
+            # Ensure we have a DataFrame
+            if not isinstance(transcripts_df, pd.DataFrame):
+                raise ValueError("Expected pandas DataFrame from defeatbeta-api")
 
-            # Extract transcript information
-            # Note: The actual structure will depend on defeatbeta-api's response format
             formatted_data = {
                 "symbol": symbol.upper(),
                 "transcripts": []
             }
 
-            # If data is a list of transcripts
-            if isinstance(data, list):
-                for item in data:
-                    transcript_item = self._process_transcript_item(item, quarter, year)
-                    if transcript_item:
-                        formatted_data["transcripts"].append(transcript_item)
-            else:
-                # If data is a single transcript
-                transcript_item = self._process_transcript_item(data, quarter, year)
+            # Filter DataFrame by quarter and year if specified
+            filtered_df = transcripts_df.copy()
+            
+            if year:
+                filtered_df = filtered_df[filtered_df['fiscal_year'] == year]
+            
+            if quarter:
+                # Extract quarter number from string like "Q1" -> 1
+                quarter_num = int(quarter[1:]) if quarter.startswith('Q') and len(quarter) == 2 else None
+                if quarter_num:
+                    filtered_df = filtered_df[filtered_df['fiscal_quarter'] == quarter_num]
+
+            # Process each row in the filtered DataFrame
+            for _, row in filtered_df.iterrows():
+                transcript_item = self._process_transcript_row(row, quarter, year)
                 if transcript_item:
                     formatted_data["transcripts"].append(transcript_item)
 
-            # Filter by quarter and year if specified
-            if quarter or year:
-                formatted_data["transcripts"] = self._filter_transcripts(
-                    formatted_data["transcripts"], quarter, year
+            if not formatted_data["transcripts"]:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No transcripts found for {symbol} with the specified filters"
                 )
 
             return formatted_data
 
+        except HTTPException:
+            # Re-raise HTTP exceptions as-is (like 404 for no data found)
+            raise
         except Exception as e:
             logger.error(f"Error formatting transcript data: {e}")
-            # Return sample data structure for development/testing
-            return self._get_sample_transcript_data(symbol, quarter, year)
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to format transcript data: {str(e)}"
+            )
 
-    def _process_transcript_item(self, item: Any, quarter: Optional[str] = None, year: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    def _process_transcript_row(self, row: Any, quarter: Optional[str] = None, year: Optional[int] = None) -> Optional[Dict[str, Any]]:
         """
-        Process individual transcript item
+        Process individual transcript row from DataFrame
         """
         try:
-            # Extract relevant fields based on defeatbeta-api structure
-            # This is a template - actual field names will depend on the API response
+            import pandas as pd
+            import numpy as np
+            
+            # Helper function to handle NaN/NA values
+            def clean_value(value):
+                if pd.isna(value) or value is None or (isinstance(value, float) and np.isnan(value)):
+                    return None
+                return value
+            
+            # Extract transcript content from the transcripts column
+            transcript_content = ""
+            participants = []
+            
+            if 'transcripts' in row and row['transcripts'] is not None and len(row['transcripts']) > 0:
+                # The transcripts column contains a numpy array of dictionaries with paragraph data
+                transcript_paragraphs = row['transcripts']
+                
+                # Build full transcript text and extract participants
+                transcript_lines = []
+                seen_speakers = set()
+                
+                for paragraph in transcript_paragraphs:
+                    speaker = paragraph.get('speaker', 'Unknown')
+                    content = paragraph.get('content', '')
+                    
+                    # Add speaker to participants list
+                    if speaker and speaker != 'Unknown' and speaker not in seen_speakers:
+                        participants.append(speaker)
+                        seen_speakers.add(speaker)
+                    
+                    # Format transcript line
+                    if speaker and content:
+                        transcript_lines.append(f"{speaker}: {content}")
+                
+                transcript_content = "\n\n".join(transcript_lines)
+            
+            # Determine quarter from fiscal_quarter or use provided quarter
+            row_quarter = quarter
+            fiscal_quarter = clean_value(row.get('fiscal_quarter'))
+            if fiscal_quarter is not None:
+                row_quarter = f"Q{fiscal_quarter}"
+            
+            # Get fiscal year
+            row_year = year
+            fiscal_year = clean_value(row.get('fiscal_year'))
+            if fiscal_year is not None:
+                row_year = int(fiscal_year)
+            
+            # Create date from fiscal year and quarter
+            transcript_date = datetime.now()
+            if row_year:
+                # Estimate date based on fiscal quarter
+                quarter_months = {'Q1': 3, 'Q2': 6, 'Q3': 9, 'Q4': 12}
+                month = quarter_months.get(row_quarter, 12)
+                try:
+                    transcript_date = datetime(row_year, month, 15)  # Mid-month estimate
+                except:
+                    transcript_date = datetime.now()
+            
+            # Clean all values to prevent serialization errors
             transcript = {
-                "quarter": getattr(item, 'quarter', quarter or 'Q1'),
-                "year": getattr(item, 'year', year or datetime.now().year),
-                "date": getattr(item, 'date', datetime.now()),
-                "transcript": getattr(item, 'transcript', getattr(item, 'text', '')),
-                "participants": getattr(item, 'participants', []),
+                "symbol": clean_value(row.get('symbol', '')).upper() if clean_value(row.get('symbol', '')) else '',
+                "quarter": row_quarter or 'Q1',
+                "year": row_year or datetime.now().year,
+                "date": transcript_date,
+                "transcript": transcript_content,
+                "participants": participants,
                 "metadata": {
                     "source": "defeatbeta-api",
-                    "retrieved_at": datetime.now().isoformat()
+                    "retrieved_at": datetime.now().isoformat(),
+                    "transcripts_id": clean_value(row.get('transcripts_id'))
                 }
             }
-
-            # Ensure date is datetime object
-            if isinstance(transcript["date"], str):
-                try:
-                    transcript["date"] = datetime.fromisoformat(transcript["date"])
-                except:
-                    transcript["date"] = datetime.now()
 
             return transcript
 
         except Exception as e:
-            logger.error(f"Error processing transcript item: {e}")
+            logger.error(f"Error processing transcript row: {e}")
             return None
 
     def _filter_transcripts(self, transcripts: List[Dict[str, Any]], quarter: Optional[str] = None, year: Optional[int] = None) -> List[Dict[str, Any]]:
