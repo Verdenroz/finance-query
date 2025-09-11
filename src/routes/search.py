@@ -64,4 +64,5 @@ async def search(
     type: Optional[Type] = None,
     yahoo: bool = Query(default=False, description="Use Yahoo Finance for search results"),
 ):
-    return await get_search(finance_client, query, hits, type, yahoo)
+    result = await get_search(finance_client, query, hits, type, yahoo)
+    return result

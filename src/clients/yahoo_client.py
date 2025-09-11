@@ -1,9 +1,14 @@
+import time
 from typing import Optional
 
 from fastapi import HTTPException
 from orjson import orjson
 
+from src.utils.logging import get_logger, log_external_api_call
+
 from .fetch_client import CurlFetchClient
+
+logger = get_logger(__name__)
 
 
 class YahooFinanceClient(CurlFetchClient):
@@ -33,7 +38,19 @@ class YahooFinanceClient(CurlFetchClient):
             kw.setdefault("headers", {})["Cookie"] = "; ".join(f"{k}={v}" for k, v in kw["cookies"].items())
             del kw["cookies"]
 
-        resp = await self.fetch(url, **kw, return_response=True)
+        # Extract endpoint from URL for logging
+        endpoint = url.split("/")[-1] if "/" in url else url
+        start_time = time.perf_counter()
+
+        try:
+            resp = await self.fetch(url, **kw, return_response=True)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            success = resp.status_code < 400
+            log_external_api_call(logger, "Yahoo Finance", endpoint, duration_ms, success=success)
+        except Exception:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_external_api_call(logger, "Yahoo Finance", endpoint, duration_ms, success=False)
+            raise
 
         if resp.status_code == 401:
             raise HTTPException(401, "Yahoo auth failed")

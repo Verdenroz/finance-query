@@ -57,6 +57,8 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Configuration:
+      - Logging: logging.md
   - Deployment: deployment.md
   - API Reference:
       - Health Check: api/health.md

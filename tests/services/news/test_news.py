@@ -1,8 +1,6 @@
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-import requests
 from fastapi import HTTPException
 
 from src.models import News
@@ -37,42 +35,6 @@ MOCK_SYMBOL_NEWS_RESPONSE = [
 
 
 class TestNews:
-    @pytest.fixture
-    def news_html(self):
-        """
-        Fixture that provides a function to get cached HTML content for URLs.
-        If the HTML is not cached, it will fetch and cache it from the real URL.
-        """
-        cache_dir = Path(__file__).resolve().parent.parent / "data" / "news"
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        html_cache = {}
-
-        def get_cached_html(url, symbol="general"):
-            if url in html_cache:
-                return html_cache[url]
-
-            cache_file = cache_dir / f"{symbol}.html"
-
-            if cache_file.exists():
-                with open(cache_file, encoding="utf-8") as f:
-                    html_content = f.read()
-            else:
-                response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                html_content = response.text
-                with open(cache_file, "w", encoding="utf-8") as f:
-                    f.write(html_content)
-
-            html_cache[url] = html_content
-            return html_content
-
-        yield get_cached_html
-        # Cleanup on teardown
-        for file in cache_dir.glob("*.html"):
-            file.unlink()
-        if cache_dir.exists():
-            cache_dir.rmdir()
-
     @pytest.mark.parametrize(
         "symbol,expected_base,expected_exchange",
         [
@@ -95,9 +57,10 @@ class TestNews:
             ("AAPL", "https://stockanalysis.com/stocks/AAPL"),
         ],
     )
-    async def test_scrape_news_for_quote(self, news_html, symbol, test_url, bypass_cache):
+    async def test_scrape_news_for_quote(self, html_cache_manager, symbol, test_url, bypass_cache):
         """Test scrape_news_for_quote function with cached HTML content"""
-        html_content = news_html(test_url, symbol=symbol)
+        context = f"news_{symbol}"
+        html_content = html_cache_manager(test_url, context=context)
 
         with patch("src.services.news.get_news.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
@@ -110,10 +73,10 @@ class TestNews:
 
             mock_fetch.assert_called()
 
-    async def test_scrape_general_news(self, news_html, bypass_cache):
+    async def test_scrape_general_news(self, html_cache_manager, bypass_cache):
         """Test scrape_general_news function with cached HTML content"""
         test_url = "https://stockanalysis.com/news/"
-        html_content = news_html(test_url)
+        html_content = html_cache_manager(test_url, context="news_general")
 
         with patch("src.services.news.get_news.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content

@@ -1,8 +1,11 @@
+import hashlib
 import os
+import threading
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+import requests
 from fastapi.testclient import TestClient
 from orjson import orjson
 from starlette.websockets import WebSocket
@@ -14,6 +17,122 @@ from src.utils.dependencies import FinanceClient
 from src.utils.yahoo_auth import YahooAuthManager
 
 VERSION = "v1"
+
+
+class ThreadSafeHTMLCacheManager:
+    """Thread-safe HTML cache manager for caching real web responses."""
+
+    def __init__(self, cache_dir: Path):
+        self.cache_dir = cache_dir
+        self.locks = {}
+        self.locks_lock = threading.Lock()
+
+    def _get_lock(self, cache_key: str) -> threading.Lock:
+        """Get or create a lock for a specific cache key."""
+        with self.locks_lock:
+            if cache_key not in self.locks:
+                self.locks[cache_key] = threading.Lock()
+            return self.locks[cache_key]
+
+    def _get_worker_id(self) -> str:
+        """Get pytest worker ID for parallel execution isolation."""
+        worker_id = os.environ.get("PYTEST_XDIST_WORKER", "master")
+        return worker_id
+
+    def _get_cache_file_path(self, url: str, context: str = "") -> Path:
+        """Generate cache file path with worker isolation."""
+        worker_id = self._get_worker_id()
+        self.cache_dir.mkdir(parents=True, exist_ok=True)
+
+        # Create a safe filename from URL and context
+        url_hash = hashlib.md5(url.encode()).hexdigest()
+        if context:
+            context_safe = "".join(c for c in context if c.isalnum() or c in "._-")
+            filename = f"{worker_id}_{context_safe}_{url_hash}.html"
+        else:
+            filename = f"{worker_id}_{url_hash}.html"
+
+        return self.cache_dir / filename
+
+    def get_cached_html(self, url: str, context: str = "", headers: dict = None) -> str:
+        """
+        Get cached HTML content or fetch from URL if not available.
+        Thread-safe with file locking.
+        """
+        cache_file = self._get_cache_file_path(url, context)
+        lock = self._get_lock(str(cache_file))
+
+        with lock:
+            # Check if cache exists
+            if cache_file.exists():
+                try:
+                    with open(cache_file, encoding="utf-8") as f:
+                        return f.read()
+                except (OSError, UnicodeDecodeError):
+                    # If cache is corrupted, remove it and fetch fresh
+                    cache_file.unlink(missing_ok=True)
+
+            # Fetch fresh HTML content
+            if headers is None:
+                headers = {"User-Agent": "Mozilla/5.0"}
+
+            response = requests.get(url, headers=headers)
+            response.raise_for_status()
+            html_content = response.text
+
+            # Save to cache atomically
+            temp_file = cache_file.with_suffix(f"{cache_file.suffix}.tmp")
+            try:
+                with open(temp_file, "w", encoding="utf-8") as f:
+                    f.write(html_content)
+                temp_file.replace(cache_file)
+            except Exception:
+                temp_file.unlink(missing_ok=True)
+                raise
+
+            return html_content
+
+
+# Global HTML cache manager instance
+_html_cache_manager = None
+
+
+def get_html_cache_manager() -> ThreadSafeHTMLCacheManager:
+    """Get the global HTML cache manager instance."""
+    global _html_cache_manager
+    if _html_cache_manager is None:
+        cache_dir = Path(__file__).parent / "data" / "cache"
+        _html_cache_manager = ThreadSafeHTMLCacheManager(cache_dir)
+    return _html_cache_manager
+
+
+@pytest.fixture(scope="session")
+def html_cache_setup():
+    """Set up HTML cache directory for the test session."""
+    cache_manager = get_html_cache_manager()
+    cache_manager.cache_dir.mkdir(parents=True, exist_ok=True)
+
+    yield cache_manager
+
+    # Cleanup: Only remove files for this worker to avoid conflicts
+    worker_id = cache_manager._get_worker_id()
+    for cache_file in cache_manager.cache_dir.glob(f"{worker_id}_*.html"):
+        try:
+            cache_file.unlink()
+        except FileNotFoundError:
+            pass
+
+
+@pytest.fixture(scope="session")
+def html_cache_manager(html_cache_setup):
+    """Provides HTML caching functionality for real web requests."""
+    cache_manager = html_cache_setup
+
+    def get_cached_html(url: str, context: str = "", headers: dict = None) -> str:
+        """Get cached HTML content or fetch from URL."""
+        return cache_manager.get_cached_html(url, context, headers)
+
+    return get_cached_html
 
 
 @pytest.fixture(scope="session")

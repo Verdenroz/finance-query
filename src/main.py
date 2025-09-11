@@ -19,6 +19,7 @@ from starlette.responses import JSONResponse, Response
 
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import RequestContextMiddleware
+from src.middleware import LoggingMiddleware
 from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
 from src.routes import (
     finance_news_router,
@@ -38,6 +39,7 @@ from src.routes import (
 from src.routes.financials import router as financials_router
 from src.routes.holders import router as holders_router
 from src.security import RateLimitMiddleware
+
 from src.services import (
     get_actives,
     get_gainers,
@@ -61,9 +63,15 @@ from src.utils.dependencies import (
     remove_proxy_whitelist,
     setup_proxy_whitelist,
 )
+from src.utils.logging import configure_logging, get_logger
 from src.utils.yahoo_auth import YahooAuthManager
 
 load_dotenv()
+
+# Configure logging first, before any other initialization
+configure_logging()
+logger = get_logger(__name__)
+
 yahoo_auth_manager = YahooAuthManager()
 curl_session = requests.Session(impersonate="chrome")
 
@@ -74,43 +82,79 @@ async def lifespan(app: FastAPI):
     Creates shared resources (curl session, Redis, Yahoo auth) and
     ensures they are cleaned up when the server stops.
     """
-    await register_app(app)
+    logger.info("Application startup initiated")
+    try:
+        await register_app(app)
 
-    app.state.session = curl_session
-    app.state.yahoo_auth_manager = yahoo_auth_manager
+        app.state.session = curl_session
+        app.state.yahoo_auth_manager = yahoo_auth_manager
 
-    proxy_data = None
-    if os.getenv("PROXY_URL") and os.getenv("USE_PROXY", "False") == "True":
-        proxy_data = await setup_proxy_whitelist()
-        curl_session.proxies = {"http": os.getenv("PROXY_URL"), "https": os.getenv("PROXY_URL")}
+        proxy_data = None
+        if os.getenv("PROXY_URL") and os.getenv("USE_PROXY", "False") == "True":
+            logger.info("Setting up proxy configuration")
+            try:
+                proxy_data = await setup_proxy_whitelist()
+                curl_session.proxies = {"http": os.getenv("PROXY_URL"), "https": os.getenv("PROXY_URL")}
+                logger.info("Proxy configuration completed")
+            except Exception as e:
+                logger.critical("Failed to initialize proxy configuration", extra={"error": str(e)}, exc_info=True)
+                raise
 
-    # Redis (optional)
-    if os.getenv("REDIS_URL"):
-        redis = Redis.from_url(os.getenv("REDIS_URL"))
-        app.state.redis = redis
-        app.state.connection_manager = RedisConnectionManager(redis)
-    else:
-        redis = None
-        app.state.redis = None
-        app.state.connection_manager = ConnectionManager()
+        # Redis (optional)
+        if os.getenv("REDIS_URL"):
+            logger.info("Initializing Redis connection", extra={"redis_url": os.getenv("REDIS_URL")})
+            try:
+                redis = Redis.from_url(os.getenv("REDIS_URL"))
+                # Test the connection
+                redis.ping()
+                app.state.redis = redis
+                app.state.connection_manager = RedisConnectionManager(redis)
+                logger.info("Redis connection established")
+            except Exception as e:
+                logger.critical("Failed to initialize Redis connection", extra={"error": str(e)}, exc_info=True)
+                raise
+        else:
+            logger.info("Redis not configured, using in-memory connection manager")
+            redis = None
+            app.state.redis = None
+            app.state.connection_manager = ConnectionManager()
 
-    # Prime Yahoo auth once so the first user request is fast
-    await yahoo_auth_manager.refresh(proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None)
+        # Prime Yahoo auth once so the first user request is fast
+        logger.info("Initializing Yahoo authentication")
+        try:
+            await yahoo_auth_manager.refresh(proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None)
+            logger.info("Yahoo authentication initialized")
+        except Exception as e:
+            logger.critical("Failed to initialize Yahoo authentication", extra={"error": str(e)}, exc_info=True)
+            raise
 
+    except Exception as e:
+        logger.critical("Critical failure during application startup", extra={"error": str(e)}, exc_info=True)
+        raise
+
+    logger.info("Application startup completed")
     try:
         yield
+    except Exception as e:
+        logger.critical("Critical application failure during lifespan", extra={"error": str(e), "error_type": type(e).__name__}, exc_info=True)
+        raise
     finally:
-        await cleanup_all_exit_stacks()
-        await app.state.connection_manager.close()
-        if proxy_data:
-            await remove_proxy_whitelist(proxy_data)
-        if redis:
-            redis.close()
+        logger.info("Application shutdown initiated")
+        try:
+            await cleanup_all_exit_stacks()
+            await app.state.connection_manager.close()
+            if proxy_data:
+                await remove_proxy_whitelist(proxy_data)
+            if redis:
+                redis.close()
+            logger.info("Application shutdown completed")
+        except Exception as e:
+            logger.critical("Critical failure during application shutdown", extra={"error": str(e), "error_type": type(e).__name__}, exc_info=True)
 
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.8.2.1",
+    version="1.9.0",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & Yahoo Finance's Unofficial API.",
     servers=[
         {"url": "https://finance-query.onrender.com", "description": "Render server"},
@@ -134,6 +178,7 @@ app.add_middleware(
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
+app.add_middleware(LoggingMiddleware)
 app.add_middleware(RequestContextMiddleware)
 
 if os.getenv("USE_SECURITY", "False") == "True":
@@ -204,6 +249,7 @@ async def health(r: RedisClient, finance_client: FinanceClient):
     - System time
     - Service dependencies
     """
+    logger.info("Health check initiated")
     indices_task = get_indices(finance_client)
     actives_task = get_actives()
     losers_task = get_losers()
@@ -287,6 +333,7 @@ async def health(r: RedisClient, finance_client: FinanceClient):
     service_status = f"{succeeded}/{total} succeeded"
     health_report["services"]["status"] = service_status
 
+    logger.info("Health check completed", extra={"status": health_report["status"], "services": service_status})
     return health_report
 
 

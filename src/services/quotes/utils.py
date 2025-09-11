@@ -5,9 +5,11 @@ import psutil
 from lxml import etree, html
 
 from src.utils.dependencies import get_logo
+from src.utils.logging import get_logger
 
-# Initialize thread pool
+# Initialize thread pool and logger
 thread_pool = ThreadPoolExecutor(max_workers=psutil.cpu_count(logical=True) * 2)
+logger = get_logger(__name__)
 
 
 def get_adaptive_chunk_size() -> int:
@@ -136,7 +138,7 @@ async def _scrape_price_data(tree: etree.ElementTree) -> tuple:
         return regular_price, regular_change, regular_percent_change, pre_price, post_price
 
     except Exception as e:
-        print(f"Failed to scrape prices: {e}")
+        logger.error("Failed to scrape prices", extra={"error": str(e)}, exc_info=True)
         return None, None, None, None, None
 
 
@@ -216,7 +218,7 @@ async def _scrape_general_info(tree: etree.ElementTree):
         }
 
     except Exception as e:
-        print(f"Failed to scrape general info: {e}")
+        logger.error("Failed to scrape general info", extra={"error": str(e)}, exc_info=True)
         return {}
 
 
@@ -247,8 +249,13 @@ async def _scrape_company_info(tree: etree.ElementTree, symbol: str):
             elements = container_element.xpath(xpath)
             results[key] = elements[0].strip() if elements else None
 
-        # Get logo asynchronously if website exists
-        logo = await get_logo(symbol=symbol, url=results["website"]) if results.get("website") else None
+        # Get logo asynchronously if website exists, but don't block if it fails
+        logo = None
+        if results.get("website"):
+            try:
+                logo = await get_logo(symbol=symbol, url=results["website"])
+            except Exception as e:
+                logger.debug(f"Logo fetch failed for {symbol}: {str(e)}")
 
         return {
             "sector": results["sector"],
@@ -259,7 +266,7 @@ async def _scrape_company_info(tree: etree.ElementTree, symbol: str):
         }
 
     except Exception as e:
-        print(f"Failed to scrape company info: {e}")
+        logger.error("Failed to scrape company info", extra={"error": str(e)}, exc_info=True)
         return {}
 
 
@@ -293,5 +300,5 @@ async def _scrape_performance(tree: etree.ElementTree):
         return results
 
     except Exception as e:
-        print(f"Failed to scrape performance: {e}")
+        logger.error("Failed to scrape performance data", extra={"error": str(e)}, exc_info=True)
         return {}
