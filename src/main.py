@@ -33,6 +33,7 @@ from src.routes import (
     similar_quotes_router,
     sockets_router,
     stream_router,
+    earnings_transcript_router,
 )
 from src.routes.financials import router as financials_router
 from src.routes.holders import router as holders_router
@@ -323,5 +324,6 @@ app.include_router(indicators_router, prefix="/v1", tags=["Technical Indicators"
 app.include_router(stream_router, prefix="/v1", tags=["SSE"])
 app.include_router(financials_router, prefix="/v1", tags=["Financials"])
 app.include_router(holders_router, prefix="/v1", tags=["Holders"])
+app.include_router(earnings_transcript_router, prefix="/v1", tags=["Earnings Transcripts"])
 
 handler = Mangum(app)

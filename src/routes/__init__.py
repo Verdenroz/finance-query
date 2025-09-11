@@ -10,3 +10,4 @@ from .sectors import router as sectors_router
 from .similar import router as similar_quotes_router
 from .sockets import router as sockets_router
 from .stream import router as stream_router
+from .earnings_transcript import router as earnings_transcript_router
