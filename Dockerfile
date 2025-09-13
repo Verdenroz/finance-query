@@ -29,8 +29,14 @@ COPY setup.py /app
 # Set the working directory
 WORKDIR /app
 
+# Create target directory structure for compiled extensions
+RUN mkdir -p services/indicators/core src/services/indicators/core
+
 # Run setup.py to cythonize the files
 RUN python setup.py build_ext --inplace
+
+# Copy compiled extensions to src directory for imports
+RUN cp services/indicators/core/*.so src/services/indicators/core/
 
 # Build arguments for configuration with defaults
 ARG LOG_LEVEL=INFO

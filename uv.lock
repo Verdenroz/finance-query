@@ -1,5 +1,5 @@
 version = 1
-revision = 2
+revision = 3
 requires-python = ">=3.11, <4.0"
 resolution-markers = [
     "python_full_version >= '3.12'",
@@ -440,7 +440,7 @@ wheels = [
 
 [[package]]
 name = "financequery"
-version = "1.8.2.1"
+version = "1.9.0"
 source = { editable = "." }
 dependencies = [
     { name = "algoliasearch" },
