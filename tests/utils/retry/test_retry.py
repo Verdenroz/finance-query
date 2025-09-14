@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastapi import HTTPException
@@ -97,7 +97,7 @@ class TestRetry:
     @patch("src.utils.retry.logging.getLogger")
     async def test_logging(self, mock_get_logger):
         """Test that appropriate logging occurs."""
-        mock_logger = AsyncMock()
+        mock_logger = Mock()
         mock_get_logger.return_value = mock_logger
 
         primary = AsyncMock(side_effect=ValueError("test error"))

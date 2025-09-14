@@ -15,15 +15,16 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean
 
 # Copy requirements.txt
-COPY requirements.txt .
+COPY requirements.txt ./
 
 # Install Python packages
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the 'src' directory itself, not just its contents
+# Copy project files for building
+COPY pyproject.toml setup.py ./
 COPY src /app/src
 
-# Copy setup.py
+# Copy setup.py again to app directory for later use
 COPY setup.py /app
 
 # Set the working directory

@@ -6,7 +6,7 @@ import uuid
 from contextvars import ContextVar
 from typing import Any, Optional
 
-from pythonjsonlogger.json import JsonFormatter
+from pythonjsonlogger import jsonlogger
 
 # Context variable to store request correlation ID
 request_id: ContextVar[Optional[str]] = ContextVar("request_id", default=None)
@@ -20,7 +20,7 @@ class CorrelationFilter(logging.Filter):
         return True
 
 
-class CustomJSONFormatter(JsonFormatter):
+class CustomJSONFormatter(jsonlogger.JsonFormatter):
     """Custom JSON formatter with additional context."""
 
     def add_fields(self, log_record: dict[str, Any], record: logging.LogRecord, message_dict: dict[str, Any]) -> None:
