@@ -129,8 +129,7 @@ class TestSectors:
         assert response.status_code == 422  # Validation error
 
 
-    @pytest.mark.skip(reason="Skipping due to scraper breakage from website HTML changes.")
-    async def test_get_sectors(self, sector_html, bypass_cache):
+    async def test_get_sectors(self, html_cache_manager, bypass_cache):
         """Test the sector scraping service with real cached HTML responses"""
         # Create a dictionary to store HTML content by URL
         html_cache = {}
@@ -177,8 +176,7 @@ class TestSectors:
             assert sector_data.five_year_return.endswith("%")
 
 
-    @pytest.mark.skip(reason="Skipping due to scraper breakage from website HTML changes.")
-    async def test_get_sector_for_symbol(self, yahoo_sectors, sector_html, mock_finance_client, bypass_cache):
+    async def test_get_sector_for_symbol(self, yahoo_sectors, html_cache_manager, mock_finance_client, bypass_cache):
         """Test the get_sector_for_symbol function with cached data"""
         # Set up test symbols
         test_symbols = ["AAPL", "MSFT", "JPM", "PFE"]
@@ -243,8 +241,7 @@ class TestSectors:
             assert "Sector for UNKNOWN not found" in excinfo.value.detail
 
 
-    @pytest.mark.skip(reason="Skipping due to scraper breakage from website HTML changes.")
-    async def test_get_sector_details(self, sector_html, bypass_cache):
+    async def test_get_sector_details(self, html_cache_manager, bypass_cache):
         """Test the get_sector_details function with cached HTML content"""
         # Test with all sectors
         test_sectors = list(Sector)
