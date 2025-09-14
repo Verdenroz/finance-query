@@ -15,22 +15,29 @@ RUN apt-get update && apt-get install -y \
     && apt-get clean
 
 # Copy requirements.txt
-COPY requirements.txt .
+COPY requirements.txt ./
 
 # Install Python packages
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the 'src' directory itself, not just its contents
+# Copy project files for building
+COPY pyproject.toml setup.py ./
 COPY src /app/src
 
-# Copy setup.py
+# Copy setup.py again to app directory for later use
 COPY setup.py /app
 
 # Set the working directory
 WORKDIR /app
 
+# Create target directory structure for compiled extensions
+RUN mkdir -p services/indicators/core src/services/indicators/core
+
 # Run setup.py to cythonize the files
 RUN python setup.py build_ext --inplace
+
+# Copy compiled extensions to src directory for imports
+RUN cp services/indicators/core/*.so src/services/indicators/core/
 
 # Build arguments for configuration with defaults
 ARG LOG_LEVEL=INFO
@@ -52,17 +59,6 @@ ENV DISABLE_LOGO_FETCHING=${DISABLE_LOGO_FETCHING}
 ENV LOGO_TIMEOUT_SECONDS=${LOGO_TIMEOUT_SECONDS}
 ENV LOGO_CIRCUIT_BREAKER_THRESHOLD=${LOGO_CIRCUIT_BREAKER_THRESHOLD}
 ENV LOGO_CIRCUIT_BREAKER_TIMEOUT=${LOGO_CIRCUIT_BREAKER_TIMEOUT}
-
-# Other configuration (runtime configurable)
-ENV REDIS_URL=""
-ENV USE_SECURITY=false
-ENV ADMIN_API_KEY=""
-ENV USE_PROXY=false
-ENV PROXY_URL=""
-ENV PROXY_TOKEN=""
-ENV BYPASS_CACHE=false
-ENV ALGOLIA_APP_ID=""
-ENV ALGOLIA_API_KEY=""
 
 # Expose the port FastAPI will run on
 EXPOSE 8000
