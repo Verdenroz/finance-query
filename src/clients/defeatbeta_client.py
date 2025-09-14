@@ -1,22 +1,28 @@
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, List, Union
 import asyncio
 from datetime import datetime
-import logging
 
+import pandas as pd
 from fastapi import HTTPException
-
-logger = logging.getLogger(__name__)
 
 
 class DefeatBetaClient:
     """
-    Client for fetching earnings call transcripts using defeatbeta-api
+    Production-ready client for fetching financial data using defeatbeta-api.
+
+    Provides methods to fetch earnings call transcripts and financial statements
+    with proper error handling and data validation.
     """
 
-    def __init__(self, timeout: int = 30):
+    def __init__(self, timeout: int = 30) -> None:
+        """Initialize the DefeatBetaClient.
+
+        Args:
+            timeout: Request timeout in seconds (default: 30)
+        """
         self.timeout = timeout
 
-    async def get_earnings_transcript(self, symbol: str, quarter: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Any]:
+    async def get_earnings_transcript(self, symbol: str, quarter: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Union[str, List[Dict[str, Union[str, int, datetime, List[str], Dict[str, str]]]]]]:
         """
         Fetch earnings call transcript for a given symbol
         
@@ -51,8 +57,7 @@ class DefeatBetaClient:
             
             return formatted_data
                 
-        except ImportError as e:
-            logger.error(f"defeatbeta-api import error: {e}")
+        except ImportError:
             raise HTTPException(
                 status_code=500,
                 detail="defeatbeta-api package not properly installed"
@@ -60,13 +65,12 @@ class DefeatBetaClient:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Error fetching earnings transcript for {symbol}: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to fetch earnings transcript: {str(e)}"
             )
 
-    async def get_financial_statement(self, symbol: str, statement_type: str, frequency: str) -> Dict[str, Any]:
+    async def get_financial_statement(self, symbol: str, statement_type: str, frequency: str) -> Dict[str, Union[str, Dict[str, Dict[str, Union[str, int, float, None]]], Dict[str, Union[str, int]]]]:
         """
         Fetch financial statement data for a given symbol
         
@@ -110,8 +114,7 @@ class DefeatBetaClient:
             
             return formatted_data
                 
-        except ImportError as e:
-            logger.error(f"defeatbeta-api import error: {e}")
+        except ImportError:
             raise HTTPException(
                 status_code=500,
                 detail="defeatbeta-api package not properly installed"
@@ -119,7 +122,6 @@ class DefeatBetaClient:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Error fetching {statement_type} for {symbol}: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to fetch {statement_type}: {str(e)}"
@@ -127,7 +129,17 @@ class DefeatBetaClient:
 
     def _get_financial_method_name(self, statement_type: str, frequency: str) -> str:
         """
-        Map statement type and frequency to defeatbeta-api method name
+        Map statement type and frequency to defeatbeta-api method name.
+
+        Args:
+            statement_type: Type of financial statement
+            frequency: Data frequency (quarterly/annual)
+
+        Returns:
+            Method name for the defeatbeta-api call
+
+        Raises:
+            HTTPException: If statement type is unsupported
         """
         frequency_prefix = "quarterly" if frequency == "quarterly" else "annual"
         
@@ -143,15 +155,13 @@ class DefeatBetaClient:
                 detail=f"Unsupported statement type: {statement_type}"
             )
 
-    def _format_financial_data(self, financial_data: Any, symbol: str, statement_type: str, frequency: str) -> Dict[str, Any]:
+    def _format_financial_data(self, financial_data: Union[pd.DataFrame, object], symbol: str, statement_type: str, frequency: str) -> Dict[str, Union[str, Dict[str, Dict[str, Union[str, int, float, None]]], Dict[str, Union[str, int]]]]:
         """
         Format defeatbeta-api financial data into standardized structure
         """
         try:
-            import pandas as pd
             import numpy as np
             
-            logger.info(f"Processing financial data type: {type(financial_data)}")
             
             # Handle case where financial_data might have a method to get the DataFrame
             if hasattr(financial_data, 'get_data'):
@@ -164,9 +174,6 @@ class DefeatBetaClient:
                 # Handle case where data is wrapped in an object
                 df = financial_data.data
             else:
-                # Log the actual data structure for debugging
-                logger.info(f"Financial data attributes: {dir(financial_data) if hasattr(financial_data, '__dict__') else 'No attributes'}")
-                logger.info(f"Financial data content: {str(financial_data)[:500]}")
                 
                 # Try to convert to DataFrame if it's not already
                 try:
@@ -177,7 +184,6 @@ class DefeatBetaClient:
                     else:
                         df = pd.DataFrame(financial_data)
                 except Exception as e:
-                    logger.error(f"DataFrame conversion failed: {e}")
                     raise HTTPException(
                         status_code=500,
                         detail=f"Unable to convert financial data to DataFrame: {str(e)}"
@@ -225,29 +231,36 @@ class DefeatBetaClient:
         except HTTPException:
             raise
         except Exception as e:
-            logger.error(f"Error formatting financial data: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to format financial data: {str(e)}"
             )
 
-    async def _run_sync_method(self, sync_method):
+    async def _run_sync_method(self, sync_method) -> Union[pd.DataFrame, object]:
         """
-        Run synchronous defeatbeta-api methods in async context
+        Run synchronous defeatbeta-api methods in async context.
+
+        Args:
+            sync_method: The synchronous method to execute
+
+        Returns:
+            Result from the synchronous method call
         """
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, sync_method)
 
-    def _format_transcript_data(self, transcripts_df: Any, symbol: str, quarter: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Any]:
+    def _format_transcript_data(self, transcripts_df: pd.DataFrame, symbol: str, quarter: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Union[str, List[Dict[str, Union[str, int, datetime, List[str], Dict[str, str]]]]]]:
         """
         Format DataFrame transcript data into standardized structure
         """
         try:
-            import pandas as pd
             
             # Ensure we have a DataFrame
             if not isinstance(transcripts_df, pd.DataFrame):
-                raise ValueError("Expected pandas DataFrame from defeatbeta-api")
+                raise HTTPException(
+                    status_code=500,
+                    detail="Invalid data format from defeatbeta-api"
+                )
 
             formatted_data = {
                 "symbol": symbol.upper(),
@@ -262,9 +275,13 @@ class DefeatBetaClient:
             
             if quarter:
                 # Extract quarter number from string like "Q1" -> 1
-                quarter_num = int(quarter[1:]) if quarter.startswith('Q') and len(quarter) == 2 else None
-                if quarter_num:
-                    filtered_df = filtered_df[filtered_df['fiscal_quarter'] == quarter_num]
+                if quarter.startswith('Q') and len(quarter) == 2:
+                    try:
+                        quarter_num = int(quarter[1:])
+                        filtered_df = filtered_df[filtered_df['fiscal_quarter'] == quarter_num]
+                    except (ValueError, IndexError):
+                        # Invalid quarter format, filter will return no results
+                        pass
 
             # Process each row in the filtered DataFrame
             for _, row in filtered_df.iterrows():
@@ -281,21 +298,18 @@ class DefeatBetaClient:
             return formatted_data
 
         except HTTPException:
-            # Re-raise HTTP exceptions as-is (like 404 for no data found)
             raise
         except Exception as e:
-            logger.error(f"Error formatting transcript data: {e}")
             raise HTTPException(
                 status_code=500,
                 detail=f"Failed to format transcript data: {str(e)}"
             )
 
-    def _process_transcript_row(self, row: Any, quarter: Optional[str] = None, year: Optional[int] = None) -> Optional[Dict[str, Any]]:
+    def _process_transcript_row(self, row: pd.Series, quarter: Optional[str] = None, year: Optional[int] = None) -> Optional[Dict[str, Union[str, int, datetime, List[str], Dict[str, str]]]]:
         """
         Process individual transcript row from DataFrame
         """
         try:
-            import pandas as pd
             import numpy as np
             
             # Helper function to handle NaN/NA values
@@ -351,7 +365,7 @@ class DefeatBetaClient:
                 month = quarter_months.get(row_quarter, 12)
                 try:
                     transcript_date = datetime(row_year, month, 15)  # Mid-month estimate
-                except:
+                except (ValueError, TypeError):
                     transcript_date = datetime.now()
             
             # Clean all values to prevent serialization errors
@@ -371,11 +385,10 @@ class DefeatBetaClient:
 
             return transcript
 
-        except Exception as e:
-            logger.error(f"Error processing transcript row: {e}")
+        except Exception:
             return None
 
-    def _filter_transcripts(self, transcripts: List[Dict[str, Any]], quarter: Optional[str] = None, year: Optional[int] = None) -> List[Dict[str, Any]]:
+    def _filter_transcripts(self, transcripts: List[Dict[str, Union[str, int, datetime, List[str], Dict[str, str]]]], quarter: Optional[str] = None, year: Optional[int] = None) -> List[Dict[str, Union[str, int, datetime, List[str], Dict[str, str]]]]:
         """
         Filter transcripts by quarter and year
         """
@@ -389,54 +402,3 @@ class DefeatBetaClient:
 
         return filtered
 
-    def _get_sample_transcript_data(self, symbol: str, quarter: Optional[str] = None, year: Optional[int] = None) -> Dict[str, Any]:
-        """
-        Return sample transcript data for development/testing
-        """
-        current_year = datetime.now().year
-        sample_quarter = quarter or "Q3"
-        sample_year = year or current_year
-
-        return {
-            "symbol": symbol.upper(),
-            "transcripts": [
-                {
-                    "symbol": symbol.upper(),
-                    "quarter": sample_quarter,
-                    "year": sample_year,
-                    "date": datetime(sample_year, 10, 15),
-                    "transcript": f"""
-{symbol} {sample_quarter} {sample_year} Earnings Call Transcript
-
-CORPORATE PARTICIPANTS:
-- CEO: Thank you for joining us today for our {sample_quarter} {sample_year} earnings call.
-- CFO: I'll walk through our financial results for the quarter.
-
-PRESENTATION:
-CEO: Good afternoon, everyone. We're pleased to report strong results for {sample_quarter} {sample_year}. 
-Revenue grew 15% year-over-year, driven by strong demand across all our product lines.
-
-CFO: Our gross margin improved to 42%, up from 38% in the prior year quarter. 
-Operating expenses were well-controlled at $2.1 billion.
-
-Q&A SESSION:
-ANALYST 1: Can you provide more color on your guidance for next quarter?
-CEO: We expect continued growth momentum, with revenue guidance of $5.2-5.4 billion for Q4.
-
-ANALYST 2: What are your thoughts on the competitive landscape?
-CEO: We remain confident in our market position and continue to invest in innovation.
-                    """.strip(),
-                    "participants": [
-                        "CEO - Chief Executive Officer",
-                        "CFO - Chief Financial Officer",
-                        "Analyst 1 - Investment Research",
-                        "Analyst 2 - Investment Research"
-                    ],
-                    "metadata": {
-                        "source": "defeatbeta-api-sample",
-                        "retrieved_at": datetime.now().isoformat(),
-                        "note": "This is sample data for development purposes"
-                    }
-                }
-            ]
-        }
