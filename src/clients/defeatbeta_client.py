@@ -66,6 +66,171 @@ class DefeatBetaClient:
                 detail=f"Failed to fetch earnings transcript: {str(e)}"
             )
 
+    async def get_financial_statement(self, symbol: str, statement_type: str, frequency: str) -> Dict[str, Any]:
+        """
+        Fetch financial statement data for a given symbol
+        
+        Args:
+            symbol: Stock symbol (e.g., 'AAPL', 'TSLA')
+            statement_type: Type of statement ('income_statement', 'balance_sheet', 'cash_flow')
+            frequency: Frequency ('quarterly', 'annual')
+            
+        Returns:
+            Dictionary containing financial statement data
+        """
+        try:
+            from defeatbeta_api.data.ticker import Ticker
+            
+            # Create ticker instance
+            ticker = Ticker(symbol.upper())
+            
+            # Map statement types and frequencies to appropriate method calls
+            method_name = self._get_financial_method_name(statement_type, frequency)
+            
+            # Get the method from the ticker object
+            if not hasattr(ticker, method_name):
+                raise HTTPException(
+                    status_code=400,
+                    detail=f"Method {method_name} not available for {symbol}"
+                )
+            
+            method = getattr(ticker, method_name)
+            
+            # Execute the method synchronously in async context
+            financial_data = await self._run_sync_method(method)
+            
+            if financial_data is None:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No {statement_type} data found for symbol {symbol}"
+                )
+            
+            # Format the data for our API response
+            formatted_data = self._format_financial_data(financial_data, symbol, statement_type, frequency)
+            
+            return formatted_data
+                
+        except ImportError as e:
+            logger.error(f"defeatbeta-api import error: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail="defeatbeta-api package not properly installed"
+            )
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error fetching {statement_type} for {symbol}: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to fetch {statement_type}: {str(e)}"
+            )
+
+    def _get_financial_method_name(self, statement_type: str, frequency: str) -> str:
+        """
+        Map statement type and frequency to defeatbeta-api method name
+        """
+        frequency_prefix = "quarterly" if frequency == "quarterly" else "annual"
+        
+        if statement_type == "income_statement":
+            return f"{frequency_prefix}_income_statement"
+        elif statement_type == "balance_sheet":
+            return f"{frequency_prefix}_balance_sheet"
+        elif statement_type == "cash_flow":
+            return f"{frequency_prefix}_cash_flow"
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported statement type: {statement_type}"
+            )
+
+    def _format_financial_data(self, financial_data: Any, symbol: str, statement_type: str, frequency: str) -> Dict[str, Any]:
+        """
+        Format defeatbeta-api financial data into standardized structure
+        """
+        try:
+            import pandas as pd
+            import numpy as np
+            
+            logger.info(f"Processing financial data type: {type(financial_data)}")
+            
+            # Handle case where financial_data might have a method to get the DataFrame
+            if hasattr(financial_data, 'get_data'):
+                df = financial_data.get_data()
+            elif hasattr(financial_data, 'to_dataframe'):
+                df = financial_data.to_dataframe()
+            elif isinstance(financial_data, pd.DataFrame):
+                df = financial_data
+            elif hasattr(financial_data, 'data') and isinstance(financial_data.data, pd.DataFrame):
+                # Handle case where data is wrapped in an object
+                df = financial_data.data
+            else:
+                # Log the actual data structure for debugging
+                logger.info(f"Financial data attributes: {dir(financial_data) if hasattr(financial_data, '__dict__') else 'No attributes'}")
+                logger.info(f"Financial data content: {str(financial_data)[:500]}")
+                
+                # Try to convert to DataFrame if it's not already
+                try:
+                    if isinstance(financial_data, dict):
+                        df = pd.DataFrame([financial_data])
+                    elif isinstance(financial_data, list):
+                        df = pd.DataFrame(financial_data)
+                    else:
+                        df = pd.DataFrame(financial_data)
+                except Exception as e:
+                    logger.error(f"DataFrame conversion failed: {e}")
+                    raise HTTPException(
+                        status_code=500,
+                        detail=f"Unable to convert financial data to DataFrame: {str(e)}"
+                    )
+            
+            if df is None or df.empty:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"No {statement_type} data found for {symbol}"
+                )
+            
+            # Clean NaN values and convert to serializable format
+            def clean_value(value):
+                if pd.isna(value) or value is None or (isinstance(value, float) and np.isnan(value)):
+                    return None
+                return value
+            
+            # Convert DataFrame to dict format, handling timestamp columns
+            data_dict = {}
+            for index, row in df.iterrows():
+                cleaned_row = {}
+                for col in df.columns:
+                    value = row[col]
+                    if isinstance(value, pd.Timestamp):
+                        cleaned_row[str(col)] = value.isoformat()
+                    else:
+                        cleaned_row[str(col)] = clean_value(value)
+                data_dict[str(index)] = cleaned_row
+            
+            formatted_data = {
+                "symbol": symbol.upper(),
+                "statement_type": statement_type,
+                "frequency": frequency,
+                "statement": data_dict,
+                "metadata": {
+                    "source": "defeatbeta-api",
+                    "retrieved_at": datetime.now().isoformat(),
+                    "rows_count": len(df),
+                    "columns_count": len(df.columns)
+                }
+            }
+            
+            return formatted_data
+            
+        except HTTPException:
+            raise
+        except Exception as e:
+            logger.error(f"Error formatting financial data: {e}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Failed to format financial data: {str(e)}"
+            )
+
     async def _run_sync_method(self, sync_method):
         """
         Run synchronous defeatbeta-api methods in async context

@@ -38,7 +38,7 @@ from src.routes import (
 )
 from src.routes.financials import router as financials_router
 from src.routes.holders import router as holders_router
-from src.security import RateLimitMiddleware
+from src.middleware import RateLimitMiddleware
 
 from src.services import (
     get_actives,

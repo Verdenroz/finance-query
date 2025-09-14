@@ -14,20 +14,18 @@ def client():
 
 
 @pytest.mark.asyncio
-@patch("src.services.holders.get_holders.Ticker")
+@patch("src.services.holders.get_holders.yf.Ticker")
 async def test_get_holders_institutional(mock_ticker, client):
     # Mock the yfinance Ticker object and its methods
-    mock_holders = MagicMock()
     mock_df = pd.DataFrame({
         'Holder': ['Vanguard Group Inc', 'BlackRock Inc'],
         'Shares': [1000000, 800000],
         'Date Reported': [pd.Timestamp('2024-01-01'), pd.Timestamp('2024-01-01')],
         'Value': [150000000, 120000000]
     })
-    mock_holders.institutional = mock_df
     
     mock_instance = mock_ticker.return_value
-    mock_instance._holders = mock_holders
+    mock_instance.institutional_holders = mock_df
 
     # Make the request
     response = client.get("/v1/holders/AAPL?holder_type=institutional")
@@ -43,16 +41,14 @@ async def test_get_holders_institutional(mock_ticker, client):
 
 
 @pytest.mark.asyncio
-@patch("src.services.holders.get_holders.Ticker")
+@patch("src.services.holders.get_holders.yf.Ticker")
 async def test_get_holders_major(mock_ticker, client):
-    mock_holders = MagicMock()
     mock_df = pd.DataFrame({
         'Value': [0.85, 0.10, 0.05]
     }, index=['institutionsPercentHeld', 'insidersPercentHeld', 'floatHeld'])
-    mock_holders.major = mock_df
     
     mock_instance = mock_ticker.return_value
-    mock_instance._holders = mock_holders
+    mock_instance.major_holders = mock_df
 
     response = client.get("/v1/holders/MSFT?holder_type=major")
 
@@ -65,19 +61,17 @@ async def test_get_holders_major(mock_ticker, client):
 
 
 @pytest.mark.asyncio
-@patch("src.services.holders.get_holders.Ticker")
+@patch("src.services.holders.get_holders.yf.Ticker")
 async def test_get_holders_mutualfund(mock_ticker, client):
-    mock_holders = MagicMock()
     mock_df = pd.DataFrame({
         'Holder': ['Vanguard 500 Index Fund', 'SPDR S&P 500 ETF'],
         'Shares': [500000, 300000],
         'Date Reported': [pd.Timestamp('2024-01-01'), pd.Timestamp('2024-01-01')],
         'Value': [75000000, 45000000]
     })
-    mock_holders.mutualfund = mock_df
     
     mock_instance = mock_ticker.return_value
-    mock_instance._holders = mock_holders
+    mock_instance.mutualfund_holders = mock_df
 
     response = client.get("/v1/holders/GOOG?holder_type=mutualfund")
 
@@ -90,13 +84,10 @@ async def test_get_holders_mutualfund(mock_ticker, client):
 
 
 @pytest.mark.asyncio
-@patch("src.services.holders.get_holders.Ticker")
+@patch("src.services.holders.get_holders.yf.Ticker")
 async def test_get_holders_empty_data(mock_ticker, client):
-    mock_holders = MagicMock()
-    mock_holders.institutional = pd.DataFrame()  # Empty DataFrame
-    
     mock_instance = mock_ticker.return_value
-    mock_instance._holders = mock_holders
+    mock_instance.institutional_holders = pd.DataFrame()  # Empty DataFrame
 
     response = client.get("/v1/holders/EMPTY?holder_type=institutional")
 
@@ -108,11 +99,11 @@ async def test_get_holders_empty_data(mock_ticker, client):
 
 
 @pytest.mark.asyncio
-@patch("src.services.holders.get_holders.Ticker")
+@patch("src.services.holders.get_holders.yf.Ticker")
 async def test_get_holders_yfinance_error(mock_ticker, client):
     mock_instance = mock_ticker.return_value
-    # Mock the _holders property to raise an exception when accessed
-    type(mock_instance)._holders = PropertyMock(side_effect=Exception("Yahoo Finance error"))
+    # Mock the institutional_holders property to raise an exception when accessed
+    type(mock_instance).institutional_holders = PropertyMock(side_effect=Exception("Yahoo Finance error"))
 
     response = client.get("/v1/holders/ERROR?holder_type=institutional")
 

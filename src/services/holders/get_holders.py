@@ -6,7 +6,7 @@ from src.models.holders import (
     HoldersData, HolderType, MajorHoldersBreakdown, InstitutionalHolder, MutualFundHolder,
     InsiderTransaction, InsiderPurchase, InsiderRosterMember
 )
-from src.yfinance_client.ticker import Ticker
+import yfinance as yf
 
 
 async def get_holders_data(symbol: str, holder_type: HolderType) -> HoldersData:
@@ -18,11 +18,11 @@ async def get_holders_data(symbol: str, holder_type: HolderType) -> HoldersData:
     
     :raises HTTPException: with status code 404 if the symbol cannot be found, or 500 for any other error
     """
-    ticker = Ticker(symbol)
+    ticker = yf.Ticker(symbol)
     
     try:
         if holder_type == HolderType.MAJOR:
-            data = _parse_major_breakdown(ticker._holders.major)
+            data = _parse_major_breakdown(ticker.major_holders)
             return HoldersData(
                 symbol=symbol,
                 holder_type=holder_type,
@@ -30,7 +30,7 @@ async def get_holders_data(symbol: str, holder_type: HolderType) -> HoldersData:
             )
         
         elif holder_type == HolderType.INSTITUTIONAL:
-            data = _parse_institutional_holders(ticker._holders.institutional)
+            data = _parse_institutional_holders(ticker.institutional_holders)
             return HoldersData(
                 symbol=symbol,
                 holder_type=holder_type,
@@ -38,7 +38,7 @@ async def get_holders_data(symbol: str, holder_type: HolderType) -> HoldersData:
             )
         
         elif holder_type == HolderType.MUTUALFUND:
-            data = _parse_mutualfund_holders(ticker._holders.mutualfund)
+            data = _parse_mutualfund_holders(ticker.mutualfund_holders)
             return HoldersData(
                 symbol=symbol,
                 holder_type=holder_type,
@@ -46,7 +46,7 @@ async def get_holders_data(symbol: str, holder_type: HolderType) -> HoldersData:
             )
         
         elif holder_type == HolderType.INSIDER_TRANSACTIONS:
-            data = _parse_insider_transactions(ticker._holders.insider_transactions)
+            data = _parse_insider_transactions(ticker.insider_transactions)
             return HoldersData(
                 symbol=symbol,
                 holder_type=holder_type,
@@ -54,7 +54,7 @@ async def get_holders_data(symbol: str, holder_type: HolderType) -> HoldersData:
             )
         
         elif holder_type == HolderType.INSIDER_PURCHASES:
-            data = _parse_insider_purchases(ticker._holders.insider_purchases)
+            data = _parse_insider_purchases(ticker.insider_purchases)
             return HoldersData(
                 symbol=symbol,
                 holder_type=holder_type,
@@ -62,7 +62,7 @@ async def get_holders_data(symbol: str, holder_type: HolderType) -> HoldersData:
             )
         
         elif holder_type == HolderType.INSIDER_ROSTER:
-            data = _parse_insider_roster(ticker._holders.insider_roster)
+            data = _parse_insider_roster(ticker.insider_roster)
             return HoldersData(
                 symbol=symbol,
                 holder_type=holder_type,
