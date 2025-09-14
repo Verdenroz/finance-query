@@ -128,7 +128,6 @@ class TestSectors:
         response = test_client.get(f"/{VERSION}/sectors/details/invalid")
         assert response.status_code == 422  # Validation error
 
-
     async def test_get_sectors(self, html_cache_manager, bypass_cache):
         """Test the sector scraping service with real cached HTML responses"""
         # Create a dictionary to store HTML content by URL
@@ -174,7 +173,6 @@ class TestSectors:
             assert sector_data.year_return.endswith("%")
             assert sector_data.three_year_return.endswith("%")
             assert sector_data.five_year_return.endswith("%")
-
 
     async def test_get_sector_for_symbol(self, yahoo_sectors, html_cache_manager, mock_finance_client, bypass_cache):
         """Test the get_sector_for_symbol function with cached data"""
@@ -239,7 +237,6 @@ class TestSectors:
             # Verify the exception details
             assert excinfo.value.status_code == 404
             assert "Sector for UNKNOWN not found" in excinfo.value.detail
-
 
     async def test_get_sector_details(self, html_cache_manager, bypass_cache):
         """Test the get_sector_details function with cached HTML content"""

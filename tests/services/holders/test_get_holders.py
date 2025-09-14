@@ -1,7 +1,7 @@
-import pytest
 from fastapi import HTTPException
-from src.services.holders.get_holders import get_holders_data
+
 from src.models.holders import HolderType
+from src.services.holders.get_holders import get_holders_data
 
 
 class TestGetHolders:
@@ -52,7 +52,7 @@ class TestGetHolders:
         assert holders_data.holder_type == holder_type
         assert holders_data.insider_purchases is not None
         # Check that the insider_purchases object has the expected period field
-        assert hasattr(holders_data.insider_purchases, 'period')
+        assert hasattr(holders_data.insider_purchases, "period")
 
     async def test_get_holders_data_insider_roster(self):
         """

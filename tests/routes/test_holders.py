@@ -1,11 +1,10 @@
+from unittest.mock import PropertyMock, patch
+
 import pandas as pd
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock, PropertyMock
-
 from fastapi.testclient import TestClient
 
 from src.main import app
-from src.models.holders import HolderType
 
 
 @pytest.fixture
@@ -17,13 +16,15 @@ def client():
 @patch("src.services.holders.get_holders.yf.Ticker")
 async def test_get_holders_institutional(mock_ticker, client):
     # Mock the yfinance Ticker object and its methods
-    mock_df = pd.DataFrame({
-        'Holder': ['Vanguard Group Inc', 'BlackRock Inc'],
-        'Shares': [1000000, 800000],
-        'Date Reported': [pd.Timestamp('2024-01-01'), pd.Timestamp('2024-01-01')],
-        'Value': [150000000, 120000000]
-    })
-    
+    mock_df = pd.DataFrame(
+        {
+            "Holder": ["Vanguard Group Inc", "BlackRock Inc"],
+            "Shares": [1000000, 800000],
+            "Date Reported": [pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-01")],
+            "Value": [150000000, 120000000],
+        }
+    )
+
     mock_instance = mock_ticker.return_value
     mock_instance.institutional_holders = mock_df
 
@@ -43,10 +44,8 @@ async def test_get_holders_institutional(mock_ticker, client):
 @pytest.mark.asyncio
 @patch("src.services.holders.get_holders.yf.Ticker")
 async def test_get_holders_major(mock_ticker, client):
-    mock_df = pd.DataFrame({
-        'Value': [0.85, 0.10, 0.05]
-    }, index=['institutionsPercentHeld', 'insidersPercentHeld', 'floatHeld'])
-    
+    mock_df = pd.DataFrame({"Value": [0.85, 0.10, 0.05]}, index=["institutionsPercentHeld", "insidersPercentHeld", "floatHeld"])
+
     mock_instance = mock_ticker.return_value
     mock_instance.major_holders = mock_df
 
@@ -63,13 +62,15 @@ async def test_get_holders_major(mock_ticker, client):
 @pytest.mark.asyncio
 @patch("src.services.holders.get_holders.yf.Ticker")
 async def test_get_holders_mutualfund(mock_ticker, client):
-    mock_df = pd.DataFrame({
-        'Holder': ['Vanguard 500 Index Fund', 'SPDR S&P 500 ETF'],
-        'Shares': [500000, 300000],
-        'Date Reported': [pd.Timestamp('2024-01-01'), pd.Timestamp('2024-01-01')],
-        'Value': [75000000, 45000000]
-    })
-    
+    mock_df = pd.DataFrame(
+        {
+            "Holder": ["Vanguard 500 Index Fund", "SPDR S&P 500 ETF"],
+            "Shares": [500000, 300000],
+            "Date Reported": [pd.Timestamp("2024-01-01"), pd.Timestamp("2024-01-01")],
+            "Value": [75000000, 45000000],
+        }
+    )
+
     mock_instance = mock_ticker.return_value
     mock_instance.mutualfund_holders = mock_df
 
