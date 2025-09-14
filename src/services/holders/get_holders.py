@@ -62,7 +62,7 @@ async def get_holders_data(symbol: str, holder_type: HolderType) -> HoldersData:
             )
         
         elif holder_type == HolderType.INSIDER_ROSTER:
-            data = _parse_insider_roster(ticker.insider_roster)
+            data = _parse_insider_roster(ticker.insider_roster_holders)
             return HoldersData(
                 symbol=symbol,
                 holder_type=holder_type,
