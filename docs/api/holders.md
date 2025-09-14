@@ -135,7 +135,7 @@ Optional authentication via `x-api-key` header token
 | mutualfund_holders   | [MutualFundHolder[]](#mutualfundholder)           | List of mutual fund holders                          |          |
 | insider_transactions | [InsiderTransaction[]](#insidertransaction)       | List of insider transactions                         |          |
 | insider_purchases    | [InsiderPurchase](#insiderpurchase)               | Insider purchase activity summary                    |          |
-| insider_roster       | [InsiderRosterMember[]](#insiderrosterember)      | List of insider roster members                       |          |
+| insider_roster       | [InsiderRosterMember[]](#insiderrostermember)      | List of insider roster members                       |          |
 
 #### HolderType
 
