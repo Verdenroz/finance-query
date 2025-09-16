@@ -68,7 +68,7 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: "first tuesday"
+      day: "tuesday"
       time: "02:00"
       timezone: "UTC"
     target-branch: "staging"
@@ -90,7 +90,7 @@ updates:
     directory: "/"
     schedule:
       interval: "monthly"
-      day: "second tuesday"
+      day: "tuesday"
       time: "02:00"
       timezone: "UTC"
     target-branch: "staging"

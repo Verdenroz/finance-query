@@ -45,16 +45,5 @@ ENV LOGO_TIMEOUT_SECONDS=1
 ENV LOGO_CIRCUIT_BREAKER_THRESHOLD=5
 ENV LOGO_CIRCUIT_BREAKER_TIMEOUT=300
 
-# Other configuration (runtime configurable)
-ENV REDIS_URL=""
-ENV USE_SECURITY=false
-ENV ADMIN_API_KEY=""
-ENV USE_PROXY=false
-ENV PROXY_URL=""
-ENV PROXY_TOKEN=""
-ENV BYPASS_CACHE=false
-ENV ALGOLIA_APP_ID=""
-ENV ALGOLIA_API_KEY=""
-
 # Set the entry point for the AWS Lambda function
 CMD ["src/main.handler"]
