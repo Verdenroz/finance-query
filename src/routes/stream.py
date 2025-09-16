@@ -62,5 +62,5 @@ async def stream_quotes(
     finance_client: FinanceClient,
     symbols: str = Query(..., title="Symbols", description="Comma-separated list of stock symbols"),
 ):
-    symbols = list(set(symbols.upper().replace(" ", "").split(",")))
-    return StreamingResponse(quotes_generator(finance_client, symbols), media_type="text/event-stream")
+    symbols_list = list(set(symbols.upper().replace(" ", "").split(",")))
+    return StreamingResponse(quotes_generator(finance_client, symbols_list), media_type="text/event-stream")

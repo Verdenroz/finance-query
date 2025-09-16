@@ -107,3 +107,70 @@ import requests
 response = requests.get("http://localhost:8000/v1/simple-quotes", params={"symbols": "AAPL"})
 print(response.json())
 ```
+
+## Configuration
+
+### Environment Variables
+
+FinanceQuery can be configured using environment variables. Copy the template and customize as needed:
+
+```bash
+# Copy the environment template
+cp .env.template .env
+
+# Edit configuration
+nano .env
+```
+
+### Basic Configuration
+
+For a quick start, the following minimal configuration is sufficient:
+
+```env
+# Optional: Enable Redis caching for better performance
+REDIS_URL=redis://localhost:6379
+
+# Optional: Configure logging
+LOG_LEVEL=INFO
+LOG_FORMAT=text
+```
+
+### Logging Setup
+
+Configure logging based on your environment:
+
+=== "Development"
+    ```env
+    LOG_LEVEL=DEBUG
+    LOG_FORMAT=text
+    PERFORMANCE_THRESHOLD_MS=500
+    ```
+    
+    This provides:
+    - Detailed diagnostic information
+    - Human-readable log format
+    - Strict performance monitoring
+
+=== "Production"
+    ```env
+    LOG_LEVEL=INFO
+    LOG_FORMAT=json
+    PERFORMANCE_THRESHOLD_MS=2000
+    ```
+    
+    This provides:
+    - Balanced log volume
+    - Structured JSON output for monitoring tools
+    - Reasonable performance threshold
+
+### Verifying Configuration
+
+After starting the server, you should see log output indicating your configuration:
+
+```bash
+# With DEBUG level
+2025-01-15 14:30:20 - main - INFO - [system] - Application startup completed
+2025-01-15 14:30:20 - main - DEBUG - [system] - Logging configured: DEBUG level, text format
+```
+
+For more detailed logging configuration options, see the [Logging Documentation](logging.md).

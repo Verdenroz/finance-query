@@ -57,12 +57,17 @@ plugins:
 nav:
   - Home: index.md
   - Getting Started: getting-started.md
+  - Configuration:
+      - Logging: logging.md
   - Deployment: deployment.md
   - API Reference:
       - Health Check: api/health.md
       - Market Hours: api/hours.md
       - Quotes: api/quotes.md
       - Historical Data: api/historical.md
+      - Financials: api/financials.md
+      - Holders: api/holders.md
+      - Earnings Transcript: api/earnings_transcript.md
       - Market Movers: api/movers.md
       - News: api/news.md
       - Indices: api/indices.md

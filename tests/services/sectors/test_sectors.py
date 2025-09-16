@@ -1,8 +1,6 @@
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-import requests
 from fastapi import HTTPException
 
 from src.models import MarketSector, MarketSectorDetails, Sector
@@ -12,116 +10,33 @@ from tests.conftest import VERSION
 
 class TestSectors:
     @pytest.fixture
-    def sector_html(self):
-        """
-        Fixture that provides a function to get cached HTML content for URLs.
-        If the HTML is not cached, it will fetch and cache it.
-        """
-        # Path for storing cached HTML responses
-        cache_dir = Path(__file__).resolve().parent.parent / "data" / "sectors"
-        cache_dir.mkdir(parents=True, exist_ok=True)
-
-        # Create a dictionary to store HTML content by URL
-        html_cache = {}
-
-        def get_cached_html(url):
-            # Check if we already have this URL in our in-memory cache
-            if url in html_cache:
-                return html_cache[url]
-
-            # Extract sector path from URL for filename
-            sector_path = url.split("sectors/")[1].strip("/")
-            cache_file = cache_dir / f"{sector_path}.html"
-
-            # Check if we have cached HTML
-            if cache_file.exists():
-                with open(cache_file, encoding="utf-8") as f:
-                    html_content = f.read()
-            else:
-                # Fetch real content if no cache exists (only for first run)
-                response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                html_content = response.text
-
-                # Save for future test runs
-                with open(cache_file, "w", encoding="utf-8") as f:
-                    f.write(html_content)
-
-            # Store HTML in our cache dictionary
-            html_cache[url] = html_content
-            return html_content
-
-        yield get_cached_html
-        # Cleanup on teardown
-        for file in cache_dir.glob("*.html"):
-            file.unlink()
-        if cache_dir.exists():
-            cache_dir.rmdir()
-
-    @pytest.fixture
     def yahoo_sectors(self):
         """
-        Fixture that provides a function to get cached Yahoo API data for symbols.
-        If the data is not cached, it will create mock data and cache it.
+        Fixture that provides mock Yahoo API data for symbols.
+        This is not cached since it's just mock data generation.
         """
-        # Path for storing cached Yahoo API responses
-        cache_dir = Path(__file__).resolve().parent.parent / "data" / "yahoo"
-        cache_dir.mkdir(parents=True, exist_ok=True)
 
-        # Create a dictionary to store data by symbol
-        data_cache = {}
+        def get_mock_data(symbol):
+            # Mock sector data mapping
+            sectors = {
+                "AAPL": "Technology",
+                "MSFT": "Technology",
+                "JPM": "Financial Services",
+                "PFE": "Healthcare",
+                "XOM": "Energy",
+                "KO": "Consumer Defensive",
+                "HD": "Consumer Cyclical",
+                "VZ": "Communication Services",
+                "NEE": "Utilities",
+                "AMT": "Real Estate",
+                "BHP": "Basic Materials",
+                "BA": "Industrials",
+            }
 
-        def get_cached_data(symbol):
-            # Check if we already have this symbol in our in-memory cache
-            if symbol in data_cache:
-                return data_cache[symbol]
+            sector = sectors.get(symbol, "Technology")
+            return {"quoteSummary": {"result": [{"assetProfile": {"sector": sector}}]}}
 
-            # Create a cache file path
-            cache_file = cache_dir / f"{symbol}_yahoo_data.json"
-
-            # Check if we have cached data
-            if cache_file.exists():
-                import json
-
-                with open(cache_file) as f:
-                    yahoo_data = json.load(f)
-            else:
-                # Create mock data if no cache exists
-                sectors = {
-                    "AAPL": "Technology",
-                    "MSFT": "Technology",
-                    "JPM": "Financial Services",
-                    "PFE": "Healthcare",
-                    "XOM": "Energy",
-                    "KO": "Consumer Defensive",
-                    "HD": "Consumer Cyclical",
-                    "VZ": "Communication Services",
-                    "NEE": "Utilities",
-                    "AMT": "Real Estate",
-                    "BHP": "Basic Materials",
-                    "BA": "Industrials",
-                }
-
-                # Get sector for the symbol or use a default
-                sector = sectors.get(symbol, "Technology")
-
-                yahoo_data = {"quoteSummary": {"result": [{"assetProfile": {"sector": sector}}]}}
-
-                # Save for future test runs
-                with open(cache_file, "w") as f:
-                    import json
-
-                    json.dump(yahoo_data, f)
-
-            # Store data in our cache dictionary
-            data_cache[symbol] = yahoo_data
-            return yahoo_data
-
-        yield get_cached_data
-        # Cleanup on teardown
-        for file in cache_dir.glob("*.json"):
-            file.unlink()
-        if cache_dir.exists():
-            cache_dir.rmdir()
+        return get_mock_data
 
     async def test_sectors_endpoint(self, test_client, monkeypatch):
         """Test the /sectors endpoint"""
@@ -213,14 +128,15 @@ class TestSectors:
         response = test_client.get(f"/{VERSION}/sectors/details/invalid")
         assert response.status_code == 422  # Validation error
 
-    async def test_get_sectors(self, sector_html, bypass_cache):
+    async def test_get_sectors(self, html_cache_manager, bypass_cache):
         """Test the sector scraping service with real cached HTML responses"""
         # Create a dictionary to store HTML content by URL
         html_cache = {}
 
         # Prepare HTML cache for each sector URL
-        for url in urls.values():
-            html_content = sector_html(url)
+        for sector, url in urls.items():
+            context = f"sectors_{sector.value.lower().replace(' ', '_')}"
+            html_content = html_cache_manager(url, context=context)
             html_cache[url] = html_content
 
         # Create a fetch mock that returns cached HTML directly
@@ -258,13 +174,13 @@ class TestSectors:
             assert sector_data.three_year_return.endswith("%")
             assert sector_data.five_year_return.endswith("%")
 
-    async def test_get_sector_for_symbol(self, yahoo_sectors, sector_html, mock_finance_client, bypass_cache):
+    async def test_get_sector_for_symbol(self, yahoo_sectors, html_cache_manager, mock_finance_client, bypass_cache):
         """Test the get_sector_for_symbol function with cached data"""
         # Set up test symbols
         test_symbols = ["AAPL", "MSFT", "JPM", "PFE"]
 
         for symbol in test_symbols:
-            # Get cached Yahoo data for this symbol
+            # Get mock Yahoo data for this symbol
             yahoo_data = yahoo_sectors(symbol)
             expected_sector = yahoo_data["quoteSummary"]["result"][0]["assetProfile"]["sector"]
 
@@ -272,7 +188,8 @@ class TestSectors:
             sector_url = urls[Sector(expected_sector)]
 
             # Get cached HTML for this sector
-            html_content = sector_html(sector_url)
+            context = f"sectors_{expected_sector.lower().replace(' ', '_')}"
+            html_content = html_cache_manager(sector_url, context=context)
 
             # Mock the necessary functions
             with (
@@ -321,7 +238,7 @@ class TestSectors:
             assert excinfo.value.status_code == 404
             assert "Sector for UNKNOWN not found" in excinfo.value.detail
 
-    async def test_get_sector_details(self, sector_html, bypass_cache):
+    async def test_get_sector_details(self, html_cache_manager, bypass_cache):
         """Test the get_sector_details function with cached HTML content"""
         # Test with all sectors
         test_sectors = list(Sector)
@@ -329,7 +246,8 @@ class TestSectors:
         for sector in test_sectors:
             # Get cached HTML for this sector
             url = urls[sector]
-            html_content = sector_html(url)
+            context = f"sectors_{sector.value.lower().replace(' ', '_')}_details"
+            html_content = html_cache_manager(url, context=context)
 
             # Mock the fetch function
             with patch("src.services.sectors.get_sectors.fetch", new_callable=AsyncMock) as mock_fetch:

@@ -34,4 +34,5 @@ async def get_time_series(
     interval: Interval = Query(..., description="The interval for the historical data."),
     epoch: bool = Query(False, description="Whether to format dates as strings or use epoch timestamps."),
 ):
-    return await get_historical(finance_client, symbol, time_range, interval, epoch)
+    result = await get_historical(finance_client, symbol, time_range, interval, epoch)
+    return result
