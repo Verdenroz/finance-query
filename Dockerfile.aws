@@ -21,11 +21,9 @@ COPY requirements.txt .
 # Install Python packages
 RUN pip install -r requirements.txt
 
-# Copy the 'src' directory itself, not just its contents
+# Copy project files for building
+COPY pyproject.toml setup.py ${LAMBDA_TASK_ROOT}/
 COPY src ${LAMBDA_TASK_ROOT}/src
-
-# Copy setup.py
-COPY setup.py ${LAMBDA_TASK_ROOT}
 
 # Set the working directory
 WORKDIR ${LAMBDA_TASK_ROOT}
