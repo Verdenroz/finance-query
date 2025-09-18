@@ -31,6 +31,9 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 # Run setup.py to cythonize the files
 RUN python setup.py build_ext --inplace
 
+# Build arguments for configuration with defaults
+ARG APP_RATE_LIMIT_PER_DAY=8000
+
 # Set environment variables with defaults for AWS Lambda
 # Logging configuration
 ENV LOG_LEVEL=INFO
