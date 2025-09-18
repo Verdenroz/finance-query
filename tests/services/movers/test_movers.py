@@ -1,126 +1,85 @@
-import hashlib
-from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import orjson
 import pytest
-import requests
 
 from src.models.marketmover import MarketMover, MoverCount
 from src.services.movers import get_actives, get_gainers, get_losers
 from src.services.movers.fetchers import fetch_movers, scrape_movers
 from tests.conftest import VERSION
 
-# Mock response data for different count values
-MOCK_MOVER_RESPONSE_TWENTY_FIVE = [
-    {
-        "symbol": f"SYM{i}",
-        "name": f"Company {i}",
-        "price": f"{100 + i:.2f}",
-        "change": f"+{i * 0.5:.2f}",
-        "percentChange": f"+{i * 0.5:.2f}%",
-    }
-    for i in range(1, 26)
-]
 
-MOCK_MOVER_RESPONSE_FIFTY = [
-    {
-        "symbol": f"SYM{i}",
-        "name": f"Company {i}",
-        "price": f"{100 + i:.2f}",
-        "change": f"+{i * 0.5:.2f}",
-        "percentChange": f"+{i * 0.5:.2f}%",
-    }
-    for i in range(1, 51)
-]
+# Mock response data factory
+def create_mock_mover_response(count: int) -> list[dict]:
+    """Generate mock mover response data for given count."""
+    return [
+        {
+            "symbol": f"SYM{i}",
+            "name": f"Company {i}",
+            "price": f"{100 + i:.2f}",
+            "change": f"+{i * 0.5:.2f}",
+            "percentChange": f"+{i * 0.5:.2f}%",
+        }
+        for i in range(1, count + 1)
+    ]
 
-MOCK_MOVER_RESPONSE_HUNDRED = [
-    {
-        "symbol": f"SYM{i}",
-        "name": f"Company {i}",
-        "price": f"{100 + i:.2f}",
-        "change": f"+{i * 0.5:.2f}",
-        "percentChange": f"+{i * 0.5:.2f}%",
-    }
-    for i in range(1, 101)
-]
 
 # Test data mapping count values to responses
 COUNT_RESPONSE_MAP = {
-    "25": MOCK_MOVER_RESPONSE_TWENTY_FIVE,
-    "50": MOCK_MOVER_RESPONSE_FIFTY,
-    "100": MOCK_MOVER_RESPONSE_HUNDRED,
+    "25": create_mock_mover_response(25),
+    "50": create_mock_mover_response(50),
+    "100": create_mock_mover_response(100),
 }
 
 # Test data for endpoints
 ENDPOINTS = ["actives", "gainers", "losers"]
 
+# Maps endpoints to patch
+SERVICE_MAP = {
+    "actives": "src.routes.movers.get_actives",
+    "gainers": "src.routes.movers.get_gainers",
+    "losers": "src.routes.movers.get_losers",
+}
+
+
+def patch_mover_service(endpoint: str, monkeypatch, mock_service):
+    """Helper function to patch the correct service based on endpoint."""
+    service_path = SERVICE_MAP[endpoint]
+    monkeypatch.setattr(service_path, mock_service)
+
+
+def assert_mover_list_valid(result: list, expected_count: int):
+    """Helper function to validate mover list structure."""
+    assert isinstance(result, list)
+    assert len(result) == expected_count
+    assert all(isinstance(m, MarketMover) for m in result)
+
+
+def assert_api_response_valid(response, expected_data: list, status_code: int = 200):
+    """Helper function to validate API response structure."""
+    data = response.json()
+    assert response.status_code == status_code
+    assert len(data) == len(expected_data)
+    assert data == expected_data
+
 
 class TestMovers:
     @pytest.fixture
-    def movers_html(self):
-        """
-        Fixture that provides a function to get cached HTML content for URLs.
-        """
-        cache_dir = Path(__file__).resolve().parent.parent / "data" / "movers"
-        cache_dir.mkdir(parents=True, exist_ok=True)
-        html_cache = {}
-
-        def get_cached_html(url):
-            if url in html_cache:
-                return html_cache[url]
-
-            filename = hashlib.md5(url.encode()).hexdigest()
-            if "most-active" in url:
-                endpoint = "actives"
-            elif "gainers" in url:
-                endpoint = "gainers"
-            elif "losers" in url:
-                endpoint = "losers"
-            else:
-                endpoint = "unknown"
-
-            count = url.split("count=")[-1]
-            cache_file = cache_dir / f"{endpoint}_{count}_{filename}.html"
-
-            if cache_file.exists():
-                with open(cache_file, encoding="utf-8") as f:
-                    html_content = f.read()
-            else:
-                response = requests.get(url, headers={"User-Agent": "Mozilla/5.0"})
-                html_content = response.text
-                with open(cache_file, "w", encoding="utf-8") as f:
-                    f.write(html_content)
-
-            html_cache[url] = html_content
-            return html_content
-
-        yield get_cached_html
-        # Cleanup on teardown
-        for file in cache_dir.glob("*.html"):
-            file.unlink()
-        if cache_dir.exists():
-            cache_dir.rmdir()
-
-    @pytest.fixture
     def mock_api_response(self):
-        """
-        Fixture that provides mock Yahoo Finance API responses for movers.
-        """
+        """Fixture that provides mock Yahoo Finance API responses for movers."""
 
         def get_mock_response(count=50):
-            mock_items = []
-            for i in range(1, count + 1):
-                mock_items.append(
-                    {
-                        "symbol": f"SYM{i}",
-                        "longName": f"Company {i} Long",
-                        "shortName": f"Company {i}",
-                        "regularMarketPrice": {"fmt": f"{100 + i:.2f}"},
-                        "regularMarketChange": {"fmt": f"+{i * 0.5:.2f}"},
-                        "regularMarketChangePercent": {"fmt": f"+{i * 0.5:.2f}%"},
-                    }
-                )
+            mock_items = [
+                {
+                    "symbol": f"SYM{i}",
+                    "longName": f"Company {i} Long",
+                    "shortName": f"Company {i}",
+                    "regularMarketPrice": {"fmt": f"{100 + i:.2f}"},
+                    "regularMarketChange": {"fmt": f"+{i * 0.5:.2f}"},
+                    "regularMarketChangePercent": {"fmt": f"+{i * 0.5:.2f}%"},
+                }
+                for i in range(1, count + 1)
+            ]
             return {"finance": {"result": [{"quotes": mock_items}]}}
 
         return get_mock_response
@@ -129,39 +88,25 @@ class TestMovers:
     @pytest.mark.parametrize("endpoint", ENDPOINTS)
     def test_get_movers_success(self, test_client, count, endpoint, mock_finance_client, monkeypatch):
         """Test successful movers retrieval with different count values"""
-        mock_service = AsyncMock(return_value=COUNT_RESPONSE_MAP[count])
-        if endpoint == "actives":
-            monkeypatch.setattr("src.routes.movers.get_actives", mock_service)
-        elif endpoint == "gainers":
-            monkeypatch.setattr("src.routes.movers.get_gainers", mock_service)
-        else:
-            monkeypatch.setattr("src.routes.movers.get_losers", mock_service)
+        expected_data = COUNT_RESPONSE_MAP[count]
+        mock_service = AsyncMock(return_value=expected_data)
+        patch_mover_service(endpoint, monkeypatch, mock_service)
 
         response = test_client.get(f"{VERSION}/{endpoint}?count={count}")
-        data = response.json()
 
-        assert response.status_code == 200
-        assert len(data) == int(count)
-        assert data == COUNT_RESPONSE_MAP[count]
+        assert_api_response_valid(response, expected_data)
         mock_service.assert_awaited_once_with(MoverCount(count))
 
     @pytest.mark.parametrize("endpoint", ENDPOINTS)
     def test_get_movers_default_count(self, test_client, endpoint, mock_finance_client, monkeypatch):
         """Test movers retrieval with default count (50)"""
-        mock_service = AsyncMock(return_value=MOCK_MOVER_RESPONSE_FIFTY)
-        if endpoint == "actives":
-            monkeypatch.setattr("src.routes.movers.get_actives", mock_service)
-        elif endpoint == "gainers":
-            monkeypatch.setattr("src.routes.movers.get_gainers", mock_service)
-        else:
-            monkeypatch.setattr("src.routes.movers.get_losers", mock_service)
+        expected_data = COUNT_RESPONSE_MAP["50"]
+        mock_service = AsyncMock(return_value=expected_data)
+        patch_mover_service(endpoint, monkeypatch, mock_service)
 
         response = test_client.get(f"{VERSION}/{endpoint}")
-        data = response.json()
 
-        assert response.status_code == 200
-        assert len(data) == 50
-        assert data == MOCK_MOVER_RESPONSE_FIFTY
+        assert_api_response_valid(response, expected_data)
         mock_service.assert_awaited_once_with(MoverCount.FIFTY)
 
     @pytest.mark.parametrize("endpoint", ENDPOINTS)
@@ -210,10 +155,10 @@ class TestMovers:
             assert mover.change == f"+{(i + 1) * 0.5:.2f}"
             assert mover.percent_change == f"+{(i + 1) * 0.5:.2f}%"
 
-    async def test_scrape_movers(self, movers_html, bypass_cache):
+    async def test_scrape_movers(self, html_cache_manager, bypass_cache):
         """Test scrape_movers function with cached HTML content"""
         test_url = "https://finance.yahoo.com/markets/stocks/most-active/?start=0&count=50"
-        html_content = movers_html(test_url)
+        html_content = html_cache_manager(test_url, context="movers_actives_50")
         with patch("src.services.movers.fetchers.movers_scraper.fetch", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.return_value = html_content
             result = await scrape_movers(test_url)
@@ -245,12 +190,21 @@ class TestMovers:
             ),
         ],
     )
-    async def test_get_movers_services_fallback(self, service_func, api_url, scrape_url, bypass_cache, movers_html):
+    async def test_get_movers_services_fallback(self, service_func, api_url, scrape_url, bypass_cache, html_cache_manager):
         """Test get_movers service functions when API fetch fails and falls back to scraping"""
         test_count = MoverCount.FIFTY
         with patch("src.services.movers.get_movers.fetch_movers", new_callable=AsyncMock) as mock_fetch:
             mock_fetch.side_effect = Exception("API failure")
-            html_content = movers_html(scrape_url)
+            # Determine context from URL
+            if "most-active" in scrape_url:
+                context = "movers_actives_50"
+            elif "gainers" in scrape_url:
+                context = "movers_gainers_50"
+            elif "losers" in scrape_url:
+                context = "movers_losers_50"
+            else:
+                context = "movers_unknown_50"
+            html_content = html_cache_manager(scrape_url, context=context)
             with patch("src.services.movers.fetchers.movers_scraper.fetch", new_callable=AsyncMock) as mock_scrape_fetch:
                 mock_scrape_fetch.return_value = html_content
                 result = await service_func(test_count)

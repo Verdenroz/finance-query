@@ -21,17 +21,27 @@ COPY requirements.txt .
 # Install Python packages
 RUN pip install -r requirements.txt
 
-# Copy the 'src' directory itself, not just its contents
+# Copy project files for building
+COPY pyproject.toml setup.py ${LAMBDA_TASK_ROOT}/
 COPY src ${LAMBDA_TASK_ROOT}/src
-
-# Copy setup.py
-COPY setup.py ${LAMBDA_TASK_ROOT}
 
 # Set the working directory
 WORKDIR ${LAMBDA_TASK_ROOT}
 
 # Run setup.py to cythonize the files
 RUN python setup.py build_ext --inplace
+
+# Set environment variables with defaults for AWS Lambda
+# Logging configuration
+ENV LOG_LEVEL=INFO
+ENV LOG_FORMAT=json
+ENV PERFORMANCE_THRESHOLD_MS=2000
+
+# Logo fetching configuration
+ENV DISABLE_LOGO_FETCHING=false
+ENV LOGO_TIMEOUT_SECONDS=1
+ENV LOGO_CIRCUIT_BREAKER_THRESHOLD=5
+ENV LOGO_CIRCUIT_BREAKER_TIMEOUT=300
 
 # Set the entry point for the AWS Lambda function
 CMD ["src/main.handler"]

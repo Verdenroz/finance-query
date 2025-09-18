@@ -16,9 +16,11 @@ from src.clients.fetch_client import CurlFetchClient
 from src.context import request_context
 from src.models import HistoricalData, MarketIndex, MarketMover, MarketSector, News, Quote, SimpleQuote
 from src.models.sector import MarketSectorDetails
+from src.utils.logging import get_logger, log_cache_operation
 from src.utils.market import MarketSchedule, MarketStatus
 
 T = TypeVar("T")
+logger = get_logger(__name__)
 
 
 class BaseCacheHandler:
@@ -174,11 +176,21 @@ def cache(
             # Skip caching if bypass is enabled or expire_time <= 0
             bypass_cache = os.getenv("BYPASS_CACHE")
             if (bypass_cache is not None and bypass_cache.lower() == "true") or handler.get_expire_time() <= 0:
+                if bypass_cache and bypass_cache.lower() == "true":
+                    logger.debug("Cache BYPASS - caching disabled via BYPASS_CACHE", extra={"function": func.__name__, "bypass_reason": "BYPASS_CACHE=true"})
+                else:
+                    logger.debug(
+                        "Cache BYPASS - expire time is zero",
+                        extra={"function": func.__name__, "bypass_reason": "expire_time <= 0", "expire_time": handler.get_expire_time()},
+                    )
                 return await func(*args, **kwargs)
 
             # Build cache key from serializable args
-            filtered_args = [a for a in args if not isinstance(a, CurlFetchClient)]
-            filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, CurlFetchClient)}
+            from unittest.mock import AsyncMock, MagicMock, Mock
+
+            mock_types = (CurlFetchClient, AsyncMock, MagicMock, Mock)
+            filtered_args = [a for a in args if not isinstance(a, mock_types)]
+            filtered_kwargs = {k: v for k, v in kwargs.items() if not isinstance(v, mock_types)}
             key_raw = orjson.dumps((filtered_args, filtered_kwargs))
             key = f"{func.__name__}:{hashlib.sha256(key_raw).hexdigest()}"
 
@@ -188,11 +200,14 @@ def cache(
                 # Try cache
                 cached = await handler.get(key, return_type)
                 if cached is not None:
+                    log_cache_operation(logger, "get", f"{func.__name__}:{key[-8:]}", hit=True)
                     return cached
 
                 # Miss: call function and cache
+                log_cache_operation(logger, "get", f"{func.__name__}:{key[-8:]}", hit=False)
                 result = await func(*args, **kwargs)
                 if result is not None:
+                    log_cache_operation(logger, "set", f"{func.__name__}:{key[-8:]}")
                     await handler.set(key, result, handler.get_expire_time())
                 return result
 

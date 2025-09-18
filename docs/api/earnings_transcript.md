@@ -1,111 +1,119 @@
-# Earnings Transcript API
+# Earnings Transcript
 
-The Earnings Transcript API provides access to earnings call transcripts in JSON format.
+## GET /v1/earnings-transcript/{symbol}
 
-## Overview
+### Overview
 
-This API fetches earnings call transcripts using the `defeatbeta-api` package and returns the raw transcript data in structured JSON format.
+**Purpose:** Retrieve earnings call transcripts for a given stock symbol.
+**Response Format:** A transcript data object containing the transcript content and metadata.
 
-## Authentication
+### Authentication
 
-All endpoints require an API key passed in the `x-api-key` header.
+Optional authentication via `x-api-key` header token
 
-## Endpoints
+### Path Parameters
 
-### GET /v1/earnings-transcript/{symbol}
+| Parameter | Type   | Required | Description                     | Example |
+|-----------|--------|:--------:|---------------------------------|---------|
+| `symbol`  | string |    ✓     | The stock ticker symbol         | `AAPL`  |
 
-Get earnings call transcript for a stock symbol in JSON format.
+### Query Parameters
 
-**Parameters:**
-- `symbol` (path): Stock ticker symbol (e.g., AAPL, TSLA, MSFT)
-- `quarter` (query, optional): Specific quarter (Q1, Q2, Q3, Q4)
-- `year` (query, optional): Specific year (e.g., 2024, 2023)
+| Parameter | Type    | Required | Description                               | Example |
+|-----------|---------|:--------:|-------------------------------------------|---------|
+| `quarter` | string  |          | Specific quarter filter (Q1, Q2, Q3, Q4) | `Q3`    |
+| `year`    | integer |          | Specific year filter                      | `2024`  |
 
-**Example Request:**
-```bash
-curl -X GET "https://your-api-domain.com/v1/earnings-transcript/AAPL?quarter=Q3&year=2024" \
-  -H "x-api-key: your-api-key"
-```
+---
 
-**Example Response:**
-```json
-{
-  "symbol": "AAPL",
-  "transcripts": [
+### Responses
+
+- **200 OK**
+  - **Content-Type:** `application/json`
+  - **Schema:** [`EarningsTranscript`](#earningstranscript-schema)
+  - **Example (200):**
+    ```json
     {
       "symbol": "AAPL",
-      "quarter": "Q3",
-      "year": 2024,
-      "date": "2024-10-15T00:00:00",
-      "transcript": "Full transcript text...",
-      "participants": ["CEO", "CFO", "Analysts"],
-      "metadata": {"source": "defeatbeta-api"}
+      "transcripts": [
+        {
+          "symbol": "AAPL",
+          "quarter": "Q3",
+          "year": 2024,
+          "date": "2024-10-15T00:00:00",
+          "transcript": "AAPL Q3 2024 Earnings Call Transcript\n\nCORPORATE PARTICIPANTS:\n- CEO: Thank you for joining us today...",
+          "participants": [
+            "CEO - Chief Executive Officer",
+            "CFO - Chief Financial Officer",
+            "Analyst 1 - Investment Research"
+          ],
+          "metadata": {
+            "source": "defeatbeta-api",
+            "retrieved_at": "2024-10-15T12:00:00",
+            "transcripts_id": 12345
+          }
+        }
+      ]
     }
-  ],
-  "metadata": {
-    "total_transcripts": 1,
-    "filters_applied": {
-      "quarter": "Q3",
-      "year": 2024
-    },
-    "retrieved_at": "2024-10-15T12:00:00"
+    ```
+
+- **404 Not Found**
+  ```json
+  { "detail": "No earnings transcripts found for symbol INVALID" }
+  ```
+
+- **422 Unprocessable Entity**
+  ```json
+  {
+    "errors": {
+      "quarter": [
+        "Invalid quarter format. Use Q1, Q2, Q3, or Q4"
+      ]
+    }
   }
-}
-```
+  ```
 
-### POST /v1/earnings-transcript/analyze
+---
 
-Get earnings transcript with custom parameters via POST request.
+### Schema References
 
-**Request Body:**
-```json
-{
-  "symbol": "AAPL",
-  "quarter": "Q3",
-  "year": 2024
-}
-```
+#### EarningsTranscript Schema
 
-### GET /v1/earnings-transcript/{symbol}/latest
+| Field       | Type                                    | Description                          | Required |
+|-------------|-----------------------------------------|--------------------------------------|:--------:|
+| symbol      | string                                  | Stock symbol (e.g., "AAPL")         |    ✓     |
+| transcripts | [TranscriptItem[]](#transcriptitem)     | List of transcript objects           |    ✓     |
 
-Get the most recent earnings call transcript for a stock symbol.
+#### TranscriptItem
 
-**Parameters:**
-- `symbol` (path): Stock ticker symbol
+| Field        | Type     | Description                          | Required |
+|--------------|----------|--------------------------------------|:--------:|
+| symbol       | string   | Stock symbol                         |    ✓     |
+| quarter      | string   | Quarter (e.g., "Q3")                 |    ✓     |
+| year         | integer  | Year (e.g., 2024)                    |    ✓     |
+| date         | datetime | Date of the earnings call            |    ✓     |
+| transcript   | string   | Full transcript text content         |    ✓     |
+| participants | string[] | List of call participants            |    ✓     |
+| metadata     | object   | Additional transcript metadata       |    ✓     |
 
-**Example Request:**
+---
+
+### Usage Examples
+
+#### Get Latest Earnings Transcript
 ```bash
-curl -X GET "https://your-api-domain.com/v1/earnings-transcript/AAPL/latest" \
-  -H "x-api-key: your-api-key"
+curl -X GET "https://finance-query.onrender.com/v1/earnings-transcript/AAPL" \
+     -H "x-api-key: YOUR_API_KEY"
 ```
 
-## Response Structure
+#### Get Specific Quarter and Year
+```bash
+curl -X GET "https://finance-query.onrender.com/v1/earnings-transcript/TSLA?quarter=Q3&year=2024" \
+     -H "x-api-key: YOUR_API_KEY"
+```
 
-All endpoints return earnings transcript data with the following structure:
-
-- **symbol**: Stock ticker symbol
-- **transcripts**: Array of transcript objects containing:
-  - **symbol**: Stock symbol
-  - **quarter**: Quarter (e.g., "Q3")
-  - **year**: Year (e.g., 2024)
-  - **date**: Date of the earnings call
-  - **transcript**: Full transcript text
-  - **participants**: List of call participants
-  - **metadata**: Additional metadata about the transcript
-- **metadata**: Request metadata including:
-  - **total_transcripts**: Number of transcripts returned
-  - **filters_applied**: Applied filters (quarter, year)
-  - **retrieved_at**: Timestamp when data was retrieved
-
-## Error Responses
-
-- `404`: Symbol not found or no transcripts available
-- `500`: Internal server error (service unavailable)
-
-## Rate Limits
-
-Standard API rate limits apply.
-
-## Dependencies
-
-- `defeatbeta-api`: For fetching earnings transcript data
+#### Filter by Year Only
+```bash
+curl -X GET "https://finance-query.onrender.com/v1/earnings-transcript/MSFT?year=2023" \
+     -H "x-api-key: YOUR_API_KEY"
+```

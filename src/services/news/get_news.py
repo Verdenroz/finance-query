@@ -1,9 +1,14 @@
+import time
+
 from fastapi import HTTPException
 from lxml import etree
 
 from src.models import News
 from src.utils.cache import cache
 from src.utils.dependencies import fetch
+from src.utils.logging import get_logger, log_external_api_call
+
+logger = get_logger(__name__)
 
 
 def parse_symbol_exchange(yahoo_symbol: str):
@@ -93,9 +98,10 @@ async def scrape_news_for_quote(symbol: str) -> list[News]:
     """
     # First convert the symbol if it has an exchange code
     base_symbol, exchange = parse_symbol_exchange(symbol)
-    # Build URLs based on whether we have an exchange code
+    # Build URLs and XPaths based on whether we have an exchange code
     if exchange:
         urls = [f"https://stockanalysis.com/quote/{exchange.lower()}/{base_symbol}"]
+        container_xpaths = ["/html/body/div/div[1]/div[2]/main/div[3]/div[2]/div/div[2]"]
     else:
         # If no exchange code, try all possible U.S. URLs for the symbol
         urls = [
@@ -103,13 +109,26 @@ async def scrape_news_for_quote(symbol: str) -> list[News]:
             f"https://stockanalysis.com/etf/{base_symbol}",
             f"https://stockanalysis.com/quote/otc/{base_symbol}",
         ]
+        container_xpaths = [
+            "/html/body/div[1]/div[1]/div[2]/main/div[3]/div[2]/div/div[2]",  # Stock
+            "/html/body/div/div[1]/div[2]/main/div[3]/div[2]/div[2]/div/div[2]",  # ETF
+            "/html/body/div/div[1]/div[2]/main/div[3]/div[2]/div/div[2]",  # OTC
+        ]
 
-    container_xpath = "/html/body/div/div[1]/div[2]/main/div[3]/div[2]/div/div[2]"
-
-    # Try each URL until we find news
-    for url in urls:
+    # Try each URL-XPath pair until we find news
+    for url, container_xpath in zip(urls, container_xpaths, strict=False):
+        print(f"Trying URL: {url}")
         try:
-            html = await fetch(url=url)
+            start_time = time.perf_counter()
+            try:
+                html = await fetch(url=url)
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                log_external_api_call(logger, "StockAnalysis", "news", duration_ms, success=True)
+            except Exception:
+                duration_ms = (time.perf_counter() - start_time) * 1000
+                log_external_api_call(logger, "StockAnalysis", "news", duration_ms, success=False)
+                raise
+
             news_list = await _parse_news(html, container_xpath)
 
             if news_list:
@@ -125,7 +144,17 @@ async def scrape_news_for_quote(symbol: str) -> list[News]:
 @cache(expire=900)
 async def scrape_general_news():
     url = "https://stockanalysis.com/news/"
-    html = await fetch(url=url)
+
+    start_time = time.perf_counter()
+    try:
+        html = await fetch(url=url)
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "StockAnalysis", "general_news", duration_ms, success=True)
+    except Exception:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "StockAnalysis", "general_news", duration_ms, success=False)
+        raise
+
     container_xpath = "/html/body/div/div[1]/div[2]/main/div[2]/div/div"
     news_list = await _parse_news(html, container_xpath)
     # If no news was found, raise an error

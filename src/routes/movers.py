@@ -32,7 +32,8 @@ router = APIRouter()
     },
 )
 async def actives(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    return await get_actives(count)
+    result = await get_actives(count)
+    return result
 
 
 @router.get(
@@ -58,7 +59,8 @@ async def actives(count: MoverCount = Query(MoverCount.FIFTY, description="Numbe
     },
 )
 async def gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    return await get_gainers(count)
+    result = await get_gainers(count)
+    return result
 
 
 @router.get(
@@ -84,4 +86,5 @@ async def gainers(count: MoverCount = Query(MoverCount.FIFTY, description="Numbe
     },
 )
 async def losers(count: MoverCount = Query(MoverCount.FIFTY, description="Number of movers to retrieve")):
-    return await get_losers(count)
+    result = await get_losers(count)
+    return result
