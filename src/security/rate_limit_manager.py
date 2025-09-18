@@ -13,7 +13,7 @@ class RateLimitEntry:
 
 class SecurityConfig:
     ADMIN_API_KEY: str = os.getenv("ADMIN_API_KEY")
-    RATE_LIMIT: int = 2000  # requests per day
+    RATE_LIMIT: int = 200000  # 200,000 requests per day
     HEALTH_CHECK_INTERVAL: int = 1800  # 30 minutes in seconds
 
     # Define paths that skip security checks
