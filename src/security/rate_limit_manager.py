@@ -27,7 +27,7 @@ class SecurityConfig:
 
     @classmethod
     def is_admin_key(cls, api_key: str | None) -> bool:
-        return api_key == cls.ADMIN_API_KEY
+        return cls.ADMIN_API_KEY is not None and api_key == cls.ADMIN_API_KEY
 
 
 class RateLimitManager:
