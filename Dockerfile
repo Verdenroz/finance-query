@@ -60,6 +60,12 @@ ENV LOGO_TIMEOUT_SECONDS=${LOGO_TIMEOUT_SECONDS}
 ENV LOGO_CIRCUIT_BREAKER_THRESHOLD=${LOGO_CIRCUIT_BREAKER_THRESHOLD}
 ENV LOGO_CIRCUIT_BREAKER_TIMEOUT=${LOGO_CIRCUIT_BREAKER_TIMEOUT}
 
+# Rate Limiting Configuration:
+# Self-deploying users can set their daily rate limit via APP_RATE_LIMIT_PER_DAY.
+# If not set, it defaults to 8000 requests per day.
+# Example: docker run -e APP_RATE_LIMIT_PER_DAY=15000 my-application-image
+ENV APP_RATE_LIMIT_PER_DAY=${APP_RATE_LIMIT_PER_DAY}
+
 # Expose the port FastAPI will run on
 EXPOSE 8000
 
