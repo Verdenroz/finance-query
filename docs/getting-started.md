@@ -41,11 +41,11 @@ FinanceQuery requires several system-level dependencies for optimal performance:
 
 ### Dependency Management
 
-FinanceQuery uses Poetry for dependency management. A `requirements.txt` file is also provided for environments where Poetry isn't available.
+FinanceQuery uses uv for dependency management. A `requirements.txt` file is also provided for environments where uv isn't available.
 
 ```bash
-# Using Poetry (recommended)
-poetry install
+# Using uv (recommended)
+uv sync
 
 # Using pip
 pip install -r requirements.txt
@@ -75,7 +75,7 @@ git clone https://github.com/Verdenroz/finance-query.git
 cd finance-query
 
 # Install dependencies
-poetry install
+uv sync
 
 # Cythonize files for performance
 python setup.py build_ext --inplace
