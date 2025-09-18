@@ -59,6 +59,7 @@ nav:
   - Getting Started: getting-started.md
   - Configuration:
       - Logging: logging.md
+      - Rate Limiting: rate-limiting.md
   - Deployment: deployment.md
   - API Reference:
       - Health Check: api/health.md

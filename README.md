@@ -38,8 +38,8 @@ cd finance-query
 Install dependencies
 
 ```bash
-# Using Poetry (recommended)
-poetry install
+# Using uv (recommended)
+uv sync
 
 # Using pip
 pip install -r requirements.txt
@@ -65,7 +65,7 @@ The exposed endpoints to the API are:
 - https://finance-query.onrender.com
 
 An `x-api-key` header can be added if you have enabled security and rate limiting. If a key is not provided, or an
-invalid key is used, a rate limit of 2000 requests/day is applied to the request's ip address.
+invalid key is used, a rate limit of 8000 requests/day is applied to the request's ip address.
 
 > If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See
 > the [.env template](.env.template).
@@ -156,22 +156,25 @@ ws.onmessage = (event) => {
 
 ## Available REST Endpoints
 
-| Endpoint            | Description                                    |
-|---------------------|------------------------------------------------|
-| `/health`, `/ping`  | API status and health monitoring               |
-| `/hours`            | Trading hours and market status                |
-| `/v1/quotes`        | Detailed quotes and information                |
-| `/v1/simple-quotes` | Simplified quotes with summary information     |
-| `/v1/similar`       | Find similar quotes to queried symbol          |
-| `/v1/historical`    | Historical price data with customizable ranges |
-| `/v1/movers`        | Market gainers, losers, and most active stocks |
-| `/v1/news`          | Financial news and market updates              |
-| `/v1/indices`       | Major market indices (S&P 500, NASDAQ, DOW)    |
-| `/v1/sectors`       | Market sector performance and analysis         |
-| `/v1/search`        | Search for securities with filters             |
-| `/v1/indicator`     | Get specific indicator history over time       |
-| `/v1/indicators`    | Technical indicators summary for interval      |
-| `/v1/stream`        | SSE for real-time quote updates                |
+| Endpoint                  | Description                                    |
+|---------------------------|------------------------------------------------|
+| `/health`, `/ping`        | API status and health monitoring               |
+| `/hours`                  | Trading hours and market status                |
+| `/v1/quotes`              | Detailed quotes and information                |
+| `/v1/simple-quotes`       | Simplified quotes with summary information     |
+| `/v1/similar`             | Find similar quotes to queried symbol          |
+| `/v1/historical`          | Historical price data with customizable ranges |
+| `/v1/movers`              | Market gainers, losers, and most active stocks |
+| `/v1/news`                | Financial news and market updates              |
+| `/v1/indices`             | Major market indices (S&P 500, NASDAQ, DOW)    |
+| `/v1/sectors`             | Market sector performance and analysis         |
+| `/v1/search`              | Search for securities with filters             |
+| `/v1/indicator`           | Get specific indicator history over time       |
+| `/v1/indicators`          | Technical indicators summary for interval      |
+| `/v1/holders`             | Company ownership and holder information       |
+| `/v1/financials`          | Financial statements and company metrics       |
+| `/v1/earnings-transcript` | Earnings call transcripts and analysis         |
+| `/v1/stream`              | SSE for real-time quote updates                |
 
 ## Available WebSocket Endpoints
 
@@ -340,6 +343,8 @@ FinanceQuery leverages:
 - **[lxml](https://lxml.de)** for fast and reliable web scraping
 - **[Cython](https://cython.org)** for accelerated technical indicator calculations
 - **[Redis](https://redis.io)** for intelligent caching of market data
+- **[yfinance](https://github.com/ranaroussi/yfinance)** for institutional and insider holdings data
+- **[defeatbeta-api](https://github.com/defeat-beta/defeatbeta-api)** for earnings transcripts and financial statements
 - **[logo.dev](https://logo.dev)** for fetching stock logos
 
 ## License
