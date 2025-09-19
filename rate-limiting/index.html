@@ -12,13 +12,13 @@
         <meta name="author" content="Harvey Tseng">
       
       
-        <link rel="canonical" href="https://verdenroz.github.io/finance-query/websockets/">
+        <link rel="canonical" href="https://verdenroz.github.io/finance-query/rate-limiting/">
       
       
-        <link rel="prev" href="../api/stream/">
+        <link rel="prev" href="../logging/">
       
       
-        <link rel="next" href="profile/">
+        <link rel="next" href="../deployment/">
       
       
       <link rel="icon" href="../assets/logo.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Overview - Finance Query</title>
+        <title>Rate Limiting - Finance Query</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#websockets" class="md-skip">
+        <a href="#rate-limiting-configuration" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Overview
+              Rate Limiting
             
           </span>
         </div>
@@ -303,8 +303,10 @@
       
   
   
+    
   
   
+  
     
     
       
@@ -316,13 +318,11 @@
     
     
     
-    <li class="md-nav__item md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" checked>
         
           
           <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
@@ -338,7 +338,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="true">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
             Configuration
@@ -372,10 +372,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../rate-limiting/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Rate Limiting
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -386,6 +408,194 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#environment-variables" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment Variables
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basic-setup" class="md-nav__link">
+    <span class="md-ellipsis">
+      Basic Setup
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#deployment-configuration" class="md-nav__link">
+    <span class="md-ellipsis">
+      Deployment Configuration
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Deployment Configuration">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#docker" class="md-nav__link">
+    <span class="md-ellipsis">
+      Docker
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#aws-lambda" class="md-nav__link">
+    <span class="md-ellipsis">
+      AWS Lambda
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment File
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#api-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      API Behavior
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="API Behavior">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#rate-limit-headers" class="md-nav__link">
+    <span class="md-ellipsis">
+      Rate Limit Headers
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rate-limit-exceeded" class="md-nav__link">
+    <span class="md-ellipsis">
+      Rate Limit Exceeded
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#admin-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Admin Access
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#protected-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      Protected Endpoints
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Protected Endpoints">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#open-paths-no-rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Open Paths (No Rate Limiting)
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#health-check-rate-limiting" class="md-nav__link">
+    <span class="md-ellipsis">
+      Health Check Rate Limiting
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all-other-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      All Other Endpoints
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -823,10 +1033,8 @@
       
   
   
-    
   
   
-  
     
     
       
@@ -844,11 +1052,13 @@
     
     
     
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
+    <li class="md-nav__item md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_6" checked>
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
         
           
           <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
@@ -864,7 +1074,7 @@
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="true">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_6">
             <span class="md-nav__icon md-icon"></span>
             Websockets
@@ -875,32 +1085,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../websockets/" class="md-nav__link">
         
   
   
@@ -911,185 +1099,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#available-websocket-routes" class="md-nav__link">
-    <span class="md-ellipsis">
-      Available WebSocket Routes
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#connection-requirements" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connection Requirements
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connection Requirements">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      Authentication
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#url-format" class="md-nav__link">
-    <span class="md-ellipsis">
-      URL Format
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#deployment-considerations" class="md-nav__link">
-    <span class="md-ellipsis">
-      Deployment Considerations
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Deployment Considerations">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#aws-lambda-limitations" class="md-nav__link">
-    <span class="md-ellipsis">
-      AWS Lambda Limitations
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#recommended-deployment" class="md-nav__link">
-    <span class="md-ellipsis">
-      Recommended Deployment
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#connection-management" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connection Management
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connection Management">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#redis-scaling" class="md-nav__link">
-    <span class="md-ellipsis">
-      Redis Scaling
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connection-lifecycle" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connection Lifecycle
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
-    <span class="md-ellipsis">
-      Error Handling
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#connection-management_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connection Management
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connection Management">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#channel-naming" class="md-nav__link">
-    <span class="md-ellipsis">
-      Channel Naming
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#connection-sharing" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connection Sharing
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Started
-    </span>
-  </a>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1102,7 +1111,7 @@
   
   
     <li class="md-nav__item">
-      <a href="profile/" class="md-nav__link">
+      <a href="../websockets/profile/" class="md-nav__link">
         
   
   
@@ -1125,7 +1134,7 @@
   
   
     <li class="md-nav__item">
-      <a href="quotes/" class="md-nav__link">
+      <a href="../websockets/quotes/" class="md-nav__link">
         
   
   
@@ -1148,7 +1157,7 @@
   
   
     <li class="md-nav__item">
-      <a href="market/" class="md-nav__link">
+      <a href="../websockets/market/" class="md-nav__link">
         
   
   
@@ -1171,7 +1180,7 @@
   
   
     <li class="md-nav__item">
-      <a href="hours/" class="md-nav__link">
+      <a href="../websockets/hours/" class="md-nav__link">
         
   
   
@@ -1320,37 +1329,37 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#available-websocket-routes" class="md-nav__link">
+  <a href="#overview" class="md-nav__link">
     <span class="md-ellipsis">
-      Available WebSocket Routes
+      Overview
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#connection-requirements" class="md-nav__link">
+  <a href="#configuration" class="md-nav__link">
     <span class="md-ellipsis">
-      Connection Requirements
+      Configuration
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Connection Requirements">
+    <nav class="md-nav" aria-label="Configuration">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
+  <a href="#environment-variables" class="md-nav__link">
     <span class="md-ellipsis">
-      Authentication
+      Environment Variables
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#url-format" class="md-nav__link">
+  <a href="#basic-setup" class="md-nav__link">
     <span class="md-ellipsis">
-      URL Format
+      Basic Setup
     </span>
   </a>
   
@@ -1362,28 +1371,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#deployment-considerations" class="md-nav__link">
+  <a href="#deployment-configuration" class="md-nav__link">
     <span class="md-ellipsis">
-      Deployment Considerations
+      Deployment Configuration
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Deployment Considerations">
+    <nav class="md-nav" aria-label="Deployment Configuration">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#aws-lambda-limitations" class="md-nav__link">
+  <a href="#docker" class="md-nav__link">
     <span class="md-ellipsis">
-      AWS Lambda Limitations
+      Docker
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#recommended-deployment" class="md-nav__link">
+  <a href="#aws-lambda" class="md-nav__link">
     <span class="md-ellipsis">
-      Recommended Deployment
+      AWS Lambda
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#environment-file" class="md-nav__link">
+    <span class="md-ellipsis">
+      Environment File
     </span>
   </a>
   
@@ -1395,28 +1413,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#connection-management" class="md-nav__link">
+  <a href="#api-behavior" class="md-nav__link">
     <span class="md-ellipsis">
-      Connection Management
+      API Behavior
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="Connection Management">
+    <nav class="md-nav" aria-label="API Behavior">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#redis-scaling" class="md-nav__link">
+  <a href="#rate-limit-headers" class="md-nav__link">
     <span class="md-ellipsis">
-      Redis Scaling
+      Rate Limit Headers
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#connection-lifecycle" class="md-nav__link">
+  <a href="#rate-limit-exceeded" class="md-nav__link">
     <span class="md-ellipsis">
-      Connection Lifecycle
+      Rate Limit Exceeded
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#admin-access" class="md-nav__link">
+    <span class="md-ellipsis">
+      Admin Access
     </span>
   </a>
   
@@ -1428,37 +1455,37 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#error-handling" class="md-nav__link">
+  <a href="#protected-endpoints" class="md-nav__link">
     <span class="md-ellipsis">
-      Error Handling
+      Protected Endpoints
     </span>
   </a>
   
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#connection-management_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Connection Management
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Connection Management">
+    <nav class="md-nav" aria-label="Protected Endpoints">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#channel-naming" class="md-nav__link">
+  <a href="#open-paths-no-rate-limiting" class="md-nav__link">
     <span class="md-ellipsis">
-      Channel Naming
+      Open Paths (No Rate Limiting)
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#connection-sharing" class="md-nav__link">
+  <a href="#health-check-rate-limiting" class="md-nav__link">
     <span class="md-ellipsis">
-      Connection Sharing
+      Health Check Rate Limiting
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#all-other-endpoints" class="md-nav__link">
+    <span class="md-ellipsis">
+      All Other Endpoints
     </span>
   </a>
   
@@ -1466,15 +1493,6 @@
         
       </ul>
     </nav>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#getting-started" class="md-nav__link">
-    <span class="md-ellipsis">
-      Getting Started
-    </span>
-  </a>
   
 </li>
       
@@ -1497,78 +1515,159 @@
   
 
 
-<h1 id="websockets">WebSockets<a class="headerlink" href="#websockets" title="Permanent link">&para;</a></h1>
-<p>Finance Query provides real-time financial data through WebSocket connections. All WebSocket endpoints automatically refresh data every 5 seconds and support both individual connections and Redis-based pub/sub scaling.</p>
-<h2 id="available-websocket-routes">Available WebSocket Routes<a class="headerlink" href="#available-websocket-routes" title="Permanent link">&para;</a></h2>
-<p>Finance Query currently implements four WebSocket endpoints:</p>
+<h1 id="rate-limiting-configuration">Rate Limiting Configuration<a class="headerlink" href="#rate-limiting-configuration" title="Permanent link">&para;</a></h1>
+<p>FinanceQuery includes built-in rate limiting to prevent abuse and ensure fair usage of the API. This document covers how to configure and understand the rate limiting system.</p>
+<h2 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h2>
+<p>The rate limiting system provides:</p>
 <ul>
-<li><strong><a href="profile/">Profile</a></strong> - Stream comprehensive data for a single symbol including quotes, similar stocks, sector performance, and news</li>
-<li><strong><a href="quotes/">Quotes</a></strong> - Stream simple quote data for multiple symbols simultaneously  </li>
-<li><strong><a href="market/">Market</a></strong> - Stream market overview including movers, indices, news, and sector performances</li>
-<li><strong><a href="hours/">Hours</a></strong> - Stream current market status (open, closed, pre-market, after-hours)</li>
+<li><strong>Daily request limits</strong> per IP address</li>
+<li><strong>Configurable limits</strong> via environment variables</li>
+<li><strong>Admin bypass</strong> for authenticated admin users</li>
+<li><strong>Real-time headers</strong> showing current usage</li>
+<li><strong>Health check protection</strong> with separate limits</li>
 </ul>
-<h2 id="connection-requirements">Connection Requirements<a class="headerlink" href="#connection-requirements" title="Permanent link">&para;</a></h2>
-<h3 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h3>
-<p>All WebSocket connections require validation if the <code>USE_SECURITY</code> environment variable is set to <code>True</code>. This ensures that only authenticated users can access the data streams.</p>
-<h3 id="url-format">URL Format<a class="headerlink" href="#url-format" title="Permanent link">&para;</a></h3>
-<p>WebSocket URLs follow this pattern:</p>
-<ul>
-<li><strong>Production/HTTPS</strong>: <code>wss://your-domain.com/{endpoint}</code></li>
-<li><strong>Local Development</strong>: <code>ws://localhost:8000/{endpoint}</code></li>
-</ul>
-<h2 id="deployment-considerations">Deployment Considerations<a class="headerlink" href="#deployment-considerations" title="Permanent link">&para;</a></h2>
-<h3 id="aws-lambda-limitations">AWS Lambda Limitations<a class="headerlink" href="#aws-lambda-limitations" title="Permanent link">&para;</a></h3>
-<p>WebSockets are <strong>not supported</strong> when deploying Finance Query to AWS Lambda due to Lambda's stateless nature and lack of persistent connections.</p>
-<h3 id="recommended-deployment">Recommended Deployment<a class="headerlink" href="#recommended-deployment" title="Permanent link">&para;</a></h3>
-<p>For full WebSocket functionality, deploy to platforms that support persistent connections:</p>
-<ul>
-<li><strong>Render</strong> (recommended)</li>
-<li><strong>Railway</strong></li>
-<li><strong>Fly.io</strong></li>
-<li><strong>DigitalOcean App Platform</strong></li>
-<li><strong>Traditional VPS/servers</strong></li>
-</ul>
-<h2 id="connection-management">Connection Management<a class="headerlink" href="#connection-management" title="Permanent link">&para;</a></h2>
-<h3 id="redis-scaling">Redis Scaling<a class="headerlink" href="#redis-scaling" title="Permanent link">&para;</a></h3>
-<p>Finance Query supports Redis-based connection management for horizontal scaling:</p>
-<ul>
-<li>Multiple server instances can share WebSocket state</li>
-<li>Pub/sub mechanism ensures all connected clients receive updates</li>
-<li>Automatic fallback to in-memory management if Redis is unavailable</li>
-</ul>
-<h3 id="connection-lifecycle">Connection Lifecycle<a class="headerlink" href="#connection-lifecycle" title="Permanent link">&para;</a></h3>
-<ol>
-<li><strong>Validation</strong> - Each connection is validated before acceptance (if <code>USE_SECURITY</code> is <code>True</code>)</li>
-<li><strong>Initial Data</strong> - Immediate data fetch and send upon connection</li>
-<li><strong>Periodic Updates</strong> - Data refreshed every 5 seconds</li>
-<li><strong>Graceful Disconnection</strong> - Proper cleanup on client disconnect</li>
-</ol>
-<h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
-<ul>
-<li>Invalid authentication results in connection rejection</li>
-<li>Failed data fetches don't terminate the connection</li>
-<li>Default null values provided for failed operations</li>
-</ul>
-<h2 id="connection-management_1">Connection Management<a class="headerlink" href="#connection-management_1" title="Permanent link">&para;</a></h2>
-<h3 id="channel-naming">Channel Naming<a class="headerlink" href="#channel-naming" title="Permanent link">&para;</a></h3>
-<ul>
-<li><strong>Connection Pooling</strong>: Multiple clients may share data channel</li>
-<li><strong>Redis Support</strong>: Horizontal scaling via Redis pub/sub</li>
-</ul>
-<h3 id="connection-sharing">Connection Sharing<a class="headerlink" href="#connection-sharing" title="Permanent link">&para;</a></h3>
-<ul>
-<li>Reduces server load for popular symbol combinations</li>
-<li>Redis pub/sub enables scaling across multiple server instances</li>
-</ul>
-<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
-<ol>
-<li><strong>Choose your endpoint</strong> based on data requirements</li>
-<li><strong>Establish connection</strong> using appropriate URL format</li>
-<li><strong>Handle initial data</strong> sent immediately upon connection</li>
-<li><strong>Process periodic updates</strong> sent every 5 seconds</li>
-<li><strong>Implement reconnection logic</strong> for production applications</li>
-</ol>
-<p>For detailed usage examples and response formats, see the individual endpoint documentation pages.</p>
+<h2 id="configuration">Configuration<a class="headerlink" href="#configuration" title="Permanent link">&para;</a></h2>
+<h3 id="environment-variables">Environment Variables<a class="headerlink" href="#environment-variables" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variable</th>
+<th>Default</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>USE_SECURITY</code></td>
+<td><code>False</code></td>
+<td>Enable/disable rate limiting middleware</td>
+</tr>
+<tr>
+<td><code>APP_RATE_LIMIT_PER_DAY</code></td>
+<td><code>8000</code></td>
+<td>Daily request limit per IP address</td>
+</tr>
+<tr>
+<td><code>ADMIN_API_KEY</code></td>
+<td><code>None</code></td>
+<td>Admin API key (bypasses rate limits)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="basic-setup">Basic Setup<a class="headerlink" href="#basic-setup" title="Permanent link">&para;</a></h3>
+<p>Enable rate limiting by setting the security environment variable:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Enable rate limiting with default 8000 requests/day</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nv">USE_SECURITY</span><span class="o">=</span>True
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Set custom daily limit</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="nv">APP_RATE_LIMIT_PER_DAY</span><span class="o">=</span><span class="m">5000</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="c1"># Optional: Set admin key for unlimited access</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="nv">ADMIN_API_KEY</span><span class="o">=</span>your-secret-admin-key
+</code></pre></div>
+<h2 id="deployment-configuration">Deployment Configuration<a class="headerlink" href="#deployment-configuration" title="Permanent link">&para;</a></h2>
+<h3 id="docker">Docker<a class="headerlink" href="#docker" title="Permanent link">&para;</a></h3>
+<p>Configure rate limiting when running the Docker container:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="c1"># Basic rate limiting</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">USE_SECURITY</span><span class="o">=</span>True<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">APP_RATE_LIMIT_PER_DAY</span><span class="o">=</span><span class="m">10000</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">  </span>financequery
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="c1"># With admin access</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">USE_SECURITY</span><span class="o">=</span>True<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">APP_RATE_LIMIT_PER_DAY</span><span class="o">=</span><span class="m">5000</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">ADMIN_API_KEY</span><span class="o">=</span>your-secret-key<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span>financequery
+</code></pre></div>
+<h3 id="aws-lambda">AWS Lambda<a class="headerlink" href="#aws-lambda" title="Permanent link">&para;</a></h3>
+<p>Set environment variables in your Lambda function configuration:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Build with custom rate limit</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>docker<span class="w"> </span>build<span class="w"> </span>-f<span class="w"> </span>Dockerfile.aws<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span>--build-arg<span class="w"> </span><span class="nv">APP_RATE_LIMIT_PER_DAY</span><span class="o">=</span><span class="m">15000</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span>-t<span class="w"> </span>financequery-lambda<span class="w"> </span>.
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Or set at runtime</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>docker<span class="w"> </span>run<span class="w"> </span>-e<span class="w"> </span><span class="nv">APP_RATE_LIMIT_PER_DAY</span><span class="o">=</span><span class="m">15000</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">USE_SECURITY</span><span class="o">=</span>True<span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">  </span>financequery-lambda
+</code></pre></div>
+<h3 id="environment-file">Environment File<a class="headerlink" href="#environment-file" title="Permanent link">&para;</a></h3>
+<p>Add to your <code>.env</code> file:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a># Enable security and rate limiting
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>USE_SECURITY=True
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a># Set daily rate limit (default: 8000)
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>APP_RATE_LIMIT_PER_DAY=8000
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a># Optional admin key for unlimited access
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>ADMIN_API_KEY=your-secret-admin-key
+</code></pre></div>
+<h2 id="api-behavior">API Behavior<a class="headerlink" href="#api-behavior" title="Permanent link">&para;</a></h2>
+<h3 id="rate-limit-headers">Rate Limit Headers<a class="headerlink" href="#rate-limit-headers" title="Permanent link">&para;</a></h3>
+<p>When rate limiting is active, all API responses include headers showing current usage:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">200</span> <span class="ne">OK</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="na">X-RateLimit-Limit</span><span class="o">:</span> <span class="l">8000</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="na">X-RateLimit-Remaining</span><span class="o">:</span> <span class="l">7999</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="na">X-RateLimit-Reset</span><span class="o">:</span> <span class="l">86399</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+</code></pre></div>
+<table>
+<thead>
+<tr>
+<th>Header</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>X-RateLimit-Limit</code></td>
+<td>Total requests allowed per day</td>
+</tr>
+<tr>
+<td><code>X-RateLimit-Remaining</code></td>
+<td>Requests remaining in current period</td>
+</tr>
+<tr>
+<td><code>X-RateLimit-Reset</code></td>
+<td>Seconds until limit resets</td>
+</tr>
+</tbody>
+</table>
+<h3 id="rate-limit-exceeded">Rate Limit Exceeded<a class="headerlink" href="#rate-limit-exceeded" title="Permanent link">&para;</a></h3>
+<p>When the daily limit is exceeded, the API returns:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="kr">HTTP</span><span class="o">/</span><span class="m">1.1</span> <span class="m">429</span> <span class="ne">Too Many Requests</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="na">Content-Type</span><span class="o">:</span> <span class="l">application/json</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">{</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">  </span><span class="nt">&quot;detail&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Rate limit exceeded&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">  </span><span class="nt">&quot;rate_limit_info&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">    </span><span class="nt">&quot;count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000</span><span class="p">,</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="nt">&quot;remaining&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">    </span><span class="nt">&quot;reset_in&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">43200</span><span class="p">,</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">    </span><span class="nt">&quot;limit&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8000</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="admin-access">Admin Access<a class="headerlink" href="#admin-access" title="Permanent link">&para;</a></h3>
+<p>Requests with a valid admin API key bypass rate limits:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Unlimited requests with admin key</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>curl<span class="w"> </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: your-secret-admin-key&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="w">  </span><span class="s2">&quot;https://your-api.com/v1/quotes?symbols=AAPL&quot;</span>
+</code></pre></div>
+<p>Admin requests receive no rate limit headers since they're not subject to limits.</p>
+<h2 id="protected-endpoints">Protected Endpoints<a class="headerlink" href="#protected-endpoints" title="Permanent link">&para;</a></h2>
+<h3 id="open-paths-no-rate-limiting">Open Paths (No Rate Limiting)<a class="headerlink" href="#open-paths-no-rate-limiting" title="Permanent link">&para;</a></h3>
+<p>These endpoints are always accessible without rate limiting:
+- <code>/ping</code> - Basic health check
+- <code>/docs</code> - API documentation
+- <code>/openapi.json</code> - OpenAPI specification
+- <code>/redoc</code> - Alternative API documentation</p>
+<h3 id="health-check-rate-limiting">Health Check Rate Limiting<a class="headerlink" href="#health-check-rate-limiting" title="Permanent link">&para;</a></h3>
+<p>The <code>/health</code> endpoint has separate rate limiting (30-minute cooldown per IP) to prevent health check abuse while allowing monitoring systems to function.</p>
+<h3 id="all-other-endpoints">All Other Endpoints<a class="headerlink" href="#all-other-endpoints" title="Permanent link">&para;</a></h3>
+<p>All API endpoints under <code>/v1/</code> are subject to rate limiting when <code>USE_SECURITY=True</code>.</p>
 
 
 
