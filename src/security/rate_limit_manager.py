@@ -13,7 +13,9 @@ class RateLimitEntry:
 
 class SecurityConfig:
     ADMIN_API_KEY: str = os.getenv("ADMIN_API_KEY")
-    RATE_LIMIT: int = 2000  # requests per day
+    # Allow self-deploying users to configure the rate limit via environment variable.
+    # Default to 8000 requests per day (approx. 5-6 requests per minute) if not set.
+    RATE_LIMIT: int = int(os.getenv("APP_RATE_LIMIT_PER_DAY", 8000))
     HEALTH_CHECK_INTERVAL: int = 1800  # 30 minutes in seconds
 
     # Define paths that skip security checks
@@ -25,7 +27,7 @@ class SecurityConfig:
 
     @classmethod
     def is_admin_key(cls, api_key: str | None) -> bool:
-        return api_key == cls.ADMIN_API_KEY
+        return cls.ADMIN_API_KEY is not None and api_key == cls.ADMIN_API_KEY
 
 
 class RateLimitManager:
