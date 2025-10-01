@@ -1,5 +1,5 @@
 # Start with the official Python 3.12 image
-FROM python:3.12-slim
+FROM python:3.13.7-slim
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
