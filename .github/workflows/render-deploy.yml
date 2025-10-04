@@ -2,7 +2,7 @@ name: Render Deploy
 
 on:
   push:
-    branches: [ "master", "staging" ]
+    branches: [ "master" ]
   # Also trigger on workflow_dispatch for manual deployments
   workflow_dispatch:
 
