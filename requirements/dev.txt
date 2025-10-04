@@ -190,7 +190,7 @@ pluggy==1.6.0
     # via
     #   pytest
     #   pytest-cov
-pre-commit==3.8.0
+pre-commit==4.3.0
 protobuf==6.32.1
     # via
     #   financequery
@@ -264,7 +264,7 @@ requests-futures==1.0.2
     # via financequery
 rich==14.1.0
     # via defeatbeta-api
-ruff==0.12.12
+ruff==0.13.3
 setuptools==80.9.0
     # via financequery
 six==1.17.0
