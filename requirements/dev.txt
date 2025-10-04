@@ -44,7 +44,7 @@ colorama==0.4.6
     #   mkdocs-material
     #   pytest
     #   tqdm
-coverage==7.10.6
+coverage==7.10.7
     # via pytest-cov
 curl-cffi==0.10.0
     # via
@@ -224,8 +224,8 @@ pytest==8.4.2
     #   pytest-asyncio
     #   pytest-cov
     #   pytest-xdist
-pytest-asyncio==0.26.0
-pytest-cov==6.3.0
+pytest-asyncio==1.2.0
+pytest-cov==7.0.0
 pytest-xdist==3.8.0
 python-dateutil==2.9.0.post0
     # via
