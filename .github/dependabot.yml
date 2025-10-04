@@ -31,14 +31,41 @@ updates:
           - "uvicorn*"
           - "starlette*"
           - "pydantic*"
-      redis-ecosystem:
+          - "fastapi-injectable*"
+      database:
         patterns:
           - "redis*"
           - "hiredis*"
+          - "peewee*"
       data-processing:
         patterns:
           - "pandas*"
           - "numpy*"
+      web-scraping:
+        patterns:
+          - "curl-cffi*"
+          - "beautifulsoup4*"
+          - "lxml*"
+          - "requests*"
+      data-sources:
+        patterns:
+          - "yfinance*"
+          - "defeatbeta-api*"
+          - "algoliasearch*"
+          - "multitasking*"
+      infrastructure:
+        patterns:
+          - "mangum*"
+          - "python-dotenv*"
+          - "pyyaml*"
+          - "psutil*"
+          - "websockets*"
+          - "frozendict*"
+      serialization:
+        patterns:
+          - "orjson*"
+          - "protobuf*"
+          - "python-json-logger*"
       testing:
         patterns:
           - "pytest*"
@@ -52,6 +79,14 @@ updates:
       docs:
         patterns:
           - "mkdocs*"
+      build-tools:
+        patterns:
+          - "setuptools*"
+          - "wheel*"
+          - "cython*"
+      utilities:
+        patterns:
+          - "tqdm*"
     # Ignore specific packages that require manual review
     ignore:
       # Cython updates may affect compiled extensions
