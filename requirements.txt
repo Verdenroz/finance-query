@@ -46,7 +46,7 @@ colorama==0.4.6
     #   tqdm
 coverage==7.10.7
     # via pytest-cov
-curl-cffi==0.10.0
+curl-cffi==0.13.0
     # via
     #   financequery
     #   yfinance
