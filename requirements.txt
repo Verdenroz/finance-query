@@ -201,12 +201,12 @@ psutil==7.1.0
     #   financequery
 pycparser==2.23 ; implementation_name != 'PyPy'
     # via cffi
-pydantic==2.11.9
+pydantic==2.11.10
     # via
     #   fastapi
     #   financequery
     #   openai
-pydantic-core==2.39.0
+pydantic-core==2.41.1
     # via pydantic
 pyfiglet==1.0.4
     # via defeatbeta-api
