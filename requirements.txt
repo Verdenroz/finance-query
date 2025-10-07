@@ -103,7 +103,7 @@ jinja2==3.1.6
     #   mkdocs
     #   mkdocs-material
     #   mkdocstrings
-jiter==0.10.0
+jiter==0.11.0
     # via openai
 lxml==6.0.2
     # via financequery
