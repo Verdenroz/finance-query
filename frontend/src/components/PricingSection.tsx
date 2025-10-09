@@ -24,7 +24,14 @@ const PricingSection = () => {
                 <div className="mb-4"><span className="text-4xl font-bold text-gray-900">{t('pricing.' + plan + '.price')}</span></div>
                 <div className="text-sm text-gray-600 mb-2">{t('pricing.' + plan + '.requests', {defaultValue: ''})}</div>
                 <p className="text-gray-600 mb-6">{t('pricing.' + plan + '.description')}</p>
-                <button className={'w-full py-3 px-6 rounded-lg font-semibold transition ' + (idx === 1 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200')}>
+                <button
+                  onClick={() => {
+                    if (plan === 'selfHosted') {
+                      window.open('https://github.com/linhaiwebs/allstock_api', '_blank');
+                    }
+                  }}
+                  className={'w-full py-3 px-6 rounded-lg font-semibold transition ' + (idx === 1 ? 'bg-blue-600 text-white hover:bg-blue-700' : 'bg-gray-100 text-gray-900 hover:bg-gray-200')}
+                >
                   {t('pricing.' + plan + '.button')}
                 </button>
                 <ul className="mt-6 space-y-3">

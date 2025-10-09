@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { TrendingUp } from 'lucide-react';
+import { TrendingUp, Github } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import LanguageSwitcher from './LanguageSwitcher';
 
@@ -26,6 +26,15 @@ const Layout = ({ children }: LayoutProps) => {
               <Link to="/api-docs" className="text-gray-700 hover:text-blue-600 font-medium transition">
                 {t('nav.apiDocs')}
               </Link>
+              <a
+                href="https://github.com/linhaiwebs/allstock_api"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-gray-700 hover:text-blue-600 transition"
+                aria-label="GitHub Repository"
+              >
+                <Github className="h-6 w-6" />
+              </a>
               <LanguageSwitcher />
             </nav>
           </div>
