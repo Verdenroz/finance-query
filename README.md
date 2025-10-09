@@ -14,7 +14,9 @@ Or manually:
 docker-compose up -d
 ```
 
-Access at: **http://localhost**
+Access at: **http://localhost:8080**
+
+> Note: Using port 8080 to avoid conflicts with other services
 
 ## Services
 

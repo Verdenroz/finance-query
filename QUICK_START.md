@@ -6,7 +6,7 @@
 ./start.sh
 ```
 
-Then open: **http://localhost**
+Then open: **http://localhost:8080**
 
 ## What You Get
 
@@ -82,8 +82,8 @@ docker-compose logs -f nginx
 
 ### Check Health
 ```bash
-curl http://localhost/health
-curl http://localhost/ping
+curl http://localhost:8080/health
+curl http://localhost:8080/ping
 ```
 
 ### Container Status
@@ -113,10 +113,11 @@ docker-compose up --build -d
 ## Troubleshooting
 
 ### Port Already in Use
-Change ports in `docker-compose.yml`:
+Already configured to use port 8080 instead of 80 to avoid conflicts.
+If 8080 is also in use, change ports in `docker-compose.yml`:
 ```yaml
 ports:
-  - "8080:80"  # Use 8080 instead of 80
+  - "9090:80"  # Use any available port
 ```
 
 ### Backend Not Responding
@@ -137,7 +138,7 @@ docker-compose up --build frontend
 
 - Check `DEPLOYMENT.md` for detailed setup
 - Review `PROJECT_SUMMARY.md` for architecture
-- Visit API docs at http://localhost/api-docs
+- Visit API docs at http://localhost:8080/api-docs
 
 ## License
 
