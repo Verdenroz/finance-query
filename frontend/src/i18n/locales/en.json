@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "Home",
+    "apiDocs": "API Docs"
+  },
+  "hero": {
+    "title": "Real-Time Stock Market Data API",
+    "subtitle": "Access comprehensive financial data with our powerful, free, and open-source API",
+    "description": "Get real-time quotes, historical data, market indices, and more. Perfect for developers, traders, and financial applications.",
+    "searchPlaceholder": "Search stocks (e.g., AAPL, MSFT)...",
+    "features": {
+      "realtime": "Real-time quotes and market data",
+      "comprehensive": "Comprehensive stock information",
+      "free": "Free tier available",
+      "opensource": "Open-source and self-hostable"
+    }
+  },
+  "pricing": {
+    "title": "Choose Your Plan",
+    "subtitle": "Start free, upgrade as you grow",
+    "selfHosted": {
+      "name": "Self-Hosted",
+      "price": "Free",
+      "description": "Deploy on your own infrastructure",
+      "features": [
+        "Unlimited API calls",
+        "Full source code access",
+        "Community support",
+        "Self-managed updates"
+      ],
+      "button": "View on GitHub"
+    },
+    "personal": {
+      "name": "Personal",
+      "price": "$9/month",
+      "requests": "8,000 requests/day",
+      "description": "Perfect for individual developers",
+      "features": [
+        "8,000 daily API calls",
+        "Email support",
+        "99.9% uptime SLA",
+        "Advanced analytics"
+      ],
+      "button": "Get Started"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "price": "$99/month",
+      "requests": "100,000+ requests/day",
+      "description": "For production applications",
+      "features": [
+        "100,000+ daily API calls",
+        "Priority support",
+        "99.99% uptime SLA",
+        "Custom integrations",
+        "Dedicated account manager"
+      ],
+      "button": "Contact Sales"
+    }
+  },
+  "sections": {
+    "overview": "Market Overview",
+    "gainers": "Top Gainers",
+    "losers": "Top Losers",
+    "actives": "Most Active",
+    "sectors": "Sector Performance",
+    "news": "Latest News"
+  },
+  "stats": {
+    "today": "Today",
+    "ytd": "YTD",
+    "oneYear": "1 Year",
+    "fiveYear": "5 Year"
+  }
+}

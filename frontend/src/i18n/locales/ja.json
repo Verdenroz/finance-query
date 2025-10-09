@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "ホーム",
+    "apiDocs": "APIドキュメント"
+  },
+  "hero": {
+    "title": "リアルタイム株式市場データAPI",
+    "subtitle": "強力で無料、オープンソースのAPIで包括的な金融データにアクセス",
+    "description": "リアルタイムの見積もり、過去のデータ、市場指数などを取得します。開発者、トレーダー、金融アプリケーションに最適です。",
+    "searchPlaceholder": "株式を検索（例：AAPL、MSFT）...",
+    "features": {
+      "realtime": "リアルタイムの見積もりと市場データ",
+      "comprehensive": "包括的な株式情報",
+      "free": "無料プランあり",
+      "opensource": "オープンソースでセルフホスト可能"
+    }
+  },
+  "pricing": {
+    "title": "プランを選択",
+    "subtitle": "無料で始めて、成長に合わせてアップグレード",
+    "selfHosted": {
+      "name": "セルフホスト",
+      "price": "無料",
+      "description": "独自のインフラストラクチャにデプロイ",
+      "features": [
+        "無制限のAPI呼び出し",
+        "完全なソースコードアクセス",
+        "コミュニティサポート",
+        "自己管理アップデート"
+      ],
+      "button": "GitHubで見る"
+    },
+    "personal": {
+      "name": "個人",
+      "price": "¥1,200/月",
+      "requests": "1日8,000リクエスト",
+      "description": "個人開発者に最適",
+      "features": [
+        "1日8,000回のAPI呼び出し",
+        "メールサポート",
+        "99.9%稼働時間SLA",
+        "高度な分析"
+      ],
+      "button": "始める"
+    },
+    "enterprise": {
+      "name": "エンタープライズ",
+      "price": "¥13,200/月",
+      "requests": "1日100,000+リクエスト",
+      "description": "本番アプリケーション向け",
+      "features": [
+        "1日100,000+回のAPI呼び出し",
+        "優先サポート",
+        "99.99%稼働時間SLA",
+        "カスタム統合",
+        "専任アカウントマネージャー"
+      ],
+      "button": "営業に問い合わせ"
+    }
+  },
+  "sections": {
+    "overview": "市場概要",
+    "gainers": "上昇銘柄",
+    "losers": "下落銘柄",
+    "actives": "出来高上位",
+    "sectors": "セクターパフォーマンス",
+    "news": "最新ニュース"
+  },
+  "stats": {
+    "today": "今日",
+    "ytd": "年初来",
+    "oneYear": "1年",
+    "fiveYear": "5年"
+  }
+}

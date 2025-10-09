@@ -1,12 +1,15 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { TrendingUp } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import LanguageSwitcher from './LanguageSwitcher';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
 const Layout = ({ children }: LayoutProps) => {
+  const { t } = useTranslation();
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b border-gray-200 sticky top-0 z-50">
@@ -16,13 +19,14 @@ const Layout = ({ children }: LayoutProps) => {
               <TrendingUp className="h-8 w-8 text-blue-600" />
               <span className="text-2xl font-bold text-gray-900">FinanceQuery</span>
             </Link>
-            <nav className="flex space-x-8">
+            <nav className="flex items-center space-x-8">
               <Link to="/" className="text-gray-700 hover:text-blue-600 font-medium transition">
-                Market
+                {t('nav.home')}
               </Link>
               <Link to="/api-docs" className="text-gray-700 hover:text-blue-600 font-medium transition">
-                API Docs
+                {t('nav.apiDocs')}
               </Link>
+              <LanguageSwitcher />
             </nav>
           </div>
         </div>

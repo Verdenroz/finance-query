@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TrendingUp, TrendingDown, Activity } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { getIndices, getMarketMovers, getSectors, getNews, searchSymbols, type MarketIndex, type MarketMover, type MarketSector, type News } from '../services/api';
 import MarketOverview from '../components/MarketOverview';
 import NewsSection from '../components/NewsSection';
 import SearchBar from '../components/SearchBar';
+import PricingSection from '../components/PricingSection';
 
 const HomePage = () => {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const [indices, setIndices] = useState<MarketIndex[]>([]);
   const [gainers, setGainers] = useState<MarketMover[]>([]);
@@ -66,12 +69,19 @@ const HomePage = () => {
   return (
     <div className="space-y-8">
       <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-lg shadow-lg p-8 text-white">
-        <h1 className="text-4xl font-bold mb-4">Real-Time Stock Market Data</h1>
-        <p className="text-xl mb-6 text-blue-100">
-          Track stocks, indices, and market trends with our free API
-        </p>
+        <h1 className="text-4xl font-bold mb-4">{t('hero.title')}</h1>
+        <p className="text-xl mb-4 text-blue-100">{t('hero.subtitle')}</p>
+        <p className="text-lg mb-6 text-blue-200">{t('hero.description')}</p>
         <SearchBar onSearch={handleSearch} />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-6">
+          <div className="text-center"><div className="text-2xl font-bold">✓</div><div className="text-sm">{t('hero.features.realtime')}</div></div>
+          <div className="text-center"><div className="text-2xl font-bold">✓</div><div className="text-sm">{t('hero.features.comprehensive')}</div></div>
+          <div className="text-center"><div className="text-2xl font-bold">✓</div><div className="text-sm">{t('hero.features.free')}</div></div>
+          <div className="text-center"><div className="text-2xl font-bold">✓</div><div className="text-sm">{t('hero.features.opensource')}</div></div>
+        </div>
       </div>
+
+      <PricingSection />
 
       <MarketOverview indices={indices.slice(0, 6)} />
 
@@ -79,7 +89,7 @@ const HomePage = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center space-x-2 mb-4">
             <TrendingUp className="h-6 w-6 text-green-600" />
-            <h2 className="text-xl font-bold text-gray-900">Top Gainers</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('sections.gainers')}</h2>
           </div>
           <div className="space-y-3">
             {gainers.slice(0, 10).map((stock) => (
@@ -104,7 +114,7 @@ const HomePage = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center space-x-2 mb-4">
             <TrendingDown className="h-6 w-6 text-red-600" />
-            <h2 className="text-xl font-bold text-gray-900">Top Losers</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('sections.losers')}</h2>
           </div>
           <div className="space-y-3">
             {losers.slice(0, 10).map((stock) => (
@@ -129,7 +139,7 @@ const HomePage = () => {
         <div className="bg-white rounded-lg shadow p-6">
           <div className="flex items-center space-x-2 mb-4">
             <Activity className="h-6 w-6 text-blue-600" />
-            <h2 className="text-xl font-bold text-gray-900">Most Active</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('sections.actives')}</h2>
           </div>
           <div className="space-y-3">
             {actives.slice(0, 10).map((stock) => (
@@ -155,7 +165,7 @@ const HomePage = () => {
       </div>
 
       <div className="bg-white rounded-lg shadow p-6">
-        <h2 className="text-xl font-bold text-gray-900 mb-4">Sector Performance</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-4">{t('sections.sectors')}</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {sectors.map((sector) => (
             <div key={sector.sector} className="border border-gray-200 rounded-lg p-4">

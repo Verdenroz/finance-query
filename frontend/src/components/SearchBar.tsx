@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Search } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface SearchBarProps {
   onSearch: (query: string) => void;
 }
 
 const SearchBar = ({ onSearch }: SearchBarProps) => {
+  const { t } = useTranslation();
   const [query, setQuery] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -22,7 +24,7 @@ const SearchBar = ({ onSearch }: SearchBarProps) => {
           type="text"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search stocks (e.g., AAPL, TSLA, NVDA)..."
+          placeholder={t('hero.searchPlaceholder')}
           className="w-full px-4 py-3 pl-12 pr-4 text-gray-900 bg-white rounded-lg shadow-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
         <Search className="absolute left-4 top-3.5 h-5 w-5 text-gray-400" />

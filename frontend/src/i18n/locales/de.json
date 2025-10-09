@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "apiDocs": "API-Dokumentation"
+  },
+  "hero": {
+    "title": "Echtzeit-Börsenmarktdaten-API",
+    "subtitle": "Zugriff auf umfassende Finanzdaten mit unserer leistungsstarken, kostenlosen und Open-Source-API",
+    "description": "Erhalten Sie Echtzeit-Kurse, historische Daten, Marktindizes und mehr. Perfekt für Entwickler, Händler und Finanzanwendungen.",
+    "searchPlaceholder": "Aktien suchen (z.B. AAPL, MSFT)...",
+    "features": {
+      "realtime": "Echtzeit-Kurse und Marktdaten",
+      "comprehensive": "Umfassende Aktieninformationen",
+      "free": "Kostenloser Plan verfügbar",
+      "opensource": "Open-Source und selbst-hostbar"
+    }
+  },
+  "pricing": {
+    "title": "Wählen Sie Ihren Plan",
+    "subtitle": "Kostenlos starten, mit Wachstum upgraden",
+    "selfHosted": {
+      "name": "Selbst-Hosting",
+      "price": "Kostenlos",
+      "description": "Auf Ihrer eigenen Infrastruktur bereitstellen",
+      "features": [
+        "Unbegrenzte API-Aufrufe",
+        "Vollständiger Quellcode-Zugriff",
+        "Community-Support",
+        "Selbstverwaltete Updates"
+      ],
+      "button": "Auf GitHub ansehen"
+    },
+    "personal": {
+      "name": "Persönlich",
+      "price": "9€/Monat",
+      "requests": "8.000 Anfragen/Tag",
+      "description": "Perfekt für einzelne Entwickler",
+      "features": [
+        "8.000 tägliche API-Aufrufe",
+        "E-Mail-Support",
+        "99,9% Verfügbarkeits-SLA",
+        "Erweiterte Analysen"
+      ],
+      "button": "Jetzt starten"
+    },
+    "enterprise": {
+      "name": "Enterprise",
+      "price": "99€/Monat",
+      "requests": "100.000+ Anfragen/Tag",
+      "description": "Für Produktionsanwendungen",
+      "features": [
+        "100.000+ tägliche API-Aufrufe",
+        "Priority-Support",
+        "99,99% Verfügbarkeits-SLA",
+        "Benutzerdefinierte Integrationen",
+        "Dedizierter Account-Manager"
+      ],
+      "button": "Vertrieb kontaktieren"
+    }
+  },
+  "sections": {
+    "overview": "Marktübersicht",
+    "gainers": "Top-Gewinner",
+    "losers": "Top-Verlierer",
+    "actives": "Meistgehandelt",
+    "sectors": "Sektorperformance",
+    "news": "Neueste Nachrichten"
+  },
+  "stats": {
+    "today": "Heute",
+    "ytd": "Seit Jahresbeginn",
+    "oneYear": "1 Jahr",
+    "fiveYear": "5 Jahre"
+  }
+}

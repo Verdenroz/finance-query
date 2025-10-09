@@ -1,0 +1,75 @@
+{
+  "nav": {
+    "home": "首页",
+    "apiDocs": "API文档"
+  },
+  "hero": {
+    "title": "实时股票市场数据API",
+    "subtitle": "通过我们强大、免费、开源的API访问全面的金融数据",
+    "description": "获取实时报价、历史数据、市场指数等。非常适合开发者、交易者和金融应用。",
+    "searchPlaceholder": "搜索股票（例如：AAPL, MSFT）...",
+    "features": {
+      "realtime": "实时报价和市场数据",
+      "comprehensive": "全面的股票信息",
+      "free": "提供免费套餐",
+      "opensource": "开源且可自部署"
+    }
+  },
+  "pricing": {
+    "title": "选择您的套餐",
+    "subtitle": "从免费开始，随着增长升级",
+    "selfHosted": {
+      "name": "自部署",
+      "price": "免费",
+      "description": "部署在您自己的基础设施上",
+      "features": [
+        "无限API调用",
+        "完整源代码访问",
+        "社区支持",
+        "自主管理更新"
+      ],
+      "button": "查看GitHub"
+    },
+    "personal": {
+      "name": "个人版",
+      "price": "¥60/月",
+      "requests": "每日8,000次请求",
+      "description": "适合个人开发者",
+      "features": [
+        "每日8,000次API调用",
+        "邮件支持",
+        "99.9% 正常运行时间SLA",
+        "高级分析"
+      ],
+      "button": "开始使用"
+    },
+    "enterprise": {
+      "name": "企业版",
+      "price": "¥660/月",
+      "requests": "每日100,000+次请求",
+      "description": "适合生产应用",
+      "features": [
+        "每日100,000+次API调用",
+        "优先支持",
+        "99.99% 正常运行时间SLA",
+        "自定义集成",
+        "专属客户经理"
+      ],
+      "button": "联系销售"
+    }
+  },
+  "sections": {
+    "overview": "市场概览",
+    "gainers": "涨幅榜",
+    "losers": "跌幅榜",
+    "actives": "成交活跃",
+    "sectors": "板块表现",
+    "news": "最新资讯"
+  },
+  "stats": {
+    "today": "今日",
+    "ytd": "今年以来",
+    "oneYear": "1年",
+    "fiveYear": "5年"
+  }
+}
