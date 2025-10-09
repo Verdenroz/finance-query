@@ -10,8 +10,8 @@ services:
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
       - PERFORMANCE_THRESHOLD_MS=2000
-    ports:
-      - "8000:8000"
+    expose:
+      - "8000"
     networks:
       - financequery-network
     restart: unless-stopped
@@ -21,6 +21,8 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: financequery-frontend
+    expose:
+      - "80"
     networks:
       - financequery-network
     restart: unless-stopped
@@ -35,6 +37,9 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - backend
+      - frontend
     networks:
       - financequery-network
     restart: unless-stopped
