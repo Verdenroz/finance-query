@@ -21,9 +21,9 @@ const HomePage = () => {
       try {
         const [indicesData, gainersData, losersData, activesData, sectorsData, newsData] = await Promise.all([
           getIndices(),
-          getMarketMovers('gainers', 10),
-          getMarketMovers('losers', 10),
-          getMarketMovers('actives', 10),
+          getMarketMovers('gainers', 50),
+          getMarketMovers('losers', 50),
+          getMarketMovers('actives', 50),
           getSectors(),
           getNews(),
         ]);
@@ -82,7 +82,7 @@ const HomePage = () => {
             <h2 className="text-xl font-bold text-gray-900">Top Gainers</h2>
           </div>
           <div className="space-y-3">
-            {gainers.map((stock) => (
+            {gainers.slice(0, 10).map((stock) => (
               <div
                 key={stock.symbol}
                 className="flex justify-between items-center p-3 hover:bg-gray-50 rounded cursor-pointer transition"
@@ -107,7 +107,7 @@ const HomePage = () => {
             <h2 className="text-xl font-bold text-gray-900">Top Losers</h2>
           </div>
           <div className="space-y-3">
-            {losers.map((stock) => (
+            {losers.slice(0, 10).map((stock) => (
               <div
                 key={stock.symbol}
                 className="flex justify-between items-center p-3 hover:bg-gray-50 rounded cursor-pointer transition"
@@ -132,7 +132,7 @@ const HomePage = () => {
             <h2 className="text-xl font-bold text-gray-900">Most Active</h2>
           </div>
           <div className="space-y-3">
-            {actives.map((stock) => (
+            {actives.slice(0, 10).map((stock) => (
               <div
                 key={stock.symbol}
                 className="flex justify-between items-center p-3 hover:bg-gray-50 rounded cursor-pointer transition"
