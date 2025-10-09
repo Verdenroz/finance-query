@@ -52,6 +52,27 @@ Backend (`.env`):
 Frontend (`frontend/.env`):
 - `VITE_API_URL` - Backend API endpoint
 
+## 故障排除
+
+### 502 Bad Gateway 错误
+
+运行诊断工具：
+```bash
+./diagnose.sh
+```
+
+常见解决方法：
+1. 等待30-60秒让服务完全启动
+2. 检查后端状态：`docker logs financequery-backend`
+3. 测试后端：`curl http://localhost:8000/ping`
+4. 重启服务：`docker compose restart`
+
+详细故障排除：[TROUBLESHOOTING.md](TROUBLESHOOTING.md)
+
+### Redis相关
+
+Redis是**可选的**，不需要配置。后端会自动使用内存连接管理器。
+
 ## License
 
 MIT License - Free and open-source software

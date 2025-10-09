@@ -16,11 +16,24 @@ if ! command -v docker-compose &> /dev/null; then
 fi
 
 echo "Building and starting services..."
-docker-compose up --build -d
+docker compose up --build -d
 
 echo ""
-echo "Waiting for services to be ready..."
-sleep 10
+echo "Waiting for services to start..."
+echo "(This may take 30-60 seconds on first run)"
+sleep 5
+
+echo "Checking backend status..."
+for i in {1..12}; do
+    if curl -s http://localhost:8000/ping > /dev/null 2>&1; then
+        echo "✓ Backend is ready"
+        break
+    fi
+    echo "  Waiting for backend... ($i/12)"
+    sleep 5
+done
+
+sleep 5
 
 echo ""
 echo "========================================="
