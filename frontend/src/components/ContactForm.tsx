@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { Send, Mail, User, CheckCircle } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
 const ContactForm = () => {
-  const { t } = useTranslation();
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [submitted, setSubmitted] = useState(false);
   const [loading, setLoading] = useState(false);
