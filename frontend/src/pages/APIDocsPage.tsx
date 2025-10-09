@@ -1,4 +1,5 @@
 import { Book, Zap, Shield } from 'lucide-react';
+import ContactForm from '../components/ContactForm';
 
 const APIDocsPage = () => {
   const endpoints = [
@@ -205,6 +206,10 @@ ws.onmessage = (event) => console.log(JSON.parse(event.data));`}
           registration requirements. Financial data is provided for informational purposes only and should
           not be considered financial advice.
         </p>
+      </div>
+
+      <div className="mt-12">
+        <ContactForm />
       </div>
     </div>
   );
