@@ -264,7 +264,7 @@ requests-futures==1.0.2
     # via financequery
 rich==14.1.0
     # via defeatbeta-api
-ruff==0.13.3
+ruff==0.14.0
 setuptools==80.9.0
     # via financequery
 six==1.17.0
