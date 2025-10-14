@@ -170,7 +170,7 @@ packaging==25.0
     #   pytest
 paginate==0.5.7
     # via mkdocs-material
-pandas==2.3.2
+pandas==2.3.3
     # via
     #   defeatbeta-api
     #   financequery
