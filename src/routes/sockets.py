@@ -22,8 +22,10 @@ from src.services import (
     scrape_news_for_quote,
 )
 from src.utils.dependencies import FinanceClient, Schedule, WebsocketConnectionManager
+from src.utils.logging import get_logger
 
 router = APIRouter()
+logger = get_logger(__name__)
 
 # Refresh interval for fetching data
 REFRESH_INTERVAL = 5
@@ -149,11 +151,16 @@ async def websocket_quotes(
 ):
     is_valid, metadata = await validate_websocket(websocket=websocket)
     if not is_valid:
+        logger.warning("WebSocket validation failed for quotes endpoint")
         return
+
     await websocket.accept()
+    logger.info("WebSocket connection established for quotes endpoint")
+
     try:
         channel = await websocket.receive_text()
         symbols = list({symbol.upper() for symbol in channel.split(",")})
+        logger.info("WebSocket quotes subscription", extra={"symbols": symbols, "symbol_count": len(symbols)})
 
         async def get_request_symbols() -> list[dict]:
             """
@@ -217,9 +224,11 @@ async def websocket_quotes(
             while True:
                 await websocket.receive_text()
         except WebSocketDisconnect:
+            logger.info("WebSocket client disconnected from quotes endpoint", extra={"symbols": symbols})
             await connection_manager.disconnect(websocket, channel)
 
     except WebSocketDisconnect:
+        logger.info("WebSocket connection closed for quotes endpoint")
         # If the client disconnects before the channel is received return,
         return
 

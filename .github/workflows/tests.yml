@@ -14,18 +14,18 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
       - name: Install pre-commit
         run: pip install pre-commit
 
       - name: Cache pre-commit hooks
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
@@ -39,38 +39,46 @@ jobs:
     needs: pre-commit
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 2
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: "3.11"
+          python-version: "3.13"
 
-      - name: Install Poetry
-        uses: snok/install-poetry@v1
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
-          version: latest
-          virtualenvs-create: true
-          virtualenvs-in-project: true
+          version: "latest"
 
-      - name: Load cached venv
-        id: cached-poetry-dependencies
-        uses: actions/cache@v3
+      - name: Create virtual environment
+        run: uv venv
+
+      - name: Cache uv dependencies
+        uses: actions/cache@v4
         with:
           path: .venv
-          key: venv-${{ runner.os }}-${{ hashFiles('**/poetry.lock') }}
+          key: venv-${{ runner.os }}-${{ hashFiles('uv.lock', 'pyproject.toml') }}
+          restore-keys: |
+            venv-${{ runner.os }}-
 
       - name: Install dependencies
-        if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-        run: poetry install --no-interaction --with dev
+        run: uv sync --all-groups
 
-      - name: Run setup.py
-        run: poetry run python setup.py build_ext --inplace
+      - name: Build Cython extensions
+        run: uv run python setup.py build_ext --inplace
 
       - name: Run tests
-        run: poetry run pytest --cov --cov-report=xml
+        env:
+          # Test environment variables
+          BYPASS_CACHE: true
+          LOG_LEVEL: DEBUG
+          LOG_FORMAT: text
+          DISABLE_LOGO_FETCHING: true
+          PERFORMANCE_THRESHOLD_MS: 5000
+        run: uv run pytest
 
       - name: Upload results to Codecov
         uses: codecov/codecov-action@v5

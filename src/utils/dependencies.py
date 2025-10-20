@@ -1,5 +1,7 @@
 import asyncio
 import os
+import time
+from datetime import datetime, timedelta
 from typing import Annotated, Any, Literal, Optional, Union, cast
 from urllib.parse import urlparse
 
@@ -13,25 +15,71 @@ from src.clients.fetch_client import CurlFetchClient
 from src.clients.yahoo_client import YahooFinanceClient
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import request_context
+from src.utils.cache import cache
+from src.utils.logging import get_logger, log_external_api_call
 from src.utils.market import MarketSchedule
 from src.utils.yahoo_auth import YahooAuthManager
 
 Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
+logger = get_logger(__name__)
 
 
-@injectable
-async def get_request_context() -> Request | WebSocket:
+class CircuitBreaker:
+    """Simple circuit breaker for external API calls."""
+
+    def __init__(self, failure_threshold: int = 5, timeout_duration: int = 300):
+        self.failure_threshold = failure_threshold
+        self.timeout_duration = timeout_duration  # seconds
+        self.failure_count = 0
+        self.last_failure_time: Optional[datetime] = None
+        self.state = "CLOSED"  # CLOSED, OPEN, HALF_OPEN
+
+    def is_available(self) -> bool:
+        """Check if the circuit breaker allows calls."""
+        if self.state == "CLOSED":
+            return True
+
+        if self.state == "OPEN":
+            if self.last_failure_time and datetime.now() - self.last_failure_time > timedelta(seconds=self.timeout_duration):
+                self.state = "HALF_OPEN"
+                return True
+            return False
+
+        return True  # HALF_OPEN allows one call
+
+    def record_success(self):
+        """Record a successful call."""
+        self.failure_count = 0
+        self.state = "CLOSED"
+        self.last_failure_time = None
+
+    def record_failure(self):
+        """Record a failed call."""
+        self.failure_count += 1
+        self.last_failure_time = datetime.now()
+
+        if self.failure_count >= self.failure_threshold:
+            self.state = "OPEN"
+            logger.warning(f"Circuit breaker OPEN after {self.failure_count} failures")
+
+
+# Global circuit breaker for Logo.dev API
+logo_circuit_breaker = CircuitBreaker(
+    failure_threshold=int(os.getenv("LOGO_CIRCUIT_BREAKER_THRESHOLD", "5")), timeout_duration=int(os.getenv("LOGO_CIRCUIT_BREAKER_TIMEOUT", "300"))
+)
+
+
+async def get_request_context() -> Union[Request, WebSocket]:
     """Return whichever object (Request / WebSocket) is active on this task."""
     return request_context.get()
 
 
-RequestContext = Annotated[Request | WebSocket, Depends(get_request_context)]
+RequestContext = Annotated[Union[Request, WebSocket], Depends(get_request_context)]
 
 
-@injectable
 async def get_connection_manager(
     websocket: WebSocket,
-) -> RedisConnectionManager | ConnectionManager:
+) -> Union[RedisConnectionManager, ConnectionManager]:
     """Return the current connection manager based on if redis is enabled"""
     return websocket.app.state.connection_manager
 
@@ -39,7 +87,6 @@ async def get_connection_manager(
 WebsocketConnectionManager = Annotated[RedisConnectionManager, ConnectionManager, Depends(get_connection_manager)]
 
 
-@injectable
 async def get_redis(request: RequestContext) -> Redis:
     """Return shared redis client"""
     return cast(Redis, request.app.state.redis)
@@ -48,7 +95,6 @@ async def get_redis(request: RequestContext) -> Redis:
 RedisClient = Annotated[Redis, Depends(get_redis)]
 
 
-@injectable
 async def get_session(req: RequestContext) -> requests.Session:
     """
     Return the *shared* curl_cffi session placed on `app.state.session`
@@ -61,17 +107,16 @@ Session = Annotated[requests.Session, Depends(get_session)]
 
 
 @injectable
-async def get_proxy() -> str | None:
+async def get_proxy() -> Optional[str]:
     """
     Return the proxy URL if set, otherwise None.
     """
     return os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None
 
 
-Proxy = Annotated[str | None, Depends(get_proxy)]
+Proxy = Annotated[Optional[str], Depends(get_proxy)]
 
 
-@injectable
 async def get_fetch_client(
     session: Session,
     proxy: Proxy,
@@ -83,7 +128,6 @@ async def get_fetch_client(
 FetchClient = Annotated[CurlFetchClient, Depends(get_fetch_client)]
 
 
-@injectable
 async def _get_auth_manager(req: RequestContext) -> YahooAuthManager:
     """Return the auth manager saved in lifespan"""
     mgr = getattr(req.app.state, "yahoo_auth_manager", None)
@@ -109,7 +153,6 @@ async def get_yahoo_auth(mgr: AuthManager) -> tuple[dict, str]:
 YahooAuth = Annotated[tuple[dict, str], Depends(get_yahoo_auth)]
 
 
-@injectable
 async def get_yahoo_finance_client(auth: YahooAuth, proxy: Proxy) -> CurlFetchClient:
     """
     Returns a YahooFinanceClient with the given auth and fetch client.
@@ -178,10 +221,13 @@ async def fetch(
                 return_response=return_response,
             )
         except Exception as exc:
-            print(f"Attempt {attempt + 1} failed: {exc}, {str(exc)}")
+            logger.warning(
+                "Request attempt failed", extra={"attempt": attempt + 1, "max_retries": max_retries, "error": str(exc), "error_type": type(exc).__name__}
+            )
             if attempt < max_retries - 1:
                 await asyncio.sleep(retry_delay * 2**attempt)
             else:
+                logger.error("All request attempts failed", extra={"max_retries": max_retries, "final_error": str(exc)}, exc_info=True)
                 raise HTTPException(
                     500,
                     f"Request failed after {max_retries} attempts: {exc}",
@@ -189,6 +235,7 @@ async def fetch(
     return None  # (never reached)
 
 
+@cache(expire=86400)  # Cache for 24 hours
 @injectable
 async def get_logo(
     client: FetchClient,
@@ -198,27 +245,82 @@ async def get_logo(
 ) -> str | None:
     """
     Try logo.dev with the ticker first, fall back to domain icon.
+    Cached for 24 hours to prevent repeated expensive calls.
+    Uses circuit breaker to prevent cascading failures.
     """
+    # Check if logo fetching is disabled
+    if os.getenv("DISABLE_LOGO_FETCHING", "false").lower() == "true":
+        return None
+
+    # Check circuit breaker
+    if not logo_circuit_breaker.is_available():
+        logger.debug(f"Logo.dev circuit breaker is OPEN, skipping logo fetch for {symbol or 'domain'}")
+        return None
+
     token = "pk_Xd1Cdye3QYmCOXzcvxhxyw"  # personal public key
     if not symbol and not url:
         return None
 
+    # Set timeout for logo requests (default 1 seconds)
+    logo_timeout = float(os.getenv("LOGO_TIMEOUT_SECONDS", "1"))
+
     if symbol:
-        maybe = await client.fetch(
-            f"https://img.logo.dev/ticker/{symbol}?token={token}&retina=true",
-            return_response=True,
-        )
-        if isinstance(maybe, requests.Response) and maybe.status_code == 200:
-            return str(maybe.url)
+        start_time = time.perf_counter()
+        try:
+            maybe = await asyncio.wait_for(
+                client.fetch(
+                    f"https://img.logo.dev/ticker/{symbol}?token={token}&retina=true",
+                    return_response=True,
+                ),
+                timeout=logo_timeout,
+            )
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            success = isinstance(maybe, requests.Response) and maybe.status_code == 200
+            log_external_api_call(logger, "Logo.dev", "ticker", duration_ms, success=success)
+
+            if success:
+                logo_circuit_breaker.record_success()
+                return str(maybe.url)
+            else:
+                logo_circuit_breaker.record_failure()
+        except Exception:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_external_api_call(logger, "Logo.dev", "ticker", duration_ms, success=False)
+            logo_circuit_breaker.record_failure()
+            # Don't re-raise, fall through to domain lookup
 
     if url:
         domain = urlparse(url).netloc.replace("www.", "")
-        maybe = await client.fetch(
-            f"https://img.logo.dev/{domain}?token={token}&retina=true",
-            return_response=True,
-        )
-        if isinstance(maybe, requests.Response) and maybe.status_code == 200:
-            return str(maybe.url)
+        start_time = time.perf_counter()
+        try:
+            maybe = await asyncio.wait_for(
+                client.fetch(
+                    f"https://img.logo.dev/{domain}?token={token}&retina=true",
+                    return_response=True,
+                ),
+                timeout=logo_timeout,
+            )
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            success = isinstance(maybe, requests.Response) and maybe.status_code == 200
+            log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=success)
+
+            if success:
+                logo_circuit_breaker.record_success()
+                return str(maybe.url)
+            else:
+                logo_circuit_breaker.record_failure()
+
+        except TimeoutError:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=False)
+            logger.warning(f"Logo fetch timeout for domain {domain} after {logo_timeout}s")
+            logo_circuit_breaker.record_failure()
+            # Don't re-raise, return None
+        except Exception:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_external_api_call(logger, "Logo.dev", "domain", duration_ms, success=False)
+            logo_circuit_breaker.record_failure()
+            # Don't re-raise, return None
 
     return None
 
@@ -231,14 +333,38 @@ async def setup_proxy_whitelist() -> dict | None:
     if not os.getenv("PROXY_TOKEN") or os.getenv("USE_PROXY", "False") != "True":
         raise ValueError("Proxy configuration is missing")
 
-    ip_response = requests.get("https://api.ipify.org/")
-    ip = ip_response.text
+    # Get IP address
+    start_time = time.perf_counter()
+    try:
+        ip_response = requests.get("https://api.ipify.org/")
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        success = ip_response.status_code == 200
+        log_external_api_call(logger, "ipify", "get_ip", duration_ms, success=success)
+        if not success:
+            return None
+        ip = ip_response.text
+    except Exception:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "ipify", "get_ip", duration_ms, success=False)
+        return None
+
+    # Setup proxy whitelist
     api_url = "https://api.brightdata.com/zone/whitelist"
     proxy_header_token = {"Authorization": f"Bearer {os.getenv('PROXY_TOKEN')}", "Content-Type": "application/json"}
     payload = {"ip": ip}
-    response = requests.post(api_url, headers=proxy_header_token, json=payload)
-    if 200 < response.status_code >= 300:
-        print(f"Proxy whitelist setup failed: {response.text}")
+
+    start_time = time.perf_counter()
+    try:
+        response = requests.post(api_url, headers=proxy_header_token, json=payload)
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        success = 200 <= response.status_code < 300
+        log_external_api_call(logger, "BrightData", "whitelist_add", duration_ms, success=success)
+    except Exception:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "BrightData", "whitelist_add", duration_ms, success=False)
+        return None
+    if not success:
+        logger.error("Proxy whitelist setup failed", extra={"status_code": response.status_code, "response_text": response.text})
         return None
 
     return {"api_url": api_url, "headers": proxy_header_token, "payload": payload}
@@ -250,4 +376,13 @@ async def remove_proxy_whitelist(proxy_data: dict) -> None:
     """
     if not proxy_data:
         return
-    requests.delete(proxy_data["api_url"], headers=proxy_data["headers"], json=proxy_data["payload"])
+
+    start_time = time.perf_counter()
+    try:
+        response = requests.delete(proxy_data["api_url"], headers=proxy_data["headers"], json=proxy_data["payload"])
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        success = 200 <= response.status_code < 300
+        log_external_api_call(logger, "BrightData", "whitelist_remove", duration_ms, success=success)
+    except Exception:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "BrightData", "whitelist_remove", duration_ms, success=False)

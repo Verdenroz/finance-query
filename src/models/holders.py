@@ -1,6 +1,6 @@
+from datetime import datetime
 from enum import Enum
 from typing import Any, Optional
-from datetime import datetime
 
 from pydantic import BaseModel, Field
 
@@ -16,15 +16,17 @@ class HolderType(str, Enum):
 
 class MajorHoldersBreakdown(BaseModel):
     """Major holders breakdown data"""
+
     breakdown_data: dict[str, Any] = Field(
         default=...,
         description="Major holders breakdown with metrics as keys and values",
-        examples=[{"insidersPercentHeld": 0.1, "institutionsPercentHeld": 0.85}]
+        examples=[{"insidersPercentHeld": 0.1, "institutionsPercentHeld": 0.85}],
     )
 
 
 class InstitutionalHolder(BaseModel):
     """Individual institutional holder"""
+
     holder: str = Field(default=..., description="Institution name")
     shares: int = Field(default=..., description="Number of shares held")
     date_reported: datetime = Field(default=..., description="Date of last report")
@@ -34,6 +36,7 @@ class InstitutionalHolder(BaseModel):
 
 class MutualFundHolder(BaseModel):
     """Individual mutual fund holder"""
+
     holder: str = Field(default=..., description="Fund name")
     shares: int = Field(default=..., description="Number of shares held")
     date_reported: datetime = Field(default=..., description="Date of last report")
@@ -43,6 +46,7 @@ class MutualFundHolder(BaseModel):
 
 class InsiderTransaction(BaseModel):
     """Individual insider transaction"""
+
     start_date: datetime = Field(default=..., description="Transaction start date")
     insider: str = Field(default=..., description="Insider name")
     position: str = Field(default=..., description="Insider position/relation")
@@ -54,6 +58,7 @@ class InsiderTransaction(BaseModel):
 
 class InsiderPurchase(BaseModel):
     """Insider purchase activity summary"""
+
     period: str = Field(default=..., description="Time period for the data")
     purchases_shares: Optional[int] = Field(default=None, description="Shares purchased")
     purchases_transactions: Optional[int] = Field(default=None, description="Number of purchase transactions")
@@ -69,6 +74,7 @@ class InsiderPurchase(BaseModel):
 
 class InsiderRosterMember(BaseModel):
     """Individual insider roster member"""
+
     name: str = Field(default=..., description="Insider name")
     position: str = Field(default=..., description="Position/relation")
     most_recent_transaction: Optional[str] = Field(default=None, description="Most recent transaction")
@@ -80,9 +86,10 @@ class InsiderRosterMember(BaseModel):
 
 class HoldersData(BaseModel):
     """Complete holders data for a symbol"""
+
     symbol: str = Field(default=..., examples=["AAPL"], description="Stock symbol")
     holder_type: HolderType = Field(default=..., examples=["institutional"], description="Type of holder data")
-    
+
     # Optional fields based on holder type
     major_breakdown: Optional[MajorHoldersBreakdown] = Field(default=None, description="Major holders breakdown")
     institutional_holders: Optional[list[InstitutionalHolder]] = Field(default=None, description="Institutional holders")

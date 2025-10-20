@@ -156,13 +156,16 @@ async def technical_indicator(
     params = {k: v for k, v in params.items() if v is not None}
 
     try:
-        return await IndicatorFunctions[function](**params)
+        result = await IndicatorFunctions[function](**params)
+        return result
 
     except TypeError as te:
         param_name = str(te).split("'")[1]
-        raise HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.") from te
+        error_details = HTTPException(status_code=400, detail=f"Invalid parameter: {param_name} for the {function.name} function.")
+        raise error_details from te
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}") from e
+        error_details = HTTPException(status_code=500, detail=f"Failed to retrieve technical indicators: {str(e)}")
+        raise error_details from e
 
 
 @router.get(
@@ -245,8 +248,11 @@ async def technical_indicators(
 ):
     try:
         indicator_list = [Indicator[ind.strip()] for ind in functions.split(",")] if functions else None
-        return await get_technical_indicators(finance_client, symbol, interval, indicator_list)
+        result = await get_technical_indicators(finance_client, symbol, interval, indicator_list)
+        return result
     except KeyError as ke:
-        raise HTTPException(status_code=400, detail=f"Invalid indicator: {str(ke)}") from ke
+        error_details = HTTPException(status_code=400, detail=f"Invalid indicator: {str(ke)}")
+        raise error_details from ke
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}") from e
+        error_details = HTTPException(status_code=500, detail=f"Failed to retrieve technical analysis: {str(e)}")
+        raise error_details from e

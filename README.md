@@ -38,8 +38,8 @@ cd finance-query
 Install dependencies
 
 ```bash
-# Using Poetry (recommended)
-poetry install
+# Using uv (recommended)
+uv sync
 
 # Using pip
 pip install -r requirements.txt
@@ -65,7 +65,7 @@ The exposed endpoints to the API are:
 - https://finance-query.onrender.com
 
 An `x-api-key` header can be added if you have enabled security and rate limiting. If a key is not provided, or an
-invalid key is used, a rate limit of 2000 requests/day is applied to the request's ip address.
+invalid key is used, a rate limit of 8000 requests/day is applied to the request's ip address.
 
 > If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See
 > the [.env template](.env.template).
@@ -156,22 +156,25 @@ ws.onmessage = (event) => {
 
 ## Available REST Endpoints
 
-| Endpoint            | Description                                    |
-|---------------------|------------------------------------------------|
-| `/health`, `/ping`  | API status and health monitoring               |
-| `/hours`            | Trading hours and market status                |
-| `/v1/quotes`        | Detailed quotes and information                |
-| `/v1/simple-quotes` | Simplified quotes with summary information     |
-| `/v1/similar`       | Find similar quotes to queried symbol          |
-| `/v1/historical`    | Historical price data with customizable ranges |
-| `/v1/movers`        | Market gainers, losers, and most active stocks |
-| `/v1/news`          | Financial news and market updates              |
-| `/v1/indices`       | Major market indices (S&P 500, NASDAQ, DOW)    |
-| `/v1/sectors`       | Market sector performance and analysis         |
-| `/v1/search`        | Search for securities with filters             |
-| `/v1/indicator`     | Get specific indicator history over time       |
-| `/v1/indicators`    | Technical indicators summary for interval      |
-| `/v1/stream`        | SSE for real-time quote updates                |
+| Endpoint                  | Description                                    |
+|---------------------------|------------------------------------------------|
+| `/health`, `/ping`        | API status and health monitoring               |
+| `/hours`                  | Trading hours and market status                |
+| `/v1/quotes`              | Detailed quotes and information                |
+| `/v1/simple-quotes`       | Simplified quotes with summary information     |
+| `/v1/similar`             | Find similar quotes to queried symbol          |
+| `/v1/historical`          | Historical price data with customizable ranges |
+| `/v1/movers`              | Market gainers, losers, and most active stocks |
+| `/v1/news`                | Financial news and market updates              |
+| `/v1/indices`             | Major market indices (S&P 500, NASDAQ, DOW)    |
+| `/v1/sectors`             | Market sector performance and analysis         |
+| `/v1/search`              | Search for securities with filters             |
+| `/v1/indicator`           | Get specific indicator history over time       |
+| `/v1/indicators`          | Technical indicators summary for interval      |
+| `/v1/holders`             | Company ownership and holder information       |
+| `/v1/financials`          | Financial statements and company metrics       |
+| `/v1/earnings-transcript` | Earnings call transcripts and analysis         |
+| `/v1/stream`              | SSE for real-time quote updates                |
 
 ## Available WebSocket Endpoints
 
@@ -212,8 +215,45 @@ Easy deployment with WebSocket support:
 Deploy anywhere with Docker:
 
 ```bash
+# Basic deployment
 docker build -t financequery .
 docker run -p 8000:8000 financequery
+```
+
+#### Docker with Custom Logging Configuration
+
+Configure logging at build time:
+
+```bash
+# Build with custom logging settings
+docker build \
+  --build-arg LOG_LEVEL=DEBUG \
+  --build-arg LOG_FORMAT=text \
+  --build-arg PERFORMANCE_THRESHOLD_MS=1000 \
+  -t financequery .
+```
+
+Or configure at runtime:
+
+```bash
+# Run with environment variables
+docker run -p 8000:8000 \
+  -e LOG_LEVEL=WARNING \
+  -e LOG_FORMAT=json \
+  -e PERFORMANCE_THRESHOLD_MS=5000 \
+  financequery
+```
+
+#### Production Docker Example
+
+```bash
+# Production deployment with structured logging
+docker run -p 8000:8000 \
+  -e LOG_LEVEL=INFO \
+  -e LOG_FORMAT=json \
+  -e PERFORMANCE_THRESHOLD_MS=2000 \
+  -e REDIS_URL=redis://redis:6379 \
+  financequery
 ```
 
 > **Note**: There are two workflows that will automatically deploy to render and AWS, but they will require repository
@@ -258,6 +298,41 @@ ALGOLIA_APP_ID=your-algolia-app-id
 ALGOLIA_API_KEY=your-algolia-api-key
 ```
 
+### Logging Configuration
+
+Control logging behavior for debugging, monitoring, and production deployments:
+
+```env
+# Log level - controls verbosity
+LOG_LEVEL=INFO  # Options: DEBUG, INFO, WARNING, ERROR, CRITICAL
+
+# Log format - structured vs human-readable
+LOG_FORMAT=json  # Options: json, text
+
+# Performance monitoring threshold in milliseconds
+PERFORMANCE_THRESHOLD_MS=2000  # Operations taking longer than this trigger warnings
+```
+
+#### Log Levels
+
+- **DEBUG**: Detailed information, including cache hits/misses and operation details
+- **INFO**: General information about requests, responses, and external API calls
+- **WARNING**: Performance issues and slow operations
+- **ERROR**: Error conditions and failed operations
+- **CRITICAL**: System-level failures that require immediate attention
+
+#### Log Formats
+
+- **JSON** (`LOG_FORMAT=json`): Structured logging for production monitoring systems
+- **Text** (`LOG_FORMAT=text`): Human-readable format for development and debugging
+
+#### Performance Monitoring
+
+Adjust `PERFORMANCE_THRESHOLD_MS` based on your requirements:
+- **Development**: `500` - Strict performance monitoring
+- **Production**: `2000` - Balanced monitoring (default)
+- **High-load**: `5000` - Relaxed monitoring for systems under heavy load
+
 ## Performance
 
 FinanceQuery leverages:
@@ -268,6 +343,8 @@ FinanceQuery leverages:
 - **[lxml](https://lxml.de)** for fast and reliable web scraping
 - **[Cython](https://cython.org)** for accelerated technical indicator calculations
 - **[Redis](https://redis.io)** for intelligent caching of market data
+- **[yfinance](https://github.com/ranaroussi/yfinance)** for institutional and insider holdings data
+- **[defeatbeta-api](https://github.com/defeat-beta/defeatbeta-api)** for earnings transcripts and financial statements
 - **[logo.dev](https://logo.dev)** for fetching stock logos
 
 ## License

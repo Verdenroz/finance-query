@@ -1,9 +1,13 @@
 import os
+import time
 from typing import Optional
 
 from algoliasearch.search_client import SearchClient
 
 from src.models import SearchResult, Type
+from src.utils.logging import get_logger, log_external_api_call
+
+logger = get_logger(__name__)
 
 
 async def fetch_algolia_search_results(query: str, hits: int, type: Optional[Type]) -> list[SearchResult]:
@@ -36,7 +40,16 @@ async def fetch_algolia_search_results(query: str, hits: int, type: Optional[Typ
     if type is not None:
         params["facetFilters"] = [f"type:{type.value}"]
 
-    results = index.search(query, params)
+    # Time the API call
+    start_time = time.perf_counter()
+    try:
+        results = index.search(query, params)
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "Algolia", "search", duration_ms, success=True)
+    except Exception:
+        duration_ms = (time.perf_counter() - start_time) * 1000
+        log_external_api_call(logger, "Algolia", "search", duration_ms, success=False)
+        raise
 
     stocks = []
     for result in results["hits"]:

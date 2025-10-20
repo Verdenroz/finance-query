@@ -54,16 +54,17 @@ class YahooAuthManager:
         if proxy:
             session.proxies = {"http": proxy, "https": proxy}
 
-        session.get("https://fc.yahoo.com", timeout=10, allow_redirects=True)
+        session.get("https://fc.yahoo.com", timeout=10, allow_redirects=True, proxies={"http": proxy, "https": proxy})
         crumb = session.get(
             "https://query1.finance.yahoo.com/v1/test/getcrumb",
             timeout=10,
             allow_redirects=True,
+            proxies={"http": proxy, "https": proxy},
         ).text.strip()
 
         if not crumb or "<html" in crumb:
             # fallback to csrf token method
-            csrf_token, session_id = self._extract_csrf(session.get("https://guce.yahoo.com/consent", timeout=10).text)
+            csrf_token, session_id = self._extract_csrf(session.get("https://guce.yahoo.com/consent", timeout=10, proxies={"http": proxy, "https": proxy}).text)
             if not csrf_token or not session_id:
                 raise YahooAuthError("Failed to extract CSRF token and session id")
 
@@ -80,14 +81,20 @@ class YahooAuthManager:
                 f"https://consent.yahoo.com/v2/collectConsent?sessionId={session_id}",
                 data=data,
                 timeout=10,
+                proxies={"http": proxy, "https": proxy},
             )
             session.get(
                 f"https://guce.yahoo.com/copyConsent?sessionId={session_id}",
                 data=data,
                 timeout=10,
+                proxies={"http": proxy, "https": proxy},
             )
 
-            crumb = session.get("https://query2.finance.yahoo.com/v1/test/getcrumb", timeout=10).text.strip()
+            crumb = session.get(
+                "https://query2.finance.yahoo.com/v1/test/getcrumb",
+                timeout=10,
+                proxies={"http": proxy, "https": proxy},
+            ).text.strip()
 
             if not crumb or "<html" in crumb:
                 raise YahooAuthError("Yahoo returned an invalid crumb")

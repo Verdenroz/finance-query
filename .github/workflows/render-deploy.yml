@@ -2,14 +2,16 @@ name: Render Deploy
 
 on:
   push:
-    branches: [ "master", "staging" ]
+    branches: [ "master" ]
+  # Also trigger on workflow_dispatch for manual deployments
+  workflow_dispatch:
 
 jobs:
   render-deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Deploy to Render
         env:

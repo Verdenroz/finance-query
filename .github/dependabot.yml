@@ -1,0 +1,148 @@
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "02:00"
+      timezone: "UTC"
+    target-branch: "staging"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "Verdenroz"
+    assignees:
+      - "Verdenroz"
+    commit-message:
+      prefix: "deps"
+      prefix-development: "deps-dev"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "python"
+    versioning-strategy: "increase-if-necessary"
+    # Group related updates to reduce PR noise
+    groups:
+      fastapi-ecosystem:
+        patterns:
+          - "fastapi*"
+          - "uvicorn*"
+          - "starlette*"
+          - "pydantic*"
+          - "fastapi-injectable*"
+      database:
+        patterns:
+          - "redis*"
+          - "hiredis*"
+          - "peewee*"
+      data-processing:
+        patterns:
+          - "pandas*"
+          - "numpy*"
+      web-scraping:
+        patterns:
+          - "curl-cffi*"
+          - "beautifulsoup4*"
+          - "lxml*"
+          - "requests*"
+      data-sources:
+        patterns:
+          - "yfinance*"
+          - "defeatbeta-api*"
+          - "algoliasearch*"
+          - "multitasking*"
+      infrastructure:
+        patterns:
+          - "mangum*"
+          - "python-dotenv*"
+          - "pyyaml*"
+          - "psutil*"
+          - "websockets*"
+          - "frozendict*"
+      serialization:
+        patterns:
+          - "orjson*"
+          - "protobuf*"
+          - "python-json-logger*"
+      testing:
+        patterns:
+          - "pytest*"
+          - "coverage*"
+          - "httpx*"
+          - "freezegun*"
+      linting:
+        patterns:
+          - "ruff*"
+          - "pre-commit*"
+      docs:
+        patterns:
+          - "mkdocs*"
+      build-tools:
+        patterns:
+          - "setuptools*"
+          - "wheel*"
+          - "cython*"
+      utilities:
+        patterns:
+          - "tqdm*"
+    # Ignore specific packages that require manual review
+    ignore:
+      # Cython updates may affect compiled extensions
+      - dependency-name: "cython"
+        update-types: ["version-update:semver-major"]
+      # NumPy major versions may break Cython compatibility
+      - dependency-name: "numpy"
+        update-types: ["version-update:semver-major"]
+      # Pin Python version updates (requires testing)
+      - dependency-name: "python"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "tuesday"
+      time: "02:00"
+      timezone: "UTC"
+    target-branch: "staging"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "Verdenroz"
+    assignees:
+      - "Verdenroz"
+    commit-message:
+      prefix: "ci"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "github-actions"
+      - "ci"
+
+  # Docker dependencies
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "monthly"
+      day: "tuesday"
+      time: "02:00"
+      timezone: "UTC"
+    target-branch: "staging"
+    open-pull-requests-limit: 2
+    reviewers:
+      - "Verdenroz"
+    assignees:
+      - "Verdenroz"
+    commit-message:
+      prefix: "docker"
+      include: "scope"
+    labels:
+      - "dependencies"
+      - "docker"
+    # Only patch and minor updates for base images
+    ignore:
+      - dependency-name: "python"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "public.ecr.aws/lambda/python"
+        update-types: ["version-update:semver-major"]

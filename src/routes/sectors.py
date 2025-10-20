@@ -116,7 +116,8 @@ router = APIRouter()
     },
 )
 async def sectors():
-    return await get_sectors()
+    result = await get_sectors()
+    return result
 
 
 @router.get(
@@ -157,7 +158,8 @@ async def sector_by_symbol(
     finance_client: FinanceClient,
     symbol: str,
 ):
-    return await get_sector_for_symbol(finance_client, symbol)
+    result = await get_sector_for_symbol(finance_client, symbol)
+    return result
 
 
 @router.get(
@@ -224,4 +226,5 @@ async def sector_by_symbol(
     },
 )
 async def sector_details(sector: Sector):
-    return await get_sector_details(sector)
+    result = await get_sector_details(sector)
+    return result

@@ -35,6 +35,8 @@ async def get_news(
     symbol: Optional[str] = Query(None, description="Optional symbol to get news for. If not provided, general market news is returned"),
 ):
     if not symbol:
-        return await scrape_general_news()
+        result = await scrape_general_news()
     else:
-        return await scrape_news_for_quote(symbol)
+        result = await scrape_news_for_quote(symbol)
+
+    return result
