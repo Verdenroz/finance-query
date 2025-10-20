@@ -1,3 +1,12 @@
+from src.services.analysis import (
+    get_analyst_price_targets,
+    get_earnings_estimate,
+    get_revenue_estimate,
+    get_earnings_history,
+    get_eps_trend,
+    get_eps_revisions,
+    get_growth_estimates,
+)
 from src.services.historical.get_historical import get_historical
 from src.services.indicators import *
 from src.services.indices.get_indices import get_indices
@@ -9,6 +18,13 @@ from src.services.sectors.get_sectors import get_sectors, get_sector_for_symbol,
 from src.services.similar.get_similar_quotes import get_similar_quotes
 
 _all__ = [
+    "get_analyst_price_targets",
+    "get_earnings_estimate",
+    "get_revenue_estimate",
+    "get_earnings_history",
+    "get_eps_trend",
+    "get_eps_revisions",
+    "get_growth_estimates",
     "get_historical",
     "get_quotes",
     "get_simple_quotes",
@@ -37,6 +53,6 @@ _all__ = [
     "get_bbands",
     "get_obv",
     "get_super_trend",
-    "get_ichimoku"
+    "get_ichimoku",
     "get_technical_indicators",
 ]

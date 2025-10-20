@@ -21,6 +21,7 @@ from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import RequestContextMiddleware
 from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
 from src.routes import (
+    analysis_router,
     finance_news_router,
     historical_prices_router,
     hours_router,
@@ -325,5 +326,6 @@ app.include_router(stream_router, prefix="/v1", tags=["SSE"])
 app.include_router(financials_router, prefix="/v1", tags=["Financials"])
 app.include_router(holders_router, prefix="/v1", tags=["Holders"])
 app.include_router(earnings_transcript_router, prefix="/v1", tags=["Earnings Transcripts"])
+app.include_router(analysis_router, prefix="/v1", tags=["Analysis"])
 
 handler = Mangum(app)

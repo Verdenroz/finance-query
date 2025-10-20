@@ -1,3 +1,12 @@
+from .analysis import (
+    AnalystPriceTargets,
+    EarningsEstimate,
+    RevenueEstimate,
+    EarningsHistory,
+    EPSTrend,
+    EPSRevisions,
+    GrowthEstimates,
+)
 from .indicators import TechnicalIndicator, Indicator
 from .historical_data import HistoricalData, TimeRange, Interval
 from .index import MarketIndex, Index, Region, INDEX_REGIONS
