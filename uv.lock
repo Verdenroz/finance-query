@@ -512,7 +512,7 @@ wheels = [
 
 [[package]]
 name = "financequery"
-version = "1.10.0"
+version = "1.9.1"
 source = { editable = "." }
 dependencies = [
     { name = "algoliasearch" },
