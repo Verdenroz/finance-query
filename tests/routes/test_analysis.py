@@ -1,9 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from fastapi.testclient import TestClient
 
 from src.main import app
-from src.models.analysis import AnalysisType
 
 
 @pytest.fixture
@@ -21,7 +21,7 @@ async def test_get_analysis_recommendations(mock_ticker, client):
     mock_ticker_instance.recommendations.empty = False
     mock_ticker_instance.recommendations.iterrows.return_value = [
         (0, {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0}),
-        (1, {"period": "1m", "strongBuy": 3, "buy": 8, "hold": 5, "sell": 2, "strongSell": 1})
+        (1, {"period": "1m", "strongBuy": 3, "buy": 8, "hold": 5, "sell": 2, "strongSell": 1}),
     ]
     mock_ticker.return_value = mock_ticker_instance
 
@@ -43,13 +43,7 @@ async def test_get_analysis_price_targets(mock_ticker, client):
     """Test analysis endpoint with price targets type"""
     # Mock the yfinance Ticker object and its methods
     mock_ticker_instance = MagicMock()
-    mock_ticker_instance.analyst_price_targets = {
-        "current": 150.0,
-        "mean": 160.0,
-        "median": 155.0,
-        "low": 140.0,
-        "high": 180.0
-    }
+    mock_ticker_instance.analyst_price_targets = {"current": 150.0, "mean": 160.0, "median": 155.0, "low": 140.0, "high": 180.0}
     mock_ticker.return_value = mock_ticker_instance
 
     response = client.get("/v1/analysis/AAPL?analysis_type=price_targets")
@@ -69,13 +63,10 @@ async def test_get_analysis_price_targets(mock_ticker, client):
 async def test_get_analysis_earnings_estimate(mock_ticker, client):
     """Test analysis endpoint with earnings estimate type"""
     import pandas as pd
-    
+
     # Mock the yfinance Ticker object and its methods
     mock_ticker_instance = MagicMock()
-    mock_df = pd.DataFrame({
-        "2024-12-31": {"avg": 6.5, "low": 6.0, "high": 7.0},
-        "2025-12-31": {"avg": 7.2, "low": 6.8, "high": 7.6}
-    })
+    mock_df = pd.DataFrame({"2024-12-31": {"avg": 6.5, "low": 6.0, "high": 7.0}, "2025-12-31": {"avg": 7.2, "low": 6.8, "high": 7.6}})
     mock_ticker_instance.earnings_estimate = mock_df
     mock_ticker.return_value = mock_ticker_instance
 
@@ -98,11 +89,7 @@ async def test_get_analysis_sustainability(mock_ticker, client):
     mock_ticker_instance.sustainability = MagicMock()
     mock_ticker_instance.sustainability.empty = False
     mock_ticker_instance.sustainability.columns = ["environmentScore", "socialScore", "governanceScore"]
-    mock_ticker_instance.sustainability.__getitem__.side_effect = lambda x: {
-        "environmentScore": 75,
-        "socialScore": 80,
-        "governanceScore": 85
-    }[x]
+    mock_ticker_instance.sustainability.__getitem__.side_effect = lambda x: {"environmentScore": 75, "socialScore": 80, "governanceScore": 85}[x]
     mock_ticker_instance.sustainability.iloc = [75, 80, 85]
     mock_ticker.return_value = mock_ticker_instance
 
@@ -126,7 +113,7 @@ async def test_get_analysis_upgrades_downgrades(mock_ticker, client):
     mock_ticker_instance.upgrades_downgrades.empty = False
     mock_ticker_instance.upgrades_downgrades.iterrows.return_value = [
         (0, {"firm": "Goldman Sachs", "toGrade": "Buy", "fromGrade": "Hold", "action": "upgrade", "date": "2024-01-15"}),
-        (1, {"firm": "Morgan Stanley", "toGrade": "Hold", "fromGrade": "Buy", "action": "downgrade", "date": "2024-01-10"})
+        (1, {"firm": "Morgan Stanley", "toGrade": "Hold", "fromGrade": "Buy", "action": "downgrade", "date": "2024-01-10"}),
     ]
     mock_ticker.return_value = mock_ticker_instance
 
@@ -152,7 +139,7 @@ async def test_get_analysis_earnings_history(mock_ticker, client):
     mock_ticker_instance.earnings_history.empty = False
     mock_ticker_instance.earnings_history.iterrows.return_value = [
         (0, {"date": "2024-01-15", "eps_actual": 2.18, "eps_estimate": 2.10, "surprise": 0.08, "surprise_percent": 3.8}),
-        (1, {"date": "2023-10-15", "eps_actual": 1.46, "eps_estimate": 1.39, "surprise": 0.07, "surprise_percent": 5.0})
+        (1, {"date": "2023-10-15", "eps_actual": 1.46, "eps_estimate": 1.39, "surprise": 0.07, "surprise_percent": 5.0}),
     ]
     mock_ticker.return_value = mock_ticker_instance
 
@@ -173,13 +160,15 @@ async def test_get_analysis_earnings_history(mock_ticker, client):
 async def test_get_analysis_revenue_estimate(mock_ticker, client):
     """Test analysis endpoint with revenue estimate type"""
     import pandas as pd
-    
+
     # Mock the yfinance Ticker object and its methods
     mock_ticker_instance = MagicMock()
-    mock_df = pd.DataFrame({
-        "2024-12-31": {"avg": 400000000000, "low": 380000000000, "high": 420000000000},
-        "2025-12-31": {"avg": 420000000000, "low": 400000000000, "high": 440000000000}
-    })
+    mock_df = pd.DataFrame(
+        {
+            "2024-12-31": {"avg": 400000000000, "low": 380000000000, "high": 420000000000},
+            "2025-12-31": {"avg": 420000000000, "low": 400000000000, "high": 440000000000},
+        }
+    )
     mock_ticker_instance.revenue_estimate = mock_df
     mock_ticker.return_value = mock_ticker_instance
 
@@ -249,16 +238,10 @@ def test_get_analysis_missing_analysis_type(client):
 async def test_get_analysis_price_targets_series_format(mock_ticker, client):
     """Test analysis endpoint with price targets in Series format"""
     import pandas as pd
-    
+
     # Mock the yfinance Ticker object with Series format
     mock_ticker_instance = MagicMock()
-    mock_series = pd.Series({
-        "current": 150.0,
-        "mean": 160.0,
-        "median": 155.0,
-        "low": 140.0,
-        "high": 180.0
-    })
+    mock_series = pd.Series({"current": 150.0, "mean": 160.0, "median": 155.0, "low": 140.0, "high": 180.0})
     mock_ticker_instance.analyst_price_targets = mock_series
     mock_ticker.return_value = mock_ticker_instance
 
@@ -298,14 +281,12 @@ async def test_get_analysis_price_targets_none_data(mock_ticker, client):
 async def test_get_analysis_with_nan_values(mock_ticker, client):
     """Test analysis endpoint handling NaN values"""
     import pandas as pd
-    
+
     # Mock the yfinance Ticker object with NaN values
     mock_ticker_instance = MagicMock()
     mock_ticker_instance.recommendations = MagicMock()
     mock_ticker_instance.recommendations.empty = False
-    mock_ticker_instance.recommendations.iterrows.return_value = [
-        (0, {"period": "3m", "strongBuy": 5, "buy": pd.NA, "hold": 3, "sell": 1, "strongSell": 0})
-    ]
+    mock_ticker_instance.recommendations.iterrows.return_value = [(0, {"period": "3m", "strongBuy": 5, "buy": pd.NA, "hold": 3, "sell": 1, "strongSell": 0})]
     mock_ticker.return_value = mock_ticker_instance
 
     response = client.get("/v1/analysis/AAPL?analysis_type=recommendations")
@@ -327,9 +308,7 @@ async def test_get_analysis_multiple_symbols(mock_ticker, client):
     mock_ticker_instance = MagicMock()
     mock_ticker_instance.recommendations = MagicMock()
     mock_ticker_instance.recommendations.empty = False
-    mock_ticker_instance.recommendations.iterrows.return_value = [
-        (0, {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0})
-    ]
+    mock_ticker_instance.recommendations.iterrows.return_value = [(0, {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0})]
     mock_ticker.return_value = mock_ticker_instance
 
     # Test with different symbols
@@ -350,14 +329,12 @@ async def test_get_analysis_concurrent_requests(mock_ticker, client):
     mock_ticker_instance = MagicMock()
     mock_ticker_instance.recommendations = MagicMock()
     mock_ticker_instance.recommendations.empty = False
-    mock_ticker_instance.recommendations.iterrows.return_value = [
-        (0, {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0})
-    ]
+    mock_ticker_instance.recommendations.iterrows.return_value = [(0, {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0})]
     mock_ticker.return_value = mock_ticker_instance
 
     # Test concurrent requests
     import asyncio
-    
+
     async def make_request(symbol):
         response = client.get(f"/v1/analysis/{symbol}?analysis_type=recommendations")
         return response.status_code == 200
@@ -365,7 +342,7 @@ async def test_get_analysis_concurrent_requests(mock_ticker, client):
     symbols = ["AAPL", "MSFT", "GOOGL", "TSLA"]
     tasks = [make_request(symbol) for symbol in symbols]
     results = await asyncio.gather(*tasks)
-    
+
     assert all(results)
 
 
@@ -373,11 +350,11 @@ def test_analysis_endpoint_documentation(client):
     """Test that the analysis endpoint has proper documentation"""
     response = client.get("/docs")
     assert response.status_code == 200
-    
+
     # Check that the analysis endpoint appears in the OpenAPI spec
     openapi_spec = client.get("/openapi.json").json()
     assert "/v1/analysis/{symbol}" in openapi_spec["paths"]
-    
+
     # Check that the endpoint has proper tags
     analysis_path = openapi_spec["paths"]["/v1/analysis/{symbol}"]
     assert "get" in analysis_path
@@ -393,22 +370,20 @@ async def test_get_analysis_response_structure(mock_ticker, client):
     mock_ticker_instance = MagicMock()
     mock_ticker_instance.recommendations = MagicMock()
     mock_ticker_instance.recommendations.empty = False
-    mock_ticker_instance.recommendations.iterrows.return_value = [
-        (0, {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0})
-    ]
+    mock_ticker_instance.recommendations.iterrows.return_value = [(0, {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0})]
     mock_ticker.return_value = mock_ticker_instance
 
     response = client.get("/v1/analysis/AAPL?analysis_type=recommendations")
 
     assert response.status_code == 200
     data = response.json()
-    
+
     # Check required fields
     assert "symbol" in data
     assert "analysis_type" in data
     assert data["symbol"] == "AAPL"
     assert data["analysis_type"] == "recommendations"
-    
+
     # Check that only the relevant field is populated
     assert data["recommendations"] is not None
     assert data["price_targets"] is None

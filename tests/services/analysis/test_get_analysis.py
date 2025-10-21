@@ -1,20 +1,20 @@
-import pytest
 from unittest.mock import MagicMock, patch
+
 import pandas as pd
-from datetime import datetime
+import pytest
 from fastapi import HTTPException
 
-from src.services.analysis.get_analysis import (
-    get_analysis_data,
-    _parse_recommendations,
-    _parse_upgrades_downgrades,
-    _parse_price_targets,
-    _parse_earnings_estimate,
-    _parse_revenue_estimate,
-    _parse_earnings_history,
-    _parse_sustainability,
-)
 from src.models.analysis import AnalysisType
+from src.services.analysis.get_analysis import (
+    _parse_earnings_estimate,
+    _parse_earnings_history,
+    _parse_price_targets,
+    _parse_recommendations,
+    _parse_revenue_estimate,
+    _parse_sustainability,
+    _parse_upgrades_downgrades,
+    get_analysis_data,
+)
 
 
 class TestGetAnalysisData:
@@ -48,13 +48,7 @@ class TestGetAnalysisData:
         with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
             # Mock the yfinance Ticker object
             mock_ticker_instance = MagicMock()
-            mock_ticker_instance.analyst_price_targets = {
-                "current": 150.0,
-                "mean": 160.0,
-                "median": 155.0,
-                "low": 140.0,
-                "high": 180.0
-            }
+            mock_ticker_instance.analyst_price_targets = {"current": 150.0, "mean": 160.0, "median": 155.0, "low": 140.0, "high": 180.0}
             mock_ticker.return_value = mock_ticker_instance
 
             result = await get_analysis_data("AAPL", AnalysisType.PRICE_TARGETS)
@@ -71,10 +65,7 @@ class TestGetAnalysisData:
         with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
             # Mock the yfinance Ticker object
             mock_ticker_instance = MagicMock()
-            mock_df = pd.DataFrame({
-                "2024-12-31": {"avg": 6.5, "low": 6.0, "high": 7.0},
-                "2025-12-31": {"avg": 7.2, "low": 6.8, "high": 7.6}
-            })
+            mock_df = pd.DataFrame({"2024-12-31": {"avg": 6.5, "low": 6.0, "high": 7.0}, "2025-12-31": {"avg": 7.2, "low": 6.8, "high": 7.6}})
             mock_ticker_instance.earnings_estimate = mock_df
             mock_ticker.return_value = mock_ticker_instance
 
@@ -94,11 +85,7 @@ class TestGetAnalysisData:
             mock_ticker_instance.sustainability = MagicMock()
             mock_ticker_instance.sustainability.empty = False
             mock_ticker_instance.sustainability.columns = ["environmentScore", "socialScore", "governanceScore"]
-            mock_ticker_instance.sustainability.__getitem__.side_effect = lambda x: {
-                "environmentScore": 75,
-                "socialScore": 80,
-                "governanceScore": 85
-            }[x]
+            mock_ticker_instance.sustainability.__getitem__.side_effect = lambda x: {"environmentScore": 75, "socialScore": 80, "governanceScore": 85}[x]
             mock_ticker_instance.sustainability.iloc = [75, 80, 85]
             mock_ticker.return_value = mock_ticker_instance
 
@@ -157,9 +144,7 @@ class TestGetAnalysisData:
         with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
             # Mock the yfinance Ticker object
             mock_ticker_instance = MagicMock()
-            mock_df = pd.DataFrame({
-                "2024-12-31": {"avg": 400000000000, "low": 380000000000, "high": 420000000000}
-            })
+            mock_df = pd.DataFrame({"2024-12-31": {"avg": 400000000000, "low": 380000000000, "high": 420000000000}})
             mock_ticker_instance.revenue_estimate = mock_df
             mock_ticker.return_value = mock_ticker_instance
 
@@ -179,7 +164,7 @@ class TestGetAnalysisData:
 
             with pytest.raises(HTTPException) as exc_info:
                 await get_analysis_data("AAPL", "invalid_type")
-            
+
             assert exc_info.value.status_code == 400
             assert "Invalid analysis type" in exc_info.value.detail
 
@@ -208,12 +193,14 @@ class TestParseRecommendations:
 
     def test_parse_recommendations_with_data(self):
         """Test parsing recommendations DataFrame with data"""
-        df = pd.DataFrame([
-            {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0},
-            {"period": "1m", "strongBuy": 3, "buy": 8, "hold": 5, "sell": 2, "strongSell": 1}
-        ])
+        df = pd.DataFrame(
+            [
+                {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0},
+                {"period": "1m", "strongBuy": 3, "buy": 8, "hold": 5, "sell": 2, "strongSell": 1},
+            ]
+        )
         result = _parse_recommendations(df)
-        
+
         assert len(result) == 2
         assert result[0].period == "3m"
         assert result[0].strong_buy == 5
@@ -223,11 +210,9 @@ class TestParseRecommendations:
 
     def test_parse_recommendations_with_nan_values(self):
         """Test parsing recommendations DataFrame with NaN values"""
-        df = pd.DataFrame([
-            {"period": "3m", "strongBuy": 5, "buy": pd.NA, "hold": 3, "sell": 1, "strongSell": 0}
-        ])
+        df = pd.DataFrame([{"period": "3m", "strongBuy": 5, "buy": pd.NA, "hold": 3, "sell": 1, "strongSell": 0}])
         result = _parse_recommendations(df)
-        
+
         assert len(result) == 1
         assert result[0].period == "3m"
         assert result[0].strong_buy == 5
@@ -245,12 +230,14 @@ class TestParseUpgradesDowngrades:
 
     def test_parse_upgrades_downgrades_with_data(self):
         """Test parsing upgrades/downgrades DataFrame with data"""
-        df = pd.DataFrame([
-            {"firm": "Goldman Sachs", "toGrade": "Buy", "fromGrade": "Hold", "action": "upgrade", "date": "2024-01-15"},
-            {"firm": "Morgan Stanley", "toGrade": "Hold", "fromGrade": "Buy", "action": "downgrade", "date": "2024-01-10"}
-        ])
+        df = pd.DataFrame(
+            [
+                {"firm": "Goldman Sachs", "toGrade": "Buy", "fromGrade": "Hold", "action": "upgrade", "date": "2024-01-15"},
+                {"firm": "Morgan Stanley", "toGrade": "Hold", "fromGrade": "Buy", "action": "downgrade", "date": "2024-01-10"},
+            ]
+        )
         result = _parse_upgrades_downgrades(df)
-        
+
         assert len(result) == 2
         assert result[0].firm == "Goldman Sachs"
         assert result[0].action == "upgrade"
@@ -259,11 +246,9 @@ class TestParseUpgradesDowngrades:
 
     def test_parse_upgrades_downgrades_with_nan_values(self):
         """Test parsing upgrades/downgrades DataFrame with NaN values"""
-        df = pd.DataFrame([
-            {"firm": "Goldman Sachs", "toGrade": pd.NA, "fromGrade": "Hold", "action": "upgrade", "date": pd.NA}
-        ])
+        df = pd.DataFrame([{"firm": "Goldman Sachs", "toGrade": pd.NA, "fromGrade": "Hold", "action": "upgrade", "date": pd.NA}])
         result = _parse_upgrades_downgrades(df)
-        
+
         assert len(result) == 1
         assert result[0].firm == "Goldman Sachs"
         assert result[0].to_grade is None
@@ -275,15 +260,9 @@ class TestParsePriceTargets:
 
     def test_parse_price_targets_dict_format(self):
         """Test parsing price targets in dict format"""
-        data = {
-            "current": 150.0,
-            "mean": 160.0,
-            "median": 155.0,
-            "low": 140.0,
-            "high": 180.0
-        }
+        data = {"current": 150.0, "mean": 160.0, "median": 155.0, "low": 140.0, "high": 180.0}
         result = _parse_price_targets(data)
-        
+
         assert result.current == 150.0
         assert result.mean == 160.0
         assert result.median == 155.0
@@ -292,15 +271,9 @@ class TestParsePriceTargets:
 
     def test_parse_price_targets_series_format(self):
         """Test parsing price targets in Series format"""
-        series = pd.Series({
-            "current": 150.0,
-            "mean": 160.0,
-            "median": 155.0,
-            "low": 140.0,
-            "high": 180.0
-        })
+        series = pd.Series({"current": 150.0, "mean": 160.0, "median": 155.0, "low": 140.0, "high": 180.0})
         result = _parse_price_targets(series)
-        
+
         assert result.current == 150.0
         assert result.mean == 160.0
         assert result.median == 155.0
@@ -308,7 +281,7 @@ class TestParsePriceTargets:
     def test_parse_price_targets_none_data(self):
         """Test parsing price targets with None data"""
         result = _parse_price_targets(None)
-        
+
         assert result.current is None
         assert result.mean is None
         assert result.median is None
@@ -317,22 +290,16 @@ class TestParsePriceTargets:
         """Test parsing price targets with empty DataFrame"""
         empty_df = pd.DataFrame()
         result = _parse_price_targets(empty_df)
-        
+
         assert result.current is None
         assert result.mean is None
         assert result.median is None
 
     def test_parse_price_targets_with_nan_values(self):
         """Test parsing price targets with NaN values"""
-        data = {
-            "current": 150.0,
-            "mean": pd.NA,
-            "median": 155.0,
-            "low": 140.0,
-            "high": 180.0
-        }
+        data = {"current": 150.0, "mean": pd.NA, "median": 155.0, "low": 140.0, "high": 180.0}
         result = _parse_price_targets(data)
-        
+
         assert result.current == 150.0
         assert result.mean is None  # NaN should be converted to None
         assert result.median == 155.0
@@ -345,18 +312,15 @@ class TestParseEarningsEstimate:
         """Test parsing empty earnings estimate DataFrame"""
         empty_df = pd.DataFrame()
         result = _parse_earnings_estimate(empty_df)
-        
+
         assert result.estimates == {}
 
     def test_parse_earnings_estimate_with_data(self):
         """Test parsing earnings estimate DataFrame with data"""
-        df = pd.DataFrame({
-            "2024-12-31": [6.5, 6.0, 7.0],
-            "2025-12-31": [7.2, 6.8, 7.6]
-        }, index=["avg", "low", "high"])
-        
+        df = pd.DataFrame({"2024-12-31": [6.5, 6.0, 7.0], "2025-12-31": [7.2, 6.8, 7.6]}, index=["avg", "low", "high"])
+
         result = _parse_earnings_estimate(df)
-        
+
         assert "2024-12-31" in result.estimates
         assert "2025-12-31" in result.estimates
 
@@ -368,18 +332,17 @@ class TestParseRevenueEstimate:
         """Test parsing empty revenue estimate DataFrame"""
         empty_df = pd.DataFrame()
         result = _parse_revenue_estimate(empty_df)
-        
+
         assert result.estimates == {}
 
     def test_parse_revenue_estimate_with_data(self):
         """Test parsing revenue estimate DataFrame with data"""
-        df = pd.DataFrame({
-            "2024-12-31": [400000000000, 380000000000, 420000000000],
-            "2025-12-31": [420000000000, 400000000000, 440000000000]
-        }, index=["avg", "low", "high"])
-        
+        df = pd.DataFrame(
+            {"2024-12-31": [400000000000, 380000000000, 420000000000], "2025-12-31": [420000000000, 400000000000, 440000000000]}, index=["avg", "low", "high"]
+        )
+
         result = _parse_revenue_estimate(df)
-        
+
         assert "2024-12-31" in result.estimates
         assert "2025-12-31" in result.estimates
 
@@ -395,12 +358,14 @@ class TestParseEarningsHistory:
 
     def test_parse_earnings_history_with_data(self):
         """Test parsing earnings history DataFrame with data"""
-        df = pd.DataFrame([
-            {"date": "2024-01-15", "eps_actual": 2.18, "eps_estimate": 2.10, "surprise": 0.08, "surprise_percent": 3.8},
-            {"date": "2023-10-15", "eps_actual": 1.46, "eps_estimate": 1.39, "surprise": 0.07, "surprise_percent": 5.0}
-        ])
+        df = pd.DataFrame(
+            [
+                {"date": "2024-01-15", "eps_actual": 2.18, "eps_estimate": 2.10, "surprise": 0.08, "surprise_percent": 3.8},
+                {"date": "2023-10-15", "eps_actual": 1.46, "eps_estimate": 1.39, "surprise": 0.07, "surprise_percent": 5.0},
+            ]
+        )
         result = _parse_earnings_history(df)
-        
+
         assert len(result) == 2
         assert result[0].eps_actual == 2.18
         assert result[0].surprise_percent == 3.8
@@ -408,11 +373,9 @@ class TestParseEarningsHistory:
 
     def test_parse_earnings_history_with_nan_values(self):
         """Test parsing earnings history DataFrame with NaN values"""
-        df = pd.DataFrame([
-            {"date": "2024-01-15", "eps_actual": 2.18, "eps_estimate": pd.NA, "surprise": 0.08, "surprise_percent": pd.NA}
-        ])
+        df = pd.DataFrame([{"date": "2024-01-15", "eps_actual": 2.18, "eps_estimate": pd.NA, "surprise": 0.08, "surprise_percent": pd.NA}])
         result = _parse_earnings_history(df)
-        
+
         assert len(result) == 1
         assert result[0].eps_actual == 2.18
         assert result[0].eps_estimate is None
@@ -426,18 +389,14 @@ class TestParseSustainability:
         """Test parsing empty sustainability DataFrame"""
         empty_df = pd.DataFrame()
         result = _parse_sustainability(empty_df)
-        
+
         assert result.scores == {}
 
     def test_parse_sustainability_with_data(self):
         """Test parsing sustainability DataFrame with data"""
-        df = pd.DataFrame({
-            "environmentScore": [75],
-            "socialScore": [80],
-            "governanceScore": [85]
-        })
+        df = pd.DataFrame({"environmentScore": [75], "socialScore": [80], "governanceScore": [85]})
         result = _parse_sustainability(df)
-        
+
         assert "environmentScore" in result.scores
         assert "socialScore" in result.scores
         assert "governanceScore" in result.scores
@@ -445,13 +404,9 @@ class TestParseSustainability:
 
     def test_parse_sustainability_with_nan_values(self):
         """Test parsing sustainability DataFrame with NaN values"""
-        df = pd.DataFrame({
-            "environmentScore": [75],
-            "socialScore": [pd.NA],
-            "governanceScore": [85]
-        })
+        df = pd.DataFrame({"environmentScore": [75], "socialScore": [pd.NA], "governanceScore": [85]})
         result = _parse_sustainability(df)
-        
+
         assert result.scores["environmentScore"] == 75
         assert result.scores["socialScore"] is None
         assert result.scores["governanceScore"] == 85

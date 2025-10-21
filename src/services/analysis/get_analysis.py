@@ -108,7 +108,7 @@ def _parse_upgrades_downgrades(df: pd.DataFrame) -> list[UpgradeDowngrade]:
 
 def _parse_price_targets(data: Any) -> PriceTarget:
     """Parse analyst price targets"""
-    if data is None or (hasattr(data, 'empty') and data.empty):
+    if data is None or (hasattr(data, "empty") and data.empty):
         return PriceTarget()
 
     # Handle different data types that yfinance might return
