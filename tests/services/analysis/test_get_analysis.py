@@ -177,8 +177,11 @@ class TestGetAnalysisData:
             mock_ticker_instance = MagicMock()
             mock_ticker.return_value = mock_ticker_instance
 
-            with pytest.raises(Exception):  # Should raise HTTPException
+            with pytest.raises(HTTPException) as exc_info:
                 await get_analysis_data("AAPL", "invalid_type")
+            
+            assert exc_info.value.status_code == 400
+            assert "Invalid analysis type" in exc_info.value.detail
 
     @pytest.mark.asyncio
     async def test_get_analysis_data_yfinance_error(self):
