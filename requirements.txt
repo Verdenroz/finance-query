@@ -154,7 +154,7 @@ multitasking==0.0.12
     #   yfinance
 nodeenv==1.9.1
     # via pre-commit
-numpy==2.3.3
+numpy==2.3.4
     # via
     #   defeatbeta-api
     #   financequery
@@ -170,7 +170,7 @@ packaging==25.0
     #   pytest
 paginate==0.5.7
     # via mkdocs-material
-pandas==2.3.2
+pandas==2.3.3
     # via
     #   defeatbeta-api
     #   financequery
