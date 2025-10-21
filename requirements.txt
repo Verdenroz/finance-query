@@ -62,11 +62,11 @@ duckdb==1.4.0
     # via defeatbeta-api
 execnet==2.1.1
     # via pytest-xdist
-fastapi==0.118.0
+fastapi==0.119.1
     # via
     #   fastapi-injectable
     #   financequery
-fastapi-injectable==1.4.0
+fastapi-injectable==1.4.2
     # via financequery
 filelock==3.19.1
     # via virtualenv
@@ -201,12 +201,12 @@ psutil==7.1.0
     #   financequery
 pycparser==2.23 ; implementation_name != 'PyPy'
     # via cffi
-pydantic==2.11.10
+pydantic==2.12.3
     # via
     #   fastapi
     #   financequery
     #   openai
-pydantic-core==2.41.1
+pydantic-core==2.41.4
     # via pydantic
 pyfiglet==1.0.4
     # via defeatbeta-api
@@ -304,7 +304,7 @@ urllib3==2.5.0
     # via
     #   defeatbeta-api
     #   requests
-uvicorn==0.37.0
+uvicorn==0.38.0
     # via financequery
 virtualenv==20.34.0
     # via pre-commit
