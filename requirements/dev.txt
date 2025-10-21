@@ -83,7 +83,7 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-hiredis==3.2.1
+hiredis==3.3.0
     # via financequery
 httpcore==1.0.9
     # via httpx
