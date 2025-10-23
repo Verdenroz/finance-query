@@ -22,38 +22,38 @@ ANALYSIS_TYPE_MAPPING = {
     AnalysisType.RECOMMENDATIONS: {
         "parser": None,  # Will be set to _parse_recommendations after function definition
         "ticker_attr": "recommendations",
-        "field_name": "recommendations"
+        "field_name": "recommendations",
     },
     AnalysisType.UPGRADES_DOWNGRADES: {
         "parser": None,  # Will be set to _parse_upgrades_downgrades after function definition
         "ticker_attr": "upgrades_downgrades",
-        "field_name": "upgrades_downgrades"
+        "field_name": "upgrades_downgrades",
     },
     AnalysisType.PRICE_TARGETS: {
         "parser": None,  # Will be set to _parse_price_targets after function definition
         "ticker_attr": "analyst_price_targets",
-        "field_name": "price_targets"
+        "field_name": "price_targets",
     },
     AnalysisType.EARNINGS_ESTIMATE: {
         "parser": None,  # Will be set to _parse_earnings_estimate after function definition
         "ticker_attr": "earnings_estimate",
-        "field_name": "earnings_estimate"
+        "field_name": "earnings_estimate",
     },
     AnalysisType.REVENUE_ESTIMATE: {
         "parser": None,  # Will be set to _parse_revenue_estimate after function definition
         "ticker_attr": "revenue_estimate",
-        "field_name": "revenue_estimate"
+        "field_name": "revenue_estimate",
     },
     AnalysisType.EARNINGS_HISTORY: {
         "parser": None,  # Will be set to _parse_earnings_history after function definition
         "ticker_attr": "earnings_history",
-        "field_name": "earnings_history"
+        "field_name": "earnings_history",
     },
     AnalysisType.SUSTAINABILITY: {
         "parser": None,  # Will be set to _parse_sustainability after function definition
         "ticker_attr": "sustainability",
-        "field_name": "sustainability"
-    }
+        "field_name": "sustainability",
+    },
 }
 
 
@@ -72,23 +72,19 @@ async def get_analysis_data(symbol: str, analysis_type: AnalysisType) -> Analysi
         # Validate analysis type
         if analysis_type not in ANALYSIS_TYPE_MAPPING:
             raise HTTPException(status_code=400, detail="Invalid analysis type")
-        
+
         # Get mapping configuration
         mapping = ANALYSIS_TYPE_MAPPING[analysis_type]
-        
+
         # Extract data from ticker using the mapped attribute
         ticker_data = getattr(ticker, mapping["ticker_attr"])
-        
+
         # Parse the data using the mapped parser function
         parsed_data = mapping["parser"](ticker_data)
-        
+
         # Create AnalysisData object with dynamic field assignment
-        analysis_data_kwargs = {
-            "symbol": symbol,
-            "analysis_type": analysis_type,
-            mapping["field_name"]: parsed_data
-        }
-        
+        analysis_data_kwargs = {"symbol": symbol, "analysis_type": analysis_type, mapping["field_name"]: parsed_data}
+
         return AnalysisData(**analysis_data_kwargs)
 
     except HTTPException:
