@@ -247,7 +247,7 @@ async def fetch(
         if proxy_rotator:
             proxy = proxy_rotator.get_proxy()
             if proxy:
-                logger.debug(f"Using proxy for request", extra={"proxy": proxy, "attempt": attempt + 1, "url": url})
+                logger.debug("Using proxy for request", extra={"proxy": proxy, "attempt": attempt + 1, "url": url})
             else:
                 logger.warning("ProxyRotator returned None, proceeding without proxy")
 
@@ -264,7 +264,7 @@ async def fetch(
             # Mark proxy as successful if rotator is available
             if proxy_rotator and proxy:
                 proxy_rotator.mark_success(proxy)
-                logger.debug(f"Request succeeded", extra={"proxy": proxy, "attempt": attempt + 1})
+                logger.debug("Request succeeded", extra={"proxy": proxy, "attempt": attempt + 1})
             return result
 
         except Exception as exc:

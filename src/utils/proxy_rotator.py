@@ -166,4 +166,3 @@ def create_proxy_rotator_from_env() -> Optional["ProxyRotator"]:
         return ProxyRotator(proxy_urls=[proxy_url], strategy=strategy, max_failures=max_failures)
 
     return None
-
