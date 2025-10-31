@@ -198,8 +198,21 @@ ADMIN_API_KEY=your-secret-admin-key
 ```env
 USE_PROXY=true
 PROXY_URL=your-proxy-url
+# Or use multiple proxies for IP rotation:
+PROXY_POOL=http://proxy1:8080,http://proxy2:8080,http://proxy3:8080
+PROXY_ROTATION_STRATEGY=round_robin  # Options: round_robin, random, weighted
+PROXY_MAX_FAILURES=3  # Max failures before marking proxy as dead
 PROXY_TOKEN=your-proxy-token
 ```
+
+**Proxy Rotation:**
+- `PROXY_POOL`: Comma-separated list of proxy URLs for IP rotation (recommended for preventing rate limits)
+- `PROXY_URL`: Single proxy URL (backward compatible, used if PROXY_POOL not set)
+- `PROXY_ROTATION_STRATEGY`: 
+  - `round_robin`: Rotate through proxies sequentially (default)
+  - `random`: Select proxy randomly
+  - `weighted`: Prefer proxies with higher success rates
+- `PROXY_MAX_FAILURES`: Maximum failures before automatically excluding a proxy (default: 3)
 
 !!! settings "**Redis Caching**"
 ```env

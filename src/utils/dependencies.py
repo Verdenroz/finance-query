@@ -18,6 +18,7 @@ from src.context import request_context
 from src.utils.cache import cache
 from src.utils.logging import get_logger, log_external_api_call
 from src.utils.market import MarketSchedule
+from src.utils.proxy_rotator import ProxyRotator
 from src.utils.yahoo_auth import YahooAuthManager
 
 Schedule = Annotated[MarketSchedule, Depends(MarketSchedule)]
@@ -106,12 +107,23 @@ async def get_session(req: RequestContext) -> requests.Session:
 Session = Annotated[requests.Session, Depends(get_session)]
 
 
+async def get_proxy_rotator(req: RequestContext) -> Optional[ProxyRotator]:
+    """
+    Return the ProxyRotator instance from app state if available.
+    """
+    return getattr(req.app.state, "proxy_rotator", None)
+
+
+ProxyRotatorDep = Annotated[Optional[ProxyRotator], Depends(get_proxy_rotator)]
+
+
 @injectable
 async def get_proxy() -> Optional[str]:
     """
     Return the proxy URL if set, otherwise None.
+    Backward compatibility function - for single proxy URL access.
     """
-    return os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None
+    return os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False").lower() == "true" else None
 
 
 Proxy = Annotated[Optional[str], Depends(get_proxy)]
@@ -119,10 +131,18 @@ Proxy = Annotated[Optional[str], Depends(get_proxy)]
 
 async def get_fetch_client(
     session: Session,
-    proxy: Proxy,
+    proxy_rotator: ProxyRotatorDep,
 ) -> CurlFetchClient:
-    """Returns a fetch client from the shared session"""
-    return CurlFetchClient(session=session, proxy=proxy)
+    """
+    Returns a fetch client from the shared session.
+    Works with ProxyRotator for per-request proxy selection.
+    """
+    # For backward compatibility, if no rotator, try to get single proxy URL
+    proxy_url = None
+    if proxy_rotator is None:
+        proxy_url = os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False").lower() == "true" else None
+
+    return CurlFetchClient(session=session, proxy=proxy_url)
 
 
 FetchClient = Annotated[CurlFetchClient, Depends(get_fetch_client)]
@@ -146,7 +166,7 @@ async def get_yahoo_auth(mgr: AuthManager) -> tuple[dict, str]:
     one coroutine hits Yahoo at a time; subsequent concurrent calls get
     the freshly cached pair.
     """
-    cookies, crumb = await mgr.get_or_refresh(proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None)
+    cookies, crumb = await mgr.get_or_refresh(proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False").lower() == "true" else None)
     return cookies, crumb
 
 
@@ -180,10 +200,21 @@ async def fetch(
     return_response: bool = False,
     max_retries: int = 3,
     retry_delay: float = 1.0,
+    proxy_rotator: ProxyRotatorDep = None,
 ) -> Optional[Union[str, requests.Response]]:
     """
     A thin async wrapper that delegates to CurlFetchClient.fetch
+    with automatic proxy rotation support.
     """
+    # Manually resolve proxy_rotator if not injected (e.g., when called directly from services)
+    if proxy_rotator is None:
+        try:
+            req = request_context.get()
+            proxy_rotator = getattr(req.app.state, "proxy_rotator", None)
+        except (LookupError, AttributeError, RuntimeError):
+            # No request context available (e.g., background task, startup/shutdown)
+            proxy_rotator = None
+
     # Default headers for the request
     default_headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
@@ -209,29 +240,64 @@ async def fetch(
     if "Referer" not in merged_headers:
         merged_headers["Referer"] = "https://finance.yahoo.com/" if "yahoo.com" in url else "https://www.google.com/"
 
-    # Basic retry loop (exponential back-off)
+    # Retry loop with proxy rotation
     for attempt in range(max_retries):
+        # Get proxy for this attempt (rotate on retries)
+        proxy = None
+        if proxy_rotator:
+            proxy = proxy_rotator.get_proxy()
+            if proxy:
+                logger.debug(f"Using proxy for request", extra={"proxy": proxy, "attempt": attempt + 1, "url": url})
+            else:
+                logger.warning("ProxyRotator returned None, proceeding without proxy")
+
         try:
-            return await client.fetch(
+            result = await client.fetch(
                 url,
                 method=method,
                 params=params,
                 data=data,
                 headers=merged_headers,
                 return_response=return_response,
+                proxy=proxy,
             )
+            # Mark proxy as successful if rotator is available
+            if proxy_rotator and proxy:
+                proxy_rotator.mark_success(proxy)
+                logger.debug(f"Request succeeded", extra={"proxy": proxy, "attempt": attempt + 1})
+            return result
+
         except Exception as exc:
-            logger.warning(
-                "Request attempt failed", extra={"attempt": attempt + 1, "max_retries": max_retries, "error": str(exc), "error_type": type(exc).__name__}
-            )
+            # Mark proxy as failed if rotator is available
+            if proxy_rotator and proxy:
+                proxy_rotator.mark_failure(proxy)
+                logger.warning(
+                    "Request failed with proxy",
+                    extra={
+                        "proxy": proxy,
+                        "attempt": attempt + 1,
+                        "max_retries": max_retries,
+                        "error": str(exc),
+                        "error_type": type(exc).__name__,
+                    },
+                )
+            else:
+                logger.warning(
+                    "Request attempt failed",
+                    extra={"attempt": attempt + 1, "max_retries": max_retries, "error": str(exc), "error_type": type(exc).__name__},
+                )
+
             if attempt < max_retries - 1:
-                await asyncio.sleep(retry_delay * 2**attempt)
+                delay = retry_delay * 2**attempt
+                logger.debug(f"Retrying request after {delay}s with different proxy", extra={"attempt": attempt + 1})
+                await asyncio.sleep(delay)
             else:
                 logger.error("All request attempts failed", extra={"max_retries": max_retries, "final_error": str(exc)}, exc_info=True)
                 raise HTTPException(
                     500,
                     f"Request failed after {max_retries} attempts: {exc}",
                 ) from exc
+
     return None  # (never reached)
 
 
@@ -330,7 +396,7 @@ async def setup_proxy_whitelist() -> dict | None:
     Setup proxy whitelist for BrightData or similar proxy services
     Returns the configuration data needed for cleanup
     """
-    if not os.getenv("PROXY_TOKEN") or os.getenv("USE_PROXY", "False") != "True":
+    if not os.getenv("PROXY_TOKEN") or os.getenv("USE_PROXY", "False").lower() != "true":
         raise ValueError("Proxy configuration is missing")
 
     # Get IP address

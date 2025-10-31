@@ -88,16 +88,43 @@ async def lifespan(app: FastAPI):
         app.state.session = curl_session
         app.state.yahoo_auth_manager = yahoo_auth_manager
 
+        # Initialize ProxyRotator for IP rotation
+        from src.utils.proxy_rotator import create_proxy_rotator_from_env
+
+        proxy_rotator = create_proxy_rotator_from_env()
+        app.state.proxy_rotator = proxy_rotator
+
         proxy_data = None
-        if os.getenv("PROXY_URL") and os.getenv("USE_PROXY", "False") == "True":
+        if os.getenv("PROXY_URL") and os.getenv("USE_PROXY", "False").lower() == "true":
             logger.info("Setting up proxy configuration")
             try:
                 proxy_data = await setup_proxy_whitelist()
-                curl_session.proxies = {"http": os.getenv("PROXY_URL"), "https": os.getenv("PROXY_URL")}
+                if proxy_data:
+                    logger.info("IP whitelisted successfully")
+                else:
+                    logger.warning("IP whitelisting failed or skipped - you may need to manually whitelist your IP in BrightData dashboard")
+                # Only set session-level proxy if using single proxy (backward compatibility)
+                # If ProxyRotator exists, proxies will be set per-request
+                if proxy_rotator is None or len(proxy_rotator.proxy_urls) == 1:
+                    proxy_url = os.getenv("PROXY_URL")
+                    curl_session.proxies = {"http": proxy_url, "https": proxy_url}
+                else:
+                    # With multiple proxies, don't set session-level proxy
+                    logger.info("Using ProxyRotator for per-request proxy selection")
                 logger.info("Proxy configuration completed")
             except Exception as e:
-                logger.critical("Failed to initialize proxy configuration", extra={"error": str(e)}, exc_info=True)
-                raise
+                logger.warning("Proxy whitelist setup encountered an error (non-critical)", extra={"error": str(e)}, exc_info=True)
+                # Continue anyway - proxy may still work if IP is manually whitelisted
+
+        if proxy_rotator:
+            logger.info(
+                "ProxyRotator initialized",
+                extra={
+                    "proxy_count": len(proxy_rotator.proxy_urls),
+                    "strategy": proxy_rotator.strategy,
+                    "max_failures": proxy_rotator.max_failures,
+                },
+            )
 
         # Redis (optional)
         if os.getenv("REDIS_URL"):
@@ -121,11 +148,22 @@ async def lifespan(app: FastAPI):
         # Prime Yahoo auth once so the first user request is fast
         logger.info("Initializing Yahoo authentication")
         try:
-            await yahoo_auth_manager.refresh(proxy=os.getenv("PROXY_URL") if os.getenv("USE_PROXY", "False") == "True" else None)
+            # Use first proxy from rotator if available, otherwise fallback to PROXY_URL
+            proxy_for_auth = None
+            if proxy_rotator:
+                proxy_for_auth = proxy_rotator.get_proxy()
+            elif os.getenv("USE_PROXY", "False").lower() == "true":
+                proxy_for_auth = os.getenv("PROXY_URL")
+            await yahoo_auth_manager.refresh(proxy=proxy_for_auth)
             logger.info("Yahoo authentication initialized")
         except Exception as e:
-            logger.critical("Failed to initialize Yahoo authentication", extra={"error": str(e)}, exc_info=True)
-            raise
+            logger.warning(
+                "Failed to initialize Yahoo authentication during startup (non-critical)",
+                extra={"error": str(e)},
+                exc_info=True,
+            )
+            logger.warning("Yahoo authentication will be attempted on first request. If using proxy, ensure your IP is whitelisted in BrightData dashboard.")
+            # Continue startup - auth will be attempted on first request
 
     except Exception as e:
         logger.critical("Critical failure during application startup", extra={"error": str(e)}, exc_info=True)
