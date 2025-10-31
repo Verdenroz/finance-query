@@ -83,7 +83,7 @@ h11==0.16.0
     # via
     #   httpcore
     #   uvicorn
-hiredis==3.2.1
+hiredis==3.3.0
     # via financequery
 httpcore==1.0.9
     # via httpx
@@ -250,7 +250,7 @@ pyyaml==6.0.2
     #   pyyaml-env-tag
 pyyaml-env-tag==1.1
     # via mkdocs
-redis==6.4.0
+redis==7.0.1
     # via financequery
 requests==2.32.5
     # via
