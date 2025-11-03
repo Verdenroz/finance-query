@@ -17,7 +17,7 @@ class TestTrends:
         )
         assert isinstance(result, dict)
         assert result["type"] == Indicator.ADX
-        assert round(result["Technical Analysis"]["2025-03-14"].value, 2) == 25.36
+        assert round(result["Technical Analysis"]["2025-03-14"]["ADX"], 2) == 25.36
 
     async def test_get_macd(self, historical_quotes, mock_finance_client, monkeypatch):
         mock = AsyncMock(return_value=historical_quotes)
@@ -31,7 +31,7 @@ class TestTrends:
         )
         assert isinstance(result, dict)
         assert result["type"] == Indicator.MACD
-        assert round(result["Technical Analysis"]["2025-03-14"].value, 2) == -4.67
+        assert round(result["Technical Analysis"]["2025-03-14"]["MACD"], 2) == -4.67
 
     async def test_get_aroon(self, historical_quotes, mock_finance_client, monkeypatch):
         mock = AsyncMock(return_value=historical_quotes)
@@ -45,7 +45,7 @@ class TestTrends:
         )
         assert isinstance(result, dict)
         assert result["type"] == Indicator.AROON
-        assert round(result["Technical Analysis"]["2025-03-14"].aroon_up, 2) == 28.0
+        assert round(result["Technical Analysis"]["2025-03-14"]["Aroon Up"], 2) == 28.0
 
     async def test_get_bbands(self, historical_quotes, mock_finance_client, monkeypatch):
         mock = AsyncMock(return_value=historical_quotes)
@@ -59,7 +59,7 @@ class TestTrends:
         )
         assert isinstance(result, dict)
         assert result["type"] == Indicator.BBANDS
-        assert round(result["Technical Analysis"]["2025-03-14"].upper_band, 2) == 145.44
+        assert round(result["Technical Analysis"]["2025-03-14"]["Upper Band"], 2) == 145.44
 
     async def test_get_obv(self, historical_quotes, mock_finance_client, monkeypatch):
         mock = AsyncMock(return_value=historical_quotes)
@@ -73,7 +73,7 @@ class TestTrends:
         )
         assert isinstance(result, dict)
         assert result["type"] == Indicator.OBV
-        assert round(result["Technical Analysis"]["2025-03-14"].value, 2) == 4908424676.0
+        assert round(result["Technical Analysis"]["2025-03-14"]["OBV"], 2) == 4908424676.0
 
     async def test_get_supertrend(self, historical_quotes, mock_finance_client, monkeypatch):
         mock = AsyncMock(return_value=historical_quotes)
@@ -87,7 +87,7 @@ class TestTrends:
         )
         assert isinstance(result, dict)
         assert result["type"] == Indicator.SUPER_TREND
-        assert result["Technical Analysis"]["2025-03-14"].trend == "DOWN"
+        assert result["Technical Analysis"]["2025-03-14"]["Trend"] == "DOWN"
 
     async def test_get_ichimoku(self, historical_quotes, mock_finance_client, monkeypatch):
         mock = AsyncMock(return_value=historical_quotes)
@@ -101,4 +101,4 @@ class TestTrends:
         )
         assert isinstance(result, dict)
         assert result["type"] == Indicator.ICHIMOKU
-        assert round(result["Technical Analysis"]["2025-03-14"].tenkan_sen, 2) == 113.32
+        assert round(result["Technical Analysis"]["2025-03-14"]["Conversion Line"], 2) == 113.32

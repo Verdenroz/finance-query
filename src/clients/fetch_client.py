@@ -44,6 +44,7 @@ class CurlFetchClient:
         params: dict[str, Any] | None = None,
         data: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
+        proxy: Optional[str] = None,
     ) -> requests.Response:
         """
         Synchronous wrapper for the request method.
@@ -52,9 +53,13 @@ class CurlFetchClient:
         :param params: the URL parameters to include in the request.
         :param data: the data to include in the request body.
         :param headers: the headers to include in the request.
+        :param proxy: Optional proxy URL to use for this request (overrides instance proxy).
 
         :return: a requests.Response object.
         """
+        # Use provided proxy or fallback to instance-level proxy
+        proxies = {"http": proxy, "https": proxy} if proxy else self.proxies
+
         try:
             return self.session.request(
                 method=method,
@@ -63,7 +68,7 @@ class CurlFetchClient:
                 json=data,
                 headers=headers,
                 timeout=self.timeout,
-                proxies=self.proxies,
+                proxies=proxies,
             )
         except requests.RequestsError as exc:
             raise HTTPException(500, f"HTTP request failed: {exc}") from exc
@@ -77,6 +82,7 @@ class CurlFetchClient:
         data: dict[str, Any] | None = None,
         headers: dict[str, str] | None = None,
         return_response: bool = False,
+        proxy: Optional[str] = None,
     ):
         """
         Asynchronous wrapper for the request method.
@@ -86,8 +92,9 @@ class CurlFetchClient:
         :param data: the data to include in the request body.
         :param headers: the headers to include in the request.
         :param return_response: whether to return the response object or the response text.
+        :param proxy: Optional proxy URL to use for this request (overrides instance proxy).
 
         :return: the response text or the response object.
         """
-        resp: requests.Response = await asyncio.to_thread(self.request, url, method=method, params=params, data=data, headers=headers)
+        resp: requests.Response = await asyncio.to_thread(self.request, url, method=method, params=params, data=data, headers=headers, proxy=proxy)
         return resp if return_response else resp.text

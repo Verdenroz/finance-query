@@ -60,6 +60,7 @@ nav:
   - Configuration:
       - Logging: logging.md
       - Rate Limiting: rate-limiting.md
+      - Proxy & IP Rotation: proxy-rotation.md
   - Deployment: deployment.md
   - API Reference:
       - Health Check: api/health.md
