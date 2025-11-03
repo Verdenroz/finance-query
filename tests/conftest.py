@@ -13,7 +13,7 @@ from starlette.websockets import WebSocket
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.main import app
 from src.models import HistoricalData
-from src.utils.dependencies import FinanceClient
+from src.utils.dependencies import get_yahoo_finance_client
 from src.utils.yahoo_auth import YahooAuthManager
 
 VERSION = "v1"
@@ -193,7 +193,9 @@ def mock_finance_client():
     original_overrides = app.dependency_overrides.copy()
 
     # Set the override for the dependency
-    app.dependency_overrides[FinanceClient] = client
+    # Use the function itself (not the Annotated alias) as the key
+    # The override just needs to return the mock client
+    app.dependency_overrides[get_yahoo_finance_client] = lambda: client
 
     yield client
 
