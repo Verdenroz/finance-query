@@ -201,7 +201,7 @@ protobuf==6.33.0
     # via
     #   financequery
     #   yfinance
-psutil==7.1.2
+psutil==7.1.3
     # via
     #   defeatbeta-api
     #   financequery
