@@ -240,7 +240,7 @@ python-dateutil==2.9.0.post0
     #   pandas
 python-dotenv==1.2.1
     # via financequery
-python-json-logger==3.3.0
+python-json-logger==4.0.0
     # via financequery
 pytz==2025.2
     # via
