@@ -2,7 +2,7 @@
 
 version: 2
 updates:
-  - package-ecosystem: "pip"
+  - package-ecosystem: "uv"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -10,7 +10,6 @@ updates:
       time: "02:00"
       timezone: "UTC"
     target-branch: "staging"
-    open-pull-requests-limit: 5
     reviewers:
       - "Verdenroz"
     assignees:
@@ -23,8 +22,13 @@ updates:
       - "dependencies"
       - "python"
     versioning-strategy: "increase-if-necessary"
+    rebase-strategy: "auto"
+    insecure-external-code-execution: "allow"
+    pull-request-branch-name:
+      separator: "/"
     # Group related updates to reduce PR noise
     groups:
+      # Production dependencies grouped by function
       fastapi-ecosystem:
         patterns:
           - "fastapi*"
@@ -32,27 +36,48 @@ updates:
           - "starlette*"
           - "pydantic*"
           - "fastapi-injectable*"
+        update-types:
+          - "minor"
+          - "patch"
+
       database:
         patterns:
           - "redis*"
           - "hiredis*"
           - "peewee*"
+        update-types:
+          - "minor"
+          - "patch"
+
       data-processing:
         patterns:
           - "pandas*"
           - "numpy*"
+        update-types:
+          - "minor"
+          - "patch"
+
       web-scraping:
         patterns:
           - "curl-cffi*"
           - "beautifulsoup4*"
           - "lxml*"
           - "requests*"
+          - "requests-futures*"
+        update-types:
+          - "minor"
+          - "patch"
+
       data-sources:
         patterns:
           - "yfinance*"
           - "defeatbeta-api*"
           - "algoliasearch*"
           - "multitasking*"
+        update-types:
+          - "minor"
+          - "patch"
+
       infrastructure:
         patterns:
           - "mangum*"
@@ -61,32 +86,51 @@ updates:
           - "psutil*"
           - "websockets*"
           - "frozendict*"
-      serialization:
-        patterns:
           - "orjson*"
           - "protobuf*"
           - "python-json-logger*"
+          - "tqdm*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      # Development dependencies
       testing:
+        dependency-type: "development"
         patterns:
           - "pytest*"
           - "coverage*"
           - "httpx*"
           - "freezegun*"
+        update-types:
+          - "minor"
+          - "patch"
+
       linting:
+        dependency-type: "development"
         patterns:
           - "ruff*"
           - "pre-commit*"
+        update-types:
+          - "minor"
+          - "patch"
+
       docs:
+        dependency-type: "development"
         patterns:
           - "mkdocs*"
+        update-types:
+          - "minor"
+          - "patch"
+
       build-tools:
         patterns:
           - "setuptools*"
           - "wheel*"
           - "cython*"
-      utilities:
-        patterns:
-          - "tqdm*"
+        update-types:
+          - "minor"
+          - "patch"
     # Ignore specific packages that require manual review
     ignore:
       # Cython updates may affect compiled extensions
@@ -140,6 +184,18 @@ updates:
     labels:
       - "dependencies"
       - "docker"
+    rebase-strategy: "auto"
+    pull-request-branch-name:
+      separator: "/"
+    # Group Docker images
+    groups:
+      python-images:
+        patterns:
+          - "python*"
+          - "public.ecr.aws/lambda/python*"
+        update-types:
+          - "minor"
+          - "patch"
     # Only patch and minor updates for base images
     ignore:
       - dependency-name: "python"

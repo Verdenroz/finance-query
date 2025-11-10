@@ -1,4 +1,4 @@
-# Start with the official Python 3.12 image
+# Start with the official Python image
 FROM python:3.14.0-slim
 
 # Install system dependencies
@@ -11,33 +11,28 @@ RUN apt-get update && apt-get install -y \
     tar \
     gzip \
     gcc \
+    g++ \
     python3-dev \
     && apt-get clean
-
-# Copy requirements.txt
-COPY requirements.txt ./
-
-# Install Python packages
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Copy project files for building
-COPY pyproject.toml setup.py ./
-COPY src /app/src
-
-# Copy setup.py again to app directory for later use
-COPY setup.py /app
 
 # Set the working directory
 WORKDIR /app
 
-# Create target directory structure for compiled extensions
-RUN mkdir -p services/indicators/core src/services/indicators/core
+# Copy project files for building and installing dependencies
+COPY pyproject.toml setup.py ./
+COPY src ./src
 
-# Run setup.py to cythonize the files
+# Install uv for dependency resolution
+RUN pip install --no-cache-dir uv
+
+# Generate requirements.txt from pyproject.toml
+RUN uv pip compile pyproject.toml -o requirements.txt
+
+# Install dependencies from generated requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Build Cython extensions in place
 RUN python setup.py build_ext --inplace
-
-# Copy compiled extensions to src directory for imports
-RUN cp services/indicators/core/*.so src/services/indicators/core/
 
 # Build arguments for configuration with defaults
 ARG LOG_LEVEL=INFO

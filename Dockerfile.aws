@@ -1,4 +1,4 @@
-# Start with the AWS Lambda Python 3.12 image
+# Start with the AWS Lambda Python image
 FROM public.ecr.aws/lambda/python:3.13
 
 # Install system dependencies
@@ -15,20 +15,23 @@ RUN microdnf install -y \
     python3-devel \
     && microdnf clean all
 
-# Copy requirements.txt
-COPY requirements.txt .
-
-# Install Python packages
-RUN pip install -r requirements.txt
-
-# Copy project files for building
-COPY pyproject.toml setup.py ${LAMBDA_TASK_ROOT}/
-COPY src ${LAMBDA_TASK_ROOT}/src
-
 # Set the working directory
 WORKDIR ${LAMBDA_TASK_ROOT}
 
-# Run setup.py to cythonize the files
+# Copy project files for building and installing dependencies
+COPY pyproject.toml setup.py ./
+COPY src ./src
+
+# Install uv for dependency resolution
+RUN pip install --no-cache-dir uv
+
+# Generate requirements.txt from pyproject.toml
+RUN uv pip compile pyproject.toml -o requirements.txt
+
+# Install dependencies from generated requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Build Cython extensions in place
 RUN python setup.py build_ext --inplace
 
 # Build arguments for configuration with defaults

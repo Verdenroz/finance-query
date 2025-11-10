@@ -41,14 +41,15 @@ FinanceQuery requires several system-level dependencies for optimal performance:
 
 ### Dependency Management
 
-FinanceQuery uses uv for dependency management. A `requirements.txt` file is also provided for environments where uv isn't available.
+FinanceQuery uses uv for dependency management. Dependencies are defined in `pyproject.toml`.
 
 ```bash
 # Using uv (recommended)
 uv sync
 
 # Using pip
-pip install -r requirements.txt
+pip install -e .
+python setup.py build_ext --inplace  # Required for Cython extensions
 ```
 
 ### Optional Requirements
