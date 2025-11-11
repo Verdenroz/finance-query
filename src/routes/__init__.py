@@ -1,3 +1,4 @@
+from .earnings_transcript import router as earnings_transcript_router
 from .finance_news import router as finance_news_router
 from .historical_prices import router as historical_prices_router
 from .hours import router as hours_router
