@@ -84,16 +84,61 @@ class InsiderRosterMember(BaseModel):
     position_direct_date: Optional[datetime] = Field(default=None, description="Position direct date")
 
 
+class MajorHoldersResponse(BaseModel):
+    """Major holders breakdown response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    breakdown: MajorHoldersBreakdown = Field(..., description="Major holders breakdown data")
+
+
+class InstitutionalHoldersResponse(BaseModel):
+    """Institutional holders response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    holders: list[InstitutionalHolder] = Field(..., description="List of institutional holders")
+
+
+class MutualFundHoldersResponse(BaseModel):
+    """Mutual fund holders response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    holders: list[MutualFundHolder] = Field(..., description="List of mutual fund holders")
+
+
+class InsiderTransactionsResponse(BaseModel):
+    """Insider transactions response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    transactions: list[InsiderTransaction] = Field(..., description="List of insider transactions")
+
+
+class InsiderPurchasesResponse(BaseModel):
+    """Insider purchases summary response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    summary: InsiderPurchase = Field(..., description="Insider purchase activity summary")
+
+
+class InsiderRosterResponse(BaseModel):
+    """Insider roster response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    roster: list[InsiderRosterMember] = Field(..., description="List of company insiders")
+
+
 class HoldersData(BaseModel):
-    """Complete holders data for a symbol"""
+    """
+    Internal model combining all holder types.
+    Used by service layer to return data, routes extract specific fields.
+    """
 
-    symbol: str = Field(default=..., examples=["AAPL"], description="Stock symbol")
-    holder_type: HolderType = Field(default=..., examples=["institutional"], description="Type of holder data")
+    symbol: str = Field(..., description="Stock symbol")
+    holder_type: HolderType = Field(..., description="Type of holder data")
 
-    # Optional fields based on holder type
+    # All possible holder data fields (only one will be populated based on holder_type)
     major_breakdown: Optional[MajorHoldersBreakdown] = Field(default=None, description="Major holders breakdown")
-    institutional_holders: Optional[list[InstitutionalHolder]] = Field(default=None, description="Institutional holders")
-    mutualfund_holders: Optional[list[MutualFundHolder]] = Field(default=None, description="Mutual fund holders")
-    insider_transactions: Optional[list[InsiderTransaction]] = Field(default=None, description="Insider transactions")
-    insider_purchases: Optional[InsiderPurchase] = Field(default=None, description="Insider purchase activity")
-    insider_roster: Optional[list[InsiderRosterMember]] = Field(default=None, description="Insider roster")
+    institutional_holders: Optional[list[InstitutionalHolder]] = Field(default=None, description="Institutional holders list")
+    mutualfund_holders: Optional[list[MutualFundHolder]] = Field(default=None, description="Mutual fund holders list")
+    insider_transactions: Optional[list[InsiderTransaction]] = Field(default=None, description="Insider transactions list")
+    insider_purchases: Optional[InsiderPurchase] = Field(default=None, description="Insider purchases summary")
+    insider_roster: Optional[list[InsiderRosterMember]] = Field(default=None, description="Insider roster list")

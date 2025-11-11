@@ -13,6 +13,7 @@ from src.models.holders import (
     MajorHoldersBreakdown,
     MutualFundHolder,
 )
+from src.utils.cache import cache
 from src.utils.dependencies import FinanceClient
 
 # Module mapping for Yahoo Finance quoteSummary API
@@ -60,6 +61,7 @@ HOLDER_TYPE_CONFIG = {
 }
 
 
+@cache(expire=3600)
 async def get_holders_data(finance_client: FinanceClient, symbol: str, holder_type: HolderType) -> HoldersData:
     """
     Get holders data for a symbol using Yahoo Finance API directly.
