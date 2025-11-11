@@ -10,9 +10,9 @@ MKDOCS := mkdocs
 DOCKER := docker
 
 # Colors
-GREEN := \033[0;32m
-YELLOW := \033[0;33m
-NC := \033[0m
+GREEN := $(shell printf '\033[0;32m')
+YELLOW := $(shell printf '\033[0;33m')
+NC := $(shell printf '\033[0m')
 
 help: ## Show available commands
 	@echo "$(GREEN)FinanceQuery Commands$(NC)"

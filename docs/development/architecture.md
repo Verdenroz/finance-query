@@ -130,7 +130,7 @@ High-performance numerical computations using Cython:
 
 - **Primary**: `uv` for fast dependency resolution and virtual environment management
 - **Commands**: `uv sync --all-groups` for development setup
-- **Fallback**: Traditional pip with requirements.txt files
+- **Fallback**: Traditional pip with `pip install -e .` from pyproject.toml
 
 ### Build Process
 

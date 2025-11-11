@@ -75,6 +75,7 @@ nav:
       - Sectors: api/sectors.md
       - Search: api/search.md
       - Technical Indicators: api/indicators.md
+      - Analysis: api/analysis.md
       - SSE Stream: api/stream.md
   - Websockets:
       - Overview: websockets.md

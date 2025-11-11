@@ -4,7 +4,7 @@ This document outlines various ways to deploy the FinanceQuery API service. This
 
 ## Dependencies
 
-For the full list of dependencies, see [`requirements.txt`](https://github.com/Verdenroz/finance-query/blob/master/requirements.txt) in the project root.
+For the full list of dependencies, see [`pyproject.toml`](https://github.com/Verdenroz/finance-query/blob/master/pyproject.toml) in the project root.
 
 ## Docker Deployment
 

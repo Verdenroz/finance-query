@@ -36,6 +36,7 @@ from src.routes import (
     sockets_router,
     stream_router,
 )
+from src.routes.analysis import router as analysis_router
 from src.routes.financials import router as financials_router
 from src.routes.holders import router as holders_router
 from src.services import (
@@ -152,7 +153,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="FinanceQuery",
-    version="1.9.1",
+    version="1.10.0",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & Yahoo Finance's Unofficial API.",
     servers=[
         {"url": "https://finance-query.onrender.com", "description": "Render server"},
@@ -369,6 +370,7 @@ app.include_router(indicators_router, prefix="/v1", tags=["Technical Indicators"
 app.include_router(stream_router, prefix="/v1", tags=["SSE"])
 app.include_router(financials_router, prefix="/v1", tags=["Financials"])
 app.include_router(holders_router, prefix="/v1", tags=["Holders"])
+app.include_router(analysis_router, prefix="/v1", tags=["Analysis"])
 app.include_router(earnings_transcript_router, prefix="/v1", tags=["Earnings Transcripts"])
 
 handler = Mangum(app)

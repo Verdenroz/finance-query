@@ -42,7 +42,7 @@ Install dependencies
 uv sync
 
 # Using pip
-pip install -r requirements.txt
+pip install -e .
 ```
 
 Cythonize files

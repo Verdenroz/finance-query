@@ -85,8 +85,7 @@ For environments without `uv`, you can still use pip:
 ```console
 $ python -m venv venv
 $ source venv/bin/activate  # On Windows: venv\Scripts\activate
-$ pip install -r requirements.txt
-$ pip install -r requirements/dev.txt
+$ pip install -e ".[dev]"
 $ python setup.py build_ext --inplace  # Required for technical indicators
 ```
 

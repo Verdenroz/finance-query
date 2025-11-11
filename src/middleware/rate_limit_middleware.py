@@ -3,13 +3,13 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 
-from src.security.dependencies import check_health_rate_limit, increment_and_check
-from src.security.rate_limit_manager import SecurityConfig
+from src.security.rate_limit_manager import RateLimitManager, SecurityConfig
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
     def __init__(self, app):
         super().__init__(app)
+        self.rate_limit_manager = RateLimitManager()
 
     async def dispatch(self, request: Request, call_next):
         api_key = request.headers.get("x-api-key")
@@ -21,7 +21,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
 
         # Special handling for health check endpoint
         if request.url.path == "/health":
-            is_allowed, rate_info = await check_health_rate_limit(ip=client_ip, api_key=api_key)
+            is_allowed, rate_info = await self.rate_limit_manager.check_health_rate_limit(ip=client_ip, api_key=api_key)
 
             if not is_allowed:
                 return JSONResponse(
@@ -34,7 +34,7 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return response
 
         # Check rate limit for all other requests
-        is_allowed, rate_info = await increment_and_check(ip=client_ip, api_key=api_key)
+        is_allowed, rate_info = await self.rate_limit_manager.increment_and_check(ip=client_ip, api_key=api_key)
 
         if not is_allowed:
             return JSONResponse(
