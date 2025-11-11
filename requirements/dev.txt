@@ -52,7 +52,7 @@ curl-cffi==0.13.0
     # via
     #   financequery
     #   yfinance
-cython==3.1.6
+cython==3.2.0
     # via financequery
 defeatbeta-api==0.0.23
     # via financequery
