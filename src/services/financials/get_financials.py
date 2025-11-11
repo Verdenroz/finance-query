@@ -5,6 +5,7 @@ from typing import Any
 from fastapi import HTTPException
 
 from src.models.financials import FinancialStatement, Frequency, StatementType
+from src.utils.cache import cache
 from src.utils.dependencies import FinanceClient
 from src.utils.yahoo_financials_constants import get_statement_fields
 
@@ -32,18 +33,23 @@ def _parse_timeseries_data(timeseries_result: list[dict[str, Any]]) -> dict[str,
     parsed_data: dict[str, dict[str, Any]] = {}
 
     for item in timeseries_result:
-        # Get the metric name (e.g., 'annualTotalRevenue' -> 'TotalRevenue')
-        metric_name = item.get("meta", {}).get("type", [""])[0]
+        # Get the metric name (e.g., 'annualTotalRevenue')
+        metric_name_with_prefix = item.get("meta", {}).get("type", [""])[0]
 
-        # Remove frequency prefix (annual/quarterly/trailing)
+        # Remove frequency prefix (annual/quarterly/trailing) for storage
+        metric_name = metric_name_with_prefix
         for prefix in ["annual", "quarterly", "trailing"]:
             if metric_name.startswith(prefix):
                 metric_name = metric_name[len(prefix) :]
                 break
 
-        # Extract timestamp data
+        # Extract timestamp data using the original name with prefix
         timestamp_data: dict[str, Any] = {}
-        for datapoint in item.get(metric_name, []):
+        for datapoint in item.get(metric_name_with_prefix, []):
+            # Skip null entries
+            if datapoint is None:
+                continue
+
             as_of_date = datapoint.get("asOfDate")
             reported_value = datapoint.get("reportedValue", {})
 
@@ -56,7 +62,12 @@ def _parse_timeseries_data(timeseries_result: list[dict[str, Any]]) -> dict[str,
 
                 # Handle raw value
                 if isinstance(reported_value, dict):
-                    timestamp_data[date_key] = reported_value.get("raw")
+                    raw_value = reported_value.get("raw")
+                    # Check if raw is nested with parsedValue
+                    if isinstance(raw_value, dict) and "parsedValue" in raw_value:
+                        timestamp_data[date_key] = raw_value.get("parsedValue")
+                    else:
+                        timestamp_data[date_key] = raw_value
                 else:
                     timestamp_data[date_key] = reported_value
 
@@ -66,6 +77,7 @@ def _parse_timeseries_data(timeseries_result: list[dict[str, Any]]) -> dict[str,
     return parsed_data
 
 
+@cache(expire=86400)
 async def get_financial_statement(finance_client: FinanceClient, symbol: str, statement_type: StatementType, freq: Frequency) -> FinancialStatement:
     """
     Get financial statement for a symbol using Yahoo Finance API directly.
