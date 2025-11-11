@@ -38,11 +38,6 @@ dependencies = [
     "python-json-logger>=3.3.0,<5.0.0",
     "beautifulsoup4>=4.13.5",
     "frozendict>=2.4.6",
-    "peewee>=3.18.2",
-    "protobuf>=6.32.1",
-    "multitasking>=0.0.12",
-    "yfinance>=0.2.65",
-    "defeatbeta-api>=0.0.15",
 ]
 
 [dependency-groups]
