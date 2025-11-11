@@ -12,7 +12,6 @@ class AnalysisType(str, Enum):
     EARNINGS_ESTIMATE = "earnings_estimate"
     REVENUE_ESTIMATE = "revenue_estimate"
     EARNINGS_HISTORY = "earnings_history"
-    SUSTAINABILITY = "sustainability"
 
 
 class RecommendationData(BaseModel):
@@ -76,27 +75,43 @@ class EarningsHistoryItem(BaseModel):
     surprise_percent: Optional[float] = Field(default=None, description="EPS surprise percentage")
 
 
-class SustainabilityScores(BaseModel):
-    """ESG (Environmental, Social, Governance) scores"""
+class RecommendationsResponse(BaseModel):
+    """Analyst recommendations response"""
 
-    scores: dict[str, Any] = Field(
-        default=...,
-        description="Sustainability scores and metrics",
-        examples=[{"environmentScore": 75, "socialScore": 80, "governanceScore": 85, "totalEsg": 80}],
-    )
+    symbol: str = Field(..., description="Stock symbol")
+    recommendations: list[RecommendationData] = Field(..., description="List of analyst recommendations by period")
 
 
-class AnalysisData(BaseModel):
-    """Complete analysis data for a symbol"""
+class UpgradesDowngradesResponse(BaseModel):
+    """Analyst upgrades and downgrades response"""
 
-    symbol: str = Field(default=..., min_length=1, examples=["AAPL"], description="Stock symbol")
-    analysis_type: AnalysisType = Field(default=..., examples=["recommendations"], description="Type of analysis data")
+    symbol: str = Field(..., description="Stock symbol")
+    upgrades_downgrades: list[UpgradeDowngrade] = Field(..., description="List of analyst rating changes")
 
-    # Optional fields based on analysis type
-    recommendations: Optional[list[RecommendationData]] = Field(default=None, description="Analyst recommendations")
-    upgrades_downgrades: Optional[list[UpgradeDowngrade]] = Field(default=None, description="Analyst upgrades and downgrades")
-    price_targets: Optional[PriceTarget] = Field(default=None, description="Analyst price targets")
-    earnings_estimate: Optional[EarningsEstimate] = Field(default=None, description="Earnings estimates")
-    revenue_estimate: Optional[RevenueEstimate] = Field(default=None, description="Revenue estimates")
-    earnings_history: Optional[list[EarningsHistoryItem]] = Field(default=None, description="Historical earnings data")
-    sustainability: Optional[SustainabilityScores] = Field(default=None, description="ESG sustainability scores")
+
+class PriceTargetsResponse(BaseModel):
+    """Analyst price targets response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    price_targets: PriceTarget = Field(..., description="Consensus price target data")
+
+
+class EarningsEstimateResponse(BaseModel):
+    """Earnings estimates response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    earnings_estimate: EarningsEstimate = Field(..., description="Earnings estimate data")
+
+
+class RevenueEstimateResponse(BaseModel):
+    """Revenue estimates response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    revenue_estimate: RevenueEstimate = Field(..., description="Revenue estimate data")
+
+
+class EarningsHistoryResponse(BaseModel):
+    """Historical earnings response"""
+
+    symbol: str = Field(..., description="Stock symbol")
+    earnings_history: list[EarningsHistoryItem] = Field(..., description="Historical earnings data")

@@ -4,16 +4,15 @@ from typing import Any
 from fastapi import HTTPException
 
 from src.models.analysis import (
-    AnalysisData,
     AnalysisType,
     EarningsEstimate,
     EarningsHistoryItem,
     PriceTarget,
     RecommendationData,
     RevenueEstimate,
-    SustainabilityScores,
     UpgradeDowngrade,
 )
+from src.utils.cache import cache
 from src.utils.dependencies import FinanceClient
 
 # Mapping of analysis types to their corresponding Yahoo Finance modules
@@ -24,7 +23,6 @@ ANALYSIS_TYPE_MODULES = {
     AnalysisType.EARNINGS_ESTIMATE: ["earningsTrend"],
     AnalysisType.REVENUE_ESTIMATE: ["earningsTrend"],
     AnalysisType.EARNINGS_HISTORY: ["earningsHistory"],
-    AnalysisType.SUSTAINABILITY: ["esgScores"],
 }
 
 # Mapping of analysis types to their data extraction and parsing configuration
@@ -59,15 +57,11 @@ ANALYSIS_TYPE_CONFIG = {
         "parser": "_parse_earnings_history",
         "field_name": "earnings_history",
     },
-    AnalysisType.SUSTAINABILITY: {
-        "data_path": lambda d: d.get("esgScores", {}),
-        "parser": "_parse_sustainability",
-        "field_name": "sustainability",
-    },
 }
 
 
-async def get_analysis_data(finance_client: FinanceClient, symbol: str, analysis_type: AnalysisType) -> AnalysisData:
+@cache(expire=3600)
+async def get_analysis_data(finance_client: FinanceClient, symbol: str, analysis_type: AnalysisType) -> dict[str, Any]:
     """
     Get analysis data for a symbol using Yahoo Finance API directly.
 
@@ -77,7 +71,7 @@ async def get_analysis_data(finance_client: FinanceClient, symbol: str, analysis
         analysis_type: Type of analysis data to fetch
 
     Returns:
-        AnalysisData object
+        Dictionary with symbol and parsed analysis data
 
     Raises:
         HTTPException: 400 for invalid type, 404 if no data found, 500 for other errors
@@ -114,8 +108,8 @@ async def get_analysis_data(finance_client: FinanceClient, symbol: str, analysis
         # Parse the data
         parsed_data = parser_func(raw_data)
 
-        # Build AnalysisData with the appropriate field
-        return AnalysisData(symbol=symbol.upper(), analysis_type=analysis_type, **{config["field_name"]: parsed_data})
+        # Return dictionary with symbol and parsed data
+        return {"symbol": symbol.upper(), config["field_name"]: parsed_data}
 
     except HTTPException:
         raise
@@ -166,17 +160,42 @@ def _parse_upgrades_downgrades(history_list: list[dict[str, Any]]) -> list[Upgra
     return upgrades_downgrades
 
 
+def _safe_extract_value(value: Any) -> float | None:
+    """
+    Safely extract numeric value from Yahoo Finance response.
+    Handles both dict format {"raw": value} and direct numeric values.
+
+    Args:
+        value: Value from Yahoo API (dict, float, int, or None)
+
+    Returns:
+        Extracted numeric value or None
+    """
+    if value is None:
+        return None
+
+    # If it's a dict with "raw" key, extract it
+    if isinstance(value, dict):
+        return value.get("raw")
+
+    # If it's already a numeric type, return it
+    if isinstance(value, int | float):
+        return float(value)
+
+    return None
+
+
 def _parse_price_targets(data: dict[str, Any]) -> PriceTarget:
     """Parse analyst price targets from Yahoo Finance API"""
     if not data:
         return PriceTarget()
 
     return PriceTarget(
-        current=data.get("currentPrice", {}).get("raw"),
-        mean=data.get("targetMeanPrice", {}).get("raw"),
-        median=data.get("targetMedianPrice", {}).get("raw"),
-        low=data.get("targetLowPrice", {}).get("raw"),
-        high=data.get("targetHighPrice", {}).get("raw"),
+        current=_safe_extract_value(data.get("currentPrice")),
+        mean=_safe_extract_value(data.get("targetMeanPrice")),
+        median=_safe_extract_value(data.get("targetMedianPrice")),
+        low=_safe_extract_value(data.get("targetLowPrice")),
+        high=_safe_extract_value(data.get("targetHighPrice")),
     )
 
 
@@ -250,32 +269,3 @@ def _parse_earnings_history(history_list: list[dict[str, Any]]) -> list[Earnings
         earnings_history.append(earnings_item)
 
     return earnings_history
-
-
-def _parse_sustainability(data: dict[str, Any]) -> SustainabilityScores:
-    """Parse sustainability data from Yahoo Finance API"""
-    if not data:
-        return SustainabilityScores(scores={})
-
-    scores_dict = {
-        "totalEsg": data.get("totalEsg", {}).get("raw"),
-        "environmentScore": data.get("environmentScore", {}).get("raw"),
-        "socialScore": data.get("socialScore", {}).get("raw"),
-        "governanceScore": data.get("governanceScore", {}).get("raw"),
-        "ratingYear": data.get("ratingYear"),
-        "ratingMonth": data.get("ratingMonth"),
-        "highestControversy": data.get("highestControversy", {}).get("raw"),
-        "peerCount": data.get("peerCount", {}).get("raw"),
-        "peerGroup": data.get("peerGroup"),
-        "percentile": data.get("percentile", {}).get("raw"),
-        "peerEsgScorePerformance": data.get("peerEsgScorePerformance", {}).get("raw"),
-        "peerGovernancePerformance": data.get("peerGovernancePerformance", {}).get("raw"),
-        "peerSocialPerformance": data.get("peerSocialPerformance", {}).get("raw"),
-        "peerEnvironmentPerformance": data.get("peerEnvironmentPerformance", {}).get("raw"),
-        "peerHighestControversyPerformance": data.get("peerHighestControversyPerformance", {}).get("raw"),
-    }
-
-    # Remove None values
-    scores_dict = {k: v for k, v in scores_dict.items() if v is not None}
-
-    return SustainabilityScores(scores=scores_dict)
