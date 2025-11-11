@@ -3,6 +3,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models.holders import HoldersData, HolderType
 from src.services.holders.get_holders import get_holders_data
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ router = APIRouter()
 )
 async def holders(
     symbol: str,
+    finance_client: FinanceClient,
     holder_type: HolderType = Query(..., description="The type of holders data to retrieve."),
 ):
-    return await get_holders_data(symbol, holder_type)
+    return await get_holders_data(finance_client, symbol, holder_type)

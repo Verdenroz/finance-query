@@ -3,6 +3,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models.financials import FinancialStatement, Frequency, StatementType
 from src.services.financials.get_financials import get_financial_statement
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -23,7 +24,8 @@ router = APIRouter()
 )
 async def financials(
     symbol: str,
+    finance_client: FinanceClient,
     statement: StatementType = Query(..., description="The type of financial statement to retrieve."),
     frequency: Frequency = Query(Frequency.ANNUAL, description="The frequency of the financial statement."),
 ):
-    return await get_financial_statement(symbol, statement, frequency)
+    return await get_financial_statement(finance_client, symbol, statement, frequency)

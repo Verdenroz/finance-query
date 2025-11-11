@@ -114,3 +114,43 @@ class YahooFinanceClient(CurlFetchClient):
         Get similar quotes for a symbol.
         """
         return await self._json(f"https://query2.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}", params={"count": limit})
+
+    async def get_fundamentals_timeseries(self, symbol: str, period1: int, period2: int, types: list[str]):
+        """
+        Fetch fundamentals timeseries data (financial statements, etc.).
+
+        Args:
+            symbol: Stock symbol
+            period1: Start Unix timestamp
+            period2: End Unix timestamp
+            types: List of fundamental types (e.g., ['annualTotalRevenue', 'quarterlyTotalRevenue'])
+        """
+        return await self._json(
+            f"https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}",
+            params={
+                "merge": "false",
+                "padTimeSeries": "true",
+                "period1": period1,
+                "period2": period2,
+                "type": ",".join(types),
+                "lang": "en-US",
+                "region": "US",
+            },
+        )
+
+    async def get_quote_summary(self, symbol: str, modules: list[str]):
+        """
+        Fetch quote summary data with specified modules.
+
+        Args:
+            symbol: Stock symbol
+            modules: List of modules to fetch (e.g., ['institutionOwnership', 'majorHoldersBreakdown'])
+        """
+        return await self._json(
+            f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}",
+            params={
+                "modules": ",".join(modules),
+                "corsDomain": "finance.yahoo.com",
+                "formatted": "false",
+            },
+        )

@@ -3,6 +3,7 @@ from fastapi.security import APIKeyHeader
 
 from src.models.analysis import AnalysisData, AnalysisType
 from src.services.analysis.get_analysis import get_analysis_data
+from src.utils.dependencies import FinanceClient
 
 router = APIRouter()
 
@@ -23,6 +24,7 @@ router = APIRouter()
 )
 async def analysis(
     symbol: str,
+    finance_client: FinanceClient,
     analysis_type: AnalysisType = Query(..., description="The type of analysis data to retrieve."),
 ):
-    return await get_analysis_data(symbol, analysis_type)
+    return await get_analysis_data(finance_client, symbol, analysis_type)
