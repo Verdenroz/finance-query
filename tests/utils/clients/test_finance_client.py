@@ -14,7 +14,6 @@ def yahoo_client():
     return YahooFinanceClient(cookies=cookies, crumb=crumb)
 
 
-@pytest.mark.asyncio
 class TestYahooFinanceClient:
     async def test_init(self, yahoo_client):
         """Test the client initialization."""

@@ -21,6 +21,9 @@ from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import RequestContextMiddleware
 from src.middleware import LoggingMiddleware, RateLimitMiddleware
 from src.models import Interval, Sector, TimeRange, ValidationErrorResponse
+from src.models.analysis import AnalysisType
+from src.models.financials import Frequency, StatementType
+from src.models.holders import HolderType
 from src.routes import (
     earnings_transcript_router,
     finance_news_router,
@@ -56,6 +59,10 @@ from src.services import (
     scrape_general_news,
     scrape_news_for_quote,
 )
+from src.services.analysis.get_analysis import get_analysis_data
+from src.services.earnings_transcript.get_earnings_transcript import get_earnings_calls_list, get_earnings_transcript
+from src.services.financials.get_financials import get_financial_statement
+from src.services.holders.get_holders import get_holders_data
 from src.utils.dependencies import (
     FinanceClient,
     RedisClient,
@@ -63,6 +70,7 @@ from src.utils.dependencies import (
     setup_proxy_whitelist,
 )
 from src.utils.logging import configure_logging, get_logger
+from src.utils.market import MarketSchedule
 from src.utils.yahoo_auth import YahooAuthManager
 
 load_dotenv()
@@ -212,7 +220,7 @@ async def request_validation_error_formatter(request, exc):
                         "timestamp": "2025-02-13T18:27:37.508568",
                         "redis": {"status": "healthy", "latency_ms": 13.1},
                         "services": {
-                            "status": "20/20 succeeded",
+                            "status": "28/28 succeeded",
                             "Indices": {"status": "succeeded"},
                             "Market Actives": {"status": "succeeded"},
                             "Market Losers": {"status": "succeeded"},
@@ -232,7 +240,15 @@ async def request_validation_error_formatter(request, exc):
                             "Historical year prices": {"status": "succeeded"},
                             "Historical five year prices": {"status": "succeeded"},
                             "Search": {"status": "succeeded"},
-                            "Summary Analysis": {"status": "succeeded"},
+                            "Technical Indicators": {"status": "succeeded"},
+                            "Market Hours": {"status": "succeeded"},
+                            "Annual Income Statement": {"status": "succeeded"},
+                            "Quarterly Balance Sheet": {"status": "succeeded"},
+                            "Institutional Holders": {"status": "succeeded"},
+                            "Analyst Recommendations": {"status": "succeeded"},
+                            "Price Targets": {"status": "succeeded"},
+                            "Earnings Calls List": {"status": "succeeded"},
+                            "Earnings Transcript": {"status": "succeeded"},
                         },
                     }
                 }
@@ -269,6 +285,14 @@ async def health(r: RedisClient, finance_client: FinanceClient):
     historical_data_task_five_years = get_historical(finance_client, "NVDA", TimeRange.FIVE_YEARS, Interval.MONTHLY)
     search_task = get_search(finance_client, "NVDA")
     summary_analysis_task = get_technical_indicators(finance_client, "NVDA", Interval.DAILY)
+    market_hours_task = asyncio.create_task(asyncio.to_thread(MarketSchedule().get_market_status))
+    income_statement_task = get_financial_statement(finance_client, "NVDA", StatementType.INCOME_STATEMENT, Frequency.ANNUAL)
+    balance_sheet_task = get_financial_statement(finance_client, "NVDA", StatementType.BALANCE_SHEET, Frequency.QUARTERLY)
+    institutional_holders_task = get_holders_data(finance_client, "NVDA", HolderType.INSTITUTIONAL)
+    recommendations_task = get_analysis_data(finance_client, "NVDA", AnalysisType.RECOMMENDATIONS)
+    price_targets_task = get_analysis_data(finance_client, "NVDA", AnalysisType.PRICE_TARGETS)
+    earnings_calls_list_task = get_earnings_calls_list(finance_client, "AAPL")
+    earnings_transcript_task = get_earnings_transcript(finance_client, "AAPL")
 
     tasks = [
         ("Indices", indices_task),
@@ -290,7 +314,15 @@ async def health(r: RedisClient, finance_client: FinanceClient):
         ("Historical year prices", historical_data_task_year),
         ("Historical five year prices", historical_data_task_five_years),
         ("Search", search_task),
-        ("Summary Analysis", summary_analysis_task),
+        ("Technical Indicators", summary_analysis_task),
+        ("Market Hours", market_hours_task),
+        ("Annual Income Statement", income_statement_task),
+        ("Quarterly Balance Sheet", balance_sheet_task),
+        ("Institutional Holders", institutional_holders_task),
+        ("Analyst Recommendations", recommendations_task),
+        ("Price Targets", price_targets_task),
+        ("Earnings Calls List", earnings_calls_list_task),
+        ("Earnings Transcript", earnings_transcript_task),
     ]
 
     results = await asyncio.gather(*[task for _, task in tasks], return_exceptions=True)
@@ -300,7 +332,7 @@ async def health(r: RedisClient, finance_client: FinanceClient):
         "timestamp": datetime.datetime.now().isoformat(),
         "redis": {"status": "healthy", "latency_ms": 0},
         "services": {
-            "status": "20/20 succeeded",
+            "status": "28/28 succeeded",
         },
     }
 

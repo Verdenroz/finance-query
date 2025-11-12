@@ -1,6 +1,6 @@
-from unittest.mock import MagicMock, patch
+from datetime import datetime
+from unittest.mock import AsyncMock
 
-import pandas as pd
 import pytest
 from fastapi import HTTPException
 
@@ -11,402 +11,539 @@ from src.services.analysis.get_analysis import (
     _parse_price_targets,
     _parse_recommendations,
     _parse_revenue_estimate,
-    _parse_sustainability,
     _parse_upgrades_downgrades,
+    _safe_extract_value,
     get_analysis_data,
 )
 
 
-class TestGetAnalysisData:
-    """Test suite for the get_analysis_data service."""
+@pytest.fixture
+def mock_finance_client():
+    """Create a mock YahooFinanceClient"""
+    return AsyncMock()
 
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_recommendations(self):
-        """Test get_analysis_data with recommendations type"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            # Mock the yfinance Ticker object
-            mock_ticker_instance = MagicMock()
-            mock_ticker_instance.recommendations = MagicMock()
-            mock_ticker_instance.recommendations.empty = False
-            mock_ticker_instance.recommendations.iterrows.return_value = [
-                (0, {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0})
+
+@pytest.fixture
+def sample_recommendations_response():
+    """Sample Yahoo Finance quoteSummary API response for recommendations"""
+    return {
+        "quoteSummary": {
+            "result": [
+                {
+                    "recommendationTrend": {
+                        "trend": [
+                            {
+                                "period": "0m",
+                                "strongBuy": 15,
+                                "buy": 25,
+                                "hold": 10,
+                                "sell": 2,
+                                "strongSell": 1,
+                            },
+                            {
+                                "period": "-1m",
+                                "strongBuy": 14,
+                                "buy": 24,
+                                "hold": 11,
+                                "sell": 3,
+                                "strongSell": 1,
+                            },
+                        ]
+                    }
+                }
             ]
-            mock_ticker.return_value = mock_ticker_instance
+        }
+    }
 
-            result = await get_analysis_data("AAPL", AnalysisType.RECOMMENDATIONS)
 
-            assert result.symbol == "AAPL"
-            assert result.analysis_type == AnalysisType.RECOMMENDATIONS
-            assert result.recommendations is not None
-            assert len(result.recommendations) == 1
-            assert result.recommendations[0].period == "3m"
-            assert result.recommendations[0].strong_buy == 5
-
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_price_targets(self):
-        """Test get_analysis_data with price targets type"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            # Mock the yfinance Ticker object
-            mock_ticker_instance = MagicMock()
-            mock_ticker_instance.analyst_price_targets = {"current": 150.0, "mean": 160.0, "median": 155.0, "low": 140.0, "high": 180.0}
-            mock_ticker.return_value = mock_ticker_instance
-
-            result = await get_analysis_data("AAPL", AnalysisType.PRICE_TARGETS)
-
-            assert result.symbol == "AAPL"
-            assert result.analysis_type == AnalysisType.PRICE_TARGETS
-            assert result.price_targets is not None
-            assert result.price_targets.current == 150.0
-            assert result.price_targets.mean == 160.0
-
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_earnings_estimate(self):
-        """Test get_analysis_data with earnings estimate type"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            # Mock the yfinance Ticker object
-            mock_ticker_instance = MagicMock()
-            mock_df = pd.DataFrame({"2024-12-31": {"avg": 6.5, "low": 6.0, "high": 7.0}, "2025-12-31": {"avg": 7.2, "low": 6.8, "high": 7.6}})
-            mock_ticker_instance.earnings_estimate = mock_df
-            mock_ticker.return_value = mock_ticker_instance
-
-            result = await get_analysis_data("AAPL", AnalysisType.EARNINGS_ESTIMATE)
-
-            assert result.symbol == "AAPL"
-            assert result.analysis_type == AnalysisType.EARNINGS_ESTIMATE
-            assert result.earnings_estimate is not None
-            assert "estimates" in result.earnings_estimate.model_dump()
-
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_sustainability(self):
-        """Test get_analysis_data with sustainability type"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            # Mock the yfinance Ticker object
-            mock_ticker_instance = MagicMock()
-            mock_ticker_instance.sustainability = MagicMock()
-            mock_ticker_instance.sustainability.empty = False
-            mock_ticker_instance.sustainability.columns = ["environmentScore", "socialScore", "governanceScore"]
-            mock_ticker_instance.sustainability.__getitem__.side_effect = lambda x: {"environmentScore": 75, "socialScore": 80, "governanceScore": 85}[x]
-            mock_ticker_instance.sustainability.iloc = [75, 80, 85]
-            mock_ticker.return_value = mock_ticker_instance
-
-            result = await get_analysis_data("AAPL", AnalysisType.SUSTAINABILITY)
-
-            assert result.symbol == "AAPL"
-            assert result.analysis_type == AnalysisType.SUSTAINABILITY
-            assert result.sustainability is not None
-            assert "scores" in result.sustainability.model_dump()
-
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_upgrades_downgrades(self):
-        """Test get_analysis_data with upgrades/downgrades type"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            # Mock the yfinance Ticker object
-            mock_ticker_instance = MagicMock()
-            mock_ticker_instance.upgrades_downgrades = MagicMock()
-            mock_ticker_instance.upgrades_downgrades.empty = False
-            mock_ticker_instance.upgrades_downgrades.iterrows.return_value = [
-                (0, {"firm": "Goldman Sachs", "toGrade": "Buy", "fromGrade": "Hold", "action": "upgrade", "date": "2024-01-15"})
+@pytest.fixture
+def sample_upgrades_downgrades_response():
+    """Sample Yahoo Finance quoteSummary API response for upgrades/downgrades"""
+    return {
+        "quoteSummary": {
+            "result": [
+                {
+                    "upgradeDowngradeHistory": {
+                        "history": [
+                            {
+                                "firm": "Goldman Sachs",
+                                "toGrade": "Buy",
+                                "fromGrade": "Hold",
+                                "action": "upgrade",
+                                "epochGradeDate": 1705363200,  # 2024-01-16
+                            },
+                            {
+                                "firm": "Morgan Stanley",
+                                "toGrade": "Hold",
+                                "fromGrade": "Buy",
+                                "action": "downgrade",
+                                "epochGradeDate": 1704931200,  # 2024-01-11
+                            },
+                        ]
+                    }
+                }
             ]
-            mock_ticker.return_value = mock_ticker_instance
+        }
+    }
 
-            result = await get_analysis_data("AAPL", AnalysisType.UPGRADES_DOWNGRADES)
 
-            assert result.symbol == "AAPL"
-            assert result.analysis_type == AnalysisType.UPGRADES_DOWNGRADES
-            assert result.upgrades_downgrades is not None
-            assert len(result.upgrades_downgrades) == 1
-            assert result.upgrades_downgrades[0].firm == "Goldman Sachs"
-
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_earnings_history(self):
-        """Test get_analysis_data with earnings history type"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            # Mock the yfinance Ticker object
-            mock_ticker_instance = MagicMock()
-            mock_ticker_instance.earnings_history = MagicMock()
-            mock_ticker_instance.earnings_history.empty = False
-            mock_ticker_instance.earnings_history.iterrows.return_value = [
-                (0, {"date": "2024-01-15", "eps_actual": 2.18, "eps_estimate": 2.10, "surprise": 0.08, "surprise_percent": 3.8})
+@pytest.fixture
+def sample_price_targets_response():
+    """Sample Yahoo Finance quoteSummary API response for price targets"""
+    return {
+        "quoteSummary": {
+            "result": [
+                {
+                    "financialData": {
+                        "currentPrice": {"raw": 150.25, "fmt": "$150.25"},
+                        "targetMeanPrice": {"raw": 175.50, "fmt": "$175.50"},
+                        "targetMedianPrice": {"raw": 172.00, "fmt": "$172.00"},
+                        "targetLowPrice": {"raw": 140.00, "fmt": "$140.00"},
+                        "targetHighPrice": {"raw": 220.00, "fmt": "$220.00"},
+                    }
+                }
             ]
-            mock_ticker.return_value = mock_ticker_instance
-
-            result = await get_analysis_data("AAPL", AnalysisType.EARNINGS_HISTORY)
-
-            assert result.symbol == "AAPL"
-            assert result.analysis_type == AnalysisType.EARNINGS_HISTORY
-            assert result.earnings_history is not None
-            assert len(result.earnings_history) == 1
-            assert result.earnings_history[0].eps_actual == 2.18
-
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_revenue_estimate(self):
-        """Test get_analysis_data with revenue estimate type"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            # Mock the yfinance Ticker object
-            mock_ticker_instance = MagicMock()
-            mock_df = pd.DataFrame({"2024-12-31": {"avg": 400000000000, "low": 380000000000, "high": 420000000000}})
-            mock_ticker_instance.revenue_estimate = mock_df
-            mock_ticker.return_value = mock_ticker_instance
-
-            result = await get_analysis_data("AAPL", AnalysisType.REVENUE_ESTIMATE)
-
-            assert result.symbol == "AAPL"
-            assert result.analysis_type == AnalysisType.REVENUE_ESTIMATE
-            assert result.revenue_estimate is not None
-            assert "estimates" in result.revenue_estimate.model_dump()
-
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_invalid_type(self):
-        """Test get_analysis_data with invalid analysis type"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            mock_ticker_instance = MagicMock()
-            mock_ticker.return_value = mock_ticker_instance
-
-            with pytest.raises(HTTPException) as exc_info:
-                await get_analysis_data("AAPL", "invalid_type")
-
-            assert exc_info.value.status_code == 400
-            assert "Invalid analysis type" in exc_info.value.detail
-
-    @pytest.mark.asyncio
-    async def test_get_analysis_data_yfinance_error(self):
-        """Test get_analysis_data with yfinance error"""
-        with patch("src.services.analysis.get_analysis.yf.Ticker") as mock_ticker:
-            mock_ticker_instance = MagicMock()
-            mock_ticker_instance.recommendations = MagicMock()
-            mock_ticker_instance.recommendations.empty = False
-            mock_ticker_instance.recommendations.iterrows.side_effect = Exception("Yahoo Finance API error")
-            mock_ticker.return_value = mock_ticker_instance
-
-            with pytest.raises(HTTPException):  # Should raise HTTPException
-                await get_analysis_data("AAPL", AnalysisType.RECOMMENDATIONS)
+        }
+    }
 
 
-class TestParseRecommendations:
-    """Test suite for _parse_recommendations function."""
-
-    def test_parse_recommendations_empty_dataframe(self):
-        """Test parsing empty recommendations DataFrame"""
-        empty_df = pd.DataFrame()
-        result = _parse_recommendations(empty_df)
-        assert result == []
-
-    def test_parse_recommendations_with_data(self):
-        """Test parsing recommendations DataFrame with data"""
-        df = pd.DataFrame(
-            [
-                {"period": "3m", "strongBuy": 5, "buy": 10, "hold": 3, "sell": 1, "strongSell": 0},
-                {"period": "1m", "strongBuy": 3, "buy": 8, "hold": 5, "sell": 2, "strongSell": 1},
+@pytest.fixture
+def sample_earnings_estimate_response():
+    """Sample Yahoo Finance quoteSummary API response for earnings estimate"""
+    return {
+        "quoteSummary": {
+            "result": [
+                {
+                    "earningsTrend": {
+                        "trend": [
+                            {
+                                "period": "0q",
+                                "earningsEstimate": {
+                                    "avg": {"raw": 1.55},
+                                    "low": {"raw": 1.45},
+                                    "high": {"raw": 1.65},
+                                    "numberOfAnalysts": {"raw": 35},
+                                    "yearAgoEps": {"raw": 1.42},
+                                    "growth": {"raw": 0.092},
+                                },
+                            },
+                            {
+                                "period": "+1q",
+                                "earningsEstimate": {
+                                    "avg": {"raw": 1.72},
+                                    "low": {"raw": 1.60},
+                                    "high": {"raw": 1.85},
+                                    "numberOfAnalysts": {"raw": 32},
+                                    "yearAgoEps": {"raw": 1.58},
+                                    "growth": {"raw": 0.089},
+                                },
+                            },
+                        ]
+                    }
+                }
             ]
-        )
-        result = _parse_recommendations(df)
-
-        assert len(result) == 2
-        assert result[0].period == "3m"
-        assert result[0].strong_buy == 5
-        assert result[0].buy == 10
-        assert result[1].period == "1m"
-        assert result[1].strong_sell == 1
-
-    def test_parse_recommendations_with_nan_values(self):
-        """Test parsing recommendations DataFrame with NaN values"""
-        df = pd.DataFrame([{"period": "3m", "strongBuy": 5, "buy": pd.NA, "hold": 3, "sell": 1, "strongSell": 0}])
-        result = _parse_recommendations(df)
-
-        assert len(result) == 1
-        assert result[0].period == "3m"
-        assert result[0].strong_buy == 5
-        assert result[0].buy is None  # NaN should be converted to None
+        }
+    }
 
 
-class TestParseUpgradesDowngrades:
-    """Test suite for _parse_upgrades_downgrades function."""
-
-    def test_parse_upgrades_downgrades_empty_dataframe(self):
-        """Test parsing empty upgrades/downgrades DataFrame"""
-        empty_df = pd.DataFrame()
-        result = _parse_upgrades_downgrades(empty_df)
-        assert result == []
-
-    def test_parse_upgrades_downgrades_with_data(self):
-        """Test parsing upgrades/downgrades DataFrame with data"""
-        df = pd.DataFrame(
-            [
-                {"firm": "Goldman Sachs", "toGrade": "Buy", "fromGrade": "Hold", "action": "upgrade", "date": "2024-01-15"},
-                {"firm": "Morgan Stanley", "toGrade": "Hold", "fromGrade": "Buy", "action": "downgrade", "date": "2024-01-10"},
+@pytest.fixture
+def sample_earnings_history_response():
+    """Sample Yahoo Finance quoteSummary API response for earnings history"""
+    return {
+        "quoteSummary": {
+            "result": [
+                {
+                    "earningsHistory": {
+                        "history": [
+                            {
+                                "quarter": {"raw": 1698796800},  # 2023-11-01
+                                "epsActual": {"raw": 1.46},
+                                "epsEstimate": {"raw": 1.39},
+                                "epsDifference": {"raw": 0.07},
+                                "surprisePercent": {"raw": 0.05},
+                            },
+                            {
+                                "quarter": {"raw": 1706745600},  # 2024-02-01
+                                "epsActual": {"raw": 1.53},
+                                "epsEstimate": {"raw": 1.50},
+                                "epsDifference": {"raw": 0.03},
+                                "surprisePercent": {"raw": 0.02},
+                            },
+                        ]
+                    }
+                }
             ]
-        )
-        result = _parse_upgrades_downgrades(df)
-
-        assert len(result) == 2
-        assert result[0].firm == "Goldman Sachs"
-        assert result[0].action == "upgrade"
-        assert result[1].firm == "Morgan Stanley"
-        assert result[1].action == "downgrade"
-
-    def test_parse_upgrades_downgrades_with_nan_values(self):
-        """Test parsing upgrades/downgrades DataFrame with NaN values"""
-        df = pd.DataFrame([{"firm": "Goldman Sachs", "toGrade": pd.NA, "fromGrade": "Hold", "action": "upgrade", "date": pd.NA}])
-        result = _parse_upgrades_downgrades(df)
-
-        assert len(result) == 1
-        assert result[0].firm == "Goldman Sachs"
-        assert result[0].to_grade is None
-        assert result[0].date is None
+        }
+    }
 
 
-class TestParsePriceTargets:
-    """Test suite for _parse_price_targets function."""
-
-    def test_parse_price_targets_dict_format(self):
-        """Test parsing price targets in dict format"""
-        data = {"current": 150.0, "mean": 160.0, "median": 155.0, "low": 140.0, "high": 180.0}
-        result = _parse_price_targets(data)
-
-        assert result.current == 150.0
-        assert result.mean == 160.0
-        assert result.median == 155.0
-        assert result.low == 140.0
-        assert result.high == 180.0
-
-    def test_parse_price_targets_series_format(self):
-        """Test parsing price targets in Series format"""
-        series = pd.Series({"current": 150.0, "mean": 160.0, "median": 155.0, "low": 140.0, "high": 180.0})
-        result = _parse_price_targets(series)
-
-        assert result.current == 150.0
-        assert result.mean == 160.0
-        assert result.median == 155.0
-
-    def test_parse_price_targets_none_data(self):
-        """Test parsing price targets with None data"""
-        result = _parse_price_targets(None)
-
-        assert result.current is None
-        assert result.mean is None
-        assert result.median is None
-
-    def test_parse_price_targets_empty_dataframe(self):
-        """Test parsing price targets with empty DataFrame"""
-        empty_df = pd.DataFrame()
-        result = _parse_price_targets(empty_df)
-
-        assert result.current is None
-        assert result.mean is None
-        assert result.median is None
-
-    def test_parse_price_targets_with_nan_values(self):
-        """Test parsing price targets with NaN values"""
-        data = {"current": 150.0, "mean": pd.NA, "median": 155.0, "low": 140.0, "high": 180.0}
-        result = _parse_price_targets(data)
-
-        assert result.current == 150.0
-        assert result.mean is None  # NaN should be converted to None
-        assert result.median == 155.0
+# Test helper function
+def test_safe_extract_value_dict():
+    """Test safe value extraction from dict with 'raw' key"""
+    value = {"raw": 123.45, "fmt": "$123.45"}
+    assert _safe_extract_value(value) == 123.45
 
 
-class TestParseEarningsEstimate:
-    """Test suite for _parse_earnings_estimate function."""
-
-    def test_parse_earnings_estimate_empty_dataframe(self):
-        """Test parsing empty earnings estimate DataFrame"""
-        empty_df = pd.DataFrame()
-        result = _parse_earnings_estimate(empty_df)
-
-        assert result.estimates == {}
-
-    def test_parse_earnings_estimate_with_data(self):
-        """Test parsing earnings estimate DataFrame with data"""
-        df = pd.DataFrame({"2024-12-31": [6.5, 6.0, 7.0], "2025-12-31": [7.2, 6.8, 7.6]}, index=["avg", "low", "high"])
-
-        result = _parse_earnings_estimate(df)
-
-        assert "2024-12-31" in result.estimates
-        assert "2025-12-31" in result.estimates
+def test_safe_extract_value_numeric():
+    """Test safe value extraction from numeric values"""
+    assert _safe_extract_value(100.5) == 100.5
+    assert _safe_extract_value(42) == 42.0
 
 
-class TestParseRevenueEstimate:
-    """Test suite for _parse_revenue_estimate function."""
-
-    def test_parse_revenue_estimate_empty_dataframe(self):
-        """Test parsing empty revenue estimate DataFrame"""
-        empty_df = pd.DataFrame()
-        result = _parse_revenue_estimate(empty_df)
-
-        assert result.estimates == {}
-
-    def test_parse_revenue_estimate_with_data(self):
-        """Test parsing revenue estimate DataFrame with data"""
-        df = pd.DataFrame(
-            {"2024-12-31": [400000000000, 380000000000, 420000000000], "2025-12-31": [420000000000, 400000000000, 440000000000]}, index=["avg", "low", "high"]
-        )
-
-        result = _parse_revenue_estimate(df)
-
-        assert "2024-12-31" in result.estimates
-        assert "2025-12-31" in result.estimates
+def test_safe_extract_value_none():
+    """Test safe value extraction from None"""
+    assert _safe_extract_value(None) is None
 
 
-class TestParseEarningsHistory:
-    """Test suite for _parse_earnings_history function."""
+# Test parser functions
+def test_parse_recommendations():
+    """Test parsing recommendations list from Yahoo Finance API"""
+    trend_list = [
+        {"period": "0m", "strongBuy": 15, "buy": 25, "hold": 10, "sell": 2, "strongSell": 1},
+        {"period": "-1m", "strongBuy": 14, "buy": 24, "hold": 11, "sell": 3, "strongSell": 1},
+    ]
 
-    def test_parse_earnings_history_empty_dataframe(self):
-        """Test parsing empty earnings history DataFrame"""
-        empty_df = pd.DataFrame()
-        result = _parse_earnings_history(empty_df)
-        assert result == []
+    result = _parse_recommendations(trend_list)
 
-    def test_parse_earnings_history_with_data(self):
-        """Test parsing earnings history DataFrame with data"""
-        df = pd.DataFrame(
-            [
-                {"date": "2024-01-15", "eps_actual": 2.18, "eps_estimate": 2.10, "surprise": 0.08, "surprise_percent": 3.8},
-                {"date": "2023-10-15", "eps_actual": 1.46, "eps_estimate": 1.39, "surprise": 0.07, "surprise_percent": 5.0},
+    assert len(result) == 2
+    assert result[0].period == "0m"
+    assert result[0].strong_buy == 15
+    assert result[0].buy == 25
+    assert result[1].period == "-1m"
+    assert result[1].strong_sell == 1
+
+
+def test_parse_recommendations_empty():
+    """Test parsing empty recommendations list"""
+    result = _parse_recommendations([])
+    assert result == []
+
+
+def test_parse_upgrades_downgrades():
+    """Test parsing upgrades/downgrades list from Yahoo Finance API"""
+    history_list = [
+        {
+            "firm": "Goldman Sachs",
+            "toGrade": "Buy",
+            "fromGrade": "Hold",
+            "action": "upgrade",
+            "epochGradeDate": 1705363200,
+        },
+        {
+            "firm": "Morgan Stanley",
+            "toGrade": "Hold",
+            "fromGrade": "Buy",
+            "action": "downgrade",
+            "epochGradeDate": 1704931200,
+        },
+    ]
+
+    result = _parse_upgrades_downgrades(history_list)
+
+    assert len(result) == 2
+    assert result[0].firm == "Goldman Sachs"
+    assert result[0].to_grade == "Buy"
+    assert result[0].action == "upgrade"
+    assert result[0].date == datetime.fromtimestamp(1705363200)
+    assert result[1].firm == "Morgan Stanley"
+    assert result[1].action == "downgrade"
+
+
+def test_parse_upgrades_downgrades_empty():
+    """Test parsing empty upgrades/downgrades list"""
+    result = _parse_upgrades_downgrades([])
+    assert result == []
+
+
+def test_parse_price_targets():
+    """Test parsing analyst price targets from Yahoo Finance API"""
+    data = {
+        "currentPrice": {"raw": 150.25},
+        "targetMeanPrice": {"raw": 175.50},
+        "targetMedianPrice": {"raw": 172.00},
+        "targetLowPrice": {"raw": 140.00},
+        "targetHighPrice": {"raw": 220.00},
+    }
+
+    result = _parse_price_targets(data)
+
+    assert result.current == 150.25
+    assert result.mean == 175.50
+    assert result.median == 172.00
+    assert result.low == 140.00
+    assert result.high == 220.00
+
+
+def test_parse_price_targets_empty():
+    """Test parsing empty price targets data"""
+    result = _parse_price_targets({})
+    assert result.current is None
+    assert result.mean is None
+
+
+def test_parse_earnings_estimate():
+    """Test parsing earnings estimate from Yahoo Finance API"""
+    trend_list = [
+        {
+            "period": "0q",
+            "earningsEstimate": {
+                "avg": {"raw": 1.55},
+                "low": {"raw": 1.45},
+                "high": {"raw": 1.65},
+                "numberOfAnalysts": {"raw": 35},
+                "yearAgoEps": {"raw": 1.42},
+                "growth": {"raw": 0.092},
+            },
+        },
+        {
+            "period": "+1q",
+            "earningsEstimate": {
+                "avg": {"raw": 1.72},
+                "low": {"raw": 1.60},
+                "high": {"raw": 1.85},
+                "numberOfAnalysts": {"raw": 32},
+            },
+        },
+    ]
+
+    result = _parse_earnings_estimate(trend_list)
+
+    assert "0q" in result.estimates
+    assert "+1q" in result.estimates
+    assert result.estimates["0q"]["avg"] == 1.55
+    assert result.estimates["0q"]["low"] == 1.45
+    assert result.estimates["0q"]["numberOfAnalysts"] == 35
+    assert result.estimates["+1q"]["avg"] == 1.72
+
+
+def test_parse_earnings_estimate_empty():
+    """Test parsing empty earnings estimate list"""
+    result = _parse_earnings_estimate([])
+    assert result.estimates == {}
+
+
+def test_parse_revenue_estimate():
+    """Test parsing revenue estimate from Yahoo Finance API"""
+    trend_list = [
+        {
+            "period": "0q",
+            "revenueEstimate": {
+                "avg": {"raw": 100000000000},
+                "low": {"raw": 95000000000},
+                "high": {"raw": 105000000000},
+                "numberOfAnalysts": {"raw": 30},
+                "yearAgoRevenue": {"raw": 92000000000},
+                "growth": {"raw": 0.087},
+            },
+        }
+    ]
+
+    result = _parse_revenue_estimate(trend_list)
+
+    assert "0q" in result.estimates
+    assert result.estimates["0q"]["avg"] == 100000000000
+    assert result.estimates["0q"]["low"] == 95000000000
+    assert result.estimates["0q"]["growth"] == 0.087
+
+
+def test_parse_revenue_estimate_empty():
+    """Test parsing empty revenue estimate list"""
+    result = _parse_revenue_estimate([])
+    assert result.estimates == {}
+
+
+def test_parse_earnings_history():
+    """Test parsing earnings history from Yahoo Finance API"""
+    history_list = [
+        {
+            "quarter": {"raw": 1698796800},
+            "epsActual": {"raw": 1.46},
+            "epsEstimate": {"raw": 1.39},
+            "epsDifference": {"raw": 0.07},
+            "surprisePercent": {"raw": 0.05},
+        },
+        {
+            "quarter": {"raw": 1706745600},
+            "epsActual": {"raw": 1.53},
+            "epsEstimate": {"raw": 1.50},
+            "epsDifference": {"raw": 0.03},
+            "surprisePercent": {"raw": 0.02},
+        },
+    ]
+
+    result = _parse_earnings_history(history_list)
+
+    assert len(result) == 2
+    assert result[0].eps_actual == 1.46
+    assert result[0].eps_estimate == 1.39
+    assert result[0].surprise == 0.07
+    assert result[0].surprise_percent == 0.05
+    assert result[0].date == datetime.fromtimestamp(1698796800)
+    assert result[1].eps_actual == 1.53
+
+
+def test_parse_earnings_history_empty():
+    """Test parsing empty earnings history list"""
+    result = _parse_earnings_history([])
+    assert result == []
+
+
+# Integration tests with mocked finance client
+
+
+async def test_get_analysis_data_recommendations(mock_finance_client, sample_recommendations_response, bypass_cache):
+    """Test getting recommendations analysis"""
+    mock_finance_client.get_quote_summary.return_value = sample_recommendations_response
+
+    result = await get_analysis_data(mock_finance_client, "AAPL", AnalysisType.RECOMMENDATIONS)
+
+    assert result["symbol"] == "AAPL"
+    assert "recommendations" in result
+    assert len(result["recommendations"]) == 2
+    assert result["recommendations"][0].period == "0m"
+    assert result["recommendations"][0].strong_buy == 15
+
+
+async def test_get_analysis_data_upgrades_downgrades(mock_finance_client, sample_upgrades_downgrades_response, bypass_cache):
+    """Test getting upgrades/downgrades analysis"""
+    mock_finance_client.get_quote_summary.return_value = sample_upgrades_downgrades_response
+
+    result = await get_analysis_data(mock_finance_client, "MSFT", AnalysisType.UPGRADES_DOWNGRADES)
+
+    assert result["symbol"] == "MSFT"
+    assert "upgrades_downgrades" in result
+    assert len(result["upgrades_downgrades"]) == 2
+    assert result["upgrades_downgrades"][0].firm == "Goldman Sachs"
+
+
+async def test_get_analysis_data_price_targets(mock_finance_client, sample_price_targets_response, bypass_cache):
+    """Test getting price targets analysis"""
+    mock_finance_client.get_quote_summary.return_value = sample_price_targets_response
+
+    result = await get_analysis_data(mock_finance_client, "GOOG", AnalysisType.PRICE_TARGETS)
+
+    assert result["symbol"] == "GOOG"
+    assert "price_targets" in result
+    assert result["price_targets"].current == 150.25
+    assert result["price_targets"].mean == 175.50
+
+
+async def test_get_analysis_data_earnings_estimate(mock_finance_client, sample_earnings_estimate_response, bypass_cache):
+    """Test getting earnings estimate analysis"""
+    mock_finance_client.get_quote_summary.return_value = sample_earnings_estimate_response
+
+    result = await get_analysis_data(mock_finance_client, "TSLA", AnalysisType.EARNINGS_ESTIMATE)
+
+    assert result["symbol"] == "TSLA"
+    assert "earnings_estimate" in result
+    assert "0q" in result["earnings_estimate"].estimates
+    assert result["earnings_estimate"].estimates["0q"]["avg"] == 1.55
+
+
+async def test_get_analysis_data_revenue_estimate(mock_finance_client, bypass_cache):
+    """Test getting revenue estimate analysis"""
+    mock_response = {
+        "quoteSummary": {
+            "result": [
+                {
+                    "earningsTrend": {
+                        "trend": [
+                            {
+                                "period": "0q",
+                                "revenueEstimate": {
+                                    "avg": {"raw": 100000000000},
+                                    "low": {"raw": 95000000000},
+                                    "high": {"raw": 105000000000},
+                                },
+                            }
+                        ]
+                    }
+                }
             ]
-        )
-        result = _parse_earnings_history(df)
+        }
+    }
+    mock_finance_client.get_quote_summary.return_value = mock_response
 
-        assert len(result) == 2
-        assert result[0].eps_actual == 2.18
-        assert result[0].surprise_percent == 3.8
-        assert result[1].eps_actual == 1.46
+    result = await get_analysis_data(mock_finance_client, "NVDA", AnalysisType.REVENUE_ESTIMATE)
 
-    def test_parse_earnings_history_with_nan_values(self):
-        """Test parsing earnings history DataFrame with NaN values"""
-        df = pd.DataFrame([{"date": "2024-01-15", "eps_actual": 2.18, "eps_estimate": pd.NA, "surprise": 0.08, "surprise_percent": pd.NA}])
-        result = _parse_earnings_history(df)
-
-        assert len(result) == 1
-        assert result[0].eps_actual == 2.18
-        assert result[0].eps_estimate is None
-        assert result[0].surprise_percent is None
+    assert result["symbol"] == "NVDA"
+    assert "revenue_estimate" in result
+    assert "0q" in result["revenue_estimate"].estimates
 
 
-class TestParseSustainability:
-    """Test suite for _parse_sustainability function."""
+async def test_get_analysis_data_earnings_history(mock_finance_client, sample_earnings_history_response, bypass_cache):
+    """Test getting earnings history analysis"""
+    mock_finance_client.get_quote_summary.return_value = sample_earnings_history_response
 
-    def test_parse_sustainability_empty_dataframe(self):
-        """Test parsing empty sustainability DataFrame"""
-        empty_df = pd.DataFrame()
-        result = _parse_sustainability(empty_df)
+    result = await get_analysis_data(mock_finance_client, "AAPL", AnalysisType.EARNINGS_HISTORY)
 
-        assert result.scores == {}
+    assert result["symbol"] == "AAPL"
+    assert "earnings_history" in result
+    assert len(result["earnings_history"]) == 2
+    assert result["earnings_history"][0].eps_actual == 1.46
 
-    def test_parse_sustainability_with_data(self):
-        """Test parsing sustainability DataFrame with data"""
-        df = pd.DataFrame({"environmentScore": [75], "socialScore": [80], "governanceScore": [85]})
-        result = _parse_sustainability(df)
 
-        assert "environmentScore" in result.scores
-        assert "socialScore" in result.scores
-        assert "governanceScore" in result.scores
-        assert result.scores["environmentScore"] == 75
+async def test_get_analysis_data_empty_result(mock_finance_client, bypass_cache):
+    """Test error handling when no data is returned"""
+    mock_response = {"quoteSummary": {"result": []}}
+    mock_finance_client.get_quote_summary.return_value = mock_response
 
-    def test_parse_sustainability_with_nan_values(self):
-        """Test parsing sustainability DataFrame with NaN values"""
-        df = pd.DataFrame({"environmentScore": [75], "socialScore": [pd.NA], "governanceScore": [85]})
-        result = _parse_sustainability(df)
+    with pytest.raises(HTTPException) as exc_info:
+        await get_analysis_data(mock_finance_client, "INVALID", AnalysisType.RECOMMENDATIONS)
 
-        assert result.scores["environmentScore"] == 75
-        assert result.scores["socialScore"] is None
-        assert result.scores["governanceScore"] == 85
+    assert exc_info.value.status_code == 404
+    assert "No recommendations data found" in exc_info.value.detail
+
+
+async def test_get_analysis_data_api_error(mock_finance_client, bypass_cache):
+    """Test error handling when API call fails"""
+    mock_finance_client.get_quote_summary.side_effect = Exception("Yahoo Finance API error")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_analysis_data(mock_finance_client, "ERROR", AnalysisType.RECOMMENDATIONS)
+
+    assert exc_info.value.status_code == 500
+    assert "Failed to fetch analysis data" in exc_info.value.detail
+
+
+async def test_get_analysis_data_calls_api_with_correct_params(mock_finance_client, sample_recommendations_response, bypass_cache):
+    """Test that API is called with correct parameters"""
+    mock_finance_client.get_quote_summary.return_value = sample_recommendations_response
+
+    await get_analysis_data(mock_finance_client, "AAPL", AnalysisType.RECOMMENDATIONS)
+
+    # Verify API was called
+    mock_finance_client.get_quote_summary.assert_called_once()
+    call_args = mock_finance_client.get_quote_summary.call_args
+
+    assert call_args.kwargs["symbol"] == "AAPL"
+    assert "recommendationTrend" in call_args.kwargs["modules"]
+
+
+async def test_get_analysis_data_all_types(mock_finance_client, bypass_cache):
+    """Test all analysis type values work"""
+    analysis_types = [
+        AnalysisType.RECOMMENDATIONS,
+        AnalysisType.UPGRADES_DOWNGRADES,
+        AnalysisType.PRICE_TARGETS,
+        AnalysisType.EARNINGS_ESTIMATE,
+        AnalysisType.REVENUE_ESTIMATE,
+        AnalysisType.EARNINGS_HISTORY,
+    ]
+
+    # Mock response templates for each analysis type
+    mock_response_templates = {
+        AnalysisType.RECOMMENDATIONS: {"quoteSummary": {"result": [{"recommendationTrend": {"trend": []}}]}},
+        AnalysisType.UPGRADES_DOWNGRADES: {"quoteSummary": {"result": [{"upgradeDowngradeHistory": {"history": []}}]}},
+        AnalysisType.PRICE_TARGETS: {"quoteSummary": {"result": [{"financialData": {}}]}},
+        AnalysisType.EARNINGS_ESTIMATE: {"quoteSummary": {"result": [{"earningsTrend": {"trend": []}}]}},
+        AnalysisType.REVENUE_ESTIMATE: {"quoteSummary": {"result": [{"earningsTrend": {"trend": []}}]}},
+        AnalysisType.EARNINGS_HISTORY: {"quoteSummary": {"result": [{"earningsHistory": {"history": []}}]}},
+    }
+
+    for analysis_type in analysis_types:
+        mock_response = mock_response_templates[analysis_type]
+        mock_finance_client.get_quote_summary.return_value = mock_response
+
+        result = await get_analysis_data(mock_finance_client, "TEST", analysis_type)
+        assert result["symbol"] == "TEST"

@@ -26,7 +26,7 @@ None required
             "latency_ms": 18.45
         },
         "services": {
-            "status": "20/20 succeeded",
+            "status": "28/28 succeeded",
             "Indices": {
                 "status": "succeeded"
             },
@@ -84,7 +84,31 @@ None required
             "Search": {
                 "status": "succeeded"
             },
-            "Summary Analysis": {
+            "Technical Indicators": {
+                "status": "succeeded"
+            },
+            "Market Hours": {
+                "status": "succeeded"
+            },
+            "Annual Income Statement": {
+                "status": "succeeded"
+            },
+            "Quarterly Balance Sheet": {
+                "status": "succeeded"
+            },
+            "Institutional Holders": {
+                "status": "succeeded"
+            },
+            "Analyst Recommendations": {
+                "status": "succeeded"
+            },
+            "Price Targets": {
+                "status": "succeeded"
+            },
+            "Earnings Calls List": {
+                "status": "succeeded"
+            },
+            "Earnings Transcript": {
                 "status": "succeeded"
             }
         }
