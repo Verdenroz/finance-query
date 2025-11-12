@@ -1,18 +1,19 @@
 from datetime import datetime
 
-import pytest
-from pydantic import ValidationError
-
 from src.models.analysis import (
-    AnalysisData,
     AnalysisType,
     EarningsEstimate,
+    EarningsEstimateResponse,
     EarningsHistoryItem,
+    EarningsHistoryResponse,
     PriceTarget,
+    PriceTargetsResponse,
     RecommendationData,
+    RecommendationsResponse,
     RevenueEstimate,
-    SustainabilityScores,
+    RevenueEstimateResponse,
     UpgradeDowngrade,
+    UpgradesDowngradesResponse,
 )
 
 
@@ -28,7 +29,6 @@ class TestAnalysisType:
             "earnings_estimate",
             "revenue_estimate",
             "earnings_history",
-            "sustainability",
         ]
 
         actual_values = [e.value for e in AnalysisType]
@@ -38,7 +38,7 @@ class TestAnalysisType:
         """Test AnalysisType enum behavior"""
         assert AnalysisType.RECOMMENDATIONS == "recommendations"
         assert AnalysisType.PRICE_TARGETS == "price_targets"
-        assert AnalysisType.SUSTAINABILITY == "sustainability"
+        assert AnalysisType.UPGRADES_DOWNGRADES == "upgrades_downgrades"
 
 
 class TestRecommendationData:
@@ -223,188 +223,112 @@ class TestEarningsHistoryItem:
         assert data.surprise_percent is None
 
 
-class TestSustainabilityScores:
-    """Test suite for SustainabilityScores model."""
+class TestRecommendationsResponse:
+    """Test suite for RecommendationsResponse model."""
 
-    def test_sustainability_scores_valid(self):
-        """Test SustainabilityScores with valid data"""
-        scores = {"environmentScore": 75, "socialScore": 80, "governanceScore": 85, "totalEsg": 80}
-        data = SustainabilityScores(scores=scores)
-
-        assert data.scores == scores
-        assert data.scores["environmentScore"] == 75
-        assert data.scores["socialScore"] == 80
-        assert data.scores["governanceScore"] == 85
-        assert data.scores["totalEsg"] == 80
-
-    def test_sustainability_scores_empty(self):
-        """Test SustainabilityScores with empty scores"""
-        data = SustainabilityScores(scores={})
-
-        assert data.scores == {}
-
-
-class TestAnalysisData:
-    """Test suite for AnalysisData model."""
-
-    def test_analysis_data_recommendations(self):
-        """Test AnalysisData with recommendations type"""
+    def test_recommendations_response_valid(self):
+        """Test RecommendationsResponse with valid data"""
         recommendations = [RecommendationData(period="3m", strong_buy=5, buy=10, hold=3, sell=1, strong_sell=0)]
 
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.RECOMMENDATIONS, recommendations=recommendations)
+        data = RecommendationsResponse(symbol="AAPL", recommendations=recommendations)
 
         assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.RECOMMENDATIONS
         assert data.recommendations == recommendations
-        assert data.price_targets is None
-        assert data.earnings_estimate is None
-        assert data.revenue_estimate is None
-        assert data.earnings_history is None
-        assert data.sustainability is None
-        assert data.upgrades_downgrades is None
+        assert len(data.recommendations) == 1
 
-    def test_analysis_data_price_targets(self):
-        """Test AnalysisData with price targets type"""
-        price_targets = PriceTarget(current=150.0, mean=160.0, median=155.0, low=140.0, high=180.0)
-
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.PRICE_TARGETS, price_targets=price_targets)
+    def test_recommendations_response_empty_list(self):
+        """Test RecommendationsResponse with empty recommendations list"""
+        data = RecommendationsResponse(symbol="AAPL", recommendations=[])
 
         assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.PRICE_TARGETS
-        assert data.price_targets == price_targets
-        assert data.recommendations is None
-        assert data.earnings_estimate is None
-        assert data.revenue_estimate is None
-        assert data.earnings_history is None
-        assert data.sustainability is None
-        assert data.upgrades_downgrades is None
+        assert data.recommendations == []
 
-    def test_analysis_data_earnings_estimate(self):
-        """Test AnalysisData with earnings estimate type"""
-        earnings_estimate = EarningsEstimate(estimates={"2024-12-31": {"avg": 6.5, "low": 6.0, "high": 7.0}})
 
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.EARNINGS_ESTIMATE, earnings_estimate=earnings_estimate)
+class TestUpgradesDowngradesResponse:
+    """Test suite for UpgradesDowngradesResponse model."""
 
-        assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.EARNINGS_ESTIMATE
-        assert data.earnings_estimate == earnings_estimate
-        assert data.recommendations is None
-        assert data.price_targets is None
-        assert data.revenue_estimate is None
-        assert data.earnings_history is None
-        assert data.sustainability is None
-        assert data.upgrades_downgrades is None
-
-    def test_analysis_data_revenue_estimate(self):
-        """Test AnalysisData with revenue estimate type"""
-        revenue_estimate = RevenueEstimate(estimates={"2024-12-31": {"avg": 400000000000, "low": 380000000000, "high": 420000000000}})
-
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.REVENUE_ESTIMATE, revenue_estimate=revenue_estimate)
-
-        assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.REVENUE_ESTIMATE
-        assert data.revenue_estimate == revenue_estimate
-        assert data.recommendations is None
-        assert data.price_targets is None
-        assert data.earnings_estimate is None
-        assert data.earnings_history is None
-        assert data.sustainability is None
-        assert data.upgrades_downgrades is None
-
-    def test_analysis_data_earnings_history(self):
-        """Test AnalysisData with earnings history type"""
-        earnings_history = [EarningsHistoryItem(date=datetime(2024, 1, 15), eps_actual=2.18, eps_estimate=2.10, surprise=0.08, surprise_percent=3.8)]
-
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.EARNINGS_HISTORY, earnings_history=earnings_history)
-
-        assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.EARNINGS_HISTORY
-        assert data.earnings_history == earnings_history
-        assert data.recommendations is None
-        assert data.price_targets is None
-        assert data.earnings_estimate is None
-        assert data.revenue_estimate is None
-        assert data.sustainability is None
-        assert data.upgrades_downgrades is None
-
-    def test_analysis_data_sustainability(self):
-        """Test AnalysisData with sustainability type"""
-        sustainability = SustainabilityScores(scores={"environmentScore": 75, "socialScore": 80, "governanceScore": 85})
-
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.SUSTAINABILITY, sustainability=sustainability)
-
-        assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.SUSTAINABILITY
-        assert data.sustainability == sustainability
-        assert data.recommendations is None
-        assert data.price_targets is None
-        assert data.earnings_estimate is None
-        assert data.revenue_estimate is None
-        assert data.earnings_history is None
-        assert data.upgrades_downgrades is None
-
-    def test_analysis_data_upgrades_downgrades(self):
-        """Test AnalysisData with upgrades/downgrades type"""
+    def test_upgrades_downgrades_response_valid(self):
+        """Test UpgradesDowngradesResponse with valid data"""
         upgrades_downgrades = [UpgradeDowngrade(firm="Goldman Sachs", to_grade="Buy", from_grade="Hold", action="upgrade", date=datetime(2024, 1, 15))]
 
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.UPGRADES_DOWNGRADES, upgrades_downgrades=upgrades_downgrades)
+        data = UpgradesDowngradesResponse(symbol="AAPL", upgrades_downgrades=upgrades_downgrades)
 
         assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.UPGRADES_DOWNGRADES
         assert data.upgrades_downgrades == upgrades_downgrades
-        assert data.recommendations is None
-        assert data.price_targets is None
-        assert data.earnings_estimate is None
-        assert data.revenue_estimate is None
-        assert data.earnings_history is None
-        assert data.sustainability is None
+        assert len(data.upgrades_downgrades) == 1
 
-    def test_analysis_data_minimal(self):
-        """Test AnalysisData with minimal required data"""
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.RECOMMENDATIONS)
+
+class TestPriceTargetsResponse:
+    """Test suite for PriceTargetsResponse model."""
+
+    def test_price_targets_response_valid(self):
+        """Test PriceTargetsResponse with valid data"""
+        price_targets = PriceTarget(current=150.0, mean=160.0, median=155.0, low=140.0, high=180.0)
+
+        data = PriceTargetsResponse(symbol="AAPL", price_targets=price_targets)
 
         assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.RECOMMENDATIONS
-        assert data.recommendations is None
-        assert data.price_targets is None
-        assert data.earnings_estimate is None
-        assert data.revenue_estimate is None
-        assert data.earnings_history is None
-        assert data.sustainability is None
-        assert data.upgrades_downgrades is None
+        assert data.price_targets == price_targets
 
-    def test_analysis_data_validation_error(self):
-        """Test AnalysisData with invalid data"""
-        with pytest.raises(ValidationError):
-            AnalysisData(
-                symbol="",  # Empty symbol should fail validation
-                analysis_type=AnalysisType.RECOMMENDATIONS,
-            )
 
-    def test_analysis_data_json_serialization(self):
-        """Test AnalysisData JSON serialization"""
-        recommendations = [RecommendationData(period="3m", strong_buy=5, buy=10, hold=3, sell=1, strong_sell=0)]
+class TestEarningsEstimateResponse:
+    """Test suite for EarningsEstimateResponse model."""
 
-        data = AnalysisData(symbol="AAPL", analysis_type=AnalysisType.RECOMMENDATIONS, recommendations=recommendations)
+    def test_earnings_estimate_response_valid(self):
+        """Test EarningsEstimateResponse with valid data"""
+        earnings_estimate = EarningsEstimate(estimates={"2024-12-31": {"avg": 6.5, "low": 6.0, "high": 7.0}})
+
+        data = EarningsEstimateResponse(symbol="AAPL", earnings_estimate=earnings_estimate)
+
+        assert data.symbol == "AAPL"
+        assert data.earnings_estimate == earnings_estimate
+
+
+class TestRevenueEstimateResponse:
+    """Test suite for RevenueEstimateResponse model."""
+
+    def test_revenue_estimate_response_valid(self):
+        """Test RevenueEstimateResponse with valid data"""
+        revenue_estimate = RevenueEstimate(estimates={"2024-12-31": {"avg": 400000000000, "low": 380000000000, "high": 420000000000}})
+
+        data = RevenueEstimateResponse(symbol="AAPL", revenue_estimate=revenue_estimate)
+
+        assert data.symbol == "AAPL"
+        assert data.revenue_estimate == revenue_estimate
+
+
+class TestEarningsHistoryResponse:
+    """Test suite for EarningsHistoryResponse model."""
+
+    def test_earnings_history_response_valid(self):
+        """Test EarningsHistoryResponse with valid data"""
+        earnings_history = [EarningsHistoryItem(date=datetime(2024, 1, 15), eps_actual=2.18, eps_estimate=2.10, surprise=0.08, surprise_percent=3.8)]
+
+        data = EarningsHistoryResponse(symbol="AAPL", earnings_history=earnings_history)
+
+        assert data.symbol == "AAPL"
+        assert data.earnings_history == earnings_history
+        assert len(data.earnings_history) == 1
+
+    def test_earnings_history_response_json_serialization(self):
+        """Test EarningsHistoryResponse JSON serialization"""
+        earnings_history = [EarningsHistoryItem(date=datetime(2024, 1, 15), eps_actual=2.18, eps_estimate=2.10)]
+
+        data = EarningsHistoryResponse(symbol="AAPL", earnings_history=earnings_history)
 
         # Test that the model can be serialized to JSON
         json_data = data.model_dump()
         assert json_data["symbol"] == "AAPL"
-        assert json_data["analysis_type"] == "recommendations"
-        assert len(json_data["recommendations"]) == 1
-        assert json_data["recommendations"][0]["period"] == "3m"
+        assert len(json_data["earnings_history"]) == 1
 
-    def test_analysis_data_json_deserialization(self):
-        """Test AnalysisData JSON deserialization"""
+    def test_earnings_history_response_json_deserialization(self):
+        """Test EarningsHistoryResponse JSON deserialization"""
         json_data = {
             "symbol": "AAPL",
-            "analysis_type": "recommendations",
-            "recommendations": [{"period": "3m", "strong_buy": 5, "buy": 10, "hold": 3, "sell": 1, "strong_sell": 0}],
+            "earnings_history": [{"date": "2024-01-15T00:00:00", "eps_actual": 2.18, "eps_estimate": 2.10, "surprise": 0.08, "surprise_percent": 3.8}],
         }
 
-        data = AnalysisData.model_validate(json_data)
+        data = EarningsHistoryResponse.model_validate(json_data)
         assert data.symbol == "AAPL"
-        assert data.analysis_type == AnalysisType.RECOMMENDATIONS
-        assert len(data.recommendations) == 1
-        assert data.recommendations[0].period == "3m"
-        assert data.recommendations[0].strong_buy == 5
+        assert len(data.earnings_history) == 1
+        assert data.earnings_history[0].eps_actual == 2.18

@@ -1,277 +1,352 @@
-from datetime import datetime
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi import HTTPException
 
-from src.services.earnings_transcript.get_earnings_transcript import get_earnings_transcript
+from src.models.earnings_transcript import EarningsCallListing
+from src.services.earnings_transcript.get_earnings_transcript import (
+    _parse_transcript,
+    get_earnings_calls_list,
+    get_earnings_transcript,
+)
 
 
-class TestGetEarningsTranscript:
-    """Test the earnings transcript service layer with real API calls"""
+@pytest.fixture
+def mock_finance_client():
+    """Create a mock YahooFinanceClient"""
+    return AsyncMock()
 
-    @pytest.mark.asyncio
-    async def test_get_earnings_transcript_success(self):
-        """Test successful earnings transcript retrieval"""
-        symbol = "AAPL"
 
-        result = await get_earnings_transcript(symbol)
+@pytest.fixture
+def sample_earnings_calls_response():
+    """Sample Yahoo Finance earnings calls list response"""
+    return [
+        {"eventId": "event123", "quarter": "Q4", "year": 2024, "title": "Q4 2024 Earnings Call", "url": "https://example.com/q4"},
+        {"eventId": "event456", "quarter": "Q3", "year": 2024, "title": "Q3 2024 Earnings Call", "url": "https://example.com/q3"},
+        {"eventId": "event789", "quarter": "Q2", "year": 2024, "title": "Q2 2024 Earnings Call", "url": "https://example.com/q2"},
+    ]
 
-        # Verify response structure
-        assert isinstance(result, dict)
-        assert "symbol" in result
-        assert "transcripts" in result
-        assert "metadata" in result
-        assert result["symbol"] == symbol.upper()
-        assert isinstance(result["transcripts"], list)
-        assert isinstance(result["metadata"], dict)
 
-        # Verify metadata structure
-        metadata = result["metadata"]
-        assert "total_transcripts" in metadata
-        assert "filters_applied" in metadata
-        assert "retrieved_at" in metadata
-        assert isinstance(metadata["total_transcripts"], int)
-        assert isinstance(metadata["filters_applied"], dict)
-        assert isinstance(metadata["retrieved_at"], str)
+@pytest.fixture
+def sample_quote_type_response():
+    """Sample Yahoo Finance quote type response with quartrId"""
+    return {"quoteType": {"result": [{"quartrId": "company123", "symbol": "AAPL"}]}}
 
-        # If we have transcripts, verify their structure
-        if result["transcripts"]:
-            transcript = result["transcripts"][0]
-            assert "symbol" in transcript
-            assert "quarter" in transcript
-            assert "year" in transcript
-            assert "date" in transcript
-            assert "transcript" in transcript
-            assert "participants" in transcript
-            assert "metadata" in transcript
 
-    @pytest.mark.asyncio
-    async def test_get_earnings_transcript_with_quarter_filter(self):
-        """Test earnings transcript with quarter filter"""
-        symbol = "MSFT"
-        quarter = "Q3"
-
-        result = await get_earnings_transcript(symbol, quarter=quarter)
-
-        assert result["symbol"] == symbol.upper()
-        assert result["metadata"]["filters_applied"]["quarter"] == quarter
-        assert result["metadata"]["filters_applied"]["year"] is None
-
-    @pytest.mark.asyncio
-    async def test_get_earnings_transcript_with_year_filter(self):
-        """Test earnings transcript with year filter"""
-        symbol = "GOOGL"
-        year = 2024
-
-        result = await get_earnings_transcript(symbol, year=year)
-
-        assert result["symbol"] == symbol.upper()
-        assert result["metadata"]["filters_applied"]["quarter"] is None
-        assert result["metadata"]["filters_applied"]["year"] == year
-
-    @pytest.mark.asyncio
-    async def test_get_earnings_transcript_with_both_filters(self):
-        """Test earnings transcript with both quarter and year filters"""
-        symbol = "TSLA"
-        quarter = "Q2"
-        year = 2024
-
-        result = await get_earnings_transcript(symbol, quarter=quarter, year=year)
-
-        assert result["symbol"] == symbol.upper()
-        assert result["metadata"]["filters_applied"]["quarter"] == quarter
-        assert result["metadata"]["filters_applied"]["year"] == year
-
-    @pytest.mark.asyncio
-    async def test_get_earnings_transcript_no_data_found(self):
-        """Test handling when no transcripts are found"""
-        # Mock the DefeatBetaClient to return empty transcripts
-        with patch("src.services.earnings_transcript.get_earnings_transcript.DefeatBetaClient") as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client.get_earnings_transcript.return_value = {"symbol": "INVALID", "transcripts": []}
-            mock_client_class.return_value = mock_client
-
-            with pytest.raises(HTTPException) as exc_info:
-                await get_earnings_transcript("INVALID")
-
-            assert exc_info.value.status_code == 404
-            assert "No earnings transcripts found for INVALID" in str(exc_info.value.detail)
-
-    @pytest.mark.asyncio
-    async def test_get_earnings_transcript_client_error(self):
-        """Test handling of client errors"""
-        with patch("src.services.earnings_transcript.get_earnings_transcript.DefeatBetaClient") as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client.get_earnings_transcript.side_effect = Exception("Client error")
-            mock_client_class.return_value = mock_client
-
-            with pytest.raises(HTTPException) as exc_info:
-                await get_earnings_transcript("ERROR")
-
-            assert exc_info.value.status_code == 500
-            assert "Internal server error" in str(exc_info.value.detail)
-
-    @pytest.mark.asyncio
-    async def test_get_earnings_transcript_http_exception_passthrough(self):
-        """Test that HTTPExceptions from client are passed through"""
-        with patch("src.services.earnings_transcript.get_earnings_transcript.DefeatBetaClient") as mock_client_class:
-            mock_client = AsyncMock()
-            original_exception = HTTPException(status_code=404, detail="Symbol not found")
-            mock_client.get_earnings_transcript.side_effect = original_exception
-            mock_client_class.return_value = mock_client
-
-            with pytest.raises(HTTPException) as exc_info:
-                await get_earnings_transcript("NOTFOUND")
-
-            assert exc_info.value.status_code == 404
-            assert exc_info.value.detail == "Symbol not found"
-
-    @pytest.mark.asyncio
-    async def test_earnings_transcript_model_validation(self):
-        """Test that EarningsTranscript model validation works correctly"""
-        # Mock valid transcript data
-        mock_transcript_data = {
-            "symbol": "AAPL",
-            "quarter": "Q1",
-            "year": 2024,
-            "date": datetime(2024, 1, 15),
-            "transcript": "Sample transcript text",
-            "participants": ["CEO", "CFO"],
-            "metadata": {"source": "test"},
-        }
-
-        with patch("src.services.earnings_transcript.get_earnings_transcript.DefeatBetaClient") as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client.get_earnings_transcript.return_value = {"symbol": "AAPL", "transcripts": [mock_transcript_data]}
-            mock_client_class.return_value = mock_client
-
-            result = await get_earnings_transcript("AAPL")
-
-            assert len(result["transcripts"]) == 1
-            transcript = result["transcripts"][0]
-
-            # Verify all required fields are present and correctly typed
-            assert transcript["symbol"] == "AAPL"
-            assert transcript["quarter"] == "Q1"
-            assert transcript["year"] == 2024
-            assert isinstance(transcript["date"], str)  # Should be serialized as ISO string
-            assert transcript["transcript"] == "Sample transcript text"
-            assert transcript["participants"] == ["CEO", "CFO"]
-            assert transcript["metadata"] == {"source": "test"}
-
-    @pytest.mark.asyncio
-    async def test_multiple_transcripts_processing(self):
-        """Test processing multiple transcripts"""
-        mock_transcripts = [
-            {
-                "symbol": "AAPL",
-                "quarter": "Q1",
-                "year": 2024,
-                "date": datetime(2024, 1, 15),
-                "transcript": "Q1 transcript",
-                "participants": ["CEO"],
-                "metadata": {"source": "test"},
+@pytest.fixture
+def sample_transcript_response():
+    """Sample Yahoo Finance transcript response"""
+    return {
+        "transcriptContent": {
+            "speaker_mapping": [
+                {"speaker": "1", "speaker_data": {"name": "Tim Cook", "role": "CEO", "company": "Apple Inc."}},
+                {"speaker": "2", "speaker_data": {"name": "Luca Maestri", "role": "CFO", "company": "Apple Inc."}},
+            ],
+            "transcript": {
+                "paragraphs": [
+                    {"speaker": "1", "text": "Thank you for joining today's call. Our Q4 results were strong."},
+                    {"speaker": "2", "text": "Revenue grew 8% year-over-year to $94.9 billion."},
+                    {"speaker": "1", "text": "We're excited about our product pipeline for 2025."},
+                ]
             },
-            {
-                "symbol": "AAPL",
-                "quarter": "Q2",
-                "year": 2024,
-                "date": datetime(2024, 4, 15),
-                "transcript": "Q2 transcript",
-                "participants": ["CFO"],
-                "metadata": {"source": "test"},
+        },
+        "transcriptMetadata": {
+            "fiscalYear": 2024,
+            "fiscalPeriod": "Q4",
+            "title": "Q4 2024 Earnings Call",
+            "date": 1704067200,  # 2024-01-01
+            "transcriptId": "transcript123",
+            "eventType": "Earnings Call",
+            "isLatest": True,
+        },
+    }
+
+
+# Test parser function
+def test_parse_transcript():
+    """Test parsing transcript from Yahoo Finance response"""
+    call_info = EarningsCallListing(event_id="event123", quarter="Q4", year=2024, title="Q4 2024 Earnings Call", url="https://example.com")
+
+    transcript_data = {
+        "transcriptContent": {
+            "speaker_mapping": [
+                {"speaker": "1", "speaker_data": {"name": "Tim Cook", "role": "CEO", "company": "Apple Inc."}},
+                {"speaker": "2", "speaker_data": {"name": "Luca Maestri", "role": "CFO", "company": "Apple Inc."}},
+            ],
+            "transcript": {
+                "paragraphs": [
+                    {"speaker": "1", "text": "Thank you for joining."},
+                    {"speaker": "2", "text": "Revenue grew 8%."},
+                ]
             },
-        ]
+        },
+        "transcriptMetadata": {
+            "fiscalYear": 2024,
+            "fiscalPeriod": "Q4",
+            "title": "Q4 2024 Earnings Call",
+            "date": 1704067200,
+            "transcriptId": "transcript123",
+            "eventType": "Earnings Call",
+            "isLatest": True,
+        },
+    }
 
-        with patch("src.services.earnings_transcript.get_earnings_transcript.DefeatBetaClient") as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client.get_earnings_transcript.return_value = {"symbol": "AAPL", "transcripts": mock_transcripts}
-            mock_client_class.return_value = mock_client
+    result = _parse_transcript("AAPL", transcript_data, call_info)
 
-            result = await get_earnings_transcript("AAPL")
+    assert result.symbol == "AAPL"
+    assert result.quarter == "Q4"
+    assert result.year == 2024
+    assert result.title == "Q4 2024 Earnings Call"
+    assert len(result.speakers) == 2
+    assert result.speakers[0].name == "Tim Cook"
+    assert result.speakers[0].role == "CEO"
+    assert len(result.paragraphs) == 2
+    assert result.paragraphs[0].speaker == "Tim Cook"
+    assert result.paragraphs[0].text == "Thank you for joining."
+    assert result.metadata["eventId"] == "event123"
+    assert result.metadata["isLatest"] is True
 
-            assert len(result["transcripts"]) == 2
-            assert result["metadata"]["total_transcripts"] == 2
 
-            # Verify both transcripts are processed correctly
-            quarters = [t["quarter"] for t in result["transcripts"]]
-            assert "Q1" in quarters
-            assert "Q2" in quarters
+def test_parse_transcript_missing_speaker_metadata():
+    """Test parsing transcript with missing speaker metadata"""
+    call_info = EarningsCallListing(event_id="event123", quarter="Q1", year=2024, title="Q1 Call", url="https://example.com")
 
-    @pytest.mark.asyncio
-    async def test_real_api_integration_multiple_symbols(self):
-        """Integration test with real API calls for multiple symbols"""
-        symbols = ["AAPL", "MSFT", "GOOGL"]
+    transcript_data = {
+        "transcriptContent": {
+            "speaker_mapping": [
+                {"speaker": "1", "speaker_data": {"name": "John Doe"}},  # Missing role and company
+            ],
+            "transcript": {"paragraphs": [{"speaker": "1", "text": "Hello everyone."}]},
+        },
+        "transcriptMetadata": {"fiscalYear": 2024, "fiscalPeriod": "Q1", "title": "Q1 Call"},
+    }
 
-        for symbol in symbols:
-            try:
-                result = await get_earnings_transcript(symbol)
+    result = _parse_transcript("TEST", transcript_data, call_info)
 
-                # Basic structure validation
-                assert result["symbol"] == symbol.upper()
-                assert "transcripts" in result
-                assert "metadata" in result
-                assert isinstance(result["transcripts"], list)
-                assert result["metadata"]["total_transcripts"] >= 0
+    assert len(result.speakers) == 1
+    assert result.speakers[0].name == "John Doe"
+    assert result.speakers[0].role is None
+    assert result.speakers[0].company is None
 
-                # If we have transcripts, validate their structure
-                for transcript in result["transcripts"]:
-                    assert "symbol" in transcript
-                    assert "quarter" in transcript
-                    assert "year" in transcript
-                    assert "date" in transcript
-                    assert "transcript" in transcript
 
-            except Exception as e:
-                # Log but don't fail - some symbols might not have data available
-                print(f"Warning: {symbol} test failed with {e}")
+def test_parse_transcript_empty_paragraphs():
+    """Test parsing transcript filters out empty paragraphs"""
+    call_info = EarningsCallListing(event_id="event123", quarter="Q1", year=2024, title="Q1 Call", url="https://example.com")
 
-    @pytest.mark.asyncio
-    async def test_date_handling_and_serialization(self):
-        """Test proper date handling and serialization"""
-        test_date = datetime(2024, 3, 15, 14, 30, 0)
+    transcript_data = {
+        "transcriptContent": {
+            "speaker_mapping": [{"speaker": "1", "speaker_data": {"name": "Speaker 1"}}],
+            "transcript": {
+                "paragraphs": [
+                    {"speaker": "1", "text": "Valid text."},
+                    {"speaker": "1", "text": ""},  # Empty text
+                    {"speaker": "1", "text": "Another valid text."},
+                ]
+            },
+        },
+        "transcriptMetadata": {},
+    }
 
-        mock_transcript_data = {
-            "symbol": "TEST",
-            "quarter": "Q1",
-            "year": 2024,
-            "date": test_date,
-            "transcript": "Test transcript",
-            "participants": [],
-            "metadata": {},
-        }
+    result = _parse_transcript("TEST", transcript_data, call_info)
 
-        with patch("src.services.earnings_transcript.get_earnings_transcript.DefeatBetaClient") as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client.get_earnings_transcript.return_value = {"symbol": "TEST", "transcripts": [mock_transcript_data]}
-            mock_client_class.return_value = mock_client
+    # Should only have 2 paragraphs (empty one filtered out)
+    assert len(result.paragraphs) == 2
+    assert result.paragraphs[0].text == "Valid text."
+    assert result.paragraphs[1].text == "Another valid text."
 
-            result = await get_earnings_transcript("TEST")
 
-            # Verify date is properly serialized
-            transcript = result["transcripts"][0]
-            assert isinstance(transcript["date"], str)
-            # Should be ISO format
-            assert "2024-03-15" in transcript["date"]
+# Integration tests with mocked finance client
 
-    @pytest.mark.asyncio
-    async def test_metadata_timestamp_format(self):
-        """Test that metadata timestamp is in correct format"""
-        with patch("src.services.earnings_transcript.get_earnings_transcript.DefeatBetaClient") as mock_client_class:
-            mock_client = AsyncMock()
-            mock_client.get_earnings_transcript.return_value = {
-                "symbol": "TEST",
-                "transcripts": [
-                    {"symbol": "TEST", "quarter": "Q1", "year": 2024, "date": datetime.now(), "transcript": "Test", "participants": [], "metadata": {}}
-                ],
-            }
-            mock_client_class.return_value = mock_client
 
-            result = await get_earnings_transcript("TEST")
+async def test_get_earnings_calls_list(mock_finance_client, sample_earnings_calls_response, bypass_cache):
+    """Test getting earnings calls list"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
 
-            # Verify timestamp format
-            retrieved_at = result["metadata"]["retrieved_at"]
-            assert isinstance(retrieved_at, str)
-            # Should be parseable as datetime
-            datetime.fromisoformat(retrieved_at.replace("Z", "+00:00") if retrieved_at.endswith("Z") else retrieved_at)
+    result = await get_earnings_calls_list(mock_finance_client, "AAPL")
+
+    assert result.symbol == "AAPL"
+    assert result.total == 3
+    assert len(result.earnings_calls) == 3
+    # Should be sorted by year and quarter (most recent first)
+    assert result.earnings_calls[0].quarter == "Q4"
+    assert result.earnings_calls[0].year == 2024
+    assert result.earnings_calls[0].event_id == "event123"
+
+
+async def test_get_earnings_calls_list_empty(mock_finance_client, bypass_cache):
+    """Test error handling when no earnings calls found"""
+    mock_finance_client.get_earnings_calls_list.return_value = []
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_earnings_calls_list(mock_finance_client, "INVALID")
+
+    assert exc_info.value.status_code == 404
+    assert "No earnings calls found" in exc_info.value.detail
+
+
+async def test_get_earnings_calls_list_api_error(mock_finance_client, bypass_cache):
+    """Test error handling when API call fails"""
+    mock_finance_client.get_earnings_calls_list.side_effect = Exception("API error")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_earnings_calls_list(mock_finance_client, "ERROR")
+
+    assert exc_info.value.status_code == 500
+    assert "Failed to fetch earnings calls list" in exc_info.value.detail
+
+
+async def test_get_earnings_transcript_most_recent(
+    mock_finance_client, sample_earnings_calls_response, sample_quote_type_response, sample_transcript_response, bypass_cache
+):
+    """Test getting most recent earnings transcript"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = sample_quote_type_response
+    mock_finance_client.get_earnings_transcript.return_value = sample_transcript_response
+
+    result = await get_earnings_transcript(mock_finance_client, "AAPL")
+
+    assert result.symbol == "AAPL"
+    assert result.quarter == "Q4"
+    assert result.year == 2024
+    assert len(result.speakers) == 2
+    assert len(result.paragraphs) == 3
+    assert result.speakers[0].name == "Tim Cook"
+
+
+async def test_get_earnings_transcript_with_quarter_filter(
+    mock_finance_client, sample_earnings_calls_response, sample_quote_type_response, sample_transcript_response, bypass_cache
+):
+    """Test getting earnings transcript with quarter filter"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = sample_quote_type_response
+    mock_finance_client.get_earnings_transcript.return_value = sample_transcript_response
+
+    result = await get_earnings_transcript(mock_finance_client, "AAPL", quarter="Q3")
+
+    # Should get Q3 call (event456)
+    assert result.symbol == "AAPL"
+    # Verify the correct call was fetched
+    mock_finance_client.get_earnings_transcript.assert_called_once()
+    call_args = mock_finance_client.get_earnings_transcript.call_args
+    assert call_args.args[0] == "event456"  # Q3's eventId
+
+
+async def test_get_earnings_transcript_with_year_filter(
+    mock_finance_client, sample_earnings_calls_response, sample_quote_type_response, sample_transcript_response, bypass_cache
+):
+    """Test getting earnings transcript with year filter"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = sample_quote_type_response
+    mock_finance_client.get_earnings_transcript.return_value = sample_transcript_response
+
+    result = await get_earnings_transcript(mock_finance_client, "AAPL", year=2024)
+
+    # Should get most recent 2024 call (Q4)
+    assert result.symbol == "AAPL"
+    mock_finance_client.get_earnings_transcript.assert_called_once()
+    call_args = mock_finance_client.get_earnings_transcript.call_args
+    assert call_args.args[0] == "event123"  # Q4's eventId
+
+
+async def test_get_earnings_transcript_with_both_filters(
+    mock_finance_client, sample_earnings_calls_response, sample_quote_type_response, sample_transcript_response, bypass_cache
+):
+    """Test getting earnings transcript with both quarter and year filters"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = sample_quote_type_response
+    mock_finance_client.get_earnings_transcript.return_value = sample_transcript_response
+
+    result = await get_earnings_transcript(mock_finance_client, "AAPL", quarter="Q2", year=2024)
+
+    assert result.symbol == "AAPL"
+    mock_finance_client.get_earnings_transcript.assert_called_once()
+    call_args = mock_finance_client.get_earnings_transcript.call_args
+    assert call_args.args[0] == "event789"  # Q2's eventId
+
+
+async def test_get_earnings_transcript_quarter_normalization(
+    mock_finance_client, sample_earnings_calls_response, sample_quote_type_response, sample_transcript_response, bypass_cache
+):
+    """Test quarter normalization (e.g., '2' -> 'Q2')"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = sample_quote_type_response
+    mock_finance_client.get_earnings_transcript.return_value = sample_transcript_response
+
+    # Test with just the number
+    result = await get_earnings_transcript(mock_finance_client, "AAPL", quarter="2")
+
+    assert result.symbol == "AAPL"
+    mock_finance_client.get_earnings_transcript.assert_called_once()
+    call_args = mock_finance_client.get_earnings_transcript.call_args
+    assert call_args.args[0] == "event789"  # Q2's eventId
+
+
+async def test_get_earnings_transcript_no_matching_call(mock_finance_client, sample_earnings_calls_response, bypass_cache):
+    """Test error when no call matches filters"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_earnings_transcript(mock_finance_client, "AAPL", quarter="Q1", year=2023)
+
+    assert exc_info.value.status_code == 404
+    assert "No earnings call found" in exc_info.value.detail
+
+
+async def test_get_earnings_transcript_no_company_id(mock_finance_client, sample_earnings_calls_response, bypass_cache):
+    """Test error handling when no company ID found"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = {"quoteType": {"result": []}}
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_earnings_transcript(mock_finance_client, "AAPL")
+
+    assert exc_info.value.status_code == 404
+    assert "Could not find company ID" in exc_info.value.detail
+
+
+async def test_get_earnings_transcript_missing_quartr_id(mock_finance_client, sample_earnings_calls_response, bypass_cache):
+    """Test error handling when quartrId is missing"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = {"quoteType": {"result": [{"symbol": "AAPL"}]}}  # Missing quartrId
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_earnings_transcript(mock_finance_client, "AAPL")
+
+    assert exc_info.value.status_code == 404
+    assert "No company ID (quartrId) found" in exc_info.value.detail
+
+
+async def test_get_earnings_transcript_api_error(mock_finance_client, sample_earnings_calls_response, sample_quote_type_response, bypass_cache):
+    """Test error handling when transcript API call fails"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = sample_quote_type_response
+    mock_finance_client.get_earnings_transcript.side_effect = Exception("Transcript API error")
+
+    with pytest.raises(HTTPException) as exc_info:
+        await get_earnings_transcript(mock_finance_client, "AAPL")
+
+    assert exc_info.value.status_code == 500
+    assert "Failed to fetch earnings transcript" in exc_info.value.detail
+
+
+async def test_get_earnings_transcript_calls_api_with_correct_params(
+    mock_finance_client, sample_earnings_calls_response, sample_quote_type_response, sample_transcript_response, bypass_cache
+):
+    """Test that APIs are called with correct parameters"""
+    mock_finance_client.get_earnings_calls_list.return_value = sample_earnings_calls_response
+    mock_finance_client.get_quote_type.return_value = sample_quote_type_response
+    mock_finance_client.get_earnings_transcript.return_value = sample_transcript_response
+
+    await get_earnings_transcript(mock_finance_client, "AAPL")
+
+    # Verify get_earnings_calls_list was called
+    mock_finance_client.get_earnings_calls_list.assert_called_once_with("AAPL")
+
+    # Verify get_quote_type was called
+    mock_finance_client.get_quote_type.assert_called_once_with("AAPL")
+
+    # Verify get_earnings_transcript was called with event ID and company ID
+    mock_finance_client.get_earnings_transcript.assert_called_once()
+    call_args = mock_finance_client.get_earnings_transcript.call_args
+    assert call_args.args[0] == "event123"  # eventId of most recent call
+    assert call_args.args[1] == "company123"  # quartrId from quote_type response

@@ -13,7 +13,6 @@ def yahoo_auth_manager():
     return YahooAuthManager()
 
 
-@pytest.mark.asyncio
 class TestYahooAuthManager:
     @patch("src.utils.yahoo_auth.requests.Session")
     async def test_refresh_success(self, mock_session_class, yahoo_auth_manager):
