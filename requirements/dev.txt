@@ -212,7 +212,7 @@ pydantic==2.12.3
     #   fastapi
     #   financequery
     #   openai
-pydantic-core==2.41.4
+pydantic-core==2.41.5
     # via pydantic
 pyfiglet==1.0.4
     # via defeatbeta-api
