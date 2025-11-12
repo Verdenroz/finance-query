@@ -199,6 +199,21 @@ Perfect for serverless applications with automatic scaling:
   `AWS_SECRET_ID` and `AWS_SECRET_KEY`.
 - Also edit the `AWS_REGION`, `ECR_REPOSITORY`, and `FUNCTION_NAME` in the workflow file
 
+#### Testing AWS Lambda Locally
+
+Test the AWS Lambda Docker image locally before deployment:
+
+```bash
+# Build and test the Lambda image with automated health checks
+make docker-aws
+```
+
+This command will:
+1. Build the image from `Dockerfile.aws`
+2. Run the container with the Lambda Runtime Interface Emulator
+3. Test `/ping` and `/health` endpoints using Lambda events
+4. Clean up the container after testing
+
 ### Render
 
 Easy deployment with WebSocket support:
