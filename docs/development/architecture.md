@@ -37,6 +37,11 @@ Modular routers organize endpoints by domain:
 - `search` - Symbol search functionality
 - `hours` - Market hours status
 - `similar` - Similar securities lookup
+- `indicators` - Technical indicators (SMA, EMA, RSI, MACD, etc.)
+- `financials` - Financial statements (income, balance sheet, cash flow)
+- `holders` - Institutional and insider holdings data
+- `analysis` - Analyst recommendations, price targets, earnings estimates
+- `earnings_transcript` - Earnings call transcripts
 - `stream` - Server-sent events
 - `sockets` - WebSocket connections
 

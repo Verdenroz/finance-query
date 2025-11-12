@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "financequery"
-version = "1.10.0"
+version = "1.10.1"
 description = "A free and open-source financial data API for pricing, fundamentals, and technical indicators."
 license = "MIT"
 authors = [
@@ -38,11 +38,6 @@ dependencies = [
     "python-json-logger>=3.3.0,<5.0.0",
     "beautifulsoup4>=4.13.5",
     "frozendict>=2.4.6",
-    "peewee>=3.18.2",
-    "protobuf>=6.32.1",
-    "multitasking>=0.0.12",
-    "yfinance>=0.2.65",
-    "defeatbeta-api>=0.0.15",
 ]
 
 [dependency-groups]
@@ -80,7 +75,7 @@ tests = ["test", "*/test"]
 parallel = true
 source = ["src"]
 omit = [
-    "src/security/rate_limit_middleware.py",
+    "src/main.py",
     "src/**/dependencies.py",
     "src/**/*middleware.py",
     "src/**/utils.py",

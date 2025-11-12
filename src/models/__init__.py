@@ -8,4 +8,21 @@ from .search_result import SearchResult, Type
 from .sector import Sector, MarketSector, MarketSectorDetails
 from .simple_quote import SimpleQuote
 from .validation_error import ValidationErrorResponse
-from .earnings_transcript import EarningsTranscript, EarningsTranscriptRequest
+from .earnings_transcript import EarningsTranscript, EarningsCallsList, EarningsCallListing, TranscriptSpeaker, TranscriptParagraph, Quarter
+from .holders import (
+    HoldersData,
+    MajorHoldersResponse,
+    InstitutionalHoldersResponse,
+    MutualFundHoldersResponse,
+    InsiderTransactionsResponse,
+    InsiderPurchasesResponse,
+    InsiderRosterResponse,
+)
+from .analysis import (
+    RecommendationsResponse,
+    UpgradesDowngradesResponse,
+    PriceTargetsResponse,
+    EarningsEstimateResponse,
+    RevenueEstimateResponse,
+    EarningsHistoryResponse,
+)

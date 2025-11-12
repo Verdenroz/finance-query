@@ -1,227 +1,271 @@
 from datetime import datetime
 from typing import Any
 
-import pandas as pd
-import yfinance as yf
 from fastapi import HTTPException
 
 from src.models.analysis import (
-    AnalysisData,
     AnalysisType,
     EarningsEstimate,
     EarningsHistoryItem,
     PriceTarget,
     RecommendationData,
     RevenueEstimate,
-    SustainabilityScores,
     UpgradeDowngrade,
 )
+from src.utils.cache import cache
+from src.utils.dependencies import FinanceClient
 
-# Mapping of analysis types to their corresponding parser functions, ticker attributes, and field names
-ANALYSIS_TYPE_MAPPING = {
+# Mapping of analysis types to their corresponding Yahoo Finance modules
+ANALYSIS_TYPE_MODULES = {
+    AnalysisType.RECOMMENDATIONS: ["recommendationTrend"],
+    AnalysisType.UPGRADES_DOWNGRADES: ["upgradeDowngradeHistory"],
+    AnalysisType.PRICE_TARGETS: ["financialData"],
+    AnalysisType.EARNINGS_ESTIMATE: ["earningsTrend"],
+    AnalysisType.REVENUE_ESTIMATE: ["earningsTrend"],
+    AnalysisType.EARNINGS_HISTORY: ["earningsHistory"],
+}
+
+# Mapping of analysis types to their data extraction and parsing configuration
+ANALYSIS_TYPE_CONFIG = {
     AnalysisType.RECOMMENDATIONS: {
-        "parser": None,  # Will be set to _parse_recommendations after function definition
-        "ticker_attr": "recommendations",
+        "data_path": lambda d: d.get("recommendationTrend", {}).get("trend", []),
+        "parser": "_parse_recommendations",
         "field_name": "recommendations",
     },
     AnalysisType.UPGRADES_DOWNGRADES: {
-        "parser": None,  # Will be set to _parse_upgrades_downgrades after function definition
-        "ticker_attr": "upgrades_downgrades",
+        "data_path": lambda d: d.get("upgradeDowngradeHistory", {}).get("history", []),
+        "parser": "_parse_upgrades_downgrades",
         "field_name": "upgrades_downgrades",
     },
     AnalysisType.PRICE_TARGETS: {
-        "parser": None,  # Will be set to _parse_price_targets after function definition
-        "ticker_attr": "analyst_price_targets",
+        "data_path": lambda d: d.get("financialData", {}),
+        "parser": "_parse_price_targets",
         "field_name": "price_targets",
     },
     AnalysisType.EARNINGS_ESTIMATE: {
-        "parser": None,  # Will be set to _parse_earnings_estimate after function definition
-        "ticker_attr": "earnings_estimate",
+        "data_path": lambda d: d.get("earningsTrend", {}).get("trend", []),
+        "parser": "_parse_earnings_estimate",
         "field_name": "earnings_estimate",
     },
     AnalysisType.REVENUE_ESTIMATE: {
-        "parser": None,  # Will be set to _parse_revenue_estimate after function definition
-        "ticker_attr": "revenue_estimate",
+        "data_path": lambda d: d.get("earningsTrend", {}).get("trend", []),
+        "parser": "_parse_revenue_estimate",
         "field_name": "revenue_estimate",
     },
     AnalysisType.EARNINGS_HISTORY: {
-        "parser": None,  # Will be set to _parse_earnings_history after function definition
-        "ticker_attr": "earnings_history",
+        "data_path": lambda d: d.get("earningsHistory", {}).get("history", []),
+        "parser": "_parse_earnings_history",
         "field_name": "earnings_history",
-    },
-    AnalysisType.SUSTAINABILITY: {
-        "parser": None,  # Will be set to _parse_sustainability after function definition
-        "ticker_attr": "sustainability",
-        "field_name": "sustainability",
     },
 }
 
 
-async def get_analysis_data(symbol: str, analysis_type: AnalysisType) -> AnalysisData:
+@cache(expire=3600)
+async def get_analysis_data(finance_client: FinanceClient, symbol: str, analysis_type: AnalysisType) -> dict[str, Any]:
     """
-    Get analysis data for a symbol using yfinance.
-    :param symbol: the stock symbol
-    :param analysis_type: the type of analysis data to fetch
-    :return: an AnalysisData object
+    Get analysis data for a symbol using Yahoo Finance API directly.
 
-    :raises HTTPException: with status code 404 if the symbol cannot be found, or 500 for any other error
+    Args:
+        finance_client: Yahoo Finance client
+        symbol: Stock symbol
+        analysis_type: Type of analysis data to fetch
+
+    Returns:
+        Dictionary with symbol and parsed analysis data
+
+    Raises:
+        HTTPException: 400 for invalid type, 404 if no data found, 500 for other errors
     """
-    ticker = yf.Ticker(symbol)
+    if analysis_type not in ANALYSIS_TYPE_MODULES:
+        raise HTTPException(status_code=400, detail="Invalid analysis type")
 
     try:
-        # Validate analysis type
-        if analysis_type not in ANALYSIS_TYPE_MAPPING:
-            raise HTTPException(status_code=400, detail="Invalid analysis type")
+        # Get required modules
+        modules = ANALYSIS_TYPE_MODULES[analysis_type]
 
-        # Get mapping configuration
-        mapping = ANALYSIS_TYPE_MAPPING[analysis_type]
+        # Fetch data from Yahoo Finance
+        response = await finance_client.get_quote_summary(symbol=symbol.upper(), modules=modules)
 
-        # Extract data from ticker using the mapped attribute
-        ticker_data = getattr(ticker, mapping["ticker_attr"])
+        # Extract result
+        result = response.get("quoteSummary", {}).get("result", [])
+        if not result:
+            raise HTTPException(status_code=404, detail=f"No {analysis_type.value} data found for {symbol}")
 
-        # Parse the data using the mapped parser function
-        parsed_data = mapping["parser"](ticker_data)
+        data = result[0]
 
-        # Create AnalysisData object with dynamic field assignment
-        analysis_data_kwargs = {"symbol": symbol, "analysis_type": analysis_type, mapping["field_name"]: parsed_data}
+        # Get configuration for this analysis type
+        config = ANALYSIS_TYPE_CONFIG.get(analysis_type)
+        if not config:
+            raise HTTPException(status_code=400, detail=f"Invalid analysis type: {analysis_type}")
 
-        return AnalysisData(**analysis_data_kwargs)
+        # Extract data using configured path
+        raw_data = config["data_path"](data)
+
+        # Get the parser function by name
+        parser_name = config["parser"]
+        parser_func = globals()[parser_name]
+
+        # Parse the data
+        parsed_data = parser_func(raw_data)
+
+        # Return dictionary with symbol and parsed data
+        return {"symbol": symbol.upper(), config["field_name"]: parsed_data}
 
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e)) from e
+        raise HTTPException(status_code=500, detail=f"Failed to fetch analysis data: {str(e)}") from e
 
 
-def _parse_recommendations(df: pd.DataFrame) -> list[RecommendationData]:
-    """Parse recommendations DataFrame"""
-    if df.empty:
+def _parse_recommendations(trend_list: list[dict[str, Any]]) -> list[RecommendationData]:
+    """Parse recommendations list from Yahoo Finance API"""
+    if not trend_list:
         return []
 
     recommendations = []
-    for _, row in df.iterrows():
+    for trend_data in trend_list:
         recommendation = RecommendationData(
-            period=str(row.get("period", "")),
-            strong_buy=row.get("strongBuy") if pd.notna(row.get("strongBuy")) else None,
-            buy=row.get("buy") if pd.notna(row.get("buy")) else None,
-            hold=row.get("hold") if pd.notna(row.get("hold")) else None,
-            sell=row.get("sell") if pd.notna(row.get("sell")) else None,
-            strong_sell=row.get("strongSell") if pd.notna(row.get("strongSell")) else None,
+            period=trend_data.get("period", ""),
+            strong_buy=trend_data.get("strongBuy"),
+            buy=trend_data.get("buy"),
+            hold=trend_data.get("hold"),
+            sell=trend_data.get("sell"),
+            strong_sell=trend_data.get("strongSell"),
         )
         recommendations.append(recommendation)
 
     return recommendations
 
 
-def _parse_upgrades_downgrades(df: pd.DataFrame) -> list[UpgradeDowngrade]:
-    """Parse upgrades/downgrades DataFrame"""
-    if df.empty:
+def _parse_upgrades_downgrades(history_list: list[dict[str, Any]]) -> list[UpgradeDowngrade]:
+    """Parse upgrades/downgrades list from Yahoo Finance API"""
+    if not history_list:
         return []
 
     upgrades_downgrades = []
-    for _, row in df.iterrows():
+    for item in history_list:
+        # Convert epoch to datetime
+        epoch_time = item.get("epochGradeDate")
+        grade_date = datetime.fromtimestamp(epoch_time) if epoch_time else None
+
         upgrade_downgrade = UpgradeDowngrade(
-            firm=str(row.get("firm", "")),
-            to_grade=row.get("toGrade") if pd.notna(row.get("toGrade")) else None,
-            from_grade=row.get("fromGrade") if pd.notna(row.get("fromGrade")) else None,
-            action=row.get("action") if pd.notna(row.get("action")) else None,
-            date=row.get("date") if pd.notna(row.get("date")) else None,
+            firm=item.get("firm", ""),
+            to_grade=item.get("toGrade"),
+            from_grade=item.get("fromGrade"),
+            action=item.get("action"),
+            date=grade_date,
         )
         upgrades_downgrades.append(upgrade_downgrade)
 
     return upgrades_downgrades
 
 
-def _parse_price_targets(data: Any) -> PriceTarget:
-    """Parse analyst price targets"""
-    if data is None or (hasattr(data, "empty") and data.empty):
+def _safe_extract_value(value: Any) -> float | None:
+    """
+    Safely extract numeric value from Yahoo Finance response.
+    Handles both dict format {"raw": value} and direct numeric values.
+
+    Args:
+        value: Value from Yahoo API (dict, float, int, or None)
+
+    Returns:
+        Extracted numeric value or None
+    """
+    if value is None:
+        return None
+
+    # If it's a dict with "raw" key, extract it
+    if isinstance(value, dict):
+        return value.get("raw")
+
+    # If it's already a numeric type, return it
+    if isinstance(value, int | float):
+        return float(value)
+
+    return None
+
+
+def _parse_price_targets(data: dict[str, Any]) -> PriceTarget:
+    """Parse analyst price targets from Yahoo Finance API"""
+    if not data:
         return PriceTarget()
 
-    # Handle different data types that yfinance might return
-    if isinstance(data, dict):
-        return PriceTarget(
-            current=data.get("current") if pd.notna(data.get("current")) else None,
-            mean=data.get("mean") if pd.notna(data.get("mean")) else None,
-            median=data.get("median") if pd.notna(data.get("median")) else None,
-            low=data.get("low") if pd.notna(data.get("low")) else None,
-            high=data.get("high") if pd.notna(data.get("high")) else None,
-        )
-    elif isinstance(data, pd.Series):
-        return PriceTarget(
-            current=data.get("current") if pd.notna(data.get("current")) else None,
-            mean=data.get("mean") if pd.notna(data.get("mean")) else None,
-            median=data.get("median") if pd.notna(data.get("median")) else None,
-            low=data.get("low") if pd.notna(data.get("low")) else None,
-            high=data.get("high") if pd.notna(data.get("high")) else None,
-        )
-    else:
-        return PriceTarget()
+    return PriceTarget(
+        current=_safe_extract_value(data.get("currentPrice")),
+        mean=_safe_extract_value(data.get("targetMeanPrice")),
+        median=_safe_extract_value(data.get("targetMedianPrice")),
+        low=_safe_extract_value(data.get("targetLowPrice")),
+        high=_safe_extract_value(data.get("targetHighPrice")),
+    )
 
 
-def _parse_earnings_estimate(df: pd.DataFrame) -> EarningsEstimate:
-    """Parse earnings estimate DataFrame"""
-    if df.empty:
+def _parse_earnings_estimate(trend_list: list[dict[str, Any]]) -> EarningsEstimate:
+    """Parse earnings estimate from Yahoo Finance API"""
+    if not trend_list:
         return EarningsEstimate(estimates={})
 
-    # Convert DataFrame to dict format
+    # Build estimates dict from trend data
     estimates_dict = {}
-    for column in df.columns:
-        estimates_dict[column] = df[column].to_dict()
+    for trend_data in trend_list:
+        period = trend_data.get("period", "")
+        earnings_estimate = trend_data.get("earningsEstimate", {})
+
+        estimates_dict[period] = {
+            "avg": earnings_estimate.get("avg", {}).get("raw"),
+            "low": earnings_estimate.get("low", {}).get("raw"),
+            "high": earnings_estimate.get("high", {}).get("raw"),
+            "numberOfAnalysts": earnings_estimate.get("numberOfAnalysts", {}).get("raw"),
+            "yearAgoEps": earnings_estimate.get("yearAgoEps", {}).get("raw"),
+            "growth": earnings_estimate.get("growth", {}).get("raw"),
+        }
 
     return EarningsEstimate(estimates=estimates_dict)
 
 
-def _parse_revenue_estimate(df: pd.DataFrame) -> RevenueEstimate:
-    """Parse revenue estimate DataFrame"""
-    if df.empty:
+def _parse_revenue_estimate(trend_list: list[dict[str, Any]]) -> RevenueEstimate:
+    """Parse revenue estimate from Yahoo Finance API"""
+    if not trend_list:
         return RevenueEstimate(estimates={})
 
-    # Convert DataFrame to dict format
+    # Build estimates dict from trend data
     estimates_dict = {}
-    for column in df.columns:
-        estimates_dict[column] = df[column].to_dict()
+    for trend_data in trend_list:
+        period = trend_data.get("period", "")
+        revenue_estimate = trend_data.get("revenueEstimate", {})
+
+        estimates_dict[period] = {
+            "avg": revenue_estimate.get("avg", {}).get("raw"),
+            "low": revenue_estimate.get("low", {}).get("raw"),
+            "high": revenue_estimate.get("high", {}).get("raw"),
+            "numberOfAnalysts": revenue_estimate.get("numberOfAnalysts", {}).get("raw"),
+            "yearAgoRevenue": revenue_estimate.get("yearAgoRevenue", {}).get("raw"),
+            "growth": revenue_estimate.get("growth", {}).get("raw"),
+        }
 
     return RevenueEstimate(estimates=estimates_dict)
 
 
-def _parse_earnings_history(df: pd.DataFrame) -> list[EarningsHistoryItem]:
-    """Parse earnings history DataFrame"""
-    if df.empty:
+def _parse_earnings_history(history_list: list[dict[str, Any]]) -> list[EarningsHistoryItem]:
+    """Parse earnings history from Yahoo Finance API"""
+    if not history_list:
         return []
 
     earnings_history = []
-    for _, row in df.iterrows():
+    for item in history_list:
+        # Convert quarter date
+        quarter = item.get("quarter", {}).get("raw")
+        if quarter:
+            quarter_date = datetime.fromtimestamp(quarter)
+        else:
+            quarter_date = datetime.now()
+
         earnings_item = EarningsHistoryItem(
-            date=row.get("date", datetime.now()),
-            eps_actual=row.get("eps_actual") if pd.notna(row.get("eps_actual")) else None,
-            eps_estimate=row.get("eps_estimate") if pd.notna(row.get("eps_estimate")) else None,
-            surprise=row.get("surprise") if pd.notna(row.get("surprise")) else None,
-            surprise_percent=row.get("surprise_percent") if pd.notna(row.get("surprise_percent")) else None,
+            date=quarter_date,
+            eps_actual=item.get("epsActual", {}).get("raw"),
+            eps_estimate=item.get("epsEstimate", {}).get("raw"),
+            surprise=item.get("epsDifference", {}).get("raw"),
+            surprise_percent=item.get("surprisePercent", {}).get("raw"),
         )
         earnings_history.append(earnings_item)
 
     return earnings_history
-
-
-def _parse_sustainability(df: pd.DataFrame) -> SustainabilityScores:
-    """Parse sustainability DataFrame"""
-    if df.empty:
-        return SustainabilityScores(scores={})
-
-    # Convert DataFrame to dict format
-    scores_dict = {}
-    for column in df.columns:
-        value = df[column].iloc[0] if len(df) > 0 else None
-        scores_dict[column] = value if pd.notna(value) else None
-
-    return SustainabilityScores(scores=scores_dict)
-
-
-# Update the mapping with actual parser function references
-ANALYSIS_TYPE_MAPPING[AnalysisType.RECOMMENDATIONS]["parser"] = _parse_recommendations
-ANALYSIS_TYPE_MAPPING[AnalysisType.UPGRADES_DOWNGRADES]["parser"] = _parse_upgrades_downgrades
-ANALYSIS_TYPE_MAPPING[AnalysisType.PRICE_TARGETS]["parser"] = _parse_price_targets
-ANALYSIS_TYPE_MAPPING[AnalysisType.EARNINGS_ESTIMATE]["parser"] = _parse_earnings_estimate
-ANALYSIS_TYPE_MAPPING[AnalysisType.REVENUE_ESTIMATE]["parser"] = _parse_revenue_estimate
-ANALYSIS_TYPE_MAPPING[AnalysisType.EARNINGS_HISTORY]["parser"] = _parse_earnings_history
-ANALYSIS_TYPE_MAPPING[AnalysisType.SUSTAINABILITY]["parser"] = _parse_sustainability

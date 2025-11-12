@@ -41,12 +41,30 @@ from src.services.indicators.core import (
 )
 from src.utils.dependencies import FinanceClient
 
+# Mapping of indicators to their task generation functions
+INDICATOR_CONFIG = {
+    Indicator.SMA: lambda prices, high_prices, low_prices, volumes: [(f"SMA({period})", get_sma_data(prices, period)) for period in [10, 20, 50, 100, 200]],
+    Indicator.EMA: lambda prices, high_prices, low_prices, volumes: [(f"EMA({period})", get_ema_data(prices, period)) for period in [10, 20, 50, 100, 200]],
+    Indicator.WMA: lambda prices, high_prices, low_prices, volumes: [(f"WMA({period})", get_wma_data(prices, period)) for period in [10, 20, 50, 100, 200]],
+    Indicator.VWMA: lambda prices, high_prices, low_prices, volumes: [("VWMA(20)", get_vwma_data(prices, volumes))],
+    Indicator.RSI: lambda prices, high_prices, low_prices, volumes: [("RSI(14)", get_rsi_data(prices))],
+    Indicator.SRSI: lambda prices, high_prices, low_prices, volumes: [("SRSI(3,3,14,14)", get_srsi_data(prices))],
+    Indicator.STOCH: lambda prices, high_prices, low_prices, volumes: [("STOCH %K(14,3,3)", get_stoch_data(high_prices, low_prices, prices))],
+    Indicator.CCI: lambda prices, high_prices, low_prices, volumes: [("CCI(20)", get_cci_data(high_prices, low_prices, prices))],
+    Indicator.MACD: lambda prices, high_prices, low_prices, volumes: [("MACD(12,26)", get_macd_data(prices))],
+    Indicator.ADX: lambda prices, high_prices, low_prices, volumes: [("ADX(14)", get_adx_data(high_prices, low_prices, prices))],
+    Indicator.AROON: lambda prices, high_prices, low_prices, volumes: [("Aroon(25)", get_aroon_data(high_prices, low_prices))],
+    Indicator.BBANDS: lambda prices, high_prices, low_prices, volumes: [("BBANDS(20,2)", get_bbands_data(prices))],
+    Indicator.SUPER_TREND: lambda prices, high_prices, low_prices, volumes: [("Super Trend", get_supertrend_data(high_prices, low_prices, prices))],
+    Indicator.ICHIMOKU: lambda prices, high_prices, low_prices, volumes: [("Ichimoku Cloud", get_ichimoku_data(high_prices, low_prices, prices))],
+}
+
 
 async def get_technical_indicators(
     finance_client: FinanceClient,
     symbol: str,
     interval: Interval,
-    indicators: list[Indicator] = None,
+    indicators: list[Indicator] | None = None,
 ) -> dict[str, IndicatorData]:
     # Default to all indicators if none specified
     if not indicators:
@@ -68,37 +86,9 @@ async def get_technical_indicators(
     tasks = []
 
     for indicator in indicators:
-        if indicator == Indicator.SMA:
-            for period in [10, 20, 50, 100, 200]:
-                tasks.append((f"SMA({period})", get_sma_data(prices, period)))
-        elif indicator == Indicator.EMA:
-            for period in [10, 20, 50, 100, 200]:
-                tasks.append((f"EMA({period})", get_ema_data(prices, period)))
-        elif indicator == Indicator.WMA:
-            for period in [10, 20, 50, 100, 200]:
-                tasks.append((f"WMA({period})", get_wma_data(prices, period)))
-        elif indicator == Indicator.VWMA:
-            tasks.append(("VWMA(20)", get_vwma_data(prices, volumes)))
-        elif indicator == Indicator.RSI:
-            tasks.append(("RSI(14)", get_rsi_data(prices)))
-        elif indicator == Indicator.SRSI:
-            tasks.append(("SRSI(3,3,14,14)", get_srsi_data(prices)))
-        elif indicator == Indicator.STOCH:
-            tasks.append(("STOCH %K(14,3,3)", get_stoch_data(high_prices, low_prices, prices)))
-        elif indicator == Indicator.CCI:
-            tasks.append(("CCI(20)", get_cci_data(high_prices, low_prices, prices)))
-        elif indicator == Indicator.MACD:
-            tasks.append(("MACD(12,26)", get_macd_data(prices)))
-        elif indicator == Indicator.ADX:
-            tasks.append(("ADX(14)", get_adx_data(high_prices, low_prices, prices)))
-        elif indicator == Indicator.AROON:
-            tasks.append(("Aroon(25)", get_aroon_data(high_prices, low_prices)))
-        elif indicator == Indicator.BBANDS:
-            tasks.append(("BBANDS(20,2)", get_bbands_data(prices)))
-        elif indicator == Indicator.SUPER_TREND:
-            tasks.append(("Super Trend", get_supertrend_data(high_prices, low_prices, prices)))
-        elif indicator == Indicator.ICHIMOKU:
-            tasks.append(("Ichimoku Cloud", get_ichimoku_data(high_prices, low_prices, prices)))
+        task_generator = INDICATOR_CONFIG.get(indicator)
+        if task_generator:
+            tasks.extend(task_generator(prices, high_prices, low_prices, volumes))
 
     task_results = await asyncio.gather(*[task[1] for task in tasks])
     return {name: result for (name, _), result in zip(tasks, task_results, strict=False)}

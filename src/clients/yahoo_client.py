@@ -1,7 +1,9 @@
+import re
 import time
 from typing import Optional
 
 from fastapi import HTTPException
+from lxml import html as lxml_html
 from orjson import orjson
 
 from src.utils.logging import get_logger, log_external_api_call
@@ -114,3 +116,135 @@ class YahooFinanceClient(CurlFetchClient):
         Get similar quotes for a symbol.
         """
         return await self._json(f"https://query2.finance.yahoo.com/v6/finance/recommendationsbysymbol/{symbol}", params={"count": limit})
+
+    async def get_fundamentals_timeseries(self, symbol: str, period1: int, period2: int, types: list[str]):
+        """
+        Fetch fundamentals timeseries data (financial statements, etc.).
+
+        Args:
+            symbol: Stock symbol
+            period1: Start Unix timestamp
+            period2: End Unix timestamp
+            types: List of fundamental types (e.g., ['annualTotalRevenue', 'quarterlyTotalRevenue'])
+        """
+        return await self._json(
+            f"https://query1.finance.yahoo.com/ws/fundamentals-timeseries/v1/finance/timeseries/{symbol}",
+            params={
+                "merge": "false",
+                "padTimeSeries": "true",
+                "period1": period1,
+                "period2": period2,
+                "type": ",".join(types),
+                "lang": "en-US",
+                "region": "US",
+            },
+        )
+
+    async def get_quote_summary(self, symbol: str, modules: list[str]):
+        """
+        Fetch quote summary data with specified modules.
+
+        Args:
+            symbol: Stock symbol
+            modules: List of modules to fetch (e.g., ['institutionOwnership', 'majorHoldersBreakdown'])
+        """
+        return await self._json(
+            f"https://query2.finance.yahoo.com/v10/finance/quoteSummary/{symbol}",
+            params={
+                "modules": ",".join(modules),
+                "corsDomain": "finance.yahoo.com",
+                "formatted": "false",
+            },
+        )
+
+    async def get_quote_type(self, symbol: str):
+        """
+        Fetch quote type data including company ID (quartrId) for a symbol.
+
+        Args:
+            symbol: Stock symbol
+
+        Returns:
+            Dict containing quoteType data including quartrId
+        """
+        url = f"https://query1.finance.yahoo.com/v1/finance/quoteType/{symbol}"
+        return await self._json(url)
+
+    async def get_earnings_calls_list(self, symbol: str):
+        """
+        Scrape the earnings calls page to get list of available earnings call transcripts.
+
+        Args:
+            symbol: Stock symbol
+
+        Returns:
+            List of dicts with eventId, quarter, year, title, url
+        """
+        url = f"https://finance.yahoo.com/quote/{symbol}/earnings-calls/"
+
+        # Fetch the HTML page
+        start_time = time.perf_counter()
+        try:
+            resp = await self.fetch(url, return_response=True)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            success = resp.status_code < 400
+            log_external_api_call(logger, "Yahoo Finance", "earnings-calls-page", duration_ms, success=success)
+        except Exception:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            log_external_api_call(logger, "Yahoo Finance", "earnings-calls-page", duration_ms, success=False)
+            raise
+
+        if resp.status_code >= 400:
+            raise HTTPException(resp.status_code, f"Failed to fetch earnings calls page: {resp.text[:200]}")
+
+        # Parse HTML
+        tree = lxml_html.fromstring(resp.text)
+
+        # Find all links containing "earnings_call"
+        all_links = tree.xpath("//a/@href")
+        earnings_links = [link for link in all_links if "earnings_call" in link]
+
+        # Extract event IDs and quarter/year info
+        eventid_pattern = r"earnings_call-(\d+)"
+        quarter_year_pattern = r"-([Qq]\d)-(\d{4})-earnings_call"
+
+        calls = []
+        seen_event_ids = set()
+
+        for link in earnings_links:
+            event_match = re.search(eventid_pattern, link)
+            if event_match:
+                event_id = event_match.group(1)
+
+                # Skip duplicates
+                if event_id in seen_event_ids:
+                    continue
+                seen_event_ids.add(event_id)
+
+                # Extract quarter and year
+                qy_match = re.search(quarter_year_pattern, link)
+                quarter = qy_match.group(1).upper() if qy_match else None
+                year = int(qy_match.group(2)) if qy_match else None
+
+                # Extract title from link text (try to find the corresponding link element)
+                title = f"{quarter} {year}" if quarter and year else "Earnings Call"
+
+                calls.append({"eventId": event_id, "quarter": quarter, "year": year, "title": title, "url": f"https://finance.yahoo.com{link}"})
+
+        return calls
+
+    async def get_earnings_transcript(self, event_id: str, company_id: str):
+        """
+        Fetch earnings call transcript from Yahoo Finance.
+
+        Args:
+            event_id: Event ID for the earnings call
+            company_id: Company ID (quartrId) for the symbol
+
+        Returns:
+            Dict containing transcript content and metadata
+        """
+        url = "https://finance.yahoo.com/xhr/transcript"
+        params = {"eventType": "earnings_call", "quartrId": company_id, "eventId": event_id, "lang": "en-US", "region": "US"}
+
+        return await self._json(url, params=params)

@@ -173,6 +173,7 @@ ws.onmessage = (event) => {
 | `/v1/indicators`          | Technical indicators summary for interval      |
 | `/v1/holders`             | Company ownership and holder information       |
 | `/v1/financials`          | Financial statements and company metrics       |
+| `/v1/analysis`            | Analyst recommendations, price targets, estimates |
 | `/v1/earnings-transcript` | Earnings call transcripts and analysis         |
 | `/v1/stream`              | SSE for real-time quote updates                |
 
@@ -197,6 +198,21 @@ Perfect for serverless applications with automatic scaling:
 - Alternatively use the [AWS Deployment Workflow](.github/workflows/aws-deploy.yml), providing repository secrets for
   `AWS_SECRET_ID` and `AWS_SECRET_KEY`.
 - Also edit the `AWS_REGION`, `ECR_REPOSITORY`, and `FUNCTION_NAME` in the workflow file
+
+#### Testing AWS Lambda Locally
+
+Test the AWS Lambda Docker image locally before deployment:
+
+```bash
+# Build and test the Lambda image with automated health checks
+make docker-aws
+```
+
+This command will:
+1. Build the image from `Dockerfile.aws`
+2. Run the container with the Lambda Runtime Interface Emulator
+3. Test `/ping` and `/health` endpoints using Lambda events
+4. Clean up the container after testing
 
 ### Render
 
@@ -343,8 +359,7 @@ FinanceQuery leverages:
 - **[lxml](https://lxml.de)** for fast and reliable web scraping
 - **[Cython](https://cython.org)** for accelerated technical indicator calculations
 - **[Redis](https://redis.io)** for intelligent caching of market data
-- **[yfinance](https://github.com/ranaroussi/yfinance)** for institutional and insider holdings data
-- **[defeatbeta-api](https://github.com/defeat-beta/defeatbeta-api)** for earnings transcripts and financial statements
+- **[Yahoo Finance API](https://finance.yahoo.com)** for financial data (quotes, financials, holders, analysis, earnings transcripts)
 - **[logo.dev](https://logo.dev)** for fetching stock logos
 
 ## License
