@@ -165,21 +165,18 @@ async def test_get_analysis_all_endpoints(mock_get_analysis, client):
         ("earnings-history", AnalysisType.EARNINGS_HISTORY),
     ]
 
-    for endpoint, analysis_type in endpoints:
-        # Create appropriate mock data for each endpoint
-        if analysis_type == AnalysisType.RECOMMENDATIONS:
-            mock_data = {"symbol": "TEST", "recommendations": []}
-        elif analysis_type == AnalysisType.UPGRADES_DOWNGRADES:
-            mock_data = {"symbol": "TEST", "upgrades_downgrades": []}
-        elif analysis_type == AnalysisType.PRICE_TARGETS:
-            mock_data = {"symbol": "TEST", "price_targets": PriceTarget()}
-        elif analysis_type == AnalysisType.EARNINGS_ESTIMATE:
-            mock_data = {"symbol": "TEST", "earnings_estimate": EarningsEstimate(estimates={})}
-        elif analysis_type == AnalysisType.REVENUE_ESTIMATE:
-            mock_data = {"symbol": "TEST", "revenue_estimate": RevenueEstimate(estimates={})}
-        else:  # EARNINGS_HISTORY
-            mock_data = {"symbol": "TEST", "earnings_history": []}
+    # Mock data templates for each analysis type
+    mock_data_templates = {
+        AnalysisType.RECOMMENDATIONS: {"symbol": "TEST", "recommendations": []},
+        AnalysisType.UPGRADES_DOWNGRADES: {"symbol": "TEST", "upgrades_downgrades": []},
+        AnalysisType.PRICE_TARGETS: {"symbol": "TEST", "price_targets": PriceTarget()},
+        AnalysisType.EARNINGS_ESTIMATE: {"symbol": "TEST", "earnings_estimate": EarningsEstimate(estimates={})},
+        AnalysisType.REVENUE_ESTIMATE: {"symbol": "TEST", "revenue_estimate": RevenueEstimate(estimates={})},
+        AnalysisType.EARNINGS_HISTORY: {"symbol": "TEST", "earnings_history": []},
+    }
 
+    for endpoint, analysis_type in endpoints:
+        mock_data = mock_data_templates[analysis_type]
         mock_get_analysis.return_value = mock_data
 
         response = client.get(f"/v1/analysis/TEST/{endpoint}")

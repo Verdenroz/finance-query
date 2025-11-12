@@ -221,63 +221,60 @@ async def test_get_holders_all_endpoints(mock_get_holders, client):
         ("insider-roster", HolderType.INSIDER_ROSTER),
     ]
 
-    for endpoint, holder_type in endpoints:
-        # Create appropriate mock data for each endpoint
-        if holder_type == HolderType.MAJOR:
-            mock_holders = HoldersData(
-                symbol="TEST",
-                holder_type=holder_type,
-                major_breakdown=MajorHoldersBreakdown(breakdown_data={"insidersPercentHeld": {"raw": 0.1}}),
-            )
-        elif holder_type == HolderType.INSTITUTIONAL:
-            mock_holders = HoldersData(
-                symbol="TEST",
-                holder_type=holder_type,
-                institutional_holders=[InstitutionalHolder(holder="Test", shares=100, date_reported=datetime.now(), percent_out=0.1, value=1000)],
-            )
-        elif holder_type == HolderType.MUTUALFUND:
-            mock_holders = HoldersData(
-                symbol="TEST",
-                holder_type=holder_type,
-                mutualfund_holders=[MutualFundHolder(holder="Test", shares=100, date_reported=datetime.now(), percent_out=0.1, value=1000)],
-            )
-        elif holder_type == HolderType.INSIDER_TRANSACTIONS:
-            mock_holders = HoldersData(
-                symbol="TEST",
-                holder_type=holder_type,
-                insider_transactions=[
-                    InsiderTransaction(
-                        start_date=datetime.now(),
-                        insider="Test",
-                        position="CEO",
-                        transaction="Sale",
-                        shares=100,
-                        value=1000,
-                        ownership="D",
-                    )
-                ],
-            )
-        elif holder_type == HolderType.INSIDER_PURCHASES:
-            mock_holders = HoldersData(
-                symbol="TEST",
-                holder_type=holder_type,
-                insider_purchases=InsiderPurchase(period="6m", purchases_shares=100, sales_shares=50),
-            )
-        else:  # INSIDER_ROSTER
-            mock_holders = HoldersData(
-                symbol="TEST",
-                holder_type=holder_type,
-                insider_roster=[
-                    InsiderRosterMember(
-                        name="Test",
-                        position="CEO",
-                        most_recent_transaction="Sale",
-                        latest_transaction_date=datetime.now(),
-                        shares_owned_directly=100,
-                    )
-                ],
-            )
+    # Mock data templates for each holder type
+    mock_data_templates = {
+        HolderType.MAJOR: lambda: HoldersData(
+            symbol="TEST",
+            holder_type=HolderType.MAJOR,
+            major_breakdown=MajorHoldersBreakdown(breakdown_data={"insidersPercentHeld": {"raw": 0.1}}),
+        ),
+        HolderType.INSTITUTIONAL: lambda: HoldersData(
+            symbol="TEST",
+            holder_type=HolderType.INSTITUTIONAL,
+            institutional_holders=[InstitutionalHolder(holder="Test", shares=100, date_reported=datetime.now(), percent_out=0.1, value=1000)],
+        ),
+        HolderType.MUTUALFUND: lambda: HoldersData(
+            symbol="TEST",
+            holder_type=HolderType.MUTUALFUND,
+            mutualfund_holders=[MutualFundHolder(holder="Test", shares=100, date_reported=datetime.now(), percent_out=0.1, value=1000)],
+        ),
+        HolderType.INSIDER_TRANSACTIONS: lambda: HoldersData(
+            symbol="TEST",
+            holder_type=HolderType.INSIDER_TRANSACTIONS,
+            insider_transactions=[
+                InsiderTransaction(
+                    start_date=datetime.now(),
+                    insider="Test",
+                    position="CEO",
+                    transaction="Sale",
+                    shares=100,
+                    value=1000,
+                    ownership="D",
+                )
+            ],
+        ),
+        HolderType.INSIDER_PURCHASES: lambda: HoldersData(
+            symbol="TEST",
+            holder_type=HolderType.INSIDER_PURCHASES,
+            insider_purchases=InsiderPurchase(period="6m", purchases_shares=100, sales_shares=50),
+        ),
+        HolderType.INSIDER_ROSTER: lambda: HoldersData(
+            symbol="TEST",
+            holder_type=HolderType.INSIDER_ROSTER,
+            insider_roster=[
+                InsiderRosterMember(
+                    name="Test",
+                    position="CEO",
+                    most_recent_transaction="Sale",
+                    latest_transaction_date=datetime.now(),
+                    shares_owned_directly=100,
+                )
+            ],
+        ),
+    }
 
+    for endpoint, holder_type in endpoints:
+        mock_holders = mock_data_templates[holder_type]()
         mock_get_holders.return_value = mock_holders
 
         response = client.get(f"/v1/holders/TEST/{endpoint}")

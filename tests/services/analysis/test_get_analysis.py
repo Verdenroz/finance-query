@@ -531,21 +531,18 @@ async def test_get_analysis_data_all_types(mock_finance_client, bypass_cache):
         AnalysisType.EARNINGS_HISTORY,
     ]
 
-    for analysis_type in analysis_types:
-        # Create minimal mock response for each type
-        if analysis_type == AnalysisType.RECOMMENDATIONS:
-            mock_response = {"quoteSummary": {"result": [{"recommendationTrend": {"trend": []}}]}}
-        elif analysis_type == AnalysisType.UPGRADES_DOWNGRADES:
-            mock_response = {"quoteSummary": {"result": [{"upgradeDowngradeHistory": {"history": []}}]}}
-        elif analysis_type == AnalysisType.PRICE_TARGETS:
-            mock_response = {"quoteSummary": {"result": [{"financialData": {}}]}}
-        elif analysis_type == AnalysisType.EARNINGS_ESTIMATE:
-            mock_response = {"quoteSummary": {"result": [{"earningsTrend": {"trend": []}}]}}
-        elif analysis_type == AnalysisType.REVENUE_ESTIMATE:
-            mock_response = {"quoteSummary": {"result": [{"earningsTrend": {"trend": []}}]}}
-        else:  # EARNINGS_HISTORY
-            mock_response = {"quoteSummary": {"result": [{"earningsHistory": {"history": []}}]}}
+    # Mock response templates for each analysis type
+    mock_response_templates = {
+        AnalysisType.RECOMMENDATIONS: {"quoteSummary": {"result": [{"recommendationTrend": {"trend": []}}]}},
+        AnalysisType.UPGRADES_DOWNGRADES: {"quoteSummary": {"result": [{"upgradeDowngradeHistory": {"history": []}}]}},
+        AnalysisType.PRICE_TARGETS: {"quoteSummary": {"result": [{"financialData": {}}]}},
+        AnalysisType.EARNINGS_ESTIMATE: {"quoteSummary": {"result": [{"earningsTrend": {"trend": []}}]}},
+        AnalysisType.REVENUE_ESTIMATE: {"quoteSummary": {"result": [{"earningsTrend": {"trend": []}}]}},
+        AnalysisType.EARNINGS_HISTORY: {"quoteSummary": {"result": [{"earningsHistory": {"history": []}}]}},
+    }
 
+    for analysis_type in analysis_types:
+        mock_response = mock_response_templates[analysis_type]
         mock_finance_client.get_quote_summary.return_value = mock_response
 
         result = await get_analysis_data(mock_finance_client, "TEST", analysis_type)
