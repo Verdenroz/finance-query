@@ -75,7 +75,7 @@ tests = ["test", "*/test"]
 parallel = true
 source = ["src"]
 omit = [
-    "src/security/rate_limit_middleware.py",
+    "src/main.py",
     "src/**/dependencies.py",
     "src/**/*middleware.py",
     "src/**/utils.py",
