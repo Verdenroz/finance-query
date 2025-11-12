@@ -12,13 +12,13 @@
         <meta name="author" content="Harvey Tseng">
       
       
-        <link rel="canonical" href="https://verdenroz.github.io/finance-query/api/holders/">
+        <link rel="canonical" href="https://verdenroz.github.io/finance-query/api/analysis/">
       
       
-        <link rel="prev" href="../financials/">
+        <link rel="prev" href="../indicators/">
       
       
-        <link rel="next" href="../earnings_transcript/">
+        <link rel="next" href="../stream/">
       
       
       <link rel="icon" href="../../assets/logo.png">
@@ -26,7 +26,7 @@
     
     
       
-        <title>Holders - Finance Query</title>
+        <title>Analysis - Finance Query</title>
       
     
     
@@ -80,7 +80,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#holders" class="md-skip">
+        <a href="#analysis-api" class="md-skip">
           Skip to content
         </a>
       
@@ -116,7 +116,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Holders
+              Analysis
             
           </span>
         </div>
@@ -611,32 +611,10 @@
                 
   
   
-    
   
   
-  
-    <li class="md-nav__item md-nav__item--active">
-      
-      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
-      
-      
-        
-      
-      
-        <label class="md-nav__link md-nav__link--active" for="__toc">
-          
-  
-  
-  <span class="md-ellipsis">
-    Holders
-    
-  </span>
-  
-
-          <span class="md-nav__icon md-icon"></span>
-        </label>
-      
-      <a href="./" class="md-nav__link md-nav__link--active">
+    <li class="md-nav__item">
+      <a href="../holders/" class="md-nav__link">
         
   
   
@@ -647,224 +625,6 @@
   
 
       </a>
-      
-        
-
-<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
-  
-  
-  
-    
-  
-  
-    <label class="md-nav__title" for="__toc">
-      <span class="md-nav__icon md-icon"></span>
-      Table of contents
-    </label>
-    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
-      
-        <li class="md-nav__item">
-  <a href="#get-v1holderssymbol" class="md-nav__link">
-    <span class="md-ellipsis">
-      GET /v1/holders/{symbol}
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="GET /v1/holders/{symbol}">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#overview" class="md-nav__link">
-    <span class="md-ellipsis">
-      Overview
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#authentication" class="md-nav__link">
-    <span class="md-ellipsis">
-      Authentication
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#path-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Path Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#query-parameters" class="md-nav__link">
-    <span class="md-ellipsis">
-      Query Parameters
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#responses" class="md-nav__link">
-    <span class="md-ellipsis">
-      Responses
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#schema-references" class="md-nav__link">
-    <span class="md-ellipsis">
-      Schema References
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Schema References">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#holdersdata-schema" class="md-nav__link">
-    <span class="md-ellipsis">
-      HoldersData Schema
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#holdertype" class="md-nav__link">
-    <span class="md-ellipsis">
-      HolderType
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#majorholdersbreakdown" class="md-nav__link">
-    <span class="md-ellipsis">
-      MajorHoldersBreakdown
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#institutionalholder" class="md-nav__link">
-    <span class="md-ellipsis">
-      InstitutionalHolder
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#mutualfundholder" class="md-nav__link">
-    <span class="md-ellipsis">
-      MutualFundHolder
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#insidertransaction" class="md-nav__link">
-    <span class="md-ellipsis">
-      InsiderTransaction
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#insiderpurchase" class="md-nav__link">
-    <span class="md-ellipsis">
-      InsiderPurchase
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#insiderrostermember" class="md-nav__link">
-    <span class="md-ellipsis">
-      InsiderRosterMember
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#usage-examples" class="md-nav__link">
-    <span class="md-ellipsis">
-      Usage Examples
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Usage Examples">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#get-institutional-holders" class="md-nav__link">
-    <span class="md-ellipsis">
-      Get Institutional Holders
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#get-major-holders-breakdown" class="md-nav__link">
-    <span class="md-ellipsis">
-      Get Major Holders Breakdown
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#get-mutual-fund-holders" class="md-nav__link">
-    <span class="md-ellipsis">
-      Get Mutual Fund Holders
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#get-insider-transactions" class="md-nav__link">
-    <span class="md-ellipsis">
-      Get Insider Transactions
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
-    </ul>
-  
-</nav>
-      
     </li>
   
 
@@ -1035,10 +795,32 @@
                 
   
   
+    
   
   
-    <li class="md-nav__item">
-      <a href="../analysis/" class="md-nav__link">
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    Analysis
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
         
   
   
@@ -1049,6 +831,284 @@
   
 
       </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#get-v1analysissymbol" class="md-nav__link">
+    <span class="md-ellipsis">
+      GET /v1/analysis/{symbol}
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="GET /v1/analysis/{symbol}">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#overview" class="md-nav__link">
+    <span class="md-ellipsis">
+      Overview
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#authentication" class="md-nav__link">
+    <span class="md-ellipsis">
+      Authentication
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#path-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Path Parameters
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#query-parameters" class="md-nav__link">
+    <span class="md-ellipsis">
+      Query Parameters
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Query Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-analysis-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Analysis Types
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#responses" class="md-nav__link">
+    <span class="md-ellipsis">
+      Responses
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#schema-references" class="md-nav__link">
+    <span class="md-ellipsis">
+      Schema References
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Schema References">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#analysisdata-schema" class="md-nav__link">
+    <span class="md-ellipsis">
+      AnalysisData Schema
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#recommendationdata" class="md-nav__link">
+    <span class="md-ellipsis">
+      RecommendationData
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#upgradedowngrade" class="md-nav__link">
+    <span class="md-ellipsis">
+      UpgradeDowngrade
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#pricetarget" class="md-nav__link">
+    <span class="md-ellipsis">
+      PriceTarget
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#earningsestimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      EarningsEstimate
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#revenueestimate" class="md-nav__link">
+    <span class="md-ellipsis">
+      RevenueEstimate
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#earningshistoryitem" class="md-nav__link">
+    <span class="md-ellipsis">
+      EarningsHistoryItem
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#sustainabilityscores" class="md-nav__link">
+    <span class="md-ellipsis">
+      SustainabilityScores
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#usage-examples" class="md-nav__link">
+    <span class="md-ellipsis">
+      Usage Examples
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Usage Examples">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#get-analyst-recommendations" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Analyst Recommendations
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-price-targets" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Price Targets
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-earnings-estimates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Earnings Estimates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-sustainability-scores" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Sustainability Scores
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-earnings-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Earnings History
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-revenue-estimates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Revenue Estimates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-upgradesdowngrades" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Upgrades/Downgrades
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Sources
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
     </li>
   
 
@@ -1384,13 +1444,13 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#get-v1holderssymbol" class="md-nav__link">
+  <a href="#get-v1analysissymbol" class="md-nav__link">
     <span class="md-ellipsis">
-      GET /v1/holders/{symbol}
+      GET /v1/analysis/{symbol}
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="GET /v1/holders/{symbol}">
+    <nav class="md-nav" aria-label="GET /v1/analysis/{symbol}">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -1427,6 +1487,21 @@
     </span>
   </a>
   
+    <nav class="md-nav" aria-label="Query Parameters">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#available-analysis-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      Available Analysis Types
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
 </li>
         
           <li class="md-nav__item">
@@ -1449,72 +1524,72 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#holdersdata-schema" class="md-nav__link">
+  <a href="#analysisdata-schema" class="md-nav__link">
     <span class="md-ellipsis">
-      HoldersData Schema
+      AnalysisData Schema
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#holdertype" class="md-nav__link">
+  <a href="#recommendationdata" class="md-nav__link">
     <span class="md-ellipsis">
-      HolderType
+      RecommendationData
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#majorholdersbreakdown" class="md-nav__link">
+  <a href="#upgradedowngrade" class="md-nav__link">
     <span class="md-ellipsis">
-      MajorHoldersBreakdown
+      UpgradeDowngrade
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#institutionalholder" class="md-nav__link">
+  <a href="#pricetarget" class="md-nav__link">
     <span class="md-ellipsis">
-      InstitutionalHolder
+      PriceTarget
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#mutualfundholder" class="md-nav__link">
+  <a href="#earningsestimate" class="md-nav__link">
     <span class="md-ellipsis">
-      MutualFundHolder
+      EarningsEstimate
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#insidertransaction" class="md-nav__link">
+  <a href="#revenueestimate" class="md-nav__link">
     <span class="md-ellipsis">
-      InsiderTransaction
+      RevenueEstimate
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#insiderpurchase" class="md-nav__link">
+  <a href="#earningshistoryitem" class="md-nav__link">
     <span class="md-ellipsis">
-      InsiderPurchase
+      EarningsHistoryItem
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#insiderrostermember" class="md-nav__link">
+  <a href="#sustainabilityscores" class="md-nav__link">
     <span class="md-ellipsis">
-      InsiderRosterMember
+      SustainabilityScores
     </span>
   </a>
   
@@ -1536,36 +1611,63 @@
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#get-institutional-holders" class="md-nav__link">
+  <a href="#get-analyst-recommendations" class="md-nav__link">
     <span class="md-ellipsis">
-      Get Institutional Holders
+      Get Analyst Recommendations
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-major-holders-breakdown" class="md-nav__link">
+  <a href="#get-price-targets" class="md-nav__link">
     <span class="md-ellipsis">
-      Get Major Holders Breakdown
+      Get Price Targets
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-mutual-fund-holders" class="md-nav__link">
+  <a href="#get-earnings-estimates" class="md-nav__link">
     <span class="md-ellipsis">
-      Get Mutual Fund Holders
+      Get Earnings Estimates
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#get-insider-transactions" class="md-nav__link">
+  <a href="#get-sustainability-scores" class="md-nav__link">
     <span class="md-ellipsis">
-      Get Insider Transactions
+      Get Sustainability Scores
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-earnings-history" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Earnings History
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-revenue-estimates" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Revenue Estimates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#get-upgradesdowngrades" class="md-nav__link">
+    <span class="md-ellipsis">
+      Get Upgrades/Downgrades
     </span>
   </a>
   
@@ -1573,6 +1675,24 @@
         
       </ul>
     </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#data-sources" class="md-nav__link">
+    <span class="md-ellipsis">
+      Data Sources
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#error-handling" class="md-nav__link">
+    <span class="md-ellipsis">
+      Error Handling
+    </span>
+  </a>
   
 </li>
         
@@ -1600,11 +1720,11 @@
   
 
 
-<h1 id="holders">Holders<a class="headerlink" href="#holders" title="Permanent link">&para;</a></h1>
-<h2 id="get-v1holderssymbol">GET /v1/holders/{symbol}<a class="headerlink" href="#get-v1holderssymbol" title="Permanent link">&para;</a></h2>
+<h1 id="analysis-api">Analysis API<a class="headerlink" href="#analysis-api" title="Permanent link">&para;</a></h1>
+<h2 id="get-v1analysissymbol">GET /v1/analysis/{symbol}<a class="headerlink" href="#get-v1analysissymbol" title="Permanent link">&para;</a></h2>
 <h3 id="overview">Overview<a class="headerlink" href="#overview" title="Permanent link">&para;</a></h3>
-<p><strong>Purpose:</strong> Retrieve holders information for a given stock symbol.<br />
-<strong>Response Format:</strong> A holders data object containing the requested holder type information.</p>
+<p><strong>Purpose:</strong> Retrieve comprehensive stock analysis data including analyst recommendations, upgrades/downgrades, price targets, earnings/revenue estimates, sustainability scores, and earnings history for a given stock symbol.
+<strong>Response Format:</strong> Analysis data object containing the requested analysis type and associated data.</p>
 <h3 id="authentication">Authentication<a class="headerlink" href="#authentication" title="Permanent link">&para;</a></h3>
 <p>Optional authentication via <code>x-api-key</code> header token</p>
 <h3 id="path-parameters">Path Parameters<a class="headerlink" href="#path-parameters" title="Permanent link">&para;</a></h3>
@@ -1641,114 +1761,161 @@
 </thead>
 <tbody>
 <tr>
-<td><code>holder_type</code></td>
-<td>HolderType</td>
+<td><code>analysis_type</code></td>
+<td>string</td>
 <td style="text-align: center;">✓</td>
-<td>The type of holders data to retrieve</td>
-<td><code>institutional</code></td>
+<td>Type of analysis data to retrieve</td>
+<td><code>recommendations</code></td>
+</tr>
+</tbody>
+</table>
+<h4 id="available-analysis-types">Available Analysis Types<a class="headerlink" href="#available-analysis-types" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Analysis Type</th>
+<th>Description</th>
+<th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>recommendations</code></td>
+<td>Analyst recommendations (strong buy, buy, hold, sell, strong sell)</td>
+<td><code>recommendations</code></td>
+</tr>
+<tr>
+<td><code>upgrades_downgrades</code></td>
+<td>Recent analyst upgrades and downgrades</td>
+<td><code>upgrades_downgrades</code></td>
+</tr>
+<tr>
+<td><code>price_targets</code></td>
+<td>Analyst price targets (current, mean, median, high, low)</td>
+<td><code>price_targets</code></td>
+</tr>
+<tr>
+<td><code>earnings_estimate</code></td>
+<td>Earnings estimates for upcoming periods</td>
+<td><code>earnings_estimate</code></td>
+</tr>
+<tr>
+<td><code>revenue_estimate</code></td>
+<td>Revenue estimates for upcoming periods</td>
+<td><code>revenue_estimate</code></td>
+</tr>
+<tr>
+<td><code>earnings_history</code></td>
+<td>Historical earnings data</td>
+<td><code>earnings_history</code></td>
+</tr>
+<tr>
+<td><code>sustainability</code></td>
+<td>ESG (Environmental, Social, Governance) scores</td>
+<td><code>sustainability</code></td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h3 id="responses">Responses<a class="headerlink" href="#responses" title="Permanent link">&para;</a></h3>
 <ul>
-<li><strong>200 OK</strong>  </li>
-<li><strong>Content-Type:</strong> <code>application/json</code>  </li>
-<li><strong>Schema:</strong> <a href="#holdersdata-schema"><code>HoldersData</code></a></li>
+<li><strong>200 OK</strong></li>
+<li><strong>Content-Type:</strong> <code>application/json</code></li>
+<li><strong>Schema:</strong> <a href="#analysisdata-schema"><code>AnalysisData</code></a></li>
 <li>
-<p><strong>Example (200) - Institutional Holders:</strong>
+<p><strong>Example - Recommendations (200):</strong>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="p">{</span>
 <a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="w">  </span><span class="nt">&quot;symbol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AAPL&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;holder_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;institutional&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;major_breakdown&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">  </span><span class="nt">&quot;institutional_holders&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">&quot;holder&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Vanguard Group Inc&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">&quot;shares&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1311658000</span><span class="p">,</span>
-<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">&quot;date_reported&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2024-03-31T00:00:00&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">      </span><span class="nt">&quot;percent_out&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">8.44</span><span class="p">,</span>
-<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">224234567000</span>
-<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">},</span>
-<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="w">      </span><span class="nt">&quot;holder&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BlackRock Inc.&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-15" name="__codelineno-0-15" href="#__codelineno-0-15"></a><span class="w">      </span><span class="nt">&quot;shares&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1038225000</span><span class="p">,</span>
-<a id="__codelineno-0-16" name="__codelineno-0-16" href="#__codelineno-0-16"></a><span class="w">      </span><span class="nt">&quot;date_reported&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2024-03-31T00:00:00&quot;</span><span class="p">,</span>
-<a id="__codelineno-0-17" name="__codelineno-0-17" href="#__codelineno-0-17"></a><span class="w">      </span><span class="nt">&quot;percent_out&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">6.68</span><span class="p">,</span>
-<a id="__codelineno-0-18" name="__codelineno-0-18" href="#__codelineno-0-18"></a><span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">177456789000</span>
-<a id="__codelineno-0-19" name="__codelineno-0-19" href="#__codelineno-0-19"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-0-20" name="__codelineno-0-20" href="#__codelineno-0-20"></a><span class="w">  </span><span class="p">],</span>
-<a id="__codelineno-0-21" name="__codelineno-0-21" href="#__codelineno-0-21"></a><span class="w">  </span><span class="nt">&quot;mutualfund_holders&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-0-22" name="__codelineno-0-22" href="#__codelineno-0-22"></a><span class="w">  </span><span class="nt">&quot;insider_transactions&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-0-23" name="__codelineno-0-23" href="#__codelineno-0-23"></a><span class="w">  </span><span class="nt">&quot;insider_purchases&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-0-24" name="__codelineno-0-24" href="#__codelineno-0-24"></a><span class="w">  </span><span class="nt">&quot;insider_roster&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
-<a id="__codelineno-0-25" name="__codelineno-0-25" href="#__codelineno-0-25"></a><span class="p">}</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="w">  </span><span class="nt">&quot;analysis_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;recommendations&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="w">  </span><span class="nt">&quot;recommendations&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="w">      </span><span class="nt">&quot;period&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;3m&quot;</span><span class="p">,</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="w">      </span><span class="nt">&quot;strong_buy&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5</span><span class="p">,</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="w">      </span><span class="nt">&quot;buy&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="w">      </span><span class="nt">&quot;hold&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="w">      </span><span class="nt">&quot;sell&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">      </span><span class="nt">&quot;strong_sell&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-0-14" name="__codelineno-0-14" href="#__codelineno-0-14"></a><span class="p">}</span>
 </code></pre></div></p>
 </li>
 <li>
-<p><strong>Example (200) - Major Holders Breakdown:</strong>
+<p><strong>Example - Price Targets (200):</strong>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="p">{</span>
 <a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="w">  </span><span class="nt">&quot;symbol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AAPL&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;holder_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;major&quot;</span><span class="p">,</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;major_breakdown&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">&quot;breakdown_data&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">      </span><span class="nt">&quot;institutionsPercentHeld&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.595</span><span class="p">,</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">      </span><span class="nt">&quot;insidersPercentHeld&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.0007</span><span class="p">,</span>
-<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">      </span><span class="nt">&quot;institutionsFloatPercentHeld&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">0.596</span><span class="p">,</span>
-<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">      </span><span class="nt">&quot;institutionsCount&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5743</span>
-<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="w">  </span><span class="p">},</span>
-<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="w">  </span><span class="nt">&quot;institutional_holders&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="w">  </span><span class="nt">&quot;mutualfund_holders&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a><span class="w">  </span><span class="nt">&quot;insider_transactions&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="w">  </span><span class="nt">&quot;insider_purchases&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a><span class="w">  </span><span class="nt">&quot;insider_roster&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
-<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a><span class="p">}</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="w">  </span><span class="nt">&quot;analysis_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;price_targets&quot;</span><span class="p">,</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="w">  </span><span class="nt">&quot;price_targets&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="nt">&quot;current&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">150.0</span><span class="p">,</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="nt">&quot;mean&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">160.0</span><span class="p">,</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="nt">&quot;median&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">155.0</span><span class="p">,</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="nt">&quot;low&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">140.0</span><span class="p">,</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="nt">&quot;high&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">180.0</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a><span class="p">}</span>
 </code></pre></div></p>
 </li>
 <li>
-<p><strong>Example (200) - Insider Transactions:</strong>
+<p><strong>Example - Earnings Estimate (200):</strong>
     <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="p">{</span>
 <a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="w">  </span><span class="nt">&quot;symbol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AAPL&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;holder_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;insider_transactions&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;major_breakdown&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">  </span><span class="nt">&quot;institutional_holders&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">  </span><span class="nt">&quot;mutualfund_holders&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">  </span><span class="nt">&quot;insider_transactions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">    </span><span class="p">{</span>
-<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">      </span><span class="nt">&quot;start_date&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2024-02-01T00:00:00&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="nt">&quot;insider&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;COOK TIMOTHY D&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="nt">&quot;position&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Chief Executive Officer&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">      </span><span class="nt">&quot;transaction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Sale at price 191.12 - 195.33 per share.&quot;</span><span class="p">,</span>
-<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">      </span><span class="nt">&quot;shares&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">511000</span><span class="p">,</span>
-<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">      </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">98620000</span><span class="p">,</span>
-<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">      </span><span class="nt">&quot;ownership&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;D&quot;</span>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="w">  </span><span class="nt">&quot;analysis_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;earnings_estimate&quot;</span><span class="p">,</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="w">  </span><span class="nt">&quot;earnings_estimate&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="w">    </span><span class="nt">&quot;estimates&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="w">      </span><span class="nt">&quot;2024-12-31&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="w">        </span><span class="nt">&quot;avg&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">6.5</span><span class="p">,</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="w">        </span><span class="nt">&quot;low&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">6.0</span><span class="p">,</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="w">        </span><span class="nt">&quot;high&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">7.0</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a><span class="w">      </span><span class="p">},</span>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="w">      </span><span class="nt">&quot;2025-12-31&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="w">        </span><span class="nt">&quot;avg&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">7.2</span><span class="p">,</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="w">        </span><span class="nt">&quot;low&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">6.8</span><span class="p">,</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="w">        </span><span class="nt">&quot;high&quot;</span><span class="p">:</span><span class="w"> </span><span class="mf">7.6</span>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="w">      </span><span class="p">}</span>
 <a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a><span class="w">    </span><span class="p">}</span>
-<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">  </span><span class="p">],</span>
-<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="w">  </span><span class="nt">&quot;insider_purchases&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span><span class="p">,</span>
-<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="w">  </span><span class="nt">&quot;insider_roster&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">null</span>
-<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a><span class="p">}</span>
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a><span class="p">}</span>
 </code></pre></div></p>
 </li>
 <li>
-<p><strong>404 Not Found</strong><br />
-  <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">&quot;detail&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;No data found for SYMBOL&quot;</span><span class="w"> </span><span class="p">}</span>
+<p><strong>Example - Sustainability (200):</strong>
+    <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="p">{</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">  </span><span class="nt">&quot;symbol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;AAPL&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">  </span><span class="nt">&quot;analysis_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;sustainability&quot;</span><span class="p">,</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">  </span><span class="nt">&quot;sustainability&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="nt">&quot;scores&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">      </span><span class="nt">&quot;environmentScore&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">75</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">      </span><span class="nt">&quot;socialScore&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">      </span><span class="nt">&quot;governanceScore&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">85</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">      </span><span class="nt">&quot;totalEsg&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">80</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">  </span><span class="p">}</span>
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a><span class="p">}</span>
+</code></pre></div></p>
+</li>
+<li>
+<p><strong>404 Not Found</strong>
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span><span class="w"> </span><span class="nt">&quot;detail&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Symbol not found or no analysis data available for the specified type&quot;</span><span class="w"> </span><span class="p">}</span>
 </code></pre></div></p>
 </li>
 <li>
 <p><strong>422 Unprocessable Entity</strong>
-  <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="p">{</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="w">  </span><span class="nt">&quot;errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">      </span><span class="nt">&quot;holder_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">          </span><span class="s2">&quot;Input should be &#39;major&#39;, &#39;institutional&#39;, &#39;mutualfund&#39;, &#39;insider_transactions&#39;, &#39;insider_purchases&#39; or &#39;insider_roster&#39;&quot;</span>
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">      </span><span class="p">]</span>
-<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">  </span><span class="p">}</span>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="p">}</span>
+  <div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="p">{</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">  </span><span class="nt">&quot;detail&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="p">{</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="w">      </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enum&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="w">      </span><span class="nt">&quot;loc&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;query&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;analysis_type&quot;</span><span class="p">],</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="w">      </span><span class="nt">&quot;msg&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Input should be &#39;recommendations&#39;, &#39;upgrades_downgrades&#39;, &#39;price_targets&#39;, &#39;earnings_estimate&#39;, &#39;revenue_estimate&#39;, &#39;earnings_history&#39;, or &#39;sustainability&#39;&quot;</span><span class="p">,</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="w">      </span><span class="nt">&quot;input&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;invalid_type&quot;</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">  </span><span class="p">]</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="p">}</span>
 </code></pre></div></p>
 </li>
 </ul>
 <hr />
 <h3 id="schema-references">Schema References<a class="headerlink" href="#schema-references" title="Permanent link">&para;</a></h3>
-<h4 id="holdersdata-schema">HoldersData Schema<a class="headerlink" href="#holdersdata-schema" title="Permanent link">&para;</a></h4>
+<h4 id="analysisdata-schema">AnalysisData Schema<a class="headerlink" href="#analysisdata-schema" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
 <tr>
@@ -1766,218 +1933,56 @@
 <td style="text-align: center;">✓</td>
 </tr>
 <tr>
-<td>holder_type</td>
-<td><a href="#holdertype">HolderType</a></td>
-<td>Type of holders data</td>
+<td>analysis_type</td>
+<td>string</td>
+<td>Type of analysis data requested</td>
 <td style="text-align: center;">✓</td>
 </tr>
 <tr>
-<td>major_breakdown</td>
-<td><a href="#majorholdersbreakdown">MajorHoldersBreakdown</a></td>
-<td>Major holders breakdown (when holder_type=major)</td>
+<td>recommendations</td>
+<td><a href="#recommendationdata">RecommendationData[]</a></td>
+<td>Analyst recommendations data</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>institutional_holders</td>
-<td><a href="#institutionalholder">InstitutionalHolder[]</a></td>
-<td>List of institutional holders</td>
+<td>upgrades_downgrades</td>
+<td><a href="#upgradedowngrade">UpgradeDowngrade[]</a></td>
+<td>Analyst upgrades/downgrades data</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>mutualfund_holders</td>
-<td><a href="#mutualfundholder">MutualFundHolder[]</a></td>
-<td>List of mutual fund holders</td>
+<td>price_targets</td>
+<td><a href="#pricetarget">PriceTarget</a></td>
+<td>Analyst price targets data</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>insider_transactions</td>
-<td><a href="#insidertransaction">InsiderTransaction[]</a></td>
-<td>List of insider transactions</td>
+<td>earnings_estimate</td>
+<td><a href="#earningsestimate">EarningsEstimate</a></td>
+<td>Earnings estimates data</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>insider_purchases</td>
-<td><a href="#insiderpurchase">InsiderPurchase</a></td>
-<td>Insider purchase activity summary</td>
+<td>revenue_estimate</td>
+<td><a href="#revenueestimate">RevenueEstimate</a></td>
+<td>Revenue estimates data</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>insider_roster</td>
-<td><a href="#insiderrostermember">InsiderRosterMember[]</a></td>
-<td>List of insider roster members</td>
+<td>earnings_history</td>
+<td><a href="#earningshistoryitem">EarningsHistoryItem[]</a></td>
+<td>Historical earnings data</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>sustainability</td>
+<td><a href="#sustainabilityscores">SustainabilityScores</a></td>
+<td>ESG sustainability scores data</td>
 <td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
-<h4 id="holdertype">HolderType<a class="headerlink" href="#holdertype" title="Permanent link">&para;</a></h4>
-<p>An <code>Enum</code> with the following possible string values:
-- <code>major</code> - Major holders breakdown
-- <code>institutional</code> - Institutional holders list
-- <code>mutualfund</code> - Mutual fund holders list
-- <code>insider_transactions</code> - Insider transaction history
-- <code>insider_purchases</code> - Insider purchase activity summary
-- <code>insider_roster</code> - Current insider roster</p>
-<h4 id="majorholdersbreakdown">MajorHoldersBreakdown<a class="headerlink" href="#majorholdersbreakdown" title="Permanent link">&para;</a></h4>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
-<th style="text-align: center;">Required</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>breakdown_data</td>
-<td>object</td>
-<td>Key-value pairs of major holder metrics</td>
-<td style="text-align: center;">✓</td>
-</tr>
-</tbody>
-</table>
-<h4 id="institutionalholder">InstitutionalHolder<a class="headerlink" href="#institutionalholder" title="Permanent link">&para;</a></h4>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
-<th style="text-align: center;">Required</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>holder</td>
-<td>string</td>
-<td>Institution name</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>shares</td>
-<td>integer</td>
-<td>Number of shares held</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>date_reported</td>
-<td>datetime</td>
-<td>Date of last report</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>percent_out</td>
-<td>number</td>
-<td>Percentage of outstanding shares</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>value</td>
-<td>integer</td>
-<td>Value of holdings</td>
-<td style="text-align: center;"></td>
-</tr>
-</tbody>
-</table>
-<h4 id="mutualfundholder">MutualFundHolder<a class="headerlink" href="#mutualfundholder" title="Permanent link">&para;</a></h4>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
-<th style="text-align: center;">Required</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>holder</td>
-<td>string</td>
-<td>Fund name</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>shares</td>
-<td>integer</td>
-<td>Number of shares held</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>date_reported</td>
-<td>datetime</td>
-<td>Date of last report</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>percent_out</td>
-<td>number</td>
-<td>Percentage of outstanding shares</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>value</td>
-<td>integer</td>
-<td>Value of holdings</td>
-<td style="text-align: center;"></td>
-</tr>
-</tbody>
-</table>
-<h4 id="insidertransaction">InsiderTransaction<a class="headerlink" href="#insidertransaction" title="Permanent link">&para;</a></h4>
-<table>
-<thead>
-<tr>
-<th>Field</th>
-<th>Type</th>
-<th>Description</th>
-<th style="text-align: center;">Required</th>
-</tr>
-</thead>
-<tbody>
-<tr>
-<td>start_date</td>
-<td>datetime</td>
-<td>Transaction start date</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>insider</td>
-<td>string</td>
-<td>Insider name</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>position</td>
-<td>string</td>
-<td>Insider position/relation</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>transaction</td>
-<td>string</td>
-<td>Transaction description</td>
-<td style="text-align: center;">✓</td>
-</tr>
-<tr>
-<td>shares</td>
-<td>integer</td>
-<td>Number of shares</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>value</td>
-<td>integer</td>
-<td>Transaction value</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>ownership</td>
-<td>string</td>
-<td>Ownership type (direct/indirect)</td>
-<td style="text-align: center;"></td>
-</tr>
-</tbody>
-</table>
-<h4 id="insiderpurchase">InsiderPurchase<a class="headerlink" href="#insiderpurchase" title="Permanent link">&para;</a></h4>
+<h4 id="recommendationdata">RecommendationData<a class="headerlink" href="#recommendationdata" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
 <tr>
@@ -1991,72 +1996,42 @@
 <tr>
 <td>period</td>
 <td>string</td>
-<td>Time period for the data</td>
+<td>Time period (e.g., "3m", "1m")</td>
 <td style="text-align: center;">✓</td>
 </tr>
 <tr>
-<td>purchases_shares</td>
-<td>integer</td>
-<td>Shares purchased</td>
+<td>strong_buy</td>
+<td>int</td>
+<td>Number of strong buy recommendations</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>purchases_transactions</td>
-<td>integer</td>
-<td>Number of purchase transactions</td>
+<td>buy</td>
+<td>int</td>
+<td>Number of buy recommendations</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>sales_shares</td>
-<td>integer</td>
-<td>Shares sold</td>
+<td>hold</td>
+<td>int</td>
+<td>Number of hold recommendations</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>sales_transactions</td>
-<td>integer</td>
-<td>Number of sale transactions</td>
+<td>sell</td>
+<td>int</td>
+<td>Number of sell recommendations</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>net_shares</td>
-<td>integer</td>
-<td>Net shares purchased/sold</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>net_transactions</td>
-<td>integer</td>
-<td>Net transactions</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>total_insider_shares</td>
-<td>integer</td>
-<td>Total insider shares held</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>net_percent_insider_shares</td>
-<td>number</td>
-<td>Net % of insider shares</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>buy_percent_insider_shares</td>
-<td>number</td>
-<td>% buy shares</td>
-<td style="text-align: center;"></td>
-</tr>
-<tr>
-<td>sell_percent_insider_shares</td>
-<td>number</td>
-<td>% sell shares</td>
+<td>strong_sell</td>
+<td>int</td>
+<td>Number of strong sell recommendations</td>
 <td style="text-align: center;"></td>
 </tr>
 </tbody>
 </table>
-<h4 id="insiderrostermember">InsiderRosterMember<a class="headerlink" href="#insiderrostermember" title="Permanent link">&para;</a></h4>
+<h4 id="upgradedowngrade">UpgradeDowngrade<a class="headerlink" href="#upgradedowngrade" title="Permanent link">&para;</a></h4>
 <table>
 <thead>
 <tr>
@@ -2068,67 +2043,220 @@
 </thead>
 <tbody>
 <tr>
-<td>name</td>
+<td>firm</td>
 <td>string</td>
-<td>Insider name</td>
+<td>Firm providing the upgrade/downgrade</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>to_grade</td>
+<td>string</td>
+<td>New grade/recommendation</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>from_grade</td>
+<td>string</td>
+<td>Previous grade/recommendation</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>action</td>
+<td>string</td>
+<td>Action taken (upgrade, downgrade)</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>date</td>
+<td>datetime</td>
+<td>Date of the action</td>
+<td style="text-align: center;"></td>
+</tr>
+</tbody>
+</table>
+<h4 id="pricetarget">PriceTarget<a class="headerlink" href="#pricetarget" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+<th style="text-align: center;">Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>current</td>
+<td>float</td>
+<td>Current stock price</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>mean</td>
+<td>float</td>
+<td>Mean analyst price target</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>median</td>
+<td>float</td>
+<td>Median analyst price target</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>low</td>
+<td>float</td>
+<td>Lowest analyst price target</td>
+<td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>high</td>
+<td>float</td>
+<td>Highest analyst price target</td>
+<td style="text-align: center;"></td>
+</tr>
+</tbody>
+</table>
+<h4 id="earningsestimate">EarningsEstimate<a class="headerlink" href="#earningsestimate" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+<th style="text-align: center;">Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>estimates</td>
+<td>object</td>
+<td>Earnings estimates by period</td>
 <td style="text-align: center;">✓</td>
 </tr>
+</tbody>
+</table>
+<h4 id="revenueestimate">RevenueEstimate<a class="headerlink" href="#revenueestimate" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
 <tr>
-<td>position</td>
-<td>string</td>
-<td>Position/relation</td>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+<th style="text-align: center;">Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>estimates</td>
+<td>object</td>
+<td>Revenue estimates by period</td>
 <td style="text-align: center;">✓</td>
 </tr>
+</tbody>
+</table>
+<h4 id="earningshistoryitem">EarningsHistoryItem<a class="headerlink" href="#earningshistoryitem" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
 <tr>
-<td>most_recent_transaction</td>
-<td>string</td>
-<td>Most recent transaction</td>
-<td style="text-align: center;"></td>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+<th style="text-align: center;">Required</th>
 </tr>
+</thead>
+<tbody>
 <tr>
-<td>latest_transaction_date</td>
+<td>date</td>
 <td>datetime</td>
-<td>Latest transaction date</td>
+<td>Date of earnings report</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>shares_owned_directly</td>
-<td>integer</td>
-<td>Shares owned directly</td>
+<td>eps_actual</td>
+<td>float</td>
+<td>Actual earnings per share</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>shares_owned_indirectly</td>
-<td>integer</td>
-<td>Shares owned indirectly</td>
+<td>eps_estimate</td>
+<td>float</td>
+<td>Estimated earnings per share</td>
 <td style="text-align: center;"></td>
 </tr>
 <tr>
-<td>position_direct_date</td>
-<td>datetime</td>
-<td>Position direct date</td>
+<td>surprise</td>
+<td>float</td>
+<td>Earnings surprise amount</td>
 <td style="text-align: center;"></td>
+</tr>
+<tr>
+<td>surprise_percent</td>
+<td>float</td>
+<td>Earnings surprise percentage</td>
+<td style="text-align: center;"></td>
+</tr>
+</tbody>
+</table>
+<h4 id="sustainabilityscores">SustainabilityScores<a class="headerlink" href="#sustainabilityscores" title="Permanent link">&para;</a></h4>
+<table>
+<thead>
+<tr>
+<th>Field</th>
+<th>Type</th>
+<th>Description</th>
+<th style="text-align: center;">Required</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>scores</td>
+<td>object</td>
+<td>ESG scores and metrics</td>
+<td style="text-align: center;">✓</td>
 </tr>
 </tbody>
 </table>
 <hr />
 <h3 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h3>
-<h4 id="get-institutional-holders">Get Institutional Holders<a class="headerlink" href="#get-institutional-holders" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/holders/AAPL?holder_type=institutional&quot;</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: YOUR_API_KEY&quot;</span>
-</code></pre></div>
-<h4 id="get-major-holders-breakdown">Get Major Holders Breakdown<a class="headerlink" href="#get-major-holders-breakdown" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/holders/MSFT?holder_type=major&quot;</span><span class="w"> </span><span class="se">\</span>
+<h4 id="get-analyst-recommendations">Get Analyst Recommendations<a class="headerlink" href="#get-analyst-recommendations" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/analysis/AAPL?analysis_type=recommendations&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: YOUR_API_KEY&quot;</span>
 </code></pre></div>
-<h4 id="get-mutual-fund-holders">Get Mutual Fund Holders<a class="headerlink" href="#get-mutual-fund-holders" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/holders/GOOGL?holder_type=mutualfund&quot;</span><span class="w"> </span><span class="se">\</span>
+<h4 id="get-price-targets">Get Price Targets<a class="headerlink" href="#get-price-targets" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/analysis/MSFT?analysis_type=price_targets&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: YOUR_API_KEY&quot;</span>
 </code></pre></div>
-<h4 id="get-insider-transactions">Get Insider Transactions<a class="headerlink" href="#get-insider-transactions" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/holders/TSLA?holder_type=insider_transactions&quot;</span><span class="w"> </span><span class="se">\</span>
+<h4 id="get-earnings-estimates">Get Earnings Estimates<a class="headerlink" href="#get-earnings-estimates" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/analysis/GOOGL?analysis_type=earnings_estimate&quot;</span><span class="w"> </span><span class="se">\</span>
 <a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: YOUR_API_KEY&quot;</span>
 </code></pre></div>
+<h4 id="get-sustainability-scores">Get Sustainability Scores<a class="headerlink" href="#get-sustainability-scores" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/analysis/TSLA?analysis_type=sustainability&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: YOUR_API_KEY&quot;</span>
+</code></pre></div>
+<h4 id="get-earnings-history">Get Earnings History<a class="headerlink" href="#get-earnings-history" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/analysis/NVDA?analysis_type=earnings_history&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: YOUR_API_KEY&quot;</span>
+</code></pre></div>
+<h4 id="get-revenue-estimates">Get Revenue Estimates<a class="headerlink" href="#get-revenue-estimates" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/analysis/AMZN?analysis_type=revenue_estimate&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: YOUR_API_KEY&quot;</span>
+</code></pre></div>
+<h4 id="get-upgradesdowngrades">Get Upgrades/Downgrades<a class="headerlink" href="#get-upgradesdowngrades" title="Permanent link">&para;</a></h4>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>curl<span class="w"> </span>-X<span class="w"> </span>GET<span class="w"> </span><span class="s2">&quot;https://finance-query.onrender.com/v1/analysis/META?analysis_type=upgrades_downgrades&quot;</span><span class="w"> </span><span class="se">\</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="w">     </span>-H<span class="w"> </span><span class="s2">&quot;x-api-key: YOUR_API_KEY&quot;</span>
+</code></pre></div>
+<hr />
+<h3 id="data-sources">Data Sources<a class="headerlink" href="#data-sources" title="Permanent link">&para;</a></h3>
+<p>This endpoint uses the <code>yfinance</code> library to fetch real-time analysis data from Yahoo Finance, providing comprehensive analyst insights and market data for informed investment decisions.</p>
+<h3 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h3>
+<ul>
+<li><strong>Graceful Degradation</strong>: Missing data fields return <code>null</code> rather than errors</li>
+<li><strong>Symbol Validation</strong>: Invalid symbols return 404 Not Found</li>
+<li><strong>Type Validation</strong>: Invalid analysis types return 422 Unprocessable Entity</li>
+<li><strong>Server Errors</strong>: Unexpected errors return 500 Internal Server Error</li>
+</ul>
 
 
 
