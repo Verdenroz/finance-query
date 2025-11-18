@@ -54,7 +54,7 @@ curl-cffi==0.13.0
     #   yfinance
 cython==3.1.6
     # via financequery
-defeatbeta-api==0.0.23
+defeatbeta-api==0.0.24
     # via financequery
 distlib==0.4.0
     # via virtualenv
