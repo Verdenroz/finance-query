@@ -1,1 +1,0 @@
-# Earnings transcript service tests

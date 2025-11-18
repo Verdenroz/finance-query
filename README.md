@@ -4,18 +4,20 @@
   <img src=".github/assets/logo.png" alt="FinanceQuery" width="187">
 </p>
 
-[![Tests](https://github.com/Verdenroz/finance-query/actions/workflows/tests.yml/badge.svg)](https://github.com/Verdenroz/finance-query/actions/workflows/tests.yml)
-[![codecov](https://codecov.io/gh/Verdenroz/finance-query/graph/badge.svg?token=0S3003BAZY)](https://codecov.io/gh/Verdenroz/finance-query)
-[![AWS Deploy](https://img.shields.io/github/actions/workflow/status/Verdenroz/finance-query/aws-deploy.yml?branch=master&logo=amazon-aws&label=AWS%20Deploy)](https://github.com/Verdenroz/finance-query/actions/workflows/aws-deploy.yml)
-[![Render Deploy](https://img.shields.io/github/actions/workflow/status/Verdenroz/finance-query/render-deploy.yml?branch=master&logo=render&label=Render%20Deploy)](https://github.com/Verdenroz/finance-query/actions/workflows/render-deploy.yml)
-[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
-[![Python 3.11+](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org/downloads/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
+[![CI](https://github.com/Verdenroz/finance-query/actions/workflows/ci.yml/badge.svg?branch=v2/rust)](https://github.com/Verdenroz/finance-query/actions/workflows/ci.yml)
+[![Rust 1.83+](https://img.shields.io/badge/rust-1.83+-orange.svg)](https://www.rust-lang.org)
+[![Axum](https://img.shields.io/badge/Axum-0.7-blue.svg)](https://github.com/tokio-rs/axum)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**FinanceQuery** is an open-source API for financial data that provides real-time quotes, market data, news, and
-technical indicators. It sources data from the unofficial Yahoo Finance API, web scraping, and other financial data
-providers.
+**FinanceQuery v2** is a financial data API built with Rust and Axum. It provides real-time quotes,
+market data, news, and technical indicators by aggregating data from Yahoo Finance and other sources.
+
+> **Note**: This is v2, a complete Rust rewrite of the original Python-based API for improved performance and reliability.
+
+## Prerequisites
+
+- Rust 1.83 or higher ([install Rust](https://www.rust-lang.org/tools/install))
+- (Optional) Docker for containerized deployment
 
 ## Documentation
 
@@ -35,26 +37,27 @@ Go to the project directory
 cd finance-query
 ```
 
-Install dependencies
+Build the project
 
 ```bash
-# Using uv (recommended)
-uv sync
+# Debug build (for development)
+cargo build
 
-# Using pip
-pip install -e .
-```
-
-Cythonize files
-
-```bash
-python setup.py build_ext --inplace
+# Release build (optimized for production)
+cargo build --release
 ```
 
 Start the server
 
 ```bash
-python -m uvicorn src.main:app --reload
+# Run in development mode
+cargo run
+
+# Run release build
+cargo run --release
+
+# Or use make
+make serve
 ```
 
 ## Usage/Examples

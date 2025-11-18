@@ -1,21 +1,46 @@
-default_language_version:
-  python: python3.13
-
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.7
+  # Rust pre-commit hooks
+  - repo: local
     hooks:
-      - id: ruff
-        args:
-          - --fix
-      - id: ruff-format
+      # Check Rust code formatting
+      - id: fmt
+        name: cargo fmt
+        description: Check Rust code formatting with rustfmt
+        entry: cargo fmt --all -- --check
+        language: system
+        types: [rust]
+        pass_filenames: false
 
+      # Run Clippy linter on workspace
+      - id: clippy
+        name: cargo clippy
+        description: Run clippy linter on all targets
+        entry: bash -c 'cargo clippy --workspace --all-targets --all-features -- -D warnings'
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+      # Run cargo check for fast compilation check
+      - id: cargo-check
+        name: cargo check
+        description: Check that Rust code compiles
+        entry: bash -c 'cargo check --workspace --all-targets --all-features'
+        language: system
+        types: [rust]
+        pass_filenames: false
+
+  # General pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
       - id: check-added-large-files
+        args: ['--maxkb=1000']
       - id: check-toml
       - id: check-yaml
+        args: ['--unsafe']
       - id: end-of-file-fixer
+        exclude: ^(docs/|book/)
       - id: trailing-whitespace
-        exclude: ^docs/
+        exclude: ^(docs/|book/)
+      - id: mixed-line-ending
+        args: ['--fix=lf']

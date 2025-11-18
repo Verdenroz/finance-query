@@ -1,13 +1,14 @@
-.PHONY: help serve install install-dev build test lint docs docker docker-aws clean
+.PHONY: help serve install install-dev build test lint fix docs docker clean
 
 # Default target
 .DEFAULT_GOAL := help
 
 # Variables
-UV := uv
-PYTHON := python3
-MKDOCS := mkdocs
+CARGO := cargo
+MDBOOK := mdbook
 DOCKER := docker
+PRECOMMIT := pre-commit
+PORT ?= 8000
 
 # Colors
 GREEN := $(shell printf '\033[0;32m')
@@ -20,68 +21,52 @@ help: ## Show available commands
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "$(YELLOW)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 serve: ## Start development server
-	@echo "$(GREEN)Starting server at http://localhost:8000$(NC)"
-	$(PYTHON) -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+	@echo "$(GREEN)Starting server at http://localhost:$(PORT)$(NC)"
+	PORT=$(PORT) $(CARGO) run -p finance-query-server
 
-install: ## Install production dependencies
-	@echo "$(GREEN)Installing production dependencies...$(NC)"
-	$(UV) sync
-	$(PYTHON) setup.py build_ext --inplace
+install: ## Build release binary
+	@echo "$(GREEN)Building release binary...$(NC)"
+	$(CARGO) build --release -p finance-query-server
 
-install-dev: ## Install dev dependencies + pre-commit hooks
-	@echo "$(GREEN)Installing dev dependencies...$(NC)"
-	$(UV) sync --all-groups
-	$(PYTHON) setup.py build_ext --inplace
-	pre-commit install
+install-dev: ## Install dev tools and build workspace
+	@echo "$(GREEN)Installing dev tools...$(NC)"
+	rustup component add rustfmt clippy
+	@echo "$(GREEN)Building workspace in dev mode...$(NC)"
+	$(CARGO) build --workspace
+	@echo "$(GREEN)✓ Dev environment ready! Run 'make lint' before committing.$(NC)"
 
-build: ## Build Cython extensions
-	@echo "$(GREEN)Building Cython extensions...$(NC)"
-	$(PYTHON) setup.py build_ext --inplace
+build: ## Build in release mode
+	@echo "$(GREEN)Building server in release mode...$(NC)"
+	$(CARGO) build --release -p finance-query-server
 
-test: ## Run tests with coverage
-	@echo "$(GREEN)Running tests with coverage...$(NC)"
-	pytest
+test: ## Run all tests
+	@echo "$(GREEN)Running tests...$(NC)"
+	$(CARGO) test --workspace -- --nocapture
 
-lint: ## Run linting and formatting
-	@echo "$(GREEN)Running linting and formatting...$(NC)"
-	pre-commit run --all-files
+lint: ## Run all pre-commit checks (formatting, linting, compilation, and file checks)
+	@echo "$(GREEN)Running all pre-commit checks...$(NC)"
+	@prek
+
+fix: ## Auto-fix formatting and linting issues, then verify with pre-commit checks
+	@echo "$(GREEN)Formatting code...$(NC)"
+	@$(CARGO) fmt --all
+	@echo "$(GREEN)Fixing clippy issues...$(NC)"
+	@$(CARGO) clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged
+	@echo "$(GREEN)Running pre-commit checks to verify...$(NC)"
+	@prek
+	@echo "$(GREEN)✓ Auto-fix complete and verified!$(NC)"
 
 docs: ## Build and serve documentation
-	@echo "$(GREEN)Serving docs at http://localhost:8001$(NC)"
-	$(MKDOCS) serve --dev-addr=0.0.0.0:8001
+	@echo "$(GREEN)Serving docs at http://localhost:3000$(NC)"
+	$(MDBOOK) serve --open
 
 docker: ## Build and run Docker container
-	@echo "$(GREEN)Building and running Docker container...$(NC)"
+	@echo "$(GREEN)Building Docker image...$(NC)"
 	$(DOCKER) build -t financequery .
-	$(DOCKER) run -p 8000:8000 financequery
-
-docker-aws: ## Build and test AWS Lambda Docker image
-	@echo "$(GREEN)Building AWS Lambda Docker image...$(NC)"
-	$(DOCKER) build -f Dockerfile.aws -t financequery-lambda .
-	@echo "$(GREEN)Starting Lambda container in background...$(NC)"
-	$(DOCKER) run -d --name financequery-lambda-test -p 9000:8080 financequery-lambda
-	@echo "$(YELLOW)Waiting for Lambda to be ready...$(NC)"
-	@sleep 5
-	@echo "$(GREEN)Testing /ping endpoint...$(NC)"
-	@curl -s -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
-		-H "Content-Type: application/json" \
-		-d '{"resource":"/ping","path":"/ping","httpMethod":"GET","headers":{"Accept":"*/*","Host":"localhost:9000"},"requestContext":{"requestId":"test-request-id","accountId":"123456789012","stage":"prod","identity":{"sourceIp":"127.0.0.1"}},"queryStringParameters":null,"pathParameters":null,"stageVariables":null,"body":null,"isBase64Encoded":false}' \
-		| grep -q '"statusCode": 200' && echo "$(GREEN)✓ /ping endpoint working$(NC)" || (echo "$(YELLOW)✗ /ping endpoint failed$(NC)" && exit 1)
-	@echo "$(GREEN)Testing /health endpoint...$(NC)"
-	@curl -s -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
-		-H "Content-Type: application/json" \
-		-d '{"resource":"/health","path":"/health","httpMethod":"GET","headers":{"Accept":"*/*","Host":"localhost:9000"},"requestContext":{"requestId":"test-request-id","accountId":"123456789012","stage":"prod","identity":{"sourceIp":"127.0.0.1"}},"queryStringParameters":null,"pathParameters":null,"stageVariables":null,"body":null,"isBase64Encoded":false}' \
-		| grep -q '"statusCode": 200' && echo "$(GREEN)✓ /health endpoint working$(NC)" || (echo "$(YELLOW)✗ /health endpoint failed$(NC)" && exit 1)
-	@echo "$(GREEN)All tests passed! Cleaning up...$(NC)"
-	@$(DOCKER) stop financequery-lambda-test > /dev/null
-	@$(DOCKER) rm financequery-lambda-test > /dev/null
-	@echo "$(GREEN)AWS Lambda Docker image test complete!$(NC)"
+	@echo "$(GREEN)Running container on port $(PORT)...$(NC)"
+	$(DOCKER) run -p $(PORT):8000 --env-file .env financequery
 
 clean: ## Clean build artifacts and cache
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
-	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/ .ruff_cache/
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.c" -path "*/services/indicators/core/*" -delete
-	find . -type f -name "*.so" -path "*/services/indicators/core/*" -delete
-	find . -type f -name "*.pyd" -path "*/services/indicators/core/*" -delete
+	$(CARGO) clean
+	rm -rf book/ target/ Cargo.lock

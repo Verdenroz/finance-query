@@ -1,12 +1,6 @@
 # Project-specific ignores
 /*.zip
-env
 /.env
-.venv/
-__pycache__/
-*.pyc
-
-# Additions to standard GitHub .gitignore:
 *.bak
 *.orig
 tmp/
@@ -14,154 +8,51 @@ trash/
 attic/
 .kash/
 
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+# Rust build artifacts
+/target/
+Cargo.lock  # Uncomment for libraries: #Cargo.lock
+**/*.rs.bk
+*.pdb
 
-# C extensions
-*.so
-*.c
+# Rust debug files
+debug/
+target/*/debug/
+*.dSYM/
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+# Rustfmt backup files
+*.rs.bak
 
-# PyInstaller
-*.manifest
-*.spec
+# Clippy cache
+.clippy.toml
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+# Test coverage
+*.profraw
+*.profdata
+tarpaulin-report.html
+cobertura.xml
+lcov.info
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
+# IDE files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
 
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
+# Logs
 *.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
 
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
+# Documentation build
+/site
+/book
 docs/_build/
 
-# PyBuilder
-.pybuilder/
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# pyenv
-# .python-version
-
-# pipenv
-#Pipfile.lock
-
-# UV
-#uv.lock
-
-# poetry
-#poetry.lock
-
-# pdm
-.pdm.toml
-.pdm-python
-.pdm-build/
-
-# PEP 582
-__pypackages__/
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# SageMath parsed files
-*.sage.py
-
-# Environments
+# Environment variables
 .env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+.env.local
+.env.*.local
 
-# Spyder project settings
-.spyderproject
-.spyproject
-
-# Rope project settings
-.ropeproject
-
-# mkdocs documentation
-/site
-
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#.idea/
-
-# PyPI configuration file
-.pypirc
-
-# YoYo AI version control directory
-.yoyo/
+# OS files
+.DS_Store
+Thumbs.db
