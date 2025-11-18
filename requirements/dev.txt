@@ -46,7 +46,7 @@ colorama==0.4.6
     #   mkdocs-material
     #   pytest
     #   tqdm
-coverage==7.11.0
+coverage==7.11.3
     # via pytest-cov
 curl-cffi==0.13.0
     # via
