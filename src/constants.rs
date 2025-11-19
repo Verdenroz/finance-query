@@ -8,15 +8,6 @@ pub mod urls {
 
     /// Yahoo authentication/cookie page
     pub const YAHOO_FC: &str = "https://fc.yahoo.com";
-
-    /// GUCE consent page
-    pub const YAHOO_GUCE_CONSENT: &str = "https://guce.yahoo.com/consent";
-
-    /// Consent submission endpoint
-    pub const YAHOO_CONSENT_SUBMIT: &str = "https://consent.yahoo.com/v2/collectConsent";
-
-    /// Copy consent endpoint
-    pub const YAHOO_COPY_CONSENT: &str = "https://guce.yahoo.com/copyConsent";
 }
 
 /// Yahoo Finance API endpoints
@@ -27,10 +18,6 @@ pub mod endpoints {
     pub const CRUMB_QUERY1: &str =
         const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/test/getcrumb");
 
-    /// Get crumb token (query2)
-    pub const CRUMB_QUERY2: &str =
-        const_format::concatcp!(YAHOO_FINANCE_QUERY2, "/v1/test/getcrumb");
-
     /// Quote summary endpoint (detailed quote data)
     pub fn quote_summary(symbol: &str) -> String {
         format!(
@@ -40,18 +27,22 @@ pub mod endpoints {
     }
 
     /// Simple quotes endpoint (batch quotes)
+    #[allow(dead_code)]
     pub const SIMPLE_QUOTES: &str =
         const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v7/finance/quote");
 
     /// Historical chart data endpoint
+    #[allow(dead_code)]
     pub fn chart(symbol: &str) -> String {
         format!("{}/v8/finance/chart/{}", YAHOO_FINANCE_QUERY1, symbol)
     }
 
     /// Search endpoint
+    #[allow(dead_code)]
     pub const SEARCH: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/finance/search");
 
     /// Financial timeseries endpoint (financials)
+    #[allow(dead_code)]
     pub fn financials(symbol: &str) -> String {
         format!(
             "{}/ws/fundamentals-timeseries/v1/finance/timeseries/{}",
@@ -60,6 +51,7 @@ pub mod endpoints {
     }
 
     /// Recommendations endpoint (similar stocks)
+    #[allow(dead_code)]
     pub fn recommendations(symbol: &str) -> String {
         format!(
             "{}/v6/finance/recommendationsbysymbol/{}",
@@ -68,6 +60,7 @@ pub mod endpoints {
     }
 
     /// Quote type endpoint (get quartr ID)
+    #[allow(dead_code)]
     pub fn quote_type(symbol: &str) -> String {
         format!("{}/v1/finance/quoteType/{}", YAHOO_FINANCE_QUERY1, symbol)
     }
@@ -79,17 +72,21 @@ pub mod headers {
     pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
 
     /// Accept header
+    #[allow(dead_code)]
     pub const ACCEPT: &str = "*/*";
 
     /// Accept language
+    #[allow(dead_code)]
     pub const ACCEPT_LANGUAGE: &str = "en-US,en;q=0.9";
 
     /// Accept encoding
+    #[allow(dead_code)]
     pub const ACCEPT_ENCODING: &str = "gzip, deflate, br";
 }
 
 /// Chart intervals
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum Interval {
     /// 1 minute
     OneMinute,
@@ -111,6 +108,7 @@ pub enum Interval {
     ThreeMonths,
 }
 
+#[allow(dead_code)]
 impl Interval {
     /// Convert interval to Yahoo Finance API format
     pub fn as_str(&self) -> &'static str {
@@ -130,6 +128,7 @@ impl Interval {
 
 /// Time ranges for chart data
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)]
 pub enum TimeRange {
     /// 1 day
     OneDay,
@@ -155,6 +154,7 @@ pub enum TimeRange {
     Max,
 }
 
+#[allow(dead_code)]
 impl TimeRange {
     /// Convert time range to Yahoo Finance API format
     pub fn as_str(&self) -> &'static str {
@@ -179,9 +179,11 @@ pub mod auth {
     use std::time::Duration;
 
     /// Minimum interval between auth refreshes (prevent excessive refreshing)
+    #[allow(dead_code)]
     pub const MIN_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
 
     /// Maximum age of auth before considering it stale
+    #[allow(dead_code)]
     pub const AUTH_MAX_AGE: Duration = Duration::from_secs(3600); // 1 hour
 }
 

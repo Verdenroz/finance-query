@@ -9,8 +9,10 @@ use tracing::{debug, info};
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
     /// HTTP request timeout
+    #[allow(dead_code)]
     pub timeout: Duration,
     /// Optional proxy URL
+    #[allow(dead_code)]
     pub proxy: Option<String>,
 }
 
@@ -106,6 +108,7 @@ impl YahooClient {
     /// Refresh authentication if needed
     ///
     /// This checks if the current authentication is expired and refreshes it if necessary.
+    #[allow(dead_code)]
     pub async fn refresh_auth_if_needed(&self) -> Result<()> {
         let auth = self.auth.read().await;
 
@@ -132,6 +135,7 @@ impl YahooClient {
     ///
     /// This can be useful for advanced use cases where you need direct access to the client.
     /// Note: This is an async method because the client is behind a RwLock.
+    #[allow(dead_code)]
     pub async fn http_client(&self) -> reqwest::Client {
         self.http.read().await.clone()
     }

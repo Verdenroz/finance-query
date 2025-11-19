@@ -49,46 +49,31 @@ impl YahooAuth {
             YahooError::InternalError(format!("Failed to establish session: {}", e))
         })?;
 
-        //: Try to get crumb from query1
+        // Try to get crumb from query1
         debug!("Attempting to fetch crumb from query1");
-        match get_crumb(&client, crate::constants::endpoints::CRUMB_QUERY1).await {
-            Ok(crumb) => {
-                info!("Successfully authenticated with Yahoo Finance");
-                return Ok(Self {
-                    crumb,
-                    last_refresh: Instant::now(),
-                    http_client: client,
-                });
-            }
-            Err(e) => {
-                warn!("Primary crumb fetch failed: {}, trying fallback method", e);
-            }
-        }
+        let crumb = get_crumb(&client, crate::constants::endpoints::CRUMB_QUERY1)
+            .await
+            .map_err(|e| {
+                warn!("Failed to fetch crumb: {}", e);
+                YahooError::AuthenticationFailed
+            })?;
 
-        // Fallback - Try CSRF token method with GUCE consent
-        debug!("Attempting CSRF token fallback method");
-        match csrf_token_fallback(&client).await {
-            Ok(crumb) => {
-                info!("Successfully authenticated with Yahoo Finance (CSRF fallback)");
-                Ok(Self {
-                    crumb,
-                    last_refresh: Instant::now(),
-                    http_client: client,
-                })
-            }
-            Err(e) => {
-                warn!("CSRF fallback also failed: {}", e);
-                Err(YahooError::AuthenticationFailed)
-            }
-        }
+        info!("Successfully authenticated with Yahoo Finance");
+        Ok(Self {
+            crumb,
+            last_refresh: Instant::now(),
+            http_client: client,
+        })
     }
 
     /// Check if authentication is still valid
+    #[allow(dead_code)]
     pub fn is_expired(&self) -> bool {
         self.last_refresh.elapsed() > crate::constants::auth::AUTH_MAX_AGE
     }
 
     /// Check if enough time has passed to allow refresh
+    #[allow(dead_code)]
     pub fn can_refresh(&self) -> bool {
         self.last_refresh.elapsed() >= crate::constants::auth::MIN_REFRESH_INTERVAL
     }
@@ -125,82 +110,6 @@ async fn get_crumb(client: &reqwest::Client, crumb_url: &str) -> Result<String> 
         "Successfully fetched crumb: {}",
         &crumb[..10.min(crumb.len())]
     );
-    Ok(crumb)
-}
-
-/// CSRF token fallback method using GUCE consent flow
-async fn csrf_token_fallback(client: &reqwest::Client) -> Result<String> {
-    use regex::Regex;
-    use scraper::{Html, Selector};
-
-    // Get consent page to extract CSRF token and session ID
-    debug!("Fetching GUCE consent page");
-    let consent_response = client
-        .get(urls::YAHOO_GUCE_CONSENT)
-        .send()
-        .await
-        .map_err(|e| YahooError::InternalError(format!("Consent page request failed: {}", e)))?;
-
-    let consent_html = consent_response
-        .text()
-        .await
-        .map_err(|e| YahooError::InternalError(format!("Failed to read consent page: {}", e)))?;
-
-    // Extract session ID from URL or form
-    let session_id_re = Regex::new(r#"sessionId[="]([^"&]+)"#).unwrap();
-    let session_id = session_id_re
-        .captures(&consent_html)
-        .and_then(|cap| cap.get(1))
-        .map(|m| m.as_str())
-        .ok_or_else(|| YahooError::InternalError("Failed to extract session ID".to_string()))?;
-
-    // Extract CSRF token
-    let document = Html::parse_document(&consent_html);
-    let csrf_selector = Selector::parse(r#"input[name="csrfToken"]"#).unwrap();
-    let csrf_token = document
-        .select(&csrf_selector)
-        .next()
-        .and_then(|el| el.value().attr("value"))
-        .ok_or_else(|| YahooError::InternalError("Failed to extract CSRF token".to_string()))?;
-
-    debug!(
-        "Extracted session_id: {}, csrf_token length: {}",
-        session_id,
-        csrf_token.len()
-    );
-
-    // Submit consent
-    let consent_url = format!("{}?sessionId={}", urls::YAHOO_CONSENT_SUBMIT, session_id);
-    let consent_data = [
-        ("csrfToken", csrf_token),
-        ("sessionId", session_id),
-        (
-            "originalDoneUrl",
-            "https://guce.yahoo.com/copyConsent?sessionId=",
-        ),
-        ("namespace", "yahoo"),
-        ("agree", "agree"),
-    ];
-
-    client
-        .post(&consent_url)
-        .form(&consent_data)
-        .send()
-        .await
-        .map_err(|e| YahooError::InternalError(format!("Consent submission failed: {}", e)))?;
-
-    // Copy consent
-    let copy_consent_url = format!("{}?sessionId={}", urls::YAHOO_COPY_CONSENT, session_id);
-    client
-        .get(&copy_consent_url)
-        .send()
-        .await
-        .map_err(|e| YahooError::InternalError(format!("Copy consent failed: {}", e)))?;
-
-    // Try to get crumb again from query2
-    debug!("Fetching crumb after consent flow");
-    let crumb = get_crumb(client, crate::constants::endpoints::CRUMB_QUERY2).await?;
-
     Ok(crumb)
 }
 

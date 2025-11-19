@@ -42,7 +42,18 @@ pub enum YahooError {
     /// Internal error
     #[error("Internal error: {0}")]
     InternalError(String),
+
+    /// API error from Yahoo Finance
+    #[error("API error: {0}")]
+    ApiError(String),
+
+    /// Tokio runtime error
+    #[error("Runtime error: {0}")]
+    RuntimeError(#[from] std::io::Error),
 }
+
+/// Type alias for Error (for consistency with common Rust patterns)
+pub type Error = YahooError;
 
 /// Result type alias for library operations
 pub type Result<T> = std::result::Result<T, YahooError>;

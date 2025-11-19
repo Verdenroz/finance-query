@@ -1,23 +1,17 @@
 use axum::{
-    extract::{Path, State},
+    Router,
+    extract::Path,
     http::{HeaderValue, Method, StatusCode},
     response::{IntoResponse, Json},
     routing::get,
-    Router,
 };
-use finance_query::{endpoints, ClientConfig, YahooClient};
+use finance_query::{Error as YahooError, Ticker};
 use serde::Serialize;
 use std::net::SocketAddr;
-use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-
-#[derive(Clone)]
-struct AppState {
-    yahoo_client: Arc<YahooClient>,
-}
 
 #[derive(Serialize)]
 struct HealthResponse {
@@ -38,24 +32,10 @@ async fn main() {
     // Initialize tracing/logging
     init_tracing();
 
-    // Initialize Yahoo Finance client
-    info!("Initializing Yahoo Finance client...");
-    let yahoo_client = match YahooClient::new(ClientConfig::default()).await {
-        Ok(client) => {
-            info!("✅ Yahoo Finance client initialized successfully");
-            Arc::new(client)
-        }
-        Err(e) => {
-            error!("❌ Failed to initialize Yahoo Finance client: {}", e);
-            panic!("Cannot start server without Yahoo Finance client");
-        }
-    };
-
-    // Create shared application state
-    let state = AppState { yahoo_client };
+    info!("Finance Query server initializing...");
 
     // Build application with routes
-    let app = create_app(state.clone());
+    let app = create_app();
 
     // Determine server address
     let port = std::env::var("PORT")
@@ -77,7 +57,7 @@ async fn main() {
         .expect("Server error");
 }
 
-fn create_app(state: AppState) -> Router {
+fn create_app() -> Router {
     // Configure CORS
     let cors = CorsLayer::new()
         .allow_origin("*".parse::<HeaderValue>().unwrap())
@@ -88,10 +68,9 @@ fn create_app(state: AppState) -> Router {
     Router::new()
         .route("/health", get(health_check))
         .route("/ping", get(ping))
-        .route("/quote/:symbol", get(get_quote))
+        .route("/quote/{symbol}", get(get_quote))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
-        .with_state(state)
 }
 
 /// Health check endpoint
@@ -114,26 +93,52 @@ async fn ping() -> impl IntoResponse {
 }
 
 /// Get quote for a symbol
-async fn get_quote(
-    State(state): State<AppState>,
-    Path(symbol): Path<String>,
-) -> Result<Json<serde_json::Value>, (StatusCode, String)> {
+async fn get_quote(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Received quote request for symbol: {}", symbol);
 
-    match endpoints::fetch_quote_summary(&state.yahoo_client, &symbol).await {
-        Ok(quote) => {
+    match Ticker::new(&symbol).await {
+        Ok(ticker) => {
             info!("Successfully fetched quote for {}", symbol);
-            Ok(Json(quote))
+            // Convert ticker data to JSON for response
+            let response = serde_json::json!({
+                "symbol": ticker.symbol(),
+                "price": ticker.price(),
+                "summaryDetail": ticker.summary_detail(),
+                "financialData": ticker.financial_data(),
+                "keyStats": ticker.key_stats(),
+                "assetProfile": ticker.asset_profile(),
+                "calendarEvents": ticker.calendar_events(),
+                "earnings": ticker.earnings(),
+                "earningsHistory": ticker.earnings_history(),
+                "earningsTrend": ticker.earnings_trend(),
+                "esgScores": ticker.esg_scores(),
+                "institutionOwnership": ticker.institution_ownership(),
+                "fundOwnership": ticker.fund_ownership(),
+                "majorHolders": ticker.major_holders(),
+                "insiderHolders": ticker.insider_holders(),
+                "insiderTransactions": ticker.insider_transactions(),
+                "recommendationTrend": ticker.recommendation_trend(),
+                "gradingHistory": ticker.grading_history(),
+                "secFilings": ticker.sec_filings(),
+                "sharePurchaseActivity": ticker.share_purchase_activity(),
+                "quoteType": ticker.quote_type(),
+                "summaryProfile": ticker.summary_profile(),
+            });
+            (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
             error!("Failed to fetch quote for {}: {}", symbol, e);
             let status = match e {
-                finance_query::YahooError::SymbolNotFound(_) => StatusCode::NOT_FOUND,
-                finance_query::YahooError::AuthenticationFailed => StatusCode::UNAUTHORIZED,
-                finance_query::YahooError::RateLimited => StatusCode::TOO_MANY_REQUESTS,
+                YahooError::SymbolNotFound(_) => StatusCode::NOT_FOUND,
+                YahooError::AuthenticationFailed => StatusCode::UNAUTHORIZED,
+                YahooError::RateLimited => StatusCode::TOO_MANY_REQUESTS,
                 _ => StatusCode::INTERNAL_SERVER_ERROR,
             };
-            Err((status, e.to_string()))
+            let error_response = serde_json::json!({
+                "error": e.to_string(),
+                "status": status.as_u16()
+            });
+            (status, Json(error_response)).into_response()
         }
     }
 }

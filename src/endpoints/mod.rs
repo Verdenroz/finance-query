@@ -1,3 +1,1 @@
-mod quote_summary;
-
-pub use quote_summary::fetch_quote_summary;
+pub(crate) mod quote_summary;

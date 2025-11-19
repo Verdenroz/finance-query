@@ -16,15 +16,15 @@ use tracing::info;
 /// # Example
 ///
 /// ```no_run
-/// use finance_query::{YahooClient, ClientConfig, endpoints::fetch_quote_summary};
+/// use finance_query::{YahooClient, ClientConfig};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let client = YahooClient::new(ClientConfig::default()).await?;
-/// let quote = fetch_quote_summary(&client, "AAPL").await?;
-/// println!("{}", serde_json::to_string_pretty(&quote)?);
+/// // Use client for low-level Yahoo Finance API access
 /// # Ok(())
 /// # }
 /// ```
+#[allow(dead_code)]
 pub async fn fetch_quote_summary(client: &YahooClient, symbol: &str) -> Result<serde_json::Value> {
     info!("Fetching quote summary for symbol: {}", symbol);
 
@@ -49,7 +49,7 @@ pub async fn fetch_quote_summary(client: &YahooClient, symbol: &str) -> Result<s
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ClientConfig, YahooClient};
+    use crate::client::{ClientConfig, YahooClient};
 
     #[tokio::test]
     #[ignore] // Ignore by default as it makes real network requests
