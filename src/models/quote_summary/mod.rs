@@ -26,8 +26,6 @@ pub enum Module {
     Earnings,
     /// Historical trend data for earnings and revenue estimations
     EarningsTrend,
-    /// Environmental, social, and governance metrics
-    EsgScores,
     /// Financial KPIs (PE, enterprise value, EPS, EBITA, etc.)
     FinancialData,
     /// Aggregated maturity and duration information (funds/ETFs)
@@ -66,8 +64,6 @@ pub enum Module {
     MajorHolders,
     /// Short, mid, and long-term trend data for page views
     PageViews,
-    /// Detailed pricing data (exchange, quote type, currency, market cap, etc.)
-    Price,
     /// Stock exchange specific data
     QuoteType,
     /// Historical buy/hold/sell recommendations
@@ -92,7 +88,6 @@ impl Module {
             Module::EarningHistory => "earningsHistory",
             Module::Earnings => "earnings",
             Module::EarningsTrend => "earningsTrend",
-            Module::EsgScores => "esgScores",
             Module::FinancialData => "financialData",
             Module::FundBondHoldings => "fundBondHoldings",
             Module::FundBondRatings => "fundBondRatings",
@@ -112,7 +107,6 @@ impl Module {
             Module::KeyStats => "defaultKeyStatistics",
             Module::MajorHolders => "majorHoldersBreakdown",
             Module::PageViews => "pageViews",
-            Module::Price => "price",
             Module::QuoteType => "quoteType",
             Module::RecommendationTrend => "recommendationTrend",
             Module::SecFilings => "secFilings",
@@ -131,7 +125,6 @@ impl Module {
             Module::EarningHistory,
             Module::Earnings,
             Module::EarningsTrend,
-            Module::EsgScores,
             Module::FinancialData,
             Module::FundBondHoldings,
             Module::FundBondRatings,
@@ -151,7 +144,6 @@ impl Module {
             Module::KeyStats,
             Module::MajorHolders,
             Module::PageViews,
-            Module::Price,
             Module::QuoteType,
             Module::RecommendationTrend,
             Module::SecFilings,
@@ -164,7 +156,6 @@ impl Module {
     /// Returns the most commonly used core modules
     pub fn core() -> Vec<Module> {
         vec![
-            Module::Price,
             Module::SummaryDetail,
             Module::FinancialData,
             Module::KeyStats,
@@ -179,7 +170,6 @@ mod tests {
 
     #[test]
     fn test_module_as_str() {
-        assert_eq!(Module::Price.as_str(), "price");
         assert_eq!(Module::SummaryDetail.as_str(), "summaryDetail");
         assert_eq!(Module::KeyStats.as_str(), "defaultKeyStatistics");
     }
@@ -188,13 +178,11 @@ mod tests {
     fn test_module_all() {
         let all_modules = Module::all();
         assert!(all_modules.len() > 30);
-        assert!(all_modules.contains(&Module::Price));
     }
 
     #[test]
     fn test_module_core() {
         let core_modules = Module::core();
-        assert_eq!(core_modules.len(), 5);
-        assert!(core_modules.contains(&Module::Price));
+        assert_eq!(core_modules.len(), 4);
     }
 }

@@ -102,7 +102,6 @@ async fn get_quote(Path(symbol): Path<String>) -> impl IntoResponse {
             // Convert ticker data to JSON for response
             let response = serde_json::json!({
                 "symbol": ticker.symbol(),
-                "price": ticker.price(),
                 "summaryDetail": ticker.summary_detail(),
                 "financialData": ticker.financial_data(),
                 "keyStats": ticker.key_stats(),
@@ -111,7 +110,6 @@ async fn get_quote(Path(symbol): Path<String>) -> impl IntoResponse {
                 "earnings": ticker.earnings(),
                 "earningsHistory": ticker.earnings_history(),
                 "earningsTrend": ticker.earnings_trend(),
-                "esgScores": ticker.esg_scores(),
                 "institutionOwnership": ticker.institution_ownership(),
                 "fundOwnership": ticker.fund_ownership(),
                 "majorHolders": ticker.major_holders(),

@@ -19,7 +19,7 @@
 
 use crate::client::YahooClient;
 use crate::error::Result;
-use crate::models::quote_summary::{Module, Price, QuoteSummaryData};
+use crate::models::quote_summary::{Module, QuoteSummaryData};
 
 /// Main ticker struct for fetching financial data for a specific symbol
 ///
@@ -121,11 +121,7 @@ impl Ticker {
     ///
     ///     Ok(())
     /// }
-    /// ```
-    pub fn price(&self) -> Option<&Price> {
-        self.data.price.as_ref()
-    }
-
+    ///
     /// Returns summary detail information (PE ratios, dividends, 52-week range)
     ///
     /// Note: Currently returns raw JSON. Will be strongly typed in future releases.
@@ -172,11 +168,6 @@ impl Ticker {
     /// Returns earnings history
     pub fn earnings_history(&self) -> Option<&serde_json::Value> {
         self.data.earnings_history.as_ref()
-    }
-
-    /// Returns ESG scores
-    pub fn esg_scores(&self) -> Option<&serde_json::Value> {
-        self.data.esg_scores.as_ref()
     }
 
     /// Returns recommendation trend
@@ -253,24 +244,19 @@ mod tests {
         assert!(ticker.is_ok());
         if let Ok(t) = ticker {
             assert_eq!(t.symbol(), "AAPL");
-            // Price should be available
-            assert!(t.price().is_some());
+            // Financial data should be available
+            assert!(t.financial_data().is_some());
         }
     }
 
     #[tokio::test]
     #[ignore] // Requires network access
-    async fn test_ticker_price_sync_access() {
+    async fn test_ticker_sync_access() {
         let ticker = Ticker::new("AAPL").await.unwrap();
 
         // Synchronous access - no .await!
-        let price = ticker.price();
-        assert!(price.is_some());
-
-        if let Some(p) = price {
-            assert!(p.symbol.is_some());
-            assert_eq!(p.symbol.as_deref(), Some("AAPL"));
-        }
+        let financials = ticker.financial_data();
+        assert!(financials.is_some());
     }
 
     #[tokio::test]
@@ -279,7 +265,7 @@ mod tests {
         let ticker = Ticker::new("MSFT").await.unwrap();
 
         // All synchronous accesses
-        assert!(ticker.price().is_some());
+        assert!(ticker.financial_data().is_some());
         // Other modules may or may not be present depending on Yahoo's response
     }
 }

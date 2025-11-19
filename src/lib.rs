@@ -22,17 +22,7 @@
 //!     let ticker = Ticker::new("AAPL").await?;  // <-- Only .await needed!
 //!
 //!     // All subsequent access is synchronous (no .await!)
-//!     if let Some(price) = ticker.price() {
-//!         if let Some(current) = price.current_price() {
-//!             println!("Current price: ${:.2}", current);
-//!         }
-//!
-//!         if let Some(change) = price.day_change_percent() {
-//!             println!("Day change: {:.2}%", change * 100.0);
-//!         }
-//!     }
-//!
-//!     // Access other modules - all already loaded!
+//!     // Access modules - all already loaded!
 //!     if let Some(financials) = ticker.financial_data() {
 //!         println!("Financial data: {:?}", financials);
 //!     }
@@ -58,8 +48,8 @@
 //!         .block_on(Ticker::new("AAPL"))?;
 //!
 //!     // Everything else is synchronous!
-//!     if let Some(price) = ticker.price() {
-//!         println!("Price: ${:.2}", price.current_price().unwrap_or(0.0));
+//!     if let Some(financials) = ticker.financial_data() {
+//!         println!("Financial data: {:?}", financials);
 //!     }
 //!
 //!     Ok(())
@@ -84,5 +74,5 @@ mod ticker;
 
 // Public exports
 pub use error::{Error, Result, YahooError};
-pub use models::quote_summary::{Module, Price, QuoteSummaryData};
+pub use models::quote_summary::{Module, QuoteSummaryData};
 pub use ticker::Ticker;

@@ -3,7 +3,6 @@
 //! Handles parsing of Yahoo Finance quoteSummary API responses
 
 use crate::error::{Error, Result};
-use crate::models::quote_summary::Price;
 use serde_json::Value;
 use std::collections::HashMap;
 
@@ -142,9 +141,6 @@ pub struct QuoteSummaryData {
     pub symbol: String,
 
     // Core modules (most commonly used)
-    /// Detailed pricing data
-    pub price: Option<Price>,
-
     /// Summary detail information (PE ratios, dividends, 52-week range)
     pub summary_detail: Option<Value>, // TODO: Implement SummaryDetail struct
 
@@ -169,9 +165,6 @@ pub struct QuoteSummaryData {
 
     /// Earnings history
     pub earnings_history: Option<Value>,
-
-    /// ESG scores
-    pub esg_scores: Option<Value>,
 
     /// Recommendation trend
     pub recommendation_trend: Option<Value>,
@@ -252,7 +245,6 @@ impl QuoteSummaryData {
     pub fn from_response(response: QuoteSummaryResponse) -> Result<Self> {
         let mut data = Self {
             symbol: response.symbol.clone(),
-            price: None,
             summary_detail: None,
             financial_data: None,
             key_stats: None,
@@ -261,7 +253,6 @@ impl QuoteSummaryData {
             earnings: None,
             earnings_trend: None,
             earnings_history: None,
-            esg_scores: None,
             recommendation_trend: None,
             insider_holders: None,
             insider_transactions: None,
@@ -288,11 +279,6 @@ impl QuoteSummaryData {
             fund_sector_weightings: None,
         };
 
-        // Parse typed modules
-        if let Some(price_json) = response.get_module("price") {
-            data.price = serde_json::from_value(price_json.clone()).ok();
-        }
-
         // Store raw JSON for modules not yet implemented as structs
         if let Some(val) = response.get_module("summaryDetail") {
             data.summary_detail = Some(val.clone());
@@ -317,9 +303,6 @@ impl QuoteSummaryData {
         }
         if let Some(val) = response.get_module("earningsHistory") {
             data.earnings_history = Some(val.clone());
-        }
-        if let Some(val) = response.get_module("esgScores") {
-            data.esg_scores = Some(val.clone());
         }
         if let Some(val) = response.get_module("recommendationTrend") {
             data.recommendation_trend = Some(val.clone());
