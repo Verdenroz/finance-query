@@ -359,7 +359,6 @@ FinanceQuery leverages:
 - **[lxml](https://lxml.de)** for fast and reliable web scraping
 - **[Cython](https://cython.org)** for accelerated technical indicator calculations
 - **[Redis](https://redis.io)** for intelligent caching of market data
-- **[Yahoo Finance API](https://finance.yahoo.com)** for financial data (quotes, financials, holders, analysis, earnings transcripts)
 - **[logo.dev](https://logo.dev)** for fetching stock logos
 
 ## License
