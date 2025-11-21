@@ -59,13 +59,13 @@ router = APIRouter()
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_recommendations(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_recommendations(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get analyst recommendations for a stock symbol.
 
     Returns recommendation trends showing how many analysts rate the stock at each level.
     """
-    data = await get_analysis_data(finance_client, symbol, AnalysisType.RECOMMENDATIONS)
+    data = await get_analysis_data(finance_client, symbol.upper(), AnalysisType.RECOMMENDATIONS)
     return RecommendationsResponse(symbol=data["symbol"], recommendations=data["recommendations"])
 
 
@@ -109,13 +109,13 @@ async def get_recommendations(finance_client: FinanceClient, symbol: str = Path(
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_upgrades_downgrades(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_upgrades_downgrades(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get analyst upgrades and downgrades for a stock symbol.
 
     Returns historical rating changes from analyst firms.
     """
-    data = await get_analysis_data(finance_client, symbol, AnalysisType.UPGRADES_DOWNGRADES)
+    data = await get_analysis_data(finance_client, symbol.upper(), AnalysisType.UPGRADES_DOWNGRADES)
     return UpgradesDowngradesResponse(symbol=data["symbol"], upgrades_downgrades=data["upgrades_downgrades"])
 
 
@@ -150,13 +150,13 @@ async def get_upgrades_downgrades(finance_client: FinanceClient, symbol: str = P
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_price_targets(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_price_targets(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get analyst price targets for a stock symbol.
 
     Returns consensus price target data from analyst coverage.
     """
-    data = await get_analysis_data(finance_client, symbol, AnalysisType.PRICE_TARGETS)
+    data = await get_analysis_data(finance_client, symbol.upper(), AnalysisType.PRICE_TARGETS)
     return PriceTargetsResponse(symbol=data["symbol"], price_targets=data["price_targets"])
 
 
@@ -204,13 +204,13 @@ async def get_price_targets(finance_client: FinanceClient, symbol: str = Path(..
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_earnings_estimate(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_earnings_estimate(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get earnings estimates for a stock symbol.
 
     Returns analyst consensus earnings forecasts for upcoming quarters.
     """
-    data = await get_analysis_data(finance_client, symbol, AnalysisType.EARNINGS_ESTIMATE)
+    data = await get_analysis_data(finance_client, symbol.upper(), AnalysisType.EARNINGS_ESTIMATE)
     return EarningsEstimateResponse(symbol=data["symbol"], earnings_estimate=data["earnings_estimate"])
 
 
@@ -258,13 +258,13 @@ async def get_earnings_estimate(finance_client: FinanceClient, symbol: str = Pat
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_revenue_estimate(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_revenue_estimate(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get revenue estimates for a stock symbol.
 
     Returns analyst consensus revenue forecasts for upcoming quarters.
     """
-    data = await get_analysis_data(finance_client, symbol, AnalysisType.REVENUE_ESTIMATE)
+    data = await get_analysis_data(finance_client, symbol.upper(), AnalysisType.REVENUE_ESTIMATE)
     return RevenueEstimateResponse(symbol=data["symbol"], revenue_estimate=data["revenue_estimate"])
 
 
@@ -308,11 +308,11 @@ async def get_revenue_estimate(finance_client: FinanceClient, symbol: str = Path
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_earnings_history(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_earnings_history(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get historical earnings for a stock symbol.
 
     Returns past earnings results with actual vs estimated performance.
     """
-    data = await get_analysis_data(finance_client, symbol, AnalysisType.EARNINGS_HISTORY)
+    data = await get_analysis_data(finance_client, symbol.upper(), AnalysisType.EARNINGS_HISTORY)
     return EarningsHistoryResponse(symbol=data["symbol"], earnings_history=data["earnings_history"])

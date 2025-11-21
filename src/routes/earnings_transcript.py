@@ -35,7 +35,9 @@ router = APIRouter()
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_earnings_calls_list_endpoint(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_earnings_calls_list_endpoint(
+    finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")
+):
     """
     Get list of available earnings call transcripts for a stock symbol.
 
@@ -48,7 +50,7 @@ async def get_earnings_calls_list_endpoint(finance_client: FinanceClient, symbol
     **Returns:**
     - List of available earnings calls with metadata
     """
-    return await get_earnings_calls_list(finance_client, symbol)
+    return await get_earnings_calls_list(finance_client, symbol.upper())
 
 
 @router.get(
@@ -80,7 +82,7 @@ async def get_earnings_calls_list_endpoint(finance_client: FinanceClient, symbol
     },
 )
 async def get_latest_earnings_transcript_endpoint(
-    finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")
+    finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")
 ):
     """
     Get the most recent earnings call transcript for a stock symbol.
@@ -94,7 +96,7 @@ async def get_latest_earnings_transcript_endpoint(
     **Returns:**
     - Full transcript with speakers and paragraphs
     """
-    return await get_earnings_transcript(finance_client, symbol, quarter=None, year=None)
+    return await get_earnings_transcript(finance_client, symbol.upper(), quarter=None, year=None)
 
 
 @router.get(
@@ -127,7 +129,7 @@ async def get_latest_earnings_transcript_endpoint(
 )
 async def get_specific_earnings_transcript_endpoint(
     finance_client: FinanceClient,
-    symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$"),
+    symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$"),
     quarter: Quarter = Path(..., description="Quarter (Q1, Q2, Q3, or Q4)"),
     year: int = Path(..., description="Year", ge=1990, le=2030),
 ):
@@ -142,4 +144,4 @@ async def get_specific_earnings_transcript_endpoint(
     **Returns:**
     - Full transcript with speakers and paragraphs
     """
-    return await get_earnings_transcript(finance_client, symbol, quarter=quarter, year=year)
+    return await get_earnings_transcript(finance_client, symbol.upper(), quarter=quarter, year=year)

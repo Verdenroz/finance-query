@@ -49,14 +49,14 @@ router = APIRouter()
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_major_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_major_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get major holders breakdown for a stock symbol.
 
     Returns ownership percentages for insiders and institutions.
     """
-    data = await get_holders_data(finance_client, symbol, HolderType.MAJOR)
-    return MajorHoldersResponse(symbol=data.symbol, breakdown=data.major_breakdown)
+    data = await get_holders_data(finance_client, symbol.upper(), HolderType.MAJOR)
+    return MajorHoldersResponse(symbol=symbol.upper(), breakdown=data.major_breakdown)
 
 
 @router.get(
@@ -92,14 +92,14 @@ async def get_major_holders(finance_client: FinanceClient, symbol: str = Path(..
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_institutional_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_institutional_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get institutional holders for a stock symbol.
 
     Returns top institutional shareholders with their holdings.
     """
-    data = await get_holders_data(finance_client, symbol, HolderType.INSTITUTIONAL)
-    return InstitutionalHoldersResponse(symbol=data.symbol, holders=data.institutional_holders)
+    data = await get_holders_data(finance_client, symbol.upper(), HolderType.INSTITUTIONAL)
+    return InstitutionalHoldersResponse(symbol=symbol.upper(), holders=data.institutional_holders)
 
 
 @router.get(
@@ -135,14 +135,14 @@ async def get_institutional_holders(finance_client: FinanceClient, symbol: str =
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_mutualfund_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_mutualfund_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get mutual fund holders for a stock symbol.
 
     Returns top mutual fund shareholders with their holdings.
     """
-    data = await get_holders_data(finance_client, symbol, HolderType.MUTUALFUND)
-    return MutualFundHoldersResponse(symbol=data.symbol, holders=data.mutualfund_holders)
+    data = await get_holders_data(finance_client, symbol.upper(), HolderType.MUTUALFUND)
+    return MutualFundHoldersResponse(symbol=symbol.upper(), holders=data.mutualfund_holders)
 
 
 @router.get(
@@ -180,14 +180,14 @@ async def get_mutualfund_holders(finance_client: FinanceClient, symbol: str = Pa
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_insider_transactions(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_insider_transactions(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get insider transactions for a stock symbol.
 
     Returns recent buy/sell transactions by company insiders.
     """
-    data = await get_holders_data(finance_client, symbol, HolderType.INSIDER_TRANSACTIONS)
-    return InsiderTransactionsResponse(symbol=data.symbol, transactions=data.insider_transactions)
+    data = await get_holders_data(finance_client, symbol.upper(), HolderType.INSIDER_TRANSACTIONS)
+    return InsiderTransactionsResponse(symbol=symbol.upper(), transactions=data.insider_transactions)
 
 
 @router.get(
@@ -223,14 +223,14 @@ async def get_insider_transactions(finance_client: FinanceClient, symbol: str = 
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_insider_purchases(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_insider_purchases(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get insider purchases summary for a stock symbol.
 
     Returns aggregated purchase/sale activity by insiders.
     """
-    data = await get_holders_data(finance_client, symbol, HolderType.INSIDER_PURCHASES)
-    return InsiderPurchasesResponse(symbol=data.symbol, summary=data.insider_purchases)
+    data = await get_holders_data(finance_client, symbol.upper(), HolderType.INSIDER_PURCHASES)
+    return InsiderPurchasesResponse(symbol=symbol.upper(), summary=data.insider_purchases)
 
 
 @router.get(
@@ -267,11 +267,11 @@ async def get_insider_purchases(finance_client: FinanceClient, symbol: str = Pat
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_insider_roster(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$")):
+async def get_insider_roster(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
     """
     Get insider roster for a stock symbol.
 
     Returns list of company insiders with their current positions and shareholdings.
     """
-    data = await get_holders_data(finance_client, symbol, HolderType.INSIDER_ROSTER)
-    return InsiderRosterResponse(symbol=data.symbol, roster=data.insider_roster)
+    data = await get_holders_data(finance_client, symbol.upper(), HolderType.INSIDER_ROSTER)
+    return InsiderRosterResponse(symbol=symbol.upper(), roster=data.insider_roster)
