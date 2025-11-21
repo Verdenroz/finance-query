@@ -17,7 +17,7 @@ class Quarter(str, Enum):
 class EarningsCallListing(BaseModel):
     """Single earnings call metadata"""
 
-    event_id: str = Field(..., description="Event ID for the earnings call")
+    event_id: str = Field(..., description="Event ID for the earnings call", exclude=True)
     quarter: str | None = Field(None, description="Quarter (e.g., 'Q1', 'Q2')")
     year: int | None = Field(None, description="Year of the earnings call")
     title: str = Field(..., description="Title of the earnings call")
