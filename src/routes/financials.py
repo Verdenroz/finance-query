@@ -61,7 +61,7 @@ router = APIRouter()
 )
 async def financials(
     finance_client: FinanceClient,
-    symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Z]{1,10}$"),
+    symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$"),
     statement: StatementType = Query(..., description="The type of financial statement to retrieve."),
     frequency: Frequency = Query(Frequency.ANNUAL, description="The frequency of the financial statement."),
 ):
@@ -70,4 +70,4 @@ async def financials(
 
     Returns income statement, balance sheet, or cash flow statement data with historical periods.
     """
-    return await get_financial_statement(finance_client, symbol, statement, frequency)
+    return await get_financial_statement(finance_client, symbol.upper(), statement, frequency)

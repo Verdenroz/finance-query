@@ -12,10 +12,9 @@ import orjson
 from pydantic import BaseModel
 from redis import RedisError
 
+from src import models as models_module
 from src.clients.fetch_client import CurlFetchClient
 from src.context import request_context
-from src.models import HistoricalData, MarketIndex, MarketMover, MarketSector, News, Quote, SimpleQuote
-from src.models.sector import MarketSectorDetails
 from src.utils.logging import get_logger, log_cache_operation
 from src.utils.market import MarketSchedule, MarketStatus
 
@@ -68,15 +67,11 @@ class RedisCacheHandler(BaseCacheHandler):
         if isinstance(data, dict) and "__type__" in data:
             model_name = data["__type__"]
             model_data = data["data"]
+            # Dynamically build model_map from all BaseModel subclasses in models module
             model_map = {
-                "Quote": Quote,
-                "SimpleQuote": SimpleQuote,
-                "MarketMover": MarketMover,
-                "MarketIndex": MarketIndex,
-                "MarketSector": MarketSector,
-                "MarketSectorDetails": MarketSectorDetails,
-                "HistoricalData": HistoricalData,
-                "News": News,
+                name: cls
+                for name in dir(models_module)
+                if not name.startswith("_") and isinstance(cls := getattr(models_module, name), type) and issubclass(cls, BaseModel) and cls is not BaseModel
             }
             if model_name in model_map:
                 return model_map[model_name](**model_data)
