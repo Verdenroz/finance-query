@@ -51,15 +51,13 @@ impl YahooClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn new(_config: ClientConfig) -> Result<Self> {
+    pub async fn new(config: ClientConfig) -> Result<Self> {
         info!("Initializing Yahoo Finance client");
 
-        // Authenticate first - this returns an HTTP client with cookies
-        let auth = YahooAuth::authenticate().await?;
+        // Authenticate with the provided configuration (timeout, proxy)
+        let auth = YahooAuth::authenticate_with_config(&config).await?;
 
-        // Use the authenticated HTTP client (which has the cookies)
-        // Note: The client from auth already has cookie_store enabled
-        // TODO: Apply config settings (timeout, proxy) to the HTTP client
+        // Use the authenticated HTTP client (which has the cookies and config applied)
         let http = auth.http_client.clone();
 
         Ok(Self {

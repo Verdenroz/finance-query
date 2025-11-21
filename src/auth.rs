@@ -1,5 +1,7 @@
+use crate::client::ClientConfig;
 use crate::constants::{headers, urls};
 use crate::error::{Result, YahooError};
+use reqwest::Proxy;
 use std::time::Instant;
 use tracing::{debug, info, warn};
 
@@ -31,17 +33,33 @@ impl YahooAuth {
     /// Request crumb token from Yahoo Finance API
     /// If primary method fails, fall back to CSRF token method
     pub async fn authenticate() -> Result<Self> {
+        Self::authenticate_with_config(&ClientConfig::default()).await
+    }
+
+    /// Authenticate with Yahoo Finance using custom configuration
+    ///
+    /// Allows specifying timeout and proxy settings for the HTTP client.
+    pub async fn authenticate_with_config(config: &ClientConfig) -> Result<Self> {
         info!("Starting Yahoo Finance authentication");
 
-        // Create HTTP client for authentication
-        let client = reqwest::Client::builder()
+        // Create HTTP client with configuration
+        let mut builder = reqwest::Client::builder()
             .cookie_store(true)
-            .timeout(crate::constants::timeouts::AUTH_TIMEOUT)
-            .user_agent(headers::USER_AGENT)
-            .build()
-            .map_err(|e| {
-                YahooError::InternalError(format!("Failed to create HTTP client: {}", e))
-            })?;
+            .timeout(config.timeout)
+            .connect_timeout(crate::constants::timeouts::AUTH_TIMEOUT)
+            .user_agent(headers::USER_AGENT);
+
+        // Apply proxy if configured
+        if let Some(proxy_url) = &config.proxy {
+            debug!("Configuring proxy: {}", proxy_url);
+            let proxy = Proxy::all(proxy_url)
+                .map_err(|e| YahooError::InternalError(format!("Invalid proxy URL: {}", e)))?;
+            builder = builder.proxy(proxy);
+        }
+
+        let client = builder.build().map_err(|e| {
+            YahooError::InternalError(format!("Failed to create HTTP client: {}", e))
+        })?;
 
         // Visit fc.yahoo.com to establish session
         debug!("Visiting {} to establish session", urls::YAHOO_FC);
