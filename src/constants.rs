@@ -198,6 +198,18 @@ pub mod timeouts {
     pub const AUTH_TIMEOUT: Duration = Duration::from_secs(15);
 }
 
+/// Default values for API endpoints
+pub mod defaults {
+    /// Default number of similar stocks to return
+    pub const SIMILAR_STOCKS_LIMIT: u32 = 5;
+
+    /// Default number of search results
+    pub const SEARCH_HITS: u32 = 6;
+
+    /// Default server port
+    pub const SERVER_PORT: u16 = 8000;
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

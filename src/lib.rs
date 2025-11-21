@@ -73,6 +73,15 @@ pub mod models;
 mod ticker;
 
 // Public exports
+pub use client::{ClientConfig, YahooClient};
+pub use constants::{Interval, TimeRange, defaults};
 pub use error::{Error, Result, YahooError};
-pub use models::quote_summary::{Module, QuoteSummaryData};
+pub use models::{
+    chart::{Candle, ChartMeta, ChartResponse, ChartResult},
+    quote_summary::{Module, QuoteSummaryData},
+    quote_type::{QuoteTypeResponse, QuoteTypeResult},
+    recommendation::{RecommendationResponse, RecommendedSymbol},
+    search::{SearchQuote, SearchResponse},
+    timeseries::{TimeseriesDataPoint, TimeseriesResponse, fundamental_types},
+};
 pub use ticker::Ticker;

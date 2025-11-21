@@ -17,9 +17,13 @@
 //! }
 //! ```
 
-use crate::client::YahooClient;
+use crate::client::{ClientConfig, YahooClient};
+use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
+use crate::models::chart::{ChartResponse, ChartResult};
 use crate::models::quote_summary::{Module, QuoteSummaryData};
+use crate::models::recommendation::RecommendationResponse;
+use crate::models::timeseries::TimeseriesResponse;
 
 /// Main ticker struct for fetching financial data for a specific symbol
 ///
@@ -30,6 +34,8 @@ pub struct Ticker {
     symbol: String,
     /// All fetched quote summary data
     data: QuoteSummaryData,
+    /// Yahoo Finance client for additional requests
+    client: YahooClient,
 }
 
 impl Ticker {
@@ -63,7 +69,7 @@ impl Ticker {
     /// ```
     pub async fn new(symbol: impl Into<String>) -> Result<Self> {
         let symbol = symbol.into();
-        let client = YahooClient::new(crate::client::ClientConfig::default()).await?;
+        let client = YahooClient::new(ClientConfig::default()).await?;
 
         // Fetch ALL modules in one request
         let all_modules = Module::all();
@@ -83,7 +89,11 @@ impl Ticker {
             crate::models::quote_summary::QuoteSummaryResponse::from_json(json, &symbol)?;
         let data = quote_response.into_data()?;
 
-        Ok(Self { symbol, data })
+        Ok(Self {
+            symbol,
+            data,
+            client,
+        })
     }
 
     /// Returns the symbol for this ticker
@@ -230,6 +240,109 @@ impl Ticker {
     /// This provides access to all modules at once.
     pub fn data(&self) -> &QuoteSummaryData {
         &self.data
+    }
+
+    // ==================== Async Methods ====================
+    // These methods make additional API requests
+
+    /// Fetch historical chart data for this ticker
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - The data interval (e.g., OneDay, OneHour)
+    /// * `range` - The time range (e.g., OneMonth, OneYear)
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Interval, TimeRange};
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let ticker = Ticker::new("AAPL").await?;
+    ///     let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    ///
+    ///     let candles = chart.to_candles();
+    ///     for candle in candles.iter().take(5) {
+    ///         println!("Close: ${:.2}", candle.close);
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn chart(&self, interval: Interval, range: TimeRange) -> Result<ChartResult> {
+        let json = self.client.get_chart(&self.symbol, interval, range).await?;
+        let response = ChartResponse::from_json(json)
+            .map_err(|e| crate::error::YahooError::ParseError(e.to_string()))?;
+
+        response
+            .chart
+            .result
+            .and_then(|mut r| r.pop())
+            .ok_or_else(|| crate::error::YahooError::SymbolNotFound(self.symbol.clone()))
+    }
+
+    /// Fetch similar/recommended stocks for this ticker
+    ///
+    /// # Arguments
+    ///
+    /// * `limit` - Maximum number of recommendations to return
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let ticker = Ticker::new("AAPL").await?;
+    ///     let similar = ticker.similar(5).await?;
+    ///
+    ///     for symbol in similar.symbols() {
+    ///         println!("Similar: {}", symbol);
+    ///     }
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn similar(&self, limit: u32) -> Result<RecommendationResponse> {
+        let json = self.client.get_similar_quotes(&self.symbol, limit).await?;
+        RecommendationResponse::from_json(json)
+            .map_err(|e| crate::error::YahooError::ParseError(e.to_string()))
+    }
+
+    /// Fetch financial timeseries data (revenue, income, etc.)
+    ///
+    /// # Arguments
+    ///
+    /// * `types` - List of fundamental types to fetch
+    /// * `period1` - Start Unix timestamp
+    /// * `period2` - End Unix timestamp
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    /// use finance_query::models::timeseries::fundamental_types::*;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let ticker = Ticker::new("AAPL").await?;
+    ///     let types = &[ANNUAL_TOTAL_REVENUE, ANNUAL_NET_INCOME];
+    ///     let financials = ticker.financials(types, 0, 9999999999).await?;
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn financials(
+        &self,
+        types: &[&str],
+        period1: i64,
+        period2: i64,
+    ) -> Result<TimeseriesResponse> {
+        let json = self
+            .client
+            .get_fundamentals_timeseries(&self.symbol, period1, period2, types)
+            .await?;
+        TimeseriesResponse::from_json(json)
+            .map_err(|e| crate::error::YahooError::ParseError(e.to_string()))
     }
 }
 

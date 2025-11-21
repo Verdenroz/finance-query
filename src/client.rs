@@ -1,4 +1,5 @@
 use crate::auth::YahooAuth;
+use crate::constants::{Interval, TimeRange, endpoints};
 use crate::error::{Result, YahooError};
 use std::sync::Arc;
 use std::time::Duration;
@@ -139,6 +140,232 @@ impl YahooClient {
     pub async fn http_client(&self) -> reqwest::Client {
         self.http.read().await.clone()
     }
+
+    /// Make a GET request with query parameters and crumb authentication
+    pub async fn request_with_params<T: serde::Serialize + ?Sized>(
+        &self,
+        url: &str,
+        params: &T,
+    ) -> Result<reqwest::Response> {
+        let auth = self.auth.read().await;
+        let http = self.http.read().await;
+
+        let request = http.get(url).query(&[("crumb", &auth.crumb)]).query(params);
+
+        debug!("Making request to {}", url);
+
+        let response = request.send().await.map_err(|e| {
+            if e.is_timeout() {
+                YahooError::Timeout
+            } else {
+                YahooError::HttpError(e)
+            }
+        })?;
+
+        let status = response.status();
+        if !status.is_success() {
+            return match status.as_u16() {
+                401 => Err(YahooError::AuthenticationFailed),
+                404 => Err(YahooError::SymbolNotFound("Unknown symbol".to_string())),
+                429 => Err(YahooError::RateLimited),
+                _ => Err(YahooError::UnexpectedResponse(format!("HTTP {}", status))),
+            };
+        }
+
+        Ok(response)
+    }
+
+    /// Fetch batch quotes for multiple symbols
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// let quotes = client.get_simple_quotes(&["AAPL", "GOOGL", "MSFT"]).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_simple_quotes(&self, symbols: &[&str]) -> Result<serde_json::Value> {
+        info!("Fetching simple quotes for {} symbols", symbols.len());
+
+        let params = [("symbols", symbols.join(","))];
+        let response = self
+            .request_with_params(endpoints::SIMPLE_QUOTES, &params)
+            .await?;
+
+        Ok(response.json().await?)
+    }
+
+    /// Fetch chart data for a symbol
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Interval, TimeRange};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// let chart = client.get_chart("AAPL", Interval::OneDay, TimeRange::OneMonth).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_chart(
+        &self,
+        symbol: &str,
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<serde_json::Value> {
+        info!(
+            "Fetching chart for {} ({}, {})",
+            symbol,
+            interval.as_str(),
+            range.as_str()
+        );
+
+        let url = endpoints::chart(symbol);
+        let params = [("interval", interval.as_str()), ("range", range.as_str())];
+        let response = self.request_with_params(&url, &params).await?;
+
+        Ok(response.json().await?)
+    }
+
+    /// Search for quotes and news
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// let results = client.search("Apple", 6).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn search(&self, query: &str, hits: u32) -> Result<serde_json::Value> {
+        info!("Searching for: {}", query);
+
+        let params = [("q", query), ("quotesCount", &hits.to_string())];
+        let response = self.request_with_params(endpoints::SEARCH, &params).await?;
+
+        Ok(response.json().await?)
+    }
+
+    /// Get similar/recommended quotes for a symbol
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// let similar = client.get_similar_quotes("AAPL", 5).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_similar_quotes(&self, symbol: &str, limit: u32) -> Result<serde_json::Value> {
+        info!("Fetching similar quotes for: {}", symbol);
+
+        let url = endpoints::recommendations(symbol);
+        let params = [("count", limit.to_string())];
+        let response = self.request_with_params(&url, &params).await?;
+
+        Ok(response.json().await?)
+    }
+
+    /// Fetch fundamentals timeseries data (financial statements)
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol` - Stock symbol
+    /// * `period1` - Start Unix timestamp
+    /// * `period2` - End Unix timestamp
+    /// * `types` - List of fundamental types (e.g., "annualTotalRevenue", "quarterlyNetIncome")
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// let types = vec!["annualTotalRevenue", "annualNetIncome"];
+    /// let financials = client.get_fundamentals_timeseries("AAPL", 0, 9999999999, &types).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_fundamentals_timeseries(
+        &self,
+        symbol: &str,
+        period1: i64,
+        period2: i64,
+        types: &[&str],
+    ) -> Result<serde_json::Value> {
+        info!("Fetching fundamentals timeseries for: {}", symbol);
+
+        let url = endpoints::financials(symbol);
+        let params = [
+            ("merge", "false"),
+            ("padTimeSeries", "true"),
+            ("period1", &period1.to_string()),
+            ("period2", &period2.to_string()),
+            ("type", &types.join(",")),
+            ("lang", "en-US"),
+            ("region", "US"),
+        ];
+        let response = self.request_with_params(&url, &params).await?;
+
+        Ok(response.json().await?)
+    }
+
+    /// Fetch quote type data including company ID (quartrId)
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// let quote_type = client.get_quote_type("AAPL").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_quote_type(&self, symbol: &str) -> Result<serde_json::Value> {
+        info!("Fetching quote type for: {}", symbol);
+
+        let url = endpoints::quote_type(symbol);
+        let response = self.request_with_crumb(&url).await?;
+
+        Ok(response.json().await?)
+    }
+
+    /// Fetch quote summary with specified modules
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// let modules = vec!["price", "summaryDetail"];
+    /// let summary = client.get_quote_summary("AAPL", &modules).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_quote_summary(
+        &self,
+        symbol: &str,
+        modules: &[&str],
+    ) -> Result<serde_json::Value> {
+        info!(
+            "Fetching quote summary for {} with {} modules",
+            symbol,
+            modules.len()
+        );
+
+        let url = endpoints::quote_summary(symbol);
+        let params = [
+            ("modules", modules.join(",")),
+            ("corsDomain", "finance.yahoo.com".to_string()),
+            ("formatted", "false".to_string()),
+        ];
+        let response = self.request_with_params(&url, &params).await?;
+
+        Ok(response.json().await?)
+    }
 }
 
 #[cfg(test)]
@@ -157,5 +384,86 @@ mod tests {
         let config = ClientConfig::default();
         assert_eq!(config.timeout, crate::constants::timeouts::DEFAULT_TIMEOUT);
         assert!(config.proxy.is_none());
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires network access
+    async fn test_get_simple_quotes() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = client.get_simple_quotes(&["AAPL", "GOOGL"]).await;
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.get("quoteResponse").is_some());
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires network access
+    async fn test_get_chart() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = client
+            .get_chart("AAPL", Interval::OneDay, TimeRange::OneMonth)
+            .await;
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.get("chart").is_some());
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires network access
+    async fn test_search() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = client.search("Apple", 5).await;
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.get("quotes").is_some());
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires network access
+    async fn test_get_similar_quotes() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = client.get_similar_quotes("AAPL", 5).await;
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.get("finance").is_some());
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires network access
+    async fn test_get_quote_type() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = client.get_quote_type("AAPL").await;
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.get("quoteType").is_some());
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires network access
+    async fn test_get_quote_summary() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = client
+            .get_quote_summary("AAPL", &["price", "summaryDetail"])
+            .await;
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.get("quoteSummary").is_some());
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires network access
+    async fn test_get_fundamentals_timeseries() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = client
+            .get_fundamentals_timeseries(
+                "AAPL",
+                0,
+                9999999999,
+                &["annualTotalRevenue", "annualNetIncome"],
+            )
+            .await;
+        assert!(result.is_ok());
+        let json = result.unwrap();
+        assert!(json.get("timeseries").is_some());
     }
 }
