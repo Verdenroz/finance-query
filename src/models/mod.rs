@@ -1,11 +1,16 @@
 // Quote summary models for detailed stock information
 pub mod quote_summary;
 
-// Future modules (not yet implemented)
-// mod quote;
-// mod chart;
-// mod search;
+// Response models for various endpoints
+pub mod chart;
+pub mod quote_type;
+pub mod recommendation;
+pub mod search;
+pub mod timeseries;
 
-// pub use quote::{Quote, SimpleQuote};
-// pub use chart::Chart;
-// pub use search::SearchResult;
+// Re-exports for convenience
+pub use chart::{Candle, ChartMeta, ChartResponse, ChartResult};
+pub use quote_type::{QuoteTypeResponse, QuoteTypeResult};
+pub use recommendation::{RecommendationResponse, RecommendedSymbol};
+pub use search::{SearchQuote, SearchResponse};
+pub use timeseries::{TimeseriesDataPoint, TimeseriesResponse};
