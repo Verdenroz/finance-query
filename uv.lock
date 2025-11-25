@@ -449,14 +449,14 @@ wheels = [
 
 [[package]]
 name = "fastapi-injectable"
-version = "1.4.3"
+version = "1.4.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "fastapi" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/e4/8d/51e2f973efb3da9477fe50d5609ab17529d639d69c1638579418f3b1b0d8/fastapi_injectable-1.4.3.tar.gz", hash = "sha256:995eecc7c7593e464233541d6f2a6706739bdbb46a91d00798348c408fb71dd5", size = 30214, upload-time = "2025-10-22T04:47:48.302Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/07/b5a12680768b89ef1bc2ebe3066fd284edc825be17249156af5081803606/fastapi_injectable-1.4.4.tar.gz", hash = "sha256:d1f8383bd9172e03b15c5dd9efcb17f0b4cce46d790efe419f674d4743aef88e", size = 30414, upload-time = "2025-11-21T16:34:23Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/55/af/3108872a52fb461f82ddb29aa3eacd51efc471d0a8d9e0ff0d0fdace0f66/fastapi_injectable-1.4.3-py3-none-any.whl", hash = "sha256:55f497d50f85f14a5f732249de791e70c35569eb78320a3d888a38fc3b24aebb", size = 25706, upload-time = "2025-10-22T04:47:46.783Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/df/52e404fe18435e42c31e8a65ffacb627525996a4de121263e00f09295672/fastapi_injectable-1.4.4-py3-none-any.whl", hash = "sha256:ec98e198abc9e4b48bfd79f8d158b75cf769a08e4748a8fd1067b68ad81ac299", size = 25930, upload-time = "2025-11-21T16:34:21.414Z" },
 ]
 
 [[package]]
