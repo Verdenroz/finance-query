@@ -26,10 +26,8 @@ pub mod endpoints {
         )
     }
 
-    /// Simple quotes endpoint (batch quotes)
-    #[allow(dead_code)]
-    pub const SIMPLE_QUOTES: &str =
-        const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v7/finance/quote");
+    /// Batch quotes endpoint - fetch multiple symbols in one request
+    pub const QUOTES: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v7/finance/quote");
 
     /// Historical chart data endpoint
     #[allow(dead_code)]

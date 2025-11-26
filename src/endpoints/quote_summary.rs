@@ -1,68 +1,85 @@
+/// Quote summary endpoint
+///
+/// Fetches comprehensive quote summary data with customizable modules.
 use crate::client::YahooClient;
+use crate::constants::endpoints;
 use crate::error::Result;
 use tracing::info;
 
-/// Fetch quote summary data for a symbol from Yahoo Finance
-///
-/// This returns the raw JSON response from Yahoo Finance's quoteSummary endpoint.
-/// The response includes modules: assetProfile, price, summaryDetail, defaultKeyStatistics,
-/// calendarEvents, and quoteUnadjustedPerformanceOverview.
+/// Fetch quote summary with specified modules
 ///
 /// # Arguments
 ///
 /// * `client` - The Yahoo Finance client
-/// * `symbol` - The stock symbol (e.g., "AAPL", "NVDA")
+/// * `symbol` - Stock symbol
+/// * `modules` - List of module names to fetch (e.g., "price", "summaryDetail")
+///
+/// # Available Modules
+///
+/// Common modules include: assetProfile, price, summaryDetail, defaultKeyStatistics,
+/// calendarEvents, quoteUnadjustedPerformanceOverview, financialData, earningsHistory,
+/// earningsTrend, industryTrend, indexTrend, sectorTrend, etc.
 ///
 /// # Example
 ///
 /// ```no_run
-/// use finance_query::{YahooClient, ClientConfig};
-///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let client = YahooClient::new(ClientConfig::default()).await?;
-/// // Use client for low-level Yahoo Finance API access
+/// # let client = finance_query::YahooClient::new(Default::default()).await?;
+/// use finance_query::endpoints::quote_summary;
+/// let modules = vec!["price", "summaryDetail"];
+/// let summary = quote_summary::fetch(&client, "AAPL", &modules).await?;
 /// # Ok(())
 /// # }
 /// ```
-#[allow(dead_code)]
-pub async fn fetch_quote_summary(client: &YahooClient, symbol: &str) -> Result<serde_json::Value> {
-    info!("Fetching quote summary for symbol: {}", symbol);
+pub async fn fetch(
+    client: &YahooClient,
+    symbol: &str,
+    modules: &[&str],
+) -> Result<serde_json::Value> {
+    super::common::validate_symbol(symbol)?;
 
-    // Construct the URL
-    let url = crate::constants::endpoints::quote_summary(symbol);
+    if modules.is_empty() {
+        return Err(crate::error::YahooError::InvalidParameter(
+            "No modules provided for quote summary".to_string(),
+        ));
+    }
 
-    // Define the modules we want to fetch
-    let modules = "assetProfile,price,summaryDetail,defaultKeyStatistics,calendarEvents,quoteUnadjustedPerformanceOverview";
+    info!(
+        "Fetching quote summary for {} with {} modules",
+        symbol,
+        modules.len()
+    );
 
-    // Build full URL with modules parameter
-    let full_url = format!("{}?modules={}", url, modules);
+    let url = endpoints::quote_summary(symbol);
+    let params = [
+        ("modules", modules.join(",")),
+        ("corsDomain", "finance.yahoo.com".to_string()),
+        ("formatted", "false".to_string()),
+    ];
+    let response = client.request_with_params(&url, &params).await?;
 
-    // Make the request
-    let response = client.request_with_crumb(&full_url).await?;
-
-    // Parse JSON response
-    let json = response.json::<serde_json::Value>().await?;
-
-    Ok(json)
+    Ok(response.json().await?)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::client::{ClientConfig, YahooClient};
+    use crate::ClientConfig;
 
     #[tokio::test]
-    #[ignore] // Ignore by default as it makes real network requests
+    #[ignore] // Requires network access
     async fn test_fetch_quote_summary() {
-        let client = YahooClient::new(ClientConfig::default())
-            .await
-            .expect("Failed to create client");
-
-        let result = fetch_quote_summary(&client, "AAPL").await;
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = fetch(&client, "AAPL", &["price", "summaryDetail"]).await;
         assert!(result.is_ok());
-
         let json = result.unwrap();
-        // Check that we got a valid response structure
         assert!(json.get("quoteSummary").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_empty_modules() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = fetch(&client, "AAPL", &[]).await;
+        assert!(result.is_err());
     }
 }
