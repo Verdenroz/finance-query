@@ -20,9 +20,12 @@
 use crate::client::{ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::{ChartResponse, ChartResult};
-use crate::models::quote_summary::{Module, QuoteSummaryData};
-use crate::models::recommendation::RecommendationResponse;
+use crate::models::chart::{Chart, ChartResponse, ChartResult};
+use crate::models::quote::{
+    DefaultKeyStatistics, FinancialData, Module, Price, Quote, QuoteSummaryResponse, QuoteTypeData,
+    SummaryDetail, SummaryProfile,
+};
+use crate::models::recommendation::{Recommendation, RecommendationResponse};
 use crate::models::timeseries::TimeseriesResponse;
 
 /// Main ticker struct for fetching financial data for a specific symbol
@@ -33,7 +36,7 @@ pub struct Ticker {
     /// The stock symbol (e.g., "AAPL", "MSFT")
     symbol: String,
     /// All fetched quote summary data
-    data: QuoteSummaryData,
+    response: QuoteSummaryResponse,
     /// Yahoo Finance client for additional requests
     client: YahooClient,
 }
@@ -81,17 +84,15 @@ impl Ticker {
             .join(",");
 
         let full_url = format!("{}?modules={}", url, module_str);
-        let response = client.request_with_crumb(&full_url).await?;
-        let json = response.json::<serde_json::Value>().await?;
+        let http_response = client.request_with_crumb(&full_url).await?;
+        let json = http_response.json::<serde_json::Value>().await?;
 
-        // Parse into response and then convert to structured data
-        let quote_response =
-            crate::models::quote_summary::QuoteSummaryResponse::from_json(json, &symbol)?;
-        let data = quote_response.into_data()?;
+        // Parse into quote summary response
+        let response = crate::models::quote::QuoteSummaryResponse::from_json(json, &symbol)?;
 
         Ok(Self {
             symbol,
-            data,
+            response,
             client,
         })
     }
@@ -131,115 +132,173 @@ impl Ticker {
     ///
     ///     Ok(())
     /// }
-    ///
+    /// ```
+    pub fn price(&self) -> Option<Price> {
+        self.response.get_typed("price").ok()
+    }
+
     /// Returns summary detail information (PE ratios, dividends, 52-week range)
     ///
-    /// Note: Currently returns raw JSON. Will be strongly typed in future releases.
-    pub fn summary_detail(&self) -> Option<&serde_json::Value> {
-        self.data.summary_detail.as_ref()
+    /// Returns strongly typed summary detail data including trading metrics,
+    /// valuation data, market cap, volume, and dividend information.
+    pub fn summary_detail(&self) -> Option<SummaryDetail> {
+        self.response.get_typed("summaryDetail").ok()
     }
 
     /// Returns financial data (revenue, margins, cash flow)
     ///
-    /// Note: Currently returns raw JSON. Will be strongly typed in future releases.
-    pub fn financial_data(&self) -> Option<&serde_json::Value> {
-        self.data.financial_data.as_ref()
+    /// Returns strongly typed financial data including current price, margins,
+    /// cash flow metrics, and analyst recommendations.
+    pub fn financial_data(&self) -> Option<FinancialData> {
+        self.response.get_typed("financialData").ok()
     }
 
     /// Returns key statistics (enterprise value, shares outstanding, beta)
     ///
-    /// Note: Currently returns raw JSON. Will be strongly typed in future releases.
-    pub fn key_stats(&self) -> Option<&serde_json::Value> {
-        self.data.key_stats.as_ref()
+    /// Returns strongly typed key statistics including valuation metrics,
+    /// share data, financial ratios, and other important statistics.
+    pub fn key_stats(&self) -> Option<DefaultKeyStatistics> {
+        self.response.get_typed("defaultKeyStatistics").ok()
     }
 
     /// Returns asset profile (company info, sector, industry, officers)
     ///
     /// Note: Currently returns raw JSON. Will be strongly typed in future releases.
     pub fn asset_profile(&self) -> Option<&serde_json::Value> {
-        self.data.asset_profile.as_ref()
+        self.response.get_module("assetProfile")
     }
 
     /// Returns calendar events (earnings date, dividend date)
     pub fn calendar_events(&self) -> Option<&serde_json::Value> {
-        self.data.calendar_events.as_ref()
+        self.response.get_module("calendarEvents")
     }
 
     /// Returns earnings data
     pub fn earnings(&self) -> Option<&serde_json::Value> {
-        self.data.earnings.as_ref()
+        self.response.get_module("earnings")
     }
 
     /// Returns earnings trend
     pub fn earnings_trend(&self) -> Option<&serde_json::Value> {
-        self.data.earnings_trend.as_ref()
+        self.response.get_module("earningsTrend")
     }
 
     /// Returns earnings history
     pub fn earnings_history(&self) -> Option<&serde_json::Value> {
-        self.data.earnings_history.as_ref()
+        self.response.get_module("earningsHistory")
     }
 
     /// Returns recommendation trend
     pub fn recommendation_trend(&self) -> Option<&serde_json::Value> {
-        self.data.recommendation_trend.as_ref()
+        self.response.get_module("recommendationTrend")
     }
 
     /// Returns insider holders
     pub fn insider_holders(&self) -> Option<&serde_json::Value> {
-        self.data.insider_holders.as_ref()
+        self.response.get_module("insiderHolders")
     }
 
     /// Returns insider transactions
     pub fn insider_transactions(&self) -> Option<&serde_json::Value> {
-        self.data.insider_transactions.as_ref()
+        self.response.get_module("insiderTransactions")
     }
 
     /// Returns institution ownership
     pub fn institution_ownership(&self) -> Option<&serde_json::Value> {
-        self.data.institution_ownership.as_ref()
+        self.response.get_module("institutionOwnership")
     }
 
     /// Returns fund ownership
     pub fn fund_ownership(&self) -> Option<&serde_json::Value> {
-        self.data.fund_ownership.as_ref()
+        self.response.get_module("fundOwnership")
     }
 
     /// Returns major holders breakdown
     pub fn major_holders(&self) -> Option<&serde_json::Value> {
-        self.data.major_holders.as_ref()
+        self.response.get_module("majorHoldersBreakdown")
     }
 
     /// Returns net share purchase activity
     pub fn share_purchase_activity(&self) -> Option<&serde_json::Value> {
-        self.data.share_purchase_activity.as_ref()
+        self.response.get_module("netSharePurchaseActivity")
     }
 
     /// Returns quote type information
-    pub fn quote_type(&self) -> Option<&serde_json::Value> {
-        self.data.quote_type.as_ref()
+    ///
+    /// Returns strongly typed metadata about the symbol including exchange,
+    /// company names, quote type, and timezone information.
+    pub fn quote_type(&self) -> Option<QuoteTypeData> {
+        self.response.get_typed("quoteType").ok()
     }
 
     /// Returns summary profile
-    pub fn summary_profile(&self) -> Option<&serde_json::Value> {
-        self.data.summary_profile.as_ref()
+    ///
+    /// Returns strongly typed company profile information including address,
+    /// sector, industry, employee count, and business description.
+    pub fn summary_profile(&self) -> Option<SummaryProfile> {
+        self.response.get_typed("summaryProfile").ok()
     }
 
     /// Returns SEC filings
     pub fn sec_filings(&self) -> Option<&serde_json::Value> {
-        self.data.sec_filings.as_ref()
+        self.response.get_module("secFilings")
     }
 
     /// Returns upgrade/downgrade history
     pub fn grading_history(&self) -> Option<&serde_json::Value> {
-        self.data.grading_history.as_ref()
+        self.response.get_module("upgradeDowngradeHistory")
     }
 
-    /// Returns the complete underlying data structure
+    /// Returns the complete underlying quote summary response
     ///
     /// This provides access to all modules at once.
-    pub fn data(&self) -> &QuoteSummaryData {
-        &self.data
+    pub fn response(&self) -> &QuoteSummaryResponse {
+        &self.response
+    }
+
+    /// Returns all modules as raw JSON
+    ///
+    /// This is useful for debugging - it returns the complete raw response
+    /// from Yahoo Finance without any additional parsing or modeling.
+    pub fn raw_modules(&self) -> serde_json::Value {
+        let mut map = serde_json::Map::new();
+        map.insert(
+            "symbol".to_string(),
+            serde_json::Value::String(self.symbol.clone()),
+        );
+
+        for (key, value) in &self.response.modules {
+            map.insert(key.clone(), value.clone());
+        }
+
+        serde_json::Value::Object(map)
+    }
+
+    /// Converts this ticker's data into a fully typed Quote
+    ///
+    /// This aggregates all typed modules into a single convenient structure
+    /// that's easy to serialize and work with. Recommended for API responses
+    /// and data export.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let ticker = Ticker::new("AAPL").await?;
+    ///     let quote = ticker.to_quote();
+    ///
+    ///     // Serialize to JSON
+    ///     let json = serde_json::to_string_pretty(&quote)?;
+    ///     println!("{}", json);
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub fn to_quote(&self) -> Quote {
+        Quote::from_response(&self.response)
     }
 
     // ==================== Async Methods ====================
@@ -281,6 +340,42 @@ impl Ticker {
             .ok_or_else(|| crate::error::YahooError::SymbolNotFound(self.symbol.clone()))
     }
 
+    /// Fetch chart data as a fully typed Chart structure
+    ///
+    /// This is the recommended method for getting chart data in a clean,
+    /// serializable format. It combines metadata and candles into a single
+    /// convenient structure.
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - The data interval (e.g., OneDay, OneHour)
+    /// * `range` - The time range (e.g., OneMonth, OneYear)
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Interval, TimeRange};
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let ticker = Ticker::new("AAPL").await?;
+    ///     let chart = ticker.to_chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    ///
+    ///     println!("Symbol: {}", chart.symbol);
+    ///     println!("Candles: {}", chart.candles.len());
+    ///
+    ///     // Serialize to JSON
+    ///     let json = serde_json::to_string_pretty(&chart)?;
+    ///     println!("{}", json);
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn to_chart(&self, interval: Interval, range: TimeRange) -> Result<Chart> {
+        let chart_result = self.chart(interval, range).await?;
+        Ok(chart_result.to_chart())
+    }
+
     /// Fetch similar/recommended stocks for this ticker
     ///
     /// # Arguments
@@ -307,6 +402,47 @@ impl Ticker {
         let json = self.client.get_similar_quotes(&self.symbol, limit).await?;
         RecommendationResponse::from_json(json)
             .map_err(|e| crate::error::YahooError::ParseError(e.to_string()))
+    }
+
+    /// Fetch similar stocks as a fully typed Recommendation structure
+    ///
+    /// This is the recommended method for getting similar stocks in a clean,
+    /// serializable format.
+    ///
+    /// # Arguments
+    ///
+    /// * `limit` - Maximum number of recommendations to return
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    ///     let ticker = Ticker::new("AAPL").await?;
+    ///     let recommendation = ticker.to_recommendation(5).await?;
+    ///
+    ///     println!("Similar to {}: {} stocks", recommendation.symbol, recommendation.count());
+    ///     for rec in &recommendation.recommendations {
+    ///         println!("  {} (score: {:.3})", rec.symbol, rec.score);
+    ///     }
+    ///
+    ///     // Serialize to JSON
+    ///     let json = serde_json::to_string_pretty(&recommendation)?;
+    ///     println!("{}", json);
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
+    pub async fn to_recommendation(&self, limit: u32) -> Result<Recommendation> {
+        let response = self.similar(limit).await?;
+        response
+            .finance
+            .result
+            .first()
+            .map(|r| r.to_recommendation())
+            .ok_or_else(|| crate::error::YahooError::SymbolNotFound(self.symbol.clone()))
     }
 
     /// Fetch financial timeseries data (revenue, income, etc.)

@@ -1,5 +1,5 @@
 use crate::auth::YahooAuth;
-use crate::constants::{Interval, TimeRange, endpoints};
+use crate::constants::{Interval, TimeRange};
 use crate::error::{Result, YahooError};
 use std::sync::Arc;
 use std::time::Duration;
@@ -175,24 +175,19 @@ impl YahooClient {
 
     /// Fetch batch quotes for multiple symbols
     ///
+    /// This uses the /v7/finance/quote endpoint which is more efficient for batch requests.
+    ///
     /// # Example
     ///
     /// ```no_run
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// let quotes = client.get_simple_quotes(&["AAPL", "GOOGL", "MSFT"]).await?;
+    /// let quotes = client.get_quotes(&["AAPL", "GOOGL", "MSFT"]).await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn get_simple_quotes(&self, symbols: &[&str]) -> Result<serde_json::Value> {
-        info!("Fetching simple quotes for {} symbols", symbols.len());
-
-        let params = [("symbols", symbols.join(","))];
-        let response = self
-            .request_with_params(endpoints::SIMPLE_QUOTES, &params)
-            .await?;
-
-        Ok(response.json().await?)
+    pub async fn get_quotes(&self, symbols: &[&str]) -> Result<serde_json::Value> {
+        crate::endpoints::quotes::fetch(self, symbols).await
     }
 
     /// Fetch chart data for a symbol
@@ -213,18 +208,7 @@ impl YahooClient {
         interval: Interval,
         range: TimeRange,
     ) -> Result<serde_json::Value> {
-        info!(
-            "Fetching chart for {} ({}, {})",
-            symbol,
-            interval.as_str(),
-            range.as_str()
-        );
-
-        let url = endpoints::chart(symbol);
-        let params = [("interval", interval.as_str()), ("range", range.as_str())];
-        let response = self.request_with_params(&url, &params).await?;
-
-        Ok(response.json().await?)
+        crate::endpoints::chart::fetch(self, symbol, interval, range).await
     }
 
     /// Search for quotes and news
@@ -239,12 +223,7 @@ impl YahooClient {
     /// # }
     /// ```
     pub async fn search(&self, query: &str, hits: u32) -> Result<serde_json::Value> {
-        info!("Searching for: {}", query);
-
-        let params = [("q", query), ("quotesCount", &hits.to_string())];
-        let response = self.request_with_params(endpoints::SEARCH, &params).await?;
-
-        Ok(response.json().await?)
+        crate::endpoints::search::fetch(self, query, hits).await
     }
 
     /// Get similar/recommended quotes for a symbol
@@ -259,13 +238,7 @@ impl YahooClient {
     /// # }
     /// ```
     pub async fn get_similar_quotes(&self, symbol: &str, limit: u32) -> Result<serde_json::Value> {
-        info!("Fetching similar quotes for: {}", symbol);
-
-        let url = endpoints::recommendations(symbol);
-        let params = [("count", limit.to_string())];
-        let response = self.request_with_params(&url, &params).await?;
-
-        Ok(response.json().await?)
+        crate::endpoints::recommendations::fetch(self, symbol, limit).await
     }
 
     /// Fetch fundamentals timeseries data (financial statements)
@@ -294,21 +267,7 @@ impl YahooClient {
         period2: i64,
         types: &[&str],
     ) -> Result<serde_json::Value> {
-        info!("Fetching fundamentals timeseries for: {}", symbol);
-
-        let url = endpoints::financials(symbol);
-        let params = [
-            ("merge", "false"),
-            ("padTimeSeries", "true"),
-            ("period1", &period1.to_string()),
-            ("period2", &period2.to_string()),
-            ("type", &types.join(",")),
-            ("lang", "en-US"),
-            ("region", "US"),
-        ];
-        let response = self.request_with_params(&url, &params).await?;
-
-        Ok(response.json().await?)
+        crate::endpoints::timeseries::fetch(self, symbol, period1, period2, types).await
     }
 
     /// Fetch quote type data including company ID (quartrId)
@@ -323,12 +282,7 @@ impl YahooClient {
     /// # }
     /// ```
     pub async fn get_quote_type(&self, symbol: &str) -> Result<serde_json::Value> {
-        info!("Fetching quote type for: {}", symbol);
-
-        let url = endpoints::quote_type(symbol);
-        let response = self.request_with_crumb(&url).await?;
-
-        Ok(response.json().await?)
+        crate::endpoints::quote_type::fetch(self, symbol).await
     }
 
     /// Fetch quote summary with specified modules
@@ -348,21 +302,7 @@ impl YahooClient {
         symbol: &str,
         modules: &[&str],
     ) -> Result<serde_json::Value> {
-        info!(
-            "Fetching quote summary for {} with {} modules",
-            symbol,
-            modules.len()
-        );
-
-        let url = endpoints::quote_summary(symbol);
-        let params = [
-            ("modules", modules.join(",")),
-            ("corsDomain", "finance.yahoo.com".to_string()),
-            ("formatted", "false".to_string()),
-        ];
-        let response = self.request_with_params(&url, &params).await?;
-
-        Ok(response.json().await?)
+        crate::endpoints::quote_summary::fetch(self, symbol, modules).await
     }
 }
 
@@ -386,9 +326,9 @@ mod tests {
 
     #[tokio::test]
     #[ignore] // Requires network access
-    async fn test_get_simple_quotes() {
+    async fn test_get_quotes() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
-        let result = client.get_simple_quotes(&["AAPL", "GOOGL"]).await;
+        let result = client.get_quotes(&["AAPL", "GOOGL"]).await;
         assert!(result.is_ok());
         let json = result.unwrap();
         assert!(json.get("quoteResponse").is_some());

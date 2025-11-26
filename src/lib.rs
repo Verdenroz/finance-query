@@ -77,10 +77,10 @@ pub use client::{ClientConfig, YahooClient};
 pub use constants::{Interval, TimeRange, defaults};
 pub use error::{Error, Result, YahooError};
 pub use models::{
-    chart::{Candle, ChartMeta, ChartResponse, ChartResult},
-    quote_summary::{Module, QuoteSummaryData},
+    chart::{Candle, Chart, ChartMeta, ChartResponse, ChartResult},
+    quote::{Module, Price, Quote, QuoteSummaryResponse},
     quote_type::{QuoteTypeResponse, QuoteTypeResult},
-    recommendation::{RecommendationResponse, RecommendedSymbol},
+    recommendation::{Recommendation, RecommendationResponse, RecommendedSymbol},
     search::{SearchQuote, SearchResponse},
     timeseries::{TimeseriesDataPoint, TimeseriesResponse, fundamental_types},
 };
