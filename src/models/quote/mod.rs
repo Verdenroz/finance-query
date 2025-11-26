@@ -2,21 +2,21 @@
 //!
 //! Contains all data structures and enums for Yahoo Finance's quoteSummary endpoint.
 
+mod data;
 mod default_key_statistics;
 mod financial_data;
 mod formatted_value;
 mod price;
-mod quote;
 mod quote_type_module;
 mod response;
 mod summary_detail;
 mod summary_profile;
 
+pub use data::Quote;
 pub use default_key_statistics::DefaultKeyStatistics;
 pub use financial_data::FinancialData;
 pub use formatted_value::FormattedValue;
 pub use price::Price;
-pub use quote::Quote;
 pub use quote_type_module::QuoteTypeData;
 pub use response::QuoteSummaryResponse;
 pub use summary_detail::SummaryDetail;
