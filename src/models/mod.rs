@@ -14,6 +14,6 @@ pub mod timeseries;
 // Re-exports for convenience
 pub use chart::{Candle, Chart, ChartMeta, ChartResponse, ChartResult};
 pub use quote_type::{QuoteTypeResponse, QuoteTypeResult};
-pub use recommendation::{Recommendation, RecommendationResponse, RecommendedSymbol};
+pub use recommendation::{Recommendation, RecommendationResponse, SimilarSymbol};
 pub use search::{SearchQuote, SearchResponse};
 pub use timeseries::{TimeseriesDataPoint, TimeseriesResponse};

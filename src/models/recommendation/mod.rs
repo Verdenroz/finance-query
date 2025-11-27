@@ -10,6 +10,3 @@ pub use data::Recommendation;
 pub use response::{RecommendationFinance, RecommendationResponse};
 pub use result::RecommendationResult;
 pub use symbol::SimilarSymbol;
-
-// Backwards compatibility - keep RecommendedSymbol as alias
-pub use symbol::SimilarSymbol as RecommendedSymbol;
