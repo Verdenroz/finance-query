@@ -2,25 +2,58 @@
 //!
 //! Contains all data structures and enums for Yahoo Finance's quoteSummary endpoint.
 
+mod asset_profile;
+mod calendar_events;
 mod data;
 mod default_key_statistics;
+mod earnings;
+mod earnings_history;
+mod earnings_trend;
 mod financial_data;
 mod formatted_value;
+mod fund_ownership;
+mod insider_holders;
+mod insider_transactions;
+mod institution_ownership;
+mod major_holders_breakdown;
+mod net_share_purchase_activity;
 mod price;
 mod quote_type_module;
+mod recommendation_trend;
 mod response;
+mod sec_filings;
 mod summary_detail;
 mod summary_profile;
+mod upgrade_downgrade_history;
 
+pub use asset_profile::{AssetProfile, CompanyOfficer};
+pub use calendar_events::{CalendarEvents, EarningsCalendar};
 pub use data::Quote;
 pub use default_key_statistics::DefaultKeyStatistics;
+pub use earnings::{
+    Earnings, EarningsChart, FinancialsChart, QuarterlyEarnings, QuarterlyFinancials,
+    YearlyFinancials,
+};
+pub use earnings_history::{EarningsHistory, EarningsHistoryEntry};
+pub use earnings_trend::{
+    EarningsEstimate, EarningsTrend, EarningsTrendPeriod, EpsRevisions, EpsTrend, RevenueEstimate,
+};
 pub use financial_data::FinancialData;
 pub use formatted_value::FormattedValue;
+pub use fund_ownership::{FundOwner, FundOwnership};
+pub use insider_holders::{InsiderHolder, InsiderHolders};
+pub use insider_transactions::{InsiderTransaction, InsiderTransactions};
+pub use institution_ownership::{InstitutionOwner, InstitutionOwnership};
+pub use major_holders_breakdown::MajorHoldersBreakdown;
+pub use net_share_purchase_activity::NetSharePurchaseActivity;
 pub use price::Price;
 pub use quote_type_module::QuoteTypeData;
+pub use recommendation_trend::{RecommendationPeriod, RecommendationTrend};
 pub use response::QuoteSummaryResponse;
+pub use sec_filings::{SecExhibit, SecFiling, SecFilings};
 pub use summary_detail::SummaryDetail;
 pub use summary_profile::SummaryProfile;
+pub use upgrade_downgrade_history::{GradeChange, UpgradeDowngradeHistory};
 
 /// All available modules from Yahoo Finance's quoteSummary endpoint
 ///
