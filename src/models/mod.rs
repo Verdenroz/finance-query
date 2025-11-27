@@ -1,9 +1,11 @@
 /// Chart/historical data models
 pub mod chart;
+/// News models
+pub mod news;
+/// Options models
+pub mod options;
 /// Quote models for detailed stock information
 pub mod quote;
-/// Quote type models
-pub mod quote_type;
 /// Recommendation models
 pub mod recommendation;
 /// Search models
@@ -12,8 +14,9 @@ pub mod search;
 pub mod timeseries;
 
 // Re-exports for convenience
-pub use chart::{Candle, Chart, ChartMeta, ChartResponse, ChartResult};
-pub use quote_type::{QuoteTypeResponse, QuoteTypeResult};
-pub use recommendation::{Recommendation, RecommendationResponse, SimilarSymbol};
-pub use search::{SearchQuote, SearchResponse};
+pub use chart::{Candle, Chart, ChartMeta};
+pub use news::{NewsArticle, NewsResponse, NewsThumbnail};
+pub use options::{OptionContract, OptionsResponse};
+pub use recommendation::Recommendation;
+pub use search::SearchQuote;
 pub use timeseries::{TimeseriesDataPoint, TimeseriesResponse};
