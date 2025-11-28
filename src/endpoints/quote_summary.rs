@@ -2,7 +2,7 @@
 ///
 /// Fetches comprehensive quote summary data with customizable modules.
 use crate::client::YahooClient;
-use crate::constants::endpoints;
+use crate::constants::{api_params, endpoints};
 use crate::error::Result;
 use tracing::info;
 
@@ -53,8 +53,8 @@ pub async fn fetch(
     let url = endpoints::quote_summary(symbol);
     let params = [
         ("modules", modules.join(",")),
-        ("corsDomain", "finance.yahoo.com".to_string()),
-        ("formatted", "false".to_string()),
+        ("corsDomain", api_params::CORS_DOMAIN.to_string()),
+        ("formatted", api_params::FORMATTED.to_string()),
     ];
     let response = client.request_with_params(&url, &params).await?;
 

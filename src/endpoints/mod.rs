@@ -4,6 +4,10 @@
 /// Each endpoint module handles a specific type of API request.
 pub mod chart;
 pub mod common;
+pub mod earnings_transcript;
+pub mod movers;
+pub mod news;
+pub mod options;
 pub mod quote_summary;
 pub mod quote_type;
 pub mod quotes;
