@@ -23,7 +23,8 @@ use tracing::info;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fetch(client: &YahooClient, symbol: &str) -> Result<serde_json::Value> {
+#[allow(dead_code)]
+pub(crate) async fn fetch(client: &YahooClient, symbol: &str) -> Result<serde_json::Value> {
     super::common::validate_symbol(symbol)?;
 
     info!("Fetching quote type for: {}", symbol);

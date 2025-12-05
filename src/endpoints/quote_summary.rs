@@ -39,9 +39,10 @@ pub async fn fetch(
     super::common::validate_symbol(symbol)?;
 
     if modules.is_empty() {
-        return Err(crate::error::YahooError::InvalidParameter(
-            "No modules provided for quote summary".to_string(),
-        ));
+        return Err(crate::error::YahooError::InvalidParameter {
+            param: "modules".to_string(),
+            reason: "No modules provided for quote summary".to_string(),
+        });
     }
 
     info!(

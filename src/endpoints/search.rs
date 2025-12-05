@@ -26,9 +26,10 @@ use tracing::info;
 /// ```
 pub async fn fetch(client: &YahooClient, query: &str, hits: u32) -> Result<serde_json::Value> {
     if query.trim().is_empty() {
-        return Err(crate::error::YahooError::InvalidParameter(
-            "Empty search query".to_string(),
-        ));
+        return Err(crate::error::YahooError::InvalidParameter {
+            param: "query".to_string(),
+            reason: "Empty search query".to_string(),
+        });
     }
 
     info!("Searching for: {}", query);

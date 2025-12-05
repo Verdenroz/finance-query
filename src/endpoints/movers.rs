@@ -27,11 +27,7 @@ use crate::models::movers::MoversResponse;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fetch(
-    client: &YahooClient,
-    screener_id: &str,
-    count: u32,
-) -> Result<MoversResponse> {
+pub async fn fetch(client: &YahooClient, screener_id: &str, count: u32) -> Result<MoversResponse> {
     let url = url_builders::movers(screener_id, count);
 
     let response = client.request_with_crumb(&url).await?;

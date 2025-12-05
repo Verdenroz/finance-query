@@ -47,9 +47,12 @@ impl QuoteSummaryResponse {
         //   }
         // }
 
-        let quote_summary = json
-            .get("quoteSummary")
-            .ok_or_else(|| Error::ParseError("Missing quoteSummary field".to_string()))?;
+        let quote_summary =
+            json.get("quoteSummary")
+                .ok_or_else(|| Error::ResponseStructureError {
+                    field: "quoteSummary".to_string(),
+                    context: "Missing quoteSummary field".to_string(),
+                })?;
 
         // Check for errors
         if let Some(error) = quote_summary.get("error")
@@ -61,7 +64,10 @@ impl QuoteSummaryResponse {
         let result = quote_summary
             .get("result")
             .and_then(|r| r.as_array())
-            .ok_or_else(|| Error::ParseError("Missing or invalid result field".to_string()))?;
+            .ok_or_else(|| Error::ResponseStructureError {
+                field: "result".to_string(),
+                context: "Missing or invalid result field".to_string(),
+            })?;
 
         if result.is_empty() {
             return Err(Error::ApiError(format!(
@@ -112,12 +118,17 @@ impl QuoteSummaryResponse {
     /// - The module is not present in the response
     /// - Deserialization fails
     pub fn get_typed<T: serde::de::DeserializeOwned>(&self, module_name: &str) -> Result<T> {
-        let module_data = self
-            .get_module(module_name)
-            .ok_or_else(|| Error::ParseError(format!("Module '{}' not found", module_name)))?;
+        let module_data =
+            self.get_module(module_name)
+                .ok_or_else(|| Error::ResponseStructureError {
+                    field: module_name.to_string(),
+                    context: format!("Module '{}' not found", module_name),
+                })?;
 
-        serde_json::from_value(module_data.clone())
-            .map_err(|e| Error::ParseError(format!("Failed to deserialize {}: {}", module_name, e)))
+        serde_json::from_value(module_data.clone()).map_err(|e| Error::ResponseStructureError {
+            field: module_name.to_string(),
+            context: format!("Failed to deserialize {}: {}", module_name, e),
+        })
     }
 
     /// Returns a list of all module names present in this response

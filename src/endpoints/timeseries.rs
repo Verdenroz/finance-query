@@ -37,9 +37,10 @@ pub async fn fetch(
     super::common::validate_symbol(symbol)?;
 
     if types.is_empty() {
-        return Err(crate::error::YahooError::InvalidParameter(
-            "No types provided for timeseries".to_string(),
-        ));
+        return Err(crate::error::YahooError::InvalidParameter {
+            param: "types".to_string(),
+            reason: "No types provided for timeseries".to_string(),
+        });
     }
 
     info!("Fetching fundamentals timeseries for: {}", symbol);
@@ -78,6 +79,7 @@ pub async fn fetch(
 /// let field = build_fundamental_type(Frequency::Annual, fundamental_types::TOTAL_REVENUE);
 /// assert_eq!(field, "annualTotalRevenue");
 /// ```
+#[allow(dead_code)]
 pub fn build_fundamental_type(frequency: Frequency, field_type: &str) -> String {
     frequency.prefix(field_type)
 }
@@ -101,6 +103,7 @@ pub fn build_fundamental_type(frequency: Frequency, field_type: &str) -> String 
 /// );
 /// assert_eq!(fields, vec!["annualTotalRevenue", "annualNetIncome"]);
 /// ```
+#[allow(dead_code)]
 pub fn build_fundamental_types(frequency: Frequency, field_types: &[&str]) -> Vec<String> {
     field_types
         .iter()
