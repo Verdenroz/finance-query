@@ -73,7 +73,9 @@ impl YahooAuth {
             .await
             .map_err(|e| {
                 warn!("Failed to fetch crumb: {}", e);
-                YahooError::AuthenticationFailed
+                YahooError::AuthenticationFailed {
+                    context: format!("Failed to fetch crumb: {}", e),
+                }
             })?;
 
         info!("Successfully authenticated with Yahoo Finance");
