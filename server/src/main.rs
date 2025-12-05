@@ -5,15 +5,35 @@ use axum::{
     response::{IntoResponse, Json},
     routing::get,
 };
-use finance_query::{
-    ClientConfig, Error as YahooError, Interval, Ticker, TimeRange, YahooClient, defaults,
-};
+use finance_query::{AsyncTicker, Interval, TimeRange, YahooError, finance};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+// Server-specific default values
+mod defaults {
+    /// Default number of similar stocks to return
+    pub const SIMILAR_STOCKS_LIMIT: u32 = 5;
+    /// Default number of search results
+    pub const SEARCH_HITS: u32 = 6;
+    /// Default number of news articles to return
+    pub const NEWS_COUNT: u32 = 10;
+    /// Default chart interval
+    pub const DEFAULT_INTERVAL: &str = "1d";
+    /// Default chart range
+    pub const DEFAULT_RANGE: &str = "1mo";
+    /// Default start period for timeseries (Unix timestamp)
+    pub const DEFAULT_PERIOD1: i64 = 0;
+    /// Default end period for timeseries (Unix timestamp)
+    pub const DEFAULT_PERIOD2: i64 = 9999999999;
+    /// Default server port
+    pub const SERVER_PORT: u16 = 8000;
+    /// Default movers count
+    pub const MOVERS_COUNT: u32 = 10;
+}
 
 #[derive(Serialize)]
 struct HealthResponse {
@@ -33,15 +53,13 @@ struct QuotesQuery {
 }
 
 #[derive(Deserialize)]
-struct SimilarQuery {
-    symbol: String,
+struct RecommendationsQuery {
     #[serde(default = "default_limit")]
     limit: u32,
 }
 
 #[derive(Deserialize)]
-struct HistoricalQuery {
-    symbol: String,
+struct ChartQuery {
     #[serde(default = "default_interval")]
     interval: String,
     #[serde(default = "default_range")]
@@ -55,17 +73,86 @@ struct SearchQuery {
     hits: u32,
 }
 
+#[derive(Deserialize)]
+struct NewsQuery {
+    #[serde(default = "default_news_count")]
+    count: u32,
+}
+
+#[derive(Deserialize)]
+struct OptionsQuery {
+    date: Option<i64>, // Optional expiration timestamp
+}
+
+#[derive(Deserialize)]
+struct TimeseriesQuery {
+    #[serde(default = "default_period1")]
+    period1: i64,
+    #[serde(default = "default_period2")]
+    period2: i64,
+    types: String, // Comma-separated fundamental types
+}
+
+#[derive(Deserialize)]
+struct MoversQuery {
+    #[serde(default = "default_movers_count")]
+    count: u32,
+}
+
+#[derive(Deserialize)]
+struct EarningsTranscriptQuery {
+    event_id: String,
+    company_id: String,
+}
+
+fn default_movers_count() -> u32 {
+    std::env::var("MOVERS_COUNT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(defaults::MOVERS_COUNT)
+}
+
 fn default_limit() -> u32 {
-    defaults::SIMILAR_STOCKS_LIMIT
+    std::env::var("RECOMMENDATIONS_LIMIT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(defaults::SIMILAR_STOCKS_LIMIT)
 }
+
 fn default_hits() -> u32 {
-    defaults::SEARCH_HITS
+    std::env::var("SEARCH_HITS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(defaults::SEARCH_HITS)
 }
+
+fn default_news_count() -> u32 {
+    std::env::var("NEWS_COUNT")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(defaults::NEWS_COUNT)
+}
+
 fn default_interval() -> String {
-    "1d".to_string()
+    std::env::var("DEFAULT_INTERVAL").unwrap_or_else(|_| defaults::DEFAULT_INTERVAL.to_string())
 }
+
 fn default_range() -> String {
-    "1mo".to_string()
+    std::env::var("DEFAULT_RANGE").unwrap_or_else(|_| defaults::DEFAULT_RANGE.to_string())
+}
+
+fn default_period1() -> i64 {
+    std::env::var("DEFAULT_PERIOD1")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(defaults::DEFAULT_PERIOD1)
+}
+
+fn default_period2() -> i64 {
+    std::env::var("DEFAULT_PERIOD2")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .unwrap_or(defaults::DEFAULT_PERIOD2)
 }
 
 #[tokio::main]
@@ -125,11 +212,16 @@ fn api_routes() -> Router {
         // Core quotes
         .route("/quote/{symbol}", get(get_quote))
         .route("/quotes", get(get_quotes))
-        .route("/similar", get(get_similar))
-        .route("/historical", get(get_historical))
+        .route("/recommendations/{symbol}", get(get_recommendations))
+        .route("/chart/{symbol}", get(get_chart))
         .route("/search", get(search))
+        // News & Options
+        .route("/news/{symbol}", get(get_news))
+        .route("/options/{symbol}", get(get_options))
         // Financials
         .route("/financials/{symbol}", get(get_financials))
+        .route("/timeseries/{symbol}", get(get_timeseries))
+        .route("/quote-type/{symbol}", get(get_quote_type))
         // Holders
         .route("/holders/{symbol}/major", get(get_major_holders))
         .route(
@@ -149,25 +241,26 @@ fn api_routes() -> Router {
         // Analysis
         .route(
             "/analysis/{symbol}/recommendations",
-            get(get_recommendations),
+            get(get_recommendation_trend),
         )
         .route(
             "/analysis/{symbol}/upgrades-downgrades",
             get(get_upgrades_downgrades),
         )
-        .route("/analysis/{symbol}/price-targets", get(get_price_targets))
         .route(
             "/analysis/{symbol}/earnings-estimate",
             get(get_earnings_estimate),
         )
         .route(
-            "/analysis/{symbol}/revenue-estimate",
-            get(get_revenue_estimate),
-        )
-        .route(
             "/analysis/{symbol}/earnings-history",
             get(get_earnings_history),
         )
+        // Market Movers
+        .route("/movers/gainers", get(get_gainers))
+        .route("/movers/losers", get(get_losers))
+        .route("/movers/actives", get(get_actives))
+        // Earnings Transcript
+        .route("/earnings-transcript", get(get_earnings_transcript))
 }
 
 /// Health check endpoint
@@ -193,47 +286,20 @@ async fn ping() -> impl IntoResponse {
 async fn get_quote(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Received quote request for symbol: {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            info!("Successfully fetched quote for {}", symbol);
-            // Convert ticker data to JSON for response
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "summaryDetail": ticker.summary_detail(),
-                "financialData": ticker.financial_data(),
-                "keyStats": ticker.key_stats(),
-                "assetProfile": ticker.asset_profile(),
-                "calendarEvents": ticker.calendar_events(),
-                "earnings": ticker.earnings(),
-                "earningsHistory": ticker.earnings_history(),
-                "earningsTrend": ticker.earnings_trend(),
-                "institutionOwnership": ticker.institution_ownership(),
-                "fundOwnership": ticker.fund_ownership(),
-                "majorHolders": ticker.major_holders(),
-                "insiderHolders": ticker.insider_holders(),
-                "insiderTransactions": ticker.insider_transactions(),
-                "recommendationTrend": ticker.recommendation_trend(),
-                "gradingHistory": ticker.grading_history(),
-                "secFilings": ticker.sec_filings(),
-                "sharePurchaseActivity": ticker.share_purchase_activity(),
-                "quoteType": ticker.quote_type(),
-                "summaryProfile": ticker.summary_profile(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.quote().await {
+            Ok(quote) => {
+                info!("Successfully fetched quote for {}", symbol);
+                (StatusCode::OK, Json(quote)).into_response()
+            }
+            Err(e) => {
+                error!("Failed to fetch quote for {}: {}", symbol, e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch quote for {}: {}", symbol, e);
-            let status = match e {
-                YahooError::SymbolNotFound(_) => StatusCode::NOT_FOUND,
-                YahooError::AuthenticationFailed => StatusCode::UNAUTHORIZED,
-                YahooError::RateLimited => StatusCode::TOO_MANY_REQUESTS,
-                _ => StatusCode::INTERNAL_SERVER_ERROR,
-            };
-            let error_response = serde_json::json!({
-                "error": e.to_string(),
-                "status": status.as_u16()
-            });
-            (status, Json(error_response)).into_response()
+            error_response(e).into_response()
         }
     }
 }
@@ -241,9 +307,13 @@ async fn get_quote(Path(symbol): Path<String>) -> impl IntoResponse {
 // Helper to convert error to response
 fn error_response(e: YahooError) -> impl IntoResponse {
     let status = match e {
-        YahooError::SymbolNotFound(_) => StatusCode::NOT_FOUND,
-        YahooError::AuthenticationFailed => StatusCode::UNAUTHORIZED,
-        YahooError::RateLimited => StatusCode::TOO_MANY_REQUESTS,
+        YahooError::SymbolNotFound { .. } => StatusCode::NOT_FOUND,
+        YahooError::AuthenticationFailed { .. } => StatusCode::UNAUTHORIZED,
+        YahooError::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
+        YahooError::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
+        YahooError::ServerError { status, .. } => {
+            StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
+        }
         _ => StatusCode::INTERNAL_SERVER_ERROR,
     };
     let error_response = serde_json::json!({
@@ -296,19 +366,19 @@ async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
     let mut errors = Vec::new();
 
     for symbol in symbols {
-        match Ticker::new(symbol).await {
-            Ok(ticker) => {
-                results.push(serde_json::json!({
-                    "symbol": ticker.symbol(),
-                    "summaryDetail": ticker.summary_detail(),
-                    "financialData": ticker.financial_data(),
-                    "keyStats": ticker.key_stats(),
-                    "assetProfile": ticker.asset_profile(),
-                    "calendarEvents": ticker.calendar_events(),
-                    "earnings": ticker.earnings(),
-                    "recommendationTrend": ticker.recommendation_trend(),
-                }));
-            }
+        match AsyncTicker::new(symbol).await {
+            Ok(ticker) => match ticker.quote().await {
+                Ok(quote) => {
+                    results.push(quote);
+                }
+                Err(e) => {
+                    error!("Failed to fetch quote for {}: {}", symbol, e);
+                    errors.push(serde_json::json!({
+                        "symbol": symbol,
+                        "error": e.to_string()
+                    }));
+                }
+            },
             Err(e) => {
                 error!("Failed to fetch quote for {}: {}", symbol, e);
                 errors.push(serde_json::json!({
@@ -326,44 +396,47 @@ async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
     (StatusCode::OK, Json(response)).into_response()
 }
 
-/// Get similar quotes for a symbol
-async fn get_similar(Query(params): Query<SimilarQuery>) -> impl IntoResponse {
-    info!("Fetching similar quotes for {}", params.symbol);
+/// Get recommended/similar quotes for a symbol
+async fn get_recommendations(
+    Path(symbol): Path<String>,
+    Query(params): Query<RecommendationsQuery>,
+) -> impl IntoResponse {
+    info!("Fetching recommendations for {}", symbol);
 
-    match YahooClient::new(ClientConfig::default()).await {
-        Ok(client) => match client
-            .get_similar_quotes(&params.symbol, params.limit)
-            .await
-        {
-            Ok(json) => (StatusCode::OK, Json(json)).into_response(),
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.recommendations(params.limit).await {
+            Ok(recommendation) => (StatusCode::OK, Json(recommendation)).into_response(),
             Err(e) => {
-                error!("Failed to fetch similar quotes: {}", e);
+                error!("Failed to fetch recommendations: {}", e);
                 error_response(e).into_response()
             }
         },
         Err(e) => {
-            error!("Failed to create client: {}", e);
+            error!("Failed to create ticker: {}", e);
             error_response(e).into_response()
         }
     }
 }
 
-/// Get historical chart data
-async fn get_historical(Query(params): Query<HistoricalQuery>) -> impl IntoResponse {
+/// Get chart data
+async fn get_chart(
+    Path(symbol): Path<String>,
+    Query(params): Query<ChartQuery>,
+) -> impl IntoResponse {
     let interval = parse_interval(&params.interval);
     let range = parse_range(&params.range);
-    info!("Fetching historical data for {}", params.symbol);
+    info!("Fetching chart data for {}", symbol);
 
-    match YahooClient::new(ClientConfig::default()).await {
-        Ok(client) => match client.get_chart(&params.symbol, interval, range).await {
-            Ok(json) => (StatusCode::OK, Json(json)).into_response(),
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.chart(interval, range).await {
+            Ok(chart) => (StatusCode::OK, Json(chart)).into_response(),
             Err(e) => {
-                error!("Failed to fetch historical data: {}", e);
+                error!("Failed to fetch chart data: {}", e);
                 error_response(e).into_response()
             }
         },
         Err(e) => {
-            error!("Failed to create client: {}", e);
+            error!("Failed to create ticker: {}", e);
             error_response(e).into_response()
         }
     }
@@ -373,16 +446,54 @@ async fn get_historical(Query(params): Query<HistoricalQuery>) -> impl IntoRespo
 async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
     info!("Searching for: {}", params.q);
 
-    match YahooClient::new(ClientConfig::default()).await {
-        Ok(client) => match client.search(&params.q, params.hits).await {
-            Ok(json) => (StatusCode::OK, Json(json)).into_response(),
+    match finance::search(&params.q, params.hits).await {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
+        Err(e) => {
+            error!("Search failed: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Get news for a symbol
+async fn get_news(
+    Path(symbol): Path<String>,
+    Query(params): Query<NewsQuery>,
+) -> impl IntoResponse {
+    info!("Fetching news for {}", symbol);
+
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.news(params.count).await {
+            Ok(news_response) => (StatusCode::OK, Json(news_response)).into_response(),
             Err(e) => {
-                error!("Search failed: {}", e);
+                error!("Failed to fetch news: {}", e);
                 error_response(e).into_response()
             }
         },
         Err(e) => {
-            error!("Failed to create client: {}", e);
+            error!("Failed to create ticker: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Get options chain for a symbol
+async fn get_options(
+    Path(symbol): Path<String>,
+    Query(params): Query<OptionsQuery>,
+) -> impl IntoResponse {
+    info!("Fetching options for {}", symbol);
+
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.options(params.date).await {
+            Ok(options_response) => (StatusCode::OK, Json(options_response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch options: {}", e);
+                error_response(e).into_response()
+            }
+        },
+        Err(e) => {
+            error!("Failed to create ticker: {}", e);
             error_response(e).into_response()
         }
     }
@@ -392,19 +503,78 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
 async fn get_financials(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching financials for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "financialData": ticker.financial_data(),
-                "earnings": ticker.earnings(),
-                "earningsHistory": ticker.earnings_history(),
-                "earningsTrend": ticker.earnings_trend(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.financial_data().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch financials: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch financials: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Get fundamentals timeseries data
+async fn get_timeseries(
+    Path(symbol): Path<String>,
+    Query(params): Query<TimeseriesQuery>,
+) -> impl IntoResponse {
+    info!(
+        "Fetching timeseries for {} with types: {}",
+        symbol, params.types
+    );
+
+    // Parse types from comma-separated string
+    let types: Vec<&str> = params.types.split(',').map(|s| s.trim()).collect();
+
+    if types.is_empty() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "No types provided for timeseries"
+            })),
+        )
+            .into_response();
+    }
+
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => {
+            match ticker
+                .timeseries(&types, params.period1, params.period2)
+                .await
+            {
+                Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+                Err(e) => {
+                    error!("Failed to fetch timeseries: {}", e);
+                    error_response(e).into_response()
+                }
+            }
+        }
+        Err(e) => {
+            error!("Failed to create ticker: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Get quote type metadata for a symbol
+async fn get_quote_type(Path(symbol): Path<String>) -> impl IntoResponse {
+    info!("Fetching quote type for {}", symbol);
+
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.quote_type().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch quote type: {}", e);
+                error_response(e).into_response()
+            }
+        },
+        Err(e) => {
+            error!("Failed to create ticker: {}", e);
             error_response(e).into_response()
         }
     }
@@ -414,14 +584,14 @@ async fn get_financials(Path(symbol): Path<String>) -> impl IntoResponse {
 async fn get_major_holders(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching major holders for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "majorHolders": ticker.major_holders(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.major_holders().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch major holders: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch major holders: {}", e);
             error_response(e).into_response()
@@ -433,14 +603,14 @@ async fn get_major_holders(Path(symbol): Path<String>) -> impl IntoResponse {
 async fn get_institutional_holders(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching institutional holders for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "institutionOwnership": ticker.institution_ownership(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.institution_ownership().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch institutional holders: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch institutional holders: {}", e);
             error_response(e).into_response()
@@ -452,14 +622,14 @@ async fn get_institutional_holders(Path(symbol): Path<String>) -> impl IntoRespo
 async fn get_mutualfund_holders(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching mutual fund holders for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "fundOwnership": ticker.fund_ownership(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.fund_ownership().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch mutual fund holders: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch mutual fund holders: {}", e);
             error_response(e).into_response()
@@ -471,14 +641,14 @@ async fn get_mutualfund_holders(Path(symbol): Path<String>) -> impl IntoResponse
 async fn get_insider_transactions(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching insider transactions for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "insiderTransactions": ticker.insider_transactions(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.insider_transactions().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch insider transactions: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch insider transactions: {}", e);
             error_response(e).into_response()
@@ -490,14 +660,14 @@ async fn get_insider_transactions(Path(symbol): Path<String>) -> impl IntoRespon
 async fn get_insider_purchases(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching insider purchases for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "sharePurchaseActivity": ticker.share_purchase_activity(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.share_purchase_activity().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch insider purchases: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch insider purchases: {}", e);
             error_response(e).into_response()
@@ -509,14 +679,14 @@ async fn get_insider_purchases(Path(symbol): Path<String>) -> impl IntoResponse 
 async fn get_insider_roster(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching insider roster for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "insiderHolders": ticker.insider_holders(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.insider_holders().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch insider roster: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch insider roster: {}", e);
             error_response(e).into_response()
@@ -524,20 +694,20 @@ async fn get_insider_roster(Path(symbol): Path<String>) -> impl IntoResponse {
     }
 }
 
-/// Get analyst recommendations
-async fn get_recommendations(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching recommendations for {}", symbol);
+/// Get analyst recommendations trend
+async fn get_recommendation_trend(Path(symbol): Path<String>) -> impl IntoResponse {
+    info!("Fetching recommendation trend for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "recommendationTrend": ticker.recommendation_trend(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.recommendation_trend().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch recommendation trend: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
-            error!("Failed to fetch recommendations: {}", e);
+            error!("Failed to fetch recommendation trend: {}", e);
             error_response(e).into_response()
         }
     }
@@ -547,36 +717,16 @@ async fn get_recommendations(Path(symbol): Path<String>) -> impl IntoResponse {
 async fn get_upgrades_downgrades(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching upgrades/downgrades for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "gradingHistory": ticker.grading_history(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.grading_history().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch upgrades/downgrades: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch upgrades/downgrades: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get analyst price targets
-async fn get_price_targets(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching price targets for {}", symbol);
-
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            // Price targets are part of financial data
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "financialData": ticker.financial_data(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(e) => {
-            error!("Failed to fetch price targets: {}", e);
             error_response(e).into_response()
         }
     }
@@ -586,35 +736,16 @@ async fn get_price_targets(Path(symbol): Path<String>) -> impl IntoResponse {
 async fn get_earnings_estimate(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching earnings estimate for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "earningsTrend": ticker.earnings_trend(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.earnings_trend().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch earnings estimate: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch earnings estimate: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get revenue estimates
-async fn get_revenue_estimate(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching revenue estimate for {}", symbol);
-
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "earningsTrend": ticker.earnings_trend(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
-        Err(e) => {
-            error!("Failed to fetch revenue estimate: {}", e);
             error_response(e).into_response()
         }
     }
@@ -624,14 +755,14 @@ async fn get_revenue_estimate(Path(symbol): Path<String>) -> impl IntoResponse {
 async fn get_earnings_history(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching earnings history for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => {
-            let response = serde_json::json!({
-                "symbol": ticker.symbol(),
-                "earningsHistory": ticker.earnings_history(),
-            });
-            (StatusCode::OK, Json(response)).into_response()
-        }
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.earnings_history().await {
+            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Err(e) => {
+                error!("Failed to fetch earnings history: {}", e);
+                error_response(e).into_response()
+            }
+        },
         Err(e) => {
             error!("Failed to fetch earnings history: {}", e);
             error_response(e).into_response()
@@ -701,4 +832,58 @@ async fn shutdown_signal() {
     }
 
     info!("Shutting down gracefully...");
+}
+
+/// Get top gaining stocks
+async fn get_gainers(Query(params): Query<MoversQuery>) -> impl IntoResponse {
+    info!("Fetching top {} gainers", params.count);
+
+    match finance::gainers(params.count).await {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch gainers: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Get top losing stocks
+async fn get_losers(Query(params): Query<MoversQuery>) -> impl IntoResponse {
+    info!("Fetching top {} losers", params.count);
+
+    match finance::losers(params.count).await {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch losers: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Get most active stocks
+async fn get_actives(Query(params): Query<MoversQuery>) -> impl IntoResponse {
+    info!("Fetching top {} most active stocks", params.count);
+
+    match finance::actives(params.count).await {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch most active stocks: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Get earnings call transcript
+async fn get_earnings_transcript(
+    Query(params): Query<EarningsTranscriptQuery>,
+) -> impl IntoResponse {
+    info!("Fetching earnings transcript for event {}", params.event_id);
+
+    match finance::earnings_transcript(&params.event_id, &params.company_id).await {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch earnings transcript: {}", e);
+            error_response(e).into_response()
+        }
+    }
 }
