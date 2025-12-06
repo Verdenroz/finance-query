@@ -214,6 +214,7 @@ fn api_routes() -> Router {
         .route("/quotes", get(get_quotes))
         .route("/recommendations/{symbol}", get(get_recommendations))
         .route("/chart/{symbol}", get(get_chart))
+        .route("/indicators/{symbol}", get(get_indicators))
         .route("/search", get(search))
         // News & Options
         .route("/news/{symbol}", get(get_news))
@@ -432,6 +433,33 @@ async fn get_chart(
             Ok(chart) => (StatusCode::OK, Json(chart)).into_response(),
             Err(e) => {
                 error!("Failed to fetch chart data: {}", e);
+                error_response(e).into_response()
+            }
+        },
+        Err(e) => {
+            error!("Failed to create ticker: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Get technical indicators
+async fn get_indicators(
+    Path(symbol): Path<String>,
+    Query(params): Query<ChartQuery>,
+) -> impl IntoResponse {
+    let interval = parse_interval(&params.interval);
+    let range = parse_range(&params.range);
+    info!(
+        "Calculating indicators for {} with interval={:?}, range={:?}",
+        symbol, interval, range
+    );
+
+    match AsyncTicker::new(&symbol).await {
+        Ok(ticker) => match ticker.indicators(interval, range).await {
+            Ok(indicators) => (StatusCode::OK, Json(indicators)).into_response(),
+            Err(e) => {
+                error!("Failed to calculate indicators: {}", e);
                 error_response(e).into_response()
             }
         },

@@ -383,6 +383,43 @@ impl AsyncTicker {
         })
     }
 
+    /// Calculate all technical indicators from chart data
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - The time interval for each candle
+    /// * `range` - The time range to fetch data for
+    ///
+    /// # Returns
+    ///
+    /// Returns `IndicatorsSummary` containing all calculated indicators.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{AsyncTicker, Interval, TimeRange};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = AsyncTicker::new("AAPL").await?;
+    /// let indicators = ticker.indicators(Interval::Daily, TimeRange::OneYear).await?;
+    ///
+    /// println!("RSI(14): {:?}", indicators.rsi_14);
+    /// println!("MACD: {:?}", indicators.macd);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn indicators(
+        &self,
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<crate::indicators::IndicatorsSummary> {
+        // Fetch chart data
+        let chart = self.chart(interval, range).await?;
+
+        // Calculate indicators from candles
+        Ok(crate::indicators::calculate_indicators(&chart.candles))
+    }
+
     /// Get analyst recommendations
     pub async fn recommendations(&self, limit: u32) -> Result<Recommendation> {
         // Check cache
@@ -749,6 +786,43 @@ impl Ticker {
             interval: Some(interval.as_str().to_string()),
             range: Some(range.as_str().to_string()),
         })
+    }
+
+    /// Calculate all technical indicators from chart data
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - The time interval for each candle
+    /// * `range` - The time range to fetch data for
+    ///
+    /// # Returns
+    ///
+    /// Returns `IndicatorsSummary` containing all calculated indicators.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Interval, TimeRange};
+    ///
+    /// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = Ticker::new("AAPL")?;
+    /// let indicators = ticker.indicators(Interval::Daily, TimeRange::OneYear)?;
+    ///
+    /// println!("RSI(14): {:?}", indicators.rsi_14);
+    /// println!("MACD: {:?}", indicators.macd);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn indicators(
+        &self,
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<crate::indicators::IndicatorsSummary> {
+        // Fetch chart data
+        let chart = self.chart(interval, range)?;
+
+        // Calculate indicators from candles
+        Ok(crate::indicators::calculate_indicators(&chart.candles))
     }
 
     /// Get analyst recommendations

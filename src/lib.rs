@@ -107,6 +107,7 @@ pub(crate) mod client;
 /// Constants and default values
 pub mod constants;
 pub(crate) mod endpoints;
+pub(crate) mod indicators;
 
 /// Error types and result definitions
 pub mod error;
@@ -150,3 +151,8 @@ pub use models::{
     search::SearchQuote,
     timeseries::{TimeseriesDataPoint, TimeseriesResponse, fundamental_types},
 };
+
+// ============================================================================
+// Technical Indicators - Types returned by indicators() method
+// ============================================================================
+pub use indicators::IndicatorsSummary;

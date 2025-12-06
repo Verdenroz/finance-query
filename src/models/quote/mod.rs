@@ -123,6 +123,26 @@ pub enum Module {
     SummaryDetail,
     /// Company location and business summary
     SummaryProfile,
+    /// Historical balance sheets (annual)
+    BalanceSheetHistory,
+    /// Quarterly balance sheets
+    BalanceSheetHistoryQuarterly,
+    /// Historical cash flow statements (annual)
+    CashflowStatementHistory,
+    /// Quarterly cash flow statements
+    CashflowStatementHistoryQuarterly,
+    /// Historical income statements (annual)
+    IncomeStatementHistory,
+    /// Quarterly income statements
+    IncomeStatementHistoryQuarterly,
+    /// ESG (Environmental, Social, Governance) scores
+    EsgScores,
+    /// Real-time price data
+    Price,
+    /// Sector trend data
+    SectorTrend,
+    /// Top holdings for funds
+    TopHoldings,
 }
 
 impl Module {
@@ -160,6 +180,16 @@ impl Module {
             Module::SharePurchaseActivity => "netSharePurchaseActivity",
             Module::SummaryDetail => "summaryDetail",
             Module::SummaryProfile => "summaryProfile",
+            Module::BalanceSheetHistory => "balanceSheetHistory",
+            Module::BalanceSheetHistoryQuarterly => "balanceSheetHistoryQuarterly",
+            Module::CashflowStatementHistory => "cashflowStatementHistory",
+            Module::CashflowStatementHistoryQuarterly => "cashflowStatementHistoryQuarterly",
+            Module::IncomeStatementHistory => "incomeStatementHistory",
+            Module::IncomeStatementHistoryQuarterly => "incomeStatementHistoryQuarterly",
+            Module::EsgScores => "esgScores",
+            Module::Price => "price",
+            Module::SectorTrend => "sectorTrend",
+            Module::TopHoldings => "topHoldings",
         }
     }
 
@@ -197,6 +227,16 @@ impl Module {
             Module::SharePurchaseActivity,
             Module::SummaryDetail,
             Module::SummaryProfile,
+            Module::BalanceSheetHistory,
+            Module::BalanceSheetHistoryQuarterly,
+            Module::CashflowStatementHistory,
+            Module::CashflowStatementHistoryQuarterly,
+            Module::IncomeStatementHistory,
+            Module::IncomeStatementHistoryQuarterly,
+            Module::EsgScores,
+            Module::Price,
+            Module::SectorTrend,
+            Module::TopHoldings,
         ]
     }
 
