@@ -219,10 +219,10 @@ impl YahooClient {
     /// - Sets proper headers
     pub async fn request_with_crumb(&self, url: &str) -> Result<reqwest::Response> {
         let auth = self.auth.read().await;
-        let http = self.http.read().await;
 
-        // Build request with crumb (cookies are automatically handled by reqwest)
-        let request = http.get(url).query(&[("crumb", &auth.crumb)]);
+        // Use the auth's HTTP client directly - it has the cookies from authentication
+        // NOT self.http because that's a clone without the cookie store
+        let request = auth.http_client.get(url).query(&[("crumb", &auth.crumb)]);
 
         debug!("Making request to {}", url);
 

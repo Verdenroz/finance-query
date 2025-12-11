@@ -3,15 +3,22 @@
 //! Contains all data structures and enums for Yahoo Finance's quoteSummary endpoint.
 
 mod asset_profile;
+mod balance_sheet_history;
 mod calendar_events;
+mod cashflow_statement_history;
 mod data;
 mod default_key_statistics;
 mod earnings;
 mod earnings_history;
 mod earnings_trend;
+mod equity_performance;
 mod financial_data;
 mod formatted_value;
 mod fund_ownership;
+mod fund_performance;
+mod fund_profile;
+mod income_statement_history;
+mod index_trend;
 mod insider_holders;
 mod insider_transactions;
 mod institution_ownership;
@@ -24,10 +31,13 @@ mod response;
 mod sec_filings;
 mod summary_detail;
 mod summary_profile;
+mod top_holdings;
 mod upgrade_downgrade_history;
 
 pub use asset_profile::{AssetProfile, CompanyOfficer};
+pub use balance_sheet_history::{BalanceSheetHistory, BalanceSheetHistoryQuarterly};
 pub use calendar_events::{CalendarEvents, EarningsCalendar};
+pub use cashflow_statement_history::{CashflowStatementHistory, CashflowStatementHistoryQuarterly};
 pub use data::Quote;
 pub use default_key_statistics::DefaultKeyStatistics;
 pub use earnings::{
@@ -38,9 +48,21 @@ pub use earnings_history::{EarningsHistory, EarningsHistoryEntry};
 pub use earnings_trend::{
     EarningsEstimate, EarningsTrend, EarningsTrendPeriod, EpsRevisions, EpsTrend, RevenueEstimate,
 };
+pub use equity_performance::{
+    Benchmark, EquityPerformance, PerformanceOverview as EquityPerformanceOverview,
+};
 pub use financial_data::FinancialData;
 pub use formatted_value::FormattedValue;
 pub use fund_ownership::{FundOwner, FundOwnership};
+pub use fund_performance::{
+    AnnualReturn, AnnualTotalReturns, FundPerformance, PastQuarterlyReturns,
+    PerformanceOverview as FundPerformanceOverview, PerformanceOverviewCat, RiskOverviewStatistics,
+    RiskOverviewStatisticsCat, RiskStatistic, TrailingReturns, TrailingReturnsCat,
+    TrailingReturnsNav,
+};
+pub use fund_profile::{FeesExpenses, FeesExpensesCat, FundProfile, ManagementInfo};
+pub use income_statement_history::{IncomeStatementHistory, IncomeStatementHistoryQuarterly};
+pub use index_trend::{IndexTrend, IndustryTrend, SectorTrend, TrendEstimate};
 pub use insider_holders::{InsiderHolder, InsiderHolders};
 pub use insider_transactions::{InsiderTransaction, InsiderTransactions};
 pub use institution_ownership::{InstitutionOwner, InstitutionOwnership};
@@ -53,6 +75,7 @@ pub use response::QuoteSummaryResponse;
 pub use sec_filings::{SecExhibit, SecFiling, SecFilings};
 pub use summary_detail::SummaryDetail;
 pub use summary_profile::SummaryProfile;
+pub use top_holdings::{BondRating, EquityHoldings, Holding, SectorWeighting, TopHoldings};
 pub use upgrade_downgrade_history::{GradeChange, UpgradeDowngradeHistory};
 
 /// All available modules from Yahoo Finance's quoteSummary endpoint
@@ -73,6 +96,8 @@ pub enum Module {
     Earnings,
     /// Historical trend data for earnings and revenue estimations
     EarningsTrend,
+    /// Equity performance vs benchmark across multiple time periods
+    EquityPerformance,
     /// Financial KPIs (PE, enterprise value, EPS, EBITA, etc.)
     FinancialData,
     /// Aggregated maturity and duration information (funds/ETFs)
@@ -109,8 +134,6 @@ pub enum Module {
     KeyStats,
     /// Breakdown of owners (insiders, institutions, etc.)
     MajorHolders,
-    /// Short, mid, and long-term trend data for page views
-    PageViews,
     /// Stock exchange specific data
     QuoteType,
     /// Historical buy/hold/sell recommendations
@@ -155,6 +178,7 @@ impl Module {
             Module::EarningHistory => "earningsHistory",
             Module::Earnings => "earnings",
             Module::EarningsTrend => "earningsTrend",
+            Module::EquityPerformance => "equityPerformance",
             Module::FinancialData => "financialData",
             Module::FundBondHoldings => "fundBondHoldings",
             Module::FundBondRatings => "fundBondRatings",
@@ -173,7 +197,6 @@ impl Module {
             Module::InstitutionOwnership => "institutionOwnership",
             Module::KeyStats => "defaultKeyStatistics",
             Module::MajorHolders => "majorHoldersBreakdown",
-            Module::PageViews => "pageViews",
             Module::QuoteType => "quoteType",
             Module::RecommendationTrend => "recommendationTrend",
             Module::SecFilings => "secFilings",
@@ -202,6 +225,7 @@ impl Module {
             Module::EarningHistory,
             Module::Earnings,
             Module::EarningsTrend,
+            Module::EquityPerformance,
             Module::FinancialData,
             Module::FundBondHoldings,
             Module::FundBondRatings,
@@ -220,7 +244,6 @@ impl Module {
             Module::InstitutionOwnership,
             Module::KeyStats,
             Module::MajorHolders,
-            Module::PageViews,
             Module::QuoteType,
             Module::RecommendationTrend,
             Module::SecFilings,

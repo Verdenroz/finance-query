@@ -26,6 +26,7 @@ use serde::{Deserialize, Serialize};
 /// A generic type representing Yahoo Finance's formatted value pattern
 ///
 /// Contains the raw numeric value along with optional formatted representations.
+/// Note: `raw` is optional because Yahoo sometimes returns empty objects `{}` for unavailable data.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct FormattedValue<T> {
@@ -37,8 +38,10 @@ pub struct FormattedValue<T> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub long_fmt: Option<String>,
 
-    /// Raw numeric value
-    pub raw: T,
+    /// Raw numeric value (None if data is unavailable)
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub raw: Option<T>,
 }
 
 impl<T> FormattedValue<T> {
@@ -47,7 +50,7 @@ impl<T> FormattedValue<T> {
         Self {
             fmt: None,
             long_fmt: None,
-            raw,
+            raw: Some(raw),
         }
     }
 
@@ -56,7 +59,7 @@ impl<T> FormattedValue<T> {
         Self {
             fmt: Some(fmt),
             long_fmt: None,
-            raw,
+            raw: Some(raw),
         }
     }
 
@@ -65,13 +68,13 @@ impl<T> FormattedValue<T> {
         Self {
             fmt: Some(fmt),
             long_fmt: Some(long_fmt),
-            raw,
+            raw: Some(raw),
         }
     }
 
     /// Get the raw value
-    pub fn value(&self) -> &T {
-        &self.raw
+    pub fn value(&self) -> Option<&T> {
+        self.raw.as_ref()
     }
 
     /// Get the formatted string, falling back to long format, then None
@@ -88,7 +91,7 @@ mod tests {
     fn test_deserialize_simple() {
         let json = r#"{"fmt": "276.97", "raw": 276.97}"#;
         let value: FormattedValue<f64> = serde_json::from_str(json).unwrap();
-        assert_eq!(value.raw, 276.97);
+        assert_eq!(value.raw, Some(276.97));
         assert_eq!(value.fmt.as_deref(), Some("276.97"));
         assert_eq!(value.long_fmt, None);
     }
@@ -97,7 +100,7 @@ mod tests {
     fn test_deserialize_with_long_fmt() {
         let json = r#"{"fmt": "14.78B", "longFmt": "14,776,353,000", "raw": 14776353000}"#;
         let value: FormattedValue<i64> = serde_json::from_str(json).unwrap();
-        assert_eq!(value.raw, 14776353000);
+        assert_eq!(value.raw, Some(14776353000));
         assert_eq!(value.fmt.as_deref(), Some("14.78B"));
         assert_eq!(value.long_fmt.as_deref(), Some("14,776,353,000"));
     }
@@ -109,5 +112,26 @@ mod tests {
 
         let value = FormattedValue::new(100.5);
         assert_eq!(value.formatted(), None);
+    }
+}
+
+#[cfg(test)]
+mod test_empty_object {
+    use super::*;
+
+    #[test]
+    fn test_empty_object_deserializes() {
+        let json = "{}";
+        let result: Result<FormattedValue<f64>, _> = serde_json::from_str(json);
+        assert!(
+            result.is_ok(),
+            "Empty object should deserialize: {:?}",
+            result.err()
+        );
+
+        let fv = result.unwrap();
+        assert_eq!(fv.raw, None);
+        assert_eq!(fv.fmt, None);
+        assert_eq!(fv.long_fmt, None);
     }
 }

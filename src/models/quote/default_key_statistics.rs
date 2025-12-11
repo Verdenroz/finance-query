@@ -276,13 +276,16 @@ mod tests {
         }"#;
 
         let stats: DefaultKeyStatistics = serde_json::from_str(json).unwrap();
-        assert_eq!(stats.week_52_change.as_ref().map(|v| v.raw), Some(0.173828));
-        assert_eq!(stats.beta.as_ref().map(|v| v.raw), Some(1.109));
+        assert_eq!(
+            stats.week_52_change.as_ref().map(|v| v.raw),
+            Some(Some(0.173828))
+        );
+        assert_eq!(stats.beta.as_ref().map(|v| v.raw), Some(Some(1.109)));
         assert_eq!(stats.last_split_factor.as_deref(), Some("4:1"));
         assert_eq!(stats.max_age, Some(1));
         assert_eq!(
             stats.shares_outstanding.as_ref().map(|v| v.raw),
-            Some(14776353000)
+            Some(Some(14776353000))
         );
     }
 }

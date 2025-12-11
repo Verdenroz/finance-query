@@ -152,8 +152,14 @@ mod tests {
         }"#;
 
         let data: FinancialData = serde_json::from_str(json).unwrap();
-        assert_eq!(data.current_price.as_ref().map(|v| v.raw), Some(276.97));
-        assert_eq!(data.ebitda.as_ref().map(|v| v.raw), Some(144748003328));
+        assert_eq!(
+            data.current_price.as_ref().map(|v| v.raw),
+            Some(Some(276.97))
+        );
+        assert_eq!(
+            data.ebitda.as_ref().map(|v| v.raw),
+            Some(Some(144748003328))
+        );
         assert_eq!(data.financial_currency.as_deref(), Some("USD"));
         assert_eq!(data.recommendation_key.as_deref(), Some("buy"));
     }

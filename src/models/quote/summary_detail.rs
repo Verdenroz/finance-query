@@ -256,10 +256,13 @@ mod tests {
 
         let detail: SummaryDetail = serde_json::from_str(json).unwrap();
         assert_eq!(detail.currency.as_deref(), Some("USD"));
-        assert_eq!(detail.previous_close.as_ref().map(|v| v.raw), Some(275.0));
+        assert_eq!(
+            detail.previous_close.as_ref().map(|v| v.raw),
+            Some(Some(275.0))
+        );
         assert_eq!(
             detail.market_cap.as_ref().map(|v| v.raw),
-            Some(4090000000000)
+            Some(Some(4090000000000))
         );
         assert_eq!(detail.tradeable, Some(true));
     }

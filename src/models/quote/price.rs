@@ -18,19 +18,19 @@ pub struct Price {
 
     /// Pre-market change percentage
     #[serde(default)]
-    pub pre_market_change_percent: Option<f64>,
+    pub pre_market_change_percent: Option<super::FormattedValue<f64>>,
 
     /// Pre-market change value
     #[serde(default)]
-    pub pre_market_change: Option<f64>,
+    pub pre_market_change: Option<super::FormattedValue<f64>>,
 
-    /// Pre-market time as string
+    /// Pre-market time as Unix timestamp
     #[serde(default)]
-    pub pre_market_time: Option<String>,
+    pub pre_market_time: Option<i64>,
 
     /// Pre-market price
     #[serde(default)]
-    pub pre_market_price: Option<f64>,
+    pub pre_market_price: Option<super::FormattedValue<f64>>,
 
     /// Pre-market data source
     #[serde(default)]
@@ -38,11 +38,11 @@ pub struct Price {
 
     /// Post-market change percentage
     #[serde(default)]
-    pub post_market_change_percent: Option<f64>,
+    pub post_market_change_percent: Option<super::FormattedValue<f64>>,
 
     /// Post-market change value
     #[serde(default)]
-    pub post_market_change: Option<f64>,
+    pub post_market_change: Option<super::FormattedValue<f64>>,
 
     /// Post-market time as Unix timestamp
     #[serde(default)]
@@ -50,7 +50,7 @@ pub struct Price {
 
     /// Post-market price
     #[serde(default)]
-    pub post_market_price: Option<f64>,
+    pub post_market_price: Option<super::FormattedValue<f64>>,
 
     /// Post-market data source
     #[serde(default)]
@@ -58,39 +58,47 @@ pub struct Price {
 
     /// Regular market change percentage
     #[serde(default)]
-    pub regular_market_change_percent: Option<f64>,
+    pub regular_market_change_percent: Option<super::FormattedValue<f64>>,
 
     /// Regular market change value
     #[serde(default)]
-    pub regular_market_change: Option<f64>,
+    pub regular_market_change: Option<super::FormattedValue<f64>>,
 
-    /// Regular market time as string
+    /// Regular market time as Unix timestamp
     #[serde(default)]
-    pub regular_market_time: Option<String>,
+    pub regular_market_time: Option<i64>,
 
     /// Price hint for decimal places
     #[serde(default)]
-    pub price_hint: Option<i32>,
+    pub price_hint: Option<super::FormattedValue<i64>>,
 
     /// Current regular market price
     #[serde(default)]
-    pub regular_market_price: Option<f64>,
+    pub regular_market_price: Option<super::FormattedValue<f64>>,
 
     /// Regular market day high
     #[serde(default)]
-    pub regular_market_day_high: Option<f64>,
+    pub regular_market_day_high: Option<super::FormattedValue<f64>>,
 
     /// Regular market day low
     #[serde(default)]
-    pub regular_market_day_low: Option<f64>,
+    pub regular_market_day_low: Option<super::FormattedValue<f64>>,
 
     /// Regular market volume
     #[serde(default)]
-    pub regular_market_volume: Option<i64>,
+    pub regular_market_volume: Option<super::FormattedValue<i64>>,
+
+    /// Average daily volume over 10 days
+    #[serde(default)]
+    pub average_daily_volume10_day: Option<super::FormattedValue<i64>>,
+
+    /// Average daily volume over 3 months
+    #[serde(default)]
+    pub average_daily_volume3_month: Option<super::FormattedValue<i64>>,
 
     /// Regular market previous close
     #[serde(default)]
-    pub regular_market_previous_close: Option<f64>,
+    pub regular_market_previous_close: Option<super::FormattedValue<f64>>,
 
     /// Regular market data source
     #[serde(default)]
@@ -98,7 +106,7 @@ pub struct Price {
 
     /// Regular market open price
     #[serde(default)]
-    pub regular_market_open: Option<f64>,
+    pub regular_market_open: Option<super::FormattedValue<f64>>,
 
     /// Exchange code (e.g., "NMS" for NASDAQ)
     #[serde(default)]
@@ -162,7 +170,7 @@ pub struct Price {
 
     /// Market capitalization
     #[serde(default)]
-    pub market_cap: Option<i64>,
+    pub market_cap: Option<super::FormattedValue<i64>>,
 }
 
 impl Price {
@@ -170,25 +178,24 @@ impl Price {
     ///
     /// This is the most commonly used price value.
     pub fn current_price(&self) -> Option<f64> {
-        self.regular_market_price
+        self.regular_market_price.as_ref()?.raw
     }
 
     /// Returns the day's change in price
     pub fn day_change(&self) -> Option<f64> {
-        self.regular_market_change
+        self.regular_market_change.as_ref()?.raw
     }
 
     /// Returns the day's change as a percentage
     pub fn day_change_percent(&self) -> Option<f64> {
-        self.regular_market_change_percent
+        self.regular_market_change_percent.as_ref()?.raw
     }
 
     /// Returns the day's trading range as (low, high)
     pub fn day_range(&self) -> Option<(f64, f64)> {
-        match (self.regular_market_day_low, self.regular_market_day_high) {
-            (Some(low), Some(high)) => Some((low, high)),
-            _ => None,
-        }
+        let low = self.regular_market_day_low.as_ref()?.raw?;
+        let high = self.regular_market_day_high.as_ref()?.raw?;
+        Some((low, high))
     }
 
     /// Returns whether the market is currently open
@@ -212,11 +219,17 @@ impl Price {
     /// otherwise regular market price.
     pub fn live_price(&self) -> Option<f64> {
         if self.is_post_market() {
-            self.post_market_price.or(self.regular_market_price)
+            self.post_market_price
+                .as_ref()
+                .and_then(|p| p.raw)
+                .or_else(|| self.regular_market_price.as_ref()?.raw)
         } else if self.is_pre_market() {
-            self.pre_market_price.or(self.regular_market_price)
+            self.pre_market_price
+                .as_ref()
+                .and_then(|p| p.raw)
+                .or_else(|| self.regular_market_price.as_ref()?.raw)
         } else {
-            self.regular_market_price
+            self.regular_market_price.as_ref()?.raw
         }
     }
 }
@@ -230,13 +243,13 @@ mod tests {
     fn test_price_deserialize() {
         let json = json!({
             "maxAge": 1,
-            "regularMarketPrice": 150.25,
-            "regularMarketChange": 2.50,
-            "regularMarketChangePercent": 0.0169,
-            "regularMarketDayHigh": 151.00,
-            "regularMarketDayLow": 148.50,
-            "regularMarketVolume": 50000000,
-            "marketCap": 2500000000000i64,
+            "regularMarketPrice": {"raw": 150.25, "fmt": "150.25"},
+            "regularMarketChange": {"raw": 2.50, "fmt": "2.50"},
+            "regularMarketChangePercent": {"raw": 0.0169, "fmt": "1.69%"},
+            "regularMarketDayHigh": {"raw": 151.00, "fmt": "151.00"},
+            "regularMarketDayLow": {"raw": 148.50, "fmt": "148.50"},
+            "regularMarketVolume": {"raw": 50000000, "fmt": "50M"},
+            "marketCap": {"raw": 2500000000000i64, "fmt": "2.5T"},
             "symbol": "AAPL",
             "shortName": "Apple Inc.",
             "longName": "Apple Inc.",
@@ -246,7 +259,10 @@ mod tests {
         });
 
         let price: Price = serde_json::from_value(json).unwrap();
-        assert_eq!(price.regular_market_price, Some(150.25));
+        assert_eq!(
+            price.regular_market_price.as_ref().and_then(|v| v.raw),
+            Some(150.25)
+        );
         assert_eq!(price.symbol, Some("AAPL".to_string()));
         assert_eq!(price.current_price(), Some(150.25));
         assert_eq!(price.day_change(), Some(2.50));
@@ -255,13 +271,15 @@ mod tests {
 
     #[test]
     fn test_price_helpers() {
+        use super::super::FormattedValue;
+
         let price = Price {
-            regular_market_price: Some(100.0),
-            regular_market_day_low: Some(98.0),
-            regular_market_day_high: Some(102.0),
+            regular_market_price: Some(FormattedValue::new(100.0)),
+            regular_market_day_low: Some(FormattedValue::new(98.0)),
+            regular_market_day_high: Some(FormattedValue::new(102.0)),
             market_state: Some("REGULAR".to_string()),
-            post_market_price: Some(101.0),
-            pre_market_price: Some(99.0),
+            post_market_price: Some(FormattedValue::new(101.0)),
+            pre_market_price: Some(FormattedValue::new(99.0)),
             ..Default::default()
         };
 
@@ -272,9 +290,11 @@ mod tests {
 
     #[test]
     fn test_live_price_post_market() {
+        use super::super::FormattedValue;
+
         let price = Price {
-            regular_market_price: Some(100.0),
-            post_market_price: Some(101.0),
+            regular_market_price: Some(FormattedValue::new(100.0)),
+            post_market_price: Some(FormattedValue::new(101.0)),
             market_state: Some("POST".to_string()),
             ..Default::default()
         };

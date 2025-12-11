@@ -22,7 +22,7 @@ pub mod endpoints {
     pub fn quote_summary(symbol: &str) -> String {
         format!(
             "{}/v10/finance/quoteSummary/{}",
-            YAHOO_FINANCE_QUERY2, symbol
+            YAHOO_FINANCE_QUERY1, symbol
         )
     }
 
@@ -102,6 +102,8 @@ pub mod quote_summary_modules {
     // Core modules
     /// Company profile information (officers, description, website, etc.)
     pub const ASSET_PROFILE: &str = "assetProfile";
+    /// Company summary profile
+    pub const SUMMARY_PROFILE: &str = "summaryProfile";
     /// Current price data (regular market, pre/post market prices)
     pub const PRICE: &str = "price";
     /// Summary detail information (market cap, P/E, dividend yield, etc.)
@@ -112,6 +114,8 @@ pub mod quote_summary_modules {
     pub const CALENDAR_EVENTS: &str = "calendarEvents";
     /// Performance overview data
     pub const QUOTE_UNADJUSTED_PERFORMANCE: &str = "quoteUnadjustedPerformanceOverview";
+    /// Equity performance metrics
+    pub const EQUITY_PERFORMANCE: &str = "equityPerformance";
 
     // Analysis modules
     /// Analyst recommendation trend (buy/hold/sell ratings over time)
@@ -124,6 +128,22 @@ pub mod quote_summary_modules {
     pub const EARNINGS_TREND: &str = "earningsTrend";
     /// Historical earnings data
     pub const EARNINGS_HISTORY: &str = "earningsHistory";
+    /// Base earnings data
+    pub const EARNINGS: &str = "earnings";
+    /// GAAP earnings data
+    pub const EARNINGS_GAAP: &str = "earningsgaap";
+    /// Non-GAAP earnings data
+    pub const EARNINGS_NON_GAAP: &str = "earningsnongaap";
+    /// Earnings call transcripts
+    pub const EARNINGS_CALL_TRANSCRIPTS: &str = "earningsCallTranscripts";
+
+    // ESG and sentiment
+    /// Environmental, Social, Governance scores
+    pub const ESG_SCORES: &str = "esgScores";
+
+    // Financial statement modules
+    /// Financial statement template/structure
+    pub const FINANCIALS_TEMPLATE: &str = "financialsTemplate";
 
     // Holders modules
     /// Major holders breakdown (% held by institutions, insiders, etc.)

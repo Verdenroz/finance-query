@@ -36,9 +36,9 @@ impl TickerCoreData {
 
     /// Builds the quote summary URL with all modules
     fn build_quote_summary_url(&self) -> String {
-        let all_modules = Module::all();
         let url = crate::constants::endpoints::quote_summary(&self.symbol);
-        let module_str = all_modules
+        let quote_modules = Module::all();
+        let module_str = quote_modules
             .iter()
             .map(|m| m.as_str())
             .collect::<Vec<_>>()
