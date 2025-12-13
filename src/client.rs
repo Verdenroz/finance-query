@@ -103,7 +103,7 @@ impl ClientConfigBuilder {
     /// Set the country (automatically sets correct lang and region)
     ///
     /// This is the recommended way to configure regional settings as it ensures
-    /// lang and region codes are correctly paired.
+    /// lang and region are correctly paired.
     ///
     /// # Example
     ///
@@ -288,6 +288,71 @@ impl YahooClient {
         &self.config
     }
 
+    /// Fetch logo URLs for a symbol
+    ///
+    /// Returns (logoUrl, companyLogoUrl) if available, None for each if not found or on error.
+    /// This uses the /v7/finance/quote endpoint with selective fields for efficiency.
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol` - Stock symbol (e.g., "AAPL", "TSLA")
+    ///
+    /// # Returns
+    ///
+    /// Tuple of (logoUrl, companyLogoUrl), each as Option<String>
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use finance_query::{YahooClient, ClientConfig};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YahooClient::new(ClientConfig::default()).await?;
+    /// let (logo_url, company_logo_url) = client.get_logo_url("AAPL").await;
+    /// if let Some(url) = logo_url {
+    ///     println!("Logo URL: {}", url);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_logo_url(&self, symbol: &str) -> (Option<String>, Option<String>) {
+        // Use existing fetch_with_fields from quotes.rs
+        let json = match crate::endpoints::quotes::fetch_with_fields(
+            self,
+            &[symbol],
+            Some(&["logoUrl", "companyLogoUrl"]),
+            false, // no formatting needed
+            true,  // include logo params (imgHeights, imgWidths, imgLabels)
+        )
+        .await
+        {
+            Ok(j) => j,
+            Err(_) => return (None, None),
+        };
+
+        // Extract both URLs from response
+        let result = match json
+            .get("quoteResponse")
+            .and_then(|qr| qr.get("result"))
+            .and_then(|r| r.as_array())
+            .and_then(|arr| arr.first())
+        {
+            Some(r) => r,
+            None => return (None, None),
+        };
+
+        let logo_url = result
+            .get("logoUrl")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        let company_logo_url = result
+            .get("companyLogoUrl")
+            .and_then(|v| v.as_str())
+            .map(|s| s.to_string());
+
+        (logo_url, company_logo_url)
+    }
+
     /// Make a GET request with query parameters and crumb authentication
     pub async fn request_with_params<T: serde::Serialize + ?Sized>(
         &self,
@@ -299,7 +364,20 @@ impl YahooClient {
 
         let request = http.get(url).query(&[("crumb", &auth.crumb)]).query(params);
 
-        debug!("Making request to {}", url);
+        // Log the full request URL with all parameters
+        if let Some(full_url) = request
+            .try_clone()
+            .and_then(|r| r.build().ok())
+            .map(|r| r.url().to_string())
+        {
+            debug!("Full request URL: {}", full_url);
+            info!(
+                "Request to: {} (lang={}, region={})",
+                url, self.config.lang, self.config.region
+            );
+        } else {
+            debug!("Making request to {}", url);
+        }
 
         let response = request.send().await.map_err(|e| {
             if e.is_timeout() {
@@ -631,6 +709,14 @@ impl BlockingYahooClient {
     /// Get options chain (blocking)
     pub fn get_options(&self, symbol: &str, date: Option<i64>) -> Result<serde_json::Value> {
         self.runtime.block_on(self.inner.get_options(symbol, date))
+    }
+
+    /// Get logo URLs for a symbol (blocking)
+    ///
+    /// Returns (logoUrl, companyLogoUrl) if available, None for each if not found or on error.
+    /// This uses the /v7/finance/quote endpoint with selective fields.
+    pub fn get_logo_url(&self, symbol: &str) -> (Option<String>, Option<String>) {
+        self.runtime.block_on(self.inner.get_logo_url(symbol))
     }
 
     /// Get market movers (blocking)

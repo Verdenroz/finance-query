@@ -52,10 +52,14 @@ pub async fn fetch(
     );
 
     let url = endpoints::quote_summary(symbol);
+
+    // Get client config for lang and region
+    let config = client.config();
     let params = [
         ("modules", modules.join(",")),
-        ("corsDomain", api_params::CORS_DOMAIN.to_string()),
         ("formatted", api_params::FORMATTED.to_string()),
+        ("lang", config.lang.clone()),
+        ("region", config.region.clone()),
     ];
     let response = client.request_with_params(&url, &params).await?;
 

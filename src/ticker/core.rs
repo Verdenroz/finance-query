@@ -71,7 +71,7 @@ impl AsyncTickerBuilder {
     /// Set the country (automatically sets correct lang and region)
     ///
     /// This is the recommended way to configure regional settings as it ensures
-    /// lang and region codes are correctly paired.
+    /// lang and region are correctly paired.
     ///
     /// # Example
     ///
@@ -303,22 +303,53 @@ macros::define_quote_accessors! {
 }
 
 impl AsyncTicker {
-    /// Get full quote
-    pub async fn quote(&self) -> Result<Quote> {
-        // Ensure quote summary is loaded (fetches all modules)
-        self.ensure_quote_summary_loaded().await?;
+    /// Get full quote data with optional logo URL
+    ///
+    /// # Arguments
+    ///
+    /// * `include_logo` - Whether to fetch and include the company logo URL
+    ///
+    /// When `include_logo` is true, fetches both quote summary and logo URL in parallel
+    /// using tokio::join! for minimal latency impact (~0-100ms overhead).
+    pub async fn quote(&self, include_logo: bool) -> Result<Quote> {
+        if include_logo {
+            // Parallel fetch: quoteSummary AND logo
+            let (quote_result, logo_result) = tokio::join!(
+                self.ensure_quote_summary_loaded(),
+                self.client.get_logo_url(&self.core.symbol)
+            );
 
-        // Get the cached quote summary
-        let cache = self.quote_summary.read().await;
-        let response = cache
-            .as_ref()
-            .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
-                symbol: Some(self.core.symbol.clone()),
-                context: "Quote summary not loaded".to_string(),
-            })?;
+            // Handle quoteSummary result (required)
+            quote_result?;
 
-        // Convert QuoteSummaryResponse to Quote
-        Ok(Quote::from_response(response))
+            // Get cached quote summary
+            let cache = self.quote_summary.read().await;
+            let response =
+                cache
+                    .as_ref()
+                    .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
+                        symbol: Some(self.core.symbol.clone()),
+                        context: "Quote summary not loaded".to_string(),
+                    })?;
+
+            // Create Quote with logos (logo_result is (Option<String>, Option<String>))
+            let (logo_url, company_logo_url) = logo_result;
+            Ok(Quote::from_response(response, logo_url, company_logo_url))
+        } else {
+            // Original behavior - no logo fetch
+            self.ensure_quote_summary_loaded().await?;
+
+            let cache = self.quote_summary.read().await;
+            let response =
+                cache
+                    .as_ref()
+                    .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
+                        symbol: Some(self.core.symbol.clone()),
+                        context: "Quote summary not loaded".to_string(),
+                    })?;
+
+            Ok(Quote::from_response(response, None, None))
+        }
     }
 
     /// Get historical chart data
@@ -550,7 +581,7 @@ impl TickerBuilder {
     /// Set the country (automatically sets correct lang and region)
     ///
     /// This is the recommended way to configure regional settings as it ensures
-    /// lang and region codes are correctly paired.
+    /// lang and region are correctly paired.
     ///
     /// # Example
     ///
@@ -712,9 +743,24 @@ impl Ticker {
     }
 
     /// Get full quote
-    pub fn quote(&self) -> Result<Quote> {
+    ///
+    /// # Arguments
+    ///
+    /// * `include_logo` - Whether to fetch the company logo URL
+    ///
+    /// When `include_logo` is true, fetches the logo URL from /v7/finance/quote endpoint
+    /// in addition to the comprehensive quoteSummary data. Logo fetch failures are
+    /// handled gracefully - the quote is still returned with logo_url set to None.
+    pub fn quote(&self, include_logo: bool) -> Result<Quote> {
         // Ensure quote summary is loaded (fetches all modules)
         self.ensure_quote_summary_loaded()?;
+
+        // Fetch logo URLs if requested
+        let (logo_url, company_logo_url) = if include_logo {
+            self.client.get_logo_url(&self.core.symbol)
+        } else {
+            (None, None)
+        };
 
         // Get the cached quote summary
         let cache = self.quote_summary.read().unwrap();
@@ -725,8 +771,8 @@ impl Ticker {
                 context: "Quote summary not loaded".to_string(),
             })?;
 
-        // Convert QuoteSummaryResponse to Quote
-        Ok(Quote::from_response(response))
+        // Convert QuoteSummaryResponse to Quote with optional logos
+        Ok(Quote::from_response(response, logo_url, company_logo_url))
     }
 
     /// Get historical chart data

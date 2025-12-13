@@ -48,8 +48,18 @@ struct PingResponse {
 
 // Query parameter structs
 #[derive(Deserialize)]
+struct QuoteQuery {
+    /// Whether to include company logo URL (default: false)
+    #[serde(default)]
+    logo: bool,
+}
+
+#[derive(Deserialize)]
 struct QuotesQuery {
     symbols: String, // Comma-separated symbols
+    /// Whether to include company logo URLs (default: false)
+    #[serde(default)]
+    logo: bool,
 }
 
 #[derive(Deserialize)]
@@ -284,11 +294,17 @@ async fn ping() -> impl IntoResponse {
 }
 
 /// Get quote for a symbol
-async fn get_quote(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Received quote request for symbol: {}", symbol);
+async fn get_quote(
+    Path(symbol): Path<String>,
+    Query(params): Query<QuoteQuery>,
+) -> impl IntoResponse {
+    info!(
+        "Received quote request for symbol: {} (logo={})",
+        symbol, params.logo
+    );
 
     match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.quote().await {
+        Ok(ticker) => match ticker.quote(params.logo).await {
             Ok(quote) => {
                 info!("Successfully fetched quote for {}", symbol);
                 (StatusCode::OK, Json(quote)).into_response()
@@ -361,14 +377,18 @@ fn parse_range(s: &str) -> TimeRange {
 /// Get detailed quotes for multiple symbols
 async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
-    info!("Fetching detailed quotes for {} symbols", symbols.len());
+    info!(
+        "Fetching detailed quotes for {} symbols (logo={})",
+        symbols.len(),
+        params.logo
+    );
 
     let mut results = Vec::new();
     let mut errors = Vec::new();
 
     for symbol in symbols {
         match AsyncTicker::new(symbol).await {
-            Ok(ticker) => match ticker.quote().await {
+            Ok(ticker) => match ticker.quote(params.logo).await {
                 Ok(quote) => {
                     results.push(quote);
                 }

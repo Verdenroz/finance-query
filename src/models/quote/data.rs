@@ -28,6 +28,20 @@ pub struct Quote {
     /// Stock symbol
     pub symbol: String,
 
+    /// Company logo URL (50x50px)
+    ///
+    /// Fetched from /v7/finance/quote endpoint when requested via logo=true parameter.
+    /// Returns None if logo not available or fetch fails.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub logo_url: Option<String>,
+
+    /// Alternative company logo URL (50x50px)
+    ///
+    /// Fetched from /v7/finance/quote endpoint when requested via logo=true parameter.
+    /// Returns None if logo not available or fetch fails.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub company_logo_url: Option<String>,
+
     /// Current price and trading data
     #[serde(skip_serializing_if = "Option::is_none")]
     pub price: Option<Price>,
@@ -165,9 +179,21 @@ impl Quote {
     /// Creates a Quote from a QuoteSummaryResponse
     ///
     /// Extracts and deserializes all typed modules from the raw response.
-    pub fn from_response(response: &QuoteSummaryResponse) -> Self {
+    ///
+    /// # Arguments
+    ///
+    /// * `response` - The quote summary response from Yahoo Finance
+    /// * `logo_url` - Optional company logo URL (fetched separately from /v7/finance/quote)
+    /// * `company_logo_url` - Optional alternative company logo URL (fetched separately from /v7/finance/quote)
+    pub fn from_response(
+        response: &QuoteSummaryResponse,
+        logo_url: Option<String>,
+        company_logo_url: Option<String>,
+    ) -> Self {
         Self {
             symbol: response.symbol.clone(),
+            logo_url,
+            company_logo_url,
             price: response.get_typed("price").ok(),
             quote_type: response.get_typed("quoteType").ok(),
             summary_detail: response.get_typed("summaryDetail").ok(),
