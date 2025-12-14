@@ -4,16 +4,18 @@
 use serde::{Deserialize, Serialize};
 
 /// Response wrapper for quote type endpoint
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct QuoteTypeResponse {
+pub(crate) struct QuoteTypeResponse {
     /// Quote type container
     pub quote_type: QuoteTypeContainer,
 }
 
 /// Container for quote type results
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuoteTypeContainer {
+pub(crate) struct QuoteTypeContainer {
     /// Quote type results
     pub result: Vec<QuoteTypeResult>,
     /// Error if any
@@ -21,9 +23,10 @@ pub struct QuoteTypeContainer {
 }
 
 /// Quote type result for a symbol
+#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct QuoteTypeResult {
+pub(crate) struct QuoteTypeResult {
     /// Stock symbol
     pub symbol: String,
     /// Quote type (EQUITY, ETF, etc.)
@@ -108,23 +111,6 @@ pub struct QuoteTypeData {
     /// Unique identifier UUID
     #[serde(skip_serializing_if = "Option::is_none")]
     pub uuid: Option<String>,
-}
-
-impl QuoteTypeResponse {
-    /// Parse from JSON value
-    pub fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
-        serde_json::from_value(value)
-    }
-
-    /// Get the first result
-    pub fn first(&self) -> Option<&QuoteTypeResult> {
-        self.quote_type.result.first()
-    }
-
-    /// Get the quartr ID (company ID) for earnings transcripts
-    pub fn quartr_id(&self) -> Option<&str> {
-        self.first().and_then(|r| r.quartr_id.as_deref())
-    }
 }
 
 #[cfg(test)]

@@ -11,7 +11,7 @@ use std::collections::HashMap;
 /// Contains the raw JSON data for each requested module.
 /// Individual modules can be extracted using type-safe methods.
 #[derive(Debug, Clone)]
-pub struct QuoteSummaryResponse {
+pub(crate) struct QuoteSummaryResponse {
     /// The symbol this response is for
     pub symbol: String,
     /// Raw JSON data for each module, keyed by module name
@@ -32,7 +32,7 @@ impl QuoteSummaryResponse {
     /// - The response structure is invalid
     /// - The symbol is not found in the response
     /// - Required fields are missing
-    pub fn from_json(json: Value, symbol: &str) -> Result<Self> {
+    pub(crate) fn from_json(json: Value, symbol: &str) -> Result<Self> {
         // Yahoo Finance response structure:
         // {
         //   "quoteSummary": {
@@ -92,16 +92,6 @@ impl QuoteSummaryResponse {
         })
     }
 
-    /// Checks if a specific module is present in the response
-    pub fn has_module(&self, module_name: &str) -> bool {
-        self.modules.contains_key(module_name)
-    }
-
-    /// Gets raw JSON for a specific module
-    pub fn get_module(&self, module_name: &str) -> Option<&Value> {
-        self.modules.get(module_name)
-    }
-
     /// Gets and deserializes a specific module
     ///
     /// # Type Parameters
@@ -117,9 +107,10 @@ impl QuoteSummaryResponse {
     /// Returns an error if:
     /// - The module is not present in the response
     /// - Deserialization fails
-    pub fn get_typed<T: serde::de::DeserializeOwned>(&self, module_name: &str) -> Result<T> {
+    pub(crate) fn get_typed<T: serde::de::DeserializeOwned>(&self, module_name: &str) -> Result<T> {
         let module_data =
-            self.get_module(module_name)
+            self.modules
+                .get(module_name)
                 .ok_or_else(|| Error::ResponseStructureError {
                     field: module_name.to_string(),
                     context: format!("Module '{}' not found", module_name),
@@ -129,11 +120,6 @@ impl QuoteSummaryResponse {
             field: module_name.to_string(),
             context: format!("Failed to deserialize {}: {}", module_name, e),
         })
-    }
-
-    /// Returns a list of all module names present in this response
-    pub fn module_names(&self) -> Vec<String> {
-        self.modules.keys().cloned().collect()
     }
 }
 
@@ -162,9 +148,9 @@ mod tests {
 
         let response = QuoteSummaryResponse::from_json(json, "AAPL").unwrap();
         assert_eq!(response.symbol, "AAPL");
-        assert!(response.has_module("price"));
-        assert!(response.has_module("summaryDetail"));
-        assert_eq!(response.module_names().len(), 2);
+        assert_eq!(response.modules.len(), 2);
+        assert!(response.modules.contains_key("price"));
+        assert!(response.modules.contains_key("summaryDetail"));
     }
 
     #[test]
@@ -181,7 +167,15 @@ mod tests {
     }
 
     #[test]
-    fn test_get_module() {
+    fn test_get_typed() {
+        use serde::Deserialize;
+
+        #[derive(Debug, Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct TestPrice {
+            regular_market_price: f64,
+        }
+
         let json = json!({
             "quoteSummary": {
                 "result": [
@@ -196,7 +190,7 @@ mod tests {
         });
 
         let response = QuoteSummaryResponse::from_json(json, "AAPL").unwrap();
-        let price_data = response.get_module("price").unwrap();
-        assert_eq!(price_data["regularMarketPrice"], 150.0);
+        let price: TestPrice = response.get_typed("price").unwrap();
+        assert_eq!(price.regular_market_price, 150.0);
     }
 }

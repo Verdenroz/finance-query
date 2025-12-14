@@ -17,14 +17,34 @@ use super::{
 
 /// Flattened quote data with deduplicated fields
 ///
-/// Flattens scalar fields from multiple modules while preserving complex nested objects.
-/// Field precedence for duplicates: Price → SummaryDetail → KeyStats → FinancialData → AssetProfile
+/// This is the primary data structure for stock quotes. It flattens scalar fields
+/// from multiple Yahoo Finance modules while preserving complex nested objects.
+///
+/// # Creating Quote Instances
+///
+/// Quote instances can only be obtained through the Ticker API:
+/// ```no_run
+/// # use finance_query::Ticker;
+/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let ticker = Ticker::new("AAPL")?;
+/// let quote = ticker.quote(true)?;  // include_logo = true
+/// println!("Price: {:?}", quote.regular_market_price);
+/// # Ok(())
+/// # }
+/// ```
+///
+/// Note: This struct is marked `#[non_exhaustive]` and cannot be constructed manually.
+/// Use `Ticker::quote()` or `AsyncTicker::quote()` instead.
+///
+/// # Field Precedence
+///
+/// For duplicate fields across Yahoo Finance modules:
+/// - Price → SummaryDetail → DefaultKeyStatistics → FinancialData → AssetProfile
 ///
 /// All fields are optional since Yahoo Finance may not return all data for every symbol.
-///
-/// This is the recommended type for serialization and API responses.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[non_exhaustive]
 pub struct Quote {
     /// Stock symbol
     pub symbol: String,
@@ -786,7 +806,7 @@ impl Quote {
     /// * `response` - The quote summary response from Yahoo Finance
     /// * `logo_url` - Optional company logo URL (fetched separately from /v7/finance/quote)
     /// * `company_logo_url` - Optional alternative company logo URL (fetched separately from /v7/finance/quote)
-    pub fn from_response(
+    pub(crate) fn from_response(
         response: &QuoteSummaryResponse,
         logo_url: Option<String>,
         company_logo_url: Option<String>,

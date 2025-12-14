@@ -143,10 +143,10 @@ pub use constants::{Country, Frequency, Interval, StatementType, TimeRange};
 // ============================================================================
 pub use models::{
     chart::{Candle, Chart, ChartMeta},
-    movers::{MoverQuote, MoversFinance, MoversResponse, MoversResult},
+    movers::{MoverQuote, MoversResponse},
     news::{NewsArticle, NewsResponse, NewsThumbnail},
     options::{OptionContract, OptionsResponse},
-    quote::{Quote, QuoteTypeResponse},
+    quote::{FormattedValue, Quote}, // Only Quote and FormattedValue - internals are hidden
     recommendation::Recommendation,
     search::SearchQuote,
     timeseries::{TimeseriesDataPoint, TimeseriesResponse, fundamental_types},
