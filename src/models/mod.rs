@@ -17,7 +17,7 @@ pub mod timeseries;
 
 // Re-exports for convenience
 pub use chart::{Candle, Chart, ChartMeta};
-pub use movers::{MoverQuote, MoversFinance, MoversResponse, MoversResult};
+pub use movers::{MoverQuote, MoversResponse};
 pub use news::{NewsArticle, NewsResponse, NewsThumbnail};
 pub use options::{OptionContract, OptionsResponse};
 pub use recommendation::Recommendation;

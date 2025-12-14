@@ -102,10 +102,10 @@ pub struct MoverQuote {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub average_analyst_rating: Option<String>,
     /// Trailing 12-month P/E ratio
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "trailingPE", skip_serializing_if = "Option::is_none")]
     pub trailing_pe: Option<FormattedValue<f64>>,
     /// Forward P/E ratio
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(rename = "forwardPE", skip_serializing_if = "Option::is_none")]
     pub forward_pe: Option<FormattedValue<f64>>,
     /// Price to book ratio
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -200,19 +200,4 @@ pub struct MoverQuote {
     /// Currency code (e.g., "USD")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub currency: Option<String>,
-    /// Region (e.g., "US")
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub region: Option<String>,
-    /// Whether the symbol is tradeable
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tradeable: Option<bool>,
-    /// Whether the symbol is triggerable for alerts
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub triggerable: Option<bool>,
-    /// Quote source name
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub quote_source_name: Option<String>,
-    /// Price hint (decimal places)
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_hint: Option<i32>,
 }
