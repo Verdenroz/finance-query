@@ -1,0 +1,1053 @@
+openapi: 3.0.3
+info:
+  title: Finance Query v2
+  version: 2.0.0
+  description: |
+    REST API for fetching financial data from Yahoo Finance.
+    Provides real-time quotes, historical data, news, options, and more.
+  contact:
+    name: Finance Query
+    url: https://github.com/verdenroz/finance-query
+
+servers:
+  - url: http://localhost:8000
+    description: Local development server
+  - url: http://localhost:8000/v2
+    description: API v2
+
+tags:
+  - name: Health
+    description: Health check and status endpoints
+  - name: Quotes
+    description: Stock quote and pricing data
+  - name: Charts
+    description: Historical price data and candlesticks
+  - name: Indicators
+    description: Technical analysis indicators
+  - name: News
+    description: Financial news articles
+  - name: Options
+    description: Options chains and contracts
+  - name: Analysis
+    description: Analyst recommendations and estimates
+  - name: Financials
+    description: Company financials and timeseries data
+  - name: Holders
+    description: Institutional and insider holdings
+  - name: Movers
+    description: Market movers (gainers, losers, actives)
+  - name: Search
+    description: Symbol and company search
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Health check
+      description: Check API health status
+      responses:
+        '200':
+          description: API is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  version:
+                    type: string
+                    example: 2.0.0
+
+  /ping:
+    get:
+      tags: [Health]
+      summary: Ping endpoint
+      description: Simple ping-pong endpoint
+      responses:
+        '200':
+          description: Pong response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: pong
+
+  /v2/quote/{symbol}:
+    get:
+      tags: [Quotes]
+      summary: Get quote for a symbol
+      description: Fetch detailed quote data for a single stock symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: logo
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include company logo URL
+      responses:
+        '200':
+          description: Quote data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Quote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/quotes:
+    get:
+      tags: [Quotes]
+      summary: Get quotes for multiple symbols
+      description: Fetch quote data for multiple stock symbols
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,GOOGL
+        - name: logo
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include company logo URLs
+      responses:
+        '200':
+          description: Array of quotes
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Quote'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /v2/recommendations/{symbol}:
+    get:
+      tags: [Quotes]
+      summary: Get similar stock recommendations
+      description: Get recommended similar stocks for a given symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+          description: Maximum number of recommendations
+      responses:
+        '200':
+          description: Recommendations
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Recommendation'
+
+  /v2/chart/{symbol}:
+    get:
+      tags: [Charts]
+      summary: Get historical chart data
+      description: Fetch OHLCV candlestick data for a symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+            default: 1d
+          description: Chart interval
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: 1mo
+          description: Time range
+      responses:
+        '200':
+          description: Chart data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Chart'
+
+  /v2/indicators/{symbol}:
+    get:
+      tags: [Indicators]
+      summary: Get technical indicators
+      description: Calculate technical analysis indicators from chart data
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: interval
+          in: query
+          schema:
+            type: string
+            default: 1d
+        - name: range
+          in: query
+          schema:
+            type: string
+            default: 1mo
+      responses:
+        '200':
+          description: Technical indicators
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndicatorsSummary'
+
+  /v2/news:
+    get:
+      tags: [News]
+      summary: Get general market news
+      description: Fetch general financial market news
+      parameters:
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Number of articles to return
+      responses:
+        '200':
+          description: News articles
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsResponse'
+
+  /v2/news/{symbol}:
+    get:
+      tags: [News]
+      summary: Get news for a symbol
+      description: Fetch news articles related to a specific stock
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Symbol news
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NewsResponse'
+
+  /v2/options/{symbol}:
+    get:
+      tags: [Options]
+      summary: Get options chain
+      description: Fetch options contracts for a symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: date
+          in: query
+          schema:
+            type: integer
+          description: Expiration date (Unix timestamp)
+      responses:
+        '200':
+          description: Options chain
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/OptionsResponse'
+
+  /v2/financials/{symbol}:
+    get:
+      tags: [Financials]
+      summary: Get financial data
+      description: Fetch financial data for a symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+      responses:
+        '200':
+          description: Financial data
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/fundamentals/{symbol}:
+    get:
+      tags: [Financials]
+      summary: Get fundamentals
+      description: Fetch fundamentals (fundamentals-timeseries) data
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [incomeStatement, balanceSheet, cashFlow, valuation]
+          description: Fundamentals category to fetch
+          example: incomeStatement
+        - name: period1
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Start period (Unix timestamp)
+        - name: period2
+          in: query
+          schema:
+            type: integer
+            default: 9999999999
+          description: End period (Unix timestamp)
+      responses:
+        '200':
+          description: Fundamentals data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FundamentalsResponse'
+
+  /v2/quote-type/{symbol}:
+    get:
+      tags: [Quotes]
+      summary: Get quote type
+      description: Get the type of quote (EQUITY, ETF, etc.)
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+      responses:
+        '200':
+          description: Quote type
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/holders/{symbol}/major:
+    get:
+      tags: [Holders]
+      summary: Get major holders
+      description: Fetch major institutional holders
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+      responses:
+        '200':
+          description: Major holders data
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/holders/{symbol}/institutional:
+    get:
+      tags: [Holders]
+      summary: Get institutional holders
+      description: Fetch institutional holder positions
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Institutional holders
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/holders/{symbol}/mutualfund:
+    get:
+      tags: [Holders]
+      summary: Get mutual fund holders
+      description: Fetch mutual fund holder positions
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Mutual fund holders
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/holders/{symbol}/insider-transactions:
+    get:
+      tags: [Holders]
+      summary: Get insider transactions
+      description: Fetch insider trading transactions
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Insider transactions
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/holders/{symbol}/insider-purchases:
+    get:
+      tags: [Holders]
+      summary: Get insider purchases
+      description: Fetch insider purchase history
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Insider purchases
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/holders/{symbol}/insider-roster:
+    get:
+      tags: [Holders]
+      summary: Get insider roster
+      description: Fetch list of company insiders
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Insider roster
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/analysis/{symbol}/recommendations:
+    get:
+      tags: [Analysis]
+      summary: Get recommendation trend
+      description: Fetch analyst recommendation trends over time
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Recommendation trend
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/analysis/{symbol}/upgrades-downgrades:
+    get:
+      tags: [Analysis]
+      summary: Get upgrades and downgrades
+      description: Fetch analyst rating changes
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Upgrades/downgrades
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/analysis/{symbol}/earnings-estimate:
+    get:
+      tags: [Analysis]
+      summary: Get earnings estimates
+      description: Fetch analyst earnings estimates
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Earnings estimates
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/analysis/{symbol}/earnings-history:
+    get:
+      tags: [Analysis]
+      summary: Get earnings history
+      description: Fetch historical earnings data
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Earnings history
+          content:
+            application/json:
+              schema:
+                type: object
+
+  /v2/movers/gainers:
+    get:
+      tags: [Movers]
+      summary: Get top gainers
+      description: Fetch top gaining stocks
+      parameters:
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Number of gainers to return
+      responses:
+        '200':
+          description: Top gainers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoversResponse'
+
+  /v2/movers/losers:
+    get:
+      tags: [Movers]
+      summary: Get top losers
+      description: Fetch top losing stocks
+      parameters:
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Top losers
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoversResponse'
+
+  /v2/movers/actives:
+    get:
+      tags: [Movers]
+      summary: Get most active stocks
+      description: Fetch most active stocks by volume
+      parameters:
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Most active stocks
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MoversResponse'
+
+  /v2/search:
+    get:
+      tags: [Search]
+      summary: Search symbols
+      description: Search for stock symbols and companies
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Search query
+          example: Apple
+        - name: hits
+          in: query
+          schema:
+            type: integer
+            default: 6
+          description: Maximum results
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SearchResponse'
+
+  /v2/earnings-transcript:
+    get:
+      tags: [Analysis]
+      summary: Get earnings transcript
+      description: Fetch earnings call transcript
+      parameters:
+        - name: event_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Event ID
+        - name: company_id
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Company ID
+      responses:
+        '200':
+          description: Earnings transcript
+          content:
+            application/json:
+              schema:
+                type: object
+
+components:
+  schemas:
+    Quote:
+      type: object
+      description: Stock quote data
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        regularMarketPrice:
+          type: number
+          format: double
+          example: 182.52
+        regularMarketChange:
+          type: number
+          format: double
+        regularMarketChangePercent:
+          type: number
+          format: double
+        regularMarketVolume:
+          type: integer
+          format: int64
+        marketCap:
+          type: integer
+          format: int64
+        fiftyTwoWeekHigh:
+          type: number
+          format: double
+        fiftyTwoWeekLow:
+          type: number
+          format: double
+        logoUrl:
+          type: string
+          nullable: true
+        companyLogoUrl:
+          type: string
+          nullable: true
+
+    Chart:
+      type: object
+      properties:
+        symbol:
+          type: string
+        meta:
+          $ref: '#/components/schemas/ChartMeta'
+        candles:
+          type: array
+          items:
+            $ref: '#/components/schemas/Candle'
+        interval:
+          type: string
+        range:
+          type: string
+
+    ChartMeta:
+      type: object
+      properties:
+        currency:
+          type: string
+        symbol:
+          type: string
+        exchangeName:
+          type: string
+        instrumentType:
+          type: string
+        firstTradeDate:
+          type: integer
+        regularMarketTime:
+          type: integer
+        gmtoffset:
+          type: integer
+        timezone:
+          type: string
+        exchangeTimezoneName:
+          type: string
+        regularMarketPrice:
+          type: number
+        chartPreviousClose:
+          type: number
+        dataGranularity:
+          type: string
+        range:
+          type: string
+
+    Candle:
+      type: object
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+        open:
+          type: number
+          format: double
+        high:
+          type: number
+          format: double
+        low:
+          type: number
+          format: double
+        close:
+          type: number
+          format: double
+        volume:
+          type: integer
+          format: int64
+        adjClose:
+          type: number
+          format: double
+          nullable: true
+
+    IndicatorsSummary:
+      type: object
+      description: Technical analysis indicators
+      properties:
+        sma_10:
+          type: number
+          nullable: true
+        sma_20:
+          type: number
+          nullable: true
+        sma_50:
+          type: number
+          nullable: true
+        ema_20:
+          type: number
+          nullable: true
+        rsi_14:
+          type: number
+          nullable: true
+        macd:
+          $ref: '#/components/schemas/MacdData'
+        bollinger_bands:
+          $ref: '#/components/schemas/BollingerBandsData'
+
+    MacdData:
+      type: object
+      properties:
+        macd:
+          type: number
+          nullable: true
+        signal:
+          type: number
+          nullable: true
+        histogram:
+          type: number
+          nullable: true
+
+    BollingerBandsData:
+      type: object
+      properties:
+        upper:
+          type: number
+          nullable: true
+        middle:
+          type: number
+          nullable: true
+        lower:
+          type: number
+          nullable: true
+
+    NewsResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        news:
+          type: array
+          items:
+            $ref: '#/components/schemas/NewsArticle'
+
+    NewsArticle:
+      type: object
+      properties:
+        uuid:
+          type: string
+        title:
+          type: string
+        publisher:
+          type: string
+        link:
+          type: string
+        providerPublishTime:
+          type: integer
+        type:
+          type: string
+        thumbnail:
+          $ref: '#/components/schemas/NewsThumbnail'
+
+    NewsThumbnail:
+      type: object
+      properties:
+        resolutions:
+          type: array
+          items:
+            type: object
+            properties:
+              url:
+                type: string
+              width:
+                type: integer
+              height:
+                type: integer
+
+    OptionsResponse:
+      type: object
+      properties:
+        expirationDates:
+          type: array
+          items:
+            type: integer
+        strikes:
+          type: array
+          items:
+            type: number
+        hasMiniOptions:
+          type: boolean
+        options:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionChain'
+
+    OptionChain:
+      type: object
+      properties:
+        expirationDate:
+          type: integer
+        hasMiniOptions:
+          type: boolean
+        calls:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionContract'
+        puts:
+          type: array
+          items:
+            $ref: '#/components/schemas/OptionContract'
+
+    OptionContract:
+      type: object
+      properties:
+        contractSymbol:
+          type: string
+        strike:
+          type: number
+        currency:
+          type: string
+        lastPrice:
+          type: number
+        change:
+          type: number
+        percentChange:
+          type: number
+        volume:
+          type: integer
+        openInterest:
+          type: integer
+        bid:
+          type: number
+        ask:
+          type: number
+        contractSize:
+          type: string
+        expiration:
+          type: integer
+        lastTradeDate:
+          type: integer
+        impliedVolatility:
+          type: number
+        inTheMoney:
+          type: boolean
+
+    Recommendation:
+      type: object
+      properties:
+        symbol:
+          type: string
+        recommendations:
+          type: array
+          items:
+            $ref: '#/components/schemas/SimilarSymbol'
+
+    SimilarSymbol:
+      type: object
+      properties:
+        symbol:
+          type: string
+        recommendationPercent:
+          type: number
+
+    FundamentalsResponse:
+      type: object
+      properties:
+        timeseries:
+          type: object
+
+    MoversResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        quotes:
+          type: array
+          items:
+            $ref: '#/components/schemas/MoverQuote'
+
+    MoverQuote:
+      type: object
+      properties:
+        symbol:
+          type: string
+        regularMarketPrice:
+          type: number
+        regularMarketChange:
+          type: number
+        regularMarketChangePercent:
+          type: number
+        regularMarketVolume:
+          type: integer
+
+    SearchResponse:
+      type: object
+      properties:
+        count:
+          type: integer
+        quotes:
+          type: array
+          items:
+            $ref: '#/components/schemas/SearchQuote'
+
+    SearchQuote:
+      type: object
+      properties:
+        symbol:
+          type: string
+        shortname:
+          type: string
+        longname:
+          type: string
+        exchDisp:
+          type: string
+        typeDisp:
+          type: string
+        exchange:
+          type: string
+        quoteType:
+          type: string
+        isYahooFinance:
+          type: boolean
+
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
