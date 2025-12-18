@@ -5,7 +5,9 @@ use axum::{
     response::{IntoResponse, Json},
     routing::get,
 };
-use finance_query::{AsyncTicker, Interval, TimeRange, YahooError, finance};
+use finance_query::{
+    AsyncTicker, Frequency, Interval, StatementType, TimeRange, YahooError, finance,
+};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
@@ -25,10 +27,6 @@ mod defaults {
     pub const DEFAULT_INTERVAL: &str = "1d";
     /// Default chart range
     pub const DEFAULT_RANGE: &str = "1mo";
-    /// Default start period for timeseries (Unix timestamp)
-    pub const DEFAULT_PERIOD1: i64 = 0;
-    /// Default end period for timeseries (Unix timestamp)
-    pub const DEFAULT_PERIOD2: i64 = 9999999999;
     /// Default server port
     pub const SERVER_PORT: u16 = 8000;
     /// Default movers count
@@ -36,12 +34,14 @@ mod defaults {
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct HealthResponse {
     status: String,
     version: String,
 }
 
 #[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
 struct PingResponse {
     message: String,
 }
@@ -95,12 +95,107 @@ struct OptionsQuery {
 }
 
 #[derive(Deserialize)]
-struct TimeseriesQuery {
-    #[serde(default = "default_period1")]
-    period1: i64,
-    #[serde(default = "default_period2")]
-    period2: i64,
-    types: String, // Comma-separated fundamental types
+struct FinancialsQuery {
+    /// Frequency: annual or quarterly (default: annual)
+    #[serde(default = "default_frequency")]
+    frequency: String,
+}
+
+fn default_frequency() -> String {
+    "annual".to_string()
+}
+
+fn parse_frequency(s: &str) -> Frequency {
+    match s.to_lowercase().as_str() {
+        "quarterly" | "q" => Frequency::Quarterly,
+        _ => Frequency::Annual,
+    }
+}
+
+fn parse_statement_type(s: &str) -> Option<StatementType> {
+    match s.to_lowercase().as_str() {
+        "income" => Some(StatementType::Income),
+        "balance" => Some(StatementType::Balance),
+        "cashflow" | "cash-flow" => Some(StatementType::CashFlow),
+        _ => None,
+    }
+}
+
+/// Holder types for /holders/{symbol}/{type}
+#[derive(Debug, Clone, Copy)]
+enum HolderType {
+    Major,
+    Institutional,
+    Mutualfund,
+    InsiderTransactions,
+    InsiderPurchases,
+    InsiderRoster,
+}
+
+impl HolderType {
+    fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "major" => Some(Self::Major),
+            "institutional" => Some(Self::Institutional),
+            "mutualfund" | "mutual-fund" => Some(Self::Mutualfund),
+            "insider-transactions" => Some(Self::InsiderTransactions),
+            "insider-purchases" => Some(Self::InsiderPurchases),
+            "insider-roster" => Some(Self::InsiderRoster),
+            _ => None,
+        }
+    }
+
+    fn valid_types() -> &'static str {
+        "major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster"
+    }
+}
+
+/// Analysis types for /analysis/{symbol}/{type}
+#[derive(Debug, Clone, Copy)]
+enum AnalysisType {
+    Recommendations,
+    UpgradesDowngrades,
+    EarningsEstimate,
+    EarningsHistory,
+}
+
+impl AnalysisType {
+    fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "recommendations" => Some(Self::Recommendations),
+            "upgrades-downgrades" => Some(Self::UpgradesDowngrades),
+            "earnings-estimate" => Some(Self::EarningsEstimate),
+            "earnings-history" => Some(Self::EarningsHistory),
+            _ => None,
+        }
+    }
+
+    fn valid_types() -> &'static str {
+        "recommendations, upgrades-downgrades, earnings-estimate, earnings-history"
+    }
+}
+
+/// Mover types for /movers/{type}
+#[derive(Debug, Clone, Copy)]
+enum MoverType {
+    Gainers,
+    Losers,
+    Actives,
+}
+
+impl MoverType {
+    fn from_str(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "gainers" => Some(Self::Gainers),
+            "losers" => Some(Self::Losers),
+            "actives" => Some(Self::Actives),
+            _ => None,
+        }
+    }
+
+    fn valid_types() -> &'static str {
+        "gainers, losers, actives"
+    }
 }
 
 #[derive(Deserialize)]
@@ -151,20 +246,6 @@ fn default_range() -> String {
     std::env::var("DEFAULT_RANGE").unwrap_or_else(|_| defaults::DEFAULT_RANGE.to_string())
 }
 
-fn default_period1() -> i64 {
-    std::env::var("DEFAULT_PERIOD1")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(defaults::DEFAULT_PERIOD1)
-}
-
-fn default_period2() -> i64 {
-    std::env::var("DEFAULT_PERIOD2")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(defaults::DEFAULT_PERIOD2)
-}
-
 #[tokio::main]
 async fn main() {
     // Load environment variables from .env file
@@ -208,7 +289,9 @@ fn create_app() -> Router {
     // Build router with routes
     Router::new()
         // Health & utility (not versioned)
+        // GET /health
         .route("/health", get(health_check))
+        // GET /ping
         .route("/ping", get(ping))
         // Nest all API routes under /v2
         .nest("/v2", api_routes())
@@ -219,62 +302,42 @@ fn create_app() -> Router {
 /// API routes
 fn api_routes() -> Router {
     Router::new()
-        // Core quotes
-        .route("/quote/{symbol}", get(get_quote))
-        .route("/quotes", get(get_quotes))
-        .route("/recommendations/{symbol}", get(get_recommendations))
+        // Routes are sorted alphabetically by path for consistency.
+        // GET /v2/analysis/{symbol}/{analysis_type}
+        .route("/analysis/{symbol}/{analysis_type}", get(get_analysis))
+        // GET /v2/chart/{symbol}?interval=<str>&range=<str>
         .route("/chart/{symbol}", get(get_chart))
-        .route("/indicators/{symbol}", get(get_indicators))
-        .route("/search", get(search))
-        // News & Options
-        .route("/news/{symbol}", get(get_news))
-        .route("/options/{symbol}", get(get_options))
-        // Financials
-        .route("/financials/{symbol}", get(get_financials))
-        .route("/timeseries/{symbol}", get(get_timeseries))
-        .route("/quote-type/{symbol}", get(get_quote_type))
-        // Holders
-        .route("/holders/{symbol}/major", get(get_major_holders))
-        .route(
-            "/holders/{symbol}/institutional",
-            get(get_institutional_holders),
-        )
-        .route("/holders/{symbol}/mutualfund", get(get_mutualfund_holders))
-        .route(
-            "/holders/{symbol}/insider-transactions",
-            get(get_insider_transactions),
-        )
-        .route(
-            "/holders/{symbol}/insider-purchases",
-            get(get_insider_purchases),
-        )
-        .route("/holders/{symbol}/insider-roster", get(get_insider_roster))
-        // Analysis
-        .route(
-            "/analysis/{symbol}/recommendations",
-            get(get_recommendation_trend),
-        )
-        .route(
-            "/analysis/{symbol}/upgrades-downgrades",
-            get(get_upgrades_downgrades),
-        )
-        .route(
-            "/analysis/{symbol}/earnings-estimate",
-            get(get_earnings_estimate),
-        )
-        .route(
-            "/analysis/{symbol}/earnings-history",
-            get(get_earnings_history),
-        )
-        // Market Movers
-        .route("/movers/gainers", get(get_gainers))
-        .route("/movers/losers", get(get_losers))
-        .route("/movers/actives", get(get_actives))
-        // Earnings Transcript
+        // GET /v2/earnings-transcript?event_id=<str>&company_id=<str>
         .route("/earnings-transcript", get(get_earnings_transcript))
+        // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
+        .route("/financials/{symbol}/{statement}", get(get_financials))
+        // GET /v2/holders/{symbol}/{holder_type}
+        .route("/holders/{symbol}/{holder_type}", get(get_holders))
+        // GET /v2/indicators/{symbol}?interval=<str>&range=<str>
+        .route("/indicators/{symbol}", get(get_indicators))
+        // GET /v2/movers/{mover_type}?count=<u32>
+        .route("/movers/{mover_type}", get(get_movers))
+        // GET /v2/news?count=<u32>
+        .route("/news", get(get_general_news))
+        // GET /v2/news/{symbol}?count=<u32>
+        .route("/news/{symbol}", get(get_news))
+        // GET /v2/options/{symbol}?date=<i64>
+        .route("/options/{symbol}", get(get_options))
+        // GET /v2/quote-type/{symbol}
+        .route("/quote-type/{symbol}", get(get_quote_type))
+        // GET /v2/quote/{symbol}?logo=<bool>
+        .route("/quote/{symbol}", get(get_quote))
+        // GET /v2/quotes?symbols=<csv>&logo=<bool>
+        .route("/quotes", get(get_quotes))
+        // GET /v2/recommendations/{symbol}?limit=<u32>
+        .route("/recommendations/{symbol}", get(get_recommendations))
+        // GET /v2/search?q=<string>&hits=<u32>
+        .route("/search", get(search))
 }
 
-/// Health check endpoint
+/// GET /health
+///
+/// Query: (none)
 async fn health_check() -> impl IntoResponse {
     let response = HealthResponse {
         status: "healthy".to_string(),
@@ -284,7 +347,9 @@ async fn health_check() -> impl IntoResponse {
     Json(response)
 }
 
-/// Ping endpoint
+/// GET /ping
+///
+/// Query: (none)
 async fn ping() -> impl IntoResponse {
     let response = PingResponse {
         message: "pong".to_string(),
@@ -293,7 +358,9 @@ async fn ping() -> impl IntoResponse {
     Json(response)
 }
 
-/// Get quote for a symbol
+/// GET /v2/quote/{symbol}
+///
+/// Query: `logo` (bool, default: false)
 async fn get_quote(
     Path(symbol): Path<String>,
     Query(params): Query<QuoteQuery>,
@@ -374,7 +441,9 @@ fn parse_range(s: &str) -> TimeRange {
     }
 }
 
-/// Get detailed quotes for multiple symbols
+/// GET /v2/quotes
+///
+/// Query: `symbols` (comma-separated, required), `logo` (bool, default: false)
 async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     info!(
@@ -417,7 +486,9 @@ async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
     (StatusCode::OK, Json(response)).into_response()
 }
 
-/// Get recommended/similar quotes for a symbol
+/// GET /v2/recommendations/{symbol}
+///
+/// Query: `limit` (u32, default via `RECOMMENDATIONS_LIMIT` or server default)
 async fn get_recommendations(
     Path(symbol): Path<String>,
     Query(params): Query<RecommendationsQuery>,
@@ -439,7 +510,9 @@ async fn get_recommendations(
     }
 }
 
-/// Get chart data
+/// GET /v2/chart/{symbol}
+///
+/// Query: `interval` (str, default via `DEFAULT_INTERVAL`), `range` (str, default via `DEFAULT_RANGE`)
 async fn get_chart(
     Path(symbol): Path<String>,
     Query(params): Query<ChartQuery>,
@@ -463,7 +536,9 @@ async fn get_chart(
     }
 }
 
-/// Get technical indicators
+/// GET /v2/indicators/{symbol}
+///
+/// Query: `interval` (str, default via `DEFAULT_INTERVAL`), `range` (str, default via `DEFAULT_RANGE`)
 async fn get_indicators(
     Path(symbol): Path<String>,
     Query(params): Query<ChartQuery>,
@@ -490,7 +565,9 @@ async fn get_indicators(
     }
 }
 
-/// Search for symbols
+/// GET /v2/search
+///
+/// Query: `q` (string, required), `hits` (u32, default via `SEARCH_HITS` or server default)
 async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
     info!("Searching for: {}", params.q);
 
@@ -503,7 +580,24 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
     }
 }
 
-/// Get news for a symbol
+/// GET /v2/news
+///
+/// Query: `count` (u32, default via `NEWS_COUNT` or server default)
+async fn get_general_news(Query(params): Query<NewsQuery>) -> impl IntoResponse {
+    info!("Fetching general market news");
+
+    match finance::news(params.count).await {
+        Ok(news_response) => (StatusCode::OK, Json(news_response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch general news: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/news/{symbol}
+///
+/// Query: `count` (u32, default via `NEWS_COUNT` or server default)
 async fn get_news(
     Path(symbol): Path<String>,
     Query(params): Query<NewsQuery>,
@@ -525,7 +619,9 @@ async fn get_news(
     }
 }
 
-/// Get options chain for a symbol
+/// GET /v2/options/{symbol}
+///
+/// Query: `date` (i64, optional expiration timestamp)
 async fn get_options(
     Path(symbol): Path<String>,
     Query(params): Query<OptionsQuery>,
@@ -547,12 +643,36 @@ async fn get_options(
     }
 }
 
-/// Get financial statements for a symbol
-async fn get_financials(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching financials for {}", symbol);
+/// GET /v2/financials/{symbol}/{statement}
+///
+/// Path params:
+/// - `statement`: income, balance, or cashflow
+///
+/// Query: `frequency` (annual|quarterly, default: annual)
+async fn get_financials(
+    Path((symbol, statement)): Path<(String, String)>,
+    Query(params): Query<FinancialsQuery>,
+) -> impl IntoResponse {
+    let frequency = parse_frequency(&params.frequency);
+
+    let statement_type = match parse_statement_type(&statement) {
+        Some(st) => st,
+        None => {
+            let error = serde_json::json!({
+                "error": format!("Invalid statement type: '{}'. Valid types: income, balance, cashflow", statement),
+                "status": 400
+            });
+            return (StatusCode::BAD_REQUEST, Json(error)).into_response();
+        }
+    };
+
+    info!(
+        "Fetching {} {} financials for {}",
+        params.frequency, statement, symbol
+    );
 
     match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.financial_data().await {
+        Ok(ticker) => match ticker.financials(statement_type, frequency).await {
             Ok(response) => (StatusCode::OK, Json(response)).into_response(),
             Err(e) => {
                 error!("Failed to fetch financials: {}", e);
@@ -566,50 +686,9 @@ async fn get_financials(Path(symbol): Path<String>) -> impl IntoResponse {
     }
 }
 
-/// Get fundamentals timeseries data
-async fn get_timeseries(
-    Path(symbol): Path<String>,
-    Query(params): Query<TimeseriesQuery>,
-) -> impl IntoResponse {
-    info!(
-        "Fetching timeseries for {} with types: {}",
-        symbol, params.types
-    );
-
-    // Parse types from comma-separated string
-    let types: Vec<&str> = params.types.split(',').map(|s| s.trim()).collect();
-
-    if types.is_empty() {
-        return (
-            StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({
-                "error": "No types provided for timeseries"
-            })),
-        )
-            .into_response();
-    }
-
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => {
-            match ticker
-                .timeseries(&types, params.period1, params.period2)
-                .await
-            {
-                Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-                Err(e) => {
-                    error!("Failed to fetch timeseries: {}", e);
-                    error_response(e).into_response()
-                }
-            }
-        }
-        Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get quote type metadata for a symbol
+/// GET /v2/quote-type/{symbol}
+///
+/// Query: (none)
 async fn get_quote_type(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching quote type for {}", symbol);
 
@@ -628,191 +707,159 @@ async fn get_quote_type(Path(symbol): Path<String>) -> impl IntoResponse {
     }
 }
 
-/// Get major holders breakdown
-async fn get_major_holders(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching major holders for {}", symbol);
+/// GET /v2/holders/{symbol}/{holder_type}
+///
+/// Path params:
+/// - `holder_type`: major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster
+///
+/// Query: (none)
+async fn get_holders(Path((symbol, holder_type)): Path<(String, String)>) -> impl IntoResponse {
+    let ht = match HolderType::from_str(&holder_type) {
+        Some(t) => t,
+        None => {
+            let error = serde_json::json!({
+                "error": format!("Invalid holder type: '{}'. Valid types: {}", holder_type, HolderType::valid_types()),
+                "status": 400
+            });
+            return (StatusCode::BAD_REQUEST, Json(error)).into_response();
+        }
+    };
 
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.major_holders().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch major holders: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    info!("Fetching {} holders for {}", holder_type, symbol);
+
+    let ticker = match AsyncTicker::new(&symbol).await {
+        Ok(t) => t,
         Err(e) => {
-            error!("Failed to fetch major holders: {}", e);
+            error!("Failed to create ticker: {}", e);
+            return error_response(e).into_response();
+        }
+    };
+
+    let result = match ht {
+        HolderType::Major => ticker
+            .major_holders()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+        HolderType::Institutional => ticker
+            .institution_ownership()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+        HolderType::Mutualfund => ticker
+            .fund_ownership()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+        HolderType::InsiderTransactions => ticker
+            .insider_transactions()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+        HolderType::InsiderPurchases => ticker
+            .share_purchase_activity()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+        HolderType::InsiderRoster => ticker
+            .insider_holders()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+    };
+
+    match result {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch {} holders: {}", holder_type, e);
             error_response(e).into_response()
         }
     }
 }
 
-/// Get institutional holders
-async fn get_institutional_holders(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching institutional holders for {}", symbol);
+/// GET /v2/analysis/{symbol}/{analysis_type}
+///
+/// Path params:
+/// - `analysis_type`: recommendations, upgrades-downgrades, earnings-estimate, earnings-history
+///
+/// Query: (none)
+async fn get_analysis(Path((symbol, analysis_type)): Path<(String, String)>) -> impl IntoResponse {
+    let at = match AnalysisType::from_str(&analysis_type) {
+        Some(t) => t,
+        None => {
+            let error = serde_json::json!({
+                "error": format!("Invalid analysis type: '{}'. Valid types: {}", analysis_type, AnalysisType::valid_types()),
+                "status": 400
+            });
+            return (StatusCode::BAD_REQUEST, Json(error)).into_response();
+        }
+    };
 
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.institution_ownership().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch institutional holders: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    info!("Fetching {} analysis for {}", analysis_type, symbol);
+
+    let ticker = match AsyncTicker::new(&symbol).await {
+        Ok(t) => t,
         Err(e) => {
-            error!("Failed to fetch institutional holders: {}", e);
+            error!("Failed to create ticker: {}", e);
+            return error_response(e).into_response();
+        }
+    };
+
+    let result = match at {
+        AnalysisType::Recommendations => ticker
+            .recommendation_trend()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+        AnalysisType::UpgradesDowngrades => ticker
+            .grading_history()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+        AnalysisType::EarningsEstimate => ticker
+            .earnings_trend()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+        AnalysisType::EarningsHistory => ticker
+            .earnings_history()
+            .await
+            .map(|r| serde_json::to_value(r).unwrap()),
+    };
+
+    match result {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch {} analysis: {}", analysis_type, e);
             error_response(e).into_response()
         }
     }
 }
 
-/// Get mutual fund holders
-async fn get_mutualfund_holders(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching mutual fund holders for {}", symbol);
-
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.fund_ownership().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch mutual fund holders: {}", e);
-                error_response(e).into_response()
-            }
-        },
-        Err(e) => {
-            error!("Failed to fetch mutual fund holders: {}", e);
-            error_response(e).into_response()
+/// GET /v2/movers/{mover_type}
+///
+/// Path params:
+/// - `mover_type`: gainers, losers, actives
+///
+/// Query: `count` (u32, default via `MOVERS_COUNT` or server default)
+async fn get_movers(
+    Path(mover_type): Path<String>,
+    Query(params): Query<MoversQuery>,
+) -> impl IntoResponse {
+    let mt = match MoverType::from_str(&mover_type) {
+        Some(t) => t,
+        None => {
+            let error = serde_json::json!({
+                "error": format!("Invalid mover type: '{}'. Valid types: {}", mover_type, MoverType::valid_types()),
+                "status": 400
+            });
+            return (StatusCode::BAD_REQUEST, Json(error)).into_response();
         }
-    }
-}
+    };
 
-/// Get insider transactions
-async fn get_insider_transactions(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching insider transactions for {}", symbol);
+    info!("Fetching {} movers (count={})", mover_type, params.count);
 
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.insider_transactions().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch insider transactions: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let result = match mt {
+        MoverType::Gainers => finance::gainers(params.count).await,
+        MoverType::Losers => finance::losers(params.count).await,
+        MoverType::Actives => finance::actives(params.count).await,
+    };
+
+    match result {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
         Err(e) => {
-            error!("Failed to fetch insider transactions: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get insider purchases summary
-async fn get_insider_purchases(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching insider purchases for {}", symbol);
-
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.share_purchase_activity().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch insider purchases: {}", e);
-                error_response(e).into_response()
-            }
-        },
-        Err(e) => {
-            error!("Failed to fetch insider purchases: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get insider roster
-async fn get_insider_roster(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching insider roster for {}", symbol);
-
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.insider_holders().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch insider roster: {}", e);
-                error_response(e).into_response()
-            }
-        },
-        Err(e) => {
-            error!("Failed to fetch insider roster: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get analyst recommendations trend
-async fn get_recommendation_trend(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching recommendation trend for {}", symbol);
-
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.recommendation_trend().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch recommendation trend: {}", e);
-                error_response(e).into_response()
-            }
-        },
-        Err(e) => {
-            error!("Failed to fetch recommendation trend: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get analyst upgrades and downgrades
-async fn get_upgrades_downgrades(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching upgrades/downgrades for {}", symbol);
-
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.grading_history().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch upgrades/downgrades: {}", e);
-                error_response(e).into_response()
-            }
-        },
-        Err(e) => {
-            error!("Failed to fetch upgrades/downgrades: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get earnings estimates
-async fn get_earnings_estimate(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching earnings estimate for {}", symbol);
-
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.earnings_trend().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch earnings estimate: {}", e);
-                error_response(e).into_response()
-            }
-        },
-        Err(e) => {
-            error!("Failed to fetch earnings estimate: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get historical earnings
-async fn get_earnings_history(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching earnings history for {}", symbol);
-
-    match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.earnings_history().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch earnings history: {}", e);
-                error_response(e).into_response()
-            }
-        },
-        Err(e) => {
-            error!("Failed to fetch earnings history: {}", e);
+            error!("Failed to fetch {} movers: {}", mover_type, e);
             error_response(e).into_response()
         }
     }
@@ -849,6 +896,23 @@ fn init_tracing() {
     }
 }
 
+/// GET /v2/earnings-transcript
+///
+/// Query: `event_id` (string, required), `company_id` (string, required)
+async fn get_earnings_transcript(
+    Query(params): Query<EarningsTranscriptQuery>,
+) -> impl IntoResponse {
+    info!("Fetching earnings transcript for event {}", params.event_id);
+
+    match finance::earnings_transcript(&params.event_id, &params.company_id).await {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch earnings transcript: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
 /// Graceful shutdown handler
 async fn shutdown_signal() {
     use tokio::signal;
@@ -880,58 +944,4 @@ async fn shutdown_signal() {
     }
 
     info!("Shutting down gracefully...");
-}
-
-/// Get top gaining stocks
-async fn get_gainers(Query(params): Query<MoversQuery>) -> impl IntoResponse {
-    info!("Fetching top {} gainers", params.count);
-
-    match finance::gainers(params.count).await {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-        Err(e) => {
-            error!("Failed to fetch gainers: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get top losing stocks
-async fn get_losers(Query(params): Query<MoversQuery>) -> impl IntoResponse {
-    info!("Fetching top {} losers", params.count);
-
-    match finance::losers(params.count).await {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-        Err(e) => {
-            error!("Failed to fetch losers: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get most active stocks
-async fn get_actives(Query(params): Query<MoversQuery>) -> impl IntoResponse {
-    info!("Fetching top {} most active stocks", params.count);
-
-    match finance::actives(params.count).await {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-        Err(e) => {
-            error!("Failed to fetch most active stocks: {}", e);
-            error_response(e).into_response()
-        }
-    }
-}
-
-/// Get earnings call transcript
-async fn get_earnings_transcript(
-    Query(params): Query<EarningsTranscriptQuery>,
-) -> impl IntoResponse {
-    info!("Fetching earnings transcript for event {}", params.event_id);
-
-    match finance::earnings_transcript(&params.event_id, &params.company_id).await {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-        Err(e) => {
-            error!("Failed to fetch earnings transcript: {}", e);
-            error_response(e).into_response()
-        }
-    }
 }

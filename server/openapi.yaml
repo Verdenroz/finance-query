@@ -298,65 +298,51 @@ paths:
               schema:
                 $ref: '#/components/schemas/OptionsResponse'
 
-  /v2/financials/{symbol}:
+  /v2/financials/{symbol}/{statement}:
     get:
       tags: [Financials]
-      summary: Get financial data
-      description: Fetch financial data for a symbol
+      summary: Get financial statements
+      description: |
+        Fetch financial statement data (income statement, balance sheet, or cash flow) for a symbol.
+        Returns historical data with metrics organized by date.
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          description: Stock symbol
           example: AAPL
-      responses:
-        '200':
-          description: Financial data
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/fundamentals/{symbol}:
-    get:
-      tags: [Financials]
-      summary: Get fundamentals
-      description: Fetch fundamentals (fundamentals-timeseries) data
-      parameters:
-        - name: symbol
+        - name: statement
           in: path
           required: true
           schema:
             type: string
-          example: AAPL
-        - name: type
+            enum: [income, balance, cashflow]
+          description: Type of financial statement
+          example: income
+        - name: frequency
           in: query
-          required: true
           schema:
             type: string
-            enum: [incomeStatement, balanceSheet, cashFlow, valuation]
-          description: Fundamentals category to fetch
-          example: incomeStatement
-        - name: period1
-          in: query
-          schema:
-            type: integer
-            default: 0
-          description: Start period (Unix timestamp)
-        - name: period2
-          in: query
-          schema:
-            type: integer
-            default: 9999999999
-          description: End period (Unix timestamp)
+            enum: [annual, quarterly]
+            default: annual
+          description: Data frequency (annual or quarterly)
       responses:
         '200':
-          description: Fundamentals data
+          description: Financial statement data
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FundamentalsResponse'
+                $ref: '#/components/schemas/FinancialStatement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          description: Symbol not found or no data available
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /v2/quote-type/{symbol}:
     get:
@@ -378,254 +364,116 @@ paths:
               schema:
                 type: object
 
-  /v2/holders/{symbol}/major:
+  /v2/holders/{symbol}/{type}:
     get:
       tags: [Holders]
-      summary: Get major holders
-      description: Fetch major institutional holders
+      summary: Get holder data
+      description: |
+        Fetch holder data for a symbol by type.
+        Available types:
+        - major: Major institutional holders
+        - institutional: Institutional holder positions
+        - mutualfund: Mutual fund holder positions
+        - insider-transactions: Insider trading transactions
+        - insider-purchases: Insider purchase history
+        - insider-roster: List of company insiders
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          description: Stock symbol
           example: AAPL
-      responses:
-        '200':
-          description: Major holders data
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/holders/{symbol}/institutional:
-    get:
-      tags: [Holders]
-      summary: Get institutional holders
-      description: Fetch institutional holder positions
-      parameters:
-        - name: symbol
+        - name: type
           in: path
           required: true
           schema:
             type: string
+            enum: [major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster]
+          description: Type of holder data
+          example: major
       responses:
         '200':
-          description: Institutional holders
+          description: Holder data
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
-  /v2/holders/{symbol}/mutualfund:
-    get:
-      tags: [Holders]
-      summary: Get mutual fund holders
-      description: Fetch mutual fund holder positions
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Mutual fund holders
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/holders/{symbol}/insider-transactions:
-    get:
-      tags: [Holders]
-      summary: Get insider transactions
-      description: Fetch insider trading transactions
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Insider transactions
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/holders/{symbol}/insider-purchases:
-    get:
-      tags: [Holders]
-      summary: Get insider purchases
-      description: Fetch insider purchase history
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Insider purchases
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/holders/{symbol}/insider-roster:
-    get:
-      tags: [Holders]
-      summary: Get insider roster
-      description: Fetch list of company insiders
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Insider roster
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/analysis/{symbol}/recommendations:
+  /v2/analysis/{symbol}/{type}:
     get:
       tags: [Analysis]
-      summary: Get recommendation trend
-      description: Fetch analyst recommendation trends over time
+      summary: Get analysis data
+      description: |
+        Fetch analysis data for a symbol by type.
+        Available types:
+        - recommendations: Analyst recommendation trends over time
+        - upgrades-downgrades: Analyst rating changes
+        - earnings-estimate: Analyst earnings estimates
+        - earnings-history: Historical earnings data
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
-      responses:
-        '200':
-          description: Recommendation trend
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/analysis/{symbol}/upgrades-downgrades:
-    get:
-      tags: [Analysis]
-      summary: Get upgrades and downgrades
-      description: Fetch analyst rating changes
-      parameters:
-        - name: symbol
+          description: Stock symbol
+          example: AAPL
+        - name: type
           in: path
           required: true
           schema:
             type: string
+            enum: [recommendations, upgrades-downgrades, earnings-estimate, earnings-history]
+          description: Type of analysis data
+          example: recommendations
       responses:
         '200':
-          description: Upgrades/downgrades
+          description: Analysis data
           content:
             application/json:
               schema:
                 type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
-  /v2/analysis/{symbol}/earnings-estimate:
-    get:
-      tags: [Analysis]
-      summary: Get earnings estimates
-      description: Fetch analyst earnings estimates
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Earnings estimates
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/analysis/{symbol}/earnings-history:
-    get:
-      tags: [Analysis]
-      summary: Get earnings history
-      description: Fetch historical earnings data
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Earnings history
-          content:
-            application/json:
-              schema:
-                type: object
-
-  /v2/movers/gainers:
+  /v2/movers/{type}:
     get:
       tags: [Movers]
-      summary: Get top gainers
-      description: Fetch top gaining stocks
+      summary: Get market movers
+      description: |
+        Fetch market movers by type.
+        Available types:
+        - gainers: Top gaining stocks
+        - losers: Top losing stocks
+        - actives: Most active stocks by volume
       parameters:
+        - name: type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum: [gainers, losers, actives]
+          description: Type of market movers
+          example: gainers
         - name: count
           in: query
           schema:
             type: integer
             default: 10
-          description: Number of gainers to return
+          description: Number of results to return
       responses:
         '200':
-          description: Top gainers
+          description: Market movers
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/MoversResponse'
-
-  /v2/movers/losers:
-    get:
-      tags: [Movers]
-      summary: Get top losers
-      description: Fetch top losing stocks
-      parameters:
-        - name: count
-          in: query
-          schema:
-            type: integer
-            default: 10
-      responses:
-        '200':
-          description: Top losers
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MoversResponse'
-
-  /v2/movers/actives:
-    get:
-      tags: [Movers]
-      summary: Get most active stocks
-      description: Fetch most active stocks by volume
-      parameters:
-        - name: count
-          in: query
-          schema:
-            type: integer
-            default: 10
-      responses:
-        '200':
-          description: Most active stocks
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MoversResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/search:
     get:
@@ -969,11 +817,36 @@ components:
         recommendationPercent:
           type: number
 
-    FundamentalsResponse:
+    FinancialStatement:
       type: object
+      description: Financial statement data organized by metric and date
       properties:
-        timeseries:
+        symbol:
+          type: string
+          description: Stock symbol
+          example: AAPL
+        statementType:
+          type: string
+          description: Type of statement (income, balance, cashflow)
+          example: income
+        frequency:
+          type: string
+          description: Data frequency (annual or quarterly)
+          example: annual
+        statement:
           type: object
+          description: Financial metrics mapped to date-value pairs
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: number
+          example:
+            TotalRevenue:
+              "2024-09-30": 391035000000
+              "2023-09-30": 383285000000
+            NetIncome:
+              "2024-09-30": 100913000000
+              "2023-09-30": 96995000000
 
     MoversResponse:
       type: object
