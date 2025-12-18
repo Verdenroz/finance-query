@@ -1,19 +1,20 @@
-use super::ChartResult;
+use super::result::ChartResult;
 /// Chart Response module
 ///
 /// Handles parsing of Yahoo Finance chart API responses.
+/// These types are internal implementation details and not exposed in the public API.
 use serde::{Deserialize, Serialize};
 
 /// Response wrapper for chart endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChartResponse {
+pub(crate) struct ChartResponse {
     /// Chart container
     pub chart: ChartContainer,
 }
 
 /// Container for chart results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChartContainer {
+pub(crate) struct ChartContainer {
     /// Chart results
     pub result: Option<Vec<ChartResult>>,
     /// Error if any
@@ -22,7 +23,7 @@ pub struct ChartContainer {
 
 impl ChartResponse {
     /// Parse from JSON value
-    pub fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
+    pub(crate) fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)
     }
 }

@@ -4,6 +4,9 @@
 use serde::{Deserialize, Serialize};
 
 /// A similar/recommended symbol with score
+///
+/// Note: This struct cannot be manually constructed - obtain via `Ticker::recommendations()`.
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SimilarSymbol {
     /// Stock symbol

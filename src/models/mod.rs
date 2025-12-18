@@ -1,25 +1,30 @@
-/// Chart/historical data models
+//! Data models for Yahoo Finance responses.
+
+/// Chart/historical data models.
 pub mod chart;
-/// Market movers models
+/// Financials (fundamentals-timeseries) models.
+pub mod financials;
+/// Technical indicators models.
+pub mod indicators;
+/// Market movers models.
 pub mod movers;
-/// News models
+/// News models.
 pub mod news;
-/// Options models
+/// Options models.
 pub mod options;
-/// Quote models for detailed stock information
+/// Quote models for detailed stock information.
 pub mod quote;
-/// Recommendation models
+/// Recommendation models.
 pub mod recommendation;
-/// Search models
+/// Search models.
 pub mod search;
-/// Timeseries models
-pub mod timeseries;
 
 // Re-exports for convenience
 pub use chart::{Candle, Chart, ChartMeta};
+pub use financials::FinancialStatement;
 pub use movers::{MoverQuote, MoversResponse};
 pub use news::{NewsArticle, NewsResponse, NewsThumbnail};
-pub use options::{OptionContract, OptionsResponse};
-pub use recommendation::Recommendation;
-pub use search::SearchQuote;
-pub use timeseries::{TimeseriesDataPoint, TimeseriesResponse};
+pub use options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse};
+pub use quote::{FormattedValue, Quote};
+pub use recommendation::{Recommendation, SimilarSymbol};
+pub use search::{SearchQuote, SearchResponse};

@@ -1,11 +1,12 @@
 /// Chart Indicators module
 ///
 /// Contains OHLCV data structures and adjusted close indicators.
+/// These types are internal implementation details and not exposed in the public API.
 use serde::{Deserialize, Serialize};
 
 /// Chart indicators containing OHLCV data
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChartIndicators {
+pub(crate) struct ChartIndicators {
     /// Quote data (OHLCV)
     pub quote: Vec<QuoteIndicator>,
     /// Adjusted close data
@@ -15,7 +16,7 @@ pub struct ChartIndicators {
 
 /// OHLCV quote indicator
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct QuoteIndicator {
+pub(crate) struct QuoteIndicator {
     /// Open prices
     pub open: Option<Vec<Option<f64>>>,
     /// High prices
@@ -31,7 +32,7 @@ pub struct QuoteIndicator {
 /// Adjusted close indicator
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct AdjCloseIndicator {
+pub(crate) struct AdjCloseIndicator {
     /// Adjusted close prices
     pub adj_close: Option<Vec<Option<f64>>>,
 }

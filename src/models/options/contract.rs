@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 
 /// An options contract (call or put)
+///
+/// Note: This struct cannot be manually constructed - obtain via `Ticker::options()`.
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OptionContract {

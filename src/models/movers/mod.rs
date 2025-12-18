@@ -1,4 +1,4 @@
-//! Market movers models
+//! Market movers models.
 //!
 //! Types for market movers data (most actives, day gainers, day losers).
 //!

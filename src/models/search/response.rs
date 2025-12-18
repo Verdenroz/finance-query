@@ -17,8 +17,6 @@ pub struct SearchResponse {
     pub news: Option<Vec<SearchNews>>,
     /// Total search execution time (milliseconds)
     pub total_time: Option<i64>,
-    /// Detailed timing breakdown
-    pub timing_info: Option<serde_json::Value>,
 }
 
 impl SearchResponse {

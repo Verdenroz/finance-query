@@ -2,6 +2,9 @@ use super::contract::OptionContract;
 use serde::{Deserialize, Serialize};
 
 /// Options chain data for a specific expiration
+///
+/// Note: This struct cannot be manually constructed - use `Ticker::options()` to obtain options data.
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OptionChain {
@@ -19,6 +22,9 @@ pub struct OptionChain {
 }
 
 /// Quote data included with options response
+///
+/// Note: This struct cannot be manually constructed - obtain via `Ticker::options()`.
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OptionsQuote {

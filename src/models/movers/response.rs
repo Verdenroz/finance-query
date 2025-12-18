@@ -1,7 +1,7 @@
 use super::quote::MoverQuote;
 use serde::{Deserialize, Serialize};
 
-/// Raw response structure from Yahoo Finance movers API (internal only)
+/// Raw response structure from Yahoo Finance movers API
 ///
 /// This matches Yahoo's nested response format with finance.result[] wrapper.
 /// Use `MoversResponse::from_response()` to convert to user-friendly format.

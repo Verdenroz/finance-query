@@ -4,6 +4,9 @@
 use serde::{Deserialize, Serialize};
 
 /// Metadata for chart data
+///
+/// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ChartMeta {

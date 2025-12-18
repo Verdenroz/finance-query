@@ -101,21 +101,21 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 
-// Internal modules (not exposed to users)
-pub(crate) mod auth;
-pub(crate) mod client;
-/// Constants and default values
+// === Modules ===
+// Public modules
+/// Constants and default values.
 pub mod constants;
-pub(crate) mod endpoints;
-pub(crate) mod indicators;
-
-/// Error types and result definitions
+/// Error types and result definitions.
 pub mod error;
-/// Non-symbol-specific operations (search, movers, etc.)
+/// Non-symbol-specific operations (search, movers, etc.).
 pub mod finance;
-/// Data models for Yahoo Finance responses
+/// Data models for Yahoo Finance responses.
 pub mod models;
-/// High-level Ticker API
+
+// Internal modules
+mod auth;
+mod client;
+mod endpoints;
 mod ticker;
 
 // ============================================================================
@@ -143,16 +143,16 @@ pub use constants::{Country, Frequency, Interval, StatementType, TimeRange};
 // ============================================================================
 pub use models::{
     chart::{Candle, Chart, ChartMeta},
+    financials::FinancialStatement,
     movers::{MoverQuote, MoversResponse},
     news::{NewsArticle, NewsResponse, NewsThumbnail},
-    options::{OptionContract, OptionsResponse},
-    quote::{FormattedValue, Quote}, // Only Quote and FormattedValue - internals are hidden
-    recommendation::Recommendation,
-    search::SearchQuote,
-    timeseries::{TimeseriesDataPoint, TimeseriesResponse, fundamental_types},
+    options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse},
+    quote::{FormattedValue, Quote},
+    recommendation::{Recommendation, SimilarSymbol},
+    search::{SearchQuote, SearchResponse},
 };
 
 // ============================================================================
 // Technical Indicators - Types returned by indicators() method
 // ============================================================================
-pub use indicators::IndicatorsSummary;
+pub use models::indicators::IndicatorsSummary;

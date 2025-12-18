@@ -6,6 +6,8 @@
 use crate::client::{ClientConfig, YahooClient};
 use crate::error::Result;
 use crate::models::movers::MoversResponse;
+use crate::models::news::NewsResponse;
+use crate::models::search::SearchResponse;
 use serde_json::Value;
 
 /// Search for stock symbols and companies
@@ -22,10 +24,11 @@ use serde_json::Value;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let results = finance::search("Apple", 10).await?;
+/// println!("Found {} results", results.result_count());
 /// # Ok(())
 /// # }
 /// ```
-pub async fn search(query: &str, limit: u32) -> Result<Value> {
+pub async fn search(query: &str, limit: u32) -> Result<SearchResponse> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.search(query, limit).await
 }
@@ -94,6 +97,28 @@ pub async fn losers(count: u32) -> Result<MoversResponse> {
 pub async fn actives(count: u32) -> Result<MoversResponse> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_movers("MOST_ACTIVES", count).await
+}
+
+/// Get general market news (no symbol required)
+///
+/// # Arguments
+///
+/// * `count` - Number of news articles to return
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let news = finance::news(10).await?;
+/// println!("Market news: {:#?}", news);
+/// # Ok(())
+/// # }
+/// ```
+pub async fn news(count: u32) -> Result<NewsResponse> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.get_general_news(count).await
 }
 
 /// Get earnings transcript

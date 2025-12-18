@@ -29,8 +29,6 @@ pub struct SearchQuote {
     /// Whether this is a Yahoo Finance listed symbol
     #[serde(rename = "isYahooFinance")]
     pub is_yahoo_finance: Option<bool>,
-    /// Search relevance score
-    pub score: Option<f64>,
     /// Display security industry
     pub disp_sec_ind: Option<String>,
 }

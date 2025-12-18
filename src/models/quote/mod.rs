@@ -1,8 +1,8 @@
-//! Quote Summary Module
+//! Quote models.
 //!
 //! Contains all data structures and enums for Yahoo Finance's quoteSummary endpoint.
 
-// Internal modules - used for from_response() parsing
+// Internal modules - used for from_response() parsing.
 pub(crate) mod asset_profile;
 pub(crate) mod balance_sheet_history;
 pub(crate) mod calendar_events;
@@ -35,7 +35,7 @@ pub(crate) mod upgrade_downgrade_history;
 
 // Public modules
 pub mod data;
-/// Formatted value wrapper for Yahoo Finance numeric fields
+/// Formatted value wrapper for Yahoo Finance numeric fields.
 pub mod formatted_value;
 
 // Re-export only the final flattened Quote struct and FormattedValue (used in Quote's public fields)

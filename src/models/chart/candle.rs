@@ -4,6 +4,9 @@
 use serde::{Deserialize, Serialize};
 
 /// A single OHLCV candle/bar
+///
+/// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Candle {
     /// Timestamp (Unix)

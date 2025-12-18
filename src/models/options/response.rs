@@ -1,17 +1,24 @@
 use super::contract::OptionContract;
+/// Options Response module
+///
+/// Handles parsing of Yahoo Finance options API responses.
+/// These types are internal implementation details and not exposed in the public API.
 use serde::{Deserialize, Serialize};
 
 /// Response wrapper for options endpoint
+///
+/// Note: While this type is public for return values, users should not manually construct it.
+/// Use `Ticker::options()` to obtain options data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct OptionsResponse {
     /// Option chain container
-    pub option_chain: OptionChainContainer,
+    pub(crate) option_chain: OptionChainContainer,
 }
 
 /// Container for option chain results
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct OptionChainContainer {
+pub(crate) struct OptionChainContainer {
     /// Results array
     pub result: Vec<OptionChainResult>,
 
@@ -22,7 +29,7 @@ pub struct OptionChainContainer {
 /// Single option chain result
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OptionChainResult {
+pub(crate) struct OptionChainResult {
     /// Underlying symbol
     pub underlying_symbol: Option<String>,
 
@@ -45,7 +52,7 @@ pub struct OptionChainResult {
 /// Option chain data for a specific expiration
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OptionChainData {
+pub(crate) struct OptionChainData {
     /// Expiration date (Unix timestamp)
     pub expiration_date: i64,
 
@@ -60,13 +67,8 @@ pub struct OptionChainData {
 }
 
 impl OptionsResponse {
-    /// Parse from JSON value
-    pub fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
-        serde_json::from_value(value)
-    }
-
-    /// Get the first result (most common case)
-    pub fn first_result(&self) -> Option<&OptionChainResult> {
+    /// Get the first result
+    pub(crate) fn first_result(&self) -> Option<&OptionChainResult> {
         self.option_chain.result.first()
     }
 

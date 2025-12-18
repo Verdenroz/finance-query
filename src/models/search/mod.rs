@@ -1,4 +1,4 @@
-//! Search Module
+//! Search models.
 //!
 //! Contains all data structures for Yahoo Finance's search endpoint.
 //! Provides symbol and news search functionality.

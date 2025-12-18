@@ -6,7 +6,10 @@ use super::macros;
 use crate::client::{BlockingYahooClient, ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::{Chart, ChartResponse, ChartResult};
+use crate::models::chart::Chart;
+use crate::models::chart::response::ChartResponse;
+use crate::models::chart::result::ChartResult;
+use crate::models::financials::FinancialStatement;
 use crate::models::news::NewsResponse;
 use crate::models::options::OptionsResponse;
 use crate::models::quote::{
@@ -16,8 +19,8 @@ use crate::models::quote::{
     QuoteTypeData, RecommendationTrend, SecFilings, SummaryDetail, SummaryProfile,
     UpgradeDowngradeHistory,
 };
-use crate::models::recommendation::{Recommendation, RecommendationResponse};
-use crate::models::timeseries::TimeseriesResponse;
+use crate::models::recommendation::Recommendation;
+use crate::models::recommendation::response::RecommendationResponse;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -443,12 +446,14 @@ impl AsyncTicker {
         &self,
         interval: Interval,
         range: TimeRange,
-    ) -> Result<crate::indicators::IndicatorsSummary> {
+    ) -> Result<crate::models::indicators::IndicatorsSummary> {
         // Fetch chart data
         let chart = self.chart(interval, range).await?;
 
         // Calculate indicators from candles
-        Ok(crate::indicators::calculate_indicators(&chart.candles))
+        Ok(crate::models::indicators::calculate_indicators(
+            &chart.candles,
+        ))
     }
 
     /// Get analyst recommendations
@@ -500,45 +505,33 @@ impl AsyncTicker {
         })
     }
 
-    /// Get time series data
-    pub async fn timeseries(
-        &self,
-        types: &[&str],
-        period1: i64,
-        period2: i64,
-    ) -> Result<TimeseriesResponse> {
-        let json = self
-            .client
-            .get_fundamentals_timeseries(&self.core.symbol, period1, period2, types)
-            .await?;
-        TimeseriesResponse::from_json(json).map_err(|e| {
-            crate::error::YahooError::ResponseStructureError {
-                field: "timeseries".to_string(),
-                context: e.to_string(),
-            }
-        })
-    }
-
     /// Get financial statements
-    pub async fn financials(&self, _freq: &str) -> Result<TimeseriesResponse> {
-        let types = &[
-            "quarterlyTotalRevenue",
-            "quarterlyNetIncome",
-            "quarterlyGrossProfit",
-        ];
-        let period2 = chrono::Utc::now().timestamp();
-        let period1 = period2 - 365 * 24 * 60 * 60; // 1 year ago
-
-        let json = self
-            .client
-            .get_fundamentals_timeseries(&self.core.symbol, period1, period2, types)
-            .await?;
-        TimeseriesResponse::from_json(json).map_err(|e| {
-            crate::error::YahooError::ResponseStructureError {
-                field: "timeseries".to_string(),
-                context: e.to_string(),
-            }
-        })
+    ///
+    /// # Arguments
+    ///
+    /// * `statement_type` - Type of statement (Income, Balance, CashFlow)
+    /// * `frequency` - Annual or Quarterly
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{AsyncTicker, Frequency, StatementType};
+    ///
+    /// let ticker = AsyncTicker::new("AAPL").await?;
+    /// let income = ticker.financials(StatementType::Income, Frequency::Annual).await?;
+    /// println!("Revenue: {:?}", income.statement.get("TotalRevenue"));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn financials(
+        &self,
+        statement_type: crate::constants::StatementType,
+        frequency: crate::constants::Frequency,
+    ) -> Result<FinancialStatement> {
+        self.client
+            .get_financials(&self.core.symbol, statement_type, frequency)
+            .await
     }
 
     /// Get news articles
@@ -863,12 +856,14 @@ impl Ticker {
         &self,
         interval: Interval,
         range: TimeRange,
-    ) -> Result<crate::indicators::IndicatorsSummary> {
+    ) -> Result<crate::models::indicators::IndicatorsSummary> {
         // Fetch chart data
         let chart = self.chart(interval, range)?;
 
         // Calculate indicators from candles
-        Ok(crate::indicators::calculate_indicators(&chart.candles))
+        Ok(crate::models::indicators::calculate_indicators(
+            &chart.candles,
+        ))
     }
 
     /// Get analyst recommendations
@@ -917,43 +912,30 @@ impl Ticker {
         })
     }
 
-    /// Get time series data
-    pub fn timeseries(
-        &self,
-        types: &[&str],
-        period1: i64,
-        period2: i64,
-    ) -> Result<TimeseriesResponse> {
-        let json =
-            self.client
-                .get_fundamentals_timeseries(&self.core.symbol, period1, period2, types)?;
-        TimeseriesResponse::from_json(json).map_err(|e| {
-            crate::error::YahooError::ResponseStructureError {
-                field: "timeseries".to_string(),
-                context: e.to_string(),
-            }
-        })
-    }
-
     /// Get financial statements
-    pub fn financials(&self, _freq: &str) -> Result<TimeseriesResponse> {
-        let types = &[
-            "quarterlyTotalRevenue",
-            "quarterlyNetIncome",
-            "quarterlyGrossProfit",
-        ];
-        let period2 = chrono::Utc::now().timestamp();
-        let period1 = period2 - 365 * 24 * 60 * 60;
-
-        let json =
-            self.client
-                .get_fundamentals_timeseries(&self.core.symbol, period1, period2, types)?;
-        TimeseriesResponse::from_json(json).map_err(|e| {
-            crate::error::YahooError::ResponseStructureError {
-                field: "timeseries".to_string(),
-                context: e.to_string(),
-            }
-        })
+    ///
+    /// # Arguments
+    ///
+    /// * `statement_type` - Type of statement (Income, Balance, CashFlow)
+    /// * `frequency` - Annual or Quarterly
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Frequency, StatementType};
+    ///
+    /// let ticker = Ticker::new("AAPL")?;
+    /// let income = ticker.financials(StatementType::Income, Frequency::Annual)?;
+    /// println!("Revenue: {:?}", income.statement.get("TotalRevenue"));
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn financials(
+        &self,
+        statement_type: crate::constants::StatementType,
+        frequency: crate::constants::Frequency,
+    ) -> Result<FinancialStatement> {
+        self.client
+            .get_financials(&self.core.symbol, statement_type, frequency)
     }
 
     /// Get news articles

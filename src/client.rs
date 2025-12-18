@@ -364,7 +364,8 @@ impl YahooClient {
 
         let request = http.get(url).query(&[("crumb", &auth.crumb)]).query(params);
 
-        // Log the full request URL with all parameters
+        // Log the full request URL with all parameters.
+        // (This is critical for debugging Yahoo endpoints where query params like `type` are strict.)
         if let Some(full_url) = request
             .try_clone()
             .and_then(|r| r.build().ok())
@@ -373,10 +374,14 @@ impl YahooClient {
             debug!("Full request URL: {}", full_url);
             info!(
                 "Request to: {} (lang={}, region={})",
-                url, self.config.lang, self.config.region
+                full_url, self.config.lang, self.config.region
             );
         } else {
             debug!("Making request to {}", url);
+            info!(
+                "Request to: {} (lang={}, region={})",
+                url, self.config.lang, self.config.region
+            );
         }
 
         let response = request.send().await.map_err(|e| {
@@ -447,8 +452,13 @@ impl YahooClient {
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn search(&self, query: &str, hits: u32) -> Result<serde_json::Value> {
-        crate::endpoints::search::fetch(self, query, hits).await
+    pub async fn search(
+        &self,
+        query: &str,
+        hits: u32,
+    ) -> Result<crate::models::search::SearchResponse> {
+        let json = crate::endpoints::search::fetch(self, query, hits).await?;
+        Ok(crate::models::search::SearchResponse::from_json(json)?)
     }
 
     /// Get recommended/similar quotes for a symbol
@@ -471,6 +481,36 @@ impl YahooClient {
     /// # Arguments
     ///
     /// * `symbol` - Stock symbol
+    /// * `statement_type` - Type of statement (Income, Balance, CashFlow)
+    /// * `frequency` - Annual or Quarterly
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// use finance_query::constants::{StatementType, Frequency};
+    /// let statement = client.get_financials("AAPL", StatementType::Income, Frequency::Annual).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_financials(
+        &self,
+        symbol: &str,
+        statement_type: crate::constants::StatementType,
+        frequency: crate::constants::Frequency,
+    ) -> Result<crate::models::financials::FinancialStatement> {
+        crate::endpoints::financials::fetch(self, symbol, statement_type, frequency).await
+    }
+
+    /// Fetch raw fundamentals timeseries data (for advanced use cases)
+    ///
+    /// This returns raw JSON from Yahoo Finance. For most use cases, prefer `get_financials()`
+    /// which returns a parsed `FinancialStatement`.
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol` - Stock symbol
     /// * `period1` - Start Unix timestamp
     /// * `period2` - End Unix timestamp
     /// * `types` - List of fundamental types (e.g., "annualTotalRevenue", "quarterlyNetIncome")
@@ -481,18 +521,18 @@ impl YahooClient {
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// let types = vec!["annualTotalRevenue", "annualNetIncome"];
-    /// let financials = client.get_fundamentals_timeseries("AAPL", 0, 9999999999, &types).await?;
+    /// let raw_data = client.get_fundamentals_raw("AAPL", 0, 9999999999, &types).await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn get_fundamentals_timeseries(
+    pub async fn get_fundamentals_raw(
         &self,
         symbol: &str,
         period1: i64,
         period2: i64,
         types: &[&str],
     ) -> Result<serde_json::Value> {
-        crate::endpoints::timeseries::fetch(self, symbol, period1, period2, types).await
+        crate::endpoints::financials::fetch_raw(self, symbol, period1, period2, types).await
     }
 
     /// Fetch quote type data including company ID (quartrId)
@@ -587,6 +627,27 @@ impl YahooClient {
         crate::endpoints::movers::fetch(self, screener_id, count).await
     }
 
+    /// Get general market news (no symbol required)
+    ///
+    /// # Arguments
+    ///
+    /// * `count` - Number of news articles to return
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # use finance_query::{YahooClient, ClientConfig};
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let client = YahooClient::new(ClientConfig::default()).await?;
+    /// let news = client.get_general_news(10).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_general_news(&self, count: u32) -> Result<crate::models::news::NewsResponse> {
+        let json = crate::endpoints::news::fetch(self, &[], count).await?;
+        Ok(crate::models::news::NewsResponse::from_json(json)?)
+    }
+
     /// Get earnings call transcript
     ///
     /// # Arguments
@@ -666,7 +727,7 @@ impl BlockingYahooClient {
     }
 
     /// Search for symbols (blocking)
-    pub fn search(&self, query: &str, hits: u32) -> Result<serde_json::Value> {
+    pub fn search(&self, query: &str, hits: u32) -> Result<crate::models::search::SearchResponse> {
         self.runtime.block_on(self.inner.search(query, hits))
     }
 
@@ -676,8 +737,19 @@ impl BlockingYahooClient {
             .block_on(self.inner.get_recommendations(symbol, limit))
     }
 
-    /// Get fundamentals timeseries data (blocking)
-    pub fn get_fundamentals_timeseries(
+    /// Get financial statement data (blocking)
+    pub fn get_financials(
+        &self,
+        symbol: &str,
+        statement_type: crate::constants::StatementType,
+        frequency: crate::constants::Frequency,
+    ) -> Result<crate::models::financials::FinancialStatement> {
+        self.runtime
+            .block_on(self.inner.get_financials(symbol, statement_type, frequency))
+    }
+
+    /// Get raw fundamentals timeseries data (blocking)
+    pub fn get_fundamentals_raw(
         &self,
         symbol: &str,
         period1: i64,
@@ -686,7 +758,7 @@ impl BlockingYahooClient {
     ) -> Result<serde_json::Value> {
         self.runtime.block_on(
             self.inner
-                .get_fundamentals_timeseries(symbol, period1, period2, types),
+                .get_fundamentals_raw(symbol, period1, period2, types),
         )
     }
 
@@ -786,8 +858,8 @@ mod tests {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = client.search("Apple", 5).await;
         assert!(result.is_ok());
-        let json = result.unwrap();
-        assert!(json.get("quotes").is_some());
+        let response = result.unwrap();
+        assert!(!response.quotes.is_empty(), "Should have search results");
     }
 
     #[tokio::test]
@@ -824,10 +896,24 @@ mod tests {
 
     #[tokio::test]
     #[ignore] // Requires network access
-    async fn test_get_fundamentals_timeseries() {
+    async fn test_get_financials() {
+        use crate::constants::{Frequency, StatementType};
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = client
-            .get_fundamentals_timeseries(
+            .get_financials("AAPL", StatementType::Income, Frequency::Annual)
+            .await;
+        assert!(result.is_ok());
+        let statement = result.unwrap();
+        assert_eq!(statement.symbol, "AAPL");
+        assert!(statement.statement.contains_key("TotalRevenue"));
+    }
+
+    #[tokio::test]
+    #[ignore] // Requires network access
+    async fn test_get_fundamentals_raw() {
+        let client = YahooClient::new(ClientConfig::default()).await.unwrap();
+        let result = client
+            .get_fundamentals_raw(
                 "AAPL",
                 0,
                 9999999999,

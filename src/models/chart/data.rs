@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 /// Aggregates chart metadata and candles into a single convenient structure.
 /// This is the recommended type for serialization and API responses.
 /// Used for both single symbol and batch historical data requests.
+///
+/// Note: This struct cannot be manually constructed - use `Ticker::chart()` to obtain chart data.
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Chart {
     /// Stock symbol

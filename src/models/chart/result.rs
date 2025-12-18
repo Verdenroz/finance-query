@@ -1,12 +1,14 @@
-use super::{Candle, Chart, ChartIndicators, ChartMeta};
+use super::indicators::ChartIndicators;
+use super::{Candle, ChartMeta};
 /// Chart Result module
 ///
 /// Contains the main ChartResult type and conversion methods.
+/// This type is internal implementation detail and not exposed in the public API.
 use serde::{Deserialize, Serialize};
 
 /// Chart result for a single symbol
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ChartResult {
+pub(crate) struct ChartResult {
     /// Metadata about the chart
     pub meta: ChartMeta,
     /// Timestamps for each data point
@@ -17,7 +19,7 @@ pub struct ChartResult {
 
 impl ChartResult {
     /// Convert chart result to a vector of candles
-    pub fn to_candles(&self) -> Vec<Candle> {
+    pub(crate) fn to_candles(&self) -> Vec<Candle> {
         let timestamps = match &self.timestamp {
             Some(ts) => ts,
             None => return vec![],
@@ -62,18 +64,5 @@ impl ChartResult {
                 })
             })
             .collect()
-    }
-
-    /// Converts this chart result into a Chart aggregate
-    ///
-    /// Extracts metadata and candles into a clean, serializable structure.
-    pub fn to_chart(&self) -> Chart {
-        Chart {
-            symbol: self.meta.symbol.clone(),
-            meta: self.meta.clone(),
-            candles: self.to_candles(),
-            interval: self.meta.data_granularity.clone(),
-            range: self.meta.range.clone(),
-        }
     }
 }

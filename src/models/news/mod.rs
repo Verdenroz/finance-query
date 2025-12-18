@@ -1,6 +1,7 @@
-//! News Module
+//! News models.
 //!
 //! Contains all data structures for Yahoo Finance's news endpoint.
+
 mod article;
 mod response;
 mod thumbnail;

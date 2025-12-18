@@ -9,6 +9,9 @@ use serde::{Deserialize, Serialize};
 /// Aggregates the queried symbol and its recommendations into a single
 /// convenient structure. This is the recommended type for serialization
 /// and API responses.
+///
+/// Note: This struct cannot be manually constructed - use `Ticker::recommendations()` to obtain recommendations.
+#[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Recommendation {
     /// Symbol that was queried
