@@ -26,3 +26,4 @@ from .analysis import (
     RevenueEstimateResponse,
     EarningsHistoryResponse,
 )
+from .financials import FinancialStatement
