@@ -6,7 +6,6 @@
 use crate::client::{ClientConfig, YahooClient};
 use crate::error::Result;
 use crate::models::movers::MoversResponse;
-use crate::models::news::NewsResponse;
 use crate::models::search::SearchResponse;
 use serde_json::Value;
 
@@ -99,11 +98,7 @@ pub async fn actives(count: u32) -> Result<MoversResponse> {
     client.get_movers("MOST_ACTIVES", count).await
 }
 
-/// Get general market news (no symbol required)
-///
-/// # Arguments
-///
-/// * `count` - Number of news articles to return
+/// Get general market news
 ///
 /// # Examples
 ///
@@ -111,14 +106,15 @@ pub async fn actives(count: u32) -> Result<MoversResponse> {
 /// use finance_query::finance;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let news = finance::news(10).await?;
-/// println!("Market news: {:#?}", news);
+/// let news = finance::news().await?;
+/// for article in news {
+///     println!("{}: {}", article.source, article.title);
+/// }
 /// # Ok(())
 /// # }
 /// ```
-pub async fn news(count: u32) -> Result<NewsResponse> {
-    let client = YahooClient::new(ClientConfig::default()).await?;
-    client.get_general_news(count).await
+pub async fn news() -> Result<Vec<crate::models::news::News>> {
+    crate::scrapers::stockanalysis::scrape_general_news().await
 }
 
 /// Get earnings transcript

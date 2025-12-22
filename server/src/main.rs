@@ -21,8 +21,6 @@ mod defaults {
     pub const SIMILAR_STOCKS_LIMIT: u32 = 5;
     /// Default number of search results
     pub const SEARCH_HITS: u32 = 6;
-    /// Default number of news articles to return
-    pub const NEWS_COUNT: u32 = 10;
     /// Default chart interval
     pub const DEFAULT_INTERVAL: &str = "1d";
     /// Default chart range
@@ -81,12 +79,6 @@ struct SearchQuery {
     q: String,
     #[serde(default = "default_hits")]
     hits: u32,
-}
-
-#[derive(Deserialize)]
-struct NewsQuery {
-    #[serde(default = "default_news_count")]
-    count: u32,
 }
 
 #[derive(Deserialize)]
@@ -229,13 +221,6 @@ fn default_hits() -> u32 {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(defaults::SEARCH_HITS)
-}
-
-fn default_news_count() -> u32 {
-    std::env::var("NEWS_COUNT")
-        .ok()
-        .and_then(|v| v.parse().ok())
-        .unwrap_or(defaults::NEWS_COUNT)
 }
 
 fn default_interval() -> String {
@@ -582,12 +567,12 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
 
 /// GET /v2/news
 ///
-/// Query: `count` (u32, default via `NEWS_COUNT` or server default)
-async fn get_general_news(Query(params): Query<NewsQuery>) -> impl IntoResponse {
+/// Returns general market news
+async fn get_general_news() -> impl IntoResponse {
     info!("Fetching general market news");
 
-    match finance::news(params.count).await {
-        Ok(news_response) => (StatusCode::OK, Json(news_response)).into_response(),
+    match finance::news().await {
+        Ok(news) => (StatusCode::OK, Json(news)).into_response(),
         Err(e) => {
             error!("Failed to fetch general news: {}", e);
             error_response(e).into_response()
@@ -597,16 +582,13 @@ async fn get_general_news(Query(params): Query<NewsQuery>) -> impl IntoResponse 
 
 /// GET /v2/news/{symbol}
 ///
-/// Query: `count` (u32, default via `NEWS_COUNT` or server default)
-async fn get_news(
-    Path(symbol): Path<String>,
-    Query(params): Query<NewsQuery>,
-) -> impl IntoResponse {
+/// Returns news for a specific symbol
+async fn get_news(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching news for {}", symbol);
 
     match AsyncTicker::new(&symbol).await {
-        Ok(ticker) => match ticker.news(params.count).await {
-            Ok(news_response) => (StatusCode::OK, Json(news_response)).into_response(),
+        Ok(ticker) => match ticker.news().await {
+            Ok(news) => (StatusCode::OK, Json(news)).into_response(),
             Err(e) => {
                 error!("Failed to fetch news: {}", e);
                 error_response(e).into_response()

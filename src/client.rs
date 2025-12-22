@@ -627,27 +627,6 @@ impl YahooClient {
         crate::endpoints::movers::fetch(self, screener_id, count).await
     }
 
-    /// Get general market news (no symbol required)
-    ///
-    /// # Arguments
-    ///
-    /// * `count` - Number of news articles to return
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # use finance_query::{YahooClient, ClientConfig};
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let client = YahooClient::new(ClientConfig::default()).await?;
-    /// let news = client.get_general_news(10).await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn get_general_news(&self, count: u32) -> Result<crate::models::news::NewsResponse> {
-        let json = crate::endpoints::news::fetch(self, &[], count).await?;
-        Ok(crate::models::news::NewsResponse::from_json(json)?)
-    }
-
     /// Get earnings call transcript
     ///
     /// # Arguments

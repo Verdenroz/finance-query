@@ -56,6 +56,9 @@ const_format = "0.2"
 # Logging and tracing
 tracing = "0.1"
 
+# HTML parsing for web scraping
+scraper = "0.25.0"
+
 [dev-dependencies]
 # Testing
 tokio-test = "0.4"

@@ -116,6 +116,7 @@ pub mod models;
 mod auth;
 mod client;
 mod endpoints;
+mod scrapers;
 mod ticker;
 
 // ============================================================================
@@ -145,7 +146,7 @@ pub use models::{
     chart::{Candle, Chart, ChartMeta},
     financials::FinancialStatement,
     movers::{MoverQuote, MoversResponse},
-    news::{NewsArticle, NewsResponse, NewsThumbnail},
+    news::News,
     options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse},
     quote::{FormattedValue, Quote},
     recommendation::{Recommendation, SimilarSymbol},

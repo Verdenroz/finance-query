@@ -10,7 +10,6 @@ use crate::models::chart::Chart;
 use crate::models::chart::response::ChartResponse;
 use crate::models::chart::result::ChartResult;
 use crate::models::financials::FinancialStatement;
-use crate::models::news::NewsResponse;
 use crate::models::options::OptionsResponse;
 use crate::models::quote::{
     AssetProfile, CalendarEvents, DefaultKeyStatistics, Earnings, EarningsHistory, EarningsTrend,
@@ -534,13 +533,24 @@ impl AsyncTicker {
             .await
     }
 
-    /// Get news articles
-    pub async fn news(&self, count: u32) -> Result<NewsResponse> {
-        let json = self.client.get_news(&[&self.core.symbol], count).await?;
-        serde_json::from_value(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
-            field: "news".to_string(),
-            context: e.to_string(),
-        })
+    /// Get news articles for this symbol
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::AsyncTicker;
+    ///
+    /// let ticker = AsyncTicker::new("AAPL").await?;
+    /// let news = ticker.news().await?;
+    /// for article in news {
+    ///     println!("{}: {}", article.source, article.title);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn news(&self) -> Result<Vec<crate::models::news::News>> {
+        crate::scrapers::stockanalysis::scrape_symbol_news(&self.core.symbol).await
     }
 
     /// Get options chain
@@ -938,13 +948,29 @@ impl Ticker {
             .get_financials(&self.core.symbol, statement_type, frequency)
     }
 
-    /// Get news articles
-    pub fn news(&self, count: u32) -> Result<NewsResponse> {
-        let json = self.client.get_news(&[&self.core.symbol], count)?;
-        serde_json::from_value(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
-            field: "news".to_string(),
-            context: e.to_string(),
-        })
+    /// Get news articles for this symbol
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    ///
+    /// let ticker = Ticker::new("AAPL")?;
+    /// let news = ticker.news()?;
+    /// for article in news {
+    ///     println!("{}: {}", article.source, article.title);
+    /// }
+    /// # Ok::<(), Box<dyn std::error::Error>>(())
+    /// ```
+    pub fn news(&self) -> Result<Vec<crate::models::news::News>> {
+        // Create a temporary runtime for the async scraping operation
+        let rt = tokio::runtime::Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .map_err(|e| crate::error::YahooError::InternalError(e.to_string()))?;
+        rt.block_on(crate::scrapers::stockanalysis::scrape_symbol_news(
+            &self.core.symbol,
+        ))
     }
 
     /// Get options chain
