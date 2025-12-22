@@ -36,7 +36,8 @@ router = APIRouter()
     },
 )
 async def get_earnings_calls_list_endpoint(
-    finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
 ):
     """
     Get list of available earnings call transcripts for a stock symbol.
@@ -82,7 +83,8 @@ async def get_earnings_calls_list_endpoint(
     },
 )
 async def get_latest_earnings_transcript_endpoint(
-    finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
 ):
     """
     Get the most recent earnings call transcript for a stock symbol.
@@ -129,7 +131,7 @@ async def get_latest_earnings_transcript_endpoint(
 )
 async def get_specific_earnings_transcript_endpoint(
     finance_client: FinanceClient,
-    symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$"),
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
     quarter: Quarter = Path(..., description="Quarter (Q1, Q2, Q3, or Q4)"),
     year: int = Path(..., description="Year", ge=1990, le=2030),
 ):

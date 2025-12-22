@@ -59,7 +59,10 @@ router = APIRouter()
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_recommendations(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_recommendations(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get analyst recommendations for a stock symbol.
 
@@ -109,7 +112,10 @@ async def get_recommendations(finance_client: FinanceClient, symbol: str = Path(
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_upgrades_downgrades(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_upgrades_downgrades(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get analyst upgrades and downgrades for a stock symbol.
 
@@ -150,7 +156,10 @@ async def get_upgrades_downgrades(finance_client: FinanceClient, symbol: str = P
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_price_targets(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_price_targets(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get analyst price targets for a stock symbol.
 
@@ -204,7 +213,10 @@ async def get_price_targets(finance_client: FinanceClient, symbol: str = Path(..
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_earnings_estimate(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_earnings_estimate(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get earnings estimates for a stock symbol.
 
@@ -258,7 +270,10 @@ async def get_earnings_estimate(finance_client: FinanceClient, symbol: str = Pat
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_revenue_estimate(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_revenue_estimate(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get revenue estimates for a stock symbol.
 
@@ -308,7 +323,10 @@ async def get_revenue_estimate(finance_client: FinanceClient, symbol: str = Path
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_earnings_history(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_earnings_history(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get historical earnings for a stock symbol.
 

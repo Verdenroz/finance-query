@@ -8,6 +8,7 @@ UV := uv
 PYTHON := python3
 MKDOCS := mkdocs
 DOCKER := docker
+RUN := $(UV) run
 
 # Colors
 GREEN := $(shell printf '\033[0;32m')
@@ -21,34 +22,34 @@ help: ## Show available commands
 
 serve: ## Start development server
 	@echo "$(GREEN)Starting server at http://localhost:8000$(NC)"
-	$(PYTHON) -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+	$(RUN) uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
 
 install: ## Install production dependencies
 	@echo "$(GREEN)Installing production dependencies...$(NC)"
 	$(UV) sync
-	$(PYTHON) setup.py build_ext --inplace
+	$(RUN) $(PYTHON) setup.py build_ext --inplace
 
 install-dev: ## Install dev dependencies + pre-commit hooks
 	@echo "$(GREEN)Installing dev dependencies...$(NC)"
 	$(UV) sync --all-groups
-	$(PYTHON) setup.py build_ext --inplace
-	pre-commit install
+	$(RUN) $(PYTHON) setup.py build_ext --inplace
+	$(RUN) pre-commit install
 
 build: ## Build Cython extensions
 	@echo "$(GREEN)Building Cython extensions...$(NC)"
-	$(PYTHON) setup.py build_ext --inplace
+	$(RUN) $(PYTHON) setup.py build_ext --inplace
 
 test: ## Run tests with coverage
 	@echo "$(GREEN)Running tests with coverage...$(NC)"
-	pytest
+	$(RUN) pytest
 
 lint: ## Run linting and formatting
 	@echo "$(GREEN)Running linting and formatting...$(NC)"
-	pre-commit run --all-files
+	$(RUN) pre-commit run --all-files
 
 docs: ## Build and serve documentation
 	@echo "$(GREEN)Serving docs at http://localhost:8001$(NC)"
-	$(MKDOCS) serve --dev-addr=0.0.0.0:8001
+	$(RUN) $(MKDOCS) serve --dev-addr=0.0.0.0:8001
 
 docker: ## Build and run Docker container
 	@echo "$(GREEN)Building and running Docker container...$(NC)"
