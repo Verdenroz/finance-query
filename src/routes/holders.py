@@ -49,7 +49,10 @@ router = APIRouter()
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_major_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_major_holders(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get major holders breakdown for a stock symbol.
 
@@ -92,7 +95,10 @@ async def get_major_holders(finance_client: FinanceClient, symbol: str = Path(..
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_institutional_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_institutional_holders(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get institutional holders for a stock symbol.
 
@@ -135,7 +141,10 @@ async def get_institutional_holders(finance_client: FinanceClient, symbol: str =
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_mutualfund_holders(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_mutualfund_holders(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get mutual fund holders for a stock symbol.
 
@@ -180,7 +189,10 @@ async def get_mutualfund_holders(finance_client: FinanceClient, symbol: str = Pa
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_insider_transactions(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_insider_transactions(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get insider transactions for a stock symbol.
 
@@ -223,7 +235,10 @@ async def get_insider_transactions(finance_client: FinanceClient, symbol: str = 
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_insider_purchases(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_insider_purchases(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get insider purchases summary for a stock symbol.
 
@@ -267,7 +282,10 @@ async def get_insider_purchases(finance_client: FinanceClient, symbol: str = Pat
         422: {"model": ValidationErrorResponse, "description": "Validation error"},
     },
 )
-async def get_insider_roster(finance_client: FinanceClient, symbol: str = Path(..., description="Stock ticker symbol", pattern="^[A-Za-z]{1,10}$")):
+async def get_insider_roster(
+    finance_client: FinanceClient,
+    symbol: str = Path(..., description="Stock ticker symbol", pattern=r"^[A-Za-z0-9]{1,10}(\.[A-Za-z]{1,3})?$"),
+):
     """
     Get insider roster for a stock symbol.
 
