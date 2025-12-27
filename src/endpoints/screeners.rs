@@ -2,7 +2,7 @@ use crate::client::YahooClient;
 use crate::constants::screener_types::ScreenerType;
 use crate::constants::url_builders;
 use crate::error::Result;
-use crate::models::screeners::ScreenersResponse;
+use crate::models::screeners::{ScreenerQuery, ScreenersResponse};
 
 /// Fetch data from a predefined Yahoo Finance screener
 ///
@@ -42,6 +42,45 @@ pub async fn fetch(
     parse_screeners_response(&json)
 }
 
+/// Fetch data using a custom screener query
+///
+/// Allows flexible filtering of stocks/funds/ETFs based on various criteria.
+/// Uses POST request with JSON body.
+///
+/// # Arguments
+///
+/// * `client` - Yahoo Finance client
+/// * `query` - The custom screener query to execute
+///
+/// # Example
+///
+/// ```no_run
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// # let client = finance_query::YahooClient::new(Default::default()).await?;
+/// use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
+///
+/// let query = ScreenerQuery::new()
+///     .size(25)
+///     .sort_by("intradaymarketcap", false)
+///     .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
+///     .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(200000));
+///
+/// let result = client.custom_screener(query).await?;
+/// for quote in &result.quotes {
+///     println!("  {} - {}", quote.symbol, quote.short_name);
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn fetch_custom(client: &YahooClient, query: ScreenerQuery) -> Result<ScreenersResponse> {
+    let url = url_builders::custom_screener();
+    let response = client.request_post_with_crumb(&url, &query).await?;
+    let json: serde_json::Value = response.json().await?;
+
+    // Parse and flatten Yahoo Finance custom screener response
+    parse_custom_screeners_response(&json)
+}
+
 /// Parse Yahoo Finance screener response into clean ScreenersResponse
 ///
 /// Handles all Yahoo-specific nested structure and data transformation internally.
@@ -49,6 +88,16 @@ fn parse_screeners_response(json: &serde_json::Value) -> Result<ScreenersRespons
     ScreenersResponse::from_response(json).map_err(|e| {
         crate::error::YahooError::ResponseStructureError {
             field: "screeners".to_string(),
+            context: e,
+        }
+    })
+}
+
+/// Parse Yahoo Finance custom screener response into clean ScreenersResponse
+fn parse_custom_screeners_response(json: &serde_json::Value) -> Result<ScreenersResponse> {
+    ScreenersResponse::from_custom_response(json).map_err(|e| {
+        crate::error::YahooError::ResponseStructureError {
+            field: "custom_screener".to_string(),
             context: e,
         }
     })

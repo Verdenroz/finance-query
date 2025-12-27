@@ -103,6 +103,7 @@ pub use error::{Result, YahooError};
 // Constants and parameter enums
 // ============================================================================
 pub use constants::indices::Region as IndicesRegion;
+pub use constants::screener_query;
 pub use constants::screener_types::ScreenerType;
 pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, ValueFormat};
 
@@ -117,7 +118,10 @@ pub use models::{
     options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse},
     quote::{FormattedValue, Quote},
     recommendation::{Recommendation, SimilarSymbol},
-    screeners::{ScreenerQuote, ScreenersResponse},
+    screeners::{
+        QueryCondition, QueryGroup, QueryOperand, QueryValue, ScreenerQuery, ScreenerQuote,
+        ScreenersResponse,
+    },
     search::{SearchQuote, SearchResponse},
 };
 

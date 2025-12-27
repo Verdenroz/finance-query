@@ -3,7 +3,7 @@
 //! Types for Yahoo Finance predefined screener data (most actives, day gainers,
 //! day losers, most shorted, growth stocks, undervalued stocks, and more).
 //!
-//! ## Usage
+//! ## Predefined Screeners
 //!
 //! The API returns a clean, flattened `ScreenersResponse`:
 //! ```json
@@ -15,10 +15,22 @@
 //! }
 //! ```
 //!
-//! Each quote in the array is a `ScreenerQuote` with ~50 fields of market data.
+//! ## Custom Screeners
+//!
+//! Use `ScreenerQuery` to build custom filters:
+//! ```no_run
+//! use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
+//!
+//! let query = ScreenerQuery::new()
+//!     .size(25)
+//!     .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
+//!     .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(200000));
+//! ```
 
+mod query;
 mod quote;
 mod response;
 
+pub use query::{QueryCondition, QueryGroup, QueryOperand, QueryValue, ScreenerQuery};
 pub use quote::ScreenerQuote;
 pub use response::ScreenersResponse;

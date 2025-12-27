@@ -92,6 +92,14 @@ pub mod url_builders {
             screener_type.as_scr_id()
         )
     }
+
+    /// Custom screener endpoint (POST)
+    pub fn custom_screener() -> String {
+        format!(
+            "{}/v1/finance/screener?formatted=true&useRecordsResponse=true&lang=en-US&region=US",
+            YAHOO_FINANCE_QUERY1
+        )
+    }
 }
 
 /// Predefined screener types for Yahoo Finance
@@ -230,6 +238,400 @@ pub mod screener_types {
                 "top-mutual-funds" => Ok(ScreenerType::TopMutualFunds),
                 _ => Err(()),
             }
+        }
+    }
+}
+
+/// Custom screener query types and operators
+///
+/// Used to build custom screener queries with flexible filtering criteria.
+pub mod screener_query {
+    use serde::{Deserialize, Serialize};
+
+    /// Quote type for custom screeners
+    ///
+    /// Yahoo Finance only supports EQUITY and MUTUALFUND for custom screener queries.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+    #[serde(rename_all = "UPPERCASE")]
+    pub enum QuoteType {
+        /// Equity (stocks) - uses equity_fields for validation
+        #[default]
+        #[serde(rename = "EQUITY")]
+        Equity,
+        /// Mutual funds - uses fund_fields for validation
+        #[serde(rename = "MUTUALFUND")]
+        MutualFund,
+    }
+
+    impl QuoteType {
+        /// Get valid values for this quote type
+        pub fn valid_types() -> &'static str {
+            "equity, mutualfund"
+        }
+    }
+
+    impl std::str::FromStr for QuoteType {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().replace(['-', '_'], "").as_str() {
+                "equity" | "stock" | "stocks" => Ok(QuoteType::Equity),
+                "mutualfund" | "fund" | "funds" => Ok(QuoteType::MutualFund),
+                _ => Err(()),
+            }
+        }
+    }
+
+    /// Sort direction for custom screener results
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+    #[serde(rename_all = "UPPERCASE")]
+    pub enum SortType {
+        /// Sort ascending (smallest first)
+        #[serde(rename = "ASC")]
+        Asc,
+        /// Sort descending (largest first)
+        #[default]
+        #[serde(rename = "DESC")]
+        Desc,
+    }
+
+    impl std::str::FromStr for SortType {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().as_str() {
+                "asc" | "ascending" => Ok(SortType::Asc),
+                "desc" | "descending" => Ok(SortType::Desc),
+                _ => Err(()),
+            }
+        }
+    }
+
+    /// Comparison operator for query conditions
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    pub enum Operator {
+        /// Equal to
+        #[serde(rename = "eq")]
+        Eq,
+        /// Greater than
+        #[serde(rename = "gt")]
+        Gt,
+        /// Greater than or equal to
+        #[serde(rename = "gte")]
+        Gte,
+        /// Less than
+        #[serde(rename = "lt")]
+        Lt,
+        /// Less than or equal to
+        #[serde(rename = "lte")]
+        Lte,
+        /// Between two values (inclusive)
+        #[serde(rename = "btwn")]
+        Between,
+    }
+
+    impl std::str::FromStr for Operator {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().as_str() {
+                "eq" | "=" | "==" => Ok(Operator::Eq),
+                "gt" | ">" => Ok(Operator::Gt),
+                "gte" | ">=" => Ok(Operator::Gte),
+                "lt" | "<" => Ok(Operator::Lt),
+                "lte" | "<=" => Ok(Operator::Lte),
+                "btwn" | "between" => Ok(Operator::Between),
+                _ => Err(()),
+            }
+        }
+    }
+
+    /// Logical operator for combining conditions
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+    #[serde(rename_all = "lowercase")]
+    pub enum LogicalOperator {
+        /// All conditions must match (AND)
+        #[default]
+        And,
+        /// Any condition can match (OR)
+        Or,
+    }
+
+    impl std::str::FromStr for LogicalOperator {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().as_str() {
+                "and" | "&&" => Ok(LogicalOperator::And),
+                "or" | "||" => Ok(LogicalOperator::Or),
+                _ => Err(()),
+            }
+        }
+    }
+
+    /// Valid screener fields for equity queries
+    ///
+    /// Based on Yahoo Finance screener API. Fields grouped by category.
+    #[allow(missing_docs)]
+    pub mod equity_fields {
+        // Price fields
+        pub const EOD_PRICE: &str = "eodprice";
+        pub const INTRADAY_PRICE_CHANGE: &str = "intradaypricechange";
+        pub const INTRADAY_PRICE: &str = "intradayprice";
+        pub const PERCENT_CHANGE: &str = "percentchange";
+        pub const LASTCLOSE_52WK_HIGH: &str = "lastclose52weekhigh.lasttwelvemonths";
+        pub const FIFTY_TWO_WK_PCT_CHANGE: &str = "fiftytwowkpercentchange";
+        pub const LASTCLOSE_52WK_LOW: &str = "lastclose52weeklow.lasttwelvemonths";
+        pub const INTRADAY_MARKET_CAP: &str = "intradaymarketcap";
+        pub const LASTCLOSE_MARKET_CAP: &str = "lastclosemarketcap.lasttwelvemonths";
+
+        // Equality filter fields
+        pub const REGION: &str = "region";
+        pub const SECTOR: &str = "sector";
+        pub const PEER_GROUP: &str = "peer_group";
+        pub const INDUSTRY: &str = "industry";
+        pub const EXCHANGE: &str = "exchange";
+
+        // Trading fields
+        pub const BETA: &str = "beta";
+        pub const AVG_DAILY_VOL_3M: &str = "avgdailyvol3m";
+        pub const PCT_HELD_INSIDER: &str = "pctheldinsider";
+        pub const PCT_HELD_INST: &str = "pctheldinst";
+        pub const DAY_VOLUME: &str = "dayvolume";
+        pub const EOD_VOLUME: &str = "eodvolume";
+
+        // Short interest fields
+        pub const SHORT_PCT_SHARES_OUT: &str = "short_percentage_of_shares_outstanding.value";
+        pub const SHORT_INTEREST: &str = "short_interest.value";
+        pub const SHORT_PCT_FLOAT: &str = "short_percentage_of_float.value";
+        pub const DAYS_TO_COVER: &str = "days_to_cover_short.value";
+        pub const SHORT_INTEREST_PCT_CHANGE: &str = "short_interest_percentage_change.value";
+
+        // Valuation fields
+        pub const BOOK_VALUE_SHARE: &str = "bookvalueshare.lasttwelvemonths";
+        pub const MARKET_CAP_TO_REVENUE: &str = "lastclosemarketcaptotalrevenue.lasttwelvemonths";
+        pub const TEV_TO_REVENUE: &str = "lastclosetevtotalrevenue.lasttwelvemonths";
+        pub const PRICE_BOOK_RATIO: &str = "pricebookratio.quarterly";
+        pub const PE_RATIO: &str = "peratio.lasttwelvemonths";
+        pub const PRICE_TANGIBLE_BOOK: &str = "lastclosepricetangiblebookvalue.lasttwelvemonths";
+        pub const PRICE_EARNINGS: &str = "lastclosepriceearnings.lasttwelvemonths";
+        pub const PEG_RATIO_5Y: &str = "pegratio_5y";
+
+        // Profitability fields
+        pub const CONSECUTIVE_DIV_YEARS: &str = "consecutive_years_of_dividend_growth_count";
+        pub const ROA: &str = "returnonassets.lasttwelvemonths";
+        pub const ROE: &str = "returnonequity.lasttwelvemonths";
+        pub const FORWARD_DIV_PER_SHARE: &str = "forward_dividend_per_share";
+        pub const FORWARD_DIV_YIELD: &str = "forward_dividend_yield";
+        pub const RETURN_ON_CAPITAL: &str = "returnontotalcapital.lasttwelvemonths";
+
+        // Leverage fields
+        pub const TEV_EBIT: &str = "lastclosetevebit.lasttwelvemonths";
+        pub const NET_DEBT_EBITDA: &str = "netdebtebitda.lasttwelvemonths";
+        pub const TOTAL_DEBT_EQUITY: &str = "totaldebtequity.lasttwelvemonths";
+        pub const LT_DEBT_EQUITY: &str = "ltdebtequity.lasttwelvemonths";
+        pub const EBIT_INTEREST_EXP: &str = "ebitinterestexpense.lasttwelvemonths";
+        pub const EBITDA_INTEREST_EXP: &str = "ebitdainterestexpense.lasttwelvemonths";
+        pub const TEV_EBITDA: &str = "lastclosetevebitda.lasttwelvemonths";
+        pub const TOTAL_DEBT_EBITDA: &str = "totaldebtebitda.lasttwelvemonths";
+
+        // Liquidity fields
+        pub const QUICK_RATIO: &str = "quickratio.lasttwelvemonths";
+        pub const ALTMAN_Z_SCORE: &str =
+            "altmanzscoreusingtheaveragestockinformationforaperiod.lasttwelvemonths";
+        pub const CURRENT_RATIO: &str = "currentratio.lasttwelvemonths";
+        pub const OCF_TO_CURRENT_LIAB: &str =
+            "operatingcashflowtocurrentliabilities.lasttwelvemonths";
+
+        // Income statement fields
+        pub const TOTAL_REVENUES: &str = "totalrevenues.lasttwelvemonths";
+        pub const NET_INCOME_MARGIN: &str = "netincomemargin.lasttwelvemonths";
+        pub const GROSS_PROFIT: &str = "grossprofit.lasttwelvemonths";
+        pub const EBITDA_1YR_GROWTH: &str = "ebitda1yrgrowth.lasttwelvemonths";
+        pub const DILUTED_EPS_CONT_OPS: &str = "dilutedepscontinuingoperations.lasttwelvemonths";
+        pub const QUARTERLY_REV_GROWTH: &str = "quarterlyrevenuegrowth.quarterly";
+        pub const EPS_GROWTH: &str = "epsgrowth.lasttwelvemonths";
+        pub const NET_INCOME: &str = "netincomeis.lasttwelvemonths";
+        pub const EBITDA: &str = "ebitda.lasttwelvemonths";
+        pub const DILUTED_EPS_1YR_GROWTH: &str = "dilutedeps1yrgrowth.lasttwelvemonths";
+        pub const REVENUE_1YR_GROWTH: &str = "totalrevenues1yrgrowth.lasttwelvemonths";
+        pub const OPERATING_INCOME: &str = "operatingincome.lasttwelvemonths";
+        pub const NET_INCOME_1YR_GROWTH: &str = "netincome1yrgrowth.lasttwelvemonths";
+        pub const GROSS_PROFIT_MARGIN: &str = "grossprofitmargin.lasttwelvemonths";
+        pub const EBITDA_MARGIN: &str = "ebitdamargin.lasttwelvemonths";
+        pub const EBIT: &str = "ebit.lasttwelvemonths";
+        pub const BASIC_EPS_CONT_OPS: &str = "basicepscontinuingoperations.lasttwelvemonths";
+        pub const NET_EPS_BASIC: &str = "netepsbasic.lasttwelvemonths";
+        pub const NET_EPS_DILUTED: &str = "netepsdiluted.lasttwelvemonths";
+
+        // Balance sheet fields
+        pub const TOTAL_ASSETS: &str = "totalassets.lasttwelvemonths";
+        pub const COMMON_SHARES_OUT: &str = "totalcommonsharesoutstanding.lasttwelvemonths";
+        pub const TOTAL_DEBT: &str = "totaldebt.lasttwelvemonths";
+        pub const TOTAL_EQUITY: &str = "totalequity.lasttwelvemonths";
+        pub const TOTAL_CURRENT_ASSETS: &str = "totalcurrentassets.lasttwelvemonths";
+        pub const CASH_AND_ST_INVESTMENTS: &str =
+            "totalcashandshortterminvestments.lasttwelvemonths";
+        pub const TOTAL_COMMON_EQUITY: &str = "totalcommonequity.lasttwelvemonths";
+        pub const TOTAL_CURRENT_LIAB: &str = "totalcurrentliabilities.lasttwelvemonths";
+        pub const TOTAL_SHARES_OUT: &str = "totalsharesoutstanding";
+
+        // Cash flow fields
+        pub const LEVERED_FCF: &str = "leveredfreecashflow.lasttwelvemonths";
+        pub const CAPEX: &str = "capitalexpenditure.lasttwelvemonths";
+        pub const CASH_FROM_OPS: &str = "cashfromoperations.lasttwelvemonths";
+        pub const LEVERED_FCF_1YR_GROWTH: &str = "leveredfreecashflow1yrgrowth.lasttwelvemonths";
+        pub const UNLEVERED_FCF: &str = "unleveredfreecashflow.lasttwelvemonths";
+        pub const CASH_FROM_OPS_1YR_GROWTH: &str = "cashfromoperations1yrgrowth.lasttwelvemonths";
+
+        // ESG fields
+        pub const ESG_SCORE: &str = "esg_score";
+        pub const ENVIRONMENTAL_SCORE: &str = "environmental_score";
+        pub const GOVERNANCE_SCORE: &str = "governance_score";
+        pub const SOCIAL_SCORE: &str = "social_score";
+        pub const HIGHEST_CONTROVERSY: &str = "highest_controversy";
+    }
+
+    /// Valid screener fields for fund/mutual fund queries
+    #[allow(missing_docs)]
+    pub mod fund_fields {
+        // Common price fields (shared with equity)
+        pub const EOD_PRICE: &str = "eodprice";
+        pub const INTRADAY_PRICE_CHANGE: &str = "intradaypricechange";
+        pub const INTRADAY_PRICE: &str = "intradayprice";
+
+        // Fund-specific fields
+        pub const CATEGORY_NAME: &str = "categoryname";
+        pub const PERFORMANCE_RATING: &str = "performanceratingoverall";
+        pub const INITIAL_INVESTMENT: &str = "initialinvestment";
+        pub const ANNUAL_RETURN_RANK: &str = "annualreturnnavy1categoryrank";
+        pub const RISK_RATING: &str = "riskratingoverall";
+        pub const EXCHANGE: &str = "exchange";
+    }
+
+    /// All valid equity screener fields (for validation)
+    pub const VALID_EQUITY_FIELDS: &[&str] = &[
+        equity_fields::EOD_PRICE,
+        equity_fields::INTRADAY_PRICE_CHANGE,
+        equity_fields::INTRADAY_PRICE,
+        equity_fields::PERCENT_CHANGE,
+        equity_fields::LASTCLOSE_52WK_HIGH,
+        equity_fields::FIFTY_TWO_WK_PCT_CHANGE,
+        equity_fields::LASTCLOSE_52WK_LOW,
+        equity_fields::INTRADAY_MARKET_CAP,
+        equity_fields::LASTCLOSE_MARKET_CAP,
+        equity_fields::REGION,
+        equity_fields::SECTOR,
+        equity_fields::PEER_GROUP,
+        equity_fields::INDUSTRY,
+        equity_fields::EXCHANGE,
+        equity_fields::BETA,
+        equity_fields::AVG_DAILY_VOL_3M,
+        equity_fields::PCT_HELD_INSIDER,
+        equity_fields::PCT_HELD_INST,
+        equity_fields::DAY_VOLUME,
+        equity_fields::EOD_VOLUME,
+        equity_fields::SHORT_PCT_SHARES_OUT,
+        equity_fields::SHORT_INTEREST,
+        equity_fields::SHORT_PCT_FLOAT,
+        equity_fields::DAYS_TO_COVER,
+        equity_fields::SHORT_INTEREST_PCT_CHANGE,
+        equity_fields::BOOK_VALUE_SHARE,
+        equity_fields::MARKET_CAP_TO_REVENUE,
+        equity_fields::TEV_TO_REVENUE,
+        equity_fields::PRICE_BOOK_RATIO,
+        equity_fields::PE_RATIO,
+        equity_fields::PRICE_TANGIBLE_BOOK,
+        equity_fields::PRICE_EARNINGS,
+        equity_fields::PEG_RATIO_5Y,
+        equity_fields::CONSECUTIVE_DIV_YEARS,
+        equity_fields::ROA,
+        equity_fields::ROE,
+        equity_fields::FORWARD_DIV_PER_SHARE,
+        equity_fields::FORWARD_DIV_YIELD,
+        equity_fields::RETURN_ON_CAPITAL,
+        equity_fields::TEV_EBIT,
+        equity_fields::NET_DEBT_EBITDA,
+        equity_fields::TOTAL_DEBT_EQUITY,
+        equity_fields::LT_DEBT_EQUITY,
+        equity_fields::EBIT_INTEREST_EXP,
+        equity_fields::EBITDA_INTEREST_EXP,
+        equity_fields::TEV_EBITDA,
+        equity_fields::TOTAL_DEBT_EBITDA,
+        equity_fields::QUICK_RATIO,
+        equity_fields::ALTMAN_Z_SCORE,
+        equity_fields::CURRENT_RATIO,
+        equity_fields::OCF_TO_CURRENT_LIAB,
+        equity_fields::TOTAL_REVENUES,
+        equity_fields::NET_INCOME_MARGIN,
+        equity_fields::GROSS_PROFIT,
+        equity_fields::EBITDA_1YR_GROWTH,
+        equity_fields::DILUTED_EPS_CONT_OPS,
+        equity_fields::QUARTERLY_REV_GROWTH,
+        equity_fields::EPS_GROWTH,
+        equity_fields::NET_INCOME,
+        equity_fields::EBITDA,
+        equity_fields::DILUTED_EPS_1YR_GROWTH,
+        equity_fields::REVENUE_1YR_GROWTH,
+        equity_fields::OPERATING_INCOME,
+        equity_fields::NET_INCOME_1YR_GROWTH,
+        equity_fields::GROSS_PROFIT_MARGIN,
+        equity_fields::EBITDA_MARGIN,
+        equity_fields::EBIT,
+        equity_fields::BASIC_EPS_CONT_OPS,
+        equity_fields::NET_EPS_BASIC,
+        equity_fields::NET_EPS_DILUTED,
+        equity_fields::TOTAL_ASSETS,
+        equity_fields::COMMON_SHARES_OUT,
+        equity_fields::TOTAL_DEBT,
+        equity_fields::TOTAL_EQUITY,
+        equity_fields::TOTAL_CURRENT_ASSETS,
+        equity_fields::CASH_AND_ST_INVESTMENTS,
+        equity_fields::TOTAL_COMMON_EQUITY,
+        equity_fields::TOTAL_CURRENT_LIAB,
+        equity_fields::TOTAL_SHARES_OUT,
+        equity_fields::LEVERED_FCF,
+        equity_fields::CAPEX,
+        equity_fields::CASH_FROM_OPS,
+        equity_fields::LEVERED_FCF_1YR_GROWTH,
+        equity_fields::UNLEVERED_FCF,
+        equity_fields::CASH_FROM_OPS_1YR_GROWTH,
+        equity_fields::ESG_SCORE,
+        equity_fields::ENVIRONMENTAL_SCORE,
+        equity_fields::GOVERNANCE_SCORE,
+        equity_fields::SOCIAL_SCORE,
+        equity_fields::HIGHEST_CONTROVERSY,
+    ];
+
+    /// All valid fund screener fields (for validation)
+    pub const VALID_FUND_FIELDS: &[&str] = &[
+        fund_fields::EOD_PRICE,
+        fund_fields::INTRADAY_PRICE_CHANGE,
+        fund_fields::INTRADAY_PRICE,
+        fund_fields::CATEGORY_NAME,
+        fund_fields::PERFORMANCE_RATING,
+        fund_fields::INITIAL_INVESTMENT,
+        fund_fields::ANNUAL_RETURN_RANK,
+        fund_fields::RISK_RATING,
+        fund_fields::EXCHANGE,
+    ];
+
+    /// Check if a field is valid for equity screeners
+    pub fn is_valid_equity_field(field: &str) -> bool {
+        VALID_EQUITY_FIELDS.contains(&field)
+    }
+
+    /// Check if a field is valid for fund screeners
+    pub fn is_valid_fund_field(field: &str) -> bool {
+        VALID_FUND_FIELDS.contains(&field)
+    }
+
+    /// Check if a field is valid for the given quote type
+    pub fn is_valid_field(field: &str, quote_type: QuoteType) -> bool {
+        match quote_type {
+            QuoteType::Equity => is_valid_equity_field(field),
+            QuoteType::MutualFund => is_valid_fund_field(field),
         }
     }
 }

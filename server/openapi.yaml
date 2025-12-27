@@ -612,6 +612,123 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /v2/screeners/custom:
+    post:
+      tags: [Screeners]
+      summary: Custom screener query
+      description: |
+        Build custom screener queries with flexible filtering criteria.
+
+        **Quote Types:**
+        - `EQUITY` - Stocks (default)
+        - `MUTUALFUND` - Mutual funds
+
+        **Operators:**
+        - `eq` - Equal to (for string fields like region, sector)
+        - `gt` - Greater than
+        - `gte` - Greater than or equal
+        - `lt` - Less than
+        - `lte` - Less than or equal
+        - `btwn` - Between (requires array value: `[min, max]`)
+
+        **Common Equity Fields:**
+        - `region` - Market region (e.g., "us", "gb")
+        - `sector` - Industry sector (e.g., "Technology", "Healthcare")
+        - `industry` - Specific industry
+        - `exchange` - Exchange code (e.g., "NMS", "NYQ")
+        - `intradaymarketcap` - Market capitalization
+        - `intradayprice` - Current price
+        - `percentchange` - Percent change
+        - `avgdailyvol3m` - 3-month average daily volume
+        - `peratio.lasttwelvemonths` - P/E ratio (TTM)
+        - `forward_dividend_yield` - Forward dividend yield
+        - `returnonequity.lasttwelvemonths` - Return on equity
+        - `short_percentage_of_float.value` - Short interest % of float
+        - `esg_score` - ESG score
+
+        **Common Fund Fields:**
+        - `categoryname` - Fund category (e.g., "Large Growth")
+        - `performanceratingoverall` - Morningstar rating (1-5)
+        - `riskratingoverall` - Risk rating (1-5)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CustomScreenerRequest'
+            examples:
+              highVolumeLargeCaps:
+                summary: Large cap stocks with high volume
+                value:
+                  quoteType: EQUITY
+                  size: 10
+                  sortField: intradaymarketcap
+                  sortType: DESC
+                  filters:
+                    - field: region
+                      operator: eq
+                      value: us
+                    - field: intradaymarketcap
+                      operator: gt
+                      value: 100000000000
+                    - field: avgdailyvol3m
+                      operator: gt
+                      value: 1000000
+              highDividend:
+                summary: High dividend yield stocks
+                value:
+                  quoteType: EQUITY
+                  size: 25
+                  sortField: forward_dividend_yield
+                  sortType: DESC
+                  filters:
+                    - field: region
+                      operator: eq
+                      value: us
+                    - field: forward_dividend_yield
+                      operator: gt
+                      value: 4
+              priceRange:
+                summary: Stocks in price range $50-$100
+                value:
+                  quoteType: EQUITY
+                  size: 20
+                  filters:
+                    - field: region
+                      operator: eq
+                      value: us
+                    - field: intradayprice
+                      operator: btwn
+                      value: [50, 100]
+              topRatedFunds:
+                summary: Top rated mutual funds
+                value:
+                  quoteType: MUTUALFUND
+                  size: 10
+                  filters:
+                    - field: performanceratingoverall
+                      operator: gte
+                      value: 4
+      responses:
+        '200':
+          description: Custom screener results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ScreenersResponse'
+              example:
+                quotes:
+                  - symbol: NVDA
+                    shortName: NVIDIA Corporation
+                    quoteType: EQUITY
+                    regularMarketPrice: 134.70
+                    regularMarketChangePercent: 1.85
+                type: custom
+                description: "Custom screener query results"
+                total: 2432
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /v2/search:
     get:
       tags: [Search]
@@ -1114,6 +1231,77 @@ components:
           type: string
           description: Long formatted display string
           nullable: true
+
+    CustomScreenerRequest:
+      type: object
+      description: Request body for custom screener queries
+      properties:
+        quoteType:
+          type: string
+          enum: [EQUITY, MUTUALFUND]
+          default: EQUITY
+          description: Type of securities to screen
+        size:
+          type: integer
+          minimum: 1
+          maximum: 250
+          default: 25
+          description: Number of results to return
+        offset:
+          type: integer
+          minimum: 0
+          default: 0
+          description: Pagination offset
+        sortField:
+          type: string
+          description: Field to sort by (e.g., "intradaymarketcap", "percentchange")
+          example: intradaymarketcap
+        sortType:
+          type: string
+          enum: [ASC, DESC]
+          default: DESC
+          description: Sort direction
+        filters:
+          type: array
+          description: Filter conditions to apply
+          items:
+            $ref: '#/components/schemas/FilterCondition'
+        format:
+          type: string
+          enum: [raw, pretty, both]
+          default: raw
+          description: Response value format
+        fields:
+          type: string
+          description: Comma-separated fields to include in response
+          nullable: true
+
+    FilterCondition:
+      type: object
+      description: A single filter condition
+      required:
+        - field
+        - operator
+        - value
+      properties:
+        field:
+          type: string
+          description: Field name to filter on
+          example: region
+        operator:
+          type: string
+          enum: [eq, gt, gte, lt, lte, btwn]
+          description: Comparison operator
+          example: eq
+        value:
+          oneOf:
+            - type: string
+            - type: number
+            - type: array
+              items:
+                type: number
+          description: Filter value (use array for "btwn" operator)
+          example: us
 
     SearchResponse:
       type: object

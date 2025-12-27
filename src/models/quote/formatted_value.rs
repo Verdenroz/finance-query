@@ -27,7 +27,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Contains the raw numeric value along with optional formatted representations.
 /// Note: `raw` is optional because Yahoo sometimes returns empty objects `{}` for unavailable data.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FormattedValue<T> {
     /// Human-readable formatted string

@@ -353,6 +353,51 @@ impl YahooClient {
         (logo_url, company_logo_url)
     }
 
+    /// Make a POST request with JSON body and crumb authentication
+    ///
+    /// Used for endpoints that require POST with JSON payload (e.g., custom screeners)
+    pub async fn request_post_with_crumb<T: serde::Serialize + ?Sized>(
+        &self,
+        url: &str,
+        body: &T,
+    ) -> Result<reqwest::Response> {
+        let auth = self.auth.read().await;
+
+        // Build URL with crumb
+        let url_with_crumb = format!(
+            "{}{}crumb={}",
+            url,
+            if url.contains('?') { "&" } else { "?" },
+            auth.crumb
+        );
+
+        let request = auth
+            .http_client
+            .post(&url_with_crumb)
+            .header("Content-Type", "application/json")
+            .header("x-crumb", &auth.crumb)
+            .json(body);
+
+        debug!("Making POST request to {}", url_with_crumb);
+
+        let response = request.send().await.map_err(|e| {
+            if e.is_timeout() {
+                YahooError::Timeout {
+                    timeout_ms: crate::constants::timeouts::DEFAULT_TIMEOUT.as_millis() as u64,
+                }
+            } else {
+                YahooError::HttpError(e)
+            }
+        })?;
+
+        let status = response.status();
+        if !status.is_success() {
+            return Err(Self::map_http_status(status.as_u16()));
+        }
+
+        Ok(response)
+    }
+
     /// Make a GET request with query parameters and crumb authentication
     pub async fn request_with_params<T: serde::Serialize + ?Sized>(
         &self,
@@ -632,6 +677,39 @@ impl YahooClient {
         crate::endpoints::screeners::fetch(self, screener_type, count).await
     }
 
+    /// Execute a custom screener query
+    ///
+    /// Allows flexible filtering of stocks/funds/ETFs based on various criteria.
+    ///
+    /// # Arguments
+    ///
+    /// * `query` - The custom screener query to execute
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
+    ///
+    /// // Find US stocks with high volume sorted by market cap
+    /// let query = ScreenerQuery::new()
+    ///     .size(25)
+    ///     .sort_by("intradaymarketcap", false)
+    ///     .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
+    ///     .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(200000));
+    ///
+    /// let result = client.custom_screener(query).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn custom_screener(
+        &self,
+        query: crate::models::screeners::ScreenerQuery,
+    ) -> Result<crate::models::screeners::ScreenersResponse> {
+        crate::endpoints::screeners::fetch_custom(self, query).await
+    }
+
     /// Get earnings call transcript
     ///
     /// # Arguments
@@ -811,6 +889,14 @@ impl BlockingYahooClient {
     ) -> Result<crate::models::screeners::ScreenersResponse> {
         self.runtime
             .block_on(self.inner.get_screener(screener_type, count))
+    }
+
+    /// Execute a custom screener query (blocking)
+    pub fn custom_screener(
+        &self,
+        query: crate::models::screeners::ScreenerQuery,
+    ) -> Result<crate::models::screeners::ScreenersResponse> {
+        self.runtime.block_on(self.inner.custom_screener(query))
     }
 
     /// Get earnings call transcript (blocking)

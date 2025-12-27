@@ -65,6 +65,39 @@ pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<Screene
     client.get_screener(screener_type, count).await
 }
 
+/// Execute a custom screener query
+///
+/// Allows flexible filtering of stocks/funds/ETFs based on various criteria.
+///
+/// # Arguments
+///
+/// * `query` - The custom screener query to execute
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, screener_query::{ScreenerQuery, QueryCondition, Operator}};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Find US stocks with high volume sorted by market cap
+/// let query = ScreenerQuery::new()
+///     .size(25)
+///     .sort_by("intradaymarketcap", false)
+///     .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
+///     .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(200000));
+///
+/// let result = finance::custom_screener(query).await?;
+/// println!("Found {} stocks", result.quotes.len());
+/// # Ok(())
+/// # }
+/// ```
+pub async fn custom_screener(
+    query: crate::models::screeners::ScreenerQuery,
+) -> Result<ScreenersResponse> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.custom_screener(query).await
+}
+
 /// Get general market news
 ///
 /// # Examples

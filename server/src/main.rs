@@ -3,11 +3,11 @@ use axum::{
     extract::{Path, Query},
     http::{HeaderValue, Method, StatusCode},
     response::{IntoResponse, Json},
-    routing::get,
+    routing::{get, post},
 };
 use finance_query::{
-    Frequency, Interval, ScreenerType, StatementType, Ticker, Tickers, TimeRange, ValueFormat,
-    YahooError, finance,
+    Frequency, Interval, ScreenerQuery, ScreenerType, StatementType, Ticker, Tickers, TimeRange,
+    ValueFormat, YahooError, finance, screener_query,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -373,6 +373,8 @@ fn api_routes() -> Router {
         .route("/indicators/{symbol}", get(get_indicators))
         // GET /v2/indices?format=<raw|pretty|both>
         .route("/indices", get(get_indices))
+        // POST /v2/screeners/custom
+        .route("/screeners/custom", post(post_custom_screener))
         // GET /v2/screeners/{screener_type}?count=<u32>
         .route("/screeners/{screener_type}", get(get_screeners))
         // GET /v2/news?count=<u32>
@@ -1074,6 +1076,166 @@ async fn get_screeners(
         }
         Err(e) => {
             error!("Failed to fetch {} screener: {}", screener_type, e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Request body for custom screener endpoint
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct CustomScreenerRequest {
+    /// Number of results (default: 25, max: 250)
+    #[serde(default = "default_screeners_count")]
+    size: u32,
+    /// Pagination offset (default: 0)
+    #[serde(default)]
+    offset: u32,
+    /// Sort direction: "ASC" or "DESC" (default: DESC)
+    #[serde(default)]
+    sort_type: Option<String>,
+    /// Field to sort by (default: intradaymarketcap)
+    sort_field: Option<String>,
+    /// Quote type: EQUITY, ETF, MUTUALFUND, etc. (default: EQUITY)
+    quote_type: Option<String>,
+    /// Filter conditions
+    #[serde(default)]
+    filters: Vec<FilterCondition>,
+    /// Value format: raw, pretty, or both (default: raw)
+    format: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+/// A single filter condition
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct FilterCondition {
+    /// Field name (e.g., "region", "avgdailyvol3m", "intradaymarketcap")
+    field: String,
+    /// Operator: eq, gt, gte, lt, lte, btwn
+    operator: String,
+    /// Value(s) for the condition
+    value: serde_json::Value,
+}
+
+/// POST /v2/screeners/custom
+///
+/// Execute a custom screener query with flexible filtering.
+///
+/// Request body:
+/// ```json
+/// {
+///   "size": 25,
+///   "offset": 0,
+///   "sortType": "DESC",
+///   "sortField": "intradaymarketcap",
+///   "quoteType": "EQUITY",
+///   "filters": [
+///     {"field": "region", "operator": "eq", "value": "us"},
+///     {"field": "avgdailyvol3m", "operator": "gt", "value": 200000}
+///   ],
+///   "format": "raw",
+///   "fields": "symbol,shortName,regularMarketPrice"
+/// }
+/// ```
+async fn post_custom_screener(Json(body): Json<CustomScreenerRequest>) -> impl IntoResponse {
+    let format = parse_format(body.format.as_deref());
+    let fields = parse_fields(body.fields.as_deref());
+
+    // Parse quote type
+    let quote_type = body
+        .quote_type
+        .as_deref()
+        .and_then(|s| s.parse::<screener_query::QuoteType>().ok())
+        .unwrap_or_default();
+
+    // Parse sort type
+    let sort_ascending = body
+        .sort_type
+        .as_deref()
+        .map(|s| s.to_lowercase() == "asc")
+        .unwrap_or(false);
+
+    // Build the query
+    let mut query = ScreenerQuery::new()
+        .size(body.size)
+        .offset(body.offset)
+        .quote_type(quote_type);
+
+    // Set sort field if provided
+    if let Some(sort_field) = body.sort_field {
+        query = query.sort_by(sort_field, sort_ascending);
+    }
+
+    // Add filter conditions
+    let filter_count = body.filters.len();
+    for filter in body.filters {
+        let op = match filter.operator.to_lowercase().as_str() {
+            "eq" | "=" => screener_query::Operator::Eq,
+            "gt" | ">" => screener_query::Operator::Gt,
+            "gte" | ">=" => screener_query::Operator::Gte,
+            "lt" | "<" => screener_query::Operator::Lt,
+            "lte" | "<=" => screener_query::Operator::Lte,
+            "btwn" | "between" => screener_query::Operator::Between,
+            _ => {
+                let error = serde_json::json!({
+                    "error": format!("Invalid operator: '{}'. Valid: eq, gt, gte, lt, lte, btwn", filter.operator),
+                    "status": 400
+                });
+                return (StatusCode::BAD_REQUEST, Json(error)).into_response();
+            }
+        };
+
+        let mut condition = finance_query::QueryCondition::new(filter.field.clone(), op);
+
+        // Add value(s) to the condition
+        match &filter.value {
+            serde_json::Value::String(s) => {
+                condition = condition.value_str(s.clone());
+            }
+            serde_json::Value::Number(n) => {
+                if let Some(f) = n.as_f64() {
+                    condition = condition.value(f);
+                }
+            }
+            serde_json::Value::Array(arr) => {
+                // For BETWEEN operator or multiple values
+                for v in arr {
+                    match v {
+                        serde_json::Value::String(s) => {
+                            condition = condition.value_str(s.clone());
+                        }
+                        serde_json::Value::Number(n) => {
+                            if let Some(f) = n.as_f64() {
+                                condition = condition.value(f);
+                            }
+                        }
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+
+        query = query.add_condition(condition);
+    }
+
+    info!(
+        "Executing custom screener (size={}, quote_type={:?}, filters={})",
+        body.size, quote_type, filter_count
+    );
+
+    let result = finance::custom_screener(query).await;
+
+    match result {
+        Ok(data) => {
+            let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, format, fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to execute custom screener: {}", e);
             error_response(e).into_response()
         }
     }
