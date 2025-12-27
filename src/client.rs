@@ -501,9 +501,9 @@ impl YahooClient {
         &self,
         query: &str,
         hits: u32,
-    ) -> Result<crate::models::search::SearchResponse> {
+    ) -> Result<crate::models::search::SearchResults> {
         let json = crate::endpoints::search::fetch(self, query, hits).await?;
-        Ok(crate::models::search::SearchResponse::from_json(json)?)
+        Ok(crate::models::search::SearchResults::from_json(json)?)
     }
 
     /// Get recommended/similar quotes for a symbol
@@ -673,7 +673,7 @@ impl YahooClient {
         &self,
         screener_type: crate::constants::screener_types::ScreenerType,
         count: u32,
-    ) -> Result<crate::models::screeners::ScreenersResponse> {
+    ) -> Result<crate::models::screeners::ScreenerResults> {
         crate::endpoints::screeners::fetch(self, screener_type, count).await
     }
 
@@ -706,7 +706,7 @@ impl YahooClient {
     pub async fn custom_screener(
         &self,
         query: crate::models::screeners::ScreenerQuery,
-    ) -> Result<crate::models::screeners::ScreenersResponse> {
+    ) -> Result<crate::models::screeners::ScreenerResults> {
         crate::endpoints::screeners::fetch_custom(self, query).await
     }
 
@@ -737,7 +737,7 @@ impl YahooClient {
     pub async fn get_sector(
         &self,
         sector_type: crate::constants::sector_types::SectorType,
-    ) -> Result<crate::models::sectors::SectorResponse> {
+    ) -> Result<crate::models::sectors::Sector> {
         crate::endpoints::sectors::fetch(self, sector_type).await
     }
 
@@ -767,7 +767,7 @@ impl YahooClient {
     pub async fn get_industry(
         &self,
         industry_key: &str,
-    ) -> Result<crate::models::industries::IndustryResponse> {
+    ) -> Result<crate::models::industries::Industry> {
         crate::endpoints::industries::fetch(self, industry_key).await
     }
 
@@ -819,7 +819,7 @@ impl YahooClient {
     pub async fn get_hours(
         &self,
         region: Option<&str>,
-    ) -> Result<crate::models::hours::HoursResponse> {
+    ) -> Result<crate::models::hours::MarketHours> {
         crate::endpoints::hours::fetch(self, region).await
     }
 }
@@ -878,7 +878,7 @@ impl BlockingYahooClient {
     }
 
     /// Search for symbols (blocking)
-    pub fn search(&self, query: &str, hits: u32) -> Result<crate::models::search::SearchResponse> {
+    pub fn search(&self, query: &str, hits: u32) -> Result<crate::models::search::SearchResults> {
         self.runtime.block_on(self.inner.search(query, hits))
     }
 
@@ -947,7 +947,7 @@ impl BlockingYahooClient {
         &self,
         screener_type: crate::constants::screener_types::ScreenerType,
         count: u32,
-    ) -> Result<crate::models::screeners::ScreenersResponse> {
+    ) -> Result<crate::models::screeners::ScreenerResults> {
         self.runtime
             .block_on(self.inner.get_screener(screener_type, count))
     }
@@ -956,7 +956,7 @@ impl BlockingYahooClient {
     pub fn custom_screener(
         &self,
         query: crate::models::screeners::ScreenerQuery,
-    ) -> Result<crate::models::screeners::ScreenersResponse> {
+    ) -> Result<crate::models::screeners::ScreenerResults> {
         self.runtime.block_on(self.inner.custom_screener(query))
     }
 
@@ -971,7 +971,7 @@ impl BlockingYahooClient {
     }
 
     /// Get market hours (blocking)
-    pub fn get_hours(&self, region: Option<&str>) -> Result<crate::models::hours::HoursResponse> {
+    pub fn get_hours(&self, region: Option<&str>) -> Result<crate::models::hours::MarketHours> {
         self.runtime.block_on(self.inner.get_hours(region))
     }
 }

@@ -4,7 +4,7 @@
 //!
 //! ## Usage
 //!
-//! The API returns a clean, flattened `HoursResponse`:
+//! The API returns a clean, flattened `MarketHours`:
 //! ```json
 //! {
 //!   "markets": [
@@ -27,4 +27,4 @@
 
 mod response;
 
-pub use response::{HoursResponse, MarketTime};
+pub use response::{MarketHours, MarketTime};

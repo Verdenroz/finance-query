@@ -1,4 +1,7 @@
 //! Data models for Yahoo Finance responses.
+//!
+//! This module contains all the data structures returned by the library's API methods.
+//! Types are organized by category (chart, quote, options, etc.).
 
 /// Chart/historical data models.
 pub mod chart;
@@ -24,22 +27,3 @@ pub mod screeners;
 pub mod search;
 /// Sector models for market sector data.
 pub mod sectors;
-
-// Re-exports for convenience
-pub use chart::{Candle, Chart, ChartMeta};
-pub use financials::FinancialStatement;
-pub use hours::{HoursResponse, MarketTime};
-pub use industries::{
-    BenchmarkPerformance, GrowthCompany, IndustryCompany, IndustryOverview, IndustryPerformance,
-    IndustryResponse, PerformingCompany, ResearchReport as IndustryResearchReport,
-};
-pub use news::{NewsArticle, NewsResponse, NewsThumbnail};
-pub use options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse};
-pub use quote::{FormattedValue, Quote};
-pub use recommendation::{Recommendation, SimilarSymbol};
-pub use screeners::{ScreenerQuote, ScreenersResponse};
-pub use search::{SearchQuote, SearchResponse};
-pub use sectors::{
-    Industry, ResearchReport, SectorCompany, SectorETF, SectorMutualFund, SectorOverview,
-    SectorPerformance, SectorResponse,
-};

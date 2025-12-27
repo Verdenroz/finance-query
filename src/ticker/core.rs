@@ -10,7 +10,7 @@ use crate::models::chart::Chart;
 use crate::models::chart::response::ChartResponse;
 use crate::models::chart::result::ChartResult;
 use crate::models::financials::FinancialStatement;
-use crate::models::options::OptionsResponse;
+use crate::models::options::Options;
 use crate::models::quote::{
     AssetProfile, CalendarEvents, DefaultKeyStatistics, Earnings, EarningsHistory, EarningsTrend,
     FinancialData, FundOwnership, InsiderHolders, InsiderTransactions, InstitutionOwnership,
@@ -576,7 +576,7 @@ impl Ticker {
     }
 
     /// Get options chain
-    pub async fn options(&self, date: Option<i64>) -> Result<OptionsResponse> {
+    pub async fn options(&self, date: Option<i64>) -> Result<Options> {
         let json = self.client.get_options(&self.core.symbol, date).await?;
         serde_json::from_value(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
             field: "options".to_string(),

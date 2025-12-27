@@ -10,5 +10,5 @@ mod thumbnail;
 
 pub use news::SearchNews;
 pub use quote::SearchQuote;
-pub use response::SearchResponse;
+pub use response::SearchResults;
 pub use thumbnail::{NewsThumbnail, ThumbnailResolution};

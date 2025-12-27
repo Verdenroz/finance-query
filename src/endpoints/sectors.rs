@@ -2,7 +2,7 @@ use crate::client::YahooClient;
 use crate::constants::sector_types::SectorType;
 use crate::constants::url_builders;
 use crate::error::Result;
-use crate::models::sectors::SectorResponse;
+use crate::models::sectors::Sector;
 
 /// Fetch detailed sector data from Yahoo Finance
 ///
@@ -29,7 +29,7 @@ use crate::models::sectors::SectorResponse;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fetch(client: &YahooClient, sector_type: SectorType) -> Result<SectorResponse> {
+pub async fn fetch(client: &YahooClient, sector_type: SectorType) -> Result<Sector> {
     let url = url_builders::sector(sector_type.as_api_path());
     let response = client.request_with_crumb(&url).await?;
     let json: serde_json::Value = response.json().await?;
@@ -37,12 +37,10 @@ pub async fn fetch(client: &YahooClient, sector_type: SectorType) -> Result<Sect
     parse_sector_response(&json)
 }
 
-/// Parse Yahoo Finance sector response into clean SectorResponse
-fn parse_sector_response(json: &serde_json::Value) -> Result<SectorResponse> {
-    SectorResponse::from_response(json).map_err(|e| {
-        crate::error::YahooError::ResponseStructureError {
-            field: "sector".to_string(),
-            context: e,
-        }
+/// Parse Yahoo Finance sector response into clean Sector
+fn parse_sector_response(json: &serde_json::Value) -> Result<Sector> {
+    Sector::from_response(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
+        field: "sector".to_string(),
+        context: e,
     })
 }

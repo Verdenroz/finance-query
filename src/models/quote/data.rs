@@ -42,7 +42,15 @@ use super::{
 /// - Price → SummaryDetail → DefaultKeyStatistics → FinancialData → AssetProfile
 ///
 /// All fields are optional since Yahoo Finance may not return all data for every symbol.
+///
+/// # DataFrame Conversion
+///
+/// With the `dataframe` feature enabled, call `.to_dataframe()` to convert to a polars DataFrame:
+/// ```ignore
+/// let df = quote.to_dataframe()?;
+/// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Quote {

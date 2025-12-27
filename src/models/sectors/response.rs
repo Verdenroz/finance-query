@@ -129,11 +129,11 @@ struct RawResearchReport {
 // Public response structs - clean, user-friendly types
 // ============================================================================
 
-/// Complete sector response with all available data
+/// Complete sector data with all available information
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct SectorResponse {
+pub struct Sector {
     /// Sector name (e.g., "Technology")
     pub name: String,
 
@@ -174,7 +174,7 @@ pub struct SectorResponse {
 
     /// Industries within this sector
     #[serde(skip_serializing_if = "Vec::is_empty")]
-    pub industries: Vec<Industry>,
+    pub industries: Vec<SectorIndustry>,
 
     /// Recent research reports
     #[serde(skip_serializing_if = "Vec::is_empty")]
@@ -183,6 +183,7 @@ pub struct SectorResponse {
 
 /// Sector overview statistics
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorOverview {
@@ -213,6 +214,7 @@ pub struct SectorOverview {
 
 /// Sector performance metrics
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorPerformance {
@@ -239,6 +241,7 @@ pub struct SectorPerformance {
 
 /// A company in the sector's top companies list
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorCompany {
@@ -280,6 +283,7 @@ pub struct SectorCompany {
 
 /// An ETF tracking the sector
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorETF {
@@ -309,6 +313,7 @@ pub struct SectorETF {
 
 /// A mutual fund in the sector
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct SectorMutualFund {
@@ -338,9 +343,10 @@ pub struct SectorMutualFund {
 
 /// An industry within the sector
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct Industry {
+pub struct SectorIndustry {
     /// Industry symbol
     #[serde(skip_serializing_if = "Option::is_none")]
     pub symbol: Option<String>,
@@ -367,6 +373,7 @@ pub struct Industry {
 
 /// A research report about the sector
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResearchReport {
@@ -410,7 +417,7 @@ pub struct ResearchReport {
 // Conversion implementations
 // ============================================================================
 
-impl SectorResponse {
+impl Sector {
     /// Parse Yahoo Finance sector response JSON
     pub(crate) fn from_response(json: &serde_json::Value) -> Result<Self, String> {
         let raw: RawSectorResponse = serde_json::from_value(json.clone())
@@ -501,7 +508,7 @@ impl SectorResponse {
         let industries = data
             .industries
             .into_iter()
-            .map(|i| Industry {
+            .map(|i| SectorIndustry {
                 symbol: i.symbol,
                 key: i.key,
                 name: i.name,

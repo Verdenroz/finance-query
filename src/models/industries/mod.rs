@@ -6,6 +6,6 @@
 mod response;
 
 pub use response::{
-    BenchmarkPerformance, GrowthCompany, IndustryCompany, IndustryOverview, IndustryPerformance,
-    IndustryResponse, PerformingCompany, ResearchReport,
+    BenchmarkPerformance, GrowthCompany, Industry, IndustryCompany, IndustryOverview,
+    IndustryPerformance, PerformingCompany, ResearchReport,
 };

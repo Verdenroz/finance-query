@@ -5,7 +5,7 @@
 //!
 //! ## Predefined Screeners
 //!
-//! The API returns a clean, flattened `ScreenersResponse`:
+//! The API returns a clean, flattened `ScreenerResults`:
 //! ```json
 //! {
 //!   "quotes": [...],
@@ -33,4 +33,4 @@ mod response;
 
 pub use query::{QueryCondition, QueryGroup, QueryOperand, QueryValue, ScreenerQuery};
 pub use quote::ScreenerQuote;
-pub use response::ScreenersResponse;
+pub use response::ScreenerResults;

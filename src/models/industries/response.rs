@@ -116,11 +116,11 @@ struct RawResearchReport {
 // Public response structs - clean API surface
 // ============================================================================
 
-/// Industry response from Yahoo Finance
+/// Industry data from Yahoo Finance
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct IndustryResponse {
+pub struct Industry {
     /// Industry name
     pub name: String,
     /// Industry key (URL slug)
@@ -159,6 +159,7 @@ pub struct IndustryResponse {
 
 /// Industry overview statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryOverview {
@@ -181,6 +182,7 @@ pub struct IndustryOverview {
 
 /// Industry performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryPerformance {
@@ -203,6 +205,7 @@ pub struct IndustryPerformance {
 
 /// Benchmark performance for comparison
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BenchmarkPerformance {
@@ -228,6 +231,7 @@ pub struct BenchmarkPerformance {
 
 /// Company within an industry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryCompany {
@@ -261,6 +265,7 @@ pub struct IndustryCompany {
 
 /// Top performing company by YTD return
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PerformingCompany {
@@ -282,6 +287,7 @@ pub struct PerformingCompany {
 
 /// Top growth company by growth estimate
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct GrowthCompany {
@@ -303,6 +309,7 @@ pub struct GrowthCompany {
 
 /// Research report
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResearchReport {
@@ -336,7 +343,7 @@ pub struct ResearchReport {
 // Conversion implementations
 // ============================================================================
 
-impl IndustryResponse {
+impl Industry {
     /// Parse from Yahoo Finance JSON response
     pub(crate) fn from_response(json: &serde_json::Value) -> Result<Self, String> {
         let raw: RawIndustryResponse =
@@ -344,7 +351,7 @@ impl IndustryResponse {
 
         let data = raw.data;
 
-        Ok(IndustryResponse {
+        Ok(Industry {
             name: data.name,
             key: data.key,
             symbol: data.symbol,

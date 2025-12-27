@@ -1,0 +1,16 @@
+[package]
+name = "finance-query-derive"
+version = "2.0.0"
+edition = "2024"
+authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
+description = "Derive macros for finance-query library"
+license = "MIT"
+repository = "https://github.com/Verdenroz/finance-query"
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full", "parsing", "extra-traits"] }
+quote = "1"
+proc-macro2 = "1"

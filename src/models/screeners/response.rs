@@ -69,7 +69,7 @@ struct RawCustomResult {
 /// This removes Yahoo Finance's nested wrapper structure and internal metadata.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct ScreenersResponse {
+pub struct ScreenerResults {
     /// Array of quotes matching the screener criteria
     pub quotes: Vec<ScreenerQuote>,
 
@@ -90,7 +90,7 @@ pub struct ScreenersResponse {
     pub total: Option<i64>,
 }
 
-impl ScreenersResponse {
+impl ScreenerResults {
     /// Create a flattened response from raw Yahoo Finance JSON (predefined screeners)
     ///
     /// Converts the nested Yahoo Finance response structure into a clean,

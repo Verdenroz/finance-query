@@ -7,10 +7,10 @@ use crate::client::{ClientConfig, YahooClient};
 use crate::constants::screener_types::ScreenerType;
 use crate::constants::sector_types::SectorType;
 use crate::error::Result;
-use crate::models::industries::IndustryResponse;
-use crate::models::screeners::ScreenersResponse;
-use crate::models::search::SearchResponse;
-use crate::models::sectors::SectorResponse;
+use crate::models::industries::Industry;
+use crate::models::screeners::ScreenerResults;
+use crate::models::search::SearchResults;
+use crate::models::sectors::Sector;
 use serde_json::Value;
 
 /// Search for stock symbols and companies
@@ -31,7 +31,7 @@ use serde_json::Value;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn search(query: &str, limit: u32) -> Result<SearchResponse> {
+pub async fn search(query: &str, limit: u32) -> Result<SearchResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.search(query, limit).await
 }
@@ -63,7 +63,7 @@ pub async fn search(query: &str, limit: u32) -> Result<SearchResponse> {
 /// # Ok(())
 /// # }
 /// ```
-pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<ScreenersResponse> {
+pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<ScreenerResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_screener(screener_type, count).await
 }
@@ -96,7 +96,7 @@ pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<Screene
 /// ```
 pub async fn custom_screener(
     query: crate::models::screeners::ScreenerQuery,
-) -> Result<ScreenersResponse> {
+) -> Result<ScreenerResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.custom_screener(query).await
 }
@@ -164,7 +164,7 @@ pub async fn earnings_transcript(event_id: &str, company_id: &str) -> Result<Val
 /// # Ok(())
 /// # }
 /// ```
-pub async fn hours(region: Option<&str>) -> Result<crate::models::hours::HoursResponse> {
+pub async fn hours(region: Option<&str>) -> Result<crate::models::hours::MarketHours> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_hours(region).await
 }
@@ -232,7 +232,7 @@ pub async fn indices(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn sector(sector_type: SectorType) -> Result<SectorResponse> {
+pub async fn sector(sector_type: SectorType) -> Result<Sector> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_sector(sector_type).await
 }
@@ -262,7 +262,7 @@ pub async fn sector(sector_type: SectorType) -> Result<SectorResponse> {
 /// # Ok(())
 /// # }
 /// ```
-pub async fn industry(industry_key: &str) -> Result<IndustryResponse> {
+pub async fn industry(industry_key: &str) -> Result<Industry> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_industry(industry_key).await
 }

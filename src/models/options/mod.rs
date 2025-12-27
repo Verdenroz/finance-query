@@ -8,4 +8,4 @@ pub(crate) mod response;
 
 pub use chain::{OptionChain, OptionsQuote};
 pub use contract::OptionContract;
-pub use response::OptionsResponse;
+pub use response::Options;

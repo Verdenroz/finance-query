@@ -109,12 +109,12 @@ pub struct MarketTime {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct HoursResponse {
+pub struct MarketHours {
     /// List of market times
     pub markets: Vec<MarketTime>,
 }
 
-impl HoursResponse {
+impl MarketHours {
     /// Create a flattened response from raw Yahoo Finance JSON
     ///
     /// Converts the nested Yahoo Finance response structure into a clean,

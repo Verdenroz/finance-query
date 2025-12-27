@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 /// A quote result from symbol search
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct SearchQuote {
     /// Stock symbol

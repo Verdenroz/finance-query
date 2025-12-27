@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// Use `Ticker::options()` to obtain options data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct OptionsResponse {
+pub struct Options {
     /// Option chain container
     pub(crate) option_chain: OptionChainContainer,
 }
@@ -66,7 +66,7 @@ pub(crate) struct OptionChainData {
     pub puts: Option<Vec<OptionContract>>,
 }
 
-impl OptionsResponse {
+impl Options {
     /// Get the first result
     pub(crate) fn first_result(&self) -> Option<&OptionChainResult> {
         self.option_chain.result.first()

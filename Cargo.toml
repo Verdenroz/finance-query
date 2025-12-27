@@ -1,5 +1,5 @@
 [workspace]
-members = ["server"]
+members = ["server", "finance-query-derive"]
 resolver = "2"
 
 [package]
@@ -58,6 +58,15 @@ tracing = "0.1"
 
 # HTML parsing for web scraping
 scraper = "0.25.0"
+
+# Optional: DataFrame support
+polars = { version = "0.52", optional = true, default-features = false, features = ["lazy"] }
+finance-query-derive = { path = "finance-query-derive", optional = true }
+
+[features]
+default = []
+# Enable DataFrame conversions with polars
+dataframe = ["dep:polars", "dep:finance-query-derive"]
 
 [dev-dependencies]
 # Testing

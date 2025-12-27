@@ -6,6 +6,6 @@
 mod response;
 
 pub use response::{
-    Industry, ResearchReport, SectorCompany, SectorETF, SectorMutualFund, SectorOverview,
-    SectorPerformance, SectorResponse,
+    ResearchReport, Sector, SectorCompany, SectorETF, SectorIndustry, SectorMutualFund,
+    SectorOverview, SectorPerformance,
 };

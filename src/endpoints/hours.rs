@@ -1,7 +1,7 @@
 use crate::client::YahooClient;
 use crate::constants::endpoints;
 use crate::error::Result;
-use crate::models::hours::HoursResponse;
+use crate::models::hours::MarketHours;
 
 /// Fetch market hours/time data
 ///
@@ -25,7 +25,7 @@ use crate::models::hours::HoursResponse;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fetch(client: &YahooClient, region: Option<&str>) -> Result<HoursResponse> {
+pub async fn fetch(client: &YahooClient, region: Option<&str>) -> Result<MarketHours> {
     let config = client.config();
     let region = region.unwrap_or(&config.region);
 
@@ -43,12 +43,10 @@ pub async fn fetch(client: &YahooClient, region: Option<&str>) -> Result<HoursRe
     parse_hours_response(&json)
 }
 
-/// Parse Yahoo Finance hours response into clean HoursResponse
-fn parse_hours_response(json: &serde_json::Value) -> Result<HoursResponse> {
-    HoursResponse::from_response(json).map_err(|e| {
-        crate::error::YahooError::ResponseStructureError {
-            field: "hours".to_string(),
-            context: e,
-        }
+/// Parse Yahoo Finance hours response into clean MarketHours
+fn parse_hours_response(json: &serde_json::Value) -> Result<MarketHours> {
+    MarketHours::from_response(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
+        field: "hours".to_string(),
+        context: e,
     })
 }

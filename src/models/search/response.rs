@@ -8,7 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Response wrapper for search endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SearchResponse {
+pub struct SearchResults {
     /// Total result count
     pub count: Option<i32>,
     /// Quote/symbol results
@@ -19,8 +19,8 @@ pub struct SearchResponse {
     pub total_time: Option<i64>,
 }
 
-impl SearchResponse {
-    /// Parse SearchResponse from JSON value
+impl SearchResults {
+    /// Parse SearchResults from JSON value
     ///
     /// # Example
     /// ```no_run
@@ -29,7 +29,7 @@ impl SearchResponse {
     ///     "quotes": [],
     ///     "news": []
     /// });
-    /// let response = SearchResponse::from_json(json)?;
+    /// let response = SearchResults::from_json(json)?;
     /// ```
     pub fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
         serde_json::from_value(value)

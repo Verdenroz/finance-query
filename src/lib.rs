@@ -109,32 +109,37 @@ pub use constants::sector_types::SectorType;
 pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, ValueFormat};
 
 // ============================================================================
-// Data models - Types returned by API methods
+// Response types - Top-level types returned by API methods
 // ============================================================================
 pub use models::{
-    chart::{Candle, Chart, ChartMeta},
-    financials::FinancialStatement,
-    hours::{HoursResponse, MarketTime},
-    industries::{
-        BenchmarkPerformance, GrowthCompany, IndustryCompany, IndustryOverview,
-        IndustryPerformance, IndustryResponse, PerformingCompany,
-    },
-    news::News,
-    options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse},
-    quote::{FormattedValue, Quote},
-    recommendation::{Recommendation, SimilarSymbol},
-    screeners::{
-        QueryCondition, QueryGroup, QueryOperand, QueryValue, ScreenerQuery, ScreenerQuote,
-        ScreenersResponse,
-    },
-    search::{SearchQuote, SearchResponse},
-    sectors::{
-        Industry, ResearchReport, SectorCompany, SectorETF, SectorMutualFund, SectorOverview,
-        SectorPerformance, SectorResponse,
-    },
+    chart::Chart, financials::FinancialStatement, hours::MarketHours,
+    indicators::IndicatorsSummary, industries::Industry, news::News, options::Options,
+    quote::Quote, recommendation::Recommendation, screeners::ScreenerResults,
+    search::SearchResults, sectors::Sector,
 };
 
 // ============================================================================
-// Technical Indicators - Types returned by indicators() method
+// Nested types - Commonly accessed fields within response types
 // ============================================================================
-pub use models::indicators::IndicatorsSummary;
+pub use models::{
+    chart::{Candle, ChartMeta},
+    hours::MarketTime,
+    options::{OptionChain, OptionContract, OptionsQuote},
+    quote::FormattedValue,
+    recommendation::SimilarSymbol,
+    screeners::ScreenerQuote,
+    search::SearchQuote,
+};
+
+// ============================================================================
+// Query builders - Types for constructing custom screener queries
+// ============================================================================
+pub use models::screeners::{QueryCondition, QueryGroup, QueryOperand, QueryValue, ScreenerQuery};
+
+// ============================================================================
+// DataFrame support (requires "dataframe" feature)
+// ============================================================================
+// When enabled, structs with #[derive(ToDataFrame)] get a to_dataframe() method.
+// The derive macro auto-generates DataFrame conversion for all scalar fields.
+#[cfg(feature = "dataframe")]
+pub use finance_query_derive::ToDataFrame;

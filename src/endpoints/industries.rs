@@ -1,7 +1,7 @@
 use crate::client::YahooClient;
 use crate::constants::url_builders;
 use crate::error::Result;
-use crate::models::industries::IndustryResponse;
+use crate::models::industries::Industry;
 
 /// Fetch detailed industry data from Yahoo Finance
 ///
@@ -27,7 +27,7 @@ use crate::models::industries::IndustryResponse;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fetch(client: &YahooClient, industry_key: &str) -> Result<IndustryResponse> {
+pub async fn fetch(client: &YahooClient, industry_key: &str) -> Result<Industry> {
     let url = url_builders::industry(industry_key);
     let response = client.request_with_crumb(&url).await?;
     let json: serde_json::Value = response.json().await?;
@@ -35,12 +35,10 @@ pub async fn fetch(client: &YahooClient, industry_key: &str) -> Result<IndustryR
     parse_industry_response(&json)
 }
 
-/// Parse Yahoo Finance industry response into clean IndustryResponse
-fn parse_industry_response(json: &serde_json::Value) -> Result<IndustryResponse> {
-    IndustryResponse::from_response(json).map_err(|e| {
-        crate::error::YahooError::ResponseStructureError {
-            field: "industry".to_string(),
-            context: e,
-        }
+/// Parse Yahoo Finance industry response into clean Industry
+fn parse_industry_response(json: &serde_json::Value) -> Result<Industry> {
+    Industry::from_response(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
+        field: "industry".to_string(),
+        context: e,
     })
 }

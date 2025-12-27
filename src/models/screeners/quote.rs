@@ -7,6 +7,7 @@ use serde::{Deserialize, Serialize};
 /// screener endpoint. It includes comprehensive quote data for filtering
 /// and displaying screened stocks/funds.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenerQuote {
     // Core identification
