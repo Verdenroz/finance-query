@@ -118,11 +118,13 @@ mod client;
 mod endpoints;
 mod scrapers;
 mod ticker;
+mod tickers;
 
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
 pub use ticker::{AsyncTicker, AsyncTickerBuilder, Ticker, TickerBuilder};
+pub use tickers::{BatchChartsResponse, BatchQuotesResponse, Tickers, TickersBuilder};
 
 // ============================================================================
 // Configuration API - Configure client behavior

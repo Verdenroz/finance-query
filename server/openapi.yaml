@@ -149,7 +149,8 @@ paths:
     get:
       tags: [Quotes]
       summary: Get quotes for multiple symbols
-      description: Fetch quote data for multiple stock symbols
+      description: |
+        Fetch quote data for multiple stock symbols in a single batch request.
       parameters:
         - name: symbols
           in: query
@@ -166,15 +167,27 @@ paths:
           description: Include company logo URLs
       responses:
         '200':
-          description: Array of quotes
+          description: Batch quotes response with successful quotes and any errors
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/Quote'
+                $ref: '#/components/schemas/BatchQuotesResponse'
+              example:
+                quotes:
+                  AAPL:
+                    symbol: AAPL
+                    shortName: Apple Inc.
+                    regularMarketPrice: 182.52
+                  MSFT:
+                    symbol: MSFT
+                    shortName: Microsoft Corporation
+                    regularMarketPrice: 378.91
+                errors:
+                  INVALID: "Symbol not found in response"
         '400':
           $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/recommendations/{symbol}:
     get:
@@ -603,6 +616,32 @@ components:
         companyLogoUrl:
           type: string
           nullable: true
+
+    BatchQuotesResponse:
+      type: object
+      description: Response from batch quotes endpoint with successful quotes and errors
+      properties:
+        quotes:
+          type: object
+          description: Successfully fetched quotes, keyed by symbol
+          additionalProperties:
+            $ref: '#/components/schemas/Quote'
+          example:
+            AAPL:
+              symbol: AAPL
+              shortName: Apple Inc.
+              regularMarketPrice: 182.52
+            MSFT:
+              symbol: MSFT
+              shortName: Microsoft Corporation
+              regularMarketPrice: 378.91
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+          example:
+            INVALID: "Symbol not found in response"
 
     Chart:
       type: object

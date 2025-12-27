@@ -6,7 +6,7 @@ use axum::{
     routing::get,
 };
 use finance_query::{
-    AsyncTicker, Frequency, Interval, StatementType, TimeRange, YahooError, finance,
+    AsyncTicker, Frequency, Interval, StatementType, Tickers, TimeRange, YahooError, finance,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -431,46 +431,39 @@ fn parse_range(s: &str) -> TimeRange {
 /// GET /v2/quotes
 ///
 /// Query: `symbols` (comma-separated, required), `logo` (bool, default: false)
+///
+/// Uses batch fetching via Tickers for optimal performance (single API call).
 async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     info!(
-        "Fetching detailed quotes for {} symbols (logo={})",
+        "Fetching batch quotes for {} symbols (logo={})",
         symbols.len(),
         params.logo
     );
 
-    let mut results = Vec::new();
-    let mut errors = Vec::new();
+    // Use Tickers for batch fetching (single API call)
+    let tickers = match Tickers::new(symbols).await {
+        Ok(t) => t,
+        Err(e) => {
+            error!("Failed to create Tickers: {}", e);
+            return error_response(e).into_response();
+        }
+    };
 
-    for symbol in symbols {
-        match AsyncTicker::new(symbol).await {
-            Ok(ticker) => match ticker.quote(params.logo).await {
-                Ok(quote) => {
-                    results.push(quote);
-                }
-                Err(e) => {
-                    error!("Failed to fetch quote for {}: {}", symbol, e);
-                    errors.push(serde_json::json!({
-                        "symbol": symbol,
-                        "error": e.to_string()
-                    }));
-                }
-            },
-            Err(e) => {
-                error!("Failed to fetch quote for {}: {}", symbol, e);
-                errors.push(serde_json::json!({
-                    "symbol": symbol,
-                    "error": e.to_string()
-                }));
-            }
+    match tickers.quotes(params.logo).await {
+        Ok(batch_response) => {
+            info!(
+                "Batch fetch complete: {} success, {} errors",
+                batch_response.success_count(),
+                batch_response.error_count()
+            );
+            (StatusCode::OK, Json(batch_response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch batch quotes: {}", e);
+            error_response(e).into_response()
         }
     }
-
-    let response = serde_json::json!({
-        "quotes": results,
-        "errors": errors
-    });
-    (StatusCode::OK, Json(response)).into_response()
 }
 
 /// GET /v2/recommendations/{symbol}

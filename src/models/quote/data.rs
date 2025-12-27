@@ -1353,4 +1353,316 @@ impl Quote {
     pub fn is_post_market(&self) -> bool {
         self.market_state.as_deref() == Some("POST")
     }
+
+    /// Creates a Quote from a batch /v7/finance/quote response item
+    ///
+    /// This parses the simpler flat structure from the batch quotes endpoint,
+    /// which has fewer fields than the full quoteSummary response.
+    pub(crate) fn from_batch_response(json: &serde_json::Value) -> Result<Self, String> {
+        let symbol = json
+            .get("symbol")
+            .and_then(|v| v.as_str())
+            .ok_or("Missing symbol")?
+            .to_string();
+
+        // Helper to extract FormattedValue<f64>
+        // Handles both raw numbers and formatted objects: {"raw": 273.4, "fmt": "273.40"}
+        let get_f64 = |key: &str| -> Option<super::FormattedValue<f64>> {
+            json.get(key).and_then(|v| {
+                if let Some(raw) = v.as_f64() {
+                    // Raw number (formatted=false)
+                    Some(super::FormattedValue {
+                        raw: Some(raw),
+                        fmt: None,
+                        long_fmt: None,
+                    })
+                } else if v.is_object() {
+                    // Formatted object (formatted=true)
+                    Some(super::FormattedValue {
+                        raw: v.get("raw").and_then(|r| r.as_f64()),
+                        fmt: v.get("fmt").and_then(|f| f.as_str()).map(|s| s.to_string()),
+                        long_fmt: v
+                            .get("longFmt")
+                            .and_then(|f| f.as_str())
+                            .map(|s| s.to_string()),
+                    })
+                } else {
+                    None
+                }
+            })
+        };
+
+        // Helper to extract FormattedValue<i64>
+        // Handles both raw numbers and formatted objects
+        let get_i64 = |key: &str| -> Option<super::FormattedValue<i64>> {
+            json.get(key).and_then(|v| {
+                if let Some(raw) = v.as_i64() {
+                    // Raw number (formatted=false)
+                    Some(super::FormattedValue {
+                        raw: Some(raw),
+                        fmt: None,
+                        long_fmt: None,
+                    })
+                } else if v.is_object() {
+                    // Formatted object (formatted=true)
+                    Some(super::FormattedValue {
+                        raw: v.get("raw").and_then(|r| r.as_i64()),
+                        fmt: v.get("fmt").and_then(|f| f.as_str()).map(|s| s.to_string()),
+                        long_fmt: v
+                            .get("longFmt")
+                            .and_then(|f| f.as_str())
+                            .map(|s| s.to_string()),
+                    })
+                } else {
+                    None
+                }
+            })
+        };
+
+        // Helper to extract String
+        let get_str = |key: &str| -> Option<String> {
+            json.get(key)
+                .and_then(|v| v.as_str())
+                .map(|s| s.to_string())
+        };
+
+        Ok(Self {
+            symbol,
+            logo_url: get_str("logoUrl"),
+            company_logo_url: get_str("companyLogoUrl"),
+
+            // Identity
+            short_name: get_str("shortName"),
+            long_name: get_str("longName"),
+            exchange: get_str("exchange"),
+            exchange_name: get_str("fullExchangeName"),
+            quote_type: get_str("quoteType"),
+            currency: get_str("currency"),
+            currency_symbol: get_str("currencySymbol"),
+            underlying_symbol: get_str("underlyingSymbol"),
+            from_currency: get_str("fromCurrency"),
+            to_currency: get_str("toCurrency"),
+
+            // Real-time price
+            regular_market_price: get_f64("regularMarketPrice"),
+            regular_market_change: get_f64("regularMarketChange"),
+            regular_market_change_percent: get_f64("regularMarketChangePercent"),
+            regular_market_time: json.get("regularMarketTime").and_then(|v| v.as_i64()),
+            regular_market_day_high: get_f64("regularMarketDayHigh"),
+            regular_market_day_low: get_f64("regularMarketDayLow"),
+            regular_market_open: get_f64("regularMarketOpen"),
+            regular_market_previous_close: get_f64("regularMarketPreviousClose"),
+            regular_market_volume: get_i64("regularMarketVolume"),
+            market_state: get_str("marketState"),
+
+            // Alternative trading metrics
+            day_high: get_f64("dayHigh"),
+            day_low: get_f64("dayLow"),
+            open: get_f64("open"),
+            previous_close: get_f64("previousClose"),
+            volume: get_i64("volume"),
+
+            // Price history
+            all_time_high: None,
+            all_time_low: None,
+
+            // Pre/post market
+            pre_market_price: get_f64("preMarketPrice"),
+            pre_market_change: get_f64("preMarketChange"),
+            pre_market_change_percent: get_f64("preMarketChangePercent"),
+            pre_market_time: json.get("preMarketTime").and_then(|v| v.as_i64()),
+            post_market_price: get_f64("postMarketPrice"),
+            post_market_change: get_f64("postMarketChange"),
+            post_market_change_percent: get_f64("postMarketChangePercent"),
+            post_market_time: json.get("postMarketTime").and_then(|v| v.as_i64()),
+
+            // Volume
+            average_daily_volume10_day: get_i64("averageDailyVolume10Day"),
+            average_daily_volume3_month: get_i64("averageDailyVolume3Month"),
+            average_volume: get_i64("averageVolume"),
+            average_volume10days: get_i64("averageVolume10days"),
+
+            // Valuation
+            market_cap: get_i64("marketCap"),
+            enterprise_value: None,
+            enterprise_to_revenue: None,
+            enterprise_to_ebitda: None,
+            price_to_book: get_f64("priceToBook"),
+            price_to_sales_trailing12_months: None,
+
+            // PE
+            forward_pe: get_f64("forwardPE"),
+            trailing_pe: get_f64("trailingPE"),
+
+            // Risk
+            beta: None,
+
+            // 52-week
+            fifty_two_week_high: get_f64("fiftyTwoWeekHigh"),
+            fifty_two_week_low: get_f64("fiftyTwoWeekLow"),
+            fifty_day_average: get_f64("fiftyDayAverage"),
+            two_hundred_day_average: get_f64("twoHundredDayAverage"),
+            week_52_change: get_f64("52WeekChange"),
+            sand_p_52_week_change: None,
+
+            // Dividends
+            dividend_rate: get_f64("dividendRate"),
+            dividend_yield: get_f64("dividendYield"),
+            trailing_annual_dividend_rate: get_f64("trailingAnnualDividendRate"),
+            trailing_annual_dividend_yield: get_f64("trailingAnnualDividendYield"),
+            five_year_avg_dividend_yield: None,
+            ex_dividend_date: None,
+            payout_ratio: None,
+            last_dividend_value: None,
+            last_dividend_date: None,
+
+            // Bid/Ask
+            bid: get_f64("bid"),
+            bid_size: get_i64("bidSize"),
+            ask: get_f64("ask"),
+            ask_size: get_i64("askSize"),
+
+            // Shares
+            shares_outstanding: get_i64("sharesOutstanding"),
+            float_shares: None,
+            implied_shares_outstanding: None,
+            held_percent_insiders: None,
+            held_percent_institutions: None,
+            shares_short: None,
+            shares_short_prior_month: None,
+            short_ratio: None,
+            short_percent_of_float: None,
+            shares_percent_shares_out: None,
+            date_short_interest: None,
+
+            // Financial metrics
+            current_price: None,
+            target_high_price: None,
+            target_low_price: None,
+            target_mean_price: None,
+            target_median_price: None,
+            recommendation_mean: None,
+            recommendation_key: None,
+            number_of_analyst_opinions: None,
+            total_cash: None,
+            total_cash_per_share: None,
+            ebitda: None,
+            total_debt: None,
+            total_revenue: None,
+            net_income_to_common: None,
+            debt_to_equity: None,
+            revenue_per_share: None,
+            return_on_assets: None,
+            return_on_equity: None,
+            free_cashflow: None,
+            operating_cashflow: None,
+
+            // Margins
+            profit_margins: None,
+            gross_margins: None,
+            ebitda_margins: None,
+            operating_margins: None,
+            gross_profits: None,
+
+            // Growth
+            earnings_growth: None,
+            revenue_growth: None,
+            earnings_quarterly_growth: None,
+
+            // Ratios
+            current_ratio: None,
+            quick_ratio: None,
+
+            // EPS
+            trailing_eps: get_f64("trailingEps"),
+            forward_eps: get_f64("forwardEps"),
+            book_value: get_f64("bookValue"),
+
+            // Company profile
+            sector: get_str("sector"),
+            sector_key: get_str("sectorKey"),
+            sector_disp: get_str("sectorDisp"),
+            industry: get_str("industry"),
+            industry_key: get_str("industryKey"),
+            industry_disp: get_str("industryDisp"),
+            long_business_summary: None,
+            website: None,
+            ir_website: None,
+            address1: None,
+            city: None,
+            state: None,
+            zip: None,
+            country: None,
+            phone: None,
+            full_time_employees: None,
+            category: None,
+            fund_family: None,
+
+            // Risk scores
+            audit_risk: None,
+            board_risk: None,
+            compensation_risk: None,
+            shareholder_rights_risk: None,
+            overall_risk: None,
+
+            // Timezone
+            time_zone_full_name: get_str("exchangeTimezoneName"),
+            time_zone_short_name: get_str("exchangeTimezoneShortName"),
+            gmt_off_set_milliseconds: json.get("gmtOffSetMilliseconds").and_then(|v| v.as_i64()),
+            first_trade_date_epoch_utc: json
+                .get("firstTradeDateMilliseconds")
+                .and_then(|v| v.as_i64()),
+            message_board_id: get_str("messageBoardId"),
+            exchange_data_delayed_by: json
+                .get("exchangeDataDelayedBy")
+                .and_then(|v| v.as_i64())
+                .map(|v| v as i32),
+
+            // Fund-specific
+            nav_price: get_f64("navPrice"),
+            total_assets: get_i64("totalAssets"),
+            yield_value: get_f64("yield"),
+
+            // Stock splits
+            last_split_factor: None,
+            last_split_date: None,
+            last_fiscal_year_end: None,
+            next_fiscal_year_end: None,
+            most_recent_quarter: None,
+
+            // Misc
+            price_hint: get_i64("priceHint"),
+            tradeable: json.get("tradeable").and_then(|v| v.as_bool()),
+            financial_currency: get_str("financialCurrency"),
+
+            // Nested objects not available in batch response
+            company_officers: None,
+            earnings: None,
+            calendar_events: None,
+            recommendation_trend: None,
+            upgrade_downgrade_history: None,
+            earnings_history: None,
+            earnings_trend: None,
+            insider_holders: None,
+            insider_transactions: None,
+            institution_ownership: None,
+            fund_ownership: None,
+            major_holders_breakdown: None,
+            net_share_purchase_activity: None,
+            sec_filings: None,
+            balance_sheet_history: None,
+            balance_sheet_history_quarterly: None,
+            cashflow_statement_history: None,
+            cashflow_statement_history_quarterly: None,
+            income_statement_history: None,
+            income_statement_history_quarterly: None,
+            equity_performance: None,
+            index_trend: None,
+            industry_trend: None,
+            sector_trend: None,
+            fund_profile: None,
+            fund_performance: None,
+            top_holdings: None,
+        })
+    }
 }
