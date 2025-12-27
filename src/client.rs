@@ -741,6 +741,36 @@ impl YahooClient {
         crate::endpoints::sectors::fetch(self, sector_type).await
     }
 
+    /// Fetch detailed industry data from Yahoo Finance
+    ///
+    /// Returns comprehensive industry information including overview, performance,
+    /// top companies, top performing companies, top growth companies, and research reports.
+    ///
+    /// # Arguments
+    ///
+    /// * `industry_key` - The industry key/slug (e.g., "semiconductors", "software-infrastructure")
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// let industry = client.get_industry("semiconductors").await?;
+    /// println!("Industry: {} ({} companies)", industry.name,
+    ///     industry.overview.as_ref().map(|o| o.companies_count.unwrap_or(0)).unwrap_or(0));
+    /// for company in industry.top_companies.iter().take(5) {
+    ///     println!("  {} - {:?}", company.symbol, company.name);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_industry(
+        &self,
+        industry_key: &str,
+    ) -> Result<crate::models::industries::IndustryResponse> {
+        crate::endpoints::industries::fetch(self, industry_key).await
+    }
+
     /// Get earnings call transcript
     ///
     /// # Arguments

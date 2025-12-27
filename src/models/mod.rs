@@ -8,6 +8,8 @@ pub mod financials;
 pub mod hours;
 /// Technical indicators models.
 pub mod indicators;
+/// Industry models for market industry data.
+pub mod industries;
 /// News models.
 pub mod news;
 /// Options models.
@@ -27,6 +29,10 @@ pub mod sectors;
 pub use chart::{Candle, Chart, ChartMeta};
 pub use financials::FinancialStatement;
 pub use hours::{HoursResponse, MarketTime};
+pub use industries::{
+    BenchmarkPerformance, GrowthCompany, IndustryCompany, IndustryOverview, IndustryPerformance,
+    IndustryResponse, PerformingCompany, ResearchReport as IndustryResearchReport,
+};
 pub use news::{NewsArticle, NewsResponse, NewsThumbnail};
 pub use options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse};
 pub use quote::{FormattedValue, Quote};

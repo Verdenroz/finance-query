@@ -7,6 +7,7 @@ use crate::client::{ClientConfig, YahooClient};
 use crate::constants::screener_types::ScreenerType;
 use crate::constants::sector_types::SectorType;
 use crate::error::Result;
+use crate::models::industries::IndustryResponse;
 use crate::models::screeners::ScreenersResponse;
 use crate::models::search::SearchResponse;
 use crate::models::sectors::SectorResponse;
@@ -234,4 +235,34 @@ pub async fn indices(
 pub async fn sector(sector_type: SectorType) -> Result<SectorResponse> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_sector(sector_type).await
+}
+
+/// Fetch detailed industry data from Yahoo Finance
+///
+/// Returns comprehensive industry information including overview, performance,
+/// top companies, top performing companies, top growth companies, and research reports.
+///
+/// # Arguments
+///
+/// * `industry_key` - The industry key/slug (e.g., "semiconductors", "software-infrastructure")
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let industry = finance::industry("semiconductors").await?;
+/// println!("Industry: {} ({} companies)", industry.name,
+///     industry.overview.as_ref().map(|o| o.companies_count.unwrap_or(0)).unwrap_or(0));
+///
+/// for company in industry.top_companies.iter().take(5) {
+///     println!("  {} - {:?}", company.symbol, company.name);
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn industry(industry_key: &str) -> Result<IndustryResponse> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.get_industry(industry_key).await
 }

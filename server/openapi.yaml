@@ -40,6 +40,8 @@ tags:
     description: Predefined Yahoo Finance screeners (equity and fund filters)
   - name: Sectors
     description: Market sector data (GICS sectors)
+  - name: Industries
+    description: Market industry data (sub-sectors)
   - name: Search
     description: Symbol and company search
 
@@ -806,6 +808,81 @@ paths:
                     marketWeight: 0.3401587
         '400':
           $ref: '#/components/responses/BadRequest'
+
+  /v2/industries/{industry_key}:
+    get:
+      tags: [Industries]
+      summary: Get industry data
+      description: |
+        Fetch comprehensive data for a market industry including overview, performance,
+        top companies, top performing companies, top growth companies, and research reports.
+
+        Industry keys can be discovered from the `/v2/sectors/{sector}` endpoint, which returns
+        the industries within each sector.
+
+        **Example industry keys:**
+        - `semiconductors` (Technology)
+        - `software-infrastructure` (Technology)
+        - `banks-diversified` (Financial Services)
+        - `biotechnology` (Healthcare)
+        - `internet-retail` (Consumer Cyclical)
+        - `oil-gas-integrated` (Energy)
+        - `aerospace-defense` (Industrials)
+      parameters:
+        - name: industry_key
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Industry key/slug (discoverable from sectors endpoint)
+          example: semiconductors
+        - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Industry data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IndustryResponse'
+              example:
+                name: Semiconductors
+                key: semiconductors
+                sectorName: Technology
+                sectorKey: technology
+                overview:
+                  companiesCount: 59
+                  marketCap: 8057445154816
+                  marketWeight: 0.3401587
+                  description: "Semiconductor companies that design, manufacture..."
+                performance:
+                  dayChangePercent: 0.0000075706953
+                  ytdChangePercent: 0.44191968
+                  oneYearChangePercent: 0.4046737
+                benchmark:
+                  name: S&P 500
+                  ytdChangePercent: 0.17318612
+                topCompanies:
+                  - symbol: NVDA
+                    name: NVIDIA Corporation
+                    lastPrice: 190.53
+                    marketCap: 4638833880279
+                    marketWeight: 0.57597184
+                    rating: Strong Buy
+                topPerformingCompanies:
+                  - symbol: LASR
+                    name: nLIGHT, Inc.
+                    ytdReturn: 2.7369
+                topGrowthCompanies:
+                  - symbol: MU
+                    name: Micron Technology, Inc.
+                    growthEstimate: 5.846153846153847
+        '404':
+          description: Industry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /v2/search:
     get:
@@ -1641,6 +1718,270 @@ components:
           format: int64
           nullable: true
           description: Unix timestamp of publication
+
+    IndustryResponse:
+      type: object
+      description: Comprehensive industry data
+      properties:
+        name:
+          type: string
+          description: Industry display name
+          example: Semiconductors
+        key:
+          type: string
+          description: Industry key/slug for API calls
+          example: semiconductors
+        symbol:
+          type: string
+          nullable: true
+          description: Industry index symbol
+          example: "^YH31130020"
+        sectorName:
+          type: string
+          nullable: true
+          description: Parent sector name
+          example: Technology
+        sectorKey:
+          type: string
+          nullable: true
+          description: Parent sector key
+          example: technology
+        overview:
+          $ref: '#/components/schemas/IndustryOverview'
+        performance:
+          $ref: '#/components/schemas/IndustryPerformance'
+        benchmark:
+          $ref: '#/components/schemas/BenchmarkPerformance'
+        topCompanies:
+          type: array
+          description: Top companies by market cap
+          items:
+            $ref: '#/components/schemas/IndustryCompany'
+        topPerformingCompanies:
+          type: array
+          description: Top performing companies by YTD return
+          items:
+            $ref: '#/components/schemas/PerformingCompany'
+        topGrowthCompanies:
+          type: array
+          description: Top growth companies by growth estimate
+          items:
+            $ref: '#/components/schemas/GrowthCompany'
+        researchReports:
+          type: array
+          description: Research reports for this industry
+          items:
+            $ref: '#/components/schemas/IndustryResearchReport'
+
+    IndustryOverview:
+      type: object
+      description: Industry overview statistics
+      properties:
+        description:
+          type: string
+          nullable: true
+          description: Industry description
+        companiesCount:
+          type: integer
+          nullable: true
+          description: Number of companies in the industry
+          example: 59
+        marketCap:
+          type: number
+          format: double
+          nullable: true
+          description: Total market cap
+          example: 8057445154816
+        marketWeight:
+          type: number
+          format: double
+          nullable: true
+          description: Industry weight within the sector (0-1)
+          example: 0.3401587
+        employeeCount:
+          type: integer
+          format: int64
+          nullable: true
+          description: Total employee count
+
+    IndustryPerformance:
+      type: object
+      description: Industry performance metrics
+      properties:
+        dayChangePercent:
+          type: number
+          format: double
+          nullable: true
+        ytdChangePercent:
+          type: number
+          format: double
+          nullable: true
+        oneYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+        threeYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+        fiveYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+
+    BenchmarkPerformance:
+      type: object
+      description: Benchmark performance for comparison (e.g., S&P 500)
+      properties:
+        name:
+          type: string
+          nullable: true
+          description: Benchmark name
+          example: S&P 500
+        dayChangePercent:
+          type: number
+          format: double
+          nullable: true
+        ytdChangePercent:
+          type: number
+          format: double
+          nullable: true
+        oneYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+        threeYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+        fiveYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+
+    IndustryCompany:
+      type: object
+      description: Company within an industry
+      properties:
+        symbol:
+          type: string
+          example: NVDA
+        name:
+          type: string
+          nullable: true
+          example: NVIDIA Corporation
+        lastPrice:
+          type: number
+          format: double
+          nullable: true
+        marketCap:
+          type: number
+          format: double
+          nullable: true
+        marketWeight:
+          type: number
+          format: double
+          nullable: true
+          description: Weight within the industry (0-1)
+        dayChangePercent:
+          type: number
+          format: double
+          nullable: true
+        ytdReturn:
+          type: number
+          format: double
+          nullable: true
+        rating:
+          type: string
+          nullable: true
+          example: Strong Buy
+        targetPrice:
+          type: number
+          format: double
+          nullable: true
+
+    PerformingCompany:
+      type: object
+      description: Top performing company by YTD return
+      properties:
+        symbol:
+          type: string
+          example: LASR
+        name:
+          type: string
+          nullable: true
+        lastPrice:
+          type: number
+          format: double
+          nullable: true
+        ytdReturn:
+          type: number
+          format: double
+          nullable: true
+          description: Year-to-date return (e.g., 2.7369 = 273.69%)
+        targetPrice:
+          type: number
+          format: double
+          nullable: true
+
+    GrowthCompany:
+      type: object
+      description: Top growth company by growth estimate
+      properties:
+        symbol:
+          type: string
+          example: MU
+        name:
+          type: string
+          nullable: true
+        lastPrice:
+          type: number
+          format: double
+          nullable: true
+        ytdReturn:
+          type: number
+          format: double
+          nullable: true
+        growthEstimate:
+          type: number
+          format: double
+          nullable: true
+          description: Growth estimate (e.g., 5.84 = 584%)
+
+    IndustryResearchReport:
+      type: object
+      description: Research report for an industry
+      properties:
+        id:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        provider:
+          type: string
+          nullable: true
+          example: Argus Research
+        reportDate:
+          type: string
+          nullable: true
+          description: Report date (ISO 8601)
+        reportType:
+          type: string
+          nullable: true
+          example: Quantitative Report
+        investmentRating:
+          type: string
+          nullable: true
+          example: Bullish
+        targetPrice:
+          type: number
+          format: double
+          nullable: true
+        targetPriceStatus:
+          type: string
+          nullable: true
+          example: Increased
 
     SearchResponse:
       type: object

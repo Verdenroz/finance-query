@@ -108,6 +108,14 @@ pub mod url_builders {
             YAHOO_FINANCE_QUERY1, sector_key
         )
     }
+
+    /// Industries endpoint - detailed industry data
+    pub fn industry(industry_key: &str) -> String {
+        format!(
+            "{}/v1/finance/industries/{}?formatted=true&withReturns=false&lang=en-US&region=US",
+            YAHOO_FINANCE_QUERY1, industry_key
+        )
+    }
 }
 
 /// Predefined screener types for Yahoo Finance

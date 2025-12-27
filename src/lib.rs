@@ -115,6 +115,10 @@ pub use models::{
     chart::{Candle, Chart, ChartMeta},
     financials::FinancialStatement,
     hours::{HoursResponse, MarketTime},
+    industries::{
+        BenchmarkPerformance, GrowthCompany, IndustryCompany, IndustryOverview,
+        IndustryPerformance, IndustryResponse, PerformingCompany,
+    },
     news::News,
     options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse},
     quote::{FormattedValue, Quote},

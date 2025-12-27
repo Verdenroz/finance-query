@@ -387,6 +387,8 @@ fn api_routes() -> Router {
         .route("/screeners/{screener_type}", get(get_screeners))
         // GET /v2/sectors/{sector_type}
         .route("/sectors/{sector_type}", get(get_sector))
+        // GET /v2/industries/{industry_key}
+        .route("/industries/{industry_key}", get(get_industry))
         // GET /v2/news?count=<u32>
         .route("/news", get(get_general_news))
         // GET /v2/news/{symbol}?count=<u32>
@@ -1126,6 +1128,36 @@ async fn get_sector(
         }
         Err(e) => {
             error!("Failed to fetch {} sector: {}", sector_type, e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/industries/{industry_key}
+///
+/// Query: `format` (raw|pretty|both), `fields` (comma-separated)
+async fn get_industry(
+    Path(industry_key): Path<String>,
+    Query(params): Query<SectorQuery>,
+) -> impl IntoResponse {
+    let format = parse_format(params.format.as_deref());
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching {} industry (format={:?}, fields={:?})",
+        industry_key, params.format, params.fields
+    );
+
+    let result = finance::industry(&industry_key).await;
+
+    match result {
+        Ok(data) => {
+            let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, format, fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch {} industry: {}", industry_key, e);
             error_response(e).into_response()
         }
     }

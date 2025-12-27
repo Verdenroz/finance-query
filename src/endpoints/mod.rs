@@ -7,6 +7,7 @@ pub mod common;
 pub mod earnings_transcript;
 pub mod financials;
 pub mod hours;
+pub mod industries;
 pub mod news;
 pub mod options;
 pub mod quote_summary;
