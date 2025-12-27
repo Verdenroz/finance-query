@@ -1,13 +1,14 @@
 use crate::models::quote::FormattedValue;
 use serde::{Deserialize, Serialize};
 
-/// Quote data for a market mover (most active, gainer, or loser)
+/// Quote data from a Yahoo Finance screener
 ///
-/// This struct contains a subset of fields available in the full quote data,
-/// focusing on the most relevant information for market movers.
+/// This struct contains the fields returned by Yahoo Finance's predefined
+/// screener endpoint. It includes comprehensive quote data for filtering
+/// and displaying screened stocks/funds.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct MoverQuote {
+pub struct ScreenerQuote {
     // Core identification
     /// Stock symbol (e.g., "NVDA")
     pub symbol: String,
@@ -48,8 +49,9 @@ pub struct MoverQuote {
     pub regular_market_time: Option<FormattedValue<i64>>,
 
     // Volume & Market Cap
-    /// Regular market volume
-    pub regular_market_volume: FormattedValue<i64>,
+    /// Regular market volume (may be None for funds)
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub regular_market_volume: Option<FormattedValue<i64>>,
     /// Average daily volume over 3 months
     #[serde(skip_serializing_if = "Option::is_none")]
     pub average_daily_volume3_month: Option<FormattedValue<i64>>,

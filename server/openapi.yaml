@@ -36,8 +36,8 @@ tags:
     description: Company financials and timeseries data
   - name: Holders
     description: Institutional and insider holdings
-  - name: Movers
-    description: Market movers (gainers, losers, actives)
+  - name: Screeners
+    description: Predefined Yahoo Finance screeners (equity and fund filters)
   - name: Search
     description: Symbol and company search
 
@@ -530,39 +530,85 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /v2/movers/{type}:
+  /v2/screeners/{screener_type}:
     get:
-      tags: [Movers]
-      summary: Get market movers
+      tags: [Screeners]
+      summary: Get screener results
       description: |
-        Fetch market movers by type.
-        Available types:
-        - gainers: Top gaining stocks
-        - losers: Top losing stocks
-        - actives: Most active stocks by volume
+        Fetch stocks or funds matching predefined screener criteria.
+
+        **Equity Screeners (9):**
+        - `aggressive-small-caps`: Small caps with high EPS growth
+        - `day-gainers`: Top gaining stocks (>3% change, >$2B market cap)
+        - `day-losers`: Top losing stocks (<-2.5% change, >$2B market cap)
+        - `growth-technology-stocks`: Tech stocks with 25%+ revenue/EPS growth
+        - `most-actives`: Most actively traded by volume
+        - `most-shorted-stocks`: Highest short interest percentage
+        - `small-cap-gainers`: Small cap gainers (<$2B market cap)
+        - `undervalued-growth-stocks`: Low P/E with high EPS growth
+        - `undervalued-large-caps`: Large caps with low P/E and PEG
+
+        **Fund Screeners (6):**
+        - `conservative-foreign-funds`: Low-risk foreign large cap funds
+        - `high-yield-bond`: High yield bond funds
+        - `portfolio-anchors`: Large blend core funds
+        - `solid-large-growth-funds`: Large growth funds
+        - `solid-midcap-growth-funds`: Mid-cap growth funds
+        - `top-mutual-funds`: Top performing mutual funds
       parameters:
-        - name: type
+        - name: screener_type
           in: path
           required: true
           schema:
             type: string
-            enum: [gainers, losers, actives]
-          description: Type of market movers
-          example: gainers
+            enum:
+              - aggressive-small-caps
+              - day-gainers
+              - day-losers
+              - growth-technology-stocks
+              - most-actives
+              - most-shorted-stocks
+              - small-cap-gainers
+              - undervalued-growth-stocks
+              - undervalued-large-caps
+              - conservative-foreign-funds
+              - high-yield-bond
+              - portfolio-anchors
+              - solid-large-growth-funds
+              - solid-midcap-growth-funds
+              - top-mutual-funds
+          description: Predefined screener type (kebab-case)
+          example: most-actives
         - name: count
           in: query
           schema:
             type: integer
-            default: 10
-          description: Number of results to return
+            default: 25
+            maximum: 250
+          description: Number of results to return (max 250)
+        - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Market movers
+          description: Screener results
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/MoversResponse'
+                $ref: '#/components/schemas/ScreenersResponse'
+              example:
+                quotes:
+                  - symbol: NVDA
+                    shortName: NVIDIA Corporation
+                    quoteType: EQUITY
+                    regularMarketPrice:
+                      raw: 134.70
+                      fmt: "134.70"
+                    regularMarketChangePercent:
+                      raw: 1.85
+                      fmt: "1.85%"
+                type: most_actives
+                description: "Stocks ordered in descending order by intraday trade volume"
+                lastUpdated: 1735315200
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -986,29 +1032,88 @@ components:
               "2024-09-30": 100913000000
               "2023-09-30": 96995000000
 
-    MoversResponse:
+    ScreenersResponse:
       type: object
+      description: Response from screener endpoint
       properties:
-        count:
-          type: integer
         quotes:
           type: array
+          description: Array of quotes matching the screener criteria
           items:
-            $ref: '#/components/schemas/MoverQuote'
+            $ref: '#/components/schemas/ScreenerQuote'
+        type:
+          type: string
+          description: Screener type identifier (e.g., "most_actives", "day_gainers")
+          example: most_actives
+        description:
+          type: string
+          description: Human-readable description of the screener
+          example: "Stocks ordered in descending order by intraday trade volume"
+        lastUpdated:
+          type: integer
+          format: int64
+          description: Unix timestamp of last data update
+          example: 1735315200
 
-    MoverQuote:
+    ScreenerQuote:
       type: object
+      description: Quote data from a screener result
       properties:
         symbol:
           type: string
+          example: NVDA
+        shortName:
+          type: string
+          example: NVIDIA Corporation
+        longName:
+          type: string
+          nullable: true
+        quoteType:
+          type: string
+          example: EQUITY
+        exchange:
+          type: string
+          example: NMS
         regularMarketPrice:
-          type: number
+          $ref: '#/components/schemas/FormattedValue'
         regularMarketChange:
-          type: number
+          $ref: '#/components/schemas/FormattedValue'
         regularMarketChangePercent:
-          type: number
+          $ref: '#/components/schemas/FormattedValue'
         regularMarketVolume:
-          type: integer
+          $ref: '#/components/schemas/FormattedValue'
+        marketCap:
+          $ref: '#/components/schemas/FormattedValue'
+        fiftyTwoWeekHigh:
+          $ref: '#/components/schemas/FormattedValue'
+        fiftyTwoWeekLow:
+          $ref: '#/components/schemas/FormattedValue'
+        trailingPE:
+          $ref: '#/components/schemas/FormattedValue'
+        forwardPE:
+          $ref: '#/components/schemas/FormattedValue'
+        dividendYield:
+          $ref: '#/components/schemas/FormattedValue'
+        averageAnalystRating:
+          type: string
+          nullable: true
+          example: "1.3 - Strong Buy"
+
+    FormattedValue:
+      type: object
+      description: Yahoo Finance formatted value with raw and display formats
+      properties:
+        raw:
+          type: number
+          description: Raw numeric value
+        fmt:
+          type: string
+          description: Formatted display string
+          nullable: true
+        longFmt:
+          type: string
+          description: Long formatted display string
+          nullable: true
 
     SearchResponse:
       type: object

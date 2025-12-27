@@ -1,11 +1,12 @@
 //! Non-symbol-specific Yahoo Finance operations
 //!
 //! This module provides functions for operations that don't require a specific stock symbol,
-//! such as searching for symbols and getting market movers.
+//! such as searching for symbols and fetching screener data.
 
 use crate::client::{ClientConfig, YahooClient};
+use crate::constants::screener_types::ScreenerType;
 use crate::error::Result;
-use crate::models::movers::MoversResponse;
+use crate::models::screeners::ScreenersResponse;
 use crate::models::search::SearchResponse;
 use serde_json::Value;
 
@@ -32,70 +33,36 @@ pub async fn search(query: &str, limit: u32) -> Result<SearchResponse> {
     client.search(query, limit).await
 }
 
-/// Get top gaining stocks
+/// Fetch data from a predefined Yahoo Finance screener
+///
+/// Returns stocks/funds matching the criteria of the specified screener type.
 ///
 /// # Arguments
 ///
-/// * `count` - Number of gainers to return
+/// * `screener_type` - The predefined screener to use
+/// * `count` - Number of results to return (max 250)
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::finance;
+/// use finance_query::{finance, ScreenerType};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let gainers = finance::gainers(10).await?;
+/// // Get top gainers
+/// let gainers = finance::screener(ScreenerType::DayGainers, 25).await?;
 /// println!("Top gainers: {:#?}", gainers);
+///
+/// // Get most shorted stocks
+/// let shorted = finance::screener(ScreenerType::MostShortedStocks, 25).await?;
+///
+/// // Get growth technology stocks
+/// let tech = finance::screener(ScreenerType::GrowthTechnologyStocks, 25).await?;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn gainers(count: u32) -> Result<MoversResponse> {
+pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<ScreenersResponse> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    client.get_movers("DAY_GAINERS", count).await
-}
-
-/// Get top losing stocks
-///
-/// # Arguments
-///
-/// * `count` - Number of losers to return
-///
-/// # Examples
-///
-/// ```no_run
-/// use finance_query::finance;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let losers = finance::losers(10).await?;
-/// println!("Top losers: {:#?}", losers);
-/// # Ok(())
-/// # }
-/// ```
-pub async fn losers(count: u32) -> Result<MoversResponse> {
-    let client = YahooClient::new(ClientConfig::default()).await?;
-    client.get_movers("DAY_LOSERS", count).await
-}
-
-/// Get most active stocks by volume
-///
-/// # Arguments
-///
-/// * `count` - Number of active stocks to return
-///
-/// # Examples
-///
-/// ```no_run
-/// use finance_query::finance;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let actives = finance::actives(25).await?;
-/// println!("Most active: {:#?}", actives);
-/// # Ok(())
-/// # }
-/// ```
-pub async fn actives(count: u32) -> Result<MoversResponse> {
-    let client = YahooClient::new(ClientConfig::default()).await?;
-    client.get_movers("MOST_ACTIVES", count).await
+    client.get_screener(screener_type, count).await
 }
 
 /// Get general market news

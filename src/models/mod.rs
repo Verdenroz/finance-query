@@ -8,8 +8,6 @@ pub mod financials;
 pub mod hours;
 /// Technical indicators models.
 pub mod indicators;
-/// Market movers models.
-pub mod movers;
 /// News models.
 pub mod news;
 /// Options models.
@@ -18,6 +16,8 @@ pub mod options;
 pub mod quote;
 /// Recommendation models.
 pub mod recommendation;
+/// Screener models for predefined Yahoo Finance screeners.
+pub mod screeners;
 /// Search models.
 pub mod search;
 
@@ -25,9 +25,9 @@ pub mod search;
 pub use chart::{Candle, Chart, ChartMeta};
 pub use financials::FinancialStatement;
 pub use hours::{HoursResponse, MarketTime};
-pub use movers::{MoverQuote, MoversResponse};
 pub use news::{NewsArticle, NewsResponse, NewsThumbnail};
 pub use options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse};
 pub use quote::{FormattedValue, Quote};
 pub use recommendation::{Recommendation, SimilarSymbol};
+pub use screeners::{ScreenerQuote, ScreenersResponse};
 pub use search::{SearchQuote, SearchResponse};

@@ -80,25 +80,158 @@ pub mod endpoints {
 
 /// URL builders (functions that construct full URLs with query params)
 pub mod url_builders {
+    use super::screener_types::ScreenerType;
     use super::urls::*;
 
-    /// Movers/screener endpoint
-    pub fn movers(screener_id: &str, count: u32) -> String {
+    /// Screener endpoint for predefined screeners
+    pub fn screener(screener_type: ScreenerType, count: u32) -> String {
         format!(
             "{}/v1/finance/screener/predefined/saved?count={}&formatted=true&scrIds={}",
-            YAHOO_FINANCE_QUERY1, count, screener_id
+            YAHOO_FINANCE_QUERY1,
+            count,
+            screener_type.as_scr_id()
         )
     }
 }
 
-/// Screener IDs for market movers
-pub mod screener_ids {
-    /// Most active stocks by volume
-    pub const MOST_ACTIVES: &str = "MOST_ACTIVES";
-    /// Top gaining stocks by percentage
-    pub const DAY_GAINERS: &str = "DAY_GAINERS";
-    /// Top losing stocks by percentage
-    pub const DAY_LOSERS: &str = "DAY_LOSERS";
+/// Predefined screener types for Yahoo Finance
+pub mod screener_types {
+    /// Enum of all predefined Yahoo Finance screeners
+    ///
+    /// These map to Yahoo Finance's predefined screener IDs and can be used
+    /// to fetch filtered stock/fund lists based on various criteria.
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum ScreenerType {
+        // Equity screeners
+        /// Small caps with high EPS growth, sorted by volume
+        AggressiveSmallCaps,
+        /// Top gaining stocks (>3% change, >$2B market cap)
+        DayGainers,
+        /// Top losing stocks (<-2.5% change, >$2B market cap)
+        DayLosers,
+        /// Tech stocks with 25%+ revenue and EPS growth
+        GrowthTechnologyStocks,
+        /// Most actively traded stocks by volume
+        MostActives,
+        /// Stocks with highest short interest percentage
+        MostShortedStocks,
+        /// Small cap gainers (<$2B market cap)
+        SmallCapGainers,
+        /// Low P/E (<20), low PEG (<1), high EPS growth (25%+)
+        UndervaluedGrowthStocks,
+        /// Large caps ($10B-$100B) with low P/E and PEG
+        UndervaluedLargeCaps,
+        // Fund screeners
+        /// Low-risk foreign large cap funds (4-5 star rated)
+        ConservativeForeignFunds,
+        /// High yield bond funds (4-5 star rated)
+        HighYieldBond,
+        /// Large blend core funds (4-5 star rated)
+        PortfolioAnchors,
+        /// Large growth funds (4-5 star rated)
+        SolidLargeGrowthFunds,
+        /// Mid-cap growth funds (4-5 star rated)
+        SolidMidcapGrowthFunds,
+        /// Top performing mutual funds by percent change
+        TopMutualFunds,
+    }
+
+    impl ScreenerType {
+        /// Convert to Yahoo Finance scrId parameter value (SCREAMING_SNAKE_CASE)
+        pub fn as_scr_id(&self) -> &'static str {
+            match self {
+                ScreenerType::AggressiveSmallCaps => "aggressive_small_caps",
+                ScreenerType::DayGainers => "day_gainers",
+                ScreenerType::DayLosers => "day_losers",
+                ScreenerType::GrowthTechnologyStocks => "growth_technology_stocks",
+                ScreenerType::MostActives => "most_actives",
+                ScreenerType::MostShortedStocks => "most_shorted_stocks",
+                ScreenerType::SmallCapGainers => "small_cap_gainers",
+                ScreenerType::UndervaluedGrowthStocks => "undervalued_growth_stocks",
+                ScreenerType::UndervaluedLargeCaps => "undervalued_large_caps",
+                ScreenerType::ConservativeForeignFunds => "conservative_foreign_funds",
+                ScreenerType::HighYieldBond => "high_yield_bond",
+                ScreenerType::PortfolioAnchors => "portfolio_anchors",
+                ScreenerType::SolidLargeGrowthFunds => "solid_large_growth_funds",
+                ScreenerType::SolidMidcapGrowthFunds => "solid_midcap_growth_funds",
+                ScreenerType::TopMutualFunds => "top_mutual_funds",
+            }
+        }
+
+        /// Parse from string, returns None on invalid input
+        ///
+        /// # Example
+        /// ```
+        /// use finance_query::ScreenerType;
+        ///
+        /// assert_eq!(ScreenerType::parse("most-actives"), Some(ScreenerType::MostActives));
+        /// assert_eq!(ScreenerType::parse("day-gainers"), Some(ScreenerType::DayGainers));
+        /// ```
+        pub fn parse(s: &str) -> Option<Self> {
+            s.parse().ok()
+        }
+
+        /// List all valid screener types for error messages
+        pub fn valid_types() -> &'static str {
+            "aggressive-small-caps, day-gainers, day-losers, growth-technology-stocks, \
+             most-actives, most-shorted-stocks, small-cap-gainers, undervalued-growth-stocks, \
+             undervalued-large-caps, conservative-foreign-funds, high-yield-bond, \
+             portfolio-anchors, solid-large-growth-funds, solid-midcap-growth-funds, \
+             top-mutual-funds"
+        }
+
+        /// Get all screener types as an array
+        pub fn all() -> &'static [ScreenerType] {
+            &[
+                ScreenerType::AggressiveSmallCaps,
+                ScreenerType::DayGainers,
+                ScreenerType::DayLosers,
+                ScreenerType::GrowthTechnologyStocks,
+                ScreenerType::MostActives,
+                ScreenerType::MostShortedStocks,
+                ScreenerType::SmallCapGainers,
+                ScreenerType::UndervaluedGrowthStocks,
+                ScreenerType::UndervaluedLargeCaps,
+                ScreenerType::ConservativeForeignFunds,
+                ScreenerType::HighYieldBond,
+                ScreenerType::PortfolioAnchors,
+                ScreenerType::SolidLargeGrowthFunds,
+                ScreenerType::SolidMidcapGrowthFunds,
+                ScreenerType::TopMutualFunds,
+            ]
+        }
+    }
+
+    impl std::str::FromStr for ScreenerType {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().replace('_', "-").as_str() {
+                "aggressive-small-caps" => Ok(ScreenerType::AggressiveSmallCaps),
+                "day-gainers" | "gainers" => Ok(ScreenerType::DayGainers),
+                "day-losers" | "losers" => Ok(ScreenerType::DayLosers),
+                "growth-technology-stocks" | "growth-tech" => {
+                    Ok(ScreenerType::GrowthTechnologyStocks)
+                }
+                "most-actives" | "actives" => Ok(ScreenerType::MostActives),
+                "most-shorted-stocks" | "most-shorted" => Ok(ScreenerType::MostShortedStocks),
+                "small-cap-gainers" => Ok(ScreenerType::SmallCapGainers),
+                "undervalued-growth-stocks" | "undervalued-growth" => {
+                    Ok(ScreenerType::UndervaluedGrowthStocks)
+                }
+                "undervalued-large-caps" | "undervalued-large" => {
+                    Ok(ScreenerType::UndervaluedLargeCaps)
+                }
+                "conservative-foreign-funds" => Ok(ScreenerType::ConservativeForeignFunds),
+                "high-yield-bond" => Ok(ScreenerType::HighYieldBond),
+                "portfolio-anchors" => Ok(ScreenerType::PortfolioAnchors),
+                "solid-large-growth-funds" => Ok(ScreenerType::SolidLargeGrowthFunds),
+                "solid-midcap-growth-funds" => Ok(ScreenerType::SolidMidcapGrowthFunds),
+                "top-mutual-funds" => Ok(ScreenerType::TopMutualFunds),
+                _ => Err(()),
+            }
+        }
+    }
 }
 
 /// World market indices

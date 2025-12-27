@@ -6,8 +6,8 @@ use axum::{
     routing::get,
 };
 use finance_query::{
-    Frequency, Interval, StatementType, Ticker, Tickers, TimeRange, ValueFormat, YahooError,
-    finance,
+    Frequency, Interval, ScreenerType, StatementType, Ticker, Tickers, TimeRange, ValueFormat,
+    YahooError, finance,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -28,8 +28,8 @@ mod defaults {
     pub const DEFAULT_RANGE: &str = "1mo";
     /// Default server port
     pub const SERVER_PORT: u16 = 8000;
-    /// Default movers count
-    pub const MOVERS_COUNT: u32 = 10;
+    /// Default screeners count
+    pub const SCREENERS_COUNT: u32 = 25;
 }
 
 #[derive(Serialize)]
@@ -255,33 +255,12 @@ impl AnalysisType {
     }
 }
 
-/// Mover types for /movers/{type}
-#[derive(Debug, Clone, Copy)]
-enum MoverType {
-    Gainers,
-    Losers,
-    Actives,
-}
-
-impl MoverType {
-    fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "gainers" => Some(Self::Gainers),
-            "losers" => Some(Self::Losers),
-            "actives" => Some(Self::Actives),
-            _ => None,
-        }
-    }
-
-    fn valid_types() -> &'static str {
-        "gainers, losers, actives"
-    }
-}
-
 #[derive(Deserialize)]
-struct MoversQuery {
-    #[serde(default = "default_movers_count")]
+struct ScreenersQuery {
+    #[serde(default = "default_screeners_count")]
     count: u32,
+    /// Value format: raw, pretty, or both (default: raw)
+    format: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
 }
@@ -292,11 +271,11 @@ struct EarningsTranscriptQuery {
     company_id: String,
 }
 
-fn default_movers_count() -> u32 {
-    std::env::var("MOVERS_COUNT")
+fn default_screeners_count() -> u32 {
+    std::env::var("SCREENERS_COUNT")
         .ok()
         .and_then(|v| v.parse().ok())
-        .unwrap_or(defaults::MOVERS_COUNT)
+        .unwrap_or(defaults::SCREENERS_COUNT)
 }
 
 fn default_limit() -> u32 {
@@ -394,8 +373,8 @@ fn api_routes() -> Router {
         .route("/indicators/{symbol}", get(get_indicators))
         // GET /v2/indices?format=<raw|pretty|both>
         .route("/indices", get(get_indices))
-        // GET /v2/movers/{mover_type}?count=<u32>
-        .route("/movers/{mover_type}", get(get_movers))
+        // GET /v2/screeners/{screener_type}?count=<u32>
+        .route("/screeners/{screener_type}", get(get_screeners))
         // GET /v2/news?count=<u32>
         .route("/news", get(get_general_news))
         // GET /v2/news/{symbol}?count=<u32>
@@ -1052,22 +1031,28 @@ async fn get_analysis(
     }
 }
 
-/// GET /v2/movers/{mover_type}
+/// GET /v2/screeners/{screener_type}
 ///
 /// Path params:
-/// - `mover_type`: gainers, losers, actives
+/// - `screener_type`: One of 15 predefined screener types (kebab-case)
+///   - Equity: aggressive-small-caps, day-gainers, day-losers, growth-technology-stocks,
+///     most-actives, most-shorted-stocks, small-cap-gainers, undervalued-growth-stocks,
+///     undervalued-large-caps
+///   - Fund: conservative-foreign-funds, high-yield-bond, portfolio-anchors,
+///     solid-large-growth-funds, solid-midcap-growth-funds, top-mutual-funds
 ///
-/// Query: `count` (u32, default via `MOVERS_COUNT` or server default)
-async fn get_movers(
-    Path(mover_type): Path<String>,
-    Query(params): Query<MoversQuery>,
+/// Query: `count` (u32, default 25, max 250), `format` (raw|pretty|both), `fields` (comma-separated)
+async fn get_screeners(
+    Path(screener_type): Path<String>,
+    Query(params): Query<ScreenersQuery>,
 ) -> impl IntoResponse {
+    let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
-    let mt = match MoverType::from_str(&mover_type) {
-        Some(t) => t,
-        None => {
+    let st = match screener_type.parse::<ScreenerType>() {
+        Ok(t) => t,
+        Err(_) => {
             let error = serde_json::json!({
-                "error": format!("Invalid mover type: '{}'. Valid types: {}", mover_type, MoverType::valid_types()),
+                "error": format!("Invalid screener type: '{}'. Valid types: {}", screener_type, ScreenerType::valid_types()),
                 "status": 400
             });
             return (StatusCode::BAD_REQUEST, Json(error)).into_response();
@@ -1075,24 +1060,20 @@ async fn get_movers(
     };
 
     info!(
-        "Fetching {} movers (count={}, fields={:?})",
-        mover_type, params.count, params.fields
+        "Fetching {} screener (count={}, format={:?}, fields={:?})",
+        screener_type, params.count, params.format, params.fields
     );
 
-    let result = match mt {
-        MoverType::Gainers => finance::gainers(params.count).await,
-        MoverType::Losers => finance::losers(params.count).await,
-        MoverType::Actives => finance::actives(params.count).await,
-    };
+    let result = finance::screener(st, params.count).await;
 
     match result {
         Ok(data) => {
             let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
-            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Failed to fetch {} movers: {}", mover_type, e);
+            error!("Failed to fetch {} screener: {}", screener_type, e);
             error_response(e).into_response()
         }
     }

@@ -70,7 +70,7 @@
 pub mod constants;
 /// Error types and result definitions.
 pub mod error;
-/// Non-symbol-specific operations (search, movers, etc.).
+/// Non-symbol-specific operations (search, screeners, etc.).
 pub mod finance;
 /// Data models for Yahoo Finance responses.
 pub mod models;
@@ -103,6 +103,7 @@ pub use error::{Result, YahooError};
 // Constants and parameter enums
 // ============================================================================
 pub use constants::indices::Region as IndicesRegion;
+pub use constants::screener_types::ScreenerType;
 pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, ValueFormat};
 
 // ============================================================================
@@ -112,11 +113,11 @@ pub use models::{
     chart::{Candle, Chart, ChartMeta},
     financials::FinancialStatement,
     hours::{HoursResponse, MarketTime},
-    movers::{MoverQuote, MoversResponse},
     news::News,
     options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse},
     quote::{FormattedValue, Quote},
     recommendation::{Recommendation, SimilarSymbol},
+    screeners::{ScreenerQuote, ScreenersResponse},
     search::{SearchQuote, SearchResponse},
 };
 

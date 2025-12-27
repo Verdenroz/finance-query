@@ -601,30 +601,35 @@ impl YahooClient {
         crate::endpoints::options::fetch(self, symbol, date).await
     }
 
-    /// Get market movers (gainers, losers, or most active)
+    /// Get data from a predefined Yahoo Finance screener
+    ///
+    /// Fetches stocks/funds matching predefined criteria such as day gainers,
+    /// day losers, most actives, most shorted stocks, growth stocks, and more.
     ///
     /// # Arguments
     ///
-    /// * `screener_id` - The screener ID: "DAY_GAINERS", "DAY_LOSERS", or "MOST_ACTIVES"
-    /// * `count` - Number of results to return
+    /// * `screener_type` - The predefined screener type to use
+    /// * `count` - Number of results to return (max 250)
     ///
     /// # Example
     ///
     /// ```no_run
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// let gainers = client.get_movers("DAY_GAINERS", 25).await?;
-    /// let losers = client.get_movers("DAY_LOSERS", 25).await?;
-    /// let actives = client.get_movers("MOST_ACTIVES", 25).await?;
+    /// use finance_query::ScreenerType;
+    /// let gainers = client.get_screener(ScreenerType::DayGainers, 25).await?;
+    /// let losers = client.get_screener(ScreenerType::DayLosers, 25).await?;
+    /// let actives = client.get_screener(ScreenerType::MostActives, 25).await?;
+    /// let shorted = client.get_screener(ScreenerType::MostShortedStocks, 25).await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn get_movers(
+    pub async fn get_screener(
         &self,
-        screener_id: &str,
+        screener_type: crate::constants::screener_types::ScreenerType,
         count: u32,
-    ) -> Result<crate::models::movers::MoversResponse> {
-        crate::endpoints::movers::fetch(self, screener_id, count).await
+    ) -> Result<crate::models::screeners::ScreenersResponse> {
+        crate::endpoints::screeners::fetch(self, screener_type, count).await
     }
 
     /// Get earnings call transcript
@@ -798,14 +803,14 @@ impl BlockingYahooClient {
         self.runtime.block_on(self.inner.get_logo_url(symbol))
     }
 
-    /// Get market movers (blocking)
-    pub fn get_movers(
+    /// Get data from a predefined Yahoo Finance screener (blocking)
+    pub fn get_screener(
         &self,
-        screener_id: &str,
+        screener_type: crate::constants::screener_types::ScreenerType,
         count: u32,
-    ) -> Result<crate::models::movers::MoversResponse> {
+    ) -> Result<crate::models::screeners::ScreenersResponse> {
         self.runtime
-            .block_on(self.inner.get_movers(screener_id, count))
+            .block_on(self.inner.get_screener(screener_type, count))
     }
 
     /// Get earnings call transcript (blocking)
