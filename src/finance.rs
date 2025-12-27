@@ -5,9 +5,11 @@
 
 use crate::client::{ClientConfig, YahooClient};
 use crate::constants::screener_types::ScreenerType;
+use crate::constants::sector_types::SectorType;
 use crate::error::Result;
 use crate::models::screeners::ScreenersResponse;
 use crate::models::search::SearchResponse;
+use crate::models::sectors::SectorResponse;
 use serde_json::Value;
 
 /// Search for stock symbols and companies
@@ -202,4 +204,34 @@ pub async fn indices(
 
     let tickers = Tickers::new(symbols).await?;
     tickers.quotes(false).await
+}
+
+/// Fetch detailed sector data from Yahoo Finance
+///
+/// Returns comprehensive sector information including overview, performance,
+/// top companies, ETFs, mutual funds, industries, and research reports.
+///
+/// # Arguments
+///
+/// * `sector_type` - The sector to fetch data for
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, SectorType};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let sector = finance::sector(SectorType::Technology).await?;
+/// println!("Sector: {} ({} companies)", sector.name,
+///     sector.overview.as_ref().map(|o| o.companies_count.unwrap_or(0)).unwrap_or(0));
+///
+/// for company in sector.top_companies.iter().take(5) {
+///     println!("  {} - {:?}", company.symbol, company.name);
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn sector(sector_type: SectorType) -> Result<SectorResponse> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.get_sector(sector_type).await
 }

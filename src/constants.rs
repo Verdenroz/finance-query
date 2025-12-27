@@ -100,6 +100,14 @@ pub mod url_builders {
             YAHOO_FINANCE_QUERY1
         )
     }
+
+    /// Sector details endpoint
+    pub fn sector(sector_key: &str) -> String {
+        format!(
+            "{}/v1/finance/sectors/{}?formatted=true&withReturns=false&lang=en-US&region=US",
+            YAHOO_FINANCE_QUERY1, sector_key
+        )
+    }
 }
 
 /// Predefined screener types for Yahoo Finance
@@ -238,6 +246,130 @@ pub mod screener_types {
                 "top-mutual-funds" => Ok(ScreenerType::TopMutualFunds),
                 _ => Err(()),
             }
+        }
+    }
+}
+
+/// Yahoo Finance sector types
+///
+/// These are the 11 GICS sectors available on Yahoo Finance.
+pub mod sector_types {
+    use serde::{Deserialize, Serialize};
+
+    /// Market sector types available on Yahoo Finance
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+    #[serde(rename_all = "kebab-case")]
+    pub enum SectorType {
+        /// Technology sector (software, semiconductors, hardware)
+        Technology,
+        /// Financial Services sector (banks, insurance, asset management)
+        FinancialServices,
+        /// Consumer Cyclical sector (retail, automotive, leisure)
+        ConsumerCyclical,
+        /// Communication Services sector (telecom, media, entertainment)
+        CommunicationServices,
+        /// Healthcare sector (pharma, biotech, medical devices)
+        Healthcare,
+        /// Industrials sector (aerospace, machinery, construction)
+        Industrials,
+        /// Consumer Defensive sector (food, beverages, household products)
+        ConsumerDefensive,
+        /// Energy sector (oil, gas, renewable energy)
+        Energy,
+        /// Basic Materials sector (chemicals, metals, mining)
+        BasicMaterials,
+        /// Real Estate sector (REITs, property management)
+        RealEstate,
+        /// Utilities sector (electric, gas, water utilities)
+        Utilities,
+    }
+
+    impl SectorType {
+        /// Convert to Yahoo Finance API path segment (lowercase with hyphens)
+        pub fn as_api_path(&self) -> &'static str {
+            match self {
+                SectorType::Technology => "technology",
+                SectorType::FinancialServices => "financial-services",
+                SectorType::ConsumerCyclical => "consumer-cyclical",
+                SectorType::CommunicationServices => "communication-services",
+                SectorType::Healthcare => "healthcare",
+                SectorType::Industrials => "industrials",
+                SectorType::ConsumerDefensive => "consumer-defensive",
+                SectorType::Energy => "energy",
+                SectorType::BasicMaterials => "basic-materials",
+                SectorType::RealEstate => "real-estate",
+                SectorType::Utilities => "utilities",
+            }
+        }
+
+        /// Get human-readable display name
+        pub fn display_name(&self) -> &'static str {
+            match self {
+                SectorType::Technology => "Technology",
+                SectorType::FinancialServices => "Financial Services",
+                SectorType::ConsumerCyclical => "Consumer Cyclical",
+                SectorType::CommunicationServices => "Communication Services",
+                SectorType::Healthcare => "Healthcare",
+                SectorType::Industrials => "Industrials",
+                SectorType::ConsumerDefensive => "Consumer Defensive",
+                SectorType::Energy => "Energy",
+                SectorType::BasicMaterials => "Basic Materials",
+                SectorType::RealEstate => "Real Estate",
+                SectorType::Utilities => "Utilities",
+            }
+        }
+
+        /// List all valid sector types for error messages
+        pub fn valid_types() -> &'static str {
+            "technology, financial-services, consumer-cyclical, communication-services, \
+             healthcare, industrials, consumer-defensive, energy, basic-materials, \
+             real-estate, utilities"
+        }
+
+        /// Get all sector types as an array
+        pub fn all() -> &'static [SectorType] {
+            &[
+                SectorType::Technology,
+                SectorType::FinancialServices,
+                SectorType::ConsumerCyclical,
+                SectorType::CommunicationServices,
+                SectorType::Healthcare,
+                SectorType::Industrials,
+                SectorType::ConsumerDefensive,
+                SectorType::Energy,
+                SectorType::BasicMaterials,
+                SectorType::RealEstate,
+                SectorType::Utilities,
+            ]
+        }
+    }
+
+    impl std::str::FromStr for SectorType {
+        type Err = ();
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().replace('_', "-").as_str() {
+                "technology" | "tech" => Ok(SectorType::Technology),
+                "financial-services" | "financials" | "financial" => {
+                    Ok(SectorType::FinancialServices)
+                }
+                "consumer-cyclical" => Ok(SectorType::ConsumerCyclical),
+                "communication-services" | "communication" => Ok(SectorType::CommunicationServices),
+                "healthcare" | "health" => Ok(SectorType::Healthcare),
+                "industrials" | "industrial" => Ok(SectorType::Industrials),
+                "consumer-defensive" => Ok(SectorType::ConsumerDefensive),
+                "energy" => Ok(SectorType::Energy),
+                "basic-materials" | "materials" => Ok(SectorType::BasicMaterials),
+                "real-estate" | "realestate" => Ok(SectorType::RealEstate),
+                "utilities" | "utility" => Ok(SectorType::Utilities),
+                _ => Err(()),
+            }
+        }
+    }
+
+    impl std::fmt::Display for SectorType {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            write!(f, "{}", self.display_name())
         }
     }
 }

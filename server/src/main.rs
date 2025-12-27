@@ -6,8 +6,8 @@ use axum::{
     routing::{get, post},
 };
 use finance_query::{
-    Frequency, Interval, ScreenerQuery, ScreenerType, StatementType, Ticker, Tickers, TimeRange,
-    ValueFormat, YahooError, finance, screener_query,
+    Frequency, Interval, ScreenerQuery, ScreenerType, SectorType, StatementType, Ticker, Tickers,
+    TimeRange, ValueFormat, YahooError, finance, screener_query,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -266,6 +266,14 @@ struct ScreenersQuery {
 }
 
 #[derive(Deserialize)]
+struct SectorQuery {
+    /// Value format: raw, pretty, or both (default: raw)
+    format: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct EarningsTranscriptQuery {
     event_id: String,
     company_id: String,
@@ -377,6 +385,8 @@ fn api_routes() -> Router {
         .route("/screeners/custom", post(post_custom_screener))
         // GET /v2/screeners/{screener_type}?count=<u32>
         .route("/screeners/{screener_type}", get(get_screeners))
+        // GET /v2/sectors/{sector_type}
+        .route("/sectors/{sector_type}", get(get_sector))
         // GET /v2/news?count=<u32>
         .route("/news", get(get_general_news))
         // GET /v2/news/{symbol}?count=<u32>
@@ -1076,6 +1086,46 @@ async fn get_screeners(
         }
         Err(e) => {
             error!("Failed to fetch {} screener: {}", screener_type, e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/sectors/{sector_type}
+///
+/// Query: `format` (raw|pretty|both), `fields` (comma-separated)
+async fn get_sector(
+    Path(sector_type): Path<String>,
+    Query(params): Query<SectorQuery>,
+) -> impl IntoResponse {
+    let format = parse_format(params.format.as_deref());
+    let fields = parse_fields(params.fields.as_deref());
+    let st = match sector_type.parse::<SectorType>() {
+        Ok(t) => t,
+        Err(_) => {
+            let error = serde_json::json!({
+                "error": format!("Invalid sector type: '{}'. Valid types: {}", sector_type, SectorType::valid_types()),
+                "status": 400
+            });
+            return (StatusCode::BAD_REQUEST, Json(error)).into_response();
+        }
+    };
+
+    info!(
+        "Fetching {} sector (format={:?}, fields={:?})",
+        sector_type, params.format, params.fields
+    );
+
+    let result = finance::sector(st).await;
+
+    match result {
+        Ok(data) => {
+            let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, format, fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch {} sector: {}", sector_type, e);
             error_response(e).into_response()
         }
     }

@@ -20,6 +20,8 @@ pub mod recommendation;
 pub mod screeners;
 /// Search models.
 pub mod search;
+/// Sector models for market sector data.
+pub mod sectors;
 
 // Re-exports for convenience
 pub use chart::{Candle, Chart, ChartMeta};
@@ -31,3 +33,7 @@ pub use quote::{FormattedValue, Quote};
 pub use recommendation::{Recommendation, SimilarSymbol};
 pub use screeners::{ScreenerQuote, ScreenersResponse};
 pub use search::{SearchQuote, SearchResponse};
+pub use sectors::{
+    Industry, ResearchReport, SectorCompany, SectorETF, SectorMutualFund, SectorOverview,
+    SectorPerformance, SectorResponse,
+};

@@ -15,3 +15,4 @@ pub mod quotes;
 pub mod recommendations;
 pub mod screeners;
 pub mod search;
+pub mod sectors;

@@ -710,6 +710,37 @@ impl YahooClient {
         crate::endpoints::screeners::fetch_custom(self, query).await
     }
 
+    /// Fetch detailed sector data from Yahoo Finance
+    ///
+    /// Returns comprehensive sector information including overview, performance,
+    /// top companies, ETFs, mutual funds, industries, and research reports.
+    ///
+    /// # Arguments
+    ///
+    /// * `sector_type` - The sector to fetch data for
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// use finance_query::SectorType;
+    /// let sector = client.get_sector(SectorType::Technology).await?;
+    /// println!("Sector: {} ({} companies)", sector.name,
+    ///     sector.overview.as_ref().map(|o| o.companies_count.unwrap_or(0)).unwrap_or(0));
+    /// for company in sector.top_companies.iter().take(5) {
+    ///     println!("  {} - {:?}", company.symbol, company.name);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_sector(
+        &self,
+        sector_type: crate::constants::sector_types::SectorType,
+    ) -> Result<crate::models::sectors::SectorResponse> {
+        crate::endpoints::sectors::fetch(self, sector_type).await
+    }
+
     /// Get earnings call transcript
     ///
     /// # Arguments

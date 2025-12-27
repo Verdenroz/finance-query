@@ -105,6 +105,7 @@ pub use error::{Result, YahooError};
 pub use constants::indices::Region as IndicesRegion;
 pub use constants::screener_query;
 pub use constants::screener_types::ScreenerType;
+pub use constants::sector_types::SectorType;
 pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, ValueFormat};
 
 // ============================================================================
@@ -123,6 +124,10 @@ pub use models::{
         ScreenersResponse,
     },
     search::{SearchQuote, SearchResponse},
+    sectors::{
+        Industry, ResearchReport, SectorCompany, SectorETF, SectorMutualFund, SectorOverview,
+        SectorPerformance, SectorResponse,
+    },
 };
 
 // ============================================================================

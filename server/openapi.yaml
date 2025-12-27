@@ -38,6 +38,8 @@ tags:
     description: Institutional and insider holdings
   - name: Screeners
     description: Predefined Yahoo Finance screeners (equity and fund filters)
+  - name: Sectors
+    description: Market sector data (GICS sectors)
   - name: Search
     description: Symbol and company search
 
@@ -729,6 +731,82 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  /v2/sectors/{sector_type}:
+    get:
+      tags: [Sectors]
+      summary: Get sector data
+      description: |
+        Fetch comprehensive data for a market sector including overview, performance,
+        top companies, ETFs, mutual funds, industries, and research reports.
+
+        **Available Sectors (11 GICS Sectors):**
+        - `technology` - Technology (30.38% market weight)
+        - `financial-services` - Financial Services (13.74%)
+        - `consumer-cyclical` - Consumer Cyclical (10.15%)
+        - `communication-services` - Communication Services (9.55%)
+        - `healthcare` - Healthcare (10.52%)
+        - `industrials` - Industrials (8.27%)
+        - `consumer-defensive` - Consumer Defensive (5.72%)
+        - `energy` - Energy (3.24%)
+        - `basic-materials` - Basic Materials (1.86%)
+        - `real-estate` - Real Estate (2.32%)
+        - `utilities` - Utilities (2.46%)
+      parameters:
+        - name: sector_type
+          in: path
+          required: true
+          schema:
+            type: string
+            enum:
+              - technology
+              - financial-services
+              - consumer-cyclical
+              - communication-services
+              - healthcare
+              - industrials
+              - consumer-defensive
+              - energy
+              - basic-materials
+              - real-estate
+              - utilities
+          description: Sector type (kebab-case)
+          example: technology
+        - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Sector data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SectorResponse'
+              example:
+                name: Technology
+                slug: technology
+                overview:
+                  companiesCount: 828
+                  marketWeight: 0.3038
+                  description: "Companies in the technology sector..."
+                performance:
+                  dayChangePercent: 0.00008798734
+                  ytdChangePercent: 0.21215253
+                  oneYearChangePercent: 0.18625236
+                  threeYearChangePercent: 1.542715
+                  fiveYearChangePercent: 1.2627318
+                topCompanies:
+                  - symbol: NVDA
+                    name: NVIDIA Corporation
+                    lastPrice: 190.53
+                    marketCap: 4638833880279
+                    marketWeight: 0.19622724
+                    rating: Strong Buy
+                industries:
+                  - name: Semiconductors
+                    key: semiconductors
+                    marketWeight: 0.3401587
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
   /v2/search:
     get:
       tags: [Search]
@@ -1302,6 +1380,267 @@ components:
                 type: number
           description: Filter value (use array for "btwn" operator)
           example: us
+
+    SectorResponse:
+      type: object
+      description: Comprehensive sector data
+      properties:
+        name:
+          type: string
+          description: Sector display name
+          example: Technology
+        slug:
+          type: string
+          nullable: true
+          description: URL-friendly sector identifier
+          example: technology
+        overview:
+          $ref: '#/components/schemas/SectorOverview'
+        performance:
+          $ref: '#/components/schemas/SectorPerformance'
+        topCompanies:
+          type: array
+          description: Top companies in the sector by market cap
+          items:
+            $ref: '#/components/schemas/SectorCompany'
+        etfs:
+          type: array
+          description: ETFs tracking this sector
+          items:
+            $ref: '#/components/schemas/SectorETF'
+        mutualFunds:
+          type: array
+          description: Mutual funds focused on this sector
+          items:
+            $ref: '#/components/schemas/SectorMutualFund'
+        industries:
+          type: array
+          description: Industries within this sector
+          items:
+            $ref: '#/components/schemas/Industry'
+        researchReports:
+          type: array
+          description: Research reports for this sector
+          items:
+            $ref: '#/components/schemas/ResearchReport'
+
+    SectorOverview:
+      type: object
+      description: Sector overview statistics
+      properties:
+        description:
+          type: string
+          nullable: true
+          description: Sector description
+        companiesCount:
+          type: integer
+          nullable: true
+          description: Number of companies in the sector
+          example: 828
+        marketWeight:
+          type: number
+          format: double
+          nullable: true
+          description: Sector weight in the overall market (0-1)
+          example: 0.3038
+
+    SectorPerformance:
+      type: object
+      description: Sector performance metrics
+      properties:
+        dayChangePercent:
+          type: number
+          format: double
+          nullable: true
+          description: Daily change percentage
+        ytdChangePercent:
+          type: number
+          format: double
+          nullable: true
+          description: Year-to-date change percentage
+        oneYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+          description: 1-year change percentage
+        threeYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+          description: 3-year change percentage
+        fiveYearChangePercent:
+          type: number
+          format: double
+          nullable: true
+          description: 5-year change percentage
+
+    SectorCompany:
+      type: object
+      description: Company within a sector
+      properties:
+        symbol:
+          type: string
+          description: Stock ticker symbol
+          example: NVDA
+        name:
+          type: string
+          nullable: true
+          description: Company name
+          example: NVIDIA Corporation
+        lastPrice:
+          type: number
+          format: double
+          nullable: true
+          description: Last traded price
+          example: 190.53
+        marketCap:
+          type: number
+          format: double
+          nullable: true
+          description: Market capitalization
+          example: 4638833880279
+        marketWeight:
+          type: number
+          format: double
+          nullable: true
+          description: Weight within the sector (0-1)
+          example: 0.19622724
+        dayChangePercent:
+          type: number
+          format: double
+          nullable: true
+          description: Daily change percentage
+        ytdReturn:
+          type: number
+          format: double
+          nullable: true
+          description: Year-to-date return
+        rating:
+          type: string
+          nullable: true
+          description: Analyst rating
+          example: Strong Buy
+        targetPrice:
+          type: number
+          format: double
+          nullable: true
+          description: Analyst target price
+
+    SectorETF:
+      type: object
+      description: ETF tracking the sector
+      properties:
+        symbol:
+          type: string
+          example: XLK
+        name:
+          type: string
+          nullable: true
+        lastPrice:
+          type: number
+          format: double
+          nullable: true
+        dayChangePercent:
+          type: number
+          format: double
+          nullable: true
+        ytdReturn:
+          type: number
+          format: double
+          nullable: true
+        totalAssets:
+          type: number
+          format: double
+          nullable: true
+        expenseRatio:
+          type: number
+          format: double
+          nullable: true
+
+    SectorMutualFund:
+      type: object
+      description: Mutual fund focused on the sector
+      properties:
+        symbol:
+          type: string
+        name:
+          type: string
+          nullable: true
+        lastPrice:
+          type: number
+          format: double
+          nullable: true
+        dayChangePercent:
+          type: number
+          format: double
+          nullable: true
+        ytdReturn:
+          type: number
+          format: double
+          nullable: true
+        totalAssets:
+          type: number
+          format: double
+          nullable: true
+        expenseRatio:
+          type: number
+          format: double
+          nullable: true
+        morningstarRating:
+          type: integer
+          nullable: true
+          description: Morningstar rating (1-5)
+
+    Industry:
+      type: object
+      description: Industry within a sector
+      properties:
+        name:
+          type: string
+          description: Industry name
+          example: Semiconductors
+        key:
+          type: string
+          nullable: true
+          description: Industry key/slug
+          example: semiconductors
+        symbol:
+          type: string
+          nullable: true
+          description: Industry index symbol
+          example: "^YH31130020"
+        marketWeight:
+          type: number
+          format: double
+          nullable: true
+          description: Weight within the sector
+        dayChangePercent:
+          type: number
+          format: double
+          nullable: true
+        ytdReturn:
+          type: number
+          format: double
+          nullable: true
+
+    ResearchReport:
+      type: object
+      description: Research report for the sector
+      properties:
+        id:
+          type: string
+          nullable: true
+        title:
+          type: string
+          nullable: true
+        provider:
+          type: string
+          nullable: true
+        publishedAt:
+          type: integer
+          format: int64
+          nullable: true
+          description: Unix timestamp of publication
 
     SearchResponse:
       type: object
