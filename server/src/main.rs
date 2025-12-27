@@ -6,7 +6,8 @@ use axum::{
     routing::get,
 };
 use finance_query::{
-    Frequency, Interval, StatementType, Ticker, Tickers, TimeRange, YahooError, finance,
+    Frequency, Interval, StatementType, Ticker, Tickers, TimeRange, ValueFormat, YahooError,
+    finance,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -45,11 +46,24 @@ struct PingResponse {
 }
 
 // Query parameter structs
+/// Parse format query parameter into ValueFormat
+fn parse_format(s: Option<&str>) -> ValueFormat {
+    s.and_then(ValueFormat::parse).unwrap_or_default()
+}
+
+/// Apply format transformation to a serializable value
+fn format_response<T: Serialize>(data: T, format: ValueFormat) -> serde_json::Value {
+    let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+    format.transform(json)
+}
+
 #[derive(Deserialize)]
 struct QuoteQuery {
     /// Whether to include company logo URL (default: false)
     #[serde(default)]
     logo: bool,
+    /// Value format: raw, formatted, or both (default: both)
+    format: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -58,6 +72,8 @@ struct QuotesQuery {
     /// Whether to include company logo URLs (default: false)
     #[serde(default)]
     logo: bool,
+    /// Value format: raw, formatted, or both (default: both)
+    format: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -352,16 +368,20 @@ async fn get_quote(
     Path(symbol): Path<String>,
     Query(params): Query<QuoteQuery>,
 ) -> impl IntoResponse {
+    let format = parse_format(params.format.as_deref());
     info!(
-        "Received quote request for symbol: {} (logo={})",
-        symbol, params.logo
+        "Received quote request for symbol: {} (logo={}, format={})",
+        symbol,
+        params.logo,
+        format.as_str()
     );
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.quote(params.logo).await {
             Ok(quote) => {
                 info!("Successfully fetched quote for {}", symbol);
-                (StatusCode::OK, Json(quote)).into_response()
+                let response = format_response(quote, format);
+                (StatusCode::OK, Json(response)).into_response()
             }
             Err(e) => {
                 error!("Failed to fetch quote for {}: {}", symbol, e);
@@ -435,10 +455,12 @@ fn parse_range(s: &str) -> TimeRange {
 /// Uses batch fetching via Tickers for optimal performance (single API call).
 async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    let format = parse_format(params.format.as_deref());
     info!(
-        "Fetching batch quotes for {} symbols (logo={})",
+        "Fetching batch quotes for {} symbols (logo={}, format={})",
         symbols.len(),
-        params.logo
+        params.logo,
+        format.as_str()
     );
 
     // Use Tickers for batch fetching (single API call)
@@ -457,7 +479,8 @@ async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
                 batch_response.success_count(),
                 batch_response.error_count()
             );
-            (StatusCode::OK, Json(batch_response)).into_response()
+            let response = format_response(batch_response, format);
+            (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
             error!("Failed to fetch batch quotes: {}", e);

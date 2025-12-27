@@ -102,7 +102,7 @@ pub use error::{Result, YahooError};
 // ============================================================================
 // Constants and parameter enums
 // ============================================================================
-pub use constants::{Country, Frequency, Interval, StatementType, TimeRange};
+pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, ValueFormat};
 
 // ============================================================================
 // Data models - Types returned by API methods

@@ -133,6 +133,7 @@ paths:
             type: boolean
             default: false
           description: Include company logo URL
+        - $ref: '#/components/parameters/Format'
       responses:
         '200':
           description: Quote data
@@ -165,6 +166,7 @@ paths:
             type: boolean
             default: false
           description: Include company logo URLs
+        - $ref: '#/components/parameters/Format'
       responses:
         '200':
           description: Batch quotes response with successful quotes and any errors
@@ -580,6 +582,17 @@ paths:
                 type: object
 
 components:
+  parameters:
+    Format:
+      name: format
+      in: query
+      schema:
+        type: string
+        enum: [raw, pretty, both]
+        default: raw
+      description: |
+        Controls how fields are displayed
+
   schemas:
     Quote:
       type: object
