@@ -165,3 +165,41 @@ pub async fn hours(region: Option<&str>) -> Result<crate::models::hours::HoursRe
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_hours(region).await
 }
+
+/// Get world market indices quotes
+///
+/// Returns quotes for major world indices, optionally filtered by region.
+///
+/// # Arguments
+///
+/// * `region` - Optional region filter. If None, returns all world indices.
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, IndicesRegion};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Get all world indices
+/// let all = finance::indices(None).await?;
+/// println!("Fetched {} indices", all.success_count());
+///
+/// // Get only Americas indices
+/// let americas = finance::indices(Some(IndicesRegion::Americas)).await?;
+/// # Ok(())
+/// # }
+/// ```
+pub async fn indices(
+    region: Option<crate::constants::indices::Region>,
+) -> Result<crate::tickers::BatchQuotesResponse> {
+    use crate::Tickers;
+    use crate::constants::indices::all_symbols;
+
+    let symbols: Vec<&str> = match region {
+        Some(r) => r.symbols().to_vec(),
+        None => all_symbols(),
+    };
+
+    let tickers = Tickers::new(symbols).await?;
+    tickers.quotes(false).await
+}

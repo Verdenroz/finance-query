@@ -318,6 +318,8 @@ fn api_routes() -> Router {
         .route("/holders/{symbol}/{holder_type}", get(get_holders))
         // GET /v2/indicators/{symbol}?interval=<str>&range=<str>
         .route("/indicators/{symbol}", get(get_indicators))
+        // GET /v2/indices?format=<raw|pretty|both>
+        .route("/indices", get(get_indices))
         // GET /v2/movers/{mover_type}?count=<u32>
         .route("/movers/{mover_type}", get(get_movers))
         // GET /v2/news?count=<u32>
@@ -484,6 +486,47 @@ async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
         }
         Err(e) => {
             error!("Failed to fetch batch quotes: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Query parameters for /v2/indices
+#[derive(Deserialize)]
+struct IndicesQuery {
+    /// Region filter: americas, europe, asia-pacific, middle-east-africa, currencies
+    region: Option<String>,
+    /// Value format: raw, pretty, or both (default: raw)
+    format: Option<String>,
+}
+
+/// GET /v2/indices
+///
+/// Returns quotes for world market indices, optionally filtered by region.
+async fn get_indices(Query(params): Query<IndicesQuery>) -> impl IntoResponse {
+    use finance_query::constants::indices::Region;
+
+    let format = parse_format(params.format.as_deref());
+    let region = params.region.as_deref().and_then(Region::parse);
+
+    info!(
+        "Fetching indices (region={}, format={})",
+        region.map(|r| r.as_str()).unwrap_or("all"),
+        format.as_str()
+    );
+
+    match finance::indices(region).await {
+        Ok(batch_response) => {
+            info!(
+                "Indices fetch complete: {} success, {} errors",
+                batch_response.success_count(),
+                batch_response.error_count()
+            );
+            let response = format_response(batch_response, format);
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch indices: {}", e);
             error_response(e).into_response()
         }
     }

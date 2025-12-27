@@ -281,6 +281,31 @@ paths:
               schema:
                 $ref: '#/components/schemas/IndicatorsSummary'
 
+  /v2/indices:
+    get:
+      tags: [Quotes]
+      summary: Get world market indices
+      description: |
+        Fetch quotes for world market indices, optionally filtered by region.
+      parameters:
+        - name: region
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [americas, europe, asia-pacific, middle-east-africa, currencies]
+          description: Filter by region (returns all if not specified)
+        - $ref: '#/components/parameters/Format'
+      responses:
+        '200':
+          description: Batch quotes response for world indices
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchQuotesResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /v2/news:
     get:
       tags: [News]

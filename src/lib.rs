@@ -102,6 +102,7 @@ pub use error::{Result, YahooError};
 // ============================================================================
 // Constants and parameter enums
 // ============================================================================
+pub use constants::indices::Region as IndicesRegion;
 pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, ValueFormat};
 
 // ============================================================================
