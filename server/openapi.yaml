@@ -134,6 +134,7 @@ paths:
             default: false
           description: Include company logo URL
         - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Quote data
@@ -167,6 +168,7 @@ paths:
             default: false
           description: Include company logo URLs
         - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Batch quotes response with successful quotes and any errors
@@ -209,6 +211,7 @@ paths:
             type: integer
             default: 5
           description: Maximum number of recommendations
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Recommendations
@@ -243,6 +246,7 @@ paths:
             enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
             default: 1mo
           description: Time range
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Chart data
@@ -273,6 +277,7 @@ paths:
           schema:
             type: string
             default: 1mo
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Technical indicators
@@ -296,6 +301,7 @@ paths:
             enum: [americas, europe, asia-pacific, middle-east-africa, currencies]
           description: Filter by region (returns all if not specified)
         - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Batch quotes response for world indices
@@ -318,6 +324,7 @@ paths:
             type: integer
             default: 10
           description: Number of articles to return
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: News articles
@@ -343,6 +350,7 @@ paths:
           schema:
             type: integer
             default: 10
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Symbol news
@@ -368,6 +376,7 @@ paths:
           schema:
             type: integer
           description: Expiration date (Unix timestamp)
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Options chain
@@ -406,6 +415,7 @@ paths:
             enum: [annual, quarterly]
             default: annual
           description: Data frequency (annual or quarterly)
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Financial statement data
@@ -471,6 +481,7 @@ paths:
             enum: [major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster]
           description: Type of holder data
           example: major
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Holder data
@@ -508,6 +519,7 @@ paths:
             enum: [recommendations, upgrades-downgrades, earnings-estimate, earnings-history]
           description: Type of analysis data
           example: recommendations
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Analysis data
@@ -543,6 +555,7 @@ paths:
             type: integer
             default: 10
           description: Number of results to return
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Market movers
@@ -572,6 +585,7 @@ paths:
             type: integer
             default: 6
           description: Maximum results
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Search results
@@ -616,7 +630,16 @@ components:
         enum: [raw, pretty, both]
         default: raw
       description: |
-        Controls how fields are displayed
+        Controls how FormattedValue fields are displayed
+    Fields:
+      name: fields
+      in: query
+      required: false
+      schema:
+        type: string
+        nullable: true
+      description: |
+        Comma-separated list of field names to include in response, defaults to all fields if not specified
 
   schemas:
     Quote:

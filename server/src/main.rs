@@ -51,10 +51,50 @@ fn parse_format(s: Option<&str>) -> ValueFormat {
     s.and_then(ValueFormat::parse).unwrap_or_default()
 }
 
-/// Apply format transformation to a serializable value
-fn format_response<T: Serialize>(data: T, format: ValueFormat) -> serde_json::Value {
-    let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
-    format.transform(json)
+/// Parse comma-separated field names into a set for filtering
+fn parse_fields(s: Option<&str>) -> Option<std::collections::HashSet<String>> {
+    s.map(|fields_str| {
+        fields_str
+            .split(',')
+            .map(|f| f.trim().to_string())
+            .filter(|f| !f.is_empty())
+            .collect()
+    })
+}
+
+/// Filter a JSON value to only include specified fields (top-level only)
+fn filter_fields(
+    value: serde_json::Value,
+    fields: &std::collections::HashSet<String>,
+) -> serde_json::Value {
+    match value {
+        serde_json::Value::Object(map) => {
+            let filtered: serde_json::Map<String, serde_json::Value> = map
+                .into_iter()
+                .filter(|(k, _)| fields.contains(k))
+                .collect();
+            serde_json::Value::Object(filtered)
+        }
+        serde_json::Value::Array(arr) => {
+            // Filter each object in the array
+            serde_json::Value::Array(arr.into_iter().map(|v| filter_fields(v, fields)).collect())
+        }
+        // Non-object/array values pass through unchanged
+        other => other,
+    }
+}
+
+/// Apply format transformation and optional field filtering
+fn apply_transforms(
+    value: serde_json::Value,
+    format: ValueFormat,
+    fields: Option<&std::collections::HashSet<String>>,
+) -> serde_json::Value {
+    let formatted = format.transform(value);
+    match fields {
+        Some(f) => filter_fields(formatted, f),
+        None => formatted,
+    }
 }
 
 #[derive(Deserialize)]
@@ -62,8 +102,10 @@ struct QuoteQuery {
     /// Whether to include company logo URL (default: false)
     #[serde(default)]
     logo: bool,
-    /// Value format: raw, formatted, or both (default: both)
+    /// Value format: raw, pretty, or both (default: raw)
     format: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -72,14 +114,18 @@ struct QuotesQuery {
     /// Whether to include company logo URLs (default: false)
     #[serde(default)]
     logo: bool,
-    /// Value format: raw, formatted, or both (default: both)
+    /// Value format: raw, pretty, or both (default: raw)
     format: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct RecommendationsQuery {
     #[serde(default = "default_limit")]
     limit: u32,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -88,6 +134,8 @@ struct ChartQuery {
     interval: String,
     #[serde(default = "default_range")]
     range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -95,11 +143,15 @@ struct SearchQuery {
     q: String,
     #[serde(default = "default_hits")]
     hits: u32,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct OptionsQuery {
     date: Option<i64>, // Optional expiration timestamp
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -107,6 +159,26 @@ struct FinancialsQuery {
     /// Frequency: annual or quarterly (default: annual)
     #[serde(default = "default_frequency")]
     frequency: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct HoldersQuery {
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct AnalysisQuery {
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct NewsQuery {
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 fn default_frequency() -> String {
@@ -210,6 +282,8 @@ impl MoverType {
 struct MoversQuery {
     #[serde(default = "default_movers_count")]
     count: u32,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -365,24 +439,27 @@ async fn ping() -> impl IntoResponse {
 
 /// GET /v2/quote/{symbol}
 ///
-/// Query: `logo` (bool, default: false)
+/// Query: `logo` (bool, default: false), `format` (raw|pretty|both), `fields` (comma-separated)
 async fn get_quote(
     Path(symbol): Path<String>,
     Query(params): Query<QuoteQuery>,
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
+    let fields = parse_fields(params.fields.as_deref());
     info!(
-        "Received quote request for symbol: {} (logo={}, format={})",
+        "Received quote request for symbol: {} (logo={}, format={}, fields={:?})",
         symbol,
         params.logo,
-        format.as_str()
+        format.as_str(),
+        params.fields
     );
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.quote(params.logo).await {
             Ok(quote) => {
                 info!("Successfully fetched quote for {}", symbol);
-                let response = format_response(quote, format);
+                let json = serde_json::to_value(quote).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, format, fields.as_ref());
                 (StatusCode::OK, Json(response)).into_response()
             }
             Err(e) => {
@@ -452,17 +529,20 @@ fn parse_range(s: &str) -> TimeRange {
 
 /// GET /v2/quotes
 ///
-/// Query: `symbols` (comma-separated, required), `logo` (bool, default: false)
+/// Query: `symbols` (comma-separated, required), `logo` (bool, default: false),
+///        `format` (raw|pretty|both), `fields` (comma-separated)
 ///
 /// Uses batch fetching via Tickers for optimal performance (single API call).
 async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     let format = parse_format(params.format.as_deref());
+    let fields = parse_fields(params.fields.as_deref());
     info!(
-        "Fetching batch quotes for {} symbols (logo={}, format={})",
+        "Fetching batch quotes for {} symbols (logo={}, format={}, fields={:?})",
         symbols.len(),
         params.logo,
-        format.as_str()
+        format.as_str(),
+        params.fields
     );
 
     // Use Tickers for batch fetching (single API call)
@@ -481,7 +561,8 @@ async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
                 batch_response.success_count(),
                 batch_response.error_count()
             );
-            let response = format_response(batch_response, format);
+            let json = serde_json::to_value(batch_response).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
@@ -498,6 +579,8 @@ struct IndicesQuery {
     region: Option<String>,
     /// Value format: raw, pretty, or both (default: raw)
     format: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
 }
 
 /// GET /v2/indices
@@ -507,12 +590,14 @@ async fn get_indices(Query(params): Query<IndicesQuery>) -> impl IntoResponse {
     use finance_query::constants::indices::Region;
 
     let format = parse_format(params.format.as_deref());
+    let fields = parse_fields(params.fields.as_deref());
     let region = params.region.as_deref().and_then(Region::parse);
 
     info!(
-        "Fetching indices (region={}, format={})",
+        "Fetching indices (region={}, format={}, fields={:?})",
         region.map(|r| r.as_str()).unwrap_or("all"),
-        format.as_str()
+        format.as_str(),
+        params.fields
     );
 
     match finance::indices(region).await {
@@ -522,7 +607,8 @@ async fn get_indices(Query(params): Query<IndicesQuery>) -> impl IntoResponse {
                 batch_response.success_count(),
                 batch_response.error_count()
             );
-            let response = format_response(batch_response, format);
+            let json = serde_json::to_value(batch_response).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
@@ -539,11 +625,19 @@ async fn get_recommendations(
     Path(symbol): Path<String>,
     Query(params): Query<RecommendationsQuery>,
 ) -> impl IntoResponse {
-    info!("Fetching recommendations for {}", symbol);
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Fetching recommendations for {} (fields={:?})",
+        symbol, params.fields
+    );
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.recommendations(params.limit).await {
-            Ok(recommendation) => (StatusCode::OK, Json(recommendation)).into_response(),
+            Ok(recommendation) => {
+                let json = serde_json::to_value(recommendation).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
             Err(e) => {
                 error!("Failed to fetch recommendations: {}", e);
                 error_response(e).into_response()
@@ -565,11 +659,19 @@ async fn get_chart(
 ) -> impl IntoResponse {
     let interval = parse_interval(&params.interval);
     let range = parse_range(&params.range);
-    info!("Fetching chart data for {}", symbol);
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Fetching chart data for {} (fields={:?})",
+        symbol, params.fields
+    );
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.chart(interval, range).await {
-            Ok(chart) => (StatusCode::OK, Json(chart)).into_response(),
+            Ok(chart) => {
+                let json = serde_json::to_value(chart).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
             Err(e) => {
                 error!("Failed to fetch chart data: {}", e);
                 error_response(e).into_response()
@@ -591,14 +693,19 @@ async fn get_indicators(
 ) -> impl IntoResponse {
     let interval = parse_interval(&params.interval);
     let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
     info!(
-        "Calculating indicators for {} with interval={:?}, range={:?}",
-        symbol, interval, range
+        "Calculating indicators for {} with interval={:?}, range={:?} (fields={:?})",
+        symbol, interval, range, params.fields
     );
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.indicators(interval, range).await {
-            Ok(indicators) => (StatusCode::OK, Json(indicators)).into_response(),
+            Ok(indicators) => {
+                let json = serde_json::to_value(indicators).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
             Err(e) => {
                 error!("Failed to calculate indicators: {}", e);
                 error_response(e).into_response()
@@ -615,10 +722,15 @@ async fn get_indicators(
 ///
 /// Query: `q` (string, required), `hits` (u32, default via `SEARCH_HITS` or server default)
 async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
-    info!("Searching for: {}", params.q);
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Searching for: {} (fields={:?})", params.q, params.fields);
 
     match finance::search(&params.q, params.hits).await {
-        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
+        Ok(result) => {
+            let json = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
             error!("Search failed: {}", e);
             error_response(e).into_response()
@@ -629,11 +741,16 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
 /// GET /v2/news
 ///
 /// Returns general market news
-async fn get_general_news() -> impl IntoResponse {
-    info!("Fetching general market news");
+async fn get_general_news(Query(params): Query<NewsQuery>) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching general market news (fields={:?})", params.fields);
 
     match finance::news().await {
-        Ok(news) => (StatusCode::OK, Json(news)).into_response(),
+        Ok(news) => {
+            let json = serde_json::to_value(news).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
             error!("Failed to fetch general news: {}", e);
             error_response(e).into_response()
@@ -644,12 +761,20 @@ async fn get_general_news() -> impl IntoResponse {
 /// GET /v2/news/{symbol}
 ///
 /// Returns news for a specific symbol
-async fn get_news(Path(symbol): Path<String>) -> impl IntoResponse {
-    info!("Fetching news for {}", symbol);
+async fn get_news(
+    Path(symbol): Path<String>,
+    Query(params): Query<NewsQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching news for {} (fields={:?})", symbol, params.fields);
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.news().await {
-            Ok(news) => (StatusCode::OK, Json(news)).into_response(),
+            Ok(news) => {
+                let json = serde_json::to_value(news).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
             Err(e) => {
                 error!("Failed to fetch news: {}", e);
                 error_response(e).into_response()
@@ -669,11 +794,20 @@ async fn get_options(
     Path(symbol): Path<String>,
     Query(params): Query<OptionsQuery>,
 ) -> impl IntoResponse {
-    info!("Fetching options for {}", symbol);
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Fetching options for {} (fields={:?})",
+        symbol, params.fields
+    );
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.options(params.date).await {
-            Ok(options_response) => (StatusCode::OK, Json(options_response)).into_response(),
+            Ok(options_response) => {
+                let json =
+                    serde_json::to_value(options_response).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
             Err(e) => {
                 error!("Failed to fetch options: {}", e);
                 error_response(e).into_response()
@@ -697,6 +831,7 @@ async fn get_financials(
     Query(params): Query<FinancialsQuery>,
 ) -> impl IntoResponse {
     let frequency = parse_frequency(&params.frequency);
+    let fields = parse_fields(params.fields.as_deref());
 
     let statement_type = match parse_statement_type(&statement) {
         Some(st) => st,
@@ -710,13 +845,17 @@ async fn get_financials(
     };
 
     info!(
-        "Fetching {} {} financials for {}",
-        params.frequency, statement, symbol
+        "Fetching {} {} financials for {} (fields={:?})",
+        params.frequency, statement, symbol, params.fields
     );
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.financials(statement_type, frequency).await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+            Ok(result) => {
+                let json = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
             Err(e) => {
                 error!("Failed to fetch financials: {}", e);
                 error_response(e).into_response()
@@ -778,8 +917,12 @@ async fn get_quote_type(Path(symbol): Path<String>) -> impl IntoResponse {
 /// Path params:
 /// - `holder_type`: major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster
 ///
-/// Query: (none)
-async fn get_holders(Path((symbol, holder_type)): Path<(String, String)>) -> impl IntoResponse {
+/// Query: `fields` (comma-separated, optional)
+async fn get_holders(
+    Path((symbol, holder_type)): Path<(String, String)>,
+    Query(params): Query<HoldersQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
     let ht = match HolderType::from_str(&holder_type) {
         Some(t) => t,
         None => {
@@ -791,7 +934,10 @@ async fn get_holders(Path((symbol, holder_type)): Path<(String, String)>) -> imp
         }
     };
 
-    info!("Fetching {} holders for {}", holder_type, symbol);
+    info!(
+        "Fetching {} holders for {} (fields={:?})",
+        holder_type, symbol, params.fields
+    );
 
     let ticker = match Ticker::new(&symbol).await {
         Ok(t) => t,
@@ -829,7 +975,10 @@ async fn get_holders(Path((symbol, holder_type)): Path<(String, String)>) -> imp
     };
 
     match result {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
             error!("Failed to fetch {} holders: {}", holder_type, e);
             error_response(e).into_response()
@@ -843,7 +992,11 @@ async fn get_holders(Path((symbol, holder_type)): Path<(String, String)>) -> imp
 /// - `analysis_type`: recommendations, upgrades-downgrades, earnings-estimate, earnings-history
 ///
 /// Query: (none)
-async fn get_analysis(Path((symbol, analysis_type)): Path<(String, String)>) -> impl IntoResponse {
+async fn get_analysis(
+    Path((symbol, analysis_type)): Path<(String, String)>,
+    Query(params): Query<AnalysisQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
     let at = match AnalysisType::from_str(&analysis_type) {
         Some(t) => t,
         None => {
@@ -855,7 +1008,10 @@ async fn get_analysis(Path((symbol, analysis_type)): Path<(String, String)>) -> 
         }
     };
 
-    info!("Fetching {} analysis for {}", analysis_type, symbol);
+    info!(
+        "Fetching {} analysis for {} (fields={:?})",
+        analysis_type, symbol, params.fields
+    );
 
     let ticker = match Ticker::new(&symbol).await {
         Ok(t) => t,
@@ -885,7 +1041,10 @@ async fn get_analysis(Path((symbol, analysis_type)): Path<(String, String)>) -> 
     };
 
     match result {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
             error!("Failed to fetch {} analysis: {}", analysis_type, e);
             error_response(e).into_response()
@@ -903,6 +1062,7 @@ async fn get_movers(
     Path(mover_type): Path<String>,
     Query(params): Query<MoversQuery>,
 ) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
     let mt = match MoverType::from_str(&mover_type) {
         Some(t) => t,
         None => {
@@ -914,7 +1074,10 @@ async fn get_movers(
         }
     };
 
-    info!("Fetching {} movers (count={})", mover_type, params.count);
+    info!(
+        "Fetching {} movers (count={}, fields={:?})",
+        mover_type, params.count, params.fields
+    );
 
     let result = match mt {
         MoverType::Gainers => finance::gainers(params.count).await,
@@ -923,7 +1086,11 @@ async fn get_movers(
     };
 
     match result {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Ok(data) => {
+            let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
             error!("Failed to fetch {} movers: {}", mover_type, e);
             error_response(e).into_response()
