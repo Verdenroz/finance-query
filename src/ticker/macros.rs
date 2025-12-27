@@ -2,14 +2,11 @@
 // SPDX-License-Identifier: MIT
 
 //! Macros for generating quote summary accessor methods.
-//!
-//! This module contains declarative macros that eliminate code duplication
-//! between sync and async implementations of quote summary accessors.
 
-/// Generate quote summary accessor methods for both sync and async Ticker types.
+/// Generate quote summary accessor methods for Ticker.
 ///
-/// This macro eliminates ~300 lines of duplication by generating identical
-/// methods for both `AsyncTicker` and `Ticker` from a single declaration.
+/// This macro eliminates code duplication by generating accessor methods
+/// from a single declaration.
 ///
 /// # Usage
 ///
@@ -24,13 +21,12 @@
 /// ```
 ///
 /// This generates:
-/// - `AsyncTicker::price(&self) -> Result<Option<Price>>`
 /// - `Ticker::price(&self) -> Result<Option<Price>>`
 ///
-/// Both methods follow the same pattern:
-/// 1. Ensure quote summary data is loaded
-/// 2. Read from cache
-/// 3. Extract and return the typed module data
+/// Each method:
+/// 1. Ensures quote summary data is loaded
+/// 2. Reads from cache
+/// 3. Extracts and returns the typed module data
 macro_rules! define_quote_accessors {
     (
         $(
@@ -38,25 +34,12 @@ macro_rules! define_quote_accessors {
             $method_name:ident -> $return_type:ty, $module_name:literal
         ),* $(,)?
     ) => {
-        // Generate async methods for AsyncTicker
-        impl AsyncTicker {
+        impl Ticker {
             $(
                 $(#[$meta])*
                 pub async fn $method_name(&self) -> Result<Option<$return_type>> {
                     self.ensure_quote_summary_loaded().await?;
                     let cache = self.quote_summary.read().await;
-                    Ok(cache.as_ref().and_then(|r| r.get_typed($module_name).ok()))
-                }
-            )*
-        }
-
-        // Generate sync methods for Ticker
-        impl Ticker {
-            $(
-                $(#[$meta])*
-                pub fn $method_name(&self) -> Result<Option<$return_type>> {
-                    self.ensure_quote_summary_loaded()?;
-                    let cache = self.quote_summary.read().unwrap();
                     Ok(cache.as_ref().and_then(|r| r.get_typed($module_name).ok()))
                 }
             )*

@@ -6,7 +6,7 @@ use axum::{
     routing::get,
 };
 use finance_query::{
-    AsyncTicker, Frequency, Interval, StatementType, Tickers, TimeRange, YahooError, finance,
+    Frequency, Interval, StatementType, Ticker, Tickers, TimeRange, YahooError, finance,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -357,7 +357,7 @@ async fn get_quote(
         symbol, params.logo
     );
 
-    match AsyncTicker::new(&symbol).await {
+    match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.quote(params.logo).await {
             Ok(quote) => {
                 info!("Successfully fetched quote for {}", symbol);
@@ -475,7 +475,7 @@ async fn get_recommendations(
 ) -> impl IntoResponse {
     info!("Fetching recommendations for {}", symbol);
 
-    match AsyncTicker::new(&symbol).await {
+    match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.recommendations(params.limit).await {
             Ok(recommendation) => (StatusCode::OK, Json(recommendation)).into_response(),
             Err(e) => {
@@ -501,7 +501,7 @@ async fn get_chart(
     let range = parse_range(&params.range);
     info!("Fetching chart data for {}", symbol);
 
-    match AsyncTicker::new(&symbol).await {
+    match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.chart(interval, range).await {
             Ok(chart) => (StatusCode::OK, Json(chart)).into_response(),
             Err(e) => {
@@ -530,7 +530,7 @@ async fn get_indicators(
         symbol, interval, range
     );
 
-    match AsyncTicker::new(&symbol).await {
+    match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.indicators(interval, range).await {
             Ok(indicators) => (StatusCode::OK, Json(indicators)).into_response(),
             Err(e) => {
@@ -581,7 +581,7 @@ async fn get_general_news() -> impl IntoResponse {
 async fn get_news(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching news for {}", symbol);
 
-    match AsyncTicker::new(&symbol).await {
+    match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.news().await {
             Ok(news) => (StatusCode::OK, Json(news)).into_response(),
             Err(e) => {
@@ -605,7 +605,7 @@ async fn get_options(
 ) -> impl IntoResponse {
     info!("Fetching options for {}", symbol);
 
-    match AsyncTicker::new(&symbol).await {
+    match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.options(params.date).await {
             Ok(options_response) => (StatusCode::OK, Json(options_response)).into_response(),
             Err(e) => {
@@ -648,7 +648,7 @@ async fn get_financials(
         params.frequency, statement, symbol
     );
 
-    match AsyncTicker::new(&symbol).await {
+    match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.financials(statement_type, frequency).await {
             Ok(response) => (StatusCode::OK, Json(response)).into_response(),
             Err(e) => {
@@ -692,7 +692,7 @@ async fn get_hours(Query(params): Query<HoursQuery>) -> impl IntoResponse {
 async fn get_quote_type(Path(symbol): Path<String>) -> impl IntoResponse {
     info!("Fetching quote type for {}", symbol);
 
-    match AsyncTicker::new(&symbol).await {
+    match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.quote_type().await {
             Ok(response) => (StatusCode::OK, Json(response)).into_response(),
             Err(e) => {
@@ -727,7 +727,7 @@ async fn get_holders(Path((symbol, holder_type)): Path<(String, String)>) -> imp
 
     info!("Fetching {} holders for {}", holder_type, symbol);
 
-    let ticker = match AsyncTicker::new(&symbol).await {
+    let ticker = match Ticker::new(&symbol).await {
         Ok(t) => t,
         Err(e) => {
             error!("Failed to create ticker: {}", e);
@@ -791,7 +791,7 @@ async fn get_analysis(Path((symbol, analysis_type)): Path<(String, String)>) -> 
 
     info!("Fetching {} analysis for {}", analysis_type, symbol);
 
-    let ticker = match AsyncTicker::new(&symbol).await {
+    let ticker = match Ticker::new(&symbol).await {
         Ok(t) => t,
         Err(e) => {
             error!("Failed to create ticker: {}", e);

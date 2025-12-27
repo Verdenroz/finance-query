@@ -10,55 +10,18 @@
 //! - **Efficient grouping**: All quote modules fetched in ONE request on first access
 //! - **100% type safe**: All data structures fully typed with comprehensive models
 //! - **In-memory caching**: Fetched data persists for the lifetime of the Ticker
-//! - **Both sync and async**: Choose synchronous or asynchronous API based on your needs
+//! - **Async-first**: Built on tokio for efficient concurrent operations
 //! - **Configurable client**: Customize timeout, proxy, language, and region settings
 //!
-//! ## Quick Start - Synchronous API
+//! ## Quick Start
 //!
 //! ```no_run
 //! use finance_query::Ticker;
 //!
-//! fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // Simple: Create a ticker with default configuration
-//!     let ticker = Ticker::new("AAPL")?;
-//!
-//!     // First access to any quote property fetches ALL quote modules in one request
-//!     if let Some(financials) = ticker.financial_data()? {
-//!         println!("Financial data: {:?}", financials);
-//!     }
-//!
-//!     // Subsequent accesses use cached data (no additional network calls)
-//!     if let Some(profile) = ticker.asset_profile()? {
-//!         println!("Company profile: {:?}", profile);
-//!     }
-//!
-//!     // Chart data is fetched separately and cached by interval/range
-//!     let chart = ticker.chart(
-//!         finance_query::Interval::OneDay,
-//!         finance_query::TimeRange::OneMonth
-//!     )?;
-//!     println!("Candles: {}", chart.candles.len());
-//!
-//!     // Builder pattern: Fluent configuration
-//!     let ticker_jp = Ticker::builder("7203.T")
-//!         .lang("ja-JP")
-//!         .region("JP")
-//!         .timeout(std::time::Duration::from_secs(30))
-//!         .build()?;
-//!
-//!     Ok(())
-//! }
-//! ```
-//!
-//! ## Quick Start - Asynchronous API
-//!
-//! ```no_run
-//! use finance_query::AsyncTicker;
-//!
 //! #[tokio::main]
 //! async fn main() -> Result<(), Box<dyn std::error::Error>> {
-//!     // Simple: Create an async ticker with default configuration
-//!     let ticker = AsyncTicker::new("AAPL").await?;
+//!     // Simple: Create a ticker with default configuration
+//!     let ticker = Ticker::new("AAPL").await?;
 //!
 //!     // First access to any quote property fetches ALL quote modules in one request
 //!     if let Some(financials) = ticker.financial_data().await? {
@@ -78,7 +41,7 @@
 //!     println!("Candles: {}", chart.candles.len());
 //!
 //!     // Builder pattern: Fluent configuration
-//!     let ticker_jp = AsyncTicker::builder("7203.T")
+//!     let ticker_jp = Ticker::builder("7203.T")
 //!         .lang("ja-JP")
 //!         .region("JP")
 //!         .timeout(std::time::Duration::from_secs(30))
@@ -123,7 +86,7 @@ mod tickers;
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
-pub use ticker::{AsyncTicker, AsyncTickerBuilder, Ticker, TickerBuilder};
+pub use ticker::{Ticker, TickerBuilder};
 pub use tickers::{BatchChartsResponse, BatchQuotesResponse, Tickers, TickersBuilder};
 
 // ============================================================================
