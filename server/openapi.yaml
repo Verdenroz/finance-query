@@ -18,6 +18,8 @@ servers:
 tags:
   - name: Health
     description: Health check and status endpoints
+  - name: Market
+    description: Market hours and status
   - name: Quotes
     description: Stock quote and pricing data
   - name: Charts
@@ -76,6 +78,42 @@ paths:
                   message:
                     type: string
                     example: pong
+
+  /v2/hours:
+    get:
+      tags: [Market]
+      summary: Get market hours
+      description: |
+        Fetch current market hours and status for a specific region.
+        Returns market open/close times, current status, and timezone information.
+      parameters:
+        - name: region
+          in: query
+          schema:
+            $ref: '#/components/schemas/Region'
+          description: Market region code (defaults to US if not specified)
+      responses:
+        '200':
+          description: Market hours data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HoursResponse'
+              example:
+                markets:
+                  - id: us
+                    name: U.S. markets
+                    status: closed
+                    message: U.S. markets closed
+                    open: "2025-12-26T14:30:00Z"
+                    close: "2025-12-26T21:00:00Z"
+                    time: "2025-12-27T01:06:14Z"
+                    timezone: America/New_York
+                    timezoneShort: EST
+                    gmtOffset: -18000
+                    dst: false
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/quote/{symbol}:
     get:
@@ -909,6 +947,104 @@ components:
           type: string
         message:
           type: string
+
+    Region:
+      type: string
+      description: Market region code
+      enum:
+        - AR  # Argentina
+        - AU  # Australia
+        - BR  # Brazil
+        - CA  # Canada
+        - CN  # China
+        - DK  # Denmark
+        - FI  # Finland
+        - FR  # France
+        - DE  # Germany
+        - GR  # Greece
+        - HK  # Hong Kong
+        - IN  # India
+        - IL  # Israel
+        - IT  # Italy
+        - JP  # Japan
+        - KR  # Korea
+        - MY  # Malaysia
+        - MX  # Mexico
+        - NZ  # New Zealand
+        - NO  # Norway
+        - PT  # Portugal
+        - RU  # Russia
+        - SG  # Singapore
+        - ES  # Spain
+        - SE  # Sweden
+        - TW  # Taiwan
+        - TH  # Thailand
+        - TR  # Turkey
+        - GB  # United Kingdom
+        - US  # United States
+        - VN  # Vietnam
+      default: US
+
+    HoursResponse:
+      type: object
+      description: Market hours response containing market time data
+      properties:
+        markets:
+          type: array
+          items:
+            $ref: '#/components/schemas/MarketTime'
+
+    MarketTime:
+      type: object
+      description: Market time information for a specific region
+      properties:
+        id:
+          type: string
+          description: Market identifier (e.g., "us", "jp", "gb")
+          example: us
+        name:
+          type: string
+          description: Human-readable market name
+          example: U.S. markets
+        status:
+          type: string
+          description: Current market status (e.g., "open", "closed")
+          example: closed
+        message:
+          type: string
+          description: Status message
+          example: U.S. markets closed
+        open:
+          type: string
+          format: date-time
+          description: Market open time (ISO 8601)
+          example: "2025-12-26T14:30:00Z"
+        close:
+          type: string
+          format: date-time
+          description: Market close time (ISO 8601)
+          example: "2025-12-26T21:00:00Z"
+        time:
+          type: string
+          format: date-time
+          description: Current time (ISO 8601)
+          example: "2025-12-27T01:06:14Z"
+        timezone:
+          type: string
+          description: Timezone name (IANA format)
+          example: America/New_York
+        timezoneShort:
+          type: string
+          description: Short timezone name
+          example: EST
+        gmtOffset:
+          type: integer
+          description: GMT offset in seconds
+          example: -18000
+        dst:
+          type: boolean
+          description: Whether daylight saving time is in effect
+          example: false
 
   responses:
     BadRequest:

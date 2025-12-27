@@ -650,6 +650,34 @@ impl YahooClient {
     ) -> Result<serde_json::Value> {
         crate::endpoints::earnings_transcript::fetch(self, event_id, company_id).await
     }
+
+    /// Get market hours/time data
+    ///
+    /// Returns the current status for various markets.
+    ///
+    /// # Arguments
+    ///
+    /// * `region` - Optional region override (e.g., "US", "JP", "GB"). If None, uses client's configured region.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// // Use client's default region
+    /// let hours = client.get_hours(None).await?;
+    ///
+    /// // Get Japan market hours
+    /// let jp_hours = client.get_hours(Some("JP")).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn get_hours(
+        &self,
+        region: Option<&str>,
+    ) -> Result<crate::models::hours::HoursResponse> {
+        crate::endpoints::hours::fetch(self, region).await
+    }
 }
 
 /// Blocking/synchronous Yahoo Finance client
@@ -788,6 +816,11 @@ impl BlockingYahooClient {
     ) -> Result<serde_json::Value> {
         self.runtime
             .block_on(self.inner.get_earnings_transcript(event_id, company_id))
+    }
+
+    /// Get market hours (blocking)
+    pub fn get_hours(&self, region: Option<&str>) -> Result<crate::models::hours::HoursResponse> {
+        self.runtime.block_on(self.inner.get_hours(region))
     }
 }
 

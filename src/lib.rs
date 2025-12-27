@@ -145,6 +145,7 @@ pub use constants::{Country, Frequency, Interval, StatementType, TimeRange};
 pub use models::{
     chart::{Candle, Chart, ChartMeta},
     financials::FinancialStatement,
+    hours::{HoursResponse, MarketTime},
     movers::{MoverQuote, MoversResponse},
     news::News,
     options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse},

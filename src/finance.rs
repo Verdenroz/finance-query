@@ -138,3 +138,30 @@ pub async fn earnings_transcript(event_id: &str, company_id: &str) -> Result<Val
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_earnings_transcript(event_id, company_id).await
 }
+
+/// Get market hours/status
+///
+/// Returns the current status for various markets.
+///
+/// # Arguments
+///
+/// * `region` - Optional region override (e.g., "US", "JP", "GB"). If None, uses default (US).
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Get US market hours (default)
+/// let hours = finance::hours(None).await?;
+///
+/// // Get Japan market hours
+/// let jp_hours = finance::hours(Some("JP")).await?;
+/// # Ok(())
+/// # }
+/// ```
+pub async fn hours(region: Option<&str>) -> Result<crate::models::hours::HoursResponse> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.get_hours(region).await
+}

@@ -4,6 +4,8 @@
 pub mod chart;
 /// Financials (fundamentals-timeseries) models.
 pub mod financials;
+/// Market hours models.
+pub mod hours;
 /// Technical indicators models.
 pub mod indicators;
 /// Market movers models.
@@ -22,6 +24,7 @@ pub mod search;
 // Re-exports for convenience
 pub use chart::{Candle, Chart, ChartMeta};
 pub use financials::FinancialStatement;
+pub use hours::{HoursResponse, MarketTime};
 pub use movers::{MoverQuote, MoversResponse};
 pub use news::{NewsArticle, NewsResponse, NewsThumbnail};
 pub use options::{OptionChain, OptionContract, OptionsQuote, OptionsResponse};

@@ -72,6 +72,10 @@ pub mod endpoints {
     pub fn options(symbol: &str) -> String {
         format!("{}/v7/finance/options/{}", YAHOO_FINANCE_QUERY2, symbol)
     }
+
+    /// Market hours/time endpoint
+    pub const MARKET_TIME: &str =
+        const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v6/finance/markettime");
 }
 
 /// URL builders (functions that construct full URLs with query params)
@@ -664,35 +668,69 @@ impl TimeRange {
 /// Using the Country enum ensures correct lang/region pairing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub enum Country {
-    /// France (fr-FR, FR)
-    France,
-    /// India (en-IN, IN)
-    India,
-    /// Hong Kong (zh-Hant-HK, HK)
-    HongKong,
-    /// Germany (de-DE, DE)
-    Germany,
+    /// Argentina (es-AR, AR)
+    Argentina,
+    /// Australia (en-AU, AU)
+    Australia,
+    /// Brazil (pt-BR, BR)
+    Brazil,
     /// Canada (en-CA, CA)
     Canada,
-    /// Spain (es-ES, ES)
-    Spain,
+    /// China (zh-CN, CN)
+    China,
+    /// Denmark (da-DK, DK)
+    Denmark,
+    /// Finland (fi-FI, FI)
+    Finland,
+    /// France (fr-FR, FR)
+    France,
+    /// Germany (de-DE, DE)
+    Germany,
+    /// Greece (el-GR, GR)
+    Greece,
+    /// Hong Kong (zh-Hant-HK, HK)
+    HongKong,
+    /// India (en-IN, IN)
+    India,
+    /// Israel (he-IL, IL)
+    Israel,
     /// Italy (it-IT, IT)
     Italy,
+    /// Japan (ja-JP, JP)
+    Japan,
+    /// Korea (ko-KR, KR)
+    Korea,
+    /// Malaysia (ms-MY, MY)
+    Malaysia,
+    /// Mexico (es-MX, MX)
+    Mexico,
+    /// New Zealand (en-NZ, NZ)
+    NewZealand,
+    /// Norway (nb-NO, NO)
+    Norway,
+    /// Portugal (pt-PT, PT)
+    Portugal,
+    /// Russia (ru-RU, RU)
+    Russia,
+    /// Singapore (en-SG, SG)
+    Singapore,
+    /// Spain (es-ES, ES)
+    Spain,
+    /// Sweden (sv-SE, SE)
+    Sweden,
+    /// Taiwan (zh-TW, TW)
+    Taiwan,
+    /// Thailand (th-TH, TH)
+    Thailand,
+    /// Turkey (tr-TR, TR)
+    Turkey,
+    /// United Kingdom (en-GB, GB)
+    UnitedKingdom,
     /// United States (en-US, US) - Default
     #[default]
     UnitedStates,
-    /// Australia (en-AU, AU)
-    Australia,
-    /// United Kingdom (en-GB, GB)
-    UnitedKingdom,
-    /// Brazil (pt-BR, BR)
-    Brazil,
-    /// New Zealand (en-NZ, NZ)
-    NewZealand,
-    /// Singapore (en-SG, SG)
-    Singapore,
-    /// Taiwan (zh-tw, TW)
-    Taiwan,
+    /// Vietnam (vi-VN, VN)
+    Vietnam,
 }
 
 impl Country {
@@ -708,20 +746,37 @@ impl Country {
     /// ```
     pub fn lang(&self) -> &'static str {
         match self {
-            Country::France => "fr-FR",
-            Country::India => "en-IN",
-            Country::HongKong => "zh-Hant-HK",
-            Country::Germany => "de-DE",
-            Country::Canada => "en-CA",
-            Country::Spain => "es-ES",
-            Country::Italy => "it-IT",
-            Country::UnitedStates => "en-US",
+            Country::Argentina => "es-AR",
             Country::Australia => "en-AU",
-            Country::UnitedKingdom => "en-GB",
             Country::Brazil => "pt-BR",
+            Country::Canada => "en-CA",
+            Country::China => "zh-CN",
+            Country::Denmark => "da-DK",
+            Country::Finland => "fi-FI",
+            Country::France => "fr-FR",
+            Country::Germany => "de-DE",
+            Country::Greece => "el-GR",
+            Country::HongKong => "zh-Hant-HK",
+            Country::India => "en-IN",
+            Country::Israel => "he-IL",
+            Country::Italy => "it-IT",
+            Country::Japan => "ja-JP",
+            Country::Korea => "ko-KR",
+            Country::Malaysia => "ms-MY",
+            Country::Mexico => "es-MX",
             Country::NewZealand => "en-NZ",
+            Country::Norway => "nb-NO",
+            Country::Portugal => "pt-PT",
+            Country::Russia => "ru-RU",
             Country::Singapore => "en-SG",
-            Country::Taiwan => "zh-tw",
+            Country::Spain => "es-ES",
+            Country::Sweden => "sv-SE",
+            Country::Taiwan => "zh-TW",
+            Country::Thailand => "th-TH",
+            Country::Turkey => "tr-TR",
+            Country::UnitedKingdom => "en-GB",
+            Country::UnitedStates => "en-US",
+            Country::Vietnam => "vi-VN",
         }
     }
 
@@ -737,20 +792,37 @@ impl Country {
     /// ```
     pub fn region(&self) -> &'static str {
         match self {
-            Country::France => "FR",
-            Country::India => "IN",
-            Country::HongKong => "HK",
-            Country::Germany => "DE",
-            Country::Canada => "CA",
-            Country::Spain => "ES",
-            Country::Italy => "IT",
-            Country::UnitedStates => "US",
+            Country::Argentina => "AR",
             Country::Australia => "AU",
-            Country::UnitedKingdom => "GB",
             Country::Brazil => "BR",
+            Country::Canada => "CA",
+            Country::China => "CN",
+            Country::Denmark => "DK",
+            Country::Finland => "FI",
+            Country::France => "FR",
+            Country::Germany => "DE",
+            Country::Greece => "GR",
+            Country::HongKong => "HK",
+            Country::India => "IN",
+            Country::Israel => "IL",
+            Country::Italy => "IT",
+            Country::Japan => "JP",
+            Country::Korea => "KR",
+            Country::Malaysia => "MY",
+            Country::Mexico => "MX",
             Country::NewZealand => "NZ",
+            Country::Norway => "NO",
+            Country::Portugal => "PT",
+            Country::Russia => "RU",
             Country::Singapore => "SG",
+            Country::Spain => "ES",
+            Country::Sweden => "SE",
             Country::Taiwan => "TW",
+            Country::Thailand => "TH",
+            Country::Turkey => "TR",
+            Country::UnitedKingdom => "GB",
+            Country::UnitedStates => "US",
+            Country::Vietnam => "VN",
         }
     }
 
@@ -766,20 +838,37 @@ impl Country {
     /// ```
     pub fn cors_domain(&self) -> &'static str {
         match self {
-            Country::France => "fr.finance.yahoo.com",
-            Country::India => "in.finance.yahoo.com",
-            Country::HongKong => "hk.finance.yahoo.com",
-            Country::Germany => "de.finance.yahoo.com",
-            Country::Canada => "ca.finance.yahoo.com",
-            Country::Spain => "es.finance.yahoo.com",
-            Country::Italy => "it.finance.yahoo.com",
-            Country::UnitedStates => "finance.yahoo.com",
+            Country::Argentina => "ar.finance.yahoo.com",
             Country::Australia => "au.finance.yahoo.com",
-            Country::UnitedKingdom => "uk.finance.yahoo.com",
             Country::Brazil => "br.financas.yahoo.com",
+            Country::Canada => "ca.finance.yahoo.com",
+            Country::China => "cn.finance.yahoo.com",
+            Country::Denmark => "dk.finance.yahoo.com",
+            Country::Finland => "fi.finance.yahoo.com",
+            Country::France => "fr.finance.yahoo.com",
+            Country::Germany => "de.finance.yahoo.com",
+            Country::Greece => "gr.finance.yahoo.com",
+            Country::HongKong => "hk.finance.yahoo.com",
+            Country::India => "in.finance.yahoo.com",
+            Country::Israel => "il.finance.yahoo.com",
+            Country::Italy => "it.finance.yahoo.com",
+            Country::Japan => "jp.finance.yahoo.com",
+            Country::Korea => "kr.finance.yahoo.com",
+            Country::Malaysia => "my.finance.yahoo.com",
+            Country::Mexico => "mx.finance.yahoo.com",
             Country::NewZealand => "nz.finance.yahoo.com",
+            Country::Norway => "no.finance.yahoo.com",
+            Country::Portugal => "pt.finance.yahoo.com",
+            Country::Russia => "ru.finance.yahoo.com",
             Country::Singapore => "sg.finance.yahoo.com",
+            Country::Spain => "es.finance.yahoo.com",
+            Country::Sweden => "se.finance.yahoo.com",
             Country::Taiwan => "tw.finance.yahoo.com",
+            Country::Thailand => "th.finance.yahoo.com",
+            Country::Turkey => "tr.finance.yahoo.com",
+            Country::UnitedKingdom => "uk.finance.yahoo.com",
+            Country::UnitedStates => "finance.yahoo.com",
+            Country::Vietnam => "vn.finance.yahoo.com",
         }
     }
 }

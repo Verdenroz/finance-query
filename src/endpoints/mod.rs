@@ -6,6 +6,7 @@ pub mod chart;
 pub mod common;
 pub mod earnings_transcript;
 pub mod financials;
+pub mod hours;
 pub mod movers;
 pub mod news;
 pub mod options;

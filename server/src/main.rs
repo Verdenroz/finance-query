@@ -296,6 +296,8 @@ fn api_routes() -> Router {
         .route("/earnings-transcript", get(get_earnings_transcript))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route("/financials/{symbol}/{statement}", get(get_financials))
+        // GET /v2/hours
+        .route("/hours", get(get_hours))
         // GET /v2/holders/{symbol}/{holder_type}
         .route("/holders/{symbol}/{holder_type}", get(get_holders))
         // GET /v2/indicators/{symbol}?interval=<str>&range=<str>
@@ -663,6 +665,29 @@ async fn get_financials(
         },
         Err(e) => {
             error!("Failed to fetch financials: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Query parameters for /v2/hours
+#[derive(Deserialize)]
+struct HoursQuery {
+    /// Region code (e.g., "US", "JP", "GB"). Defaults to US if not specified.
+    region: Option<String>,
+}
+
+/// GET /v2/hours
+///
+/// Query: `region` (string, optional - e.g., "US", "JP", "GB")
+async fn get_hours(Query(params): Query<HoursQuery>) -> impl IntoResponse {
+    let region_display = params.region.as_deref().unwrap_or("US");
+    info!("Fetching market hours for region: {}", region_display);
+
+    match finance::hours(params.region.as_deref()).await {
+        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch market hours: {}", e);
             error_response(e).into_response()
         }
     }
