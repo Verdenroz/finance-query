@@ -90,9 +90,10 @@ pub use ticker::{Ticker, TickerBuilder};
 pub use tickers::{BatchChartsResponse, BatchQuotesResponse, Tickers, TickersBuilder};
 
 // ============================================================================
-// Configuration API - Configure client behavior
+// Configuration API - Configure client and request behavior
 // ============================================================================
 pub use client::{ClientConfig, ClientConfigBuilder};
+pub use finance::SearchOptions;
 
 // ============================================================================
 // Error types and results
@@ -129,7 +130,7 @@ pub use models::{
     quote::FormattedValue,
     recommendation::SimilarSymbol,
     screeners::ScreenerQuote,
-    search::SearchQuote,
+    search::{ResearchReport, SearchNews, SearchQuote},
 };
 
 // ============================================================================

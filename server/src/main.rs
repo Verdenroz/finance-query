@@ -145,9 +145,28 @@ struct ChartQuery {
 
 #[derive(Deserialize)]
 struct SearchQuery {
+    /// Search query string (required)
     q: String,
+    /// Maximum number of quote results (default: 6)
     #[serde(default = "default_hits")]
-    hits: u32,
+    quotes: u32,
+    /// Maximum number of news results (default: 0 = disabled)
+    #[serde(default)]
+    news: u32,
+    /// Enable fuzzy matching for typos (default: false)
+    #[serde(default)]
+    fuzzy: bool,
+    /// Enable logo URLs in results (default: true)
+    #[serde(default = "default_logo")]
+    logo: bool,
+    /// Enable research reports (default: false)
+    #[serde(default)]
+    research: bool,
+    /// Enable cultural assets/NFT indices (default: false)
+    #[serde(default)]
+    cultural: bool,
+    /// Country code for lang/region settings (e.g., "US", "JP", "GB")
+    country: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
 }
@@ -303,6 +322,10 @@ fn default_hits() -> u32 {
         .ok()
         .and_then(|v| v.parse().ok())
         .unwrap_or(defaults::SEARCH_HITS)
+}
+
+fn default_logo() -> bool {
+    true
 }
 
 fn default_interval() -> String {
@@ -724,12 +747,45 @@ async fn get_indicators(
 
 /// GET /v2/search
 ///
-/// Query: `q` (string, required), `hits` (u32, default via `SEARCH_HITS` or server default)
+/// Search for quotes, news, and research reports
+///
+/// Query parameters:
+/// - `q` (string, required): Search query
+/// - `quotes` (u32, default: 6): Maximum quote results
+/// - `news` (u32, default: 0): Maximum news results
+/// - `fuzzy` (bool, default: false): Enable fuzzy matching for typos
+/// - `logo` (bool, default: true): Include logo URLs
+/// - `research` (bool, default: false): Include research reports
+/// - `cultural` (bool, default: false): Include cultural assets (NFT indices)
+/// - `country` (string, optional): Country code for lang/region (e.g., "US", "JP")
 async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
-    info!("Searching for: {} (fields={:?})", params.q, params.fields);
+    info!(
+        "Searching for: {} (quotes={}, news={}, logo={}, research={}, cultural={}, country={:?})",
+        params.q,
+        params.quotes,
+        params.news,
+        params.logo,
+        params.research,
+        params.cultural,
+        params.country
+    );
 
-    match finance::search(&params.q, params.hits).await {
+    let mut options = finance::SearchOptions::new()
+        .quotes_count(params.quotes)
+        .news_count(params.news)
+        .enable_fuzzy_query(params.fuzzy)
+        .enable_logo_url(params.logo)
+        .enable_research_reports(params.research)
+        .enable_cultural_assets(params.cultural);
+
+    // Apply optional country override
+    if let Some(country_str) = params.country
+        && let Some(country) = parse_country(&country_str) {
+            options = options.country(country);
+        }
+
+    match finance::search(&params.q, &options).await {
         Ok(result) => {
             let json = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());

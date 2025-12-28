@@ -492,17 +492,26 @@ impl YahooClient {
     ///
     /// ```no_run
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # use finance_query::SearchOptions;
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// let results = client.search("Apple", 6).await?;
+    /// // Simple search with defaults
+    /// let results = client.search("Apple", &SearchOptions::default()).await?;
+    ///
+    /// // Search with custom options
+    /// let options = SearchOptions::new()
+    ///     .quotes_count(10)
+    ///     .news_count(5)
+    ///     .enable_research_reports(true);
+    /// let results = client.search("NVDA", &options).await?;
     /// # Ok(())
     /// # }
     /// ```
     pub async fn search(
         &self,
         query: &str,
-        hits: u32,
+        options: &crate::endpoints::search::SearchOptions,
     ) -> Result<crate::models::search::SearchResults> {
-        let json = crate::endpoints::search::fetch(self, query, hits).await?;
+        let json = crate::endpoints::search::fetch(self, query, options).await?;
         Ok(crate::models::search::SearchResults::from_json(json)?)
     }
 
@@ -876,8 +885,10 @@ mod tests {
     #[tokio::test]
     #[ignore] // Requires network access
     async fn test_search() {
+        use crate::endpoints::search::SearchOptions;
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
-        let result = client.search("Apple", 5).await;
+        let options = SearchOptions::new().quotes_count(5);
+        let result = client.search("Apple", &options).await;
         assert!(result.is_ok());
         let response = result.unwrap();
         assert!(!response.quotes.is_empty(), "Should have search results");

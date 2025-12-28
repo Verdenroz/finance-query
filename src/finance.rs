@@ -14,27 +14,40 @@ use crate::models::search::SearchResults;
 use crate::models::sectors::Sector;
 use serde_json::Value;
 
+// Re-export SearchOptions for convenience
+pub use crate::endpoints::search::SearchOptions;
+
 /// Search for stock symbols and companies
 ///
 /// # Arguments
 ///
 /// * `query` - Search term (company name, symbol, etc.)
-/// * `limit` - Maximum number of results to return
+/// * `options` - Search configuration options
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::finance;
+/// use finance_query::{finance, SearchOptions, Country};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let results = finance::search("Apple", 10).await?;
+/// // Simple search with defaults
+/// let results = finance::search("Apple", &SearchOptions::default()).await?;
 /// println!("Found {} results", results.result_count());
+///
+/// // Search with custom options
+/// let options = SearchOptions::new()
+///     .quotes_count(10)
+///     .news_count(5)
+///     .enable_research_reports(true)
+///     .country(Country::Japan);
+/// let results = finance::search("NVDA", &options).await?;
+/// println!("Found {} quotes", results.quotes.len());
 /// # Ok(())
 /// # }
 /// ```
-pub async fn search(query: &str, limit: u32) -> Result<SearchResults> {
+pub async fn search(query: &str, options: &SearchOptions) -> Result<SearchResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    client.search(query, limit).await
+    client.search(query, options).await
 }
 
 /// Fetch data from a predefined Yahoo Finance screener
