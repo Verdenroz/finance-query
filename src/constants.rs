@@ -39,6 +39,10 @@ pub mod endpoints {
     #[allow(dead_code)]
     pub const SEARCH: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/finance/search");
 
+    /// Lookup endpoint (type-filtered symbol discovery)
+    #[allow(dead_code)]
+    pub const LOOKUP: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/finance/lookup");
+
     /// Financial timeseries endpoint (financials)
     #[allow(dead_code)]
     pub fn financials(symbol: &str) -> String {

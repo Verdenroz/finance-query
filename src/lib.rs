@@ -93,7 +93,7 @@ pub use tickers::{BatchChartsResponse, BatchQuotesResponse, Tickers, TickersBuil
 // Configuration API - Configure client and request behavior
 // ============================================================================
 pub use client::{ClientConfig, ClientConfigBuilder};
-pub use finance::SearchOptions;
+pub use finance::{LookupOptions, LookupType, SearchOptions};
 
 // ============================================================================
 // Error types and results
@@ -114,9 +114,10 @@ pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, Valu
 // ============================================================================
 pub use models::{
     chart::Chart, currencies::Currency, financials::FinancialStatement, hours::MarketHours,
-    indicators::IndicatorsSummary, industries::Industry, market_summary::MarketSummaryQuote,
-    news::News, options::Options, quote::Quote, recommendation::Recommendation,
-    screeners::ScreenerResults, search::SearchResults, sectors::Sector, trending::TrendingQuote,
+    indicators::IndicatorsSummary, industries::Industry, lookup::LookupResults,
+    market_summary::MarketSummaryQuote, news::News, options::Options, quote::Quote,
+    recommendation::Recommendation, screeners::ScreenerResults, search::SearchResults,
+    sectors::Sector, trending::TrendingQuote,
 };
 
 // ============================================================================
@@ -125,6 +126,7 @@ pub use models::{
 pub use models::{
     chart::{Candle, ChartMeta},
     hours::MarketTime,
+    lookup::LookupQuote,
     market_summary::SparkData,
     options::{OptionChain, OptionContract, OptionsQuote},
     quote::FormattedValue,

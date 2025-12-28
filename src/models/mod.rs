@@ -15,6 +15,8 @@ pub mod hours;
 pub mod indicators;
 /// Industry models for market industry data.
 pub mod industries;
+/// Lookup models for type-filtered symbol discovery.
+pub mod lookup;
 /// Market summary models.
 pub mod market_summary;
 /// News models.

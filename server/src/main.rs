@@ -176,6 +176,34 @@ struct SearchQuery {
 }
 
 #[derive(Deserialize)]
+struct LookupQuery {
+    /// Lookup query string (required)
+    q: String,
+    /// Asset type filter: all, equity, mutualfund, etf, index, future, currency, cryptocurrency
+    #[serde(default = "default_lookup_type")]
+    #[serde(rename = "type")]
+    lookup_type: String,
+    /// Maximum number of results (default: 25)
+    #[serde(default = "default_lookup_count")]
+    count: u32,
+    /// Include logo URLs (requires additional API call, default: false)
+    #[serde(default)]
+    logo: bool,
+    /// Country code for lang/region settings (e.g., "US", "JP", "GB")
+    country: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+fn default_lookup_type() -> String {
+    "all".to_string()
+}
+
+fn default_lookup_count() -> u32 {
+    25
+}
+
+#[derive(Deserialize)]
 struct OptionsQuery {
     date: Option<i64>, // Optional expiration timestamp
     /// Comma-separated list of fields to include in response
@@ -439,6 +467,8 @@ fn api_routes() -> Router {
         .route("/screeners/{screener_type}", get(get_screeners))
         // GET /v2/search?q=<string>&hits=<u32>
         .route("/search", get(search))
+        // GET /v2/lookup?q=<string>&type=<string>&count=<u32>&logo=<bool>
+        .route("/lookup", get(lookup))
         // GET /v2/sectors/{sector_type}
         .route("/sectors/{sector_type}", get(get_sector))
         // GET /v2/trending?region=<str>
@@ -800,6 +830,62 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
         }
         Err(e) => {
             error!("Search failed: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/lookup
+///
+/// Type-filtered symbol lookup. Unlike search, lookup specializes in discovering tickers
+/// filtered by asset type (equity, ETF, mutual fund, index, future, currency, cryptocurrency).
+///
+/// Query parameters:
+/// - `q` (string, required): Lookup query
+/// - `type` (string, default: "all"): Asset type filter
+/// - `count` (u32, default: 25): Maximum results
+/// - `logo` (bool, default: false): Include logo URLs (requires extra API call)
+/// - `country` (string, optional): Country code for lang/region
+async fn lookup(Query(params): Query<LookupQuery>) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Looking up: {} (type={}, count={}, logo={}, country={:?})",
+        params.q, params.lookup_type, params.count, params.logo, params.country
+    );
+
+    // Parse lookup type
+    let lookup_type = match params.lookup_type.to_lowercase().as_str() {
+        "all" => finance::LookupType::All,
+        "equity" => finance::LookupType::Equity,
+        "mutualfund" => finance::LookupType::MutualFund,
+        "etf" => finance::LookupType::Etf,
+        "index" => finance::LookupType::Index,
+        "future" => finance::LookupType::Future,
+        "currency" => finance::LookupType::Currency,
+        "cryptocurrency" => finance::LookupType::Cryptocurrency,
+        _ => finance::LookupType::All,
+    };
+
+    let mut options = finance::LookupOptions::new()
+        .lookup_type(lookup_type)
+        .count(params.count)
+        .include_logo(params.logo);
+
+    // Apply optional country override
+    if let Some(country_str) = params.country
+        && let Some(country) = parse_country(&country_str)
+    {
+        options = options.country(country);
+    }
+
+    match finance::lookup(&params.q, &options).await {
+        Ok(result) => {
+            let json = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Lookup failed: {}", e);
             error_response(e).into_response()
         }
     }

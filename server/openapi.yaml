@@ -985,8 +985,10 @@ paths:
   /v2/search:
     get:
       tags: [Search]
-      summary: Search symbols
-      description: Search for stock symbols and companies
+      summary: Search symbols and companies
+      description: |
+        Search for stock symbols, companies, news, and research reports on Yahoo Finance.
+        Supports fuzzy matching, logo URLs, and cultural assets (NFT indices).
       parameters:
         - name: q
           in: query
@@ -995,12 +997,47 @@ paths:
             type: string
           description: Search query
           example: Apple
-        - name: hits
+        - name: quotes
           in: query
           schema:
             type: integer
-            default: 6
-          description: Maximum results
+            default: 10
+          description: Maximum number of quote results
+        - name: news
+          in: query
+          schema:
+            type: integer
+            default: 0
+          description: Maximum number of news results (0 to disable)
+        - name: fuzzy
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Enable fuzzy matching for typos
+        - name: logo
+          in: query
+          schema:
+            type: boolean
+            default: true
+          description: Include logo URLs in results
+        - name: research
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include research reports in results
+        - name: cultural
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include cultural assets (NFT indices) in results
+        - name: country
+          in: query
+          schema:
+            $ref: '#/components/schemas/Region'
+          description: Country for language/region settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -1009,6 +1046,122 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResponse'
+              example:
+                count: 6
+                quotes:
+                  - symbol: AAPL
+                    shortName: Apple Inc.
+                    longName: Apple Inc.
+                    quoteType: EQUITY
+                    exchange: NMS
+                    exchDisp: NASDAQ
+                    typeDisp: Equity
+                    sector: Technology
+                    sectorDisp: Technology
+                    industry: Consumer Electronics
+                    industryDisp: Consumer Electronics
+                    logoUrl: "https://s.yimg.com/lb/..."
+                    score: 100000.0
+                    isYahooFinance: true
+                news:
+                  - uuid: "abc123"
+                    title: "Apple announces new product"
+                    publisher: "Reuters"
+                    link: "https://..."
+                    providerPublishTime: 1735315200
+                    type: STORY
+                researchReports:
+                  - reportHeadline: "Apple Q4 Analysis"
+                    author: "John Doe"
+                    provider: "Argus Research"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /v2/lookup:
+    get:
+      tags: [Search]
+      summary: Look up symbols by type
+      description: |
+        Type-filtered symbol lookup. Unlike search, lookup specializes in discovering tickers
+        filtered by asset type (equity, ETF, mutual fund, index, future, currency, cryptocurrency).
+
+        Optionally fetches logo URLs via an additional API call when `logo=true`.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Lookup query
+          example: Apple
+        - name: type
+          in: query
+          schema:
+            type: string
+            enum: [all, equity, mutualfund, etf, index, future, currency, cryptocurrency]
+            default: all
+          description: Asset type filter
+        - name: count
+          in: query
+          schema:
+            type: integer
+            default: 25
+            maximum: 100
+          description: Maximum number of results
+        - name: logo
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include logo URLs (requires additional API call)
+        - name: country
+          in: query
+          schema:
+            $ref: '#/components/schemas/Region'
+          description: Country for language/region settings (defaults to US)
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Lookup results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LookupResponse'
+              examples:
+                equity:
+                  summary: Equity lookup
+                  value:
+                    count: 3
+                    start: 0
+                    quotes:
+                      - symbol: AAPL
+                        shortName: Apple Inc.
+                        quoteType: equity
+                        exchange: NMS
+                        regularMarketPrice: 273.40
+                        regularMarketChange: -0.41
+                      - symbol: APLE
+                        shortName: Apple Hospitality REIT, Inc.
+                        quoteType: equity
+                        exchange: NYQ
+                        regularMarketPrice: 12.04
+                        regularMarketChange: -0.05
+                withLogo:
+                  summary: With logo URLs
+                  value:
+                    count: 1
+                    start: 0
+                    quotes:
+                      - symbol: NVDA
+                        shortName: NVIDIA Corporation
+                        quoteType: equity
+                        exchange: NMS
+                        regularMarketPrice: 190.53
+                        regularMarketChange: 1.92
+                        logoUrl: "https://s.yimg.com/lb/brands/50x50_nvidia.png"
+                        companyLogoUrl: "https://s.yimg.com/lb/brands/50x50_nvidia.png"
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/earnings-transcript:
     get:
@@ -2083,33 +2236,279 @@ components:
 
     SearchResponse:
       type: object
+      description: Search results containing quotes, news, and research reports
       properties:
         count:
           type: integer
+          nullable: true
+          description: Total count of results
         quotes:
           type: array
+          description: Matching quotes (stocks, ETFs, indices, cultural assets)
           items:
             $ref: '#/components/schemas/SearchQuote'
+        news:
+          type: array
+          nullable: true
+          description: Related news articles (when news count > 0)
+          items:
+            $ref: '#/components/schemas/SearchNews'
+        researchReports:
+          type: array
+          nullable: true
+          description: Research reports (when research is enabled)
+          items:
+            $ref: '#/components/schemas/SearchResearchReport'
+        totalTime:
+          type: integer
+          format: int64
+          nullable: true
+          description: Total search time in milliseconds
 
     SearchQuote:
       type: object
+      description: A quote result from search
       properties:
         symbol:
           type: string
-        shortname:
+          description: Stock/index symbol
+          example: AAPL
+        shortName:
           type: string
-        longname:
+          nullable: true
+          description: Short company name
+          example: Apple Inc.
+        longName:
           type: string
-        exchDisp:
-          type: string
-        typeDisp:
-          type: string
-        exchange:
-          type: string
+          nullable: true
+          description: Full company name
+          example: Apple Inc.
         quoteType:
           type: string
+          nullable: true
+          description: Quote type (EQUITY, ETF, INDEX, MUTUALFUND, CURRENCY, etc.)
+          example: EQUITY
+        exchange:
+          type: string
+          nullable: true
+          description: Exchange code
+          example: NMS
+        exchDisp:
+          type: string
+          nullable: true
+          description: Exchange display name
+          example: NASDAQ
+        typeDisp:
+          type: string
+          nullable: true
+          description: Type display name (Equity, ETF, Index, Cultural Asset)
+          example: Equity
+        industry:
+          type: string
+          nullable: true
+          description: Industry key
+          example: consumer-electronics
+        industryDisp:
+          type: string
+          nullable: true
+          description: Industry display name
+          example: Consumer Electronics
+        sector:
+          type: string
+          nullable: true
+          description: Sector key
+          example: technology
+        sectorDisp:
+          type: string
+          nullable: true
+          description: Sector display name
+          example: Technology
         isYahooFinance:
           type: boolean
+          nullable: true
+          description: Whether this is a Yahoo Finance symbol
+        dispSecIndFlag:
+          type: boolean
+          nullable: true
+          description: Display sector/industry flag
+        logoUrl:
+          type: string
+          nullable: true
+          description: Company logo URL
+          example: "https://s.yimg.com/lb/logos/AAPL_300.png"
+        score:
+          type: number
+          format: double
+          nullable: true
+          description: Search relevance score
+        index:
+          type: string
+          nullable: true
+          description: Index membership
+        prevName:
+          type: string
+          nullable: true
+          description: Previous company name (if renamed)
+        nameChangeDate:
+          type: string
+          nullable: true
+          description: Date of name change
+
+    SearchNews:
+      type: object
+      description: A news result from search
+      properties:
+        uuid:
+          type: string
+          nullable: true
+          description: Unique news article identifier
+        title:
+          type: string
+          nullable: true
+          description: Article title
+        publisher:
+          type: string
+          nullable: true
+          description: Publisher name
+        link:
+          type: string
+          nullable: true
+          description: Article URL
+        providerPublishTime:
+          type: integer
+          format: int64
+          nullable: true
+          description: Publication timestamp (Unix epoch seconds)
+        type:
+          type: string
+          nullable: true
+          description: Article type (STORY, VIDEO, etc.)
+        thumbnail:
+          $ref: '#/components/schemas/NewsThumbnail'
+        relatedTickers:
+          type: array
+          nullable: true
+          items:
+            type: string
+          description: Related stock symbols
+
+    SearchResearchReport:
+      type: object
+      description: A research report from search results
+      properties:
+        reportHeadline:
+          type: string
+          nullable: true
+          description: Report headline/title
+        author:
+          type: string
+          nullable: true
+          description: Report author
+        reportDate:
+          type: integer
+          format: int64
+          nullable: true
+          description: Report date (Unix timestamp)
+        id:
+          type: string
+          nullable: true
+          description: Report ID
+        provider:
+          type: string
+          nullable: true
+          description: Research provider
+          example: Argus Research
+
+    LookupResponse:
+      type: object
+      description: Lookup results containing type-filtered quotes
+      properties:
+        quotes:
+          type: array
+          description: Matching quotes filtered by asset type
+          items:
+            $ref: '#/components/schemas/LookupQuote'
+        start:
+          type: integer
+          nullable: true
+          description: Starting index
+        count:
+          type: integer
+          nullable: true
+          description: Total result count
+
+    LookupQuote:
+      type: object
+      description: A quote result from lookup
+      properties:
+        symbol:
+          type: string
+          description: Stock/asset symbol
+          example: AAPL
+        shortName:
+          type: string
+          nullable: true
+          description: Short name
+          example: Apple Inc.
+        longName:
+          type: string
+          nullable: true
+          description: Full name
+        quoteType:
+          type: string
+          nullable: true
+          description: Asset type (equity, etf, mutualfund, index, future, currency, cryptocurrency)
+          example: equity
+        exchange:
+          type: string
+          nullable: true
+          description: Exchange code
+          example: NMS
+        exchDisp:
+          type: string
+          nullable: true
+          description: Exchange display name
+        typeDisp:
+          type: string
+          nullable: true
+          description: Type display name
+        industry:
+          type: string
+          nullable: true
+          description: Industry classification
+        sector:
+          type: string
+          nullable: true
+          description: Sector classification
+        regularMarketPrice:
+          type: number
+          format: double
+          nullable: true
+          description: Current/last price
+        regularMarketChange:
+          type: number
+          format: double
+          nullable: true
+          description: Price change
+        regularMarketChangePercent:
+          type: number
+          format: double
+          nullable: true
+          description: Price change percent
+        regularMarketPreviousClose:
+          type: number
+          format: double
+          nullable: true
+          description: Previous close price
+        logoUrl:
+          type: string
+          nullable: true
+          description: Company logo URL (when logo=true)
+          example: "https://s.yimg.com/lb/brands/50x50_nvidia.png"
+        companyLogoUrl:
+          type: string
+          nullable: true
+          description: Alternate company logo URL (when logo=true)
 
     Error:
       type: object

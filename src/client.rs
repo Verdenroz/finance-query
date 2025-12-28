@@ -515,6 +515,38 @@ impl YahooClient {
         Ok(crate::models::search::SearchResults::from_json(json)?)
     }
 
+    /// Look up symbols by type (equity, ETF, index, etc.)
+    ///
+    /// Unlike search, lookup specializes in discovering tickers filtered by asset type.
+    /// Optionally fetches logo URLs via an additional API call.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # use finance_query::{LookupOptions, LookupType};
+    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
+    /// // Simple lookup with defaults
+    /// let results = client.lookup("Apple", &LookupOptions::default()).await?;
+    ///
+    /// // Lookup equities only with logos
+    /// let options = LookupOptions::new()
+    ///     .lookup_type(LookupType::Equity)
+    ///     .count(10)
+    ///     .include_logo(true);
+    /// let results = client.lookup("NVDA", &options).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn lookup(
+        &self,
+        query: &str,
+        options: &crate::endpoints::lookup::LookupOptions,
+    ) -> Result<crate::models::lookup::LookupResults> {
+        let json = crate::endpoints::lookup::fetch(self, query, options).await?;
+        Ok(crate::models::lookup::LookupResults::from_json(json)?)
+    }
+
     /// Get recommended/similar quotes for a symbol
     ///
     /// # Example

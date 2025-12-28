@@ -14,7 +14,8 @@ use crate::models::search::SearchResults;
 use crate::models::sectors::Sector;
 use serde_json::Value;
 
-// Re-export SearchOptions for convenience
+// Re-export options for convenience
+pub use crate::endpoints::lookup::{LookupOptions, LookupType};
 pub use crate::endpoints::search::SearchOptions;
 
 /// Search for stock symbols and companies
@@ -48,6 +49,46 @@ pub use crate::endpoints::search::SearchOptions;
 pub async fn search(query: &str, options: &SearchOptions) -> Result<SearchResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.search(query, options).await
+}
+
+/// Look up symbols by type (equity, ETF, mutual fund, index, future, currency, cryptocurrency)
+///
+/// Unlike search, lookup specializes in discovering tickers filtered by asset type.
+/// Optionally fetches logo URLs via an additional API call.
+///
+/// # Arguments
+///
+/// * `query` - Search term (company name, symbol, etc.)
+/// * `options` - Lookup configuration options
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, LookupOptions, LookupType, Country};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Simple lookup with defaults
+/// let results = finance::lookup("Apple", &LookupOptions::default()).await?;
+/// println!("Found {} results", results.result_count());
+///
+/// // Lookup equities with logos
+/// let options = LookupOptions::new()
+///     .lookup_type(LookupType::Equity)
+///     .count(10)
+///     .include_logo(true);
+/// let results = finance::lookup("NVDA", &options).await?;
+/// for quote in &results.quotes {
+///     println!("{}: {:?}", quote.symbol, quote.logo_url);
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn lookup(
+    query: &str,
+    options: &LookupOptions,
+) -> Result<crate::models::lookup::LookupResults> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.lookup(query, options).await
 }
 
 /// Fetch data from a predefined Yahoo Finance screener
