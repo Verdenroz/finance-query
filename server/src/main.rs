@@ -1,14 +1,18 @@
 use axum::{
     Router,
-    extract::{Path, Query},
+    extract::{
+        Path, Query, WebSocketUpgrade,
+        ws::{Message, WebSocket},
+    },
     http::{HeaderValue, Method, StatusCode},
     response::{IntoResponse, Json},
     routing::{get, post},
 };
 use finance_query::{
     Country, Frequency, Interval, ScreenerQuery, ScreenerType, SectorType, StatementType, Ticker,
-    Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query,
+    Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query, streaming::PriceStream,
 };
+use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
 use tower_http::cors::CorsLayer;
@@ -439,6 +443,8 @@ fn api_routes() -> Router {
         .route("/sectors/{sector_type}", get(get_sector))
         // GET /v2/trending?region=<str>
         .route("/trending", get(get_trending))
+        // WebSocket /v2/stream - Real-time price streaming
+        .route("/stream", get(ws_stream_handler))
 }
 
 /// GET /health
@@ -781,9 +787,10 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
 
     // Apply optional country override
     if let Some(country_str) = params.country
-        && let Some(country) = parse_country(&country_str) {
-            options = options.country(country);
-        }
+        && let Some(country) = parse_country(&country_str)
+    {
+        options = options.country(country);
+    }
 
     match finance::search(&params.q, &options).await {
         Ok(result) => {
@@ -1518,6 +1525,135 @@ async fn get_trending(Query(params): Query<TrendingQuery>) -> impl IntoResponse 
             error_response(e).into_response()
         }
     }
+}
+
+/// WebSocket /v2/stream
+///
+/// Real-time price streaming via WebSocket.
+///
+/// # Protocol
+///
+/// **Subscribe to symbols:**
+/// ```json
+/// {"subscribe": ["AAPL", "NVDA", "TSLA"]}
+/// ```
+///
+/// **Unsubscribe from symbols:**
+/// ```json
+/// {"unsubscribe": ["AAPL"]}
+/// ```
+///
+/// **Receive price updates:**
+/// ```json
+/// {
+///   "id": "AAPL",
+///   "price": 178.52,
+///   "change": 2.34,
+///   "changePercent": 1.33,
+///   "time": 1703123456000,
+///   "exchange": "NMS",
+///   "marketHours": 2
+/// }
+/// ```
+async fn ws_stream_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
+    ws.on_upgrade(handle_stream_socket)
+}
+
+/// Handle the WebSocket connection for streaming
+async fn handle_stream_socket(mut socket: WebSocket) {
+    info!("New streaming WebSocket connection");
+
+    // Wait for initial subscription message
+    let symbols = match wait_for_subscription(&mut socket).await {
+        Some(symbols) => symbols,
+        None => {
+            warn!("WebSocket closed before subscription");
+            return;
+        }
+    };
+
+    info!("Starting stream for symbols: {:?}", symbols);
+
+    // Create price stream
+    let symbol_refs: Vec<&str> = symbols.iter().map(|s| s.as_str()).collect();
+    let stream = match PriceStream::subscribe(&symbol_refs).await {
+        Ok(s) => s,
+        Err(e) => {
+            error!("Failed to create price stream: {}", e);
+            let _ = socket
+                .send(Message::Text(
+                    serde_json::json!({"error": e.to_string()})
+                        .to_string()
+                        .into(),
+                ))
+                .await;
+            return;
+        }
+    };
+
+    // Split socket for concurrent read/write
+    let (mut sender, mut receiver) = socket.split();
+
+    // Spawn task to forward price updates to client
+    let mut price_stream = stream;
+    let send_task = tokio::spawn(async move {
+        use futures_util::stream::StreamExt;
+        while let Some(price) = price_stream.next().await {
+            let json = serde_json::to_string(&price).unwrap_or_default();
+            if sender.send(Message::Text(json.into())).await.is_err() {
+                break;
+            }
+        }
+    });
+
+    // Handle incoming messages (subscribe/unsubscribe)
+    let recv_task = tokio::spawn(async move {
+        while let Some(Ok(msg)) = receiver.next().await {
+            match msg {
+                Message::Text(text) => {
+                    if let Ok(cmd) = serde_json::from_str::<StreamCommand>(&text) {
+                        info!("Received stream command: {:?}", cmd);
+                        // Commands are handled by the price stream internally
+                        // For now, we just log them
+                    }
+                }
+                Message::Close(_) => {
+                    info!("WebSocket closed by client");
+                    break;
+                }
+                _ => {}
+            }
+        }
+    });
+
+    // Wait for either task to complete
+    tokio::select! {
+        _ = send_task => info!("Send task completed"),
+        _ = recv_task => info!("Receive task completed"),
+    }
+
+    info!("WebSocket stream connection closed");
+}
+
+/// Wait for initial subscription message
+async fn wait_for_subscription(socket: &mut WebSocket) -> Option<Vec<String>> {
+    while let Some(Ok(msg)) = socket.next().await {
+        if let Message::Text(text) = msg
+            && let Ok(cmd) = serde_json::from_str::<StreamCommand>(&text)
+            && let Some(symbols) = cmd.subscribe
+        {
+            return Some(symbols);
+        }
+    }
+    None
+}
+
+/// Stream command from client
+#[derive(Debug, Deserialize)]
+struct StreamCommand {
+    subscribe: Option<Vec<String>>,
+    #[allow(dead_code)]
+    unsubscribe: Option<Vec<String>>,
 }
 
 /// Graceful shutdown handler

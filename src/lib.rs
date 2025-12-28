@@ -139,6 +139,12 @@ pub use models::{
 pub use models::screeners::{QueryCondition, QueryGroup, QueryOperand, QueryValue, ScreenerQuery};
 
 // ============================================================================
+// Real-time streaming
+// ============================================================================
+// WebSocket-based real-time price streaming with a Flow-like Stream API.
+pub mod streaming;
+
+// ============================================================================
 // DataFrame support (requires "dataframe" feature)
 // ============================================================================
 // When enabled, structs with #[derive(ToDataFrame)] get a to_dataframe() method.

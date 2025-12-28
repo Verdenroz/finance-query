@@ -29,6 +29,7 @@ tokio = { version = "1", features = ["full"] }
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
+serde_repr = "0.1"
 
 # Error handling
 thiserror = "2.0.17"
@@ -59,6 +60,12 @@ tracing = "0.1"
 # HTML parsing for web scraping
 scraper = "0.25.0"
 
+# WebSocket streaming support
+tokio-tungstenite = { version = "0.28.0", features = ["native-tls"] }
+tokio-stream = { version = "0.1", features = ["sync"] }
+prost = "0.14.1"
+base64 = "0.22"
+
 # Optional: DataFrame support
 polars = { version = "0.52", optional = true, default-features = false, features = ["lazy"] }
 finance-query-derive = { path = "finance-query-derive", optional = true }
@@ -67,6 +74,9 @@ finance-query-derive = { path = "finance-query-derive", optional = true }
 default = []
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars", "dep:finance-query-derive"]
+
+[package.metadata.docs.rs]
+all-features = true
 
 [dev-dependencies]
 # Testing
