@@ -4,16 +4,17 @@
 /// Each endpoint module handles a specific type of API request.
 pub mod chart;
 pub mod common;
+pub mod currencies;
 pub mod earnings_transcript;
 pub mod financials;
 pub mod hours;
 pub mod industries;
-pub mod news;
+pub mod market_summary;
 pub mod options;
-pub mod quote_summary;
 pub mod quote_type;
 pub mod quotes;
 pub mod recommendations;
 pub mod screeners;
 pub mod search;
 pub mod sectors;
+pub mod trending;

@@ -112,10 +112,10 @@ pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, Valu
 // Response types - Top-level types returned by API methods
 // ============================================================================
 pub use models::{
-    chart::Chart, financials::FinancialStatement, hours::MarketHours,
-    indicators::IndicatorsSummary, industries::Industry, news::News, options::Options,
-    quote::Quote, recommendation::Recommendation, screeners::ScreenerResults,
-    search::SearchResults, sectors::Sector,
+    chart::Chart, currencies::Currency, financials::FinancialStatement, hours::MarketHours,
+    indicators::IndicatorsSummary, industries::Industry, market_summary::MarketSummaryQuote,
+    news::News, options::Options, quote::Quote, recommendation::Recommendation,
+    screeners::ScreenerResults, search::SearchResults, sectors::Sector, trending::TrendingQuote,
 };
 
 // ============================================================================
@@ -124,6 +124,7 @@ pub use models::{
 pub use models::{
     chart::{Candle, ChartMeta},
     hours::MarketTime,
+    market_summary::SparkData,
     options::{OptionChain, OptionContract, OptionsQuote},
     quote::FormattedValue,
     recommendation::SimilarSymbol,

@@ -884,6 +884,104 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
 
+  /v2/currencies:
+    get:
+      tags: [Market]
+      summary: Get available currencies
+      description: |
+        Fetch available currency pairs from Yahoo Finance.
+        Returns a list of currency pairs that can be used for forex trading/tracking.
+      responses:
+        '200':
+          description: List of available currencies
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Currency'
+              example:
+                - shortName: "USD/EUR"
+                  longName: "USD/EUR"
+                  symbol: "USDEUR=X"
+                  localLongName: "USD/EUR"
+                - shortName: "USD/JPY"
+                  longName: "USD/JPY"
+                  symbol: "USDJPY=X"
+                  localLongName: "USD/JPY"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/market-summary:
+    get:
+      tags: [Market]
+      summary: Get market summary
+      description: |
+        Fetch market summary with major indices, currencies, and commodities.
+        Returns real-time data for key market indicators.
+      parameters:
+        - name: country
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Region'
+          description: Country code for localization (defaults to US)
+        - $ref: '#/components/parameters/Format'
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Market summary data
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/MarketSummaryQuote'
+              example:
+                - symbol: "^GSPC"
+                  fullExchangeName: "SNP"
+                  exchange: "SNP"
+                  shortName: "S&P 500"
+                  quoteType: "INDEX"
+                  marketState: "CLOSED"
+                  regularMarketPrice: 5970.84
+                  regularMarketChange: -64.16
+                  regularMarketChangePercent: -1.06
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/trending:
+    get:
+      tags: [Market]
+      summary: Get trending tickers
+      description: |
+        Fetch trending stock symbols for a specific country/region.
+        Returns the most popular/trending stocks based on Yahoo Finance data.
+      parameters:
+        - name: country
+          in: query
+          required: false
+          schema:
+            $ref: '#/components/schemas/Region'
+          description: Country code for localization (defaults to US)
+      responses:
+        '200':
+          description: List of trending tickers
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TrendingQuote'
+              example:
+                - symbol: "NVDA"
+                - symbol: "TSLA"
+                - symbol: "AAPL"
+                - symbol: "AMD"
+                - symbol: "PLTR"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /v2/search:
     get:
       tags: [Search]
@@ -2021,6 +2119,119 @@ components:
         message:
           type: string
 
+    Currency:
+      type: object
+      description: Currency pair information
+      properties:
+        shortName:
+          type: string
+          nullable: true
+          description: Short name (e.g., "USD/EUR")
+          example: "USD/EUR"
+        longName:
+          type: string
+          nullable: true
+          description: Long name (e.g., "USD/EUR")
+          example: "USD/EUR"
+        symbol:
+          type: string
+          nullable: true
+          description: Symbol (e.g., "USDEUR=X")
+          example: "USDEUR=X"
+        localLongName:
+          type: string
+          nullable: true
+          description: Local long name
+          example: "USD/EUR"
+
+    MarketSummaryQuote:
+      type: object
+      description: Market summary quote (index, currency, commodity, etc.)
+      properties:
+        symbol:
+          type: string
+          description: Stock/index symbol
+          example: "^GSPC"
+        fullExchangeName:
+          type: string
+          nullable: true
+          description: Full market name
+          example: "SNP"
+        exchange:
+          type: string
+          nullable: true
+          description: Exchange code
+          example: "SNP"
+        shortName:
+          type: string
+          nullable: true
+          description: Short name
+          example: "S&P 500"
+        quoteType:
+          type: string
+          nullable: true
+          description: Quote type (INDEX, CURRENCY, FUTURE, etc.)
+          example: "INDEX"
+        marketState:
+          type: string
+          nullable: true
+          description: Market state (REGULAR, PRE, POST, CLOSED)
+          example: "CLOSED"
+        regularMarketPrice:
+          $ref: '#/components/schemas/FormattedValue'
+        regularMarketChange:
+          $ref: '#/components/schemas/FormattedValue'
+        regularMarketChangePercent:
+          $ref: '#/components/schemas/FormattedValue'
+        regularMarketPreviousClose:
+          $ref: '#/components/schemas/FormattedValue'
+        regularMarketTime:
+          $ref: '#/components/schemas/FormattedValue'
+        spark:
+          $ref: '#/components/schemas/SparkData'
+
+    SparkData:
+      type: object
+      description: Spark chart mini-data for market summary
+      properties:
+        close:
+          type: array
+          nullable: true
+          items:
+            type: number
+            nullable: true
+          description: Close prices
+        timestamp:
+          type: array
+          nullable: true
+          items:
+            type: integer
+            format: int64
+          description: Timestamps
+        symbol:
+          type: string
+          nullable: true
+          description: Symbol
+        previousClose:
+          type: number
+          format: double
+          nullable: true
+          description: Previous close
+        chartPreviousClose:
+          type: number
+          format: double
+          nullable: true
+          description: Chart previous close
+
+    TrendingQuote:
+      type: object
+      description: A trending stock/symbol
+      properties:
+        symbol:
+          type: string
+          description: Stock symbol
+          example: "NVDA"
+
     Region:
       type: string
       description: Market region code
@@ -2039,10 +2250,7 @@ components:
         - IN  # India
         - IL  # Israel
         - IT  # Italy
-        - JP  # Japan
-        - KR  # Korea
         - MY  # Malaysia
-        - MX  # Mexico
         - NZ  # New Zealand
         - NO  # Norway
         - PT  # Portugal

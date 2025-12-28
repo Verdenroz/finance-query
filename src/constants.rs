@@ -76,6 +76,19 @@ pub mod endpoints {
     /// Market hours/time endpoint
     pub const MARKET_TIME: &str =
         const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v6/finance/markettime");
+
+    /// Currencies endpoint
+    pub const CURRENCIES: &str =
+        const_format::concatcp!(YAHOO_FINANCE_QUERY2, "/v1/finance/currencies");
+
+    /// Market summary endpoint
+    pub const MARKET_SUMMARY: &str =
+        const_format::concatcp!(YAHOO_FINANCE_QUERY2, "/v6/finance/quote/marketSummary");
+
+    /// Trending tickers endpoint (requires region suffix)
+    pub fn trending(region: &str) -> String {
+        format!("{}/v1/finance/trending/{}", YAHOO_FINANCE_QUERY2, region)
+    }
 }
 
 /// URL builders (functions that construct full URLs with query params)
@@ -1513,14 +1526,8 @@ pub enum Country {
     Israel,
     /// Italy (it-IT, IT)
     Italy,
-    /// Japan (ja-JP, JP)
-    Japan,
-    /// Korea (ko-KR, KR)
-    Korea,
     /// Malaysia (ms-MY, MY)
     Malaysia,
-    /// Mexico (es-MX, MX)
-    Mexico,
     /// New Zealand (en-NZ, NZ)
     NewZealand,
     /// Norway (nb-NO, NO)
@@ -1558,7 +1565,7 @@ impl Country {
     /// ```
     /// use finance_query::Country;
     ///
-    /// assert_eq!(Country::Japan.lang(), "ja-JP");
+    /// assert_eq!(Country::France.lang(), "fr-FR");
     /// assert_eq!(Country::UnitedStates.lang(), "en-US");
     /// ```
     pub fn lang(&self) -> &'static str {
@@ -1577,10 +1584,7 @@ impl Country {
             Country::India => "en-IN",
             Country::Israel => "he-IL",
             Country::Italy => "it-IT",
-            Country::Japan => "ja-JP",
-            Country::Korea => "ko-KR",
             Country::Malaysia => "ms-MY",
-            Country::Mexico => "es-MX",
             Country::NewZealand => "en-NZ",
             Country::Norway => "nb-NO",
             Country::Portugal => "pt-PT",
@@ -1604,7 +1608,7 @@ impl Country {
     /// ```
     /// use finance_query::Country;
     ///
-    /// assert_eq!(Country::Japan.region(), "JP");
+    /// assert_eq!(Country::France.region(), "FR");
     /// assert_eq!(Country::UnitedStates.region(), "US");
     /// ```
     pub fn region(&self) -> &'static str {
@@ -1623,10 +1627,7 @@ impl Country {
             Country::India => "IN",
             Country::Israel => "IL",
             Country::Italy => "IT",
-            Country::Japan => "JP",
-            Country::Korea => "KR",
             Country::Malaysia => "MY",
-            Country::Mexico => "MX",
             Country::NewZealand => "NZ",
             Country::Norway => "NO",
             Country::Portugal => "PT",
@@ -1651,7 +1652,7 @@ impl Country {
     /// use finance_query::Country;
     ///
     /// assert_eq!(Country::UnitedStates.cors_domain(), "finance.yahoo.com");
-    /// assert_eq!(Country::Japan.cors_domain(), "finance.yahoo.co.jp");
+    /// assert_eq!(Country::France.cors_domain(), "fr.finance.yahoo.com");
     /// ```
     pub fn cors_domain(&self) -> &'static str {
         match self {
@@ -1669,10 +1670,7 @@ impl Country {
             Country::India => "in.finance.yahoo.com",
             Country::Israel => "il.finance.yahoo.com",
             Country::Italy => "it.finance.yahoo.com",
-            Country::Japan => "jp.finance.yahoo.com",
-            Country::Korea => "kr.finance.yahoo.com",
             Country::Malaysia => "my.finance.yahoo.com",
-            Country::Mexico => "mx.finance.yahoo.com",
             Country::NewZealand => "nz.finance.yahoo.com",
             Country::Norway => "no.finance.yahoo.com",
             Country::Portugal => "pt.finance.yahoo.com",
@@ -1686,6 +1684,44 @@ impl Country {
             Country::UnitedKingdom => "uk.finance.yahoo.com",
             Country::UnitedStates => "finance.yahoo.com",
             Country::Vietnam => "vn.finance.yahoo.com",
+        }
+    }
+}
+
+impl std::str::FromStr for Country {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_uppercase().as_str() {
+            "AR" => Ok(Country::Argentina),
+            "AU" => Ok(Country::Australia),
+            "BR" => Ok(Country::Brazil),
+            "CA" => Ok(Country::Canada),
+            "CN" => Ok(Country::China),
+            "DK" => Ok(Country::Denmark),
+            "FI" => Ok(Country::Finland),
+            "FR" => Ok(Country::France),
+            "DE" => Ok(Country::Germany),
+            "GR" => Ok(Country::Greece),
+            "HK" => Ok(Country::HongKong),
+            "IN" => Ok(Country::India),
+            "IL" => Ok(Country::Israel),
+            "IT" => Ok(Country::Italy),
+            "MY" => Ok(Country::Malaysia),
+            "NZ" => Ok(Country::NewZealand),
+            "NO" => Ok(Country::Norway),
+            "PT" => Ok(Country::Portugal),
+            "RU" => Ok(Country::Russia),
+            "SG" => Ok(Country::Singapore),
+            "ES" => Ok(Country::Spain),
+            "SE" => Ok(Country::Sweden),
+            "TW" => Ok(Country::Taiwan),
+            "TH" => Ok(Country::Thailand),
+            "TR" => Ok(Country::Turkey),
+            "GB" | "UK" => Ok(Country::UnitedKingdom),
+            "US" => Ok(Country::UnitedStates),
+            "VN" => Ok(Country::Vietnam),
+            _ => Err(()),
         }
     }
 }

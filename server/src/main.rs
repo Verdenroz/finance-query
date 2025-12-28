@@ -6,8 +6,8 @@ use axum::{
     routing::{get, post},
 };
 use finance_query::{
-    Frequency, Interval, ScreenerQuery, ScreenerType, SectorType, StatementType, Ticker, Tickers,
-    TimeRange, ValueFormat, YahooError, finance, screener_query,
+    Country, Frequency, Interval, ScreenerQuery, ScreenerType, SectorType, StatementType, Ticker,
+    Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query,
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
@@ -60,6 +60,11 @@ fn parse_fields(s: Option<&str>) -> Option<std::collections::HashSet<String>> {
             .filter(|f| !f.is_empty())
             .collect()
     })
+}
+
+/// Parse country code string into Country enum
+fn parse_country(s: &str) -> Option<Country> {
+    s.parse().ok()
 }
 
 /// Filter a JSON value to only include specified fields (top-level only)
@@ -369,6 +374,8 @@ fn api_routes() -> Router {
         .route("/analysis/{symbol}/{analysis_type}", get(get_analysis))
         // GET /v2/chart/{symbol}?interval=<str>&range=<str>
         .route("/chart/{symbol}", get(get_chart))
+        // GET /v2/currencies
+        .route("/currencies", get(get_currencies))
         // GET /v2/earnings-transcript?event_id=<str>&company_id=<str>
         .route("/earnings-transcript", get(get_earnings_transcript))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
@@ -381,14 +388,10 @@ fn api_routes() -> Router {
         .route("/indicators/{symbol}", get(get_indicators))
         // GET /v2/indices?format=<raw|pretty|both>
         .route("/indices", get(get_indices))
-        // POST /v2/screeners/custom
-        .route("/screeners/custom", post(post_custom_screener))
-        // GET /v2/screeners/{screener_type}?count=<u32>
-        .route("/screeners/{screener_type}", get(get_screeners))
-        // GET /v2/sectors/{sector_type}
-        .route("/sectors/{sector_type}", get(get_sector))
         // GET /v2/industries/{industry_key}
         .route("/industries/{industry_key}", get(get_industry))
+        // GET /v2/market-summary
+        .route("/market-summary", get(get_market_summary))
         // GET /v2/news?count=<u32>
         .route("/news", get(get_general_news))
         // GET /v2/news/{symbol}?count=<u32>
@@ -403,8 +406,16 @@ fn api_routes() -> Router {
         .route("/quotes", get(get_quotes))
         // GET /v2/recommendations/{symbol}?limit=<u32>
         .route("/recommendations/{symbol}", get(get_recommendations))
+        // POST /v2/screeners/custom
+        .route("/screeners/custom", post(post_custom_screener))
+        // GET /v2/screeners/{screener_type}?count=<u32>
+        .route("/screeners/{screener_type}", get(get_screeners))
         // GET /v2/search?q=<string>&hits=<u32>
         .route("/search", get(search))
+        // GET /v2/sectors/{sector_type}
+        .route("/sectors/{sector_type}", get(get_sector))
+        // GET /v2/trending?region=<str>
+        .route("/trending", get(get_trending))
 }
 
 /// GET /health
@@ -1366,6 +1377,88 @@ async fn get_earnings_transcript(
         Ok(response) => (StatusCode::OK, Json(response)).into_response(),
         Err(e) => {
             error!("Failed to fetch earnings transcript: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/currencies
+///
+/// Returns available currencies from Yahoo Finance.
+async fn get_currencies() -> impl IntoResponse {
+    info!("Fetching currencies");
+
+    match finance::currencies().await {
+        Ok(currencies) => {
+            let json = serde_json::to_value(currencies).unwrap_or(serde_json::Value::Null);
+            (StatusCode::OK, Json(json)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch currencies: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Query parameters for /v2/market-summary
+#[derive(Deserialize)]
+struct MarketSummaryQuery {
+    /// Country code for localization (e.g., "US", "JP", "GB")
+    country: Option<String>,
+    /// Value format: raw, pretty, or both (default: raw)
+    format: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+/// GET /v2/market-summary
+///
+/// Returns market summary with major indices, currencies, and commodities.
+async fn get_market_summary(Query(params): Query<MarketSummaryQuery>) -> impl IntoResponse {
+    let country = params.country.as_deref().and_then(parse_country);
+    let format = parse_format(params.format.as_deref());
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Fetching market summary (country={:?}, format={}, fields={:?})",
+        country,
+        format.as_str(),
+        params.fields
+    );
+
+    match finance::market_summary(country).await {
+        Ok(summary) => {
+            let json = serde_json::to_value(summary).unwrap_or(serde_json::Value::Null);
+            let response = apply_transforms(json, format, fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch market summary: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// Query parameters for /v2/trending
+#[derive(Deserialize)]
+struct TrendingQuery {
+    /// Country code for localization (e.g., "US", "JP", "GB")
+    country: Option<String>,
+}
+
+/// GET /v2/trending
+///
+/// Returns trending tickers for a region.
+async fn get_trending(Query(params): Query<TrendingQuery>) -> impl IntoResponse {
+    let country = params.country.as_deref().and_then(parse_country);
+    info!("Fetching trending tickers (country={:?})", country);
+
+    match finance::trending(country).await {
+        Ok(trending) => {
+            let json = serde_json::to_value(trending).unwrap_or(serde_json::Value::Null);
+            (StatusCode::OK, Json(json)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch trending tickers: {}", e);
             error_response(e).into_response()
         }
     }

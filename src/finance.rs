@@ -4,6 +4,7 @@
 //! such as searching for symbols and fetching screener data.
 
 use crate::client::{ClientConfig, YahooClient};
+use crate::constants::Country;
 use crate::constants::screener_types::ScreenerType;
 use crate::constants::sector_types::SectorType;
 use crate::error::Result;
@@ -265,4 +266,79 @@ pub async fn sector(sector_type: SectorType) -> Result<Sector> {
 pub async fn industry(industry_key: &str) -> Result<Industry> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_industry(industry_key).await
+}
+
+/// Get list of available currencies
+///
+/// Returns currency information from Yahoo Finance.
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let currencies = finance::currencies().await?;
+/// # Ok(())
+/// # }
+/// ```
+pub async fn currencies() -> Result<Vec<crate::models::currencies::Currency>> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.get_currencies().await
+}
+
+/// Get market summary
+///
+/// Returns market summary with major indices, currencies, and commodities.
+///
+/// # Arguments
+///
+/// * `country` - Optional country for localization. If None, uses default (US).
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, Country};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Use default (US)
+/// let summary = finance::market_summary(None).await?;
+/// // Or specify a country
+/// let summary = finance::market_summary(Some(Country::Japan)).await?;
+/// # Ok(())
+/// # }
+/// ```
+pub async fn market_summary(
+    country: Option<Country>,
+) -> Result<Vec<crate::models::market_summary::MarketSummaryQuote>> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.get_market_summary(country).await
+}
+
+/// Get trending tickers for a country
+///
+/// Returns trending stocks for a specific country/region.
+///
+/// # Arguments
+///
+/// * `country` - Optional country for localization. If None, uses default (US).
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, Country};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Use default (US)
+/// let trending = finance::trending(None).await?;
+/// // Or specify a country
+/// let trending = finance::trending(Some(Country::Japan)).await?;
+/// # Ok(())
+/// # }
+/// ```
+pub async fn trending(
+    country: Option<Country>,
+) -> Result<Vec<crate::models::trending::TrendingQuote>> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    client.get_trending(country).await
 }

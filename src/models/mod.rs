@@ -5,6 +5,8 @@
 
 /// Chart/historical data models.
 pub mod chart;
+/// Currency models.
+pub mod currencies;
 /// Financials (fundamentals-timeseries) models.
 pub mod financials;
 /// Market hours models.
@@ -13,6 +15,8 @@ pub mod hours;
 pub mod indicators;
 /// Industry models for market industry data.
 pub mod industries;
+/// Market summary models.
+pub mod market_summary;
 /// News models.
 pub mod news;
 /// Options models.
@@ -27,3 +31,5 @@ pub mod screeners;
 pub mod search;
 /// Sector models for market sector data.
 pub mod sectors;
+/// Trending tickers models.
+pub mod trending;
