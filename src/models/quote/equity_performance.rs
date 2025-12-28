@@ -181,6 +181,7 @@ mod tests {
 
     #[test]
     fn test_equity_performance_deserialize() {
+        // Test JSON uses FormattedValue format: {"raw": value}
         let json = json!({
             "maxAge": 1,
             "benchmark": {
@@ -188,32 +189,32 @@ mod tests {
                 "shortName": "S&P 500"
             },
             "performanceOverview": {
-                "asOfDate": 1764892800,
-                "fiveDaysReturn": 0.030622387,
-                "oneMonthReturn": -0.06551842,
-                "threeMonthReturn": 0.092266984,
-                "sixMonthReturn": 0.30325815,
-                "ytdReturnPct": 0.35870054,
-                "oneYearTotalReturn": 0.2578236,
-                "twoYearTotalReturn": 2.919418,
-                "threeYearTotalReturn": 9.992929,
-                "fiveYearTotalReturn": 12.491636,
-                "tenYearTotalReturn": 220.57314,
-                "maxReturn": 4168.3716
+                "asOfDate": {"raw": 1764892800},
+                "fiveDaysReturn": {"raw": 0.030622387},
+                "oneMonthReturn": {"raw": -0.06551842},
+                "threeMonthReturn": {"raw": 0.092266984},
+                "sixMonthReturn": {"raw": 0.30325815},
+                "ytdReturnPct": {"raw": 0.35870054},
+                "oneYearTotalReturn": {"raw": 0.2578236},
+                "twoYearTotalReturn": {"raw": 2.919418},
+                "threeYearTotalReturn": {"raw": 9.992929},
+                "fiveYearTotalReturn": {"raw": 12.491636},
+                "tenYearTotalReturn": {"raw": 220.57314},
+                "maxReturn": {"raw": 4168.3716}
             },
             "performanceOverviewBenchmark": {
-                "asOfDate": 1764892800,
-                "fiveDaysReturn": 0.0031113708,
-                "oneMonthReturn": 0.010904458,
-                "threeMonthReturn": 0.060001526,
-                "sixMonthReturn": 0.15676934,
-                "ytdReturnPct": 0.16811156,
-                "oneYearTotalReturn": 0.13090958,
-                "twoYearTotalReturn": 0.504298,
-                "threeYearTotalReturn": 0.71809816,
-                "fiveYearTotalReturn": 0.85730654,
-                "tenYearTotalReturn": 2.2846167,
-                "maxReturn": 388.03735
+                "asOfDate": {"raw": 1764892800},
+                "fiveDaysReturn": {"raw": 0.0031113708},
+                "oneMonthReturn": {"raw": 0.010904458},
+                "threeMonthReturn": {"raw": 0.060001526},
+                "sixMonthReturn": {"raw": 0.15676934},
+                "ytdReturnPct": {"raw": 0.16811156},
+                "oneYearTotalReturn": {"raw": 0.13090958},
+                "twoYearTotalReturn": {"raw": 0.504298},
+                "threeYearTotalReturn": {"raw": 0.71809816},
+                "fiveYearTotalReturn": {"raw": 0.85730654},
+                "tenYearTotalReturn": {"raw": 2.2846167},
+                "maxReturn": {"raw": 388.03735}
             }
         });
 
