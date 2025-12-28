@@ -3,16 +3,6 @@
 //! A Rust library for fetching financial data from Yahoo Finance.
 //! Inspired by yfinance, with smart lazy loading for efficient data fetching.
 //!
-//! ## Features
-//!
-//! - **yfinance-like API**: Familiar interface for Python users migrating to Rust
-//! - **Smart lazy loading**: Data fetched only when needed, then cached
-//! - **Efficient grouping**: All quote modules fetched in ONE request on first access
-//! - **100% type safe**: All data structures fully typed with comprehensive models
-//! - **In-memory caching**: Fetched data persists for the lifetime of the Ticker
-//! - **Async-first**: Built on tokio for efficient concurrent operations
-//! - **Configurable client**: Customize timeout, proxy, language, and region settings
-//!
 //! ## Quick Start
 //!
 //! ```no_run
@@ -52,9 +42,9 @@
 //! }
 //! ```
 //!
-//! ## Smart Lazy Loading
+//! ## Lazy Loading
 //!
-//! The library uses intelligent lazy loading:
+//! The library uses lazy loading:
 //! - **Quote data**: All ~30 quote modules fetched together on first property access
 //! - **Chart data**: Fetched per (interval, range) combination and cached
 //! - **Recommendations**: Fetched once and cached
@@ -66,19 +56,17 @@
 
 // === Modules ===
 // Public modules
-/// Constants and default values.
-pub mod constants;
 /// Error types and result definitions.
 pub mod error;
-/// Non-symbol-specific operations (search, screeners, etc.).
+/// Non-symbol-specific operations (search, lookup, screeners, market data, etc.).
 pub mod finance;
-/// Data models for Yahoo Finance responses.
-pub mod models;
 
 // Internal modules
 mod auth;
 mod client;
+mod constants;
 mod endpoints;
+mod models;
 mod scrapers;
 mod ticker;
 mod tickers;
@@ -90,18 +78,17 @@ pub use ticker::{Ticker, TickerBuilder};
 pub use tickers::{BatchChartsResponse, BatchQuotesResponse, Tickers, TickersBuilder};
 
 // ============================================================================
-// Configuration API - Configure client and request behavior
-// ============================================================================
-pub use client::{ClientConfig, ClientConfigBuilder};
-pub use finance::{LookupOptions, LookupType, SearchOptions};
-
-// ============================================================================
 // Error types and results
 // ============================================================================
 pub use error::{Result, YahooError};
 
 // ============================================================================
-// Constants and parameter enums
+// Options - Configure API requests
+// ============================================================================
+pub use finance::{LookupOptions, LookupType, SearchOptions};
+
+// ============================================================================
+// Parameter enums - Used with Ticker and finance methods
 // ============================================================================
 pub use constants::indices::Region as IndicesRegion;
 pub use constants::screener_query;

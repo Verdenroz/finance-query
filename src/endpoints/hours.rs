@@ -1,5 +1,5 @@
+use super::urls::api;
 use crate::client::YahooClient;
-use crate::constants::endpoints;
 use crate::error::Result;
 use crate::models::hours::MarketHours;
 
@@ -36,7 +36,7 @@ pub async fn fetch(client: &YahooClient, region: Option<&str>) -> Result<MarketH
     ];
 
     let response = client
-        .request_with_params(endpoints::MARKET_TIME, &params)
+        .request_with_params(api::MARKET_TIME, &params)
         .await?;
     let json: serde_json::Value = response.json().await?;
 

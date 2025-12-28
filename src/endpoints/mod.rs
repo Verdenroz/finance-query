@@ -1,7 +1,10 @@
 //! Yahoo Finance API endpoints.
-///
-/// This module contains organized endpoint implementations for all Yahoo Finance API calls.
-/// Each endpoint module handles a specific type of API request.
+//!
+//! This module contains organized endpoint implementations for all Yahoo Finance API calls.
+//! Each endpoint module handles a specific type of API request.
+
+pub mod urls;
+
 pub mod chart;
 pub mod common;
 pub mod currencies;

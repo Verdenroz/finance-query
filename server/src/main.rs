@@ -650,11 +650,11 @@ struct IndicesQuery {
 ///
 /// Returns quotes for world market indices, optionally filtered by region.
 async fn get_indices(Query(params): Query<IndicesQuery>) -> impl IntoResponse {
-    use finance_query::constants::indices::Region;
+    use finance_query::IndicesRegion;
 
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
-    let region = params.region.as_deref().and_then(Region::parse);
+    let region = params.region.as_deref().and_then(IndicesRegion::parse);
 
     info!(
         "Fetching indices (region={}, format={}, fields={:?})",

@@ -1,8 +1,8 @@
+use super::urls::api;
 /// Recommendations endpoint
 ///
 /// Fetches similar/recommended quotes for a given symbol.
 use crate::client::YahooClient;
-use crate::constants::endpoints;
 use crate::error::Result;
 use tracing::info;
 
@@ -19,7 +19,7 @@ use tracing::info;
 /// ```no_run
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::endpoints::recommendations;
+/// use finance_query::api::recommendations;
 /// let similar = recommendations::fetch(&client, "AAPL", 5).await?;
 /// # Ok(())
 /// # }
@@ -29,7 +29,7 @@ pub async fn fetch(client: &YahooClient, symbol: &str, limit: u32) -> Result<ser
 
     info!("Fetching similar quotes for: {}", symbol);
 
-    let url = endpoints::recommendations(symbol);
+    let url = api::recommendations(symbol);
     let params = [("count", limit.to_string())];
     let response = client.request_with_params(&url, &params).await?;
 
@@ -39,7 +39,7 @@ pub async fn fetch(client: &YahooClient, symbol: &str, limit: u32) -> Result<ser
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

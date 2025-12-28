@@ -2,8 +2,10 @@
 //!
 //! Fetches financial statement data over time (income statement, balance sheet, cash flow).
 
+use super::urls::api;
 use crate::client::YahooClient;
-use crate::constants::{Frequency, StatementType, api_params, endpoints};
+use crate::client::{API_PARAM_MERGE, API_PARAM_PAD_TIMESERIES};
+use crate::constants::{Frequency, StatementType};
 use crate::error::Result;
 use crate::models::financials::FinancialStatement;
 use tracing::info;
@@ -19,21 +21,12 @@ use tracing::info;
 ///
 /// # Example
 ///
-/// ```no_run
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::endpoints::financials;
-/// use finance_query::constants::{StatementType, Frequency};
+/// ```ignore
+/// use finance_query::{Ticker, StatementType, Frequency};
 ///
-/// let statement = financials::fetch(
-///     &client,
-///     "AAPL",
-///     StatementType::Income,
-///     Frequency::Annual
-/// ).await?;
+/// let ticker = Ticker::new("AAPL").await?;
+/// let statement = ticker.financials(StatementType::Income, Frequency::Annual).await?;
 /// println!("Revenue: {:?}", statement.statement.get("TotalRevenue"));
-/// # Ok(())
-/// # }
 /// ```
 pub async fn fetch(
     client: &YahooClient,
@@ -54,7 +47,7 @@ pub async fn fetch(
     let types: Vec<String> = fields.iter().map(|&f| frequency.prefix(f)).collect();
     let types_str = types.join(",");
 
-    let url = endpoints::financials(symbol);
+    let url = api::financials(symbol);
 
     // Use client config for lang and region
     let config = client.config();
@@ -67,8 +60,8 @@ pub async fn fetch(
     let period1 = now - (10 * 365 * 24 * 60 * 60); // 10 years ago
 
     let params = [
-        ("merge", api_params::MERGE),
-        ("padTimeSeries", api_params::PAD_TIMESERIES),
+        ("merge", API_PARAM_MERGE),
+        ("padTimeSeries", API_PARAM_PAD_TIMESERIES),
         ("period1", &period1.to_string()),
         ("period2", &now.to_string()),
         ("type", types_str.as_str()),
@@ -84,7 +77,7 @@ pub async fn fetch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

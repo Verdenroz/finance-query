@@ -1,6 +1,6 @@
+use super::urls::builders;
 use crate::client::YahooClient;
 use crate::constants::screener_types::ScreenerType;
-use crate::constants::url_builders;
 use crate::error::Result;
 use crate::models::screeners::{ScreenerQuery, ScreenerResults};
 
@@ -34,7 +34,7 @@ pub async fn fetch(
     screener_type: ScreenerType,
     count: u32,
 ) -> Result<ScreenerResults> {
-    let url = url_builders::screener(screener_type, count);
+    let url = builders::screener(screener_type, count);
     let response = client.request_with_crumb(&url).await?;
     let json: serde_json::Value = response.json().await?;
 
@@ -73,7 +73,7 @@ pub async fn fetch(
 /// # }
 /// ```
 pub async fn fetch_custom(client: &YahooClient, query: ScreenerQuery) -> Result<ScreenerResults> {
-    let url = url_builders::custom_screener();
+    let url = builders::custom_screener();
     let response = client.request_post_with_crumb(&url, &query).await?;
     let json: serde_json::Value = response.json().await?;
 

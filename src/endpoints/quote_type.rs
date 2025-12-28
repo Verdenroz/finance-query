@@ -1,8 +1,8 @@
+use super::urls::api;
 /// Quote type endpoint
 ///
 /// Fetches quote type data including company ID (quartrId).
 use crate::client::YahooClient;
-use crate::constants::endpoints;
 use crate::error::Result;
 use tracing::info;
 
@@ -18,7 +18,7 @@ use tracing::info;
 /// ```no_run
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::endpoints::quote_type;
+/// use finance_query::api::quote_type;
 /// let quote_type = quote_type::fetch(&client, "AAPL").await?;
 /// # Ok(())
 /// # }
@@ -29,7 +29,7 @@ pub(crate) async fn fetch(client: &YahooClient, symbol: &str) -> Result<serde_js
 
     info!("Fetching quote type for: {}", symbol);
 
-    let url = endpoints::quote_type(symbol);
+    let url = api::quote_type(symbol);
     let response = client.request_with_crumb(&url).await?;
 
     Ok(response.json().await?)
@@ -38,7 +38,7 @@ pub(crate) async fn fetch(client: &YahooClient, symbol: &str) -> Result<serde_js
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

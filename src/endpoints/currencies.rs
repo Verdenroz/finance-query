@@ -1,8 +1,8 @@
+use super::urls::api;
 /// Currencies endpoint
 ///
 /// Fetch available currencies from Yahoo Finance.
 use crate::client::YahooClient;
-use crate::constants::endpoints;
 use crate::error::Result;
 use tracing::info;
 
@@ -34,9 +34,7 @@ pub async fn fetch(client: &YahooClient) -> Result<serde_json::Value> {
         ("region", config.region.as_str()),
     ];
 
-    let response = client
-        .request_with_params(endpoints::CURRENCIES, &params)
-        .await?;
+    let response = client.request_with_params(api::CURRENCIES, &params).await?;
 
     Ok(response.json().await?)
 }
@@ -44,7 +42,7 @@ pub async fn fetch(client: &YahooClient) -> Result<serde_json::Value> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

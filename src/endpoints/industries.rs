@@ -1,5 +1,5 @@
+use super::urls::builders;
 use crate::client::YahooClient;
-use crate::constants::url_builders;
 use crate::error::Result;
 use crate::models::industries::Industry;
 
@@ -28,7 +28,7 @@ use crate::models::industries::Industry;
 /// # }
 /// ```
 pub async fn fetch(client: &YahooClient, industry_key: &str) -> Result<Industry> {
-    let url = url_builders::industry(industry_key);
+    let url = builders::industry(industry_key);
     let response = client.request_with_crumb(&url).await?;
     let json: serde_json::Value = response.json().await?;
 

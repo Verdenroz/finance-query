@@ -1,8 +1,9 @@
+use super::urls::api;
 /// Search endpoint
 ///
 /// Search for quotes, news, and research reports on Yahoo Finance.
 use crate::client::YahooClient;
-use crate::constants::{Country, endpoints};
+use crate::constants::Country;
 use crate::error::Result;
 use tracing::info;
 
@@ -166,9 +167,7 @@ pub async fn fetch(
         ("enableEnhancedTrivialQuery", "true"),
     ];
 
-    let response = client
-        .request_with_params(endpoints::SEARCH, &params)
-        .await?;
+    let response = client.request_with_params(api::SEARCH, &params).await?;
 
     Ok(response.json().await?)
 }
@@ -176,7 +175,7 @@ pub async fn fetch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

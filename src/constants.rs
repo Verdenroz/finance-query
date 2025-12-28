@@ -1,140 +1,3 @@
-/// Yahoo Finance API base URLs
-pub mod urls {
-    /// Base URL for Yahoo Finance API (query1)
-    pub const YAHOO_FINANCE_QUERY1: &str = "https://query1.finance.yahoo.com";
-
-    /// Base URL for Yahoo Finance API (query2)
-    pub const YAHOO_FINANCE_QUERY2: &str = "https://query2.finance.yahoo.com";
-
-    /// Yahoo authentication/cookie page
-    pub const YAHOO_FC: &str = "https://fc.yahoo.com";
-}
-
-/// Yahoo Finance API endpoints
-pub mod endpoints {
-    use super::urls::*;
-
-    /// Get crumb token (query1)
-    pub const CRUMB_QUERY1: &str =
-        const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/test/getcrumb");
-
-    /// Quote summary endpoint (detailed quote data)
-    pub fn quote_summary(symbol: &str) -> String {
-        format!(
-            "{}/v10/finance/quoteSummary/{}",
-            YAHOO_FINANCE_QUERY2, symbol
-        )
-    }
-
-    /// Batch quotes endpoint - fetch multiple symbols in one request
-    pub const QUOTES: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v7/finance/quote");
-
-    /// Historical chart data endpoint
-    #[allow(dead_code)]
-    pub fn chart(symbol: &str) -> String {
-        format!("{}/v8/finance/chart/{}", YAHOO_FINANCE_QUERY1, symbol)
-    }
-
-    /// Search endpoint
-    #[allow(dead_code)]
-    pub const SEARCH: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/finance/search");
-
-    /// Lookup endpoint (type-filtered symbol discovery)
-    #[allow(dead_code)]
-    pub const LOOKUP: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/finance/lookup");
-
-    /// Financial timeseries endpoint (financials)
-    #[allow(dead_code)]
-    pub fn financials(symbol: &str) -> String {
-        format!(
-            "{}/ws/fundamentals-timeseries/v1/finance/timeseries/{}",
-            YAHOO_FINANCE_QUERY2, symbol
-        )
-    }
-
-    /// Recommendations endpoint (similar stocks)
-    #[allow(dead_code)]
-    pub fn recommendations(symbol: &str) -> String {
-        format!(
-            "{}/v6/finance/recommendationsbysymbol/{}",
-            YAHOO_FINANCE_QUERY2, symbol
-        )
-    }
-
-    /// Quote type endpoint (get quartr ID)
-    #[allow(dead_code)]
-    pub fn quote_type(symbol: &str) -> String {
-        format!("{}/v1/finance/quoteType/{}", YAHOO_FINANCE_QUERY1, symbol)
-    }
-
-    /// News endpoint
-    #[allow(dead_code)]
-    pub const NEWS: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY2, "/v2/finance/news");
-
-    /// Options endpoint
-    #[allow(dead_code)]
-    pub fn options(symbol: &str) -> String {
-        format!("{}/v7/finance/options/{}", YAHOO_FINANCE_QUERY2, symbol)
-    }
-
-    /// Market hours/time endpoint
-    pub const MARKET_TIME: &str =
-        const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v6/finance/markettime");
-
-    /// Currencies endpoint
-    pub const CURRENCIES: &str =
-        const_format::concatcp!(YAHOO_FINANCE_QUERY2, "/v1/finance/currencies");
-
-    /// Market summary endpoint
-    pub const MARKET_SUMMARY: &str =
-        const_format::concatcp!(YAHOO_FINANCE_QUERY2, "/v6/finance/quote/marketSummary");
-
-    /// Trending tickers endpoint (requires region suffix)
-    pub fn trending(region: &str) -> String {
-        format!("{}/v1/finance/trending/{}", YAHOO_FINANCE_QUERY2, region)
-    }
-}
-
-/// URL builders (functions that construct full URLs with query params)
-pub mod url_builders {
-    use super::screener_types::ScreenerType;
-    use super::urls::*;
-
-    /// Screener endpoint for predefined screeners
-    pub fn screener(screener_type: ScreenerType, count: u32) -> String {
-        format!(
-            "{}/v1/finance/screener/predefined/saved?count={}&formatted=true&scrIds={}",
-            YAHOO_FINANCE_QUERY1,
-            count,
-            screener_type.as_scr_id()
-        )
-    }
-
-    /// Custom screener endpoint (POST)
-    pub fn custom_screener() -> String {
-        format!(
-            "{}/v1/finance/screener?formatted=true&useRecordsResponse=true&lang=en-US&region=US",
-            YAHOO_FINANCE_QUERY1
-        )
-    }
-
-    /// Sector details endpoint
-    pub fn sector(sector_key: &str) -> String {
-        format!(
-            "{}/v1/finance/sectors/{}?formatted=true&withReturns=false&lang=en-US&region=US",
-            YAHOO_FINANCE_QUERY1, sector_key
-        )
-    }
-
-    /// Industries endpoint - detailed industry data
-    pub fn industry(industry_key: &str) -> String {
-        format!(
-            "{}/v1/finance/industries/{}?formatted=true&withReturns=false&lang=en-US&region=US",
-            YAHOO_FINANCE_QUERY1, industry_key
-        )
-    }
-}
-
 /// Predefined screener types for Yahoo Finance
 pub mod screener_types {
     /// Enum of all predefined Yahoo Finance screeners
@@ -935,69 +798,6 @@ pub mod indices {
     }
 }
 
-/// Quote summary module names for the quoteSummary endpoint
-pub mod quote_summary_modules {
-    // Core modules
-    /// Company profile information (officers, description, website, etc.)
-    pub const ASSET_PROFILE: &str = "assetProfile";
-    /// Company summary profile
-    pub const SUMMARY_PROFILE: &str = "summaryProfile";
-    /// Current price data (regular market, pre/post market prices)
-    pub const PRICE: &str = "price";
-    /// Summary detail information (market cap, P/E, dividend yield, etc.)
-    pub const SUMMARY_DETAIL: &str = "summaryDetail";
-    /// Key statistics (beta, shares outstanding, etc.)
-    pub const DEFAULT_KEY_STATISTICS: &str = "defaultKeyStatistics";
-    /// Calendar events (earnings dates, dividend dates)
-    pub const CALENDAR_EVENTS: &str = "calendarEvents";
-    /// Performance overview data
-    pub const QUOTE_UNADJUSTED_PERFORMANCE: &str = "quoteUnadjustedPerformanceOverview";
-    /// Equity performance metrics
-    pub const EQUITY_PERFORMANCE: &str = "equityPerformance";
-
-    // Analysis modules
-    /// Analyst recommendation trend (buy/hold/sell ratings over time)
-    pub const RECOMMENDATION_TREND: &str = "recommendationTrend";
-    /// Analyst upgrade/downgrade history
-    pub const UPGRADE_DOWNGRADE_HISTORY: &str = "upgradeDowngradeHistory";
-    /// Financial data (price targets, profit margins, etc.)
-    pub const FINANCIAL_DATA: &str = "financialData";
-    /// Earnings and revenue estimates/trends
-    pub const EARNINGS_TREND: &str = "earningsTrend";
-    /// Historical earnings data
-    pub const EARNINGS_HISTORY: &str = "earningsHistory";
-    /// Base earnings data
-    pub const EARNINGS: &str = "earnings";
-    /// GAAP earnings data
-    pub const EARNINGS_GAAP: &str = "earningsgaap";
-    /// Non-GAAP earnings data
-    pub const EARNINGS_NON_GAAP: &str = "earningsnongaap";
-    /// Earnings call transcripts
-    pub const EARNINGS_CALL_TRANSCRIPTS: &str = "earningsCallTranscripts";
-
-    // ESG and sentiment
-    /// Environmental, Social, Governance scores
-    pub const ESG_SCORES: &str = "esgScores";
-
-    // Financial statement modules
-    /// Financial statement template/structure
-    pub const FINANCIALS_TEMPLATE: &str = "financialsTemplate";
-
-    // Holders modules
-    /// Major holders breakdown (% held by institutions, insiders, etc.)
-    pub const MAJOR_HOLDERS_BREAKDOWN: &str = "majorHoldersBreakdown";
-    /// Institutional ownership details
-    pub const INSTITUTION_OWNERSHIP: &str = "institutionOwnership";
-    /// Mutual fund ownership details
-    pub const FUND_OWNERSHIP: &str = "fundOwnership";
-    /// Insider transactions history
-    pub const INSIDER_TRANSACTIONS: &str = "insiderTransactions";
-    /// Net share purchase activity by insiders
-    pub const NET_SHARE_PURCHASE_ACTIVITY: &str = "netSharePurchaseActivity";
-    /// Insider holders roster
-    pub const INSIDER_HOLDERS: &str = "insiderHolders";
-}
-
 /// Fundamental timeseries field types for financial statements
 ///
 /// These constants represent field names that must be prefixed with frequency ("annual" or "quarterly")
@@ -1038,28 +838,6 @@ pub mod fundamental_types {
     pub const NORMALIZED_EBITDA: &str = "NormalizedEBITDA";
     pub const TOTAL_EXPENSES: &str = "TotalExpenses";
     pub const TOTAL_OPERATING_INCOME_AS_REPORTED: &str = "TotalOperatingIncomeAsReported";
-    pub const DILUTED_NI_AVAILTO_COM_STOCKHOLDERS: &str = "DilutedNIAvailtoComStockholders";
-    pub const NET_INCOME_FROM_CONTINUING_AND_DISCONTINUED_OPERATION: &str =
-        "NetIncomeFromContinuingAndDiscontinuedOperation";
-    pub const NORMALIZED_INCOME: &str = "NormalizedIncome";
-    pub const INTEREST_INCOME_NON_OPERATING: &str = "InterestIncomeNonOperating";
-    pub const INTEREST_EXPENSE_NON_OPERATING: &str = "InterestExpenseNonOperating";
-    pub const NET_INCOME_CONTINUOUS_OPERATIONS: &str = "NetIncomeContinuousOperations";
-    pub const TAX_RATE_FOR_CALCS: &str = "TaxRateForCalcs";
-    pub const TAX_EFFECT_OF_UNUSUAL_ITEMS: &str = "TaxEffectOfUnusualItems";
-    pub const TAX_PROVISION_AS_REPORTED: &str = "TaxProvisionAsReported";
-    pub const OTHER_NON_OPERATING_INCOME_EXPENSES: &str = "OtherNonOperatingIncomeExpenses";
-    pub const OTHER_OPERATING_EXPENSES: &str = "OtherOperatingExpenses";
-    pub const OTHER_TAXES: &str = "OtherTaxes";
-    pub const PROVISION_FOR_DOUBTFUL_ACCOUNTS: &str = "ProvisionForDoubtfulAccounts";
-    pub const DEPRECIATION_AMORTIZATION_DEPLETION_INCOME_STATEMENT: &str =
-        "DepreciationAmortizationDepletionIncomeStatement";
-    pub const DEPRECIATION_AND_AMORTIZATION_IN_INCOME_STATEMENT: &str =
-        "DepreciationAndAmortizationInIncomeStatement";
-    pub const DEPRECIATION: &str = "Depreciation";
-    pub const AMORTIZATION_OF_INTANGIBLES_INCOME_STATEMENT: &str =
-        "AmortizationOfIntangiblesIncomeStatement";
-    pub const AMORTIZATION: &str = "Amortization";
 
     // ==================
     // BALANCE SHEET (42 fields)
@@ -1167,22 +945,6 @@ pub mod fundamental_types {
     pub const EFFECT_OF_EXCHANGE_RATE_CHANGES: &str = "EffectOfExchangeRateChanges";
     pub const FREE_CASH_FLOW: &str = "FreeCashFlow";
     pub const CAPITAL_EXPENDITURE_REPORTED: &str = "CapitalExpenditureReported";
-}
-
-/// Industry sector classifications
-#[allow(missing_docs)]
-pub mod sectors {
-    pub const BASIC_MATERIALS: &str = "Basic Materials";
-    pub const COMMUNICATION_SERVICES: &str = "Communication Services";
-    pub const CONSUMER_CYCLICAL: &str = "Consumer Cyclical";
-    pub const CONSUMER_DEFENSIVE: &str = "Consumer Defensive";
-    pub const ENERGY: &str = "Energy";
-    pub const FINANCIAL_SERVICES: &str = "Financial Services";
-    pub const HEALTHCARE: &str = "Healthcare";
-    pub const INDUSTRIALS: &str = "Industrials";
-    pub const REAL_ESTATE: &str = "Real Estate";
-    pub const TECHNOLOGY: &str = "Technology";
-    pub const UTILITIES: &str = "Utilities";
 }
 
 /// Statement types for financial data
@@ -1378,32 +1140,14 @@ impl Frequency {
     /// # Example
     ///
     /// ```
-    /// use finance_query::constants::{Frequency, fundamental_types};
+    /// use finance_query::Frequency;
     ///
-    /// let field = Frequency::Annual.prefix(fundamental_types::TOTAL_REVENUE);
+    /// let field = Frequency::Annual.prefix("TotalRevenue");
     /// assert_eq!(field, "annualTotalRevenue");
     /// ```
     pub fn prefix(&self, field: &str) -> String {
         format!("{}{}", self.as_str(), field)
     }
-}
-
-/// HTTP headers
-pub mod headers {
-    /// User agent to use for requests (Chrome on Windows)
-    pub const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
-
-    /// Accept header
-    #[allow(dead_code)]
-    pub const ACCEPT: &str = "*/*";
-
-    /// Accept language
-    #[allow(dead_code)]
-    pub const ACCEPT_LANGUAGE: &str = "en-US,en;q=0.9";
-
-    /// Accept encoding
-    #[allow(dead_code)]
-    pub const ACCEPT_ENCODING: &str = "gzip, deflate, br";
 }
 
 /// Chart intervals
@@ -1730,19 +1474,6 @@ impl std::str::FromStr for Country {
     }
 }
 
-/// Authentication constants
-pub mod auth {
-    use std::time::Duration;
-
-    /// Minimum interval between auth refreshes (prevent excessive refreshing)
-    #[allow(dead_code)]
-    pub const MIN_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
-
-    /// Maximum age of auth before considering it stale
-    #[allow(dead_code)]
-    pub const AUTH_MAX_AGE: Duration = Duration::from_secs(3600); // 1 hour
-}
-
 /// Value format for API responses
 ///
 /// Controls how `FormattedValue<T>` fields are serialized in responses.
@@ -1891,67 +1622,6 @@ impl ValueFormat {
     }
 }
 
-/// Default timeouts
-pub mod timeouts {
-    use std::time::Duration;
-
-    /// Default HTTP request timeout
-    pub const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
-
-    /// Timeout for authentication requests
-    pub const AUTH_TIMEOUT: Duration = Duration::from_secs(15);
-}
-
-/// Default values for API endpoints
-pub mod defaults {
-    /// Default number of similar stocks to return
-    pub const SIMILAR_STOCKS_LIMIT: u32 = 5;
-
-    /// Default number of search results
-    pub const SEARCH_HITS: u32 = 6;
-
-    /// Default server port
-    pub const SERVER_PORT: u16 = 8000;
-
-    /// Default number of news articles to return
-    pub const NEWS_COUNT: u32 = 10;
-
-    /// Default chart interval
-    pub const DEFAULT_INTERVAL: &str = "1d";
-
-    /// Default chart range
-    pub const DEFAULT_RANGE: &str = "1mo";
-
-    /// Default start period for timeseries (Unix timestamp)
-    /// 0 = earliest available data
-    pub const DEFAULT_PERIOD1: i64 = 0;
-
-    /// Default end period for timeseries (Unix timestamp)
-    /// 9999999999 = far future (essentially "now" for Yahoo Finance)
-    pub const DEFAULT_PERIOD2: i64 = 9999999999;
-}
-
-/// API request parameters used across endpoints
-pub mod api_params {
-    /// CORS domain parameter value for Yahoo Finance
-    pub const CORS_DOMAIN: &str = "finance.yahoo.com";
-
-    /// Formatted parameter - disable formatting for raw data
-    pub const FORMATTED: &str = "false";
-
-    /// Merge parameter for timeseries - don't merge data
-    pub const MERGE: &str = "false";
-
-    /// Pad timeseries - fill gaps in data
-    pub const PAD_TIMESERIES: &str = "true";
-
-    /// Default language for API requests
-    pub const DEFAULT_LANG: &str = "en-US";
-
-    /// Default region for API requests
-    pub const DEFAULT_REGION: &str = "US";
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1970,17 +1640,5 @@ mod tests {
         assert_eq!(TimeRange::OneMonth.as_str(), "1mo");
         assert_eq!(TimeRange::OneYear.as_str(), "1y");
         assert_eq!(TimeRange::Max.as_str(), "max");
-    }
-
-    #[test]
-    fn test_endpoint_construction() {
-        assert_eq!(
-            endpoints::chart("AAPL"),
-            "https://query1.finance.yahoo.com/v8/finance/chart/AAPL"
-        );
-        assert_eq!(
-            endpoints::quote_summary("NVDA"),
-            "https://query2.finance.yahoo.com/v10/finance/quoteSummary/NVDA"
-        );
     }
 }

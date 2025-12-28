@@ -1,9 +1,27 @@
 use crate::client::ClientConfig;
-use crate::constants::{headers, urls};
+use crate::endpoints::urls::{api, base};
 use crate::error::{Result, YahooError};
 use reqwest::Proxy;
-use std::time::Instant;
+use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
+
+// ============================================================================
+// Authentication Constants
+// ============================================================================
+
+/// User agent to use for requests (Chrome on Windows)
+const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36";
+
+/// Timeout for authentication requests
+const AUTH_TIMEOUT: Duration = Duration::from_secs(15);
+
+/// Minimum interval between auth refreshes (prevent excessive refreshing)
+#[allow(dead_code)]
+const MIN_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
+
+/// Maximum age of auth before considering it stale
+#[allow(dead_code)]
+const AUTH_MAX_AGE: Duration = Duration::from_secs(3600); // 1 hour
 
 /// Yahoo Finance authentication data
 #[derive(Clone)]
@@ -46,8 +64,8 @@ impl YahooAuth {
         let mut builder = reqwest::Client::builder()
             .cookie_store(true)
             .timeout(config.timeout)
-            .connect_timeout(crate::constants::timeouts::AUTH_TIMEOUT)
-            .user_agent(headers::USER_AGENT);
+            .connect_timeout(AUTH_TIMEOUT)
+            .user_agent(USER_AGENT);
 
         // Apply proxy if configured
         if let Some(proxy_url) = &config.proxy {
@@ -62,21 +80,19 @@ impl YahooAuth {
         })?;
 
         // Visit fc.yahoo.com to establish session
-        debug!("Visiting {} to establish session", urls::YAHOO_FC);
-        client.get(urls::YAHOO_FC).send().await.map_err(|e| {
+        debug!("Visiting {} to establish session", base::YAHOO_FC);
+        client.get(base::YAHOO_FC).send().await.map_err(|e| {
             YahooError::InternalError(format!("Failed to establish session: {}", e))
         })?;
 
         // Try to get crumb from query1
         debug!("Attempting to fetch crumb from query1");
-        let crumb = get_crumb(&client, crate::constants::endpoints::CRUMB_QUERY1)
-            .await
-            .map_err(|e| {
-                warn!("Failed to fetch crumb: {}", e);
-                YahooError::AuthenticationFailed {
-                    context: format!("Failed to fetch crumb: {}", e),
-                }
-            })?;
+        let crumb = get_crumb(&client, api::CRUMB_QUERY1).await.map_err(|e| {
+            warn!("Failed to fetch crumb: {}", e);
+            YahooError::AuthenticationFailed {
+                context: format!("Failed to fetch crumb: {}", e),
+            }
+        })?;
 
         info!("Successfully authenticated with Yahoo Finance");
         Ok(Self {
@@ -89,13 +105,13 @@ impl YahooAuth {
     /// Check if authentication is still valid
     #[allow(dead_code)]
     pub fn is_expired(&self) -> bool {
-        self.last_refresh.elapsed() > crate::constants::auth::AUTH_MAX_AGE
+        self.last_refresh.elapsed() > AUTH_MAX_AGE
     }
 
     /// Check if enough time has passed to allow refresh
     #[allow(dead_code)]
     pub fn can_refresh(&self) -> bool {
-        self.last_refresh.elapsed() >= crate::constants::auth::MIN_REFRESH_INTERVAL
+        self.last_refresh.elapsed() >= MIN_REFRESH_INTERVAL
     }
 }
 

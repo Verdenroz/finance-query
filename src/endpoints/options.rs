@@ -1,8 +1,8 @@
+use super::urls::api;
 /// Options endpoint
 ///
 /// Fetches options chain data including calls, puts, strikes, and expirations.
 use crate::client::YahooClient;
-use crate::constants::endpoints;
 use crate::error::Result;
 use tracing::info;
 
@@ -19,7 +19,7 @@ use tracing::info;
 /// ```no_run
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::endpoints::options;
+/// use finance_query::api::options;
 /// let results = options::fetch(&client, "AAPL", None).await?;
 /// # Ok(())
 /// # }
@@ -33,7 +33,7 @@ pub async fn fetch(
 
     info!("Fetching options for: {}", symbol);
 
-    let url = endpoints::options(symbol);
+    let url = api::options(symbol);
 
     let response = if let Some(date) = date {
         let params = [("date", date.to_string())];
@@ -48,7 +48,7 @@ pub async fn fetch(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

@@ -1,8 +1,9 @@
+use super::urls::api;
 /// Trending tickers endpoint
 ///
 /// Fetch trending tickers for a region from Yahoo Finance.
 use crate::client::YahooClient;
-use crate::constants::{Country, endpoints};
+use crate::constants::Country;
 use crate::error::Result;
 use tracing::info;
 
@@ -18,7 +19,7 @@ use tracing::info;
 /// ```no_run
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::{endpoints::trending, Country};
+/// use finance_query::{api::trending, Country};
 /// // Use client's default config
 /// let result = trending::fetch(&client, None).await?;
 /// // Or specify a country
@@ -37,7 +38,7 @@ pub async fn fetch(client: &YahooClient, country: Option<Country>) -> Result<ser
         lang, region
     );
 
-    let url = endpoints::trending(&region);
+    let url = api::trending(&region);
     let params = [("lang", lang.as_str()), ("region", region.as_str())];
 
     let response = client.request_with_params(&url, &params).await?;
@@ -48,7 +49,7 @@ pub async fn fetch(client: &YahooClient, country: Option<Country>) -> Result<ser
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

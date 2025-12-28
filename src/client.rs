@@ -1,10 +1,29 @@
 use crate::auth::YahooAuth;
-use crate::constants::{Country, Interval, TimeRange, api_params};
+use crate::constants::{Country, Interval, TimeRange};
 use crate::error::{Result, YahooError};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 use tracing::{debug, info};
+
+// ============================================================================
+// Client Configuration Constants
+// ============================================================================
+
+/// Default HTTP request timeout
+pub(crate) const DEFAULT_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Default language for API requests
+pub(crate) const DEFAULT_LANG: &str = "en-US";
+
+/// Default region for API requests
+pub(crate) const DEFAULT_REGION: &str = "US";
+
+/// Merge parameter for timeseries - don't merge data
+pub(crate) const API_PARAM_MERGE: &str = "false";
+
+/// Pad timeseries - fill gaps in data
+pub(crate) const API_PARAM_PAD_TIMESERIES: &str = "true";
 
 /// Configuration for Yahoo Finance client
 #[derive(Debug, Clone)]
@@ -24,10 +43,10 @@ pub struct ClientConfig {
 impl Default for ClientConfig {
     fn default() -> Self {
         Self {
-            timeout: crate::constants::timeouts::DEFAULT_TIMEOUT,
+            timeout: DEFAULT_TIMEOUT,
             proxy: None,
-            lang: api_params::DEFAULT_LANG.to_string(),
-            region: api_params::DEFAULT_REGION.to_string(),
+            lang: DEFAULT_LANG.to_string(),
+            region: DEFAULT_REGION.to_string(),
         }
     }
 }
@@ -230,7 +249,7 @@ impl YahooClient {
         let response = request.send().await.map_err(|e| {
             if e.is_timeout() {
                 YahooError::Timeout {
-                    timeout_ms: crate::constants::timeouts::DEFAULT_TIMEOUT.as_millis() as u64,
+                    timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
                 }
             } else {
                 YahooError::HttpError(e)
@@ -383,7 +402,7 @@ impl YahooClient {
         let response = request.send().await.map_err(|e| {
             if e.is_timeout() {
                 YahooError::Timeout {
-                    timeout_ms: crate::constants::timeouts::DEFAULT_TIMEOUT.as_millis() as u64,
+                    timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
                 }
             } else {
                 YahooError::HttpError(e)
@@ -432,7 +451,7 @@ impl YahooClient {
         let response = request.send().await.map_err(|e| {
             if e.is_timeout() {
                 YahooError::Timeout {
-                    timeout_ms: crate::constants::timeouts::DEFAULT_TIMEOUT.as_millis() as u64,
+                    timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
                 }
             } else {
                 YahooError::HttpError(e)
@@ -575,7 +594,7 @@ impl YahooClient {
     /// ```no_run
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// use finance_query::constants::{StatementType, Frequency};
+    /// use finance_query::{StatementType, Frequency};
     /// let statement = client.get_financials("AAPL", StatementType::Income, Frequency::Annual).await?;
     /// # Ok(())
     /// # }
@@ -888,7 +907,7 @@ mod tests {
     #[test]
     fn test_default_config() {
         let config = ClientConfig::default();
-        assert_eq!(config.timeout, crate::constants::timeouts::DEFAULT_TIMEOUT);
+        assert_eq!(config.timeout, DEFAULT_TIMEOUT);
         assert!(config.proxy.is_none());
     }
 

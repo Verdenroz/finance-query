@@ -1,8 +1,9 @@
+use super::urls::api;
 /// Market Summary endpoint
 ///
 /// Fetch market summary from Yahoo Finance.
 use crate::client::YahooClient;
-use crate::constants::{Country, endpoints};
+use crate::constants::Country;
 use crate::error::Result;
 use tracing::info;
 
@@ -37,7 +38,7 @@ pub async fn fetch(client: &YahooClient, country: Option<Country>) -> Result<ser
     let params = [("lang", lang.as_str()), ("region", region.as_str())];
 
     let response = client
-        .request_with_params(endpoints::MARKET_SUMMARY, &params)
+        .request_with_params(api::MARKET_SUMMARY, &params)
         .await?;
 
     Ok(response.json().await?)
@@ -46,7 +47,7 @@ pub async fn fetch(client: &YahooClient, country: Option<Country>) -> Result<ser
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

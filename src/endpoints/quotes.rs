@@ -1,10 +1,10 @@
+use super::urls::api;
 /// Batch quotes endpoint
 ///
 /// Fetches basic quote data for multiple symbols in a single request.
 /// This uses the /v7/finance/quote endpoint which is more efficient for batch requests
 /// than calling quoteSummary for each symbol individually.
 use crate::client::YahooClient;
-use crate::constants::endpoints;
 use crate::error::Result;
 use tracing::info;
 
@@ -35,9 +35,7 @@ pub(crate) async fn fetch(client: &YahooClient, symbols: &[&str]) -> Result<serd
     info!("Fetching batch quotes for {} symbols", symbols.len());
 
     let params = [("symbols", symbols.join(","))];
-    let response = client
-        .request_with_params(endpoints::QUOTES, &params)
-        .await?;
+    let response = client.request_with_params(api::QUOTES, &params).await?;
 
     Ok(response.json().await?)
 }
@@ -124,9 +122,7 @@ pub(crate) async fn fetch_with_fields(
     params.push(("lang", config.lang.clone()));
     params.push(("region", config.region.clone()));
 
-    let response = client
-        .request_with_params(endpoints::QUOTES, &params)
-        .await?;
+    let response = client.request_with_params(api::QUOTES, &params).await?;
 
     Ok(response.json().await?)
 }
@@ -134,7 +130,7 @@ pub(crate) async fn fetch_with_fields(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ClientConfig;
+    use crate::client::ClientConfig;
 
     #[tokio::test]
     #[ignore] // Requires network access

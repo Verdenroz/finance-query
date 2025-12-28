@@ -1,6 +1,6 @@
+use super::urls::builders;
 use crate::client::YahooClient;
 use crate::constants::sector_types::SectorType;
-use crate::constants::url_builders;
 use crate::error::Result;
 use crate::models::sectors::Sector;
 
@@ -30,7 +30,7 @@ use crate::models::sectors::Sector;
 /// # }
 /// ```
 pub async fn fetch(client: &YahooClient, sector_type: SectorType) -> Result<Sector> {
-    let url = url_builders::sector(sector_type.as_api_path());
+    let url = builders::sector(sector_type.as_api_path());
     let response = client.request_with_crumb(&url).await?;
     let json: serde_json::Value = response.json().await?;
 
