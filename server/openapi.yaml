@@ -250,14 +250,161 @@ paths:
             enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
             default: 1mo
           description: Time range
+        - name: events
+          in: query
+          schema:
+            type: boolean
+            default: false
+          description: Include dividends, splits, and capital gains in response
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Chart data
+          description: Chart data (with optional events)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Chart'
+                allOf:
+                  - $ref: '#/components/schemas/Chart'
+                  - type: object
+                    properties:
+                      dividends:
+                        type: array
+                        description: Dividend events (when events=true)
+                        items:
+                          $ref: '#/components/schemas/Dividend'
+                      splits:
+                        type: array
+                        description: Stock split events (when events=true)
+                        items:
+                          $ref: '#/components/schemas/Split'
+                      capitalGains:
+                        type: array
+                        description: Capital gain distributions (when events=true)
+                        items:
+                          $ref: '#/components/schemas/CapitalGain'
+
+  /v2/dividends/{symbol}:
+    get:
+      tags: [Charts]
+      summary: Get dividend history
+      description: Fetch historical dividend payments for a symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: max
+          description: Time range for dividend history
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Dividend history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Dividend'
+              example:
+                - timestamp: 1739197800
+                  amount: 0.25
+                - timestamp: 1747056600
+                  amount: 0.26
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/splits/{symbol}:
+    get:
+      tags: [Charts]
+      summary: Get stock split history
+      description: Fetch historical stock splits for a symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: AAPL
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: max
+          description: Time range for split history
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Stock split history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Split'
+              example:
+                - timestamp: 1598880600
+                  numerator: 4.0
+                  denominator: 1.0
+                  ratio: "4:1"
+                - timestamp: 1402320600
+                  numerator: 7.0
+                  denominator: 1.0
+                  ratio: "7:1"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/capital-gains/{symbol}:
+    get:
+      tags: [Charts]
+      summary: Get capital gains distribution history
+      description: |
+        Fetch historical capital gains distributions for a symbol.
+        Primarily relevant for mutual funds; most stocks return an empty array.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+          example: VFIAX
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: max
+          description: Time range for capital gains history
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Capital gains distribution history
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CapitalGain'
+              example:
+                - timestamp: 1702640400
+                  amount: 5.23
+                - timestamp: 1671104400
+                  amount: 4.87
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/indicators/{symbol}:
     get:
@@ -1344,6 +1491,60 @@ components:
           type: number
           format: double
           nullable: true
+
+    Dividend:
+      type: object
+      description: Dividend payment event
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp of the dividend ex-date
+          example: 1739197800
+        amount:
+          type: number
+          format: double
+          description: Dividend amount per share
+          example: 0.25
+
+    Split:
+      type: object
+      description: Stock split event
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp of the split date
+          example: 1598880600
+        numerator:
+          type: number
+          format: double
+          description: Split numerator (shares received)
+          example: 4.0
+        denominator:
+          type: number
+          format: double
+          description: Split denominator (shares held)
+          example: 1.0
+        ratio:
+          type: string
+          description: Human-readable split ratio
+          example: "4:1"
+
+    CapitalGain:
+      type: object
+      description: Capital gain distribution event (primarily for mutual funds)
+      properties:
+        timestamp:
+          type: integer
+          format: int64
+          description: Unix timestamp of the distribution date
+          example: 1702640400
+        amount:
+          type: number
+          format: double
+          description: Capital gain distribution amount per share
+          example: 5.23
 
     IndicatorsSummary:
       type: object

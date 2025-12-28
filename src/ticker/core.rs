@@ -6,9 +6,10 @@ use super::macros;
 use crate::client::{ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
-use crate::models::chart::Chart;
+use crate::models::chart::events::ChartEvents;
 use crate::models::chart::response::ChartResponse;
 use crate::models::chart::result::ChartResult;
+use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
 use crate::models::financials::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::{
@@ -22,7 +23,73 @@ use crate::models::recommendation::Recommendation;
 use crate::models::recommendation::response::RecommendationResponse;
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+/// Trait for types with a timestamp field
+trait HasTimestamp {
+    fn timestamp(&self) -> i64;
+}
+
+impl HasTimestamp for Dividend {
+    fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+}
+
+impl HasTimestamp for Split {
+    fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+}
+
+impl HasTimestamp for CapitalGain {
+    fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+}
+
+/// Calculate cutoff timestamp for a given time range
+fn range_to_cutoff(range: TimeRange) -> i64 {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    const DAY: i64 = 86400;
+
+    match range {
+        TimeRange::OneDay => now - DAY,
+        TimeRange::FiveDays => now - 5 * DAY,
+        TimeRange::OneMonth => now - 30 * DAY,
+        TimeRange::ThreeMonths => now - 90 * DAY,
+        TimeRange::SixMonths => now - 180 * DAY,
+        TimeRange::OneYear => now - 365 * DAY,
+        TimeRange::TwoYears => now - 2 * 365 * DAY,
+        TimeRange::FiveYears => now - 5 * 365 * DAY,
+        TimeRange::TenYears => now - 10 * 365 * DAY,
+        TimeRange::YearToDate => {
+            // Approximate: ~days since Jan 1 of current year
+            // Using rough calculation (could use chrono for precision)
+            let days_in_year = (now % (365 * DAY)) / DAY;
+            now - days_in_year * DAY
+        }
+        TimeRange::Max => 0, // No cutoff
+    }
+}
+
+/// Filter a list of timestamped items by time range
+fn filter_by_range<T: HasTimestamp>(items: Vec<T>, range: TimeRange) -> Vec<T> {
+    match range {
+        TimeRange::Max => items,
+        range => {
+            let cutoff = range_to_cutoff(range);
+            items
+                .into_iter()
+                .filter(|item| item.timestamp() >= cutoff)
+                .collect()
+        }
+    }
+}
 
 // Core ticker helpers
 struct TickerCoreData {
@@ -139,6 +206,7 @@ impl TickerBuilder {
             client,
             quote_summary: Arc::new(tokio::sync::RwLock::new(None)),
             chart_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            events_cache: Arc::new(tokio::sync::RwLock::new(None)),
             recommendations_cache: Arc::new(tokio::sync::RwLock::new(None)),
         })
     }
@@ -173,6 +241,7 @@ pub struct Ticker {
     client: Arc<YahooClient>,
     quote_summary: Arc<tokio::sync::RwLock<Option<QuoteSummaryResponse>>>,
     chart_cache: Arc<tokio::sync::RwLock<HashMap<(Interval, TimeRange), ChartResult>>>,
+    events_cache: Arc<tokio::sync::RwLock<Option<ChartEvents>>>,
     recommendations_cache: Arc<tokio::sync::RwLock<Option<RecommendationResponse>>>,
 }
 
@@ -423,6 +492,14 @@ impl Ticker {
         let candles = result.to_candles();
         let meta = result.meta.clone();
 
+        // Cache events on first chart fetch (events are complete history, only cache once)
+        {
+            let mut events_cache = self.events_cache.write().await;
+            if events_cache.is_none() {
+                *events_cache = result.events.clone();
+            }
+        }
+
         // Cache the result
         {
             let mut cache = self.chart_cache.write().await;
@@ -436,6 +513,128 @@ impl Ticker {
             interval: Some(interval.as_str().to_string()),
             range: Some(range.as_str().to_string()),
         })
+    }
+
+    /// Ensures events data is loaded (fetches chart with max range if not cached)
+    async fn ensure_events_loaded(&self) -> Result<()> {
+        // Quick read check
+        {
+            let cache = self.events_cache.read().await;
+            if cache.is_some() {
+                return Ok(());
+            }
+        }
+
+        // Fetch chart with max range to get all events
+        // Using daily interval with max range gives us complete dividend/split history
+        self.chart(Interval::OneDay, TimeRange::Max).await?;
+        Ok(())
+    }
+
+    /// Get dividend history
+    ///
+    /// Returns historical dividend payments sorted by date.
+    /// Events are lazily loaded (fetched once, then filtered by range).
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - Time range to filter dividends
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, TimeRange};
+    ///
+    /// let ticker = Ticker::new("AAPL").await?;
+    ///
+    /// // Get all dividends
+    /// let all = ticker.dividends(TimeRange::Max).await?;
+    ///
+    /// // Get last year's dividends
+    /// let recent = ticker.dividends(TimeRange::OneYear).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn dividends(&self, range: TimeRange) -> Result<Vec<Dividend>> {
+        self.ensure_events_loaded().await?;
+
+        let cache = self.events_cache.read().await;
+        let all = cache.as_ref().map(|e| e.to_dividends()).unwrap_or_default();
+
+        Ok(filter_by_range(all, range))
+    }
+
+    /// Get stock split history
+    ///
+    /// Returns historical stock splits sorted by date.
+    /// Events are lazily loaded (fetched once, then filtered by range).
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - Time range to filter splits
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, TimeRange};
+    ///
+    /// let ticker = Ticker::new("NVDA").await?;
+    ///
+    /// // Get all splits
+    /// let all = ticker.splits(TimeRange::Max).await?;
+    ///
+    /// // Get last 5 years
+    /// let recent = ticker.splits(TimeRange::FiveYears).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn splits(&self, range: TimeRange) -> Result<Vec<Split>> {
+        self.ensure_events_loaded().await?;
+
+        let cache = self.events_cache.read().await;
+        let all = cache.as_ref().map(|e| e.to_splits()).unwrap_or_default();
+
+        Ok(filter_by_range(all, range))
+    }
+
+    /// Get capital gains distribution history
+    ///
+    /// Returns historical capital gain distributions sorted by date.
+    /// This is primarily relevant for mutual funds and ETFs.
+    /// Events are lazily loaded (fetched once, then filtered by range).
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - Time range to filter capital gains
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, TimeRange};
+    ///
+    /// let ticker = Ticker::new("VFIAX").await?;
+    ///
+    /// // Get all capital gains
+    /// let all = ticker.capital_gains(TimeRange::Max).await?;
+    ///
+    /// // Get last 2 years
+    /// let recent = ticker.capital_gains(TimeRange::TwoYears).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn capital_gains(&self, range: TimeRange) -> Result<Vec<CapitalGain>> {
+        self.ensure_events_loaded().await?;
+
+        let cache = self.events_cache.read().await;
+        let all = cache
+            .as_ref()
+            .map(|e| e.to_capital_gains())
+            .unwrap_or_default();
+
+        Ok(filter_by_range(all, range))
     }
 
     /// Calculate all technical indicators from chart data

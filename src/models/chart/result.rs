@@ -1,3 +1,4 @@
+use super::events::ChartEvents;
 use super::indicators::ChartIndicators;
 use super::{Candle, ChartMeta};
 /// Chart Result module
@@ -15,6 +16,9 @@ pub(crate) struct ChartResult {
     pub timestamp: Option<Vec<i64>>,
     /// Price indicators (OHLCV)
     pub indicators: ChartIndicators,
+    /// Events (dividends, splits, capital gains)
+    #[serde(default)]
+    pub events: Option<ChartEvents>,
 }
 
 impl ChartResult {

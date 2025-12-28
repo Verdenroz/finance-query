@@ -43,7 +43,11 @@ pub async fn fetch(
     );
 
     let url = api::chart(symbol);
-    let params = [("interval", interval.as_str()), ("range", range.as_str())];
+    let params = [
+        ("interval", interval.as_str()),
+        ("range", range.as_str()),
+        ("events", "div|split|capitalGain"),
+    ];
     let response = client.request_with_params(&url, &params).await?;
 
     Ok(response.json().await?)

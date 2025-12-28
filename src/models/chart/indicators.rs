@@ -31,8 +31,8 @@ pub(crate) struct QuoteIndicator {
 
 /// Adjusted close indicator
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub(crate) struct AdjCloseIndicator {
     /// Adjusted close prices
+    #[serde(rename = "adjclose")]
     pub adj_close: Option<Vec<Option<f64>>>,
 }

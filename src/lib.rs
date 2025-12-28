@@ -111,7 +111,7 @@ pub use models::{
 // Nested types - Commonly accessed fields within response types
 // ============================================================================
 pub use models::{
-    chart::{Candle, ChartMeta},
+    chart::{Candle, CapitalGain, ChartMeta, Dividend, Split},
     hours::MarketTime,
     lookup::LookupQuote,
     market_summary::SparkData,

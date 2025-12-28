@@ -143,8 +143,23 @@ struct ChartQuery {
     interval: String,
     #[serde(default = "default_range")]
     range: String,
+    /// Include events (dividends, splits, capital gains) in response
+    #[serde(default)]
+    events: bool,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct RangeQuery {
+    #[serde(default = "default_max_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+fn default_max_range() -> String {
+    "max".to_string()
 }
 
 #[derive(Deserialize)]
@@ -427,10 +442,14 @@ fn api_routes() -> Router {
         // Routes are sorted alphabetically by path for consistency.
         // GET /v2/analysis/{symbol}/{analysis_type}
         .route("/analysis/{symbol}/{analysis_type}", get(get_analysis))
-        // GET /v2/chart/{symbol}?interval=<str>&range=<str>
+        // GET /v2/capital-gains/{symbol}?range=<str>
+        .route("/capital-gains/{symbol}", get(get_capital_gains))
+        // GET /v2/chart/{symbol}?interval=<str>&range=<str>&events=<bool>
         .route("/chart/{symbol}", get(get_chart))
         // GET /v2/currencies
         .route("/currencies", get(get_currencies))
+        // GET /v2/dividends/{symbol}?range=<str>
+        .route("/dividends/{symbol}", get(get_dividends))
         // GET /v2/earnings-transcript?event_id=<str>&company_id=<str>
         .route("/earnings-transcript", get(get_earnings_transcript))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
@@ -471,6 +490,8 @@ fn api_routes() -> Router {
         .route("/lookup", get(lookup))
         // GET /v2/sectors/{sector_type}
         .route("/sectors/{sector_type}", get(get_sector))
+        // GET /v2/splits/{symbol}?range=<str>
+        .route("/splits/{symbol}", get(get_splits))
         // GET /v2/trending?region=<str>
         .route("/trending", get(get_trending))
         // WebSocket /v2/stream - Real-time price streaming
@@ -715,7 +736,7 @@ async fn get_recommendations(
 
 /// GET /v2/chart/{symbol}
 ///
-/// Query: `interval` (str, default via `DEFAULT_INTERVAL`), `range` (str, default via `DEFAULT_RANGE`)
+/// Query: `interval` (str, default via `DEFAULT_INTERVAL`), `range` (str, default via `DEFAULT_RANGE`), `events` (bool, default false)
 async fn get_chart(
     Path(symbol): Path<String>,
     Query(params): Query<ChartQuery>,
@@ -724,19 +745,135 @@ async fn get_chart(
     let range = parse_range(&params.range);
     let fields = parse_fields(params.fields.as_deref());
     info!(
-        "Fetching chart data for {} (fields={:?})",
-        symbol, params.fields
+        "Fetching chart data for {} (events={}, fields={:?})",
+        symbol, params.events, params.fields
     );
 
     match Ticker::new(&symbol).await {
         Ok(ticker) => match ticker.chart(interval, range).await {
             Ok(chart) => {
-                let json = serde_json::to_value(chart).unwrap_or(serde_json::Value::Null);
+                let mut json = serde_json::to_value(chart).unwrap_or(serde_json::Value::Null);
+
+                // Include events if requested
+                if params.events
+                    && let serde_json::Value::Object(ref mut map) = json
+                {
+                    // Fetch events using the same range (events are already cached from chart fetch)
+                    if let Ok(dividends) = ticker.dividends(range).await {
+                        map.insert(
+                            "dividends".to_string(),
+                            serde_json::to_value(dividends).unwrap_or_default(),
+                        );
+                    }
+                    if let Ok(splits) = ticker.splits(range).await {
+                        map.insert(
+                            "splits".to_string(),
+                            serde_json::to_value(splits).unwrap_or_default(),
+                        );
+                    }
+                    if let Ok(capital_gains) = ticker.capital_gains(range).await {
+                        map.insert(
+                            "capitalGains".to_string(),
+                            serde_json::to_value(capital_gains).unwrap_or_default(),
+                        );
+                    }
+                }
+
                 let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
                 (StatusCode::OK, Json(response)).into_response()
             }
             Err(e) => {
                 error!("Failed to fetch chart data: {}", e);
+                error_response(e).into_response()
+            }
+        },
+        Err(e) => {
+            error!("Failed to create ticker: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/dividends/{symbol}
+///
+/// Query: `range` (str, default "max")
+async fn get_dividends(
+    Path(symbol): Path<String>,
+    Query(params): Query<RangeQuery>,
+) -> impl IntoResponse {
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching dividends for {} (range={:?})", symbol, range);
+
+    match Ticker::new(&symbol).await {
+        Ok(ticker) => match ticker.dividends(range).await {
+            Ok(dividends) => {
+                let json = serde_json::to_value(dividends).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
+            Err(e) => {
+                error!("Failed to fetch dividends: {}", e);
+                error_response(e).into_response()
+            }
+        },
+        Err(e) => {
+            error!("Failed to create ticker: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/splits/{symbol}
+///
+/// Query: `range` (str, default "max")
+async fn get_splits(
+    Path(symbol): Path<String>,
+    Query(params): Query<RangeQuery>,
+) -> impl IntoResponse {
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching splits for {} (range={:?})", symbol, range);
+
+    match Ticker::new(&symbol).await {
+        Ok(ticker) => match ticker.splits(range).await {
+            Ok(splits) => {
+                let json = serde_json::to_value(splits).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
+            Err(e) => {
+                error!("Failed to fetch splits: {}", e);
+                error_response(e).into_response()
+            }
+        },
+        Err(e) => {
+            error!("Failed to create ticker: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/capital-gains/{symbol}
+///
+/// Query: `range` (str, default "max")
+async fn get_capital_gains(
+    Path(symbol): Path<String>,
+    Query(params): Query<RangeQuery>,
+) -> impl IntoResponse {
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching capital gains for {} (range={:?})", symbol, range);
+
+    match Ticker::new(&symbol).await {
+        Ok(ticker) => match ticker.capital_gains(range).await {
+            Ok(gains) => {
+                let json = serde_json::to_value(gains).unwrap_or(serde_json::Value::Null);
+                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+                (StatusCode::OK, Json(response)).into_response()
+            }
+            Err(e) => {
+                error!("Failed to fetch capital gains: {}", e);
                 error_response(e).into_response()
             }
         },
