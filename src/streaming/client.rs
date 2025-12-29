@@ -320,7 +320,6 @@ async fn connect_and_stream(
             Some(msg) = read.next() => {
                 match msg {
                     Ok(Message::Text(text)) => {
-                        debug!("Received text message: {} bytes", text.len());
                         if let Err(e) = handle_text_message(&text, broadcast_tx) {
                             warn!("Failed to handle message: {}", e);
                         }
@@ -355,22 +354,36 @@ async fn connect_and_stream(
             Some(cmd) = command_rx.recv() => {
                 match cmd {
                     StreamCommand::Subscribe(symbols) => {
-                        let mut subs = subscriptions.write().await;
-                        for s in &symbols {
-                            subs.insert(s.clone());
+                        let mut newly_added = Vec::new();
+                        {
+                            let mut subs = subscriptions.write().await;
+                            for s in &symbols {
+                                if subs.insert(s.clone()) {
+                                    newly_added.push(s.clone());
+                                }
+                            }
                         }
-                        let msg = serde_json::json!({ "subscribe": symbols });
-                        let _ = write.send(Message::Text(msg.to_string().into())).await;
-                        info!("Added subscriptions: {:?}", symbols);
+                        if !newly_added.is_empty() {
+                            let msg = serde_json::json!({ "subscribe": newly_added });
+                            let _ = write.send(Message::Text(msg.to_string().into())).await;
+                            info!("Added subscriptions: {:?}", newly_added);
+                        }
                     }
                     StreamCommand::Unsubscribe(symbols) => {
-                        let mut subs = subscriptions.write().await;
-                        for s in &symbols {
-                            subs.remove(s);
+                        let mut actually_removed = Vec::new();
+                        {
+                            let mut subs = subscriptions.write().await;
+                            for s in &symbols {
+                                if subs.remove(s) {
+                                    actually_removed.push(s.clone());
+                                }
+                            }
                         }
-                        let msg = serde_json::json!({ "unsubscribe": symbols });
-                        let _ = write.send(Message::Text(msg.to_string().into())).await;
-                        info!("Removed subscriptions: {:?}", symbols);
+                        if !actually_removed.is_empty() {
+                            let msg = serde_json::json!({ "unsubscribe": actually_removed });
+                            let _ = write.send(Message::Text(msg.to_string().into())).await;
+                            info!("Removed subscriptions: {:?}", actually_removed);
+                        }
                     }
                     StreamCommand::Close => {
                         info!("Received close command");
@@ -399,10 +412,6 @@ fn handle_text_message(
     if let Some(encoded) = json.get("message").and_then(|v| v.as_str()) {
         let pricing_data = PricingData::from_base64(encoded)?;
         let price_update: PriceUpdate = pricing_data.into();
-        debug!(
-            "Decoded price: {} = ${:.2}",
-            price_update.id, price_update.price
-        );
 
         // Broadcast to all receivers
         if broadcast_tx.receiver_count() > 0 {

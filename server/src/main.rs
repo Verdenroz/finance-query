@@ -1,7 +1,7 @@
 use axum::{
     Router,
     extract::{
-        Path, Query, WebSocketUpgrade,
+        Extension, Path, Query, WebSocketUpgrade,
         ws::{Message, WebSocket},
     },
     http::{HeaderValue, Method, StatusCode},
@@ -14,11 +14,132 @@ use finance_query::{
 };
 use futures_util::{SinkExt, StreamExt};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
+use std::sync::Arc;
 use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 use tracing::{error, info, warn};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+#[derive(Clone)]
+struct AppState {
+    stream_hub: StreamHub,
+}
+
+/// Process-wide hub that maintains a single upstream Yahoo Finance stream.
+///
+/// Multiple downstream WebSocket clients can subscribe/unsubscribe to symbols.
+/// Symbol subscriptions are ref-counted so each symbol is only subscribed once upstream.
+#[derive(Clone, Default)]
+struct StreamHub {
+    inner: Arc<tokio::sync::Mutex<StreamHubInner>>,
+}
+
+#[derive(Default)]
+struct StreamHubInner {
+    upstream: Option<PriceStream>,
+    symbol_ref_counts: HashMap<String, usize>,
+}
+
+impl StreamHub {
+    fn new() -> Self {
+        Self::default()
+    }
+
+    async fn resubscribe(&self) -> Option<PriceStream> {
+        let inner = self.inner.lock().await;
+        inner.upstream.as_ref().map(|s| s.resubscribe())
+    }
+
+    async fn subscribe_symbols(&self, symbols: &[String]) -> Result<(), YahooError> {
+        let unique: HashSet<String> = symbols
+            .iter()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
+
+        if unique.is_empty() {
+            return Ok(());
+        }
+
+        let mut inner = self.inner.lock().await;
+
+        // Track which symbols are newly needed upstream.
+        let mut newly_needed: Vec<String> = Vec::new();
+        for symbol in &unique {
+            let count = inner.symbol_ref_counts.entry(symbol.clone()).or_insert(0);
+            if *count == 0 {
+                newly_needed.push(symbol.clone());
+            }
+            *count += 1;
+        }
+
+        // Create upstream stream if this is the first active subscription.
+        if inner.upstream.is_none() {
+            let refs: Vec<&str> = unique.iter().map(|s| s.as_str()).collect();
+            let stream = PriceStream::subscribe(&refs).await?;
+            inner.upstream = Some(stream);
+            return Ok(());
+        }
+
+        // Add newly needed symbols to upstream.
+        if !newly_needed.is_empty()
+            && let Some(upstream) = inner.upstream.as_ref()
+        {
+            let refs: Vec<&str> = newly_needed.iter().map(|s| s.as_str()).collect();
+            upstream.add_symbols(&refs).await;
+        }
+
+        Ok(())
+    }
+
+    async fn unsubscribe_symbols(&self, symbols: &[String]) {
+        let unique: HashSet<String> = symbols
+            .iter()
+            .map(|s| s.trim())
+            .filter(|s| !s.is_empty())
+            .map(|s| s.to_string())
+            .collect();
+
+        if unique.is_empty() {
+            return;
+        }
+
+        let mut inner = self.inner.lock().await;
+
+        let mut newly_unneeded: Vec<String> = Vec::new();
+        for symbol in &unique {
+            if let Some(count) = inner.symbol_ref_counts.get_mut(symbol)
+                && *count > 0
+            {
+                *count -= 1;
+                if *count == 0 {
+                    newly_unneeded.push(symbol.clone());
+                }
+            }
+        }
+
+        for symbol in &newly_unneeded {
+            inner.symbol_ref_counts.remove(symbol);
+        }
+
+        if let Some(upstream) = inner.upstream.as_ref()
+            && !newly_unneeded.is_empty()
+        {
+            let refs: Vec<&str> = newly_unneeded.iter().map(|s| s.as_str()).collect();
+            upstream.remove_symbols(&refs).await;
+        }
+
+        // If nothing is subscribed anywhere, close upstream to stop background tasks.
+        if inner.symbol_ref_counts.is_empty()
+            && let Some(upstream) = inner.upstream.take()
+        {
+            upstream.close().await;
+        }
+    }
+}
 
 // Server-specific default values
 mod defaults {
@@ -425,6 +546,10 @@ async fn main() {
 }
 
 fn create_app() -> Router {
+    let state = AppState {
+        stream_hub: StreamHub::new(),
+    };
+
     // Configure CORS
     let cors = CorsLayer::new()
         .allow_origin("*".parse::<HeaderValue>().unwrap())
@@ -440,6 +565,7 @@ fn create_app() -> Router {
         .route("/ping", get(ping))
         // Nest all API routes under /v2
         .nest("/v2", api_routes())
+        .layer(Extension(state))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
 }
@@ -1835,12 +1961,15 @@ async fn get_trending(Query(params): Query<TrendingQuery>) -> impl IntoResponse 
 ///   "marketHours": 2
 /// }
 /// ```
-async fn ws_stream_handler(ws: WebSocketUpgrade) -> impl IntoResponse {
-    ws.on_upgrade(handle_stream_socket)
+async fn ws_stream_handler(
+    Extension(state): Extension<AppState>,
+    ws: WebSocketUpgrade,
+) -> impl IntoResponse {
+    ws.on_upgrade(move |socket| handle_stream_socket(state, socket))
 }
 
 /// Handle the WebSocket connection for streaming
-async fn handle_stream_socket(mut socket: WebSocket) {
+async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
     info!("New streaming WebSocket connection");
 
     // Wait for initial subscription message
@@ -1854,15 +1983,25 @@ async fn handle_stream_socket(mut socket: WebSocket) {
 
     info!("Starting stream for symbols: {:?}", symbols);
 
-    // Create price stream
-    let symbol_refs: Vec<&str> = symbols.iter().map(|s| s.as_str()).collect();
-    let stream = match PriceStream::subscribe(&symbol_refs).await {
-        Ok(s) => s,
-        Err(e) => {
-            error!("Failed to create price stream: {}", e);
+    // Ref-counted subscribe (shared upstream stream).
+    if let Err(e) = state.stream_hub.subscribe_symbols(&symbols).await {
+        error!("Failed to create shared price stream: {}", e);
+        let _ = socket
+            .send(Message::Text(
+                serde_json::json!({"error": e.to_string()})
+                    .to_string()
+                    .into(),
+            ))
+            .await;
+        return;
+    }
+
+    let mut hub_stream = match state.stream_hub.resubscribe().await {
+        Some(s) => s,
+        None => {
             let _ = socket
                 .send(Message::Text(
-                    serde_json::json!({"error": e.to_string()})
+                    serde_json::json!({"error": "stream unavailable"})
                         .to_string()
                         .into(),
                 ))
@@ -1871,30 +2010,113 @@ async fn handle_stream_socket(mut socket: WebSocket) {
         }
     };
 
+    let subscriptions = Arc::new(tokio::sync::RwLock::new(
+        symbols.iter().cloned().collect::<HashSet<String>>(),
+    ));
+
+    let (out_tx, mut out_rx) = tokio::sync::mpsc::channel::<Message>(32);
+
     // Split socket for concurrent read/write
     let (mut sender, mut receiver) = socket.split();
 
-    // Spawn task to forward price updates to client
-    let mut price_stream = stream;
-    let send_task = tokio::spawn(async move {
+    // Spawn task to forward filtered price updates + outbound messages to client
+    let subscriptions_for_send = Arc::clone(&subscriptions);
+    let mut send_task = tokio::spawn(async move {
         use futures_util::stream::StreamExt;
-        while let Some(price) = price_stream.next().await {
-            let json = serde_json::to_string(&price).unwrap_or_default();
-            if sender.send(Message::Text(json.into())).await.is_err() {
-                break;
+        loop {
+            tokio::select! {
+                msg = out_rx.recv() => {
+                    match msg {
+                        Some(msg) => {
+                            if sender.send(msg).await.is_err() {
+                                break;
+                            }
+                        }
+                        None => {
+                            // Control channel closed.
+                            break;
+                        }
+                    }
+                }
+
+                maybe_price = hub_stream.next() => {
+                    match maybe_price {
+                        Some(price) => {
+                            let should_send = {
+                                let subs = subscriptions_for_send.read().await;
+                                subs.contains(&price.id)
+                            };
+
+                            if should_send {
+                                let json = serde_json::to_string(&price).unwrap_or_default();
+                                if sender.send(Message::Text(json.into())).await.is_err() {
+                                    break;
+                                }
+                            }
+                        }
+                        None => break,
+                    }
+                }
             }
         }
     });
 
     // Handle incoming messages (subscribe/unsubscribe)
-    let recv_task = tokio::spawn(async move {
+    let subscriptions_for_recv = Arc::clone(&subscriptions);
+    let stream_hub = state.stream_hub.clone();
+    let mut recv_task = tokio::spawn(async move {
         while let Some(Ok(msg)) = receiver.next().await {
             match msg {
                 Message::Text(text) => {
                     if let Ok(cmd) = serde_json::from_str::<StreamCommand>(&text) {
                         info!("Received stream command: {:?}", cmd);
-                        // Commands are handled by the price stream internally
-                        // For now, we just log them
+
+                        if let Some(symbols) = cmd.subscribe {
+                            let mut newly_added: Vec<String> = Vec::new();
+                            {
+                                let mut subs = subscriptions_for_recv.write().await;
+                                for s in symbols {
+                                    if subs.insert(s.clone()) {
+                                        newly_added.push(s);
+                                    }
+                                }
+                            }
+
+                            if !newly_added.is_empty()
+                                && let Err(e) = stream_hub.subscribe_symbols(&newly_added).await
+                            {
+                                error!("Failed to subscribe symbols: {}", e);
+                                {
+                                    let mut subs = subscriptions_for_recv.write().await;
+                                    for s in &newly_added {
+                                        subs.remove(s);
+                                    }
+                                }
+                                let _ = out_tx
+                                    .send(Message::Text(
+                                        serde_json::json!({"error": e.to_string()})
+                                            .to_string()
+                                            .into(),
+                                    ))
+                                    .await;
+                            }
+                        }
+
+                        if let Some(symbols) = cmd.unsubscribe {
+                            let mut removed: Vec<String> = Vec::new();
+                            {
+                                let mut subs = subscriptions_for_recv.write().await;
+                                for s in symbols {
+                                    if subs.remove(&s) {
+                                        removed.push(s);
+                                    }
+                                }
+                            }
+
+                            if !removed.is_empty() {
+                                stream_hub.unsubscribe_symbols(&removed).await;
+                            }
+                        }
                     }
                 }
                 Message::Close(_) => {
@@ -1906,11 +2128,25 @@ async fn handle_stream_socket(mut socket: WebSocket) {
         }
     });
 
-    // Wait for either task to complete
+    // Wait for either task to complete, then ensure per-client resources are torn down.
     tokio::select! {
-        _ = send_task => info!("Send task completed"),
-        _ = recv_task => info!("Receive task completed"),
+        _ = &mut send_task => info!("Send task completed"),
+        _ = &mut recv_task => info!("Receive task completed"),
     }
+
+    // Ensure tasks stop promptly.
+    send_task.abort();
+    recv_task.abort();
+
+    // Release this client's active subscriptions from the global hub.
+    let symbols_to_release: Vec<String> = {
+        let subs = subscriptions.read().await;
+        subs.iter().cloned().collect()
+    };
+    state
+        .stream_hub
+        .unsubscribe_symbols(&symbols_to_release)
+        .await;
 
     info!("WebSocket stream connection closed");
 }
@@ -1932,7 +2168,6 @@ async fn wait_for_subscription(socket: &mut WebSocket) -> Option<Vec<String>> {
 #[derive(Debug, Deserialize)]
 struct StreamCommand {
     subscribe: Option<Vec<String>>,
-    #[allow(dead_code)]
     unsubscribe: Option<Vec<String>>,
 }
 
