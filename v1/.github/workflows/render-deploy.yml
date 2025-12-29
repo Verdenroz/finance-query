@@ -1,0 +1,20 @@
+name: Render Deploy
+
+on:
+  push:
+    branches: [ "master" ]
+  # Also trigger on workflow_dispatch for manual deployments
+  workflow_dispatch:
+
+jobs:
+  render-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Deploy to Render
+        env:
+          deploy_url: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          curl "$deploy_url"
