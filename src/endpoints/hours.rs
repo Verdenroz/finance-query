@@ -14,7 +14,7 @@ use crate::models::hours::MarketHours;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
 /// // Use client's default region

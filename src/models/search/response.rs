@@ -32,7 +32,7 @@ impl SearchResults {
     ///
     /// # Example
     /// ```no_run
-    /// # use finance_query::models::search::SearchResults;
+    /// # use finance_query::SearchResults;
     /// let json = serde_json::json!({
     ///     "count": 10,
     ///     "quotes": [],

@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 /// # Example
 ///
 /// ```
-/// use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator, QuoteType};
+/// use finance_query::{ScreenerQuery, QueryCondition, screener_query::{Operator, QuoteType}};
 ///
 /// // Find US stocks with high volume and market cap > $10B
 /// let query = ScreenerQuery::new()
@@ -20,7 +20,7 @@ use serde::{Deserialize, Serialize};
 ///     .sort_by("intradaymarketcap", false)  // Sort by market cap descending
 ///     .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
 ///     .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(200000))
-///     .add_condition(QueryCondition::new("intradaymarketcap", Operator::Gt).value(10_000_000_000i64));
+///     .add_condition(QueryCondition::new("intradaymarketcap", Operator::Gt).value(10_000_000_000.0));
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -166,7 +166,7 @@ impl ScreenerQuery {
     /// # Example
     ///
     /// ```
-    /// use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
+    /// use finance_query::{ScreenerQuery, QueryCondition, screener_query::Operator};
     ///
     /// let query = ScreenerQuery::new()
     ///     .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
@@ -185,7 +185,7 @@ impl ScreenerQuery {
     /// # Example
     ///
     /// ```
-    /// use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
+    /// use finance_query::{ScreenerQuery, QueryCondition, screener_query::Operator};
     ///
     /// // Filter for region being US OR GB
     /// let query = ScreenerQuery::new()

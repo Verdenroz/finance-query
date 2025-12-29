@@ -29,6 +29,15 @@ repos:
         types: [rust]
         pass_filenames: false
 
+      # Run doc tests to ensure documentation examples compile
+      - id: cargo-test-doc
+        name: cargo test --doc
+        description: Run documentation tests
+        entry: bash -c 'cargo test --workspace --doc'
+        language: system
+        types: [rust]
+        pass_filenames: false
+
   # General pre-commit hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0

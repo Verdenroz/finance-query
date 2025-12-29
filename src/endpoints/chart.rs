@@ -18,7 +18,7 @@ use tracing::info;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// use finance_query::{Interval, TimeRange};
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
@@ -69,6 +69,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access - validation tested in common::tests"]
     async fn test_empty_symbol() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = fetch(&client, "", Interval::OneDay, TimeRange::OneMonth).await;

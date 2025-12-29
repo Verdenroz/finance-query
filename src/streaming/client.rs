@@ -83,7 +83,7 @@ const CHANNEL_CAPACITY: usize = 1024;
 /// // Receive price updates
 /// while let Some(price) = stream.next().await {
 ///     println!("{}: ${:.2} ({:+.2}%)",
-///         price.symbol(),
+///         price.id,
 ///         price.price,
 ///         price.change_percent
 ///     );

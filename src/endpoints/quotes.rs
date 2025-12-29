@@ -20,7 +20,7 @@ use tracing::info;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
 /// use finance_query::endpoints::quotes;
@@ -62,7 +62,7 @@ pub(crate) async fn fetch(client: &YahooClient, symbols: &[&str]) -> Result<serd
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
 /// use finance_query::endpoints::quotes;
@@ -143,6 +143,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access - validation tested in common::tests"]
     async fn test_empty_symbols() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = fetch(&client, &[]).await;

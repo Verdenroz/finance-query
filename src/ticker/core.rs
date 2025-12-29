@@ -655,7 +655,7 @@ impl Ticker {
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let ticker = Ticker::new("AAPL").await?;
-    /// let indicators = ticker.indicators(Interval::Daily, TimeRange::OneYear).await?;
+    /// let indicators = ticker.indicators(Interval::OneDay, TimeRange::OneYear).await?;
     ///
     /// println!("RSI(14): {:?}", indicators.rsi_14);
     /// println!("MACD: {:?}", indicators.macd);

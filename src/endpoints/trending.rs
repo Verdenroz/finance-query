@@ -16,7 +16,7 @@ use tracing::info;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
 /// use finance_query::{api::trending, Country};

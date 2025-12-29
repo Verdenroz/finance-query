@@ -19,7 +19,7 @@
 //!
 //! Use `ScreenerQuery` to build custom filters:
 //! ```no_run
-//! use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
+//! use finance_query::{ScreenerQuery, QueryCondition, screener_query::Operator};
 //!
 //! let query = ScreenerQuery::new()
 //!     .size(25)

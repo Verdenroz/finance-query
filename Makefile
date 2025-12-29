@@ -1,4 +1,4 @@
-.PHONY: help serve install install-dev build test lint fix docs docker clean
+.PHONY: help serve install install-dev build test test-fast lint fix docs docker clean
 
 # Default target
 .DEFAULT_GOAL := help
@@ -39,8 +39,13 @@ build: ## Build in release mode
 	@echo "$(GREEN)Building server in release mode...$(NC)"
 	$(CARGO) build --release -p finance-query-server
 
-test: ## Run all tests
-	@echo "$(GREEN)Running tests...$(NC)"
+test: ## Run ALL tests including network-dependent integration tests
+	@echo "$(GREEN)Running all tests...$(NC)"
+	@echo "$(YELLOW)Note: Some tests make real API calls to Yahoo Finance$(NC)"
+	$(CARGO) test --workspace -- --nocapture --include-ignored
+
+test-fast: ## Run only fast tests (excludes network-dependent tests)
+	@echo "$(GREEN)Running fast tests (excluding network tests)...$(NC)"
 	$(CARGO) test --workspace -- --nocapture
 
 lint: ## Run all pre-commit checks (formatting, linting, compilation, and file checks)

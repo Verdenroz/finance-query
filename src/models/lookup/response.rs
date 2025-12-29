@@ -49,7 +49,7 @@ impl LookupResults {
     ///
     /// # Example
     /// ```no_run
-    /// # use finance_query::models::lookup::LookupResults;
+    /// # use finance_query::LookupResults;
     /// let json = serde_json::json!({
     ///     "finance": {
     ///         "result": [{

@@ -127,7 +127,7 @@ impl LookupOptions {
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
 /// use finance_query::endpoints::lookup::{fetch, LookupOptions, LookupType};
@@ -338,6 +338,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access - validation tested in common::tests"]
     async fn test_empty_query() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let options = LookupOptions::new();

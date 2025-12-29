@@ -40,7 +40,7 @@ pub use crate::endpoints::search::SearchOptions;
 ///     .quotes_count(10)
 ///     .news_count(5)
 ///     .enable_research_reports(true)
-///     .country(Country::Japan);
+///     .country(Country::Canada);
 /// let results = finance::search("NVDA", &options).await?;
 /// println!("Found {} quotes", results.quotes.len());
 /// # Ok(())
@@ -134,7 +134,7 @@ pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<Screene
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::{finance, screener_query::{ScreenerQuery, QueryCondition, Operator}};
+/// use finance_query::{finance, ScreenerQuery, QueryCondition, screener_query::Operator};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Find US stocks with high volume sorted by market cap
@@ -429,7 +429,7 @@ pub async fn exchanges() -> Result<Vec<crate::models::exchanges::Exchange>> {
 /// // Use default (US)
 /// let summary = finance::market_summary(None).await?;
 /// // Or specify a country
-/// let summary = finance::market_summary(Some(Country::Japan)).await?;
+/// let summary = finance::market_summary(Some(Country::Canada)).await?;
 /// # Ok(())
 /// # }
 /// ```
@@ -457,7 +457,7 @@ pub async fn market_summary(
 /// // Use default (US)
 /// let trending = finance::trending(None).await?;
 /// // Or specify a country
-/// let trending = finance::trending(Some(Country::Japan)).await?;
+/// let trending = finance::trending(Some(Country::Canada)).await?;
 /// # Ok(())
 /// # }
 /// ```

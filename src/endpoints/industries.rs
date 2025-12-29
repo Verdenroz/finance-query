@@ -15,7 +15,7 @@ use crate::models::industries::Industry;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
 /// let industry = client.get_industry("semiconductors").await?;

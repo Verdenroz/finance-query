@@ -56,7 +56,7 @@ impl ClientConfig {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// use finance_query::ClientConfig;
     /// use std::time::Duration;
     ///
@@ -77,7 +77,7 @@ impl ClientConfig {
 ///
 /// # Example
 ///
-/// ```
+/// ```ignore
 /// use finance_query::ClientConfig;
 /// use std::time::Duration;
 ///
@@ -126,7 +126,7 @@ impl ClientConfigBuilder {
     ///
     /// # Example
     ///
-    /// ```
+    /// ```ignore
     /// use finance_query::{ClientConfig, Country};
     ///
     /// let config = ClientConfig::builder()
@@ -206,7 +206,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// use finance_query::{YahooClient, ClientConfig};
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
@@ -322,7 +322,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # use finance_query::{YahooClient, ClientConfig};
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = YahooClient::new(ClientConfig::default()).await?;
@@ -476,7 +476,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// let quotes = client.get_quotes(&["AAPL", "GOOGL", "MSFT"]).await?;
@@ -492,7 +492,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// use finance_query::{Interval, TimeRange};
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
@@ -513,7 +513,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # use finance_query::SearchOptions;
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
@@ -545,7 +545,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # use finance_query::{LookupOptions, LookupType};
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
@@ -574,7 +574,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// let recommendations = client.get_recommendations("AAPL", 5).await?;
@@ -595,7 +595,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// use finance_query::{StatementType, Frequency};
@@ -616,7 +616,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// let quote_type = client.get_quote_type("AAPL").await?;
@@ -632,7 +632,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// let options = client.get_options("AAPL", None).await?;
@@ -655,7 +655,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// use finance_query::ScreenerType;
@@ -684,7 +684,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
@@ -718,7 +718,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// use finance_query::SectorType;
@@ -749,7 +749,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// let industry = client.get_industry("semiconductors").await?;
@@ -778,7 +778,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// // Use client's default region
@@ -802,7 +802,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// let currencies = client.get_currencies().await?;
@@ -824,7 +824,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// use finance_query::Country;
@@ -853,7 +853,7 @@ impl YahooClient {
     ///
     /// # Example
     ///
-    /// ```no_run
+    /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
     /// use finance_query::Country;

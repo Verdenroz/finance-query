@@ -24,3 +24,32 @@ pub fn validate_symbol(symbol: &str) -> Result<()> {
     }
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_symbol_valid() {
+        assert!(validate_symbol("AAPL").is_ok());
+        assert!(validate_symbol("GOOGL").is_ok());
+        assert!(validate_symbol(" MSFT ").is_ok()); // with whitespace
+    }
+
+    #[test]
+    fn test_validate_symbol_empty() {
+        assert!(validate_symbol("").is_err());
+        assert!(validate_symbol("   ").is_err()); // only whitespace
+    }
+
+    #[test]
+    fn test_validate_symbols_valid() {
+        assert!(validate_symbols(&["AAPL"]).is_ok());
+        assert!(validate_symbols(&["AAPL", "GOOGL", "MSFT"]).is_ok());
+    }
+
+    #[test]
+    fn test_validate_symbols_empty() {
+        assert!(validate_symbols(&[]).is_err());
+    }
+}

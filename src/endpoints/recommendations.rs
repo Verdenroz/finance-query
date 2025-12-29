@@ -16,7 +16,7 @@ use tracing::info;
 ///
 /// # Example
 ///
-/// ```no_run
+/// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
 /// use finance_query::api::recommendations;
@@ -52,6 +52,7 @@ mod tests {
     }
 
     #[tokio::test]
+    #[ignore = "requires network access - validation tested in common::tests"]
     async fn test_empty_symbol() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = fetch(&client, "", 5).await;

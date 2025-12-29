@@ -182,12 +182,13 @@ impl TickersBuilder {
 /// // Batch fetch all quotes (single API call)
 /// let quotes = tickers.quotes(false).await?;
 /// for (symbol, quote) in &quotes.quotes {
-///     println!("{}: ${:.2}", symbol, quote.regular_market_price.unwrap_or(0.0));
+///     let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+///     println!("{}: ${:.2}", symbol, price);
 /// }
 ///
 /// // Fetch charts concurrently
 /// use finance_query::{Interval, TimeRange};
-/// let charts = tickers.charts(Interval::Daily, TimeRange::OneMonth).await?;
+/// let charts = tickers.charts(Interval::OneDay, TimeRange::OneMonth).await?;
 /// # Ok(())
 /// # }
 /// ```

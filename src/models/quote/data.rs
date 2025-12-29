@@ -25,9 +25,9 @@ use super::{
 /// Quote instances can only be obtained through the Ticker API:
 /// ```no_run
 /// # use finance_query::Ticker;
-/// # fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let ticker = Ticker::new("AAPL")?;
-/// let quote = ticker.quote(true)?;  // include_logo = true
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let ticker = Ticker::new("AAPL").await?;
+/// let quote = ticker.quote(true).await?;  // include_logo = true
 /// println!("Price: {:?}", quote.regular_market_price);
 /// # Ok(())
 /// # }

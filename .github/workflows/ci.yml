@@ -50,8 +50,8 @@ jobs:
         with:
           toolchain: ${{ matrix.rust }}
       - uses: Swatinem/rust-cache@v2
-      - name: Run tests
-        run: cargo test --all-features --verbose
+      - name: Run all tests
+        run: cargo test --all-features --verbose -- --include-ignored
 
   # Check compilation
   check:
