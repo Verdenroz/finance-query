@@ -10,10 +10,24 @@ authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
 description = "A Rust library for fetching financial data from Yahoo Finance"
 license = "MIT"
 repository = "https://github.com/Verdenroz/finance-query"
+homepage = "https://github.com/Verdenroz/finance-query"
+documentation = "https://docs.rs/finance-query"
 readme = "README.md"
-keywords = ["finance", "yahoo", "stocks", "quotes", "market-data"]
+keywords = ["finance", "yahoo", "yahoo-finance", "stocks", "quotes", "market-data"]
 categories = ["api-bindings", "finance"]
-exclude = ["server/", ".github/", "book/", "*.md", "!README.md"]
+exclude = [
+    "server/",
+    ".github/",
+    "v1/",
+    "docs/",
+    "*.md",
+    "!README.md",
+    ".env*",
+    "Makefile",
+    "docker-compose*.yml",
+    "nginx/",
+    "mkdocs.yml",
+]
 
 [lib]
 name = "finance_query"

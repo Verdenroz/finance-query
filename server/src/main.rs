@@ -162,6 +162,7 @@ mod defaults {
 struct HealthResponse {
     status: String,
     version: String,
+    timestamp: String,
 }
 
 #[derive(Serialize)]
@@ -558,10 +559,8 @@ fn create_app() -> Router {
 
     // Build router with routes
     Router::new()
-        // Health & utility (not versioned)
-        // GET /health
+        // Root health endpoints for Docker healthcheck (internal container use)
         .route("/health", get(health_check))
-        // GET /ping
         .route("/ping", get(ping))
         // Nest all API routes under /v2
         .nest("/v2", api_routes())
@@ -588,6 +587,8 @@ fn api_routes() -> Router {
         .route("/exchanges", get(get_exchanges))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route("/financials/{symbol}/{statement}", get(get_financials))
+        // GET /v2/health - version-prefixed health check
+        .route("/health", get(health_check))
         // GET /v2/holders/{symbol}/{holder_type}
         .route("/holders/{symbol}/{holder_type}", get(get_holders))
         // GET /v2/hours
@@ -608,6 +609,8 @@ fn api_routes() -> Router {
         .route("/news/{symbol}", get(get_news))
         // GET /v2/options/{symbol}?date=<i64>
         .route("/options/{symbol}", get(get_options))
+        // GET /v2/ping - version-prefixed ping
+        .route("/ping", get(ping))
         // GET /v2/quote/{symbol}?logo=<bool>
         .route("/quote/{symbol}", get(get_quote))
         // GET /v2/quote-type/{symbol}
@@ -643,6 +646,7 @@ async fn health_check() -> impl IntoResponse {
     let response = HealthResponse {
         status: "healthy".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
+        timestamp: chrono::Utc::now().to_rfc3339(),
     };
 
     Json(response)

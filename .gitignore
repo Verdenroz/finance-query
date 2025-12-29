@@ -44,14 +44,31 @@ lcov.info
 *.log
 
 # Documentation build
-/site
-/book
+/site/
+/book/
 docs/_build/
 
 # Environment variables
 .env
 .env.local
 .env.*.local
+server/.env
+
+# Nginx (SSL certs are sensitive)
+nginx/certs/
+
+# V1 Python artifacts (v1 has its own .gitignore but just in case)
+v1/.venv/
+v1/htmlcov/
+v1/*.egg-info/
+v1/__pycache__/
+v1/.pytest_cache/
+
+# Legacy Python artifacts at root (cleanup)
+/.venv/
+/htmlcov/
+/.pytest_cache/
+/.ruff_cache/
 
 # OS files
 .DS_Store

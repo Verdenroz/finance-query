@@ -1,0 +1,81 @@
+site_name: Finance Query
+site_url: https://verdenroz.github.io/finance-query/
+site_author: Harvey Tseng
+site_description: A Rust library for fetching financial data from Yahoo Finance
+
+repo_url: https://github.com/Verdenroz/finance-query
+repo_name: Verdenroz/finance-query
+
+theme:
+  favicon: .github/assets/logo.png
+  logo: .github/assets/logo.png
+  name: material
+  palette:
+    - scheme: default
+      primary: deep orange
+      accent: orange
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep orange
+      accent: orange
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to light mode
+  font:
+    text: Roboto
+    code: Roboto Mono
+  features:
+    - navigation.instant
+    - navigation.tracking
+    - navigation.expand
+    - navigation.indexes
+    - content.code.copy
+    - content.code.annotate
+    - navigation.tabs
+    - navigation.top
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - admonition
+  - pymdownx.details
+  - footnotes
+  - toc:
+      permalink: true
+  - attr_list
+  - md_in_html
+
+plugins:
+  - search
+
+nav:
+  - Home: index.md
+  - Library:
+      - Getting Started: library/getting-started.md
+      - Ticker: library/ticker.md
+      - Configuration: library/configuration.md
+      - Models: library/models.md
+      - Error Handling: library/errors.md
+  - Server:
+      - Overview: server/overview.md
+      - REST API: server/rest-api.md
+      - WebSockets: server/websockets.md
+      - Configuration: server/configuration.md
+      - Deployment: server/deployment.md
+  - Development:
+      - Contributing: development/contributing.md
+      - Architecture: development/architecture.md
+      - Testing: development/testing.md
+  - Python v1: v1-docs.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Verdenroz/finance-query

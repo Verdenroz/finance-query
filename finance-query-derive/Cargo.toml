@@ -6,6 +6,10 @@ authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
 description = "Derive macros for finance-query library"
 license = "MIT"
 repository = "https://github.com/Verdenroz/finance-query"
+homepage = "https://github.com/Verdenroz/finance-query"
+documentation = "https://docs.rs/finance-query-derive"
+keywords = ["finance", "derive", "macros", "polars"]
+categories = ["development-tools::procedural-macro-helpers"]
 
 [lib]
 proc-macro = true

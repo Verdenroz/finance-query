@@ -1,0 +1,83 @@
+services:
+  # V2 Rust Server
+  finance-query-v2:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+    container_name: finance-query-v2
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    env_file:
+      - server/.env
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - finance-query-network
+
+  # V1 Python Server
+  finance-query-v1:
+    build:
+      context: ./v1
+      dockerfile: Dockerfile
+    container_name: finance-query-v1
+    restart: unless-stopped
+    ports:
+      - "8002:8000"
+    env_file:
+      - v1/.env
+    environment:
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - finance-query-network
+
+  # Redis for caching (shared, internal only)
+  redis:
+    image: redis:7-alpine
+    container_name: finance-query-redis
+    restart: unless-stopped
+    # No external port - only accessible within Docker network
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - finance-query-network
+
+  # Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: finance-query-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/certs:/etc/nginx/certs:ro
+    depends_on:
+      - finance-query-v1
+      - finance-query-v2
+    networks:
+      - finance-query-network
+
+networks:
+  finance-query-network:
+    driver: bridge
+
+volumes:
+  redis-data:
