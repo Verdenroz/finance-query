@@ -60,6 +60,7 @@ struct RawTimezone {
 
 /// Market time information for a specific market
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MarketTime {
@@ -155,5 +156,13 @@ impl MarketHours {
         }
 
         Ok(Self { markets })
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl MarketHours {
+    /// Converts the market times to a polars DataFrame.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        MarketTime::vec_to_dataframe(&self.markets)
     }
 }

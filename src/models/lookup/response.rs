@@ -100,3 +100,11 @@ impl LookupResults {
         self.quotes.is_empty()
     }
 }
+
+#[cfg(feature = "dataframe")]
+impl LookupResults {
+    /// Converts the quotes to a polars DataFrame.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        LookupQuote::vec_to_dataframe(&self.quotes)
+    }
+}

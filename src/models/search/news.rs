@@ -4,6 +4,49 @@
 
 use super::thumbnail::NewsThumbnail;
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
+
+/// A collection of search news with DataFrame support.
+///
+/// This wrapper allows `search_results.news.to_dataframe()` syntax while still
+/// acting like a `Vec<SearchNews>` for iteration, indexing, etc.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct SearchNewsList(pub Vec<SearchNews>);
+
+impl Deref for SearchNewsList {
+    type Target = Vec<SearchNews>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl IntoIterator for SearchNewsList {
+    type Item = SearchNews;
+    type IntoIter = std::vec::IntoIter<SearchNews>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a SearchNewsList {
+    type Item = &'a SearchNews;
+    type IntoIter = std::slice::Iter<'a, SearchNews>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl SearchNewsList {
+    /// Converts the news to a polars DataFrame.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        SearchNews::vec_to_dataframe(&self.0)
+    }
+}
 
 /// A news result from search
 ///

@@ -116,11 +116,13 @@ pub use models::{
     hours::MarketTime,
     lookup::LookupQuote,
     market_summary::SparkData,
-    options::{OptionChain, OptionContract, OptionsQuote},
+    options::{Contracts, OptionChain, OptionContract, OptionsQuote},
     quote::FormattedValue,
     recommendation::SimilarSymbol,
     screeners::ScreenerQuote,
-    search::{ResearchReport, SearchNews, SearchQuote},
+    search::{
+        ResearchReport, ResearchReports, SearchNews, SearchNewsList, SearchQuote, SearchQuotes,
+    },
 };
 
 // ============================================================================

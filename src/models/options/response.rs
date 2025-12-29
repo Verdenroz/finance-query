@@ -1,4 +1,4 @@
-use super::contract::OptionContract;
+use super::contract::{Contracts, OptionContract};
 /// Options Response module
 ///
 /// Handles parsing of Yahoo Finance options API responses.
@@ -84,5 +84,91 @@ impl Options {
         self.first_result()
             .and_then(|r| r.strikes.clone())
             .unwrap_or_default()
+    }
+
+    /// Get all call contracts flattened across all expirations.
+    ///
+    /// Returns a `Contracts` wrapper that supports `.to_dataframe()` when
+    /// the `dataframe` feature is enabled.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let options = ticker.options(None).await?;
+    /// for call in &options.calls {
+    ///     println!("{}: strike={}", call.contract_symbol, call.strike);
+    /// }
+    /// // With dataframe feature:
+    /// let df = options.calls.to_dataframe()?;
+    /// ```
+    pub fn calls(&self) -> Contracts {
+        let contracts = self
+            .first_result()
+            .map(|r| {
+                r.options
+                    .iter()
+                    .flat_map(|chain| chain.calls.as_ref().map(|c| c.iter()).unwrap_or_default())
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+        Contracts(contracts)
+    }
+
+    /// Get all put contracts flattened across all expirations.
+    ///
+    /// Returns a `Contracts` wrapper that supports `.to_dataframe()` when
+    /// the `dataframe` feature is enabled.
+    ///
+    /// # Example
+    /// ```ignore
+    /// let options = ticker.options(None).await?;
+    /// for put in &options.puts {
+    ///     println!("{}: strike={}", put.contract_symbol, put.strike);
+    /// }
+    /// // With dataframe feature:
+    /// let df = options.puts.to_dataframe()?;
+    /// ```
+    pub fn puts(&self) -> Contracts {
+        let contracts = self
+            .first_result()
+            .map(|r| {
+                r.options
+                    .iter()
+                    .flat_map(|chain| chain.puts.as_ref().map(|p| p.iter()).unwrap_or_default())
+                    .cloned()
+                    .collect()
+            })
+            .unwrap_or_default();
+        Contracts(contracts)
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl Options {
+    /// Converts all option contracts (calls and puts) to a polars DataFrame.
+    ///
+    /// Flattens all contracts across all expiration dates into a single DataFrame
+    /// with an additional `option_type` column ("call" or "put").
+    ///
+    /// For separate DataFrames, use `options.calls.to_dataframe()` or
+    /// `options.puts.to_dataframe()`.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        use ::polars::prelude::*;
+
+        let calls = self.calls();
+        let puts = self.puts();
+
+        let mut calls_df = calls.to_dataframe()?;
+        let mut puts_df = puts.to_dataframe()?;
+
+        // Add option_type column
+        let call_types = Series::new("option_type".into(), vec!["call"; calls.len()]);
+        let put_types = Series::new("option_type".into(), vec!["put"; puts.len()]);
+
+        calls_df.with_column(call_types)?;
+        puts_df.with_column(put_types)?;
+
+        // Combine into single DataFrame
+        calls_df.vstack(&puts_df)
     }
 }

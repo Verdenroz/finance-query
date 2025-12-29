@@ -1,7 +1,7 @@
-use super::{Candle, ChartMeta};
 /// Chart aggregate module
 ///
 /// Contains the fully typed Chart structure for historical data.
+use super::{Candle, ChartMeta};
 use serde::{Deserialize, Serialize};
 
 /// Fully typed chart data
@@ -30,4 +30,14 @@ pub struct Chart {
     /// Time range used (e.g., "1mo", "1y")
     #[serde(skip_serializing_if = "Option::is_none")]
     pub range: Option<String>,
+}
+
+#[cfg(feature = "dataframe")]
+impl Chart {
+    /// Converts the candles to a polars DataFrame.
+    ///
+    /// Each candle becomes a row with columns for timestamp, open, high, low, close, volume.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        Candle::vec_to_dataframe(&self.candles)
+    }
 }

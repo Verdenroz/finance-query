@@ -115,6 +115,7 @@ fn prepare_data(candles: &[Candle]) -> PriceData {
 
 /// Summary of all calculated technical indicators
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct IndicatorsSummary {
     // === MOVING AVERAGES ===

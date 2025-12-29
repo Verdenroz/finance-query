@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct ChartMeta {
     /// Stock symbol

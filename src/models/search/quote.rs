@@ -3,6 +3,49 @@
 //! Represents individual stock/symbol search results
 
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
+
+/// A collection of search quotes with DataFrame support.
+///
+/// This wrapper allows `search_results.quotes.to_dataframe()` syntax while still
+/// acting like a `Vec<SearchQuote>` for iteration, indexing, etc.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct SearchQuotes(pub Vec<SearchQuote>);
+
+impl Deref for SearchQuotes {
+    type Target = Vec<SearchQuote>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl IntoIterator for SearchQuotes {
+    type Item = SearchQuote;
+    type IntoIter = std::vec::IntoIter<SearchQuote>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
+    }
+}
+
+impl<'a> IntoIterator for &'a SearchQuotes {
+    type Item = &'a SearchQuote;
+    type IntoIter = std::slice::Iter<'a, SearchQuote>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.iter()
+    }
+}
+
+#[cfg(feature = "dataframe")]
+impl SearchQuotes {
+    /// Converts the quotes to a polars DataFrame.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        SearchQuote::vec_to_dataframe(&self.0)
+    }
+}
 
 /// A quote result from symbol search
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -169,6 +169,16 @@ impl ScreenerResults {
 /// Map a custom screener record to a ScreenerQuote
 ///
 /// Custom screener records use different field names than predefined screeners.
+#[cfg(feature = "dataframe")]
+impl ScreenerResults {
+    /// Converts the quotes to a polars DataFrame.
+    ///
+    /// Each quote becomes a row with all available columns.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        ScreenerQuote::vec_to_dataframe(&self.quotes)
+    }
+}
+
 fn map_custom_record_to_quote(record: &serde_json::Value) -> Result<ScreenerQuote, String> {
     use crate::models::quote::FormattedValue;
 

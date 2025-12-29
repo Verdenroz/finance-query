@@ -6,7 +6,7 @@ mod research;
 mod response;
 mod thumbnail;
 
-pub use news::SearchNews;
-pub use quote::SearchQuote;
-pub use research::ResearchReport;
+pub use news::{SearchNews, SearchNewsList};
+pub use quote::{SearchQuote, SearchQuotes};
+pub use research::{ResearchReport, ResearchReports};
 pub use response::SearchResults;

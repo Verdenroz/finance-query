@@ -35,3 +35,11 @@ impl Recommendation {
         self.recommendations.len()
     }
 }
+
+#[cfg(feature = "dataframe")]
+impl Recommendation {
+    /// Converts the recommendations to a polars DataFrame.
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        SimilarSymbol::vec_to_dataframe(&self.recommendations)
+    }
+}

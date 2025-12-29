@@ -26,6 +26,7 @@ pub struct OptionChain {
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::options()`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct OptionsQuote {
     /// Symbol

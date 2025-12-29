@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// A news article
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct News {
     /// Article title

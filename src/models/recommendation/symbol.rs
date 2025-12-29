@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::recommendations()`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct SimilarSymbol {
     /// Stock symbol
     pub symbol: String,
