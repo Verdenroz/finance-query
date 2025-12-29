@@ -1,4 +1,4 @@
-.PHONY: help serve install install-dev build test test-fast lint fix docs docker clean
+.PHONY: help serve install install-dev build test test-fast lint fix audit docs docker clean
 
 # Default target
 .DEFAULT_GOAL := help
@@ -60,6 +60,11 @@ fix: ## Auto-fix formatting and linting issues, then verify with pre-commit chec
 	@echo "$(GREEN)Running pre-commit checks to verify...$(NC)"
 	@prek
 	@echo "$(GREEN)✓ Auto-fix complete and verified!$(NC)"
+
+audit: ## Run security audit on dependencies
+	@echo "$(GREEN)Running security audit...$(NC)"
+	@command -v cargo-audit >/dev/null 2>&1 || { echo "$(YELLOW)Installing cargo-audit...$(NC)"; $(CARGO) install cargo-audit; }
+	@$(CARGO) audit
 
 docs: ## Build and serve documentation
 	@echo "$(GREEN)Serving docs at http://localhost:3000$(NC)"
