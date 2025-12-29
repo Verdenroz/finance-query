@@ -7,6 +7,8 @@
 pub mod chart;
 /// Currency models.
 pub mod currencies;
+/// Exchange models for supported markets.
+pub mod exchanges;
 /// Financials (fundamentals-timeseries) models.
 pub mod financials;
 /// Market hours models.

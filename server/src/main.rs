@@ -447,7 +447,7 @@ fn create_app() -> Router {
 /// API routes
 fn api_routes() -> Router {
     Router::new()
-        // Routes are sorted alphabetically by path for consistency.
+        // Routes are sorted alphabetically by path.
         // GET /v2/analysis/{symbol}/{analysis_type}
         .route("/analysis/{symbol}/{analysis_type}", get(get_analysis))
         // GET /v2/capital-gains/{symbol}?range=<str>
@@ -458,22 +458,22 @@ fn api_routes() -> Router {
         .route("/currencies", get(get_currencies))
         // GET /v2/dividends/{symbol}?range=<str>
         .route("/dividends/{symbol}", get(get_dividends))
-        // GET /v2/transcripts/{symbol}?quarter=<str>&year=<i32>
-        .route("/transcripts/{symbol}", get(get_transcript))
-        // GET /v2/transcripts/{symbol}/all?limit=<usize>
-        .route("/transcripts/{symbol}/all", get(get_transcripts))
+        // GET /v2/exchanges
+        .route("/exchanges", get(get_exchanges))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route("/financials/{symbol}/{statement}", get(get_financials))
-        // GET /v2/hours
-        .route("/hours", get(get_hours))
         // GET /v2/holders/{symbol}/{holder_type}
         .route("/holders/{symbol}/{holder_type}", get(get_holders))
+        // GET /v2/hours
+        .route("/hours", get(get_hours))
         // GET /v2/indicators/{symbol}?interval=<str>&range=<str>
         .route("/indicators/{symbol}", get(get_indicators))
         // GET /v2/indices?format=<raw|pretty|both>
         .route("/indices", get(get_indices))
         // GET /v2/industries/{industry_key}
         .route("/industries/{industry_key}", get(get_industry))
+        // GET /v2/lookup?q=<string>&type=<string>&count=<u32>&logo=<bool>
+        .route("/lookup", get(lookup))
         // GET /v2/market-summary
         .route("/market-summary", get(get_market_summary))
         // GET /v2/news?count=<u32>
@@ -482,30 +482,32 @@ fn api_routes() -> Router {
         .route("/news/{symbol}", get(get_news))
         // GET /v2/options/{symbol}?date=<i64>
         .route("/options/{symbol}", get(get_options))
-        // GET /v2/quote-type/{symbol}
-        .route("/quote-type/{symbol}", get(get_quote_type))
         // GET /v2/quote/{symbol}?logo=<bool>
         .route("/quote/{symbol}", get(get_quote))
+        // GET /v2/quote-type/{symbol}
+        .route("/quote-type/{symbol}", get(get_quote_type))
         // GET /v2/quotes?symbols=<csv>&logo=<bool>
         .route("/quotes", get(get_quotes))
         // GET /v2/recommendations/{symbol}?limit=<u32>
         .route("/recommendations/{symbol}", get(get_recommendations))
-        // POST /v2/screeners/custom
-        .route("/screeners/custom", post(post_custom_screener))
         // GET /v2/screeners/{screener_type}?count=<u32>
         .route("/screeners/{screener_type}", get(get_screeners))
+        // POST /v2/screeners/custom
+        .route("/screeners/custom", post(post_custom_screener))
         // GET /v2/search?q=<string>&hits=<u32>
         .route("/search", get(search))
-        // GET /v2/lookup?q=<string>&type=<string>&count=<u32>&logo=<bool>
-        .route("/lookup", get(lookup))
         // GET /v2/sectors/{sector_type}
         .route("/sectors/{sector_type}", get(get_sector))
         // GET /v2/splits/{symbol}?range=<str>
         .route("/splits/{symbol}", get(get_splits))
+        // GET /v2/stream - WebSocket real-time price streaming
+        .route("/stream", get(ws_stream_handler))
+        // GET /v2/transcripts/{symbol}?quarter=<str>&year=<i32>
+        .route("/transcripts/{symbol}", get(get_transcript))
+        // GET /v2/transcripts/{symbol}/all?limit=<usize>
+        .route("/transcripts/{symbol}/all", get(get_transcripts))
         // GET /v2/trending?region=<str>
         .route("/trending", get(get_trending))
-        // WebSocket /v2/stream - Real-time price streaming
-        .route("/stream", get(ws_stream_handler))
 }
 
 /// GET /health
@@ -1721,6 +1723,21 @@ async fn get_currencies() -> impl IntoResponse {
         }
         Err(e) => {
             error!("Failed to fetch currencies: {}", e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/exchanges
+///
+/// Returns list of supported exchanges with their suffixes and data providers.
+async fn get_exchanges() -> impl IntoResponse {
+    info!("Fetching exchanges");
+
+    match finance::exchanges().await {
+        Ok(exchanges) => (StatusCode::OK, Json(exchanges)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch exchanges: {}", e);
             error_response(e).into_response()
         }
     }

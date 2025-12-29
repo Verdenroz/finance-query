@@ -1059,6 +1059,36 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /v2/exchanges:
+    get:
+      tags: [Market]
+      summary: Get supported exchanges
+      description: |
+        Fetch list of supported exchanges from Yahoo Finance.
+        Returns exchanges with their symbol suffixes and data delay information.
+      responses:
+        '200':
+          description: List of supported exchanges
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Exchange'
+              example:
+                - country: "United States of America"
+                  market: "Nasdaq Stock Exchange"
+                  suffix: "N/A"
+                  delay: "Real-time"
+                  dataProvider: "ICE Data Services"
+                - country: "Japan"
+                  market: "Tokyo Stock Exchange"
+                  suffix: ".T"
+                  delay: "20 min"
+                  dataProvider: "ICE Data Services"
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /v2/market-summary:
     get:
       tags: [Market]
@@ -2863,6 +2893,31 @@ components:
           nullable: true
           description: Local long name
           example: "USD/EUR"
+
+    Exchange:
+      type: object
+      description: Supported exchange information
+      properties:
+        country:
+          type: string
+          description: Country or region where the exchange operates
+          example: "Japan"
+        market:
+          type: string
+          description: Name of the market or index
+          example: "Tokyo Stock Exchange"
+        suffix:
+          type: string
+          description: Symbol suffix for this exchange (N/A if none needed)
+          example: ".T"
+        delay:
+          type: string
+          description: Data delay (e.g., "Real-time", "15 min", "20 min")
+          example: "20 min"
+        dataProvider:
+          type: string
+          description: Data provider name
+          example: "ICE Data Services"
 
     MarketSummaryQuote:
       type: object

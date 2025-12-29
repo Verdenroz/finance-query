@@ -4,3 +4,4 @@
 
 pub(crate) mod stockanalysis;
 pub(crate) mod yahoo_earnings;
+pub(crate) mod yahoo_exchanges;

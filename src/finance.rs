@@ -246,32 +246,6 @@ pub async fn earnings_transcripts(
     crate::endpoints::transcripts::fetch_all_for_symbol(&client, symbol, limit).await
 }
 
-/// Get earnings transcript by event ID and company ID (low-level)
-///
-/// This is the low-level function that requires knowing both IDs upfront.
-/// Most users should use `earnings_transcript()` instead which handles this automatically.
-///
-/// # Arguments
-///
-/// * `event_id` - Event ID for the earnings call
-/// * `company_id` - Company ID (quartrId)
-///
-/// # Examples
-///
-/// ```no_run
-/// use finance_query::finance;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let transcript = finance::earnings_transcript_by_id("369370", "4742").await?;
-/// println!("Quarter: {} {}", transcript.quarter(), transcript.year());
-/// # Ok(())
-/// # }
-/// ```
-pub async fn earnings_transcript_by_id(event_id: &str, company_id: &str) -> Result<Transcript> {
-    let client = YahooClient::new(ClientConfig::default()).await?;
-    crate::endpoints::transcripts::fetch(&client, event_id, company_id).await
-}
-
 /// Get market hours/status
 ///
 /// Returns the current status for various markets.
@@ -416,6 +390,28 @@ pub async fn currencies() -> Result<Vec<crate::models::currencies::Currency>> {
     client.get_currencies().await
 }
 
+/// Get list of supported exchanges
+///
+/// Scrapes the Yahoo Finance help page for a list of supported exchanges
+/// with their symbol suffixes and data delay information.
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let exchanges = finance::exchanges().await?;
+/// for exchange in &exchanges {
+///     println!("{} - {} ({})", exchange.country, exchange.market, exchange.suffix);
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn exchanges() -> Result<Vec<crate::models::exchanges::Exchange>> {
+    crate::scrapers::yahoo_exchanges::scrape_exchanges().await
+}
+
 /// Get market summary
 ///
 /// Returns market summary with major indices, currencies, and commodities.
@@ -470,38 +466,4 @@ pub async fn trending(
 ) -> Result<Vec<crate::models::trending::TrendingQuote>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_trending(country).await
-}
-
-/// Get list of available earnings calls for a symbol
-///
-/// Scrapes the Yahoo Finance earnings calls page to get a list of available
-/// earnings call transcripts with their event IDs and metadata.
-///
-/// # Arguments
-///
-/// * `symbol` - Stock symbol (e.g., "AAPL", "MSFT")
-///
-/// # Examples
-///
-/// ```no_run
-/// use finance_query::finance;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// // Get list of earnings calls for Apple
-/// let calls = finance::earnings_calls("AAPL").await?;
-/// for call in &calls {
-///     println!("{}: event_id={}", call.title, call.event_id);
-/// }
-///
-/// // Use the event_id to fetch the full transcript
-/// if let Some(call) = calls.first() {
-///     let transcript = finance::earnings_transcript(&call.event_id, "company_id").await?;
-/// }
-/// # Ok(())
-/// # }
-/// ```
-pub async fn earnings_calls(
-    symbol: &str,
-) -> Result<Vec<crate::scrapers::yahoo_earnings::EarningsCall>> {
-    crate::scrapers::yahoo_earnings::scrape_earnings_calls(symbol).await
 }

@@ -99,15 +99,14 @@ pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, Valu
 // ============================================================================
 // Response types - Top-level types returned by API methods
 // ============================================================================
-pub use models::transcript::{Transcript, TranscriptWithMeta};
 pub use models::{
-    chart::Chart, currencies::Currency, financials::FinancialStatement, hours::MarketHours,
-    indicators::IndicatorsSummary, industries::Industry, lookup::LookupResults,
+    chart::Chart, currencies::Currency, exchanges::Exchange, financials::FinancialStatement,
+    hours::MarketHours, indicators::IndicatorsSummary, industries::Industry, lookup::LookupResults,
     market_summary::MarketSummaryQuote, news::News, options::Options, quote::Quote,
     recommendation::Recommendation, screeners::ScreenerResults, search::SearchResults,
-    sectors::Sector, trending::TrendingQuote,
+    sectors::Sector, transcript::Transcript, transcript::TranscriptWithMeta,
+    trending::TrendingQuote,
 };
-pub use scrapers::yahoo_earnings::EarningsCall;
 
 // ============================================================================
 // Nested types - Commonly accessed fields within response types
