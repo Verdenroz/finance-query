@@ -1,3 +1,5 @@
+mod cache;
+
 use axum::{
     Router,
     extract::{
@@ -8,6 +10,7 @@ use axum::{
     response::{IntoResponse, Json},
     routing::{get, post},
 };
+use cache::Cache;
 use finance_query::{
     Country, Frequency, Interval, ScreenerQuery, ScreenerType, SectorType, StatementType, Ticker,
     Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query, streaming::PriceStream,
@@ -24,6 +27,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Clone)]
 struct AppState {
+    cache: Cache,
     stream_hub: StreamHub,
 }
 
@@ -524,7 +528,7 @@ async fn main() {
     info!("Finance Query server initializing...");
 
     // Build application with routes
-    let app = create_app();
+    let app = create_app().await;
 
     // Determine server address
     let port = std::env::var("PORT")
@@ -546,8 +550,13 @@ async fn main() {
         .expect("Server error");
 }
 
-fn create_app() -> Router {
+async fn create_app() -> Router {
+    // Initialize Redis cache (optional - falls back gracefully if not configured)
+    let redis_url = std::env::var("REDIS_URL").ok();
+    let cache = Cache::new(redis_url.as_deref()).await;
+
     let state = AppState {
+        cache,
         stream_hub: StreamHub::new(),
     };
 
@@ -667,6 +676,7 @@ async fn ping() -> impl IntoResponse {
 ///
 /// Query: `logo` (bool, default: false), `format` (raw|pretty|both), `fields` (comma-separated)
 async fn get_quote(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<QuoteQuery>,
 ) -> impl IntoResponse {
@@ -680,22 +690,36 @@ async fn get_quote(
         params.fields
     );
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.quote(params.logo).await {
-            Ok(quote) => {
-                info!("Successfully fetched quote for {}", symbol);
-                let json = serde_json::to_value(quote).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, format, fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch quote for {}: {}", symbol, e);
-                error_response(e).into_response()
-            }
-        },
+    // Cache key includes symbol and logo flag
+    let logo_str = if params.logo { "1" } else { "0" };
+    let cache_key = Cache::key("quote", &[&symbol.to_uppercase(), logo_str]);
+    let logo = params.logo;
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::QUOTES,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let quote = ticker.quote(logo).await?;
+                info!("Successfully fetched quote for {}", symbol_clone);
+                let json = serde_json::to_value(&quote)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, format, fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
             error!("Failed to fetch quote for {}: {}", symbol, e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -717,6 +741,43 @@ fn error_response(e: YahooError) -> impl IntoResponse {
         "status": status.as_u16()
     });
     (status, Json(error_response))
+}
+
+/// Converts generic errors from get_or_fetch into HTTP responses
+/// Attempts to downcast to YahooError to preserve HTTP status code mapping
+fn into_error_response(e: Box<dyn std::error::Error + Send + Sync>) -> axum::response::Response {
+    // Try to downcast to YahooError first to get proper HTTP status codes
+    if let Some(yahoo_err) = e.downcast_ref::<YahooError>() {
+        // Map YahooError to appropriate HTTP status codes
+        let status = match yahoo_err {
+            YahooError::SymbolNotFound { .. } => StatusCode::NOT_FOUND,
+            YahooError::AuthenticationFailed { .. } => StatusCode::UNAUTHORIZED,
+            YahooError::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
+            YahooError::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
+            YahooError::ServerError { status, .. } => {
+                StatusCode::from_u16(*status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
+            }
+            _ => StatusCode::INTERNAL_SERVER_ERROR,
+        };
+        return (
+            status,
+            Json(serde_json::json!({
+                "error": yahoo_err.to_string(),
+                "status": status.as_u16()
+            })),
+        )
+            .into_response();
+    }
+
+    // Fallback for other errors (e.g., serialization errors)
+    (
+        StatusCode::INTERNAL_SERVER_ERROR,
+        Json(serde_json::json!({
+            "error": e.to_string(),
+            "status": 500
+        })),
+    )
+        .into_response()
 }
 
 // Helper to parse interval string
@@ -759,8 +820,12 @@ fn parse_range(s: &str) -> TimeRange {
 ///        `format` (raw|pretty|both), `fields` (comma-separated)
 ///
 /// Uses batch fetching via Tickers for optimal performance (single API call).
-async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
-    let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+async fn get_quotes(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<QuotesQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort(); // Sort for consistent cache key
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
     info!(
@@ -771,29 +836,41 @@ async fn get_quotes(Query(params): Query<QuotesQuery>) -> impl IntoResponse {
         params.fields
     );
 
-    // Use Tickers for batch fetching (single API call)
-    let tickers = match Tickers::new(symbols).await {
-        Ok(t) => t,
-        Err(e) => {
-            error!("Failed to create Tickers: {}", e);
-            return error_response(e).into_response();
-        }
-    };
+    // Cache key: sorted symbols + logo flag
+    let logo_str = if params.logo { "1" } else { "0" };
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key("quotes", &[&symbols_key, logo_str]);
+    let logo = params.logo;
 
-    match tickers.quotes(params.logo).await {
-        Ok(batch_response) => {
-            info!(
-                "Batch fetch complete: {} success, {} errors",
-                batch_response.success_count(),
-                batch_response.error_count()
-            );
-            let json = serde_json::to_value(batch_response).unwrap_or(serde_json::Value::Null);
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::QUOTES,
+            cache::is_market_open(),
+            || async move {
+                // Use Tickers for batch fetching (single API call)
+                let tickers = Tickers::new(symbols).await?;
+                let batch_response = tickers.quotes(logo).await?;
+                info!(
+                    "Batch fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
             error!("Failed to fetch batch quotes: {}", e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -812,34 +889,53 @@ struct IndicesQuery {
 /// GET /v2/indices
 ///
 /// Returns quotes for world market indices, optionally filtered by region.
-async fn get_indices(Query(params): Query<IndicesQuery>) -> impl IntoResponse {
+async fn get_indices(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<IndicesQuery>,
+) -> impl IntoResponse {
     use finance_query::IndicesRegion;
 
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
     let region = params.region.as_deref().and_then(IndicesRegion::parse);
+    let region_str = region.map(|r| r.as_str()).unwrap_or("all");
 
     info!(
         "Fetching indices (region={}, format={}, fields={:?})",
-        region.map(|r| r.as_str()).unwrap_or("all"),
+        region_str,
         format.as_str(),
         params.fields
     );
 
-    match finance::indices(region).await {
-        Ok(batch_response) => {
-            info!(
-                "Indices fetch complete: {} success, {} errors",
-                batch_response.success_count(),
-                batch_response.error_count()
-            );
-            let json = serde_json::to_value(batch_response).unwrap_or(serde_json::Value::Null);
+    let cache_key = Cache::key("indices", &[region_str]);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::INDICES,
+            cache::is_market_open(),
+            || async move {
+                let batch_response = finance::indices(region).await?;
+                info!(
+                    "Indices fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
             error!("Failed to fetch indices: {}", e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -848,30 +944,46 @@ async fn get_indices(Query(params): Query<IndicesQuery>) -> impl IntoResponse {
 ///
 /// Query: `limit` (u32, default via `RECOMMENDATIONS_LIMIT` or server default)
 async fn get_recommendations(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<RecommendationsQuery>,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
+    let limit = params.limit;
     info!(
-        "Fetching recommendations for {} (fields={:?})",
-        symbol, params.fields
+        "Fetching recommendations for {} (limit={}, fields={:?})",
+        symbol, limit, params.fields
     );
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.recommendations(params.limit).await {
-            Ok(recommendation) => {
-                let json = serde_json::to_value(recommendation).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch recommendations: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let cache_key = Cache::key(
+        "recommendations",
+        &[&symbol.to_uppercase(), &limit.to_string()],
+    );
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let recommendation = ticker.recommendations(limit).await?;
+                let json = serde_json::to_value(&recommendation)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch recommendations for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -880,27 +992,45 @@ async fn get_recommendations(
 ///
 /// Query: `interval` (str, default via `DEFAULT_INTERVAL`), `range` (str, default via `DEFAULT_RANGE`), `events` (bool, default false)
 async fn get_chart(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<ChartQuery>,
 ) -> impl IntoResponse {
     let interval = parse_interval(&params.interval);
     let range = parse_range(&params.range);
     let fields = parse_fields(params.fields.as_deref());
+    let events_str = if params.events { "1" } else { "0" };
     info!(
         "Fetching chart data for {} (events={}, fields={:?})",
         symbol, params.events, params.fields
     );
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.chart(interval, range).await {
-            Ok(chart) => {
-                let mut json = serde_json::to_value(chart).unwrap_or(serde_json::Value::Null);
+    let cache_key = Cache::key(
+        "chart",
+        &[
+            &symbol.to_uppercase(),
+            &params.interval,
+            &params.range,
+            events_str,
+        ],
+    );
+    let symbol_clone = symbol.clone();
+    let include_events = params.events;
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::CHART,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let chart = ticker.chart(interval, range).await?;
+                let mut json = serde_json::to_value(&chart)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
 
                 // Include events if requested
-                if params.events
-                    && let serde_json::Value::Object(ref mut map) = json
-                {
-                    // Fetch events using the same range (events are already cached from chart fetch)
+                if include_events && let serde_json::Value::Object(ref mut map) = json {
                     if let Ok(dividends) = ticker.dividends(range).await {
                         map.insert(
                             "dividends".to_string(),
@@ -920,18 +1050,18 @@ async fn get_chart(
                         );
                     }
                 }
-
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch chart data: {}", e);
-                error_response(e).into_response()
-            }
-        },
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch chart data for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -940,6 +1070,7 @@ async fn get_chart(
 ///
 /// Query: `range` (str, default "max")
 async fn get_dividends(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<RangeQuery>,
 ) -> impl IntoResponse {
@@ -947,21 +1078,32 @@ async fn get_dividends(
     let fields = parse_fields(params.fields.as_deref());
     info!("Fetching dividends for {} (range={:?})", symbol, range);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.dividends(range).await {
-            Ok(dividends) => {
-                let json = serde_json::to_value(dividends).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch dividends: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let cache_key = Cache::key("dividends", &[&symbol.to_uppercase(), &params.range]);
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HISTORICAL,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let dividends = ticker.dividends(range).await?;
+                let json = serde_json::to_value(&dividends)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch dividends for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -970,6 +1112,7 @@ async fn get_dividends(
 ///
 /// Query: `range` (str, default "max")
 async fn get_splits(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<RangeQuery>,
 ) -> impl IntoResponse {
@@ -977,21 +1120,32 @@ async fn get_splits(
     let fields = parse_fields(params.fields.as_deref());
     info!("Fetching splits for {} (range={:?})", symbol, range);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.splits(range).await {
-            Ok(splits) => {
-                let json = serde_json::to_value(splits).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch splits: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let cache_key = Cache::key("splits", &[&symbol.to_uppercase(), &params.range]);
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HISTORICAL,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let splits = ticker.splits(range).await?;
+                let json = serde_json::to_value(&splits)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch splits for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -1000,6 +1154,7 @@ async fn get_splits(
 ///
 /// Query: `range` (str, default "max")
 async fn get_capital_gains(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<RangeQuery>,
 ) -> impl IntoResponse {
@@ -1007,21 +1162,32 @@ async fn get_capital_gains(
     let fields = parse_fields(params.fields.as_deref());
     info!("Fetching capital gains for {} (range={:?})", symbol, range);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.capital_gains(range).await {
-            Ok(gains) => {
-                let json = serde_json::to_value(gains).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch capital gains: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let cache_key = Cache::key("capital-gains", &[&symbol.to_uppercase(), &params.range]);
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HISTORICAL,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let gains = ticker.capital_gains(range).await?;
+                let json = serde_json::to_value(&gains)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch capital gains for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -1030,6 +1196,7 @@ async fn get_capital_gains(
 ///
 /// Query: `interval` (str, default via `DEFAULT_INTERVAL`), `range` (str, default via `DEFAULT_RANGE`)
 async fn get_indicators(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<ChartQuery>,
 ) -> impl IntoResponse {
@@ -1041,21 +1208,36 @@ async fn get_indicators(
         symbol, interval, range, params.fields
     );
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.indicators(interval, range).await {
-            Ok(indicators) => {
-                let json = serde_json::to_value(indicators).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to calculate indicators: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let cache_key = Cache::key(
+        "indicators",
+        &[&symbol.to_uppercase(), &params.interval, &params.range],
+    );
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::INDICATORS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let indicators = ticker.indicators(interval, range).await?;
+                info!("Successfully calculated indicators for {}", symbol_clone);
+                let json = serde_json::to_value(&indicators)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to calculate indicators for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -1073,7 +1255,10 @@ async fn get_indicators(
 /// - `research` (bool, default: false): Include research reports
 /// - `cultural` (bool, default: false): Include cultural assets (NFT indices)
 /// - `country` (string, optional): Country code for lang/region (e.g., "US", "JP")
-async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
+async fn search(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<SearchQuery>,
+) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
     info!(
         "Searching for: {} (quotes={}, news={}, logo={}, research={}, cultural={}, country={:?})",
@@ -1086,6 +1271,18 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
         params.country
     );
 
+    // Cache key includes query and key options
+    let cache_key = Cache::key(
+        "search",
+        &[
+            &params.q.to_lowercase(),
+            &params.quotes.to_string(),
+            &params.news.to_string(),
+            if params.logo { "1" } else { "0" },
+        ],
+    );
+
+    let query = params.q.clone();
     let mut options = finance::SearchOptions::new()
         .quotes_count(params.quotes)
         .news_count(params.news)
@@ -1101,15 +1298,28 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
         options = options.country(country);
     }
 
-    match finance::search(&params.q, &options).await {
-        Ok(result) => {
-            let json = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::SEARCH,
+            cache::is_market_open(),
+            || async move {
+                let result = finance::search(&query, &options).await?;
+                let json = serde_json::to_value(&result)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Search failed: {}", e);
-            error_response(e).into_response()
+            error!("Search failed for {}: {}", params.q, e);
+            into_error_response(e)
         }
     }
 }
@@ -1125,11 +1335,24 @@ async fn search(Query(params): Query<SearchQuery>) -> impl IntoResponse {
 /// - `count` (u32, default: 25): Maximum results
 /// - `logo` (bool, default: false): Include logo URLs (requires extra API call)
 /// - `country` (string, optional): Country code for lang/region
-async fn lookup(Query(params): Query<LookupQuery>) -> impl IntoResponse {
+async fn lookup(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<LookupQuery>,
+) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
     info!(
         "Looking up: {} (type={}, count={}, logo={}, country={:?})",
         params.q, params.lookup_type, params.count, params.logo, params.country
+    );
+
+    let cache_key = Cache::key(
+        "lookup",
+        &[
+            &params.q.to_lowercase(),
+            &params.lookup_type.to_lowercase(),
+            &params.count.to_string(),
+            if params.logo { "1" } else { "0" },
+        ],
     );
 
     // Parse lookup type
@@ -1145,6 +1368,7 @@ async fn lookup(Query(params): Query<LookupQuery>) -> impl IntoResponse {
         _ => finance::LookupType::All,
     };
 
+    let query = params.q.clone();
     let mut options = finance::LookupOptions::new()
         .lookup_type(lookup_type)
         .count(params.count)
@@ -1157,15 +1381,28 @@ async fn lookup(Query(params): Query<LookupQuery>) -> impl IntoResponse {
         options = options.country(country);
     }
 
-    match finance::lookup(&params.q, &options).await {
-        Ok(result) => {
-            let json = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::SEARCH,
+            cache::is_market_open(),
+            || async move {
+                let result = finance::lookup(&query, &options).await?;
+                let json = serde_json::to_value(&result)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Lookup failed: {}", e);
-            error_response(e).into_response()
+            error!("Lookup failed for {}: {}", params.q, e);
+            into_error_response(e)
         }
     }
 }
@@ -1173,19 +1410,37 @@ async fn lookup(Query(params): Query<LookupQuery>) -> impl IntoResponse {
 /// GET /v2/news
 ///
 /// Returns general market news
-async fn get_general_news(Query(params): Query<NewsQuery>) -> impl IntoResponse {
+async fn get_general_news(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<NewsQuery>,
+) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
     info!("Fetching general market news (fields={:?})", params.fields);
 
-    match finance::news().await {
-        Ok(news) => {
-            let json = serde_json::to_value(news).unwrap_or(serde_json::Value::Null);
+    let cache_key = Cache::key("news", &["general"]);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::GENERAL_NEWS,
+            cache::is_market_open(),
+            || async move {
+                let news = finance::news().await?;
+                let json = serde_json::to_value(&news)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
             error!("Failed to fetch general news: {}", e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -1194,27 +1449,39 @@ async fn get_general_news(Query(params): Query<NewsQuery>) -> impl IntoResponse 
 ///
 /// Returns news for a specific symbol
 async fn get_news(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<NewsQuery>,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
     info!("Fetching news for {} (fields={:?})", symbol, params.fields);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.news().await {
-            Ok(news) => {
-                let json = serde_json::to_value(news).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch news: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let cache_key = Cache::key("news", &[&symbol.to_uppercase()]);
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::NEWS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let news = ticker.news().await?;
+                let json = serde_json::to_value(&news)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch news for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -1223,6 +1490,7 @@ async fn get_news(
 ///
 /// Query: `date` (i64, optional expiration timestamp)
 async fn get_options(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<OptionsQuery>,
 ) -> impl IntoResponse {
@@ -1232,22 +1500,34 @@ async fn get_options(
         symbol, params.fields
     );
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.options(params.date).await {
-            Ok(options_response) => {
-                let json =
-                    serde_json::to_value(options_response).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch options: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let date_str = params.date.map(|d| d.to_string()).unwrap_or_default();
+    let cache_key = Cache::key("options", &[&symbol.to_uppercase(), &date_str]);
+    let symbol_clone = symbol.clone();
+    let date = params.date;
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::OPTIONS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let options_response = ticker.options(date).await?;
+                let json = serde_json::to_value(&options_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch options for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -1259,6 +1539,7 @@ async fn get_options(
 ///
 /// Query: `frequency` (annual|quarterly, default: annual)
 async fn get_financials(
+    Extension(state): Extension<AppState>,
     Path((symbol, statement)): Path<(String, String)>,
     Query(params): Query<FinancialsQuery>,
 ) -> impl IntoResponse {
@@ -1281,21 +1562,39 @@ async fn get_financials(
         params.frequency, statement, symbol, params.fields
     );
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.financials(statement_type, frequency).await {
-            Ok(result) => {
-                let json = serde_json::to_value(result).unwrap_or(serde_json::Value::Null);
-                let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
-                (StatusCode::OK, Json(response)).into_response()
-            }
-            Err(e) => {
-                error!("Failed to fetch financials: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    let cache_key = Cache::key(
+        "financials",
+        &[&symbol.to_uppercase(), &statement, &params.frequency],
+    );
+
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::FINANCIALS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let result = ticker.financials(statement_type, frequency).await?;
+                let json = serde_json::to_value(&result)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
         Err(e) => {
-            error!("Failed to fetch financials: {}", e);
-            error_response(e).into_response()
+            error!(
+                "Failed to fetch financials for {} {}: {}",
+                symbol, statement, e
+            );
+            into_error_response(e)
         }
     }
 }
@@ -1310,15 +1609,36 @@ struct HoursQuery {
 /// GET /v2/hours
 ///
 /// Query: `region` (string, optional - e.g., "US", "JP", "GB")
-async fn get_hours(Query(params): Query<HoursQuery>) -> impl IntoResponse {
+async fn get_hours(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<HoursQuery>,
+) -> impl IntoResponse {
     let region_display = params.region.as_deref().unwrap_or("US");
     info!("Fetching market hours for region: {}", region_display);
 
-    match finance::hours(params.region.as_deref()).await {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+    // Short cache (5 min) - market hours change throughout the day
+    let cache_key = Cache::key("hours", &[region_display]);
+    let region = params.region.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::MARKET_HOURS,
+            cache::is_market_open(),
+            || async move {
+                let response = finance::hours(region.as_deref()).await?;
+                let json = serde_json::to_value(&response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
-            error!("Failed to fetch market hours: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch market hours for {}: {}", region_display, e);
+            into_error_response(e)
         }
     }
 }
@@ -1326,20 +1646,36 @@ async fn get_hours(Query(params): Query<HoursQuery>) -> impl IntoResponse {
 /// GET /v2/quote-type/{symbol}
 ///
 /// Query: (none)
-async fn get_quote_type(Path(symbol): Path<String>) -> impl IntoResponse {
+async fn get_quote_type(
+    Extension(state): Extension<AppState>,
+    Path(symbol): Path<String>,
+) -> impl IntoResponse {
     info!("Fetching quote type for {}", symbol);
 
-    match Ticker::new(&symbol).await {
-        Ok(ticker) => match ticker.quote_type().await {
-            Ok(response) => (StatusCode::OK, Json(response)).into_response(),
-            Err(e) => {
-                error!("Failed to fetch quote type: {}", e);
-                error_response(e).into_response()
-            }
-        },
+    // Long cache - quote type rarely changes
+    let cache_key = Cache::key("quote-type", &[&symbol.to_uppercase()]);
+    let symbol_clone = symbol.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::METADATA,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let response = ticker.quote_type().await?;
+                let json = serde_json::to_value(&response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            error_response(e).into_response()
+            error!("Failed to fetch quote type for {}: {}", symbol, e);
+            into_error_response(e)
         }
     }
 }
@@ -1351,6 +1687,7 @@ async fn get_quote_type(Path(symbol): Path<String>) -> impl IntoResponse {
 ///
 /// Query: `fields` (comma-separated, optional)
 async fn get_holders(
+    Extension(state): Extension<AppState>,
     Path((symbol, holder_type)): Path<(String, String)>,
     Query(params): Query<HoldersQuery>,
 ) -> impl IntoResponse {
@@ -1371,49 +1708,65 @@ async fn get_holders(
         holder_type, symbol, params.fields
     );
 
-    let ticker = match Ticker::new(&symbol).await {
-        Ok(t) => t,
-        Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            return error_response(e).into_response();
-        }
-    };
+    let cache_key = Cache::key("holders", &[&symbol.to_uppercase(), &holder_type]);
+    let symbol_clone = symbol.clone();
+    let holder_type_clone = holder_type.clone();
 
-    let result = match ht {
-        HolderType::Major => ticker
-            .major_holders()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-        HolderType::Institutional => ticker
-            .institution_ownership()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-        HolderType::Mutualfund => ticker
-            .fund_ownership()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-        HolderType::InsiderTransactions => ticker
-            .insider_transactions()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-        HolderType::InsiderPurchases => ticker
-            .share_purchase_activity()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-        HolderType::InsiderRoster => ticker
-            .insider_holders()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-    };
-
-    match result {
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HOLDERS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let json: serde_json::Value = match ht {
+                    HolderType::Major => {
+                        let data = ticker.major_holders().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                    HolderType::Institutional => {
+                        let data = ticker.institution_ownership().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                    HolderType::Mutualfund => {
+                        let data = ticker.fund_ownership().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                    HolderType::InsiderTransactions => {
+                        let data = ticker.insider_transactions().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                    HolderType::InsiderPurchases => {
+                        let data = ticker.share_purchase_activity().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                    HolderType::InsiderRoster => {
+                        let data = ticker.insider_holders().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                };
+                Ok(json)
+            },
+        )
+        .await
+    {
         Ok(json) => {
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Failed to fetch {} holders: {}", holder_type, e);
-            error_response(e).into_response()
+            error!(
+                "Failed to fetch {} holders for {}: {}",
+                holder_type_clone, symbol, e
+            );
+            into_error_response(e)
         }
     }
 }
@@ -1425,6 +1778,7 @@ async fn get_holders(
 ///
 /// Query: (none)
 async fn get_analysis(
+    Extension(state): Extension<AppState>,
     Path((symbol, analysis_type)): Path<(String, String)>,
     Query(params): Query<AnalysisQuery>,
 ) -> impl IntoResponse {
@@ -1440,46 +1794,61 @@ async fn get_analysis(
         }
     };
 
+    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), &analysis_type]);
+
     info!(
         "Fetching {} analysis for {} (fields={:?})",
         analysis_type, symbol, params.fields
     );
 
-    let ticker = match Ticker::new(&symbol).await {
-        Ok(t) => t,
-        Err(e) => {
-            error!("Failed to create ticker: {}", e);
-            return error_response(e).into_response();
-        }
-    };
+    let symbol_clone = symbol.clone();
+    let analysis_type_clone = analysis_type.clone();
 
-    let result = match at {
-        AnalysisType::Recommendations => ticker
-            .recommendation_trend()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-        AnalysisType::UpgradesDowngrades => ticker
-            .grading_history()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-        AnalysisType::EarningsEstimate => ticker
-            .earnings_trend()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-        AnalysisType::EarningsHistory => ticker
-            .earnings_history()
-            .await
-            .map(|r| serde_json::to_value(r).unwrap()),
-    };
-
-    match result {
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let json: serde_json::Value = match at {
+                    AnalysisType::Recommendations => {
+                        let data = ticker.recommendation_trend().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                    AnalysisType::UpgradesDowngrades => {
+                        let data = ticker.grading_history().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                    AnalysisType::EarningsEstimate => {
+                        let data = ticker.earnings_trend().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                    AnalysisType::EarningsHistory => {
+                        let data = ticker.earnings_history().await?;
+                        serde_json::to_value(data)
+                            .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?
+                    }
+                };
+                Ok(json)
+            },
+        )
+        .await
+    {
         Ok(json) => {
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Failed to fetch {} analysis: {}", analysis_type, e);
-            error_response(e).into_response()
+            error!(
+                "Failed to fetch {} analysis for {}: {}",
+                analysis_type_clone, symbol, e
+            );
+            into_error_response(e)
         }
     }
 }
@@ -1496,6 +1865,7 @@ async fn get_analysis(
 ///
 /// Query: `count` (u32, default 25, max 250), `format` (raw|pretty|both), `fields` (comma-separated)
 async fn get_screeners(
+    Extension(state): Extension<AppState>,
     Path(screener_type): Path<String>,
     Query(params): Query<ScreenersQuery>,
 ) -> impl IntoResponse {
@@ -1512,22 +1882,37 @@ async fn get_screeners(
         }
     };
 
+    let cache_key = Cache::key("screener", &[&screener_type, &params.count.to_string()]);
+    let count = params.count;
+    let screener_type_clone = screener_type.clone();
+
     info!(
         "Fetching {} screener (count={}, format={:?}, fields={:?})",
-        screener_type, params.count, params.format, params.fields
+        screener_type, count, params.format, params.fields
     );
 
-    let result = finance::screener(st, params.count).await;
-
-    match result {
-        Ok(data) => {
-            let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::MOVERS,
+            cache::is_market_open(),
+            || async move {
+                let data = finance::screener(st, count).await?;
+                let json = serde_json::to_value(data)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Failed to fetch {} screener: {}", screener_type, e);
-            error_response(e).into_response()
+            error!("Failed to fetch {} screener: {}", screener_type_clone, e);
+            into_error_response(e)
         }
     }
 }
@@ -1536,6 +1921,7 @@ async fn get_screeners(
 ///
 /// Query: `format` (raw|pretty|both), `fields` (comma-separated)
 async fn get_sector(
+    Extension(state): Extension<AppState>,
     Path(sector_type): Path<String>,
     Query(params): Query<SectorQuery>,
 ) -> impl IntoResponse {
@@ -1552,22 +1938,36 @@ async fn get_sector(
         }
     };
 
+    let cache_key = Cache::key("sector", &[&sector_type]);
+    let sector_type_clone = sector_type.clone();
+
     info!(
         "Fetching {} sector (format={:?}, fields={:?})",
         sector_type, params.format, params.fields
     );
 
-    let result = finance::sector(st).await;
-
-    match result {
-        Ok(data) => {
-            let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::SECTORS,
+            cache::is_market_open(),
+            || async move {
+                let data = finance::sector(st).await?;
+                let json = serde_json::to_value(data)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Failed to fetch {} sector: {}", sector_type, e);
-            error_response(e).into_response()
+            error!("Failed to fetch {} sector: {}", sector_type_clone, e);
+            into_error_response(e)
         }
     }
 }
@@ -1576,28 +1976,43 @@ async fn get_sector(
 ///
 /// Query: `format` (raw|pretty|both), `fields` (comma-separated)
 async fn get_industry(
+    Extension(state): Extension<AppState>,
     Path(industry_key): Path<String>,
     Query(params): Query<SectorQuery>,
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
 
+    let cache_key = Cache::key("industry", &[&industry_key]);
+    let industry_key_clone = industry_key.clone();
+
     info!(
         "Fetching {} industry (format={:?}, fields={:?})",
         industry_key, params.format, params.fields
     );
 
-    let result = finance::industry(&industry_key).await;
-
-    match result {
-        Ok(data) => {
-            let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::SECTORS,
+            cache::is_market_open(),
+            || async move {
+                let data = finance::industry(&industry_key_clone).await?;
+                let json = serde_json::to_value(data)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
             error!("Failed to fetch {} industry: {}", industry_key, e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -1800,19 +2215,49 @@ fn init_tracing() {
 /// - `quarter` (optional): Fiscal quarter (Q1, Q2, Q3, Q4). Defaults to latest.
 /// - `year` (optional): Fiscal year. Defaults to latest.
 async fn get_transcript(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<EarningsTranscriptQuery>,
 ) -> impl IntoResponse {
+    let quarter_str = params.quarter.as_deref().unwrap_or("latest");
+    let year_str = params
+        .year
+        .map(|y| y.to_string())
+        .unwrap_or_else(|| "latest".to_string());
+    let cache_key = Cache::key(
+        "transcript",
+        &[&symbol.to_uppercase(), quarter_str, &year_str],
+    );
+
     info!(
         "Fetching transcript for {} (quarter={:?}, year={:?})",
         symbol, params.quarter, params.year
     );
 
-    match finance::earnings_transcript(&symbol, params.quarter.as_deref(), params.year).await {
-        Ok(response) => (StatusCode::OK, Json(response)).into_response(),
+    let symbol_clone = symbol.clone();
+    let quarter = params.quarter.clone();
+    let year = params.year;
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::TRANSCRIPT,
+            cache::is_market_open(),
+            || async move {
+                let response =
+                    finance::earnings_transcript(&symbol_clone, quarter.as_deref(), year).await?;
+                let json = serde_json::to_value(&response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
             error!("Failed to fetch transcript for {}: {}", symbol, e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -1823,19 +2268,43 @@ async fn get_transcript(
 /// Query params:
 /// - `limit` (optional): Maximum number of transcripts to return.
 async fn get_transcripts(
+    Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<EarningsTranscriptsQuery>,
 ) -> impl IntoResponse {
+    let limit_str = params
+        .limit
+        .map(|l| l.to_string())
+        .unwrap_or_else(|| "all".to_string());
+    let cache_key = Cache::key("transcripts", &[&symbol.to_uppercase(), &limit_str]);
+
     info!(
         "Fetching all transcripts for {} (limit={:?})",
         symbol, params.limit
     );
 
-    match finance::earnings_transcripts(&symbol, params.limit).await {
-        Ok(transcripts) => (StatusCode::OK, Json(transcripts)).into_response(),
+    let symbol_clone = symbol.clone();
+    let limit = params.limit;
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::EARNINGS_LIST,
+            cache::is_market_open(),
+            || async move {
+                let transcripts = finance::earnings_transcripts(&symbol_clone, limit).await?;
+                let json = serde_json::to_value(&transcripts)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
             error!("Failed to fetch transcripts for {}: {}", symbol, e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -1843,17 +2312,30 @@ async fn get_transcripts(
 /// GET /v2/currencies
 ///
 /// Returns available currencies from Yahoo Finance.
-async fn get_currencies() -> impl IntoResponse {
+async fn get_currencies(Extension(state): Extension<AppState>) -> impl IntoResponse {
+    let cache_key = Cache::key("currencies", &[]);
+
     info!("Fetching currencies");
 
-    match finance::currencies().await {
-        Ok(currencies) => {
-            let json = serde_json::to_value(currencies).unwrap_or(serde_json::Value::Null);
-            (StatusCode::OK, Json(json)).into_response()
-        }
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::METADATA,
+            cache::is_market_open(),
+            || async {
+                let currencies = finance::currencies().await?;
+                let json = serde_json::to_value(currencies)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
             error!("Failed to fetch currencies: {}", e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -1861,14 +2343,30 @@ async fn get_currencies() -> impl IntoResponse {
 /// GET /v2/exchanges
 ///
 /// Returns list of supported exchanges with their suffixes and data providers.
-async fn get_exchanges() -> impl IntoResponse {
+async fn get_exchanges(Extension(state): Extension<AppState>) -> impl IntoResponse {
+    let cache_key = Cache::key("exchanges", &[]);
+
     info!("Fetching exchanges");
 
-    match finance::exchanges().await {
-        Ok(exchanges) => (StatusCode::OK, Json(exchanges)).into_response(),
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::METADATA,
+            cache::is_market_open(),
+            || async {
+                let exchanges = finance::exchanges().await?;
+                let json = serde_json::to_value(&exchanges)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
             error!("Failed to fetch exchanges: {}", e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -1887,10 +2385,17 @@ struct MarketSummaryQuery {
 /// GET /v2/market-summary
 ///
 /// Returns market summary with major indices, currencies, and commodities.
-async fn get_market_summary(Query(params): Query<MarketSummaryQuery>) -> impl IntoResponse {
+async fn get_market_summary(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<MarketSummaryQuery>,
+) -> impl IntoResponse {
     let country = params.country.as_deref().and_then(parse_country);
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
+
+    let country_str = params.country.as_deref().unwrap_or("US");
+    let cache_key = Cache::key("market_summary", &[country_str]);
+
     info!(
         "Fetching market summary (country={:?}, format={}, fields={:?})",
         country,
@@ -1898,15 +2403,28 @@ async fn get_market_summary(Query(params): Query<MarketSummaryQuery>) -> impl In
         params.fields
     );
 
-    match finance::market_summary(country).await {
-        Ok(summary) => {
-            let json = serde_json::to_value(summary).unwrap_or(serde_json::Value::Null);
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::INDICES,
+            cache::is_market_open(),
+            || async move {
+                let summary = finance::market_summary(country).await?;
+                let json = serde_json::to_value(summary)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
             error!("Failed to fetch market summary: {}", e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }
@@ -1921,18 +2439,35 @@ struct TrendingQuery {
 /// GET /v2/trending
 ///
 /// Returns trending tickers for a region.
-async fn get_trending(Query(params): Query<TrendingQuery>) -> impl IntoResponse {
+async fn get_trending(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<TrendingQuery>,
+) -> impl IntoResponse {
     let country = params.country.as_deref().and_then(parse_country);
+    let country_str = params.country.as_deref().unwrap_or("US");
+    let cache_key = Cache::key("trending", &[country_str]);
+
     info!("Fetching trending tickers (country={:?})", country);
 
-    match finance::trending(country).await {
-        Ok(trending) => {
-            let json = serde_json::to_value(trending).unwrap_or(serde_json::Value::Null);
-            (StatusCode::OK, Json(json)).into_response()
-        }
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::MOVERS,
+            cache::is_market_open(),
+            || async move {
+                let trending = finance::trending(country).await?;
+                let json = serde_json::to_value(trending)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
             error!("Failed to fetch trending tickers: {}", e);
-            error_response(e).into_response()
+            into_error_response(e)
         }
     }
 }

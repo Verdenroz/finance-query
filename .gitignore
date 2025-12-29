@@ -53,6 +53,7 @@ docs/_build/
 .env.local
 .env.*.local
 server/.env
+v1/.env
 
 # Nginx (SSL certs are sensitive)
 nginx/certs/
