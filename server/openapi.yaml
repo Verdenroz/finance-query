@@ -1310,31 +1310,70 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /v2/earnings-transcript:
+  /v2/transcripts/{symbol}:
     get:
       tags: [Analysis]
       summary: Get earnings transcript
-      description: Fetch earnings call transcript
+      description: Fetch earnings call transcript for a symbol. Returns the latest transcript by default, or a specific quarter/year if provided.
       parameters:
-        - name: event_id
-          in: query
+        - name: symbol
+          in: path
           required: true
           schema:
             type: string
-          description: Event ID
-        - name: company_id
+            default: AAPL
+          description: Stock symbol (e.g., AAPL, MSFT)
+        - name: quarter
           in: query
-          required: true
+          required: false
           schema:
             type: string
-          description: Company ID
+            enum: [Q1, Q2, Q3, Q4]
+            default: Q4
+          description: Fiscal quarter (defaults to latest)
+        - name: year
+          in: query
+          required: false
+          schema:
+            type: integer
+            default: 2025
+          description: Fiscal year (defaults to latest)
       responses:
         '200':
           description: Earnings transcript
           content:
             application/json:
               schema:
-                type: object
+                $ref: '#/components/schemas/Transcript'
+
+  /v2/transcripts/{symbol}/all:
+    get:
+      tags: [Analysis]
+      summary: Get all earnings transcripts
+      description: Fetch all available earnings call transcripts for a symbol
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+            default: AAPL
+          description: Stock symbol (e.g., AAPL, MSFT)
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+          description: Maximum number of transcripts to return
+      responses:
+        '200':
+          description: List of earnings transcripts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/TranscriptWithMeta'
 
 components:
   parameters:
@@ -1393,6 +1432,87 @@ components:
         companyLogoUrl:
           type: string
           nullable: true
+
+    Transcript:
+      type: object
+      description: Earnings call transcript
+      properties:
+        transcriptContent:
+          type: object
+          properties:
+            company_id:
+              type: integer
+            event_id:
+              type: integer
+            version:
+              type: string
+            speaker_mapping:
+              type: array
+              items:
+                type: object
+                properties:
+                  speaker:
+                    type: integer
+                  speaker_data:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                      role:
+                        type: string
+                        nullable: true
+                      company:
+                        type: string
+                        nullable: true
+            transcript:
+              type: object
+              properties:
+                number_of_speakers:
+                  type: integer
+                text:
+                  type: string
+                paragraphs:
+                  type: array
+                  items:
+                    type: object
+        transcriptMetadata:
+          type: object
+          properties:
+            date:
+              type: integer
+            eventId:
+              type: integer
+            eventType:
+              type: string
+            fiscalPeriod:
+              type: string
+              example: Q4
+            fiscalYear:
+              type: integer
+              example: 2025
+            isLatest:
+              type: boolean
+            title:
+              type: string
+
+    TranscriptWithMeta:
+      type: object
+      description: Transcript with additional metadata from earnings call list
+      properties:
+        eventId:
+          type: string
+        quarter:
+          type: string
+          nullable: true
+        year:
+          type: integer
+          nullable: true
+        title:
+          type: string
+        url:
+          type: string
+        transcript:
+          $ref: '#/components/schemas/Transcript'
 
     BatchQuotesResponse:
       type: object

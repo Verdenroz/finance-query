@@ -346,8 +346,16 @@ struct SectorQuery {
 
 #[derive(Deserialize)]
 struct EarningsTranscriptQuery {
-    event_id: String,
-    company_id: String,
+    /// Fiscal quarter (Q1, Q2, Q3, Q4). If not provided, returns latest.
+    quarter: Option<String>,
+    /// Fiscal year. If not provided with quarter, returns latest.
+    year: Option<i32>,
+}
+
+#[derive(Deserialize)]
+struct EarningsTranscriptsQuery {
+    /// Maximum number of transcripts to return. If not provided, returns all.
+    limit: Option<usize>,
 }
 
 fn default_screeners_count() -> u32 {
@@ -450,8 +458,10 @@ fn api_routes() -> Router {
         .route("/currencies", get(get_currencies))
         // GET /v2/dividends/{symbol}?range=<str>
         .route("/dividends/{symbol}", get(get_dividends))
-        // GET /v2/earnings-transcript?event_id=<str>&company_id=<str>
-        .route("/earnings-transcript", get(get_earnings_transcript))
+        // GET /v2/transcripts/{symbol}?quarter=<str>&year=<i32>
+        .route("/transcripts/{symbol}", get(get_transcript))
+        // GET /v2/transcripts/{symbol}/all?limit=<usize>
+        .route("/transcripts/{symbol}/all", get(get_transcripts))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route("/financials/{symbol}/{statement}", get(get_financials))
         // GET /v2/hours
@@ -1651,18 +1661,48 @@ fn init_tracing() {
     }
 }
 
-/// GET /v2/earnings-transcript
+/// GET /v2/transcripts/{symbol}
 ///
-/// Query: `event_id` (string, required), `company_id` (string, required)
-async fn get_earnings_transcript(
+/// Returns earnings transcript for a symbol.
+/// Query params:
+/// - `quarter` (optional): Fiscal quarter (Q1, Q2, Q3, Q4). Defaults to latest.
+/// - `year` (optional): Fiscal year. Defaults to latest.
+async fn get_transcript(
+    Path(symbol): Path<String>,
     Query(params): Query<EarningsTranscriptQuery>,
 ) -> impl IntoResponse {
-    info!("Fetching earnings transcript for event {}", params.event_id);
+    info!(
+        "Fetching transcript for {} (quarter={:?}, year={:?})",
+        symbol, params.quarter, params.year
+    );
 
-    match finance::earnings_transcript(&params.event_id, &params.company_id).await {
+    match finance::earnings_transcript(&symbol, params.quarter.as_deref(), params.year).await {
         Ok(response) => (StatusCode::OK, Json(response)).into_response(),
         Err(e) => {
-            error!("Failed to fetch earnings transcript: {}", e);
+            error!("Failed to fetch transcript for {}: {}", symbol, e);
+            error_response(e).into_response()
+        }
+    }
+}
+
+/// GET /v2/transcripts/{symbol}/all
+///
+/// Returns all earnings transcripts for a symbol.
+/// Query params:
+/// - `limit` (optional): Maximum number of transcripts to return.
+async fn get_transcripts(
+    Path(symbol): Path<String>,
+    Query(params): Query<EarningsTranscriptsQuery>,
+) -> impl IntoResponse {
+    info!(
+        "Fetching all transcripts for {} (limit={:?})",
+        symbol, params.limit
+    );
+
+    match finance::earnings_transcripts(&symbol, params.limit).await {
+        Ok(transcripts) => (StatusCode::OK, Json(transcripts)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch transcripts for {}: {}", symbol, e);
             error_response(e).into_response()
         }
     }

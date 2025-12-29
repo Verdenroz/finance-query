@@ -424,9 +424,13 @@ impl YahooClient {
         params: &T,
     ) -> Result<reqwest::Response> {
         let auth = self.auth.read().await;
-        let http = self.http.read().await;
 
-        let request = http.get(url).query(&[("crumb", &auth.crumb)]).query(params);
+        // Use the auth's HTTP client directly - it has the cookies from authentication
+        let request = auth
+            .http_client
+            .get(url)
+            .query(&[("crumb", &auth.crumb)])
+            .query(params);
 
         // Log the full request URL with all parameters.
         // (This is critical for debugging Yahoo endpoints where query params like `type` are strict.)
@@ -762,30 +766,6 @@ impl YahooClient {
         industry_key: &str,
     ) -> Result<crate::models::industries::Industry> {
         crate::endpoints::industries::fetch(self, industry_key).await
-    }
-
-    /// Get earnings call transcript
-    ///
-    /// # Arguments
-    ///
-    /// * `event_id` - Event ID for the earnings call
-    /// * `company_id` - Company ID (quartrId from quote_type endpoint)
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// let transcript = client.get_earnings_transcript("12345", "0P00000000").await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn get_earnings_transcript(
-        &self,
-        event_id: &str,
-        company_id: &str,
-    ) -> Result<serde_json::Value> {
-        crate::endpoints::earnings_transcript::fetch(self, event_id, company_id).await
     }
 
     /// Get market hours/time data

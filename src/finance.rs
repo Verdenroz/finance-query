@@ -12,7 +12,7 @@ use crate::models::industries::Industry;
 use crate::models::screeners::ScreenerResults;
 use crate::models::search::SearchResults;
 use crate::models::sectors::Sector;
-use serde_json::Value;
+use crate::models::transcript::{Transcript, TranscriptWithMeta};
 
 // Re-export options for convenience
 pub use crate::endpoints::lookup::{LookupOptions, LookupType};
@@ -175,12 +175,18 @@ pub async fn news() -> Result<Vec<crate::models::news::News>> {
     crate::scrapers::stockanalysis::scrape_general_news().await
 }
 
-/// Get earnings transcript
+/// Get earnings transcript for a symbol
+///
+/// Fetches the earnings call transcript, handling all the complexity internally:
+/// 1. Gets the company ID (quartrId) from the quote_type endpoint
+/// 2. Scrapes available earnings calls
+/// 3. Fetches the requested transcript
 ///
 /// # Arguments
 ///
-/// * `event_id` - Event ID for the earnings call
-/// * `company_id` - Company ID
+/// * `symbol` - Stock symbol (e.g., "AAPL", "MSFT")
+/// * `quarter` - Optional fiscal quarter (Q1, Q2, Q3, Q4). If None, gets latest.
+/// * `year` - Optional fiscal year. If None, gets latest.
 ///
 /// # Examples
 ///
@@ -188,13 +194,82 @@ pub async fn news() -> Result<Vec<crate::models::news::News>> {
 /// use finance_query::finance;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let transcript = finance::earnings_transcript("event123", "company456").await?;
+/// // Get the latest transcript
+/// let latest = finance::earnings_transcript("AAPL", None, None).await?;
+/// println!("Quarter: {} {}", latest.quarter(), latest.year());
+///
+/// // Get a specific quarter
+/// let q4_2024 = finance::earnings_transcript("AAPL", Some("Q4"), Some(2024)).await?;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn earnings_transcript(event_id: &str, company_id: &str) -> Result<Value> {
+pub async fn earnings_transcript(
+    symbol: &str,
+    quarter: Option<&str>,
+    year: Option<i32>,
+) -> Result<Transcript> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    client.get_earnings_transcript(event_id, company_id).await
+    crate::endpoints::transcripts::fetch_for_symbol(&client, symbol, quarter, year).await
+}
+
+/// Get all earnings transcripts for a symbol
+///
+/// Fetches transcripts for all available earnings calls.
+///
+/// # Arguments
+///
+/// * `symbol` - Stock symbol (e.g., "AAPL", "MSFT")
+/// * `limit` - Optional maximum number of transcripts. If None, fetches all.
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Get all transcripts
+/// let all = finance::earnings_transcripts("AAPL", None).await?;
+///
+/// // Get only the 5 most recent
+/// let recent = finance::earnings_transcripts("AAPL", Some(5)).await?;
+/// for t in &recent {
+///     println!("{}: {} {}", t.title, t.transcript.quarter(), t.transcript.year());
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn earnings_transcripts(
+    symbol: &str,
+    limit: Option<usize>,
+) -> Result<Vec<TranscriptWithMeta>> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    crate::endpoints::transcripts::fetch_all_for_symbol(&client, symbol, limit).await
+}
+
+/// Get earnings transcript by event ID and company ID (low-level)
+///
+/// This is the low-level function that requires knowing both IDs upfront.
+/// Most users should use `earnings_transcript()` instead which handles this automatically.
+///
+/// # Arguments
+///
+/// * `event_id` - Event ID for the earnings call
+/// * `company_id` - Company ID (quartrId)
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let transcript = finance::earnings_transcript_by_id("369370", "4742").await?;
+/// println!("Quarter: {} {}", transcript.quarter(), transcript.year());
+/// # Ok(())
+/// # }
+/// ```
+pub async fn earnings_transcript_by_id(event_id: &str, company_id: &str) -> Result<Transcript> {
+    let client = YahooClient::new(ClientConfig::default()).await?;
+    crate::endpoints::transcripts::fetch(&client, event_id, company_id).await
 }
 
 /// Get market hours/status
@@ -395,4 +470,38 @@ pub async fn trending(
 ) -> Result<Vec<crate::models::trending::TrendingQuote>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_trending(country).await
+}
+
+/// Get list of available earnings calls for a symbol
+///
+/// Scrapes the Yahoo Finance earnings calls page to get a list of available
+/// earnings call transcripts with their event IDs and metadata.
+///
+/// # Arguments
+///
+/// * `symbol` - Stock symbol (e.g., "AAPL", "MSFT")
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Get list of earnings calls for Apple
+/// let calls = finance::earnings_calls("AAPL").await?;
+/// for call in &calls {
+///     println!("{}: event_id={}", call.title, call.event_id);
+/// }
+///
+/// // Use the event_id to fetch the full transcript
+/// if let Some(call) = calls.first() {
+///     let transcript = finance::earnings_transcript(&call.event_id, "company_id").await?;
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn earnings_calls(
+    symbol: &str,
+) -> Result<Vec<crate::scrapers::yahoo_earnings::EarningsCall>> {
+    crate::scrapers::yahoo_earnings::scrape_earnings_calls(symbol).await
 }

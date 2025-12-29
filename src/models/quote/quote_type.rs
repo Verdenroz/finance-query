@@ -43,8 +43,8 @@ pub(crate) struct QuoteTypeResult {
     pub exchange_timezone_name: Option<String>,
     /// Exchange timezone short name
     pub exchange_timezone_short_name: Option<String>,
-    /// GMT offset in milliseconds
-    pub gmt_off_set_milliseconds: Option<i64>,
+    /// GMT offset in milliseconds (returned as string by Yahoo)
+    pub gmt_off_set_milliseconds: Option<String>,
     /// Market
     pub market: Option<String>,
     /// Is EsgPopulated
