@@ -1076,12 +1076,12 @@ paths:
                 items:
                   $ref: '#/components/schemas/Exchange'
               example:
-                - country: "United States of America"
+                - region: "United States of America"
                   market: "Nasdaq Stock Exchange"
                   suffix: "N/A"
                   delay: "Real-time"
                   dataProvider: "ICE Data Services"
-                - country: "Japan"
+                - region: "Japan"
                   market: "Tokyo Stock Exchange"
                   suffix: ".T"
                   delay: "20 min"
@@ -1097,12 +1097,12 @@ paths:
         Fetch market summary with major indices, currencies, and commodities.
         Returns real-time data for key market indicators.
       parameters:
-        - name: country
+        - name: region
           in: query
           required: false
           schema:
             $ref: '#/components/schemas/Region'
-          description: Country code for localization (defaults to US)
+          description: Region code for localization (defaults to US)
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
       responses:
@@ -1132,15 +1132,15 @@ paths:
       tags: [Market]
       summary: Get trending tickers
       description: |
-        Fetch trending stock symbols for a specific country/region.
+        Fetch trending stock symbols for a specific region.
         Returns the most popular/trending stocks based on Yahoo Finance data.
       parameters:
-        - name: country
+        - name: region
           in: query
           required: false
           schema:
             $ref: '#/components/schemas/Region'
-          description: Country code for localization (defaults to US)
+          description: Region code for localization (defaults to US)
       responses:
         '200':
           description: List of trending tickers
@@ -1210,11 +1210,11 @@ paths:
             type: boolean
             default: false
           description: Include cultural assets (NFT indices) in results
-        - name: country
+        - name: region
           in: query
           schema:
             $ref: '#/components/schemas/Region'
-          description: Country for language/region settings (defaults to US)
+          description: Region for language/localization settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -1291,11 +1291,11 @@ paths:
             type: boolean
             default: false
           description: Include logo URLs (requires additional API call)
-        - name: country
+        - name: region
           in: query
           schema:
             $ref: '#/components/schemas/Region'
-          description: Country for language/region settings (defaults to US)
+          description: Region for language/localization settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -2898,9 +2898,9 @@ components:
       type: object
       description: Supported exchange information
       properties:
-        country:
+        region:
           type: string
-          description: Country or region where the exchange operates
+          description: Region where the exchange operates
           example: "Japan"
         market:
           type: string

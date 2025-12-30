@@ -12,7 +12,7 @@ use axum::{
 };
 use cache::Cache;
 use finance_query::{
-    Country, Frequency, Interval, ScreenerQuery, ScreenerType, SectorType, StatementType, Ticker,
+    Frequency, Interval, Region, ScreenerQuery, ScreenerType, SectorType, StatementType, Ticker,
     Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query, streaming::PriceStream,
 };
 use futures_util::{SinkExt, StreamExt};
@@ -192,8 +192,8 @@ fn parse_fields(s: Option<&str>) -> Option<std::collections::HashSet<String>> {
     })
 }
 
-/// Parse country code string into Country enum
-fn parse_country(s: &str) -> Option<Country> {
+/// Parse region code string into Region enum
+fn parse_region(s: &str) -> Option<Region> {
     s.parse().ok()
 }
 
@@ -310,8 +310,8 @@ struct SearchQuery {
     /// Enable cultural assets/NFT indices (default: false)
     #[serde(default)]
     cultural: bool,
-    /// Country code for lang/region settings (e.g., "US", "JP", "GB")
-    country: Option<String>,
+    /// Region code for lang/region settings (e.g., "US", "JP", "GB")
+    region: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
 }
@@ -330,8 +330,8 @@ struct LookupQuery {
     /// Include logo URLs (requires additional API call, default: false)
     #[serde(default)]
     logo: bool,
-    /// Country code for lang/region settings (e.g., "US", "JP", "GB")
-    country: Option<String>,
+    /// Region code for lang/region settings (e.g., "US", "JP", "GB")
+    region: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
 }
@@ -1254,21 +1254,21 @@ async fn get_indicators(
 /// - `logo` (bool, default: true): Include logo URLs
 /// - `research` (bool, default: false): Include research reports
 /// - `cultural` (bool, default: false): Include cultural assets (NFT indices)
-/// - `country` (string, optional): Country code for lang/region (e.g., "US", "JP")
+/// - `region` (string, optional): Region code for lang/localization (e.g., "US", "JP")
 async fn search(
     Extension(state): Extension<AppState>,
     Query(params): Query<SearchQuery>,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
     info!(
-        "Searching for: {} (quotes={}, news={}, logo={}, research={}, cultural={}, country={:?})",
+        "Searching for: {} (quotes={}, news={}, logo={}, research={}, cultural={}, region={:?})",
         params.q,
         params.quotes,
         params.news,
         params.logo,
         params.research,
         params.cultural,
-        params.country
+        params.region
     );
 
     // Cache key includes query and key options
@@ -1291,11 +1291,11 @@ async fn search(
         .enable_research_reports(params.research)
         .enable_cultural_assets(params.cultural);
 
-    // Apply optional country override
-    if let Some(country_str) = params.country
-        && let Some(country) = parse_country(&country_str)
+    // Apply optional region override
+    if let Some(region_str) = params.region
+        && let Some(region) = parse_region(&region_str)
     {
-        options = options.country(country);
+        options = options.region(region);
     }
 
     match state
@@ -1334,15 +1334,15 @@ async fn search(
 /// - `type` (string, default: "all"): Asset type filter
 /// - `count` (u32, default: 25): Maximum results
 /// - `logo` (bool, default: false): Include logo URLs (requires extra API call)
-/// - `country` (string, optional): Country code for lang/region
+/// - `region` (string, optional): Region code for lang/localization (e.g., "US", "JP")
 async fn lookup(
     Extension(state): Extension<AppState>,
     Query(params): Query<LookupQuery>,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
     info!(
-        "Looking up: {} (type={}, count={}, logo={}, country={:?})",
-        params.q, params.lookup_type, params.count, params.logo, params.country
+        "Looking up: {} (type={}, count={}, logo={}, region={:?})",
+        params.q, params.lookup_type, params.count, params.logo, params.region
     );
 
     let cache_key = Cache::key(
@@ -1374,11 +1374,11 @@ async fn lookup(
         .count(params.count)
         .include_logo(params.logo);
 
-    // Apply optional country override
-    if let Some(country_str) = params.country
-        && let Some(country) = parse_country(&country_str)
+    // Apply optional region override
+    if let Some(region_str) = params.region
+        && let Some(region) = parse_region(&region_str)
     {
-        options = options.country(country);
+        options = options.region(region);
     }
 
     match state
@@ -2374,8 +2374,8 @@ async fn get_exchanges(Extension(state): Extension<AppState>) -> impl IntoRespon
 /// Query parameters for /v2/market-summary
 #[derive(Deserialize)]
 struct MarketSummaryQuery {
-    /// Country code for localization (e.g., "US", "JP", "GB")
-    country: Option<String>,
+    /// Region code for localization (e.g., "US", "JP", "GB")
+    region: Option<String>,
     /// Value format: raw, pretty, or both (default: raw)
     format: Option<String>,
     /// Comma-separated list of fields to include in response
@@ -2389,16 +2389,16 @@ async fn get_market_summary(
     Extension(state): Extension<AppState>,
     Query(params): Query<MarketSummaryQuery>,
 ) -> impl IntoResponse {
-    let country = params.country.as_deref().and_then(parse_country);
+    let region = params.region.as_deref().and_then(parse_region);
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
 
-    let country_str = params.country.as_deref().unwrap_or("US");
-    let cache_key = Cache::key("market_summary", &[country_str]);
+    let region_str = params.region.as_deref().unwrap_or("US");
+    let cache_key = Cache::key("market_summary", &[region_str]);
 
     info!(
-        "Fetching market summary (country={:?}, format={}, fields={:?})",
-        country,
+        "Fetching market summary (region={:?}, format={}, fields={:?})",
+        region,
         format.as_str(),
         params.fields
     );
@@ -2410,7 +2410,7 @@ async fn get_market_summary(
             cache::ttl::INDICES,
             cache::is_market_open(),
             || async move {
-                let summary = finance::market_summary(country).await?;
+                let summary = finance::market_summary(region).await?;
                 let json = serde_json::to_value(summary)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                 Ok(json)
@@ -2432,8 +2432,8 @@ async fn get_market_summary(
 /// Query parameters for /v2/trending
 #[derive(Deserialize)]
 struct TrendingQuery {
-    /// Country code for localization (e.g., "US", "JP", "GB")
-    country: Option<String>,
+    /// Region code for localization (e.g., "US", "JP", "GB")
+    region: Option<String>,
 }
 
 /// GET /v2/trending
@@ -2443,11 +2443,11 @@ async fn get_trending(
     Extension(state): Extension<AppState>,
     Query(params): Query<TrendingQuery>,
 ) -> impl IntoResponse {
-    let country = params.country.as_deref().and_then(parse_country);
-    let country_str = params.country.as_deref().unwrap_or("US");
-    let cache_key = Cache::key("trending", &[country_str]);
+    let region = params.region.as_deref().and_then(parse_region);
+    let region_str = params.region.as_deref().unwrap_or("US");
+    let cache_key = Cache::key("trending", &[region_str]);
 
-    info!("Fetching trending tickers (country={:?})", country);
+    info!("Fetching trending tickers (region={:?})", region);
 
     match state
         .cache
@@ -2456,7 +2456,7 @@ async fn get_trending(
             cache::ttl::MOVERS,
             cache::is_market_open(),
             || async move {
-                let trending = finance::trending(country).await?;
+                let trending = finance::trending(region).await?;
                 let json = serde_json::to_value(trending)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                 Ok(json)

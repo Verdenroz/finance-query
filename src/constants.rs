@@ -1240,12 +1240,12 @@ impl TimeRange {
     }
 }
 
-/// Supported countries for Yahoo Finance regional APIs
+/// Supported regions for Yahoo Finance regional APIs
 ///
-/// Each country has predefined language and region codes that work together.
-/// Using the Country enum ensures correct lang/region pairing.
+/// Each region has predefined language and region codes that work together.
+/// Using the Region enum ensures correct lang/region pairing.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
-pub enum Country {
+pub enum Region {
     /// Argentina (es-AR, AR)
     Argentina,
     /// Australia (en-AU, AU)
@@ -1305,170 +1305,170 @@ pub enum Country {
     Vietnam,
 }
 
-impl Country {
-    /// Get the language code for this country
+impl Region {
+    /// Get the language code for this region
     ///
     /// # Example
     ///
     /// ```
-    /// use finance_query::Country;
+    /// use finance_query::Region;
     ///
-    /// assert_eq!(Country::France.lang(), "fr-FR");
-    /// assert_eq!(Country::UnitedStates.lang(), "en-US");
+    /// assert_eq!(Region::France.lang(), "fr-FR");
+    /// assert_eq!(Region::UnitedStates.lang(), "en-US");
     /// ```
     pub fn lang(&self) -> &'static str {
         match self {
-            Country::Argentina => "es-AR",
-            Country::Australia => "en-AU",
-            Country::Brazil => "pt-BR",
-            Country::Canada => "en-CA",
-            Country::China => "zh-CN",
-            Country::Denmark => "da-DK",
-            Country::Finland => "fi-FI",
-            Country::France => "fr-FR",
-            Country::Germany => "de-DE",
-            Country::Greece => "el-GR",
-            Country::HongKong => "zh-Hant-HK",
-            Country::India => "en-IN",
-            Country::Israel => "he-IL",
-            Country::Italy => "it-IT",
-            Country::Malaysia => "ms-MY",
-            Country::NewZealand => "en-NZ",
-            Country::Norway => "nb-NO",
-            Country::Portugal => "pt-PT",
-            Country::Russia => "ru-RU",
-            Country::Singapore => "en-SG",
-            Country::Spain => "es-ES",
-            Country::Sweden => "sv-SE",
-            Country::Taiwan => "zh-TW",
-            Country::Thailand => "th-TH",
-            Country::Turkey => "tr-TR",
-            Country::UnitedKingdom => "en-GB",
-            Country::UnitedStates => "en-US",
-            Country::Vietnam => "vi-VN",
+            Region::Argentina => "es-AR",
+            Region::Australia => "en-AU",
+            Region::Brazil => "pt-BR",
+            Region::Canada => "en-CA",
+            Region::China => "zh-CN",
+            Region::Denmark => "da-DK",
+            Region::Finland => "fi-FI",
+            Region::France => "fr-FR",
+            Region::Germany => "de-DE",
+            Region::Greece => "el-GR",
+            Region::HongKong => "zh-Hant-HK",
+            Region::India => "en-IN",
+            Region::Israel => "he-IL",
+            Region::Italy => "it-IT",
+            Region::Malaysia => "ms-MY",
+            Region::NewZealand => "en-NZ",
+            Region::Norway => "nb-NO",
+            Region::Portugal => "pt-PT",
+            Region::Russia => "ru-RU",
+            Region::Singapore => "en-SG",
+            Region::Spain => "es-ES",
+            Region::Sweden => "sv-SE",
+            Region::Taiwan => "zh-TW",
+            Region::Thailand => "th-TH",
+            Region::Turkey => "tr-TR",
+            Region::UnitedKingdom => "en-GB",
+            Region::UnitedStates => "en-US",
+            Region::Vietnam => "vi-VN",
         }
     }
 
-    /// Get the region code for this country
+    /// Get the region code for this region
     ///
     /// # Example
     ///
     /// ```
-    /// use finance_query::Country;
+    /// use finance_query::Region;
     ///
-    /// assert_eq!(Country::France.region(), "FR");
-    /// assert_eq!(Country::UnitedStates.region(), "US");
+    /// assert_eq!(Region::France.region(), "FR");
+    /// assert_eq!(Region::UnitedStates.region(), "US");
     /// ```
     pub fn region(&self) -> &'static str {
         match self {
-            Country::Argentina => "AR",
-            Country::Australia => "AU",
-            Country::Brazil => "BR",
-            Country::Canada => "CA",
-            Country::China => "CN",
-            Country::Denmark => "DK",
-            Country::Finland => "FI",
-            Country::France => "FR",
-            Country::Germany => "DE",
-            Country::Greece => "GR",
-            Country::HongKong => "HK",
-            Country::India => "IN",
-            Country::Israel => "IL",
-            Country::Italy => "IT",
-            Country::Malaysia => "MY",
-            Country::NewZealand => "NZ",
-            Country::Norway => "NO",
-            Country::Portugal => "PT",
-            Country::Russia => "RU",
-            Country::Singapore => "SG",
-            Country::Spain => "ES",
-            Country::Sweden => "SE",
-            Country::Taiwan => "TW",
-            Country::Thailand => "TH",
-            Country::Turkey => "TR",
-            Country::UnitedKingdom => "GB",
-            Country::UnitedStates => "US",
-            Country::Vietnam => "VN",
+            Region::Argentina => "AR",
+            Region::Australia => "AU",
+            Region::Brazil => "BR",
+            Region::Canada => "CA",
+            Region::China => "CN",
+            Region::Denmark => "DK",
+            Region::Finland => "FI",
+            Region::France => "FR",
+            Region::Germany => "DE",
+            Region::Greece => "GR",
+            Region::HongKong => "HK",
+            Region::India => "IN",
+            Region::Israel => "IL",
+            Region::Italy => "IT",
+            Region::Malaysia => "MY",
+            Region::NewZealand => "NZ",
+            Region::Norway => "NO",
+            Region::Portugal => "PT",
+            Region::Russia => "RU",
+            Region::Singapore => "SG",
+            Region::Spain => "ES",
+            Region::Sweden => "SE",
+            Region::Taiwan => "TW",
+            Region::Thailand => "TH",
+            Region::Turkey => "TR",
+            Region::UnitedKingdom => "GB",
+            Region::UnitedStates => "US",
+            Region::Vietnam => "VN",
         }
     }
 
-    /// Get the CORS domain for this country
+    /// Get the CORS domain for this region
     ///
     /// # Example
     ///
     /// ```
-    /// use finance_query::Country;
+    /// use finance_query::Region;
     ///
-    /// assert_eq!(Country::UnitedStates.cors_domain(), "finance.yahoo.com");
-    /// assert_eq!(Country::France.cors_domain(), "fr.finance.yahoo.com");
+    /// assert_eq!(Region::UnitedStates.cors_domain(), "finance.yahoo.com");
+    /// assert_eq!(Region::France.cors_domain(), "fr.finance.yahoo.com");
     /// ```
     pub fn cors_domain(&self) -> &'static str {
         match self {
-            Country::Argentina => "ar.finance.yahoo.com",
-            Country::Australia => "au.finance.yahoo.com",
-            Country::Brazil => "br.financas.yahoo.com",
-            Country::Canada => "ca.finance.yahoo.com",
-            Country::China => "cn.finance.yahoo.com",
-            Country::Denmark => "dk.finance.yahoo.com",
-            Country::Finland => "fi.finance.yahoo.com",
-            Country::France => "fr.finance.yahoo.com",
-            Country::Germany => "de.finance.yahoo.com",
-            Country::Greece => "gr.finance.yahoo.com",
-            Country::HongKong => "hk.finance.yahoo.com",
-            Country::India => "in.finance.yahoo.com",
-            Country::Israel => "il.finance.yahoo.com",
-            Country::Italy => "it.finance.yahoo.com",
-            Country::Malaysia => "my.finance.yahoo.com",
-            Country::NewZealand => "nz.finance.yahoo.com",
-            Country::Norway => "no.finance.yahoo.com",
-            Country::Portugal => "pt.finance.yahoo.com",
-            Country::Russia => "ru.finance.yahoo.com",
-            Country::Singapore => "sg.finance.yahoo.com",
-            Country::Spain => "es.finance.yahoo.com",
-            Country::Sweden => "se.finance.yahoo.com",
-            Country::Taiwan => "tw.finance.yahoo.com",
-            Country::Thailand => "th.finance.yahoo.com",
-            Country::Turkey => "tr.finance.yahoo.com",
-            Country::UnitedKingdom => "uk.finance.yahoo.com",
-            Country::UnitedStates => "finance.yahoo.com",
-            Country::Vietnam => "vn.finance.yahoo.com",
+            Region::Argentina => "ar.finance.yahoo.com",
+            Region::Australia => "au.finance.yahoo.com",
+            Region::Brazil => "br.financas.yahoo.com",
+            Region::Canada => "ca.finance.yahoo.com",
+            Region::China => "cn.finance.yahoo.com",
+            Region::Denmark => "dk.finance.yahoo.com",
+            Region::Finland => "fi.finance.yahoo.com",
+            Region::France => "fr.finance.yahoo.com",
+            Region::Germany => "de.finance.yahoo.com",
+            Region::Greece => "gr.finance.yahoo.com",
+            Region::HongKong => "hk.finance.yahoo.com",
+            Region::India => "in.finance.yahoo.com",
+            Region::Israel => "il.finance.yahoo.com",
+            Region::Italy => "it.finance.yahoo.com",
+            Region::Malaysia => "my.finance.yahoo.com",
+            Region::NewZealand => "nz.finance.yahoo.com",
+            Region::Norway => "no.finance.yahoo.com",
+            Region::Portugal => "pt.finance.yahoo.com",
+            Region::Russia => "ru.finance.yahoo.com",
+            Region::Singapore => "sg.finance.yahoo.com",
+            Region::Spain => "es.finance.yahoo.com",
+            Region::Sweden => "se.finance.yahoo.com",
+            Region::Taiwan => "tw.finance.yahoo.com",
+            Region::Thailand => "th.finance.yahoo.com",
+            Region::Turkey => "tr.finance.yahoo.com",
+            Region::UnitedKingdom => "uk.finance.yahoo.com",
+            Region::UnitedStates => "finance.yahoo.com",
+            Region::Vietnam => "vn.finance.yahoo.com",
         }
     }
 }
 
-impl std::str::FromStr for Country {
+impl std::str::FromStr for Region {
     type Err = ();
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_uppercase().as_str() {
-            "AR" => Ok(Country::Argentina),
-            "AU" => Ok(Country::Australia),
-            "BR" => Ok(Country::Brazil),
-            "CA" => Ok(Country::Canada),
-            "CN" => Ok(Country::China),
-            "DK" => Ok(Country::Denmark),
-            "FI" => Ok(Country::Finland),
-            "FR" => Ok(Country::France),
-            "DE" => Ok(Country::Germany),
-            "GR" => Ok(Country::Greece),
-            "HK" => Ok(Country::HongKong),
-            "IN" => Ok(Country::India),
-            "IL" => Ok(Country::Israel),
-            "IT" => Ok(Country::Italy),
-            "MY" => Ok(Country::Malaysia),
-            "NZ" => Ok(Country::NewZealand),
-            "NO" => Ok(Country::Norway),
-            "PT" => Ok(Country::Portugal),
-            "RU" => Ok(Country::Russia),
-            "SG" => Ok(Country::Singapore),
-            "ES" => Ok(Country::Spain),
-            "SE" => Ok(Country::Sweden),
-            "TW" => Ok(Country::Taiwan),
-            "TH" => Ok(Country::Thailand),
-            "TR" => Ok(Country::Turkey),
-            "GB" | "UK" => Ok(Country::UnitedKingdom),
-            "US" => Ok(Country::UnitedStates),
-            "VN" => Ok(Country::Vietnam),
+            "AR" => Ok(Region::Argentina),
+            "AU" => Ok(Region::Australia),
+            "BR" => Ok(Region::Brazil),
+            "CA" => Ok(Region::Canada),
+            "CN" => Ok(Region::China),
+            "DK" => Ok(Region::Denmark),
+            "FI" => Ok(Region::Finland),
+            "FR" => Ok(Region::France),
+            "DE" => Ok(Region::Germany),
+            "GR" => Ok(Region::Greece),
+            "HK" => Ok(Region::HongKong),
+            "IN" => Ok(Region::India),
+            "IL" => Ok(Region::Israel),
+            "IT" => Ok(Region::Italy),
+            "MY" => Ok(Region::Malaysia),
+            "NZ" => Ok(Region::NewZealand),
+            "NO" => Ok(Region::Norway),
+            "PT" => Ok(Region::Portugal),
+            "RU" => Ok(Region::Russia),
+            "SG" => Ok(Region::Singapore),
+            "ES" => Ok(Region::Spain),
+            "SE" => Ok(Region::Sweden),
+            "TW" => Ok(Region::Taiwan),
+            "TH" => Ok(Region::Thailand),
+            "TR" => Ok(Region::Turkey),
+            "GB" | "UK" => Ok(Region::UnitedKingdom),
+            "US" => Ok(Region::UnitedStates),
+            "VN" => Ok(Region::Vietnam),
             _ => Err(()),
         }
     }

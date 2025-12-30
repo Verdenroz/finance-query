@@ -5,7 +5,7 @@ use super::urls::api;
 /// Unlike search, lookup specializes in discovering tickers by type
 /// (equity, ETF, mutual fund, index, future, currency, cryptocurrency).
 use crate::client::YahooClient;
-use crate::constants::Country;
+use crate::constants::Region;
 use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::fmt;
@@ -63,8 +63,8 @@ pub struct LookupOptions {
     pub include_logo: bool,
     /// Include pricing data (default: true)
     pub fetch_pricing_data: bool,
-    /// Country for language/region settings. If None, uses client default.
-    pub country: Option<Country>,
+    /// Region for language/region settings. If None, uses client default.
+    pub region: Option<Region>,
 }
 
 impl Default for LookupOptions {
@@ -74,7 +74,7 @@ impl Default for LookupOptions {
             count: 25,
             include_logo: false,
             fetch_pricing_data: true,
-            country: None,
+            region: None,
         }
     }
 }
@@ -110,9 +110,9 @@ impl LookupOptions {
         self
     }
 
-    /// Set country for language/region settings
-    pub fn country(mut self, country: Country) -> Self {
-        self.country = Some(country);
+    /// Set region for language/localization settings
+    pub fn region(mut self, region: Region) -> Self {
+        self.region = Some(region);
         self
     }
 }
@@ -160,14 +160,14 @@ pub async fn fetch(
     let lookup_type = options.lookup_type.to_string();
     let fetch_pricing = options.fetch_pricing_data.to_string();
 
-    // Use provided country's lang/region or fall back to client config
+    // Use provided region's lang/code or fall back to client config
     let lang = options
-        .country
+        .region
         .as_ref()
         .map(|c| c.lang().to_string())
         .unwrap_or_else(|| client.config().lang.clone());
     let region = options
-        .country
+        .region
         .as_ref()
         .map(|c| c.region().to_string())
         .unwrap_or_else(|| client.config().region.clone());

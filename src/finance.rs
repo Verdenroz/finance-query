@@ -4,7 +4,7 @@
 //! such as searching for symbols and fetching screener data.
 
 use crate::client::{ClientConfig, YahooClient};
-use crate::constants::Country;
+use crate::constants::Region;
 use crate::constants::screener_types::ScreenerType;
 use crate::constants::sector_types::SectorType;
 use crate::error::Result;
@@ -28,7 +28,7 @@ pub use crate::endpoints::search::SearchOptions;
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::{finance, SearchOptions, Country};
+/// use finance_query::{finance, SearchOptions, Region};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Simple search with defaults
@@ -40,7 +40,7 @@ pub use crate::endpoints::search::SearchOptions;
 ///     .quotes_count(10)
 ///     .news_count(5)
 ///     .enable_research_reports(true)
-///     .country(Country::Canada);
+///     .region(Region::Canada);
 /// let results = finance::search("NVDA", &options).await?;
 /// println!("Found {} quotes", results.quotes.len());
 /// # Ok(())
@@ -64,7 +64,7 @@ pub async fn search(query: &str, options: &SearchOptions) -> Result<SearchResult
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::{finance, LookupOptions, LookupType, Country};
+/// use finance_query::{finance, LookupOptions, LookupType, Region};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Simple lookup with defaults
@@ -418,52 +418,52 @@ pub async fn exchanges() -> Result<Vec<crate::models::exchanges::Exchange>> {
 ///
 /// # Arguments
 ///
-/// * `country` - Optional country for localization. If None, uses default (US).
+/// * `region` - Optional region for localization. If None, uses default (US).
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::{finance, Country};
+/// use finance_query::{finance, Region};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Use default (US)
 /// let summary = finance::market_summary(None).await?;
-/// // Or specify a country
-/// let summary = finance::market_summary(Some(Country::Canada)).await?;
+/// // Or specify a region
+/// let summary = finance::market_summary(Some(Region::Canada)).await?;
 /// # Ok(())
 /// # }
 /// ```
 pub async fn market_summary(
-    country: Option<Country>,
+    region: Option<Region>,
 ) -> Result<Vec<crate::models::market_summary::MarketSummaryQuote>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    client.get_market_summary(country).await
+    client.get_market_summary(region).await
 }
 
-/// Get trending tickers for a country
+/// Get trending tickers for a region
 ///
-/// Returns trending stocks for a specific country/region.
+/// Returns trending stocks for a specific region.
 ///
 /// # Arguments
 ///
-/// * `country` - Optional country for localization. If None, uses default (US).
+/// * `region` - Optional region for localization. If None, uses default (US).
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::{finance, Country};
+/// use finance_query::{finance, Region};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Use default (US)
 /// let trending = finance::trending(None).await?;
-/// // Or specify a country
-/// let trending = finance::trending(Some(Country::Canada)).await?;
+/// // Or specify a region
+/// let trending = finance::trending(Some(Region::Canada)).await?;
 /// # Ok(())
 /// # }
 /// ```
 pub async fn trending(
-    country: Option<Country>,
+    region: Option<Region>,
 ) -> Result<Vec<crate::models::trending::TrendingQuote>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    client.get_trending(country).await
+    client.get_trending(region).await
 }

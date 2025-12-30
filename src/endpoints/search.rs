@@ -3,7 +3,7 @@ use super::urls::api;
 ///
 /// Search for quotes, news, and research reports on Yahoo Finance.
 use crate::client::YahooClient;
-use crate::constants::Country;
+use crate::constants::Region;
 use crate::error::Result;
 use tracing::info;
 
@@ -24,8 +24,8 @@ pub struct SearchOptions {
     pub enable_cultural_assets: bool,
     /// Recommended count (default: 5)
     pub recommend_count: u32,
-    /// Country for language/region settings. If None, uses client default.
-    pub country: Option<Country>,
+    /// Region for language/region settings. If None, uses client default.
+    pub region: Option<Region>,
 }
 
 impl Default for SearchOptions {
@@ -38,7 +38,7 @@ impl Default for SearchOptions {
             enable_research_reports: false,
             enable_cultural_assets: false,
             recommend_count: 5,
-            country: None,
+            region: None,
         }
     }
 }
@@ -91,9 +91,9 @@ impl SearchOptions {
         self
     }
 
-    /// Set country for language/region settings
-    pub fn country(mut self, country: Country) -> Self {
-        self.country = Some(country);
+    /// Set region for language settings
+    pub fn region(mut self, region: Region) -> Self {
+        self.region = Some(region);
         self
     }
 }
@@ -139,14 +139,14 @@ pub async fn fetch(
     let cultural = options.enable_cultural_assets.to_string();
     let recommend = options.recommend_count.to_string();
 
-    // Use provided country's lang/region or fall back to client config
+    // Use provided regions's lang/code or fall back to client config
     let lang = options
-        .country
+        .region
         .as_ref()
         .map(|c| c.lang().to_string())
         .unwrap_or_else(|| client.config().lang.clone());
     let region = options
-        .country
+        .region
         .as_ref()
         .map(|c| c.region().to_string())
         .unwrap_or_else(|| client.config().region.clone());

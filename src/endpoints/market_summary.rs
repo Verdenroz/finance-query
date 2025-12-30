@@ -3,7 +3,7 @@ use super::urls::api;
 ///
 /// Fetch market summary from Yahoo Finance.
 use crate::client::YahooClient;
-use crate::constants::Country;
+use crate::constants::Region;
 use crate::error::Result;
 use tracing::info;
 
@@ -12,23 +12,23 @@ use tracing::info;
 /// # Arguments
 ///
 /// * `client` - The Yahoo Finance client
-/// * `country` - Optional country for localization. If None, uses client's configured lang/region.
+/// * `region` - Optional region for localization. If None, uses client's configured lang/region.
 ///
 /// # Example
 ///
 /// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::{endpoints::market_summary, Country};
+/// use finance_query::{endpoints::market_summary, Region};
 /// // Use client's default config
 /// let result = market_summary::fetch(&client, None).await?;
-/// // Or specify a country
-/// let result = market_summary::fetch(&client, Some(Country::Japan)).await?;
+/// // Or specify a region
+/// let result = market_summary::fetch(&client, Some(Region::Japan)).await?;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fetch(client: &YahooClient, country: Option<Country>) -> Result<serde_json::Value> {
-    let (lang, region) = match country {
+pub async fn fetch(client: &YahooClient, region: Option<Region>) -> Result<serde_json::Value> {
+    let (lang, region) = match region {
         Some(c) => (c.lang().to_string(), c.region().to_string()),
         None => (client.config().lang.clone(), client.config().region.clone()),
     };

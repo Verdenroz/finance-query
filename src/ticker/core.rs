@@ -137,7 +137,7 @@ impl TickerBuilder {
         }
     }
 
-    /// Set the country (automatically sets correct lang and region)
+    /// Set the region (automatically sets correct lang and region)
     ///
     /// This is the recommended way to configure regional settings as it ensures
     /// lang and region are correctly paired.
@@ -145,25 +145,25 @@ impl TickerBuilder {
     /// # Example
     ///
     /// ```no_run
-    /// use finance_query::{Ticker, Country};
+    /// use finance_query::{Ticker, Region};
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let ticker = Ticker::builder("7203.T")
-    ///     .country(Country::Taiwan)
+    /// let ticker = Ticker::builder("2330.TW")
+    ///     .region(Region::Taiwan)
     ///     .build()
     ///     .await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn country(mut self, country: crate::constants::Country) -> Self {
-        self.config.lang = country.lang().to_string();
-        self.config.region = country.region().to_string();
+    pub fn region(mut self, region: crate::constants::Region) -> Self {
+        self.config.lang = region.lang().to_string();
+        self.config.region = region.region().to_string();
         self
     }
 
     /// Set the language code (e.g., "en-US", "ja-JP", "de-DE")
     ///
-    /// For standard countries, prefer using `.country()` instead to ensure
+    /// For standard regions, prefer using `.region()` instead to ensure
     /// correct lang/region pairing.
     pub fn lang(mut self, lang: impl Into<String>) -> Self {
         self.config.lang = lang.into();
@@ -172,9 +172,9 @@ impl TickerBuilder {
 
     /// Set the region code (e.g., "US", "JP", "DE")
     ///
-    /// For standard countries, prefer using `.country()` instead to ensure
+    /// For standard regions, prefer using `.region()` instead to ensure
     /// correct lang/region pairing.
-    pub fn region(mut self, region: impl Into<String>) -> Self {
+    pub fn region_code(mut self, region: impl Into<String>) -> Self {
         self.config.region = region.into();
         self
     }
@@ -286,7 +286,7 @@ impl Ticker {
     /// // With custom configuration
     /// let ticker = Ticker::builder("AAPL")
     ///     .lang("ja-JP")
-    ///     .region("JP")
+    ///     .region_code("JP")
     ///     .build()
     ///     .await?;
     /// # Ok(())

@@ -112,10 +112,10 @@ impl TickersBuilder {
         }
     }
 
-    /// Set the country (automatically sets correct lang and region)
-    pub fn country(mut self, country: crate::constants::Country) -> Self {
-        self.config.lang = country.lang().to_string();
-        self.config.region = country.region().to_string();
+    /// Set the region (automatically sets correct lang and region code)
+    pub fn region(mut self, region: crate::constants::Region) -> Self {
+        self.config.lang = region.lang().to_string();
+        self.config.region = region.region().to_string();
         self
     }
 
@@ -126,7 +126,7 @@ impl TickersBuilder {
     }
 
     /// Set the region code (e.g., "US", "JP", "DE")
-    pub fn region(mut self, region: impl Into<String>) -> Self {
+    pub fn region_code(mut self, region: impl Into<String>) -> Self {
         self.config.region = region.into();
         self
     }

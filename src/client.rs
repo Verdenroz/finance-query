@@ -1,5 +1,5 @@
 use crate::auth::YahooAuth;
-use crate::constants::{Country, Interval, TimeRange};
+use crate::constants::{Interval, Region, TimeRange};
 use crate::error::{Result, YahooError};
 use std::sync::Arc;
 use std::time::Duration;
@@ -63,7 +63,7 @@ impl ClientConfig {
     /// let config = ClientConfig::builder()
     ///     .timeout(Duration::from_secs(30))
     ///     .lang("ja-JP")
-    ///     .region("JP")
+    ///     .region_code("JP")
     ///     .build();
     /// ```
     pub fn builder() -> ClientConfigBuilder {
@@ -85,7 +85,7 @@ impl ClientConfig {
 ///     .timeout(Duration::from_secs(30))
 ///     .proxy("http://proxy.example.com:8080")
 ///     .lang("de-DE")
-///     .region("DE")
+///     .region_code("DE")
 ///     .build();
 /// ```
 #[derive(Debug)]
@@ -119,29 +119,29 @@ impl ClientConfigBuilder {
         self
     }
 
-    /// Set the country (automatically sets correct lang and region)
+    /// Set the region (automatically sets correct lang and code)
     ///
     /// This is the recommended way to configure regional settings as it ensures
-    /// lang and region are correctly paired.
+    /// lang and region code are correctly paired.
     ///
     /// # Example
     ///
     /// ```ignore
-    /// use finance_query::{ClientConfig, Country};
+    /// use finance_query::{ClientConfig, Region};
     ///
     /// let config = ClientConfig::builder()
-    ///     .country(Country::Germany)
+    ///     .region(Region::Germany)
     ///     .build();
     /// ```
-    pub fn country(mut self, country: crate::constants::Country) -> Self {
-        self.lang = country.lang().to_string();
-        self.region = country.region().to_string();
+    pub fn region(mut self, region: crate::constants::Region) -> Self {
+        self.lang = region.lang().to_string();
+        self.region = region.region().to_string();
         self
     }
 
     /// Set the language code (e.g., "en-US", "ja-JP", "de-DE")
     ///
-    /// For standard countries, prefer using `.country()` instead to ensure
+    /// For standard countries, prefer using `.region()` instead to ensure
     /// correct lang/region pairing.
     pub fn lang(mut self, lang: impl Into<String>) -> Self {
         self.lang = lang.into();
@@ -150,9 +150,9 @@ impl ClientConfigBuilder {
 
     /// Set the region code (e.g., "US", "JP", "DE")
     ///
-    /// For standard countries, prefer using `.country()` instead to ensure
+    /// For standard countries, prefer using `.region()` instead to ensure
     /// correct lang/region pairing.
-    pub fn region(mut self, region: impl Into<String>) -> Self {
+    pub fn region_code(mut self, region: impl Into<String>) -> Self {
         self.region = region.into();
         self
     }
@@ -820,55 +820,55 @@ impl YahooClient {
     ///
     /// # Arguments
     ///
-    /// * `country` - Optional country for localization. If None, uses client's configured lang/region.
+    /// * `region` - Optional region for localization. If None, uses client's configured lang/code.
     ///
     /// # Example
     ///
     /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// use finance_query::Country;
+    /// use finance_query::Region;
     /// // Use client's default config
     /// let summary = client.get_market_summary(None).await?;
-    /// // Or specify a country
-    /// let summary = client.get_market_summary(Some(Country::Japan)).await?;
+    /// // Or specify a region
+    /// let summary = client.get_market_summary(Some(Region::France)).await?;
     /// # Ok(())
     /// # }
     /// ```
     pub async fn get_market_summary(
         &self,
-        country: Option<Country>,
+        region: Option<Region>,
     ) -> Result<Vec<crate::models::market_summary::MarketSummaryQuote>> {
-        let json = crate::endpoints::market_summary::fetch(self, country).await?;
+        let json = crate::endpoints::market_summary::fetch(self, region).await?;
         Ok(crate::models::market_summary::MarketSummaryQuote::from_response(json)?)
     }
 
-    /// Get trending tickers for a country
+    /// Get trending tickers for a region
     ///
-    /// Returns trending stocks for a specific country/region.
+    /// Returns trending stocks for a specific region.
     ///
     /// # Arguments
     ///
-    /// * `country` - Optional country for localization. If None, uses client's configured lang/region.
+    /// * `region` - Optional region for localization. If None, uses client's configured lang/region.
     ///
     /// # Example
     ///
     /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// use finance_query::Country;
+    /// use finance_query::Region;
     /// // Use client's default config
     /// let trending = client.get_trending(None).await?;
-    /// // Or specify a country
-    /// let trending = client.get_trending(Some(Country::Japan)).await?;
+    /// // Or specify a region
+    /// let trending = client.get_trending(Some(Region::France)).await?;
     /// # Ok(())
     /// # }
     /// ```
     pub async fn get_trending(
         &self,
-        country: Option<Country>,
+        region: Option<Region>,
     ) -> Result<Vec<crate::models::trending::TrendingQuote>> {
-        let json = crate::endpoints::trending::fetch(self, country).await?;
+        let json = crate::endpoints::trending::fetch(self, region).await?;
         Ok(crate::models::trending::TrendingQuote::from_response(json)?)
     }
 }

@@ -33,7 +33,7 @@
 //!     // Builder pattern: Fluent configuration
 //!     let ticker_jp = Ticker::builder("7203.T")
 //!         .lang("ja-JP")
-//!         .region("JP")
+//!         .region_code("JP")
 //!         .timeout(std::time::Duration::from_secs(30))
 //!         .build()
 //!         .await?;
@@ -94,7 +94,7 @@ pub use constants::indices::Region as IndicesRegion;
 pub use constants::screener_query;
 pub use constants::screener_types::ScreenerType;
 pub use constants::sector_types::SectorType;
-pub use constants::{Country, Frequency, Interval, StatementType, TimeRange, ValueFormat};
+pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, ValueFormat};
 
 // ============================================================================
 // Response types - Top-level types returned by API methods
