@@ -1,22 +1,47 @@
-# Ignore Python cache files
-__pycache__
-*.pyc
-*.pyo
-*.pyd
+# Rust build artifacts
+/target
+debug/
+*.rs.bk
+*.pdb
 
-# Ignore test and documentation directories
-/tests
+# Dependency lock (will be regenerated)
+# Cargo.lock  # Uncomment if you want to ignore lock file
 
-# Ignore git and vscode directories
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Git
 .git
-.vscode
+.gitignore
 
-# Ignore log files
+# Documentation and tests
+/tests
+/book
+/docs
+*.md
+README.md
+LICENSE
+CODE_OF_CONDUCT.md
+
+# CI/CD
+.github/
+
+# Environment files (sensitive data)
+.env
+.env.*
+
+# Logs
 *.log
 
-# Ignore OS generated files
+# OS generated files
 .DS_Store
 Thumbs.db
 
-# Ignore all markdown files
-*.md
+# Other
+tmp/
+*.bak
+*.orig

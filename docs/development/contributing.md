@@ -1,281 +1,275 @@
-# Contributor Guide
+# Contributing
 
-Thank you for your interest in improving FinanceQuery.
-This project is open-source under the [MIT license] and
-welcomes contributions in the form of bug reports, feature requests, and pull requests.
+We welcome contributions to FinanceQuery! This guide will help you get started.
 
-Here is a list of important resources for contributors:
+!!! warning "V1 (Python) is Not Maintained"
 
-- [Source Code]
-- [Demo]
-- [Documentation]
-- [Issue Tracker]
-- [Code of Conduct]
+    The legacy Python implementation in `/v1` is no longer actively maintained. All development focuses on the Rust library and server. The v1 source code, workflow, and documentation remain available for reference.
 
-[mit license]: https://opensource.org/licenses/MIT
-[documentation]: https://verdenroz.github.io/finance-query/
-[demo]: https://financequery.apidocumentation.com/reference
-[source code]: https://github.com/Verdenroz/finance-query
-[issue tracker]: https://github.com/Verdenroz/finance-query/issues
-[code of conduct]: https://github.com/Verdenroz/finance-query/CODE_OF_CONDUCT.md
+## Quick Start
 
-## How to report a bug
+Clone and set up the development environment:
 
-Report bugs on the [Issue Tracker].
-
-When filing an issue, make sure to answer these questions:
-
-- Which operating system and Python version are you using?
-- Which version of this project are you using?
-- What did you do?
-- What did you expect to see?
-- What did you see instead?
-
-The best way to get your bug fixed is to provide a test case,
-and/or steps to reproduce the issue.
-
-## How to request a feature
-
-Request features on the [Issue Tracker].
-
-## How to set up your development environment
-
-You need Python 3.11 or newer. We recommend using a virtual environment.
-
-### Quick Setup with Makefile (Recommended)
-
-For the fastest setup, use the provided Makefile:
-
-```console
-$ make install-dev
+```bash
+git clone https://github.com/Verdenroz/finance-query.git
+cd finance-query
+make install-dev  # Installs rustfmt, clippy, prek, sets up pre-commit hooks
 ```
 
-This will:
-- Install all dependencies using `uv`
-- Build required Cython extensions for technical indicators
-- Set up pre-commit hooks automatically
+This sets up [prek](https://github.com/j178/prek) (a faster Rust-based pre-commit) which runs `fmt`, `clippy`, and `check` automatically before each commit.
 
-Then you can use these commands for development:
+## Useful Commands
 
-```console
-$ make help        # Show all available commands
-$ make build       # Build Cython extensions (required for technical indicators)
-$ make serve       # Start development server at http://localhost:8000
-$ make test        # Run tests with coverage
-$ make lint        # Run linting and formatting (pre-commit hooks)
-$ make docs        # Serve documentation at http://localhost:8001
-$ make clean       # Clean build artifacts
+Run `make help` to see all available commands:
+
+```bash
+make serve             # Start dev server (PORT=8000 by default)
+make test              # Run ALL tests including network integration tests
+make test-fast         # Run only fast tests (excludes network tests)
+make fix               # Auto-fix formatting and clippy issues
+make lint              # Run pre-commit checks (fmt, clippy, check)
+make audit             # Run security audit on dependencies
+make docs              # Build and serve MkDocs documentation
+make build             # Build library and server in release mode
+make docker-compose    # Start v1 and v2 servers together
+make clean             # Clean build artifacts
 ```
 
-### Manual Setup
+## Development Workflow
 
-If you prefer manual setup, you'll need [uv](https://docs.astral.sh/uv/) for dependency management:
+### 1. Make Your Changes
 
-```console
-$ pip install uv
-$ uv sync --all-groups
-$ python setup.py build_ext --inplace  # Required for technical indicators
-$ pre-commit install
+Work on the library (`src/`) or server (`server/src/`):
+
+```bash
+# Start the dev server
+make serve
+
+# Run tests as you work
+make test-fast  # Quick tests only
+make test       # All tests including network calls
 ```
 
-### Legacy Setup with pip
+### 2. Check Your Code
 
-For environments without `uv`, you can still use pip:
+Before committing, run the pre-commit checks:
 
-```console
-$ python -m venv venv
-$ source venv/bin/activate  # On Windows: venv\Scripts\activate
-$ pip install -e ".[dev]"
-$ python setup.py build_ext --inplace  # Required for technical indicators
+```bash
+make fix   # Auto-fix formatting and clippy issues
+make lint  # Verify all checks pass
 ```
 
-### Setting up environment variables
+### 3. Test Thoroughly
 
-Create a `.env` file in the project root with the following variables:
-See the `.env.template` file for an example.
+Run the appropriate tests for your changes:
 
-```
-# Basic configuration
-REDIS_URL=redis://localhost:6379  # Optional, for caching and WebSocket support
-USE_SECURITY=True  # Enable rate limiting and API key authentication
-ADMIN_API_KEY=your-admin-key-here  # Admin key that bypasses rate limits
-BYPASS_CACHE=False  # Set to True to disable caching during development
+```bash
+# Library changes
+cargo test -p finance-query
 
-# Proxy configuration (optional, recommended for production)
-USE_PROXY=False
-PROXY_URL=
-PROXY_TOKEN=  # For whitelisting IPs in proxy service
+# Server changes
+cargo test -p finance-query-server
 
-# Algolia search (optional, uses default public credentials)
-ALGOLIA_APP_ID=ZTZOECLXBC
-ALGOLIA_API_KEY=a3882d6ec31c0b1063ede94374616d8a
+# Specific test
+cargo test test_ticker_quote
 
-# Logging configuration
-LOG_LEVEL=DEBUG  # DEBUG, INFO, WARNING, ERROR, CRITICAL
-LOG_FORMAT=text  # json or text
-PERFORMANCE_THRESHOLD_MS=2000  # Slow operation warning threshold
-
-# Logo fetching configuration
-DISABLE_LOGO_FETCHING=false  # Set to true to disable logo fetching
-LOGO_TIMEOUT_SECONDS=1  # Timeout for logo requests
-LOGO_CIRCUIT_BREAKER_THRESHOLD=5  # Failures before circuit breaker opens
-LOGO_CIRCUIT_BREAKER_TIMEOUT=300  # Circuit breaker timeout in seconds
+# Integration tests (makes real API calls)
+cargo test -- --ignored
 ```
 
-## How to test the project
+## Code Standards
 
-Run the full test suite:
+### Write Idiomatic Rust
 
-```console
-$ pytest
+Use standard patterns and avoid unnecessary complexity:
+
+```rust
+// Good - simple and clear
+pub async fn quote(&self) -> Result<Quote> {
+    self.get_quote_data().await
+}
+
+// Bad - over-engineered
+pub async fn quote(&self) -> Result<Quote, Box<dyn std::error::Error>> {
+    match self.get_quote_data().await {
+        Ok(data) => Ok(data),
+        Err(e) => Err(Box::new(e)),
+    }
+}
 ```
 
-You can also run specific test files:
+### Document Public APIs
 
-```console
-$ pytest tests/test_quotes.py
+Add doc comments to public items:
+
+```rust
+/// Fetches the latest quote for the ticker.
+///
+/// # Example
+///
+/// ```no_run
+/// use finance_query::Ticker;
+///
+/// let ticker = Ticker::new("AAPL").await?;
+/// let quote = ticker.quote(true).await?;
+/// println!("Price: ${}", quote.regular_market_price);
+/// ```
+pub async fn quote(&self, include_logo: bool) -> Result<Quote> {
+    // ...
+}
 ```
 
-Unit tests are located in the _tests_ directory,
-and are written using the [pytest] testing framework.
+## Testing Guidelines
 
-[pytest]: https://pytest.readthedocs.io/
+### Unit Tests
 
-## Local development
+Keep tests focused and fast:
 
-### Using Makefile (Recommended)
+```rust
+#[tokio::test]
+async fn test_ticker_builder() {
+    let ticker = Ticker::builder("AAPL")
+        .region(Region::UnitedStates)
+        .build()
+        .await
+        .unwrap();
 
-```console
-$ make serve
+    assert_eq!(ticker.symbol(), "AAPL");
+}
 ```
 
-### Manual Development Server
+### Integration Tests
 
-To run the application locally:
+Mark network tests with `#[ignore]`:
 
-```console
-$ python -m uvicorn src.main:app --reload
+```rust
+#[tokio::test]
+#[ignore = "requires network access"]
+async fn test_real_quote() {
+    let ticker = Ticker::new("AAPL").await.unwrap();
+    let quote = ticker.quote(true).await.unwrap();
+    assert!(!quote.symbol.is_empty());
+}
 ```
 
-This will start the API server at `http://localhost:8000` with automatic reloading enabled.
+### Doc Tests
 
-### Docker Development
+Use `no_run` for examples that require network access:
 
-You can also use Docker:
-
-```console
-$ make docker
-# Or manually:
-$ docker build -t finance-query .
-$ docker run -p 8000:8000 finance-query
+```rust
+/// # Example
+///
+/// ```no_run
+/// # use finance_query::Ticker;
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let ticker = Ticker::new("AAPL").await?;
+/// let quote = ticker.quote(true).await?;
+/// # Ok(())
+/// # }
+/// ```
 ```
 
-#### Docker with Environment Variables
+## Submitting Changes
 
-**Build-time configuration** (baked into image):
-```console
-$ docker build \
-  --build-arg LOG_LEVEL=DEBUG \
-  --build-arg LOG_FORMAT=text \
-  --build-arg DISABLE_LOGO_FETCHING=true \
-  --build-arg LOGO_TIMEOUT_SECONDS=2 \
-  -t finance-query .
+### 1. Create a Branch
+
+Use descriptive branch names:
+
+```bash
+git checkout -b fix/quote-timezone-handling
+git checkout -b feat/add-options-chain
 ```
 
-**Runtime configuration** (can be changed when running):
-```console
-$ docker run -p 8000:8000 \
-  -e LOG_LEVEL=DEBUG \
-  -e LOG_FORMAT=text \
-  -e REDIS_URL=redis://host.docker.internal:6379 \
-  -e USE_SECURITY=true \
-  -e ADMIN_API_KEY=your-admin-key \
-  -e USE_PROXY=true \
-  -e PROXY_URL=http://proxy:8080 \
-  -e PROXY_TOKEN=your-proxy-token \
-  finance-query
+### 2. Commit Your Changes
+
+Write clear commit messages:
+
+```bash
+git add .
+git commit -m "fix: handle timezone correctly in market hours"
 ```
 
-**Docker Compose example**:
-```yaml
-version: '3.8'
-services:
-  api:
-    build: .
-    ports:
-      - "8000:8000"
-    environment:
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
-      - REDIS_URL=redis://redis:6379
-      - USE_SECURITY=true
-      - ADMIN_API_KEY=your-admin-key
-      - DISABLE_LOGO_FETCHING=false
-      - LOGO_TIMEOUT_SECONDS=1
-  redis:
-    image: redis:alpine
-    ports:
-      - "6379:6379"
+### 3. Push and Create PR
+
+```bash
+git push origin fix/quote-timezone-handling
 ```
 
-## How to submit changes
+Open a pull request on GitHub with:
 
-Open a [pull request] to submit changes to this project.
+- Clear description of what changed and why
+- Link to any related issues
+- Test results showing everything passes
 
-Your pull request needs to meet the following guidelines for acceptance:
+## Common Tasks
 
-- The test suite must pass without errors and warnings.
-- Include unit tests for new functionality.
-- If your changes add functionality, update the documentation accordingly.
-- Follow the existing code style (Ruff formatting and linting).
+### Adding a New Endpoint
 
-Feel free to submit early, though—we can always iterate on this.
+**Library side:**
 
-### Code Quality Checks
+1. Add endpoint URL in `src/endpoints/`:
 
-#### Using Makefile (Recommended)
+    ```rust
+    // src/endpoints/quote.rs
+    pub fn options_chain(symbol: &str) -> String {
+        format!("{}/v7/finance/options/{}", BASE_URL, symbol)
+    }
+    ```
 
-```console
-$ make lint
+2. Define model in `src/models/`:
+
+    ```rust
+    // src/models/options.rs
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct OptionsChain {
+        pub symbol: String,
+        pub expiration_dates: Vec<i64>,
+        // ...
+    }
+    ```
+
+3. Add method to `Ticker`:
+
+    ```rust
+    // src/ticker/core.rs
+    pub async fn options(&self) -> Result<OptionsChain> {
+        let url = endpoints::options_chain(&self.symbol);
+        self.client.fetch_json(&url).await
+    }
+    ```
+
+**Server side:**
+
+```rust
+// server/src/main.rs
+async fn get_options(
+    Path(symbol): Path<String>,
+) -> Result<Json<OptionsChain>, AppError> {
+    let ticker = Ticker::new(&symbol).await?;
+    let options = ticker.options().await?;
+    Ok(Json(options))
+}
+
+// Register route
+.route("/v2/options/{symbol}", get(get_options))
 ```
 
-This runs all pre-commit hooks including:
-- Ruff linting with auto-fixes
-- Ruff formatting
-- TOML/YAML validation
-- Trailing whitespace removal
+### Updating Dependencies
 
-#### Manual Code Quality
+Check for outdated dependencies:
 
-To run linting and code formatting checks before committing your change:
-
-```console
-$ pre-commit run --all-files
+```bash
+cargo outdated
+cargo update
+make test  # Ensure everything still works
 ```
 
-It is recommended to open an issue before starting work on anything.
-This will allow a chance to talk it over with the owners and validate your approach.
+## Getting Help
 
-### Branch Workflow
+- **Questions**: Open a GitHub Discussion
+- **Bugs**: Open a GitHub Issue with reproduction steps
+- **Security**: Email security@finance-query.dev (not public issues)
 
-FinanceQuery follows a structured branch workflow:
+## License
 
-1. **Feature branches**: Create a branch for your feature or bugfix. Branch names should be descriptive and follow this format: `feat/your-feature-name` or `fix/issue-description`.
-
-2. **Staging branch**: All feature branches must be merged into the `staging` branch first for integration testing.
-
-3. **Master branch**: The `master` branch contains production-ready code. Pull requests to `master` are only accepted from the `staging` branch and are automatically restricted by our CI workflow.
-
-This workflow ensures that code in the master branch has been properly reviewed and tested in staging before deployment to production.
-
-```
-feature/your-feature --> staging --> master
-```
-
-Please do not attempt to merge feature branches directly to master as these pull requests will be automatically rejected.
-
-## Project architecture
-
-Please review the [architecture document](architecture.md) to understand the project's structure before contributing.
-
-[pull request]: https://github.com/Verdenroz/finance-query/pulls
+By contributing, you agree that your contributions will be licensed under the MIT License.

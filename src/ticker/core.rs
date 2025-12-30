@@ -1,0 +1,854 @@
+//! Ticker implementation for accessing symbol-specific data from Yahoo Finance.
+//!
+//! Provides async interface for fetching quotes, charts, financials, and news.
+
+use super::macros;
+use crate::client::{ClientConfig, YahooClient};
+use crate::constants::{Interval, TimeRange};
+use crate::error::Result;
+use crate::models::chart::events::ChartEvents;
+use crate::models::chart::response::ChartResponse;
+use crate::models::chart::result::ChartResult;
+use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
+use crate::models::financials::FinancialStatement;
+use crate::models::options::Options;
+use crate::models::quote::{
+    AssetProfile, CalendarEvents, DefaultKeyStatistics, Earnings, EarningsHistory, EarningsTrend,
+    FinancialData, FundOwnership, InsiderHolders, InsiderTransactions, InstitutionOwnership,
+    MajorHoldersBreakdown, Module, NetSharePurchaseActivity, Price, Quote, QuoteSummaryResponse,
+    QuoteTypeData, RecommendationTrend, SecFilings, SummaryDetail, SummaryProfile,
+    UpgradeDowngradeHistory,
+};
+use crate::models::recommendation::Recommendation;
+use crate::models::recommendation::response::RecommendationResponse;
+use std::collections::HashMap;
+use std::sync::Arc;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+
+/// Trait for types with a timestamp field
+trait HasTimestamp {
+    fn timestamp(&self) -> i64;
+}
+
+impl HasTimestamp for Dividend {
+    fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+}
+
+impl HasTimestamp for Split {
+    fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+}
+
+impl HasTimestamp for CapitalGain {
+    fn timestamp(&self) -> i64 {
+        self.timestamp
+    }
+}
+
+/// Calculate cutoff timestamp for a given time range
+fn range_to_cutoff(range: TimeRange) -> i64 {
+    let now = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64;
+
+    const DAY: i64 = 86400;
+
+    match range {
+        TimeRange::OneDay => now - DAY,
+        TimeRange::FiveDays => now - 5 * DAY,
+        TimeRange::OneMonth => now - 30 * DAY,
+        TimeRange::ThreeMonths => now - 90 * DAY,
+        TimeRange::SixMonths => now - 180 * DAY,
+        TimeRange::OneYear => now - 365 * DAY,
+        TimeRange::TwoYears => now - 2 * 365 * DAY,
+        TimeRange::FiveYears => now - 5 * 365 * DAY,
+        TimeRange::TenYears => now - 10 * 365 * DAY,
+        TimeRange::YearToDate => {
+            // Approximate: ~days since Jan 1 of current year
+            // Using rough calculation (could use chrono for precision)
+            let days_in_year = (now % (365 * DAY)) / DAY;
+            now - days_in_year * DAY
+        }
+        TimeRange::Max => 0, // No cutoff
+    }
+}
+
+/// Filter a list of timestamped items by time range
+fn filter_by_range<T: HasTimestamp>(items: Vec<T>, range: TimeRange) -> Vec<T> {
+    match range {
+        TimeRange::Max => items,
+        range => {
+            let cutoff = range_to_cutoff(range);
+            items
+                .into_iter()
+                .filter(|item| item.timestamp() >= cutoff)
+                .collect()
+        }
+    }
+}
+
+// Core ticker helpers
+struct TickerCoreData {
+    symbol: String,
+}
+
+impl TickerCoreData {
+    fn new(symbol: impl Into<String>) -> Self {
+        Self {
+            symbol: symbol.into(),
+        }
+    }
+
+    /// Builds the quote summary URL with all modules
+    fn build_quote_summary_url(&self) -> String {
+        let url = crate::endpoints::urls::api::quote_summary(&self.symbol);
+        let quote_modules = Module::all();
+        let module_str = quote_modules
+            .iter()
+            .map(|m| m.as_str())
+            .collect::<Vec<_>>()
+            .join(",");
+        format!("{}?modules={}", url, module_str)
+    }
+
+    /// Parses quote summary response from JSON
+    fn parse_quote_summary(&self, json: serde_json::Value) -> Result<QuoteSummaryResponse> {
+        QuoteSummaryResponse::from_json(json, &self.symbol)
+    }
+}
+
+/// Builder for Ticker
+///
+/// Provides a fluent API for constructing Ticker instances.
+pub struct TickerBuilder {
+    symbol: String,
+    config: ClientConfig,
+}
+
+impl TickerBuilder {
+    fn new(symbol: impl Into<String>) -> Self {
+        Self {
+            symbol: symbol.into(),
+            config: ClientConfig::default(),
+        }
+    }
+
+    /// Set the region (automatically sets correct lang and region)
+    ///
+    /// This is the recommended way to configure regional settings as it ensures
+    /// lang and region are correctly paired.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Region};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = Ticker::builder("2330.TW")
+    ///     .region(Region::Taiwan)
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn region(mut self, region: crate::constants::Region) -> Self {
+        self.config.lang = region.lang().to_string();
+        self.config.region = region.region().to_string();
+        self
+    }
+
+    /// Set the language code (e.g., "en-US", "ja-JP", "de-DE")
+    ///
+    /// For standard regions, prefer using `.region()` instead to ensure
+    /// correct lang/region pairing.
+    pub fn lang(mut self, lang: impl Into<String>) -> Self {
+        self.config.lang = lang.into();
+        self
+    }
+
+    /// Set the region code (e.g., "US", "JP", "DE")
+    ///
+    /// For standard regions, prefer using `.region()` instead to ensure
+    /// correct lang/region pairing.
+    pub fn region_code(mut self, region: impl Into<String>) -> Self {
+        self.config.region = region.into();
+        self
+    }
+
+    /// Set the HTTP request timeout
+    pub fn timeout(mut self, timeout: Duration) -> Self {
+        self.config.timeout = timeout;
+        self
+    }
+
+    /// Set the proxy URL
+    pub fn proxy(mut self, proxy: impl Into<String>) -> Self {
+        self.config.proxy = Some(proxy.into());
+        self
+    }
+
+    /// Set a complete ClientConfig (overrides any previously set individual config fields)
+    pub fn config(mut self, config: ClientConfig) -> Self {
+        self.config = config;
+        self
+    }
+
+    /// Build the Ticker instance
+    pub async fn build(self) -> Result<Ticker> {
+        let client = Arc::new(YahooClient::new(self.config).await?);
+
+        Ok(Ticker {
+            core: TickerCoreData::new(self.symbol),
+            client,
+            quote_summary: Arc::new(tokio::sync::RwLock::new(None)),
+            chart_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            events_cache: Arc::new(tokio::sync::RwLock::new(None)),
+            recommendations_cache: Arc::new(tokio::sync::RwLock::new(None)),
+            news_cache: Arc::new(tokio::sync::RwLock::new(None)),
+            options_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            financials_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+        })
+    }
+}
+
+/// Ticker for fetching symbol-specific data.
+///
+/// Provides access to quotes, charts, financials, news, and other data for a specific symbol.
+/// Uses smart lazy loading - quote data is fetched once and cached.
+///
+/// # Example
+///
+/// ```no_run
+/// use finance_query::Ticker;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let ticker = Ticker::new("AAPL").await?;
+///
+/// // Get quote data
+/// let quote = ticker.quote(false).await?;
+/// println!("Price: {:?}", quote.regular_market_price);
+///
+/// // Get chart data
+/// use finance_query::{Interval, TimeRange};
+/// let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+/// println!("Candles: {}", chart.candles.len());
+/// # Ok(())
+/// # }
+/// ```
+pub struct Ticker {
+    core: TickerCoreData,
+    client: Arc<YahooClient>,
+    quote_summary: Arc<tokio::sync::RwLock<Option<QuoteSummaryResponse>>>,
+    chart_cache: Arc<tokio::sync::RwLock<HashMap<(Interval, TimeRange), ChartResult>>>,
+    events_cache: Arc<tokio::sync::RwLock<Option<ChartEvents>>>,
+    recommendations_cache: Arc<tokio::sync::RwLock<Option<RecommendationResponse>>>,
+    news_cache: Arc<tokio::sync::RwLock<Option<Vec<crate::models::news::News>>>>,
+    options_cache: Arc<tokio::sync::RwLock<HashMap<Option<i64>, Options>>>,
+    financials_cache: Arc<
+        tokio::sync::RwLock<
+            HashMap<
+                (crate::constants::StatementType, crate::constants::Frequency),
+                FinancialStatement,
+            >,
+        >,
+    >,
+}
+
+impl Ticker {
+    /// Creates a new ticker with default configuration
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol` - Stock symbol (e.g., "AAPL", "MSFT")
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = Ticker::new("AAPL").await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn new(symbol: impl Into<String>) -> Result<Self> {
+        Self::builder(symbol).build().await
+    }
+
+    /// Creates a new builder for Ticker
+    ///
+    /// Use this for custom configuration (language, region, timeout, proxy).
+    ///
+    /// # Arguments
+    ///
+    /// * `symbol` - Stock symbol (e.g., "AAPL", "MSFT")
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// // Simple case with defaults (same as new())
+    /// let ticker = Ticker::builder("AAPL").build().await?;
+    ///
+    /// // With custom configuration
+    /// let ticker = Ticker::builder("AAPL")
+    ///     .lang("ja-JP")
+    ///     .region_code("JP")
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn builder(symbol: impl Into<String>) -> TickerBuilder {
+        TickerBuilder::new(symbol)
+    }
+
+    /// Returns the ticker symbol
+    pub fn symbol(&self) -> &str {
+        &self.core.symbol
+    }
+
+    /// Ensures quote summary is loaded
+    async fn ensure_quote_summary_loaded(&self) -> Result<()> {
+        // Quick read check
+        {
+            let cache = self.quote_summary.read().await;
+            if cache.is_some() {
+                return Ok(());
+            }
+        }
+
+        // Acquire write lock
+        let mut cache = self.quote_summary.write().await;
+
+        // Double-check (another task may have loaded while we waited)
+        if cache.is_some() {
+            return Ok(());
+        }
+
+        // Fetch using core's URL builder
+        let url = self.core.build_quote_summary_url();
+        let http_response = self.client.request_with_crumb(&url).await?;
+        let json = http_response.json::<serde_json::Value>().await?;
+
+        // Parse using core's parser
+        let response = self.core.parse_quote_summary(json)?;
+        *cache = Some(response);
+
+        Ok(())
+    }
+}
+
+// Generate quote summary accessor methods using macro to eliminate duplication.
+macros::define_quote_accessors! {
+    /// Get price information
+    price -> Price, "price",
+
+    /// Get summary detail
+    summary_detail -> SummaryDetail, "summaryDetail",
+
+    /// Get financial data
+    financial_data -> FinancialData, "financialData",
+
+    /// Get key statistics
+    key_stats -> DefaultKeyStatistics, "defaultKeyStatistics",
+
+    /// Get asset profile
+    asset_profile -> AssetProfile, "assetProfile",
+
+    /// Get calendar events
+    calendar_events -> CalendarEvents, "calendarEvents",
+
+    /// Get earnings
+    earnings -> Earnings, "earnings",
+
+    /// Get earnings trend
+    earnings_trend -> EarningsTrend, "earningsTrend",
+
+    /// Get earnings history
+    earnings_history -> EarningsHistory, "earningsHistory",
+
+    /// Get recommendation trend
+    recommendation_trend -> RecommendationTrend, "recommendationTrend",
+
+    /// Get insider holders
+    insider_holders -> InsiderHolders, "insiderHolders",
+
+    /// Get insider transactions
+    insider_transactions -> InsiderTransactions, "insiderTransactions",
+
+    /// Get institution ownership
+    institution_ownership -> InstitutionOwnership, "institutionOwnership",
+
+    /// Get fund ownership
+    fund_ownership -> FundOwnership, "fundOwnership",
+
+    /// Get major holders breakdown
+    major_holders -> MajorHoldersBreakdown, "majorHoldersBreakdown",
+
+    /// Get net share purchase activity
+    share_purchase_activity -> NetSharePurchaseActivity, "netSharePurchaseActivity",
+
+    /// Get quote type
+    quote_type -> QuoteTypeData, "quoteType",
+
+    /// Get summary profile
+    summary_profile -> SummaryProfile, "summaryProfile",
+
+    /// Get SEC filings
+    sec_filings -> SecFilings, "secFilings",
+
+    /// Get upgrade/downgrade history
+    grading_history -> UpgradeDowngradeHistory, "upgradeDowngradeHistory",
+}
+
+impl Ticker {
+    /// Get full quote data with optional logo URL
+    ///
+    /// # Arguments
+    ///
+    /// * `include_logo` - Whether to fetch and include the company logo URL
+    ///
+    /// When `include_logo` is true, fetches both quote summary and logo URL in parallel
+    /// using tokio::join! for minimal latency impact (~0-100ms overhead).
+    pub async fn quote(&self, include_logo: bool) -> Result<Quote> {
+        if include_logo {
+            // Parallel fetch: quoteSummary AND logo
+            let (quote_result, logo_result) = tokio::join!(
+                self.ensure_quote_summary_loaded(),
+                self.client.get_logo_url(&self.core.symbol)
+            );
+
+            // Handle quoteSummary result (required)
+            quote_result?;
+
+            // Get cached quote summary
+            let cache = self.quote_summary.read().await;
+            let response =
+                cache
+                    .as_ref()
+                    .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
+                        symbol: Some(self.core.symbol.clone()),
+                        context: "Quote summary not loaded".to_string(),
+                    })?;
+
+            // Create Quote with logos (logo_result is (Option<String>, Option<String>))
+            let (logo_url, company_logo_url) = logo_result;
+            Ok(Quote::from_response(response, logo_url, company_logo_url))
+        } else {
+            // Original behavior - no logo fetch
+            self.ensure_quote_summary_loaded().await?;
+
+            let cache = self.quote_summary.read().await;
+            let response =
+                cache
+                    .as_ref()
+                    .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
+                        symbol: Some(self.core.symbol.clone()),
+                        context: "Quote summary not loaded".to_string(),
+                    })?;
+
+            Ok(Quote::from_response(response, None, None))
+        }
+    }
+
+    /// Get historical chart data
+    pub async fn chart(&self, interval: Interval, range: TimeRange) -> Result<Chart> {
+        // Check cache first
+        {
+            let cache = self.chart_cache.read().await;
+            if let Some(cached) = cache.get(&(interval, range)) {
+                return Ok(Chart {
+                    symbol: self.core.symbol.clone(),
+                    meta: cached.meta.clone(),
+                    candles: cached.to_candles(),
+                    interval: Some(interval.as_str().to_string()),
+                    range: Some(range.as_str().to_string()),
+                });
+            }
+        }
+
+        // Fetch using client delegation
+        let json = self
+            .client
+            .get_chart(&self.core.symbol, interval, range)
+            .await?;
+        let response = ChartResponse::from_json(json).map_err(|e| {
+            crate::error::YahooError::ResponseStructureError {
+                field: "chart".to_string(),
+                context: e.to_string(),
+            }
+        })?;
+
+        let mut results =
+            response
+                .chart
+                .result
+                .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
+                    symbol: Some(self.core.symbol.clone()),
+                    context: "Chart data not found".to_string(),
+                })?;
+
+        let result = results
+            .pop()
+            .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
+                symbol: Some(self.core.symbol.clone()),
+                context: "Chart data empty".to_string(),
+            })?;
+
+        let candles = result.to_candles();
+        let meta = result.meta.clone();
+
+        // Cache events on first chart fetch (events are complete history, only cache once)
+        {
+            let mut events_cache = self.events_cache.write().await;
+            if events_cache.is_none() {
+                *events_cache = result.events.clone();
+            }
+        }
+
+        // Cache the result
+        {
+            let mut cache = self.chart_cache.write().await;
+            cache.insert((interval, range), result);
+        }
+
+        Ok(Chart {
+            symbol: self.core.symbol.clone(),
+            meta,
+            candles,
+            interval: Some(interval.as_str().to_string()),
+            range: Some(range.as_str().to_string()),
+        })
+    }
+
+    /// Ensures events data is loaded (fetches chart with max range if not cached)
+    async fn ensure_events_loaded(&self) -> Result<()> {
+        // Quick read check
+        {
+            let cache = self.events_cache.read().await;
+            if cache.is_some() {
+                return Ok(());
+            }
+        }
+
+        // Fetch chart with max range to get all events
+        // Using daily interval with max range gives us complete dividend/split history
+        self.chart(Interval::OneDay, TimeRange::Max).await?;
+        Ok(())
+    }
+
+    /// Get dividend history
+    ///
+    /// Returns historical dividend payments sorted by date.
+    /// Events are lazily loaded (fetched once, then filtered by range).
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - Time range to filter dividends
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, TimeRange};
+    ///
+    /// let ticker = Ticker::new("AAPL").await?;
+    ///
+    /// // Get all dividends
+    /// let all = ticker.dividends(TimeRange::Max).await?;
+    ///
+    /// // Get last year's dividends
+    /// let recent = ticker.dividends(TimeRange::OneYear).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn dividends(&self, range: TimeRange) -> Result<Vec<Dividend>> {
+        self.ensure_events_loaded().await?;
+
+        let cache = self.events_cache.read().await;
+        let all = cache.as_ref().map(|e| e.to_dividends()).unwrap_or_default();
+
+        Ok(filter_by_range(all, range))
+    }
+
+    /// Get stock split history
+    ///
+    /// Returns historical stock splits sorted by date.
+    /// Events are lazily loaded (fetched once, then filtered by range).
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - Time range to filter splits
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, TimeRange};
+    ///
+    /// let ticker = Ticker::new("NVDA").await?;
+    ///
+    /// // Get all splits
+    /// let all = ticker.splits(TimeRange::Max).await?;
+    ///
+    /// // Get last 5 years
+    /// let recent = ticker.splits(TimeRange::FiveYears).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn splits(&self, range: TimeRange) -> Result<Vec<Split>> {
+        self.ensure_events_loaded().await?;
+
+        let cache = self.events_cache.read().await;
+        let all = cache.as_ref().map(|e| e.to_splits()).unwrap_or_default();
+
+        Ok(filter_by_range(all, range))
+    }
+
+    /// Get capital gains distribution history
+    ///
+    /// Returns historical capital gain distributions sorted by date.
+    /// This is primarily relevant for mutual funds and ETFs.
+    /// Events are lazily loaded (fetched once, then filtered by range).
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - Time range to filter capital gains
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, TimeRange};
+    ///
+    /// let ticker = Ticker::new("VFIAX").await?;
+    ///
+    /// // Get all capital gains
+    /// let all = ticker.capital_gains(TimeRange::Max).await?;
+    ///
+    /// // Get last 2 years
+    /// let recent = ticker.capital_gains(TimeRange::TwoYears).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn capital_gains(&self, range: TimeRange) -> Result<Vec<CapitalGain>> {
+        self.ensure_events_loaded().await?;
+
+        let cache = self.events_cache.read().await;
+        let all = cache
+            .as_ref()
+            .map(|e| e.to_capital_gains())
+            .unwrap_or_default();
+
+        Ok(filter_by_range(all, range))
+    }
+
+    /// Calculate all technical indicators from chart data
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - The time interval for each candle
+    /// * `range` - The time range to fetch data for
+    ///
+    /// # Returns
+    ///
+    /// Returns `IndicatorsSummary` containing all calculated indicators.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Interval, TimeRange};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = Ticker::new("AAPL").await?;
+    /// let indicators = ticker.indicators(Interval::OneDay, TimeRange::OneYear).await?;
+    ///
+    /// println!("RSI(14): {:?}", indicators.rsi_14);
+    /// println!("MACD: {:?}", indicators.macd);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn indicators(
+        &self,
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<crate::models::indicators::IndicatorsSummary> {
+        // Fetch chart data
+        let chart = self.chart(interval, range).await?;
+
+        // Calculate indicators from candles
+        Ok(crate::models::indicators::calculate_indicators(
+            &chart.candles,
+        ))
+    }
+
+    /// Get analyst recommendations
+    pub async fn recommendations(&self, limit: u32) -> Result<Recommendation> {
+        // Check cache
+        {
+            let cache = self.recommendations_cache.read().await;
+            if let Some(cached) = cache.as_ref() {
+                return Ok(Recommendation {
+                    symbol: self.core.symbol.clone(),
+                    recommendations: cached
+                        .finance
+                        .result
+                        .iter()
+                        .flat_map(|r| &r.recommended_symbols)
+                        .cloned()
+                        .collect(),
+                });
+            }
+        }
+
+        // Fetch using client delegation
+        let json = self
+            .client
+            .get_recommendations(&self.core.symbol, limit)
+            .await?;
+        let response = RecommendationResponse::from_json(json).map_err(|e| {
+            crate::error::YahooError::ResponseStructureError {
+                field: "finance".to_string(),
+                context: e.to_string(),
+            }
+        })?;
+
+        // Cache
+        {
+            let mut cache = self.recommendations_cache.write().await;
+            *cache = Some(response.clone());
+        }
+
+        Ok(Recommendation {
+            symbol: self.core.symbol.clone(),
+            recommendations: response
+                .finance
+                .result
+                .iter()
+                .flat_map(|r| &r.recommended_symbols)
+                .cloned()
+                .collect(),
+        })
+    }
+
+    /// Get financial statements
+    ///
+    /// # Arguments
+    ///
+    /// * `statement_type` - Type of statement (Income, Balance, CashFlow)
+    /// * `frequency` - Annual or Quarterly
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, Frequency, StatementType};
+    ///
+    /// let ticker = Ticker::new("AAPL").await?;
+    /// let income = ticker.financials(StatementType::Income, Frequency::Annual).await?;
+    /// println!("Revenue: {:?}", income.statement.get("TotalRevenue"));
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn financials(
+        &self,
+        statement_type: crate::constants::StatementType,
+        frequency: crate::constants::Frequency,
+    ) -> Result<FinancialStatement> {
+        let cache_key = (statement_type, frequency);
+
+        // Check cache
+        {
+            let cache = self.financials_cache.read().await;
+            if let Some(cached) = cache.get(&cache_key) {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch financials
+        let financials = self
+            .client
+            .get_financials(&self.core.symbol, statement_type, frequency)
+            .await?;
+
+        // Update cache
+        {
+            let mut cache = self.financials_cache.write().await;
+            cache.insert(cache_key, financials.clone());
+        }
+
+        Ok(financials)
+    }
+
+    /// Get news articles for this symbol
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::Ticker;
+    ///
+    /// let ticker = Ticker::new("AAPL").await?;
+    /// let news = ticker.news().await?;
+    /// for article in news {
+    ///     println!("{}: {}", article.source, article.title);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn news(&self) -> Result<Vec<crate::models::news::News>> {
+        // Check cache
+        {
+            let cache = self.news_cache.read().await;
+            if let Some(cached) = cache.as_ref() {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch news
+        let news = crate::scrapers::stockanalysis::scrape_symbol_news(&self.core.symbol).await?;
+
+        // Update cache
+        {
+            let mut cache = self.news_cache.write().await;
+            *cache = Some(news.clone());
+        }
+
+        Ok(news)
+    }
+
+    /// Get options chain
+    pub async fn options(&self, date: Option<i64>) -> Result<Options> {
+        // Check cache
+        {
+            let cache = self.options_cache.read().await;
+            if let Some(cached) = cache.get(&date) {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch options
+        let json = self.client.get_options(&self.core.symbol, date).await?;
+        let options: Options = serde_json::from_value(json).map_err(|e| {
+            crate::error::YahooError::ResponseStructureError {
+                field: "options".to_string(),
+                context: e.to_string(),
+            }
+        })?;
+
+        // Update cache
+        {
+            let mut cache = self.options_cache.write().await;
+            cache.insert(date, options.clone());
+        }
+
+        Ok(options)
+    }
+}

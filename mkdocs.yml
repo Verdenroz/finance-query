@@ -1,24 +1,25 @@
 site_name: Finance Query
 site_url: https://verdenroz.github.io/finance-query/
 site_author: Harvey Tseng
-site_description: A FastAPI service for fetching financial data from various sources
+site_description: A Rust library for fetching financial data from Yahoo Finance
 
 repo_url: https://github.com/Verdenroz/finance-query
 repo_name: Verdenroz/finance-query
 
 theme:
   favicon: assets/logo.png
+  logo: assets/logo.png
   name: material
   palette:
     - scheme: default
-      primary: teal
-      accent: teal
+      primary: deep orange
+      accent: orange
       toggle:
         icon: material/toggle-switch-off-outline
         name: Switch to dark mode
     - scheme: slate
-      primary: teal
-      accent: teal
+      primary: deep orange
+      accent: orange
       toggle:
         icon: material/toggle-switch
         name: Switch to light mode
@@ -32,6 +33,8 @@ theme:
     - navigation.indexes
     - content.code.copy
     - content.code.annotate
+    - navigation.tabs
+    - navigation.top
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -39,50 +42,36 @@ markdown_extensions:
   - pymdownx.superfences
   - pymdownx.tabbed:
       alternate_style: true
-  - pymdownx.tasklist
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - admonition
+  - pymdownx.details
   - footnotes
   - toc:
       permalink: true
+  - attr_list
+  - md_in_html
 
 plugins:
   - search
-  - mkdocstrings:
-      handlers:
-        python:
-          paths: [ src ]
-          options:
-            show_source: true
 
 nav:
   - Home: index.md
-  - Getting Started: getting-started.md
-  - Configuration:
-      - Logging: logging.md
-      - Rate Limiting: rate-limiting.md
-  - Deployment: deployment.md
-  - API Reference:
-      - Health Check: api/health.md
-      - Market Hours: api/hours.md
-      - Quotes: api/quotes.md
-      - Historical Data: api/historical.md
-      - Financials: api/financials.md
-      - Holders: api/holders.md
-      - Earnings Transcript: api/earnings_transcript.md
-      - Market Movers: api/movers.md
-      - News: api/news.md
-      - Indices: api/indices.md
-      - Sectors: api/sectors.md
-      - Search: api/search.md
-      - Technical Indicators: api/indicators.md
-      - Analysis: api/analysis.md
-      - SSE Stream: api/stream.md
-  - Websockets:
-      - Overview: websockets.md
-      - Profile: websockets/profile.md
-      - Quotes: websockets/quotes.md
-      - Market: websockets/market.md
-      - Hours: websockets/hours.md
+  - Library:
+      - Getting Started: library/getting-started.md
+      - Ticker: library/ticker.md
+      - Batch Tickers: library/tickers.md
+      - Finance Module: library/finance.md
+      - DataFrame Support: library/dataframe.md
+      - Configuration: library/configuration.md
+      - Models: library/models.md
+  - Server:
+      - REST API Reference: server/api-reference.md
+      - WebSocket API Reference: server/websocket-api-reference.md
   - Development:
       - Contributing: development/contributing.md
-      - Architecture: development/architecture.md
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/Verdenroz/finance-query

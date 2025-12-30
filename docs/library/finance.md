@@ -1,0 +1,436 @@
+# Finance Module
+
+The `finance` module provides market-wide operations that don't require a specific stock symbol. Use these functions to search for symbols, get market data, fetch screeners, and more.
+
+!!! tip "Import the finance module"
+    ```rust
+    use finance_query::finance;
+    ```
+
+## Search & Discovery
+
+### Search
+
+Search for stocks, ETFs, funds, and other securities by name or symbol:
+
+```rust
+use finance_query::{finance, SearchOptions, Region};
+
+// Simple search with defaults
+let results = finance::search("Apple", &SearchOptions::default()).await?;
+println!("Found {} results", results.result_count());
+
+for quote in &results.quotes {
+    println!("{} ({}): {}", quote.symbol, quote.exchange, quote.name);
+}
+
+// Advanced search with options
+let options = SearchOptions::new()
+    .quotes_count(10)
+    .news_count(5)
+    .enable_research_reports(true)
+    .enable_fuzzy_query(true)
+    .region(Region::Canada);
+
+let results = finance::search("tesla", &options).await?;
+```
+
+**SearchOptions Methods:**
+
+- `.quotes_count(u32)` - Number of quote results (default: 6)
+- `.news_count(u32)` - Number of news results (default: 4)
+- `.enable_fuzzy_query(bool)` - Enable fuzzy matching (default: true)
+- `.enable_logo_url(bool)` - Include logo URLs (default: true)
+- `.enable_research_reports(bool)` - Include research reports (default: false)
+- `.enable_cultural_assets(bool)` - Include cultural assets (default: false)
+- `.recommend_count(u32)` - Number of recommendations (default: 5)
+- `.region(Region)` - Search region (default: US)
+
+**SearchResults Fields:**
+
+- `quotes` - Vec of matching quotes
+- `news` - Vec of related news articles
+- `research_reports` - Optional research reports
+- `recommendations` - Recommended symbols
+
+### Lookup
+
+Lookup symbols filtered by asset type (equity, ETF, mutual fund, index, etc.):
+
+```rust
+use finance_query::{finance, LookupOptions, LookupType};
+
+// Simple lookup
+let results = finance::lookup("NVDA", &LookupOptions::default()).await?;
+
+// Lookup equities with logos
+let options = LookupOptions::new()
+    .lookup_type(LookupType::Equity)
+    .count(10)
+    .include_logo(true);
+
+let results = finance::lookup("tech", &options).await?;
+for quote in &results.quotes {
+    println!("{}: {} - {:?}", quote.symbol, quote.name, quote.logo_url);
+}
+```
+
+**Available LookupTypes:**
+
+- `All` - All asset types (default)
+- `Equity` - Stocks
+- `Etf` - Exchange-traded funds
+- `MutualFund` - Mutual funds
+- `Index` - Market indices
+- `Future` - Futures contracts
+- `Currency` - Currencies
+- `Cryptocurrency` - Cryptocurrencies
+
+## Market Data
+
+### Market Summary
+
+Get current market summary with major indices, currencies, and commodities:
+
+```rust
+use finance_query::{finance, Region};
+
+// Default (US market)
+let summary = finance::market_summary(None).await?;
+
+// Specific region
+let summary = finance::market_summary(Some(Region::Canada)).await?;
+
+for quote in &summary {
+    println!("{}: ${:?} ({:+.2}%)",
+        quote.symbol,
+        quote.regular_market_price,
+        quote.regular_market_change_percent.unwrap_or(0.0)
+    );
+}
+```
+
+### Trending
+
+Get trending stocks for a region:
+
+```rust
+let trending = finance::trending(None).await?;
+// Or specify region
+let trending = finance::trending(Some(Region::Japan)).await?;
+
+for quote in &trending {
+    println!("{}: {}", quote.symbol, quote.short_name.as_deref().unwrap_or(""));
+}
+```
+
+### Market Hours
+
+Check market status and trading hours:
+
+```rust
+// US market hours (default)
+let hours = finance::hours(None).await?;
+
+// Japan market hours
+let hours = finance::hours(Some("JP")).await?;
+
+println!("Market state: {}", hours.market_state);
+println!("Is open: {}", hours.is_market_open);
+```
+
+### Indices
+
+Get quotes for major world indices:
+
+```rust
+use finance_query::{finance, IndicesRegion};
+
+// All world indices
+let all = finance::indices(None).await?;
+println!("Fetched {} indices", all.success_count());
+
+// Only Americas indices (^DJI, ^GSPC, ^IXIC, etc.)
+let americas = finance::indices(Some(IndicesRegion::Americas)).await?;
+for (symbol, quote) in &americas.quotes {
+    if let (Some(price), Some(change_pct)) =
+        (quote.regular_market_price, quote.regular_market_change_percent) {
+        println!("{}: {:.2} ({:+.2}%)", symbol, price, change_pct);
+    }
+}
+
+// Other regions
+let europe = finance::indices(Some(IndicesRegion::Europe)).await?;
+let asia = finance::indices(Some(IndicesRegion::AsiaPacific)).await?;
+```
+
+**Available Regions:**
+
+- `Americas` - ^DJI, ^GSPC, ^IXIC, ^RUT, etc.
+- `Europe` - ^FTSE, ^GDAXI, ^FCHI, etc.
+- `AsiaPacific` - ^N225, ^HSI, 000001.SS, etc.
+- `MiddleEastAfrica` - ^TA125.TA, etc.
+- `Currencies` - Major currency pairs
+
+## Screeners
+
+### Predefined Screeners
+
+Use Yahoo Finance's predefined screeners:
+
+```rust
+use finance_query::{finance, ScreenerType};
+
+// Top gainers
+let gainers = finance::screener(ScreenerType::DayGainers, 25).await?;
+
+// Most actives
+let actives = finance::screener(ScreenerType::MostActives, 25).await?;
+
+// Day losers
+let losers = finance::screener(ScreenerType::DayLosers, 25).await?;
+
+// Process results
+for result in gainers.finance.result {
+    for quote in result.quotes {
+        println!("{}: {:+.2}%",
+            quote.symbol,
+            quote.regular_market_change_percent.unwrap_or(0.0)
+        );
+    }
+}
+```
+
+**Available ScreenerTypes:**
+
+**Market Movers:**
+
+- `DayGainers` - Top gaining stocks
+- `DayLosers` - Top losing stocks
+- `MostActives` - Highest volume stocks
+
+**Trading Activity:**
+
+- `AggressiveSmallCaps` - High-risk small caps
+- `ConservativeForeignFunds` - Conservative international funds
+- `GrowthTechnologyStocks` - Growth tech companies
+- `HighYieldBond` - High-yield bond funds
+- `MostShortedStocks` - Heavily shorted stocks
+- `PortfolioAnchors` - Stable, large-cap stocks
+- `SmallCapGainers` - Top small-cap gainers
+- `SolidLargeCap` - Established large caps
+- `SolidMidcap` - Stable mid-cap stocks
+- `TopMutualFunds` - Highest-rated mutual funds
+- `UndervaluedGrowthStocks` - Undervalued growth opportunities
+- `UndervaluedLargeCaps` - Undervalued large companies
+
+### Custom Screeners
+
+Build custom screening queries:
+
+```rust
+use finance_query::{finance, ScreenerQuery, QueryCondition, screener_query::Operator};
+
+// Find US tech stocks with high volume and market cap > $10B
+let query = ScreenerQuery::new()
+    .size(50)
+    .sort_by("intradaymarketcap", false)  // Sort by market cap descending
+    .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
+    .add_condition(QueryCondition::new("sector", Operator::Eq).value_str("technology"))
+    .add_condition(QueryCondition::new("intradaymarketcap", Operator::Gt).value(10_000_000_000))
+    .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(1_000_000));
+
+let results = finance::custom_screener(query).await?;
+println!("Found {} stocks", results.quotes.len());
+```
+
+**Common Conditions:**
+
+- `region` - Geographic region (e.g., "us", "jp", "gb")
+- `sector` - Sector name (e.g., "technology", "healthcare")
+- `intradaymarketcap` - Market capitalization
+- `avgdailyvol3m` - Average daily volume (3 months)
+- `peratio` - Price-to-earnings ratio
+- `pegratio` - PEG ratio
+- `earningsdate` - Upcoming earnings date
+- `dividendyield` - Dividend yield
+
+**Operators:**
+
+- `Eq` - Equals
+- `Gt` - Greater than
+- `Gte` - Greater than or equal
+- `Lt` - Less than
+- `Lte` - Less than or equal
+- `Btwn` - Between (use `.range(min, max)`)
+
+## Sector & Industry Data
+
+### Sectors
+
+Get comprehensive sector data:
+
+```rust
+use finance_query::{finance, SectorType};
+
+let tech = finance::sector(SectorType::Technology).await?;
+
+println!("Sector: {}", tech.name);
+if let Some(overview) = &tech.overview {
+    if let Some(count) = overview.companies_count {
+        println!("  Companies: {}", count);
+    }
+    if let Some(market_cap) = overview.market_cap {
+        println!("  Market Cap: ${:.2}B", market_cap / 1_000_000_000.0);
+    }
+}
+
+// Top companies in the sector
+println!("Top companies:");
+for company in tech.top_companies.iter().take(10) {
+    println!("  {} - {}", company.symbol, company.name.as_deref().unwrap_or("N/A"));
+}
+
+// Sector ETFs
+if let Some(etfs) = &tech.etfs {
+    println!("Sector ETFs: {}", etfs.len());
+}
+
+// Industries in this sector
+if let Some(industries) = &tech.industries {
+    println!("Industries: {}", industries.len());
+}
+```
+
+**Available SectorTypes:**
+
+- `BasicMaterials`
+- `CommunicationServices`
+- `ConsumerCyclical`
+- `ConsumerDefensive`
+- `Energy`
+- `Financial`
+- `Healthcare`
+- `Industrials`
+- `RealEstate`
+- `Technology`
+- `Utilities`
+
+### Industries
+
+Get detailed industry data:
+
+```rust
+let semiconductors = finance::industry("semiconductors").await?;
+
+println!("Industry: {}", semiconductors.name);
+if let Some(overview) = &semiconductors.overview {
+    println!("  Companies: {:?}", overview.companies_count);
+    println!("  Market Cap: ${:?}B", overview.market_cap.map(|m| m / 1e9));
+}
+
+// Top companies
+for company in semiconductors.top_companies.iter().take(5) {
+    println!("  {} - {}", company.symbol, company.name.as_deref().unwrap_or(""));
+}
+```
+
+**Common Industry Keys:**
+
+- `"semiconductors"` - Semiconductor manufacturers
+- `"software-infrastructure"` - Software infrastructure
+- `"software-application"` - Application software
+- `"electronic-components"` - Electronic components
+- `"consumer-electronics"` - Consumer electronics
+- `"communication-equipment"` - Communication equipment
+- `"internet-content-information"` - Internet content & information
+
+To discover more industry keys, use the `sector()` function and check the `industries` field.
+
+## News & Transcripts
+
+### General News
+
+Get general market news:
+
+```rust
+let news = finance::news().await?;
+
+for article in news.iter().take(10) {
+    println!("{}", article.title);
+    println!("  Source: {}", article.source);
+    println!("  Time: {}", article.time);
+    println!("  Link: {}", article.link);
+}
+```
+
+### Earnings Transcripts
+
+Fetch earnings call transcripts:
+
+```rust
+// Get the latest transcript
+let latest = finance::earnings_transcript("AAPL", None, None).await?;
+println!("Quarter: {} {}", latest.quarter(), latest.year());
+println!("Participants: {}", latest.participants.len());
+
+// Get specific quarter
+let q4_2024 = finance::earnings_transcript("AAPL", Some("Q4"), Some(2024)).await?;
+
+// Get all available transcripts
+let all = finance::earnings_transcripts("MSFT", None).await?;
+println!("Found {} transcripts", all.len());
+
+// Get only recent transcripts
+let recent = finance::earnings_transcripts("NVDA", Some(5)).await?;
+for t in &recent {
+    println!("{}: {} {}", t.title, t.transcript.quarter(), t.transcript.year());
+}
+```
+
+## Reference Data
+
+### Exchanges
+
+Get list of supported exchanges with their symbol suffixes:
+
+```rust
+let exchanges = finance::exchanges().await?;
+
+for exchange in &exchanges {
+    println!("{} - {} (suffix: {})",
+        exchange.country,
+        exchange.market,
+        exchange.suffix
+    );
+}
+```
+
+**Example Output:**
+```
+United States - NYSE (suffix: )
+United States - NASDAQ (suffix: )
+Taiwan - Taiwan (suffix: .TW)
+France - Paris (suffix: .PA)
+Germany - XETRA (suffix: .DE)
+```
+
+### Currencies
+
+Get list of available currency pairs:
+
+```rust
+let currencies = finance::currencies().await?;
+
+for currency in &currencies {
+    println!("{}: {}", currency.symbol, currency.name);
+}
+```
+
+## Next Steps
+
+- [Ticker API](ticker.md) - Symbol-specific operations
+- [Batch Tickers](tickers.md) - Efficient multi-symbol operations
+- [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis
+- [Models](models.md) - Understanding response types
+- [Configuration](configuration.md) - Regional settings and network options

@@ -1,14 +1,13 @@
-.PHONY: help serve install install-dev build test lint docs docker docker-aws clean
+.PHONY: help serve install install-dev build test test-fast lint fix audit docs docker docker-compose docker-compose-down clean publish-dry-run
 
 # Default target
 .DEFAULT_GOAL := help
 
 # Variables
-UV := uv
-PYTHON := python3
-MKDOCS := mkdocs
+CARGO := cargo
 DOCKER := docker
-RUN := $(UV) run
+DOCKER_COMPOSE := docker compose
+PORT ?= 8000
 
 # Colors
 GREEN := $(shell printf '\033[0;32m')
@@ -18,71 +17,90 @@ NC := $(shell printf '\033[0m')
 help: ## Show available commands
 	@echo "$(GREEN)FinanceQuery Commands$(NC)"
 	@echo "===================="
-	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "$(YELLOW)%-15s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "$(YELLOW)%-20s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
 serve: ## Start development server
-	@echo "$(GREEN)Starting server at http://localhost:8000$(NC)"
-	$(RUN) uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+	@echo "$(GREEN)Starting server at http://localhost:$(PORT)$(NC)"
+	cd server && PORT=$(PORT) $(CARGO) run -p finance-query-server
 
-install: ## Install production dependencies
-	@echo "$(GREEN)Installing production dependencies...$(NC)"
-	$(UV) sync
-	$(RUN) $(PYTHON) setup.py build_ext --inplace
+install: ## Build release binary
+	@echo "$(GREEN)Building release binary...$(NC)"
+	$(CARGO) build --release -p finance-query-server
 
-install-dev: ## Install dev dependencies + pre-commit hooks
-	@echo "$(GREEN)Installing dev dependencies...$(NC)"
-	$(UV) sync --all-groups
-	$(RUN) $(PYTHON) setup.py build_ext --inplace
-	$(RUN) pre-commit install
+install-dev: ## Install dev tools and build workspace
+	@echo "$(GREEN)Installing dev tools...$(NC)"
+	rustup component add rustfmt clippy
+	@if ! command -v prek >/dev/null 2>&1; then \
+		echo "$(YELLOW)prek not found. Installing via cargo binstall or cargo...$(NC)"; \
+		if command -v cargo-binstall >/dev/null 2>&1; then \
+			cargo binstall -y prek; \
+		else \
+			cargo install --locked prek; \
+		fi; \
+	fi
+	@prek install
+	@echo "$(GREEN)Setting up Python environment for docs...$(NC)"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv sync; \
+	else \
+		if ! [ -d .venv ]; then python3 -m venv .venv; fi; \
+		.venv/bin/pip install -q --upgrade pip; \
+		.venv/bin/pip install -q -e .; \
+	fi
+	@echo "$(GREEN)Building workspace in dev mode...$(NC)"
+	$(CARGO) build --workspace
+	@echo "$(GREEN)✓ Dev environment ready!$(NC)"
 
-build: ## Build Cython extensions
-	@echo "$(GREEN)Building Cython extensions...$(NC)"
-	$(RUN) $(PYTHON) setup.py build_ext --inplace
+build: ## Build library and server in release mode
+	@echo "$(GREEN)Building in release mode...$(NC)"
+	$(CARGO) build --release --workspace
 
-test: ## Run tests with coverage
-	@echo "$(GREEN)Running tests with coverage...$(NC)"
-	$(RUN) pytest
+test: ## Run ALL tests including network integration tests
+	@echo "$(GREEN)Running all tests...$(NC)"
+	@echo "$(YELLOW)Note: Some tests make real API calls$(NC)"
+	$(CARGO) test --workspace -- --nocapture --include-ignored
 
-lint: ## Run linting and formatting
-	@echo "$(GREEN)Running linting and formatting...$(NC)"
-	$(RUN) pre-commit run --all-files
+test-fast: ## Run only fast tests (excludes network tests)
+	@echo "$(GREEN)Running fast tests...$(NC)"
+	$(CARGO) test --workspace -- --nocapture
 
-docs: ## Build and serve documentation
-	@echo "$(GREEN)Serving docs at http://localhost:8001$(NC)"
-	$(RUN) $(MKDOCS) serve --dev-addr=0.0.0.0:8001
+lint: ## Run all pre-commit checks
+	@echo "$(GREEN)Running pre-commit checks...$(NC)"
+	@prek
 
-docker: ## Build and run Docker container
-	@echo "$(GREEN)Building and running Docker container...$(NC)"
-	$(DOCKER) build -t financequery .
-	$(DOCKER) run -p 8000:8000 financequery
+fix: ## Auto-fix formatting and linting issues
+	@echo "$(GREEN)Formatting code...$(NC)"
+	@$(CARGO) fmt --all
+	@echo "$(GREEN)Fixing clippy issues...$(NC)"
+	@$(CARGO) clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged
+	@echo "$(GREEN)✓ Auto-fix complete!$(NC)"
 
-docker-aws: ## Build and test AWS Lambda Docker image
-	@echo "$(GREEN)Building AWS Lambda Docker image...$(NC)"
-	$(DOCKER) build -f Dockerfile.aws -t financequery-lambda .
-	@echo "$(GREEN)Starting Lambda container in background...$(NC)"
-	$(DOCKER) run -d --name financequery-lambda-test -p 9000:8080 financequery-lambda
-	@echo "$(YELLOW)Waiting for Lambda to be ready...$(NC)"
-	@sleep 5
-	@echo "$(GREEN)Testing /ping endpoint...$(NC)"
-	@curl -s -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
-		-H "Content-Type: application/json" \
-		-d '{"resource":"/ping","path":"/ping","httpMethod":"GET","headers":{"Accept":"*/*","Host":"localhost:9000"},"requestContext":{"requestId":"test-request-id","accountId":"123456789012","stage":"prod","identity":{"sourceIp":"127.0.0.1"}},"queryStringParameters":null,"pathParameters":null,"stageVariables":null,"body":null,"isBase64Encoded":false}' \
-		| grep -q '"statusCode": 200' && echo "$(GREEN)✓ /ping endpoint working$(NC)" || (echo "$(YELLOW)✗ /ping endpoint failed$(NC)" && exit 1)
-	@echo "$(GREEN)Testing /health endpoint...$(NC)"
-	@curl -s -X POST "http://localhost:9000/2015-03-31/functions/function/invocations" \
-		-H "Content-Type: application/json" \
-		-d '{"resource":"/health","path":"/health","httpMethod":"GET","headers":{"Accept":"*/*","Host":"localhost:9000"},"requestContext":{"requestId":"test-request-id","accountId":"123456789012","stage":"prod","identity":{"sourceIp":"127.0.0.1"}},"queryStringParameters":null,"pathParameters":null,"stageVariables":null,"body":null,"isBase64Encoded":false}' \
-		| grep -q '"statusCode": 200' && echo "$(GREEN)✓ /health endpoint working$(NC)" || (echo "$(YELLOW)✗ /health endpoint failed$(NC)" && exit 1)
-	@echo "$(GREEN)All tests passed! Cleaning up...$(NC)"
-	@$(DOCKER) stop financequery-lambda-test > /dev/null
-	@$(DOCKER) rm financequery-lambda-test > /dev/null
-	@echo "$(GREEN)AWS Lambda Docker image test complete!$(NC)"
+audit: ## Run security audit on dependencies
+	@echo "$(GREEN)Running security audit...$(NC)"
+	@command -v cargo-audit >/dev/null 2>&1 || $(CARGO) install cargo-audit
+	@$(CARGO) audit
 
-clean: ## Clean build artifacts and cache
+docs: ## Build and serve documentation locally
+	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"
+	uv run mkdocs serve -a localhost:8080 --livereload
+
+docker: ## Build Docker image for v2 server
+	@echo "$(GREEN)Building v2 Docker image...$(NC)"
+	$(DOCKER) build -f server/Dockerfile -t financequery:v2 .
+
+docker-compose: ## Start both v1 and v2 with Docker Compose
+	@echo "$(GREEN)Starting v1 and v2 servers...$(NC)"
+	$(DOCKER_COMPOSE) up -d
+
+docker-compose-down: ## Stop Docker Compose services
+	$(DOCKER_COMPOSE) down
+
+clean: ## Clean build artifacts
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
-	rm -rf build/ dist/ *.egg-info/ .pytest_cache/ .coverage htmlcov/ .ruff_cache/
-	find . -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
-	find . -type f -name "*.pyc" -delete
-	find . -type f -name "*.c" -path "*/services/indicators/core/*" -delete
-	find . -type f -name "*.so" -path "*/services/indicators/core/*" -delete
-	find . -type f -name "*.pyd" -path "*/services/indicators/core/*" -delete
+	$(CARGO) clean
+	rm -rf target/ site/
+
+publish-dry-run: ## Test publishing to crates.io (dry run)
+	@echo "$(GREEN)Testing crates.io publish (dry run)...$(NC)"
+	$(CARGO) publish -p finance-query-derive --dry-run
+	$(CARGO) publish -p finance-query --dry-run

@@ -2,7 +2,8 @@
 
 version: 2
 updates:
-  - package-ecosystem: "uv"
+  # Rust dependencies
+  - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
@@ -16,26 +17,31 @@ updates:
       - "Verdenroz"
     commit-message:
       prefix: "deps"
-      prefix-development: "deps-dev"
       include: "scope"
     labels:
       - "dependencies"
-      - "python"
+      - "rust"
     versioning-strategy: "increase-if-necessary"
     rebase-strategy: "auto"
-    insecure-external-code-execution: "allow"
     pull-request-branch-name:
       separator: "/"
     # Group related updates to reduce PR noise
     groups:
       # Production dependencies grouped by function
-      fastapi-ecosystem:
+      axum-ecosystem:
         patterns:
-          - "fastapi*"
-          - "uvicorn*"
-          - "starlette*"
-          - "pydantic*"
-          - "fastapi-injectable*"
+          - "axum*"
+          - "tower*"
+          - "hyper*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      async-runtime:
+        patterns:
+          - "tokio*"
+          - "futures*"
+          - "async-trait*"
         update-types:
           - "minor"
           - "patch"
@@ -43,104 +49,76 @@ updates:
       database:
         patterns:
           - "redis*"
-          - "hiredis*"
-          - "peewee*"
         update-types:
           - "minor"
           - "patch"
 
-      data-processing:
+      serialization:
         patterns:
-          - "pandas*"
-          - "numpy*"
+          - "serde*"
+        update-types:
+          - "minor"
+          - "patch"
+
+      http-client:
+        patterns:
+          - "reqwest*"
         update-types:
           - "minor"
           - "patch"
 
       web-scraping:
         patterns:
-          - "curl-cffi*"
-          - "beautifulsoup4*"
-          - "lxml*"
-          - "requests*"
-          - "requests-futures*"
+          - "scraper*"
+          - "select*"
         update-types:
           - "minor"
           - "patch"
 
-      data-sources:
+      tracing:
         patterns:
-          - "yfinance*"
-          - "defeatbeta-api*"
-          - "algoliasearch*"
-          - "multitasking*"
+          - "tracing*"
         update-types:
           - "minor"
           - "patch"
 
-      infrastructure:
+      utilities:
         patterns:
-          - "mangum*"
-          - "python-dotenv*"
-          - "pyyaml*"
-          - "psutil*"
-          - "websockets*"
-          - "frozendict*"
-          - "orjson*"
-          - "protobuf*"
-          - "python-json-logger*"
-          - "tqdm*"
+          - "chrono*"
+          - "uuid*"
+          - "url*"
+          - "regex*"
+          - "anyhow*"
+          - "thiserror*"
+          - "dotenvy*"
+          - "once_cell*"
         update-types:
           - "minor"
           - "patch"
 
-      # Development dependencies
-      testing:
-        dependency-type: "development"
+      websockets:
         patterns:
-          - "pytest*"
-          - "coverage*"
-          - "httpx*"
-          - "freezegun*"
+          - "tokio-tungstenite*"
+          - "tungstenite*"
         update-types:
           - "minor"
           - "patch"
 
-      linting:
-        dependency-type: "development"
+      rate-limiting:
         patterns:
-          - "ruff*"
-          - "pre-commit*"
+          - "governor*"
         update-types:
           - "minor"
           - "patch"
-
-      docs:
-        dependency-type: "development"
-        patterns:
-          - "mkdocs*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      build-tools:
-        patterns:
-          - "setuptools*"
-          - "wheel*"
-          - "cython*"
-        update-types:
-          - "minor"
-          - "patch"
-    # Ignore specific packages that require manual review
+    # Ignore specific crates that require manual review
     ignore:
-      # Cython updates may affect compiled extensions
-      - dependency-name: "cython"
+      # Major version updates may have breaking changes
+      - dependency-name: "axum"
         update-types: ["version-update:semver-major"]
-      # NumPy major versions may break Cython compatibility
-      - dependency-name: "numpy"
+      - dependency-name: "tokio"
         update-types: ["version-update:semver-major"]
-      # Pin Python version updates (requires testing)
-      - dependency-name: "python"
+      - dependency-name: "serde"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions
   - package-ecosystem: "github-actions"
@@ -189,16 +167,21 @@ updates:
       separator: "/"
     # Group Docker images
     groups:
-      python-images:
+      rust-images:
         patterns:
-          - "python*"
-          - "public.ecr.aws/lambda/python*"
+          - "rust*"
+        update-types:
+          - "minor"
+          - "patch"
+      debian-images:
+        patterns:
+          - "debian*"
         update-types:
           - "minor"
           - "patch"
     # Only patch and minor updates for base images
     ignore:
-      - dependency-name: "python"
+      - dependency-name: "rust"
         update-types: ["version-update:semver-major"]
-      - dependency-name: "public.ecr.aws/lambda/python"
+      - dependency-name: "debian"
         update-types: ["version-update:semver-major"]

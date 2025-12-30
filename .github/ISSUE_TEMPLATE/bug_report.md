@@ -13,8 +13,8 @@ assignees: Verdenroz
 A clear and concise description of the bug.
 
 ## Environment
-- **Operating system and Python version**: [e.g. Windows 11 with Python 3.11.5]
-- **Deployment**: [e.g. Local, Docker, Render, AWS Lambda]
+- **Operating system and Rust version**: [e.g. Ubuntu 22.04 with Rust 1.83.0]
+- **Deployment**: [e.g. Local, Docker, Render, Cloud Platform]
 
 ## Steps to Reproduce
 1. [First Step]
@@ -28,8 +28,10 @@ A clear description of what you expected to see.
 A clear description of what you saw instead.
 
 ## Test Case/Code Example
-```python
-# A minimal code example that reproduces the issue
+```bash
+# A minimal example that reproduces the issue
+# e.g., curl command or reproduction steps
+curl -X GET 'http://localhost:8000/health'
 ```
 
 ## API Response (if applicable)
