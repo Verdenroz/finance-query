@@ -208,6 +208,9 @@ impl TickerBuilder {
             chart_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             events_cache: Arc::new(tokio::sync::RwLock::new(None)),
             recommendations_cache: Arc::new(tokio::sync::RwLock::new(None)),
+            news_cache: Arc::new(tokio::sync::RwLock::new(None)),
+            options_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            financials_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
         })
     }
 }
@@ -243,6 +246,16 @@ pub struct Ticker {
     chart_cache: Arc<tokio::sync::RwLock<HashMap<(Interval, TimeRange), ChartResult>>>,
     events_cache: Arc<tokio::sync::RwLock<Option<ChartEvents>>>,
     recommendations_cache: Arc<tokio::sync::RwLock<Option<RecommendationResponse>>>,
+    news_cache: Arc<tokio::sync::RwLock<Option<Vec<crate::models::news::News>>>>,
+    options_cache: Arc<tokio::sync::RwLock<HashMap<Option<i64>, Options>>>,
+    financials_cache: Arc<
+        tokio::sync::RwLock<
+            HashMap<
+                (crate::constants::StatementType, crate::constants::Frequency),
+                FinancialStatement,
+            >,
+        >,
+    >,
 }
 
 impl Ticker {
@@ -749,9 +762,29 @@ impl Ticker {
         statement_type: crate::constants::StatementType,
         frequency: crate::constants::Frequency,
     ) -> Result<FinancialStatement> {
-        self.client
+        let cache_key = (statement_type, frequency);
+
+        // Check cache
+        {
+            let cache = self.financials_cache.read().await;
+            if let Some(cached) = cache.get(&cache_key) {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch financials
+        let financials = self
+            .client
             .get_financials(&self.core.symbol, statement_type, frequency)
-            .await
+            .await?;
+
+        // Update cache
+        {
+            let mut cache = self.financials_cache.write().await;
+            cache.insert(cache_key, financials.clone());
+        }
+
+        Ok(financials)
     }
 
     /// Get news articles for this symbol
@@ -771,15 +804,51 @@ impl Ticker {
     /// # }
     /// ```
     pub async fn news(&self) -> Result<Vec<crate::models::news::News>> {
-        crate::scrapers::stockanalysis::scrape_symbol_news(&self.core.symbol).await
+        // Check cache
+        {
+            let cache = self.news_cache.read().await;
+            if let Some(cached) = cache.as_ref() {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch news
+        let news = crate::scrapers::stockanalysis::scrape_symbol_news(&self.core.symbol).await?;
+
+        // Update cache
+        {
+            let mut cache = self.news_cache.write().await;
+            *cache = Some(news.clone());
+        }
+
+        Ok(news)
     }
 
     /// Get options chain
     pub async fn options(&self, date: Option<i64>) -> Result<Options> {
+        // Check cache
+        {
+            let cache = self.options_cache.read().await;
+            if let Some(cached) = cache.get(&date) {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch options
         let json = self.client.get_options(&self.core.symbol, date).await?;
-        serde_json::from_value(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
-            field: "options".to_string(),
-            context: e.to_string(),
-        })
+        let options: Options = serde_json::from_value(json).map_err(|e| {
+            crate::error::YahooError::ResponseStructureError {
+                field: "options".to_string(),
+                context: e.to_string(),
+            }
+        })?;
+
+        // Update cache
+        {
+            let mut cache = self.options_cache.write().await;
+            cache.insert(date, options.clone());
+        }
+
+        Ok(options)
     }
 }
