@@ -21,7 +21,7 @@ updates:
     labels:
       - "dependencies"
       - "rust"
-    versioning-strategy: "increase-if-necessary"
+    versioning-strategy: "auto"
     rebase-strategy: "auto"
     pull-request-branch-name:
       separator: "/"
