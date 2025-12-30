@@ -82,7 +82,7 @@ base64 = "0.22"
 
 # Optional: DataFrame support
 polars = { version = "0.52", optional = true, default-features = false, features = ["lazy"] }
-finance-query-derive = { path = "finance-query-derive", optional = true }
+finance-query-derive = { version = "2.0.0", path = "finance-query-derive", optional = true }
 
 [features]
 default = []

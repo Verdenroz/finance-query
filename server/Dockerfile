@@ -66,10 +66,11 @@ ENV DEFAULT_RANGE=1mo
 ENV RECOMMENDATIONS_LIMIT=5
 ENV SEARCH_HITS=6
 ENV SCREENERS_COUNT=25
+# ENV REDIS_URL=redis://localhost:6379
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:8000/v2/health || exit 1
 
 CMD ["/app/finance-query-server"]

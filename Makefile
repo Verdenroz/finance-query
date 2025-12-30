@@ -30,6 +30,23 @@ install: ## Build release binary
 install-dev: ## Install dev tools and build workspace
 	@echo "$(GREEN)Installing dev tools...$(NC)"
 	rustup component add rustfmt clippy
+	@if ! command -v prek >/dev/null 2>&1; then \
+		echo "$(YELLOW)prek not found. Installing via cargo binstall or cargo...$(NC)"; \
+		if command -v cargo-binstall >/dev/null 2>&1; then \
+			cargo binstall -y prek; \
+		else \
+			cargo install --locked prek; \
+		fi; \
+	fi
+	@prek install
+	@echo "$(GREEN)Setting up Python environment for docs...$(NC)"
+	@if command -v uv >/dev/null 2>&1; then \
+		uv sync; \
+	else \
+		if ! [ -d .venv ]; then python3 -m venv .venv; fi; \
+		.venv/bin/pip install -q --upgrade pip; \
+		.venv/bin/pip install -q -e .; \
+	fi
 	@echo "$(GREEN)Building workspace in dev mode...$(NC)"
 	$(CARGO) build --workspace
 	@echo "$(GREEN)✓ Dev environment ready!$(NC)"
@@ -65,8 +82,7 @@ audit: ## Run security audit on dependencies
 
 docs: ## Build and serve documentation locally
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"
-	@command -v mkdocs >/dev/null 2>&1 || pip install mkdocs-material
-	mkdocs serve -a localhost:8080
+	uv run mkdocs serve -a localhost:8080 --livereload
 
 docker: ## Build Docker image for v2 server
 	@echo "$(GREEN)Building v2 Docker image...$(NC)"

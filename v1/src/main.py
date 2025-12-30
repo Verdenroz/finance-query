@@ -191,18 +191,7 @@ async def _ping_response():
     return {"message": "pong"}
 
 
-# Root health endpoints (for Docker healthcheck)
-@app.get(path="/health", tags=["Health Check"], description="Health check endpoint")
-async def health():
-    return await _health_response()
-
-
-@app.get(path="/ping", tags=["Health Check"], description="Ping endpoint")
-async def ping():
-    return await _ping_response()
-
-
-# Version-prefixed health endpoints (for nginx routing)
+# Health endpoints
 @app.get(path="/v1/health", tags=["Health Check"], description="Health check endpoint")
 async def health_v1():
     return await _health_response()

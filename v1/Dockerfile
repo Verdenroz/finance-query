@@ -56,6 +56,9 @@ ENV LOGO_TIMEOUT_SECONDS=${LOGO_TIMEOUT_SECONDS}
 ENV LOGO_CIRCUIT_BREAKER_THRESHOLD=${LOGO_CIRCUIT_BREAKER_THRESHOLD}
 ENV LOGO_CIRCUIT_BREAKER_TIMEOUT=${LOGO_CIRCUIT_BREAKER_TIMEOUT}
 
+# Application configuration
+# ENV REDIS_URL=redis://localhost:6379
+
 # Rate Limiting Configuration:
 # Self-deploying users can set their daily rate limit via APP_RATE_LIMIT_PER_DAY.
 # If not set, it defaults to 8000 requests per day.

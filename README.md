@@ -9,25 +9,30 @@
 [![CI](https://github.com/Verdenroz/finance-query/actions/workflows/ci.yml/badge.svg)](https://github.com/Verdenroz/finance-query/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Rust library for fetching financial data from Yahoo Finance, with an optional HTTP/WebSocket server.
+A Rust library and HTTP/WebSocket server for fetching financial data from Yahoo Finance.
 
-## Installation
+## What's in This Repository
+
+This repository mtaintains two services:
+
+- **Library** (`finance-query`) - Rust crate for programmatic access to Yahoo Finance data
+- **Server** (`finance-query-server`) - HTTP REST API and WebSocket server built on the library
+
+## Quick Start
+
+### Library
 
 Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
 finance-query = "2.0"
-```
 
-### Optional Features
-
-```toml
-# Enable DataFrame conversions with Polars
+# Or with DataFrame support (Polars integration)
 finance-query = { version = "2.0", features = ["dataframe"] }
 ```
 
-## Quick Start
+Basic usage:
 
 ```rust
 use finance_query::Ticker;
@@ -35,131 +40,64 @@ use finance_query::Ticker;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticker = Ticker::new("AAPL").await?;
-
-    // Quote data is lazy-loaded and cached
-    let quote = ticker.quote(true).await?; // true = include logo
+    let quote = ticker.quote(true).await?;
     println!("{}: ${}", quote.short_name, quote.regular_market_price);
-
     Ok(())
 }
 ```
 
-## Features
+### Server
 
-- **Real-time quotes** from Yahoo Finance
-- **Historical data** with customizable intervals and ranges
-- **Company information** including financials, holders, and analyst ratings
-- **Market data** including indices, sectors, and movers
-- **Technical indicators** (SMA, EMA, RSI, MACD, Bollinger Bands, etc.)
-- **News and earnings transcripts**
-- **WebSocket streaming** for real-time price updates
-- **Optional DataFrame support** with Polars integration
-
-## Examples
-
-### Historical Data
-
-```rust
-use finance_query::{Ticker, Interval, TimeRange};
-
-let ticker = Ticker::new("AAPL").await?;
-let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-
-for bar in &chart.bars {
-    println!("{}: Open={:.2}, Close={:.2}", bar.date, bar.open, bar.close);
-}
-```
-
-### Technical Indicators
-
-```rust
-let indicators = ticker.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
-
-println!("SMA 20: {:?}", indicators.sma20);
-println!("RSI 14: {:?}", indicators.rsi14);
-println!("MACD: {:?}", indicators.macd);
-```
-
-### Real-time Streaming
-
-```rust
-use finance_query::streaming::PriceStream;
-use futures::StreamExt;
-
-let mut stream = PriceStream::subscribe(&["AAPL", "NVDA", "TSLA"]).await?;
-
-while let Some(update) = stream.next().await {
-    println!("{}: ${:.2} ({:+.2}%)", update.id, update.price, update.change_percent);
-}
-```
-
-### Multiple Symbols
-
-```rust
-use finance_query::Tickers;
-
-let tickers = Tickers::new(vec!["AAPL", "GOOGL", "MSFT"]).await?;
-let quotes = tickers.quotes(false).await?;
-
-for (symbol, result) in quotes.results {
-    match result {
-        Ok(quote) => println!("{}: ${}", symbol, quote.regular_market_price),
-        Err(e) => println!("{}: Error - {}", symbol, e),
-    }
-}
-```
-
-## Server Binary
-
-A convenience HTTP/WebSocket server is included for those who want a REST API:
+Run the server locally (requires [Rust](https://rustup.rs/)):
 
 ```bash
-# Clone and run
 git clone https://github.com/Verdenroz/finance-query.git
 cd finance-query
-make serve
-
-# Or with Docker
-docker build -f server/Dockerfile -t financequery:v2 .
-docker run -p 8000:8000 financequery:v2
+make serve  # Compiles and runs v2 server
 ```
 
-### Server Endpoints
+Or run both v1 and v2 with Docker Compose:
 
-| Endpoint | Description |
-|----------|-------------|
-| `/v2/quote/{symbol}` | Detailed quote |
-| `/v2/quotes?symbols=...` | Batch quotes |
-| `/v2/chart/{symbol}` | Historical OHLCV data |
-| `/v2/indicators/{symbol}` | Technical indicators |
-| `/v2/news/{symbol}` | Symbol news |
-| `/v2/stream` | WebSocket streaming |
+```bash
+make docker-compose  # Starts v1 (port 8002), v2 (port 8001), Redis, and Nginx
+```
 
-See the [server documentation](docs/server/overview.md) for full API reference.
-
-## Python Version (v1)
-
-The original Python implementation is available in the [`v1/`](./v1/) directory with its own documentation.
+The v2 server provides REST endpoints at `/v2/*` and WebSocket streaming at `/v2/stream`.
 
 ## Documentation
 
-- [Library API Docs](https://docs.rs/finance-query)
-- [Server API Reference](https://financequery.apidocumentation.com/)
+**Full documentation is available at [verdenroz.github.io/finance-query](https://verdenroz.github.io/finance-query)**
 
-## Development
+- [Library Guide](https://verdenroz.github.io/finance-query/library/getting-started/) - Getting started with the Rust library
+- [REST API Reference](https://verdenroz.github.io/finance-query/server/api-reference/) - Interactive OpenAPI documentation
+- [WebSocket API Reference](https://verdenroz.github.io/finance-query/server/websocket-api-reference/) - Real-time streaming API
+- [Contributing](https://verdenroz.github.io/finance-query/development/contributing/) - Development setup and guidelines
+
+Additional resources:
+
+- [Rust API Docs](https://docs.rs/finance-query) - Detailed API documentation on docs.rs
+- [Crates.io](https://crates.io/crates/finance-query) - Published crate
+
+## Legacy Python Version (v1)
+
+The original Python implementation is available in the [`v1/`](./v1/) directory. It is no longer actively maintained but remains available for reference.
+
+## Contributing
+
+We welcome contributions! See the [Contributing Guide](https://verdenroz.github.io/finance-query/development/contributing/) for setup instructions and development workflow.
 
 ```bash
-make help          # Show all commands
-make test          # Run tests
-make lint          # Run linter
-make docs-serve    # Serve documentation
+make install-dev  # Set up development environment
+make test-fast    # Run tests
+make fix          # Auto-fix formatting and linting
 ```
+
+## Acknowledgements
+
+This project relies on Yahoo Finance's publicly available data. We are grateful to Yahoo for providing this data.
+
+Special thanks to [yfinance](https://github.com/ranaroussi/yfinance), the popular Python library that inspired this project. Many of the API patterns and data structures are adapted from yfinance's excellent work.
 
 ## License
 
 MIT License - see [LICENSE](LICENSE) for details.
-
-## Support
-
-- Issues: [GitHub Issues](https://github.com/Verdenroz/finance-query/issues)
-- Email: harveytseng2@gmail.com

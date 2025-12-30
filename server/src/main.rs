@@ -568,9 +568,6 @@ async fn create_app() -> Router {
 
     // Build router with routes
     Router::new()
-        // Root health endpoints for Docker healthcheck (internal container use)
-        .route("/health", get(health_check))
-        .route("/ping", get(ping))
         // Nest all API routes under /v2
         .nest("/v2", api_routes())
         .layer(Extension(state))
