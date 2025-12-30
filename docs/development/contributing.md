@@ -209,34 +209,34 @@ Open a pull request on GitHub with:
 
 1. Add endpoint URL in `src/endpoints/`:
 
-```rust
-// src/endpoints/quote.rs
-pub fn options_chain(symbol: &str) -> String {
-    format!("{}/v7/finance/options/{}", BASE_URL, symbol)
-}
-```
+    ```rust
+    // src/endpoints/quote.rs
+    pub fn options_chain(symbol: &str) -> String {
+        format!("{}/v7/finance/options/{}", BASE_URL, symbol)
+    }
+    ```
 
 2. Define model in `src/models/`:
 
-```rust
-// src/models/options.rs
-#[derive(Debug, Clone, Deserialize)]
-pub struct OptionsChain {
-    pub symbol: String,
-    pub expiration_dates: Vec<i64>,
-    // ...
-}
-```
+    ```rust
+    // src/models/options.rs
+    #[derive(Debug, Clone, Deserialize)]
+    pub struct OptionsChain {
+        pub symbol: String,
+        pub expiration_dates: Vec<i64>,
+        // ...
+    }
+    ```
 
 3. Add method to `Ticker`:
 
-```rust
-// src/ticker/core.rs
-pub async fn options(&self) -> Result<OptionsChain> {
-    let url = endpoints::options_chain(&self.symbol);
-    self.client.fetch_json(&url).await
-}
-```
+    ```rust
+    // src/ticker/core.rs
+    pub async fn options(&self) -> Result<OptionsChain> {
+        let url = endpoints::options_chain(&self.symbol);
+        self.client.fetch_json(&url).await
+    }
+    ```
 
 **Server side:**
 

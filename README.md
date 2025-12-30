@@ -1,7 +1,7 @@
 <h1 align="center">Finance Query</h1>
 
 <p align="center">
-  <img src=".github/assets/logo.png" alt="FinanceQuery" width="187">
+  <img src=".github/assets/logo.png" alt="FinanceQuery" width="187" style="background:white; border-radius:8px; padding:8px;">
 </p>
 
 [![Crates.io](https://img.shields.io/crates/v/finance-query.svg)](https://crates.io/crates/finance-query)

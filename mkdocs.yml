@@ -7,8 +7,8 @@ repo_url: https://github.com/Verdenroz/finance-query
 repo_name: Verdenroz/finance-query
 
 theme:
-  favicon: .github/assets/logo.png
-  logo: .github/assets/logo.png
+  favicon: assets/logo.png
+  logo: assets/logo.png
   name: material
   palette:
     - scheme: default

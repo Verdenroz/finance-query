@@ -106,6 +106,7 @@ jobs:
           context: .
           file: server/Dockerfile
           push: false
+          load: true
           tags: financequery:v2-ci
           cache-from: type=gha
           cache-to: type=gha,mode=max
