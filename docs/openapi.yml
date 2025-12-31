@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Finance Query API
-  version: 2.0.0
+  version: 2.0.1
   description: |
     Combined REST API for fetching financial data.
     Includes endpoints from Finance Query v2 and the legacy v1 API.
