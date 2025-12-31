@@ -11,6 +11,8 @@
 
 **Finance Query** is a Rust library and server for financial data, inspired by the popular `yfinance` Python library. It provides a simple interface to access real-time quotes, historical charts, and financial statements primarily from Yahoo Finance.
 
+A free hosted API is available at **[finance-query.com](https://finance-query.com)** — no setup required!
+
 It is designed to be used in two ways:
 
 *   **Rust Library**: A type-safe crate for direct integration into your Rust projects.
@@ -90,26 +92,26 @@ Finance Query is ready to use out of the box. Here's how to get stock data:
 
     ```bash
     # Get detailed quote for Apple
-    curl "http://localhost:8000/v2/quote/AAPL?logo=true"
+    curl "https://finance-query.com/v2/quote/AAPL?logo=true"
 
     # Get historical chart data
-    curl "http://localhost:8000/v2/chart/AAPL?interval=1d&range=1mo"
+    curl "https://finance-query.com/v2/chart/AAPL?interval=1d&range=1mo"
 
     # Search for symbols
-    curl "http://localhost:8000/v2/lookup?q=Apple"
+    curl "https://finance-query.com/v2/lookup?q=Apple"
 
-    # Get predefined screeenrs
-    curl "http://localhost:8000/v2/screeners/most-actives"
+    # Get predefined screeners
+    curl "https://finance-query.com/v2/screeners/most-actives"
 
     # Get company news
-    curl "http://localhost:8000/v2/news/AAPL"
+    curl "https://finance-query.com/v2/news/AAPL"
     ```
 
 === "WebSocket"
 
     ```javascript
     // Connect to WebSocket for real-time updates
-    const ws = new WebSocket('ws://localhost:8000/v2/stream');
+    const ws = new WebSocket('wss://finance-query.com/v2/stream');
 
     ws.onopen = () => {
         console.log('Connected to Finance Query WebSocket');

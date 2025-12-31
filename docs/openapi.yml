@@ -13,6 +13,8 @@ info:
     identifier: MIT
 
 servers:
+  - url: https://finance-query.com
+    description: Production server
   - url: http://localhost:8000
     description: Local development server
 

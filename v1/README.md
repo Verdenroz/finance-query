@@ -13,6 +13,18 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi)](https://fastapi.tiangolo.com)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
+> **⚠️ Deprecation Notice**
+>
+> The legacy AWS and Render hosted servers are **deprecated** and will be taken offline:
+> - `https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod` (AWS)
+> - `https://finance-query.onrender.com` (Render)
+>
+> Please migrate to the new unified API at **[finance-query.com](https://finance-query.com)**:
+> - REST API: `https://finance-query.com/v1/*` (v1 endpoints) or `https://finance-query.com/v2/*` (v2 endpoints)
+> - WebSocket: `wss://finance-query.com/v2/stream`
+>
+> The v2 API (Rust) is recommended for new integrations. See the [main documentation](https://verdenroz.github.io/finance-query).
+
 **FinanceQuery** is an open-source API for financial data that provides real-time quotes, market data, news, and
 technical indicators. It sources data from the unofficial Yahoo Finance API, web scraping, and other financial data
 providers.
@@ -59,23 +71,16 @@ python -m uvicorn src.main:app --reload
 
 ## Usage/Examples
 
-The exposed endpoints to the API are:
+The API is hosted at **[finance-query.com](https://finance-query.com)**:
 
-- https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod
-- https://finance-query.onrender.com
-
-An `x-api-key` header can be added if you have enabled security and rate limiting. If a key is not provided, or an
-invalid key is used, a rate limit of 8000 requests/day is applied to the request's ip address.
-
-> If you are deploying this for yourself, you can create your own admin key which will not be rate limited. See
-> the [.env template](.env.template).
+- v1 API (Python): `https://finance-query.com/v1/*`
+- v2 API (Rust): `https://finance-query.com/v2/*`
 
 ### Example REST Request
 
 ```bash
 # Get detailed quote for NVIDIA stock
-curl -X GET 'https://finance-query.onrender.com/v1/quotes?symbols=nvda' \
-  -H 'x-api-key: your-api-key'
+curl -X GET 'https://finance-query.com/v1/quotes?symbols=nvda'
 ```
 
 #### Response
@@ -125,7 +130,7 @@ curl -X GET 'https://finance-query.onrender.com/v1/quotes?symbols=nvda' \
 
 ```javascript
 // Connect to WebSocket for real-time updates
-const ws = new WebSocket('wss://finance-query.onrender.com/quotes');
+const ws = new WebSocket('wss://finance-query.com/quotes');
 
 ws.onopen = () => {
     console.log('Connected to FinanceQuery WebSocket');
@@ -277,9 +282,7 @@ docker run -p 8000:8000 \
 > with since it enables the websockets, but will require the paid Starter Plan as this API requires extensive memory. If
 > you are tight on cash, consider Lambda.
 
-> **WebSocket Support**: Remember the websockets above are not available through Lambda. If you deploy to Render
-> instead, you will be able to connect to the websockets through a request that looks like
-`wss://finance-query.onrender.com/...`
+> **WebSocket Support**: WebSockets are not available through Lambda. The hosted API at `wss://finance-query.com/...` supports WebSocket connections.
 
 ## Configuration
 

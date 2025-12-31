@@ -11,6 +11,10 @@ info:
     3. Receive real-time price updates as they occur
 
 servers:
+  production:
+    url: finance-query.com/v2/stream
+    protocol: wss
+    description: Production server
   development:
     url: localhost:8000/v2/stream
     protocol: ws

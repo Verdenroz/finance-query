@@ -11,6 +11,18 @@
 
 A Rust library and HTTP/WebSocket server for fetching financial data from Yahoo Finance.
 
+## Hosted API
+
+A free hosted version is available at **[finance-query.com](https://finance-query.com)**:
+
+```bash
+# Get a quote
+curl "https://finance-query.com/v2/quote/AAPL"
+
+# Real-time streaming
+wscat -c "wss://finance-query.com/v2/stream"
+```
+
 ## What's in This Repository
 
 This repository mtaintains two services:

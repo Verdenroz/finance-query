@@ -10,10 +10,10 @@ info:
     url: https://github.com/verdenroz/finance-query
 
 servers:
+  - url: https://finance-query.com
+    description: Production server
   - url: http://localhost:8000
     description: Local development server
-  - url: http://localhost:8000/v2
-    description: API v2
 
 tags:
   - name: Health

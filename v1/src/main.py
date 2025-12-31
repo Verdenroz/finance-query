@@ -135,8 +135,7 @@ app = FastAPI(
     version="1.10.4",
     description="FinanceQuery is a free and open-source API for financial data, retrieving data from web scraping & Yahoo Finance's Unofficial API.",
     servers=[
-        {"url": "https://finance-query.onrender.com", "description": "Render server"},
-        {"url": "https://43pk30s7aj.execute-api.us-east-2.amazonaws.com/prod", "description": "AWS server"},
+        {"url": "https://finance-query.com/v1", "description": "Production server"},
         {"url": "http://127.0.0.1:8000", "description": "Local server"},
     ],
     contact={"name": "Harvey Tseng", "email": "harveytseng2@gmail.com"},

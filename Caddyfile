@@ -45,6 +45,12 @@
         reverse_proxy finance-query-v1:8000
     }
 
+    # Root path shows health status
+    handle / {
+        rewrite * /v2/health
+        reverse_proxy finance-query-v2:8000
+    }
+
     # Default to V2
     handle {
         reverse_proxy finance-query-v2:8000
