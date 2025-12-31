@@ -4,10 +4,12 @@
 
     # Health endpoints
     handle /health {
+        rewrite * /v2/health
         reverse_proxy finance-query-v2:8000
     }
 
     handle /ping {
+        rewrite * /v2/health
         reverse_proxy finance-query-v2:8000
     }
 
