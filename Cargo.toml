@@ -13,7 +13,7 @@ repository = "https://github.com/Verdenroz/finance-query"
 homepage = "https://github.com/Verdenroz/finance-query"
 documentation = "https://docs.rs/finance-query"
 readme = "README.md"
-keywords = ["finance", "yahoo", "yahoo-finance", "stocks", "quotes", "market-data"]
+keywords = ["finance", "yahoo", "stocks", "quotes", "market-data"]
 categories = ["api-bindings", "finance"]
 exclude = [
     "server/",
