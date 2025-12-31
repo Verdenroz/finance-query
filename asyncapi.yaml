@@ -1,0 +1,202 @@
+asyncapi: 2.6.0
+info:
+  title: Finance Query Streaming API
+  version: 2.0.0
+  description: |
+    Real-time price streaming from Yahoo Finance via WebSocket.
+
+    ## Connection Flow
+    1. Connect to the WebSocket endpoint
+    2. Send a subscribe message with ticker symbols
+    3. Receive real-time price updates as they occur
+
+servers:
+  development:
+    url: localhost:8000/v2/stream
+    protocol: ws
+    description: Local development server
+
+channels:
+  /:
+    publish:
+      operationId: sendMessage
+      summary: Send messages to the server
+      message:
+        oneOf:
+          - $ref: '#/components/messages/Subscribe'
+          - $ref: '#/components/messages/Unsubscribe'
+    subscribe:
+      operationId: receiveMessage
+      summary: Receive price updates from the server
+      message:
+        $ref: '#/components/messages/PriceUpdate'
+
+components:
+  messages:
+    Subscribe:
+      name: subscribe
+      title: Subscribe Message
+      summary: Subscribe to ticker symbols
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - subscribe
+        properties:
+          subscribe:
+            type: array
+            items:
+              type: string
+            description: List of ticker symbols to subscribe to
+            example:
+              - AAPL
+              - NVDA
+              - BTC-USD
+
+    Unsubscribe:
+      name: unsubscribe
+      title: Unsubscribe Message
+      summary: Unsubscribe from ticker symbols
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - unsubscribe
+        properties:
+          unsubscribe:
+            type: array
+            items:
+              type: string
+            description: List of ticker symbols to unsubscribe from
+            example:
+              - AAPL
+
+    PriceUpdate:
+      name: priceUpdate
+      title: Price Update
+      summary: Real-time price update
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/PriceUpdate'
+
+  schemas:
+    PriceUpdate:
+      type: object
+      description: Real-time price update from Yahoo Finance
+      properties:
+        id:
+          type: string
+          description: Ticker symbol
+          example: BTC-USD
+        price:
+          type: number
+          format: float
+          description: Current price
+          example: 87690.22
+        time:
+          type: integer
+          format: int64
+          description: Unix timestamp in milliseconds
+          example: 1735364458000
+        currency:
+          type: string
+          description: Currency code
+          example: USD
+        exchange:
+          type: string
+          description: Exchange code
+          example: CCC
+        quoteType:
+          $ref: '#/components/schemas/QuoteType'
+        marketHours:
+          $ref: '#/components/schemas/MarketHoursType'
+        changePercent:
+          type: number
+          format: float
+          description: Percent change from previous close
+        dayVolume:
+          type: integer
+          format: int64
+          description: Day's trading volume
+        dayHigh:
+          type: number
+          format: float
+          description: Day's high price
+        dayLow:
+          type: number
+          format: float
+          description: Day's low price
+        change:
+          type: number
+          format: float
+          description: Price change from previous close
+        shortName:
+          type: string
+          description: Short name/description
+        openPrice:
+          type: number
+          format: float
+          description: Opening price
+        previousClose:
+          type: number
+          format: float
+          description: Previous close price
+        bid:
+          type: number
+          format: float
+          description: Bid price
+        bidSize:
+          type: integer
+          format: int64
+          description: Bid size
+        ask:
+          type: number
+          format: float
+          description: Ask price
+        askSize:
+          type: integer
+          format: int64
+          description: Ask size
+        marketCap:
+          type: number
+          format: double
+          description: Market capitalization
+
+    QuoteType:
+      type: string
+      description: Type of financial instrument
+      enum:
+        - NONE
+        - ALT_SYMBOL
+        - HEARTBEAT
+        - EQUITY
+        - INDEX
+        - MUTUAL_FUND
+        - MONEY_MARKET
+        - OPTION
+        - CURRENCY
+        - WARRANT
+        - BOND
+        - FUTURE
+        - ETF
+        - COMMODITY
+        - ECN_QUOTE
+        - CRYPTOCURRENCY
+        - INDICATOR
+        - INDUSTRY
+
+    MarketHoursType:
+      type: string
+      description: Market hours indicator
+      enum:
+        - PRE_MARKET
+        - REGULAR_MARKET
+        - POST_MARKET
+        - EXTENDED_HOURS_MARKET
+
+    OptionType:
+      type: string
+      description: Option type (for options contracts)
+      enum:
+        - CALL
+        - PUT

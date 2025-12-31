@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A FastAPI service for fetching financial data from various sources">
+        <meta name="description" content="A Rust library for fetching financial data from Yahoo Finance">
       
       
         <meta name="author" content="Harvey Tseng">
@@ -15,14 +15,15 @@
         <link rel="canonical" href="https://verdenroz.github.io/finance-query/development/contributing/">
       
       
-        <link rel="prev" href="../../websockets/hours/">
+        <link rel="prev" href="../../server/websocket-api-reference/">
       
       
-        <link rel="next" href="../architecture/">
+      
+        
       
       
       <link rel="icon" href="../../assets/logo.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.23">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
@@ -30,10 +31,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.84d31ad4.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
-        <link rel="stylesheet" href="../../assets/stylesheets/palette.06af60db.min.css">
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
       
       
 
@@ -52,13 +53,10 @@
       
     
     
-      <link rel="stylesheet" href="../../assets/_mkdocstrings.css">
-    
     <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
 
-    
     
     
   </head>
@@ -71,7 +69,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal">
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="orange">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -80,7 +78,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#contributor-guide" class="md-skip">
+        <a href="#contributing" class="md-skip">
           Skip to content
         </a>
       
@@ -92,14 +90,11 @@
     
       
 
-  
-
-<header class="md-header md-header--shadow" data-md-component="header">
+<header class="md-header" data-md-component="header">
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href="../.." title="Finance Query" class="md-header__button md-logo" aria-label="Finance Query" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../../assets/logo.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -129,7 +124,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
@@ -139,7 +134,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="teal" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-orange" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
@@ -216,6 +211,102 @@
       
         
           
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../library/getting-started/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Library
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../server/api-reference/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Server
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="./" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
         
       
       <main class="md-main" data-md-component="main">
@@ -229,13 +320,14 @@
                     
 
 
+  
 
-<nav class="md-nav md-nav--primary" aria-label="Navigation" data-md-level="0">
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
   <label class="md-nav__title" for="__drawer">
     <a href="../.." title="Finance Query" class="md-nav__button md-logo" aria-label="Finance Query" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../../assets/logo.png" alt="logo">
 
     </a>
     Finance Query
@@ -267,9 +359,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Home
+  
+
     
   </span>
+  
   
 
       </a>
@@ -279,22 +376,271 @@
     
       
       
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Library
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Library
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
   
   
   
   
     <li class="md-nav__item">
-      <a href="../../getting-started/" class="md-nav__link">
+      <a href="../../library/getting-started/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
+    
+  
     Getting Started
+  
+
     
   </span>
   
+  
 
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/ticker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ticker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/tickers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Batch Tickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/finance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Finance Module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/dataframe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DataFrame Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/models/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Models
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
@@ -314,6 +660,9 @@
       
     
     
+    
+      
+      
     
     
     <li class="md-nav__item md-nav__item--nested">
@@ -330,9 +679,14 @@
   
   
   <span class="md-ellipsis">
-    Configuration
+    
+  
+    Server
+  
+
     
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
@@ -341,7 +695,11 @@
         <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
           <label class="md-nav__title" for="__nav_3">
             <span class="md-nav__icon md-icon"></span>
-            Configuration
+            
+  
+    Server
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -352,14 +710,19 @@
   
   
     <li class="md-nav__item">
-      <a href="../../logging/" class="md-nav__link">
+      <a href="../../server/api-reference/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Logging
+    
+  
+    REST API Reference
+  
+
     
   </span>
+  
   
 
       </a>
@@ -375,634 +738,19 @@
   
   
     <li class="md-nav__item">
-      <a href="../../rate-limiting/" class="md-nav__link">
+      <a href="../../server/websocket-api-reference/" class="md-nav__link">
         
   
   
   <span class="md-ellipsis">
-    Rate Limiting
+    
+  
+    WebSocket API Reference
+  
+
     
   </span>
   
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../deployment/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Deployment
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
-        
-          
-          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    API Reference
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_5">
-            <span class="md-nav__icon md-icon"></span>
-            API Reference
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/health/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Health Check
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/hours/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Market Hours
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/quotes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Quotes
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/historical/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Historical Data
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/financials/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Financials
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/holders/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Holders
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/earnings_transcript/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Earnings Transcript
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/movers/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Market Movers
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/news/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    News
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/indices/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Indices
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/sectors/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Sectors
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/search/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Search
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/indicators/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Technical Indicators
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/analysis/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Analysis
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../api/stream/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    SSE Stream
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-          </ul>
-        </nav>
-      
-    </li>
-  
-
-    
-      
-      
-  
-  
-  
-  
-    
-    
-      
-        
-      
-        
-      
-        
-      
-        
-      
-        
-      
-    
-    
-    
-    
-    <li class="md-nav__item md-nav__item--nested">
-      
-        
-        
-          
-        
-        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_6" >
-        
-          
-          <label class="md-nav__link" for="__nav_6" id="__nav_6_label" tabindex="0">
-            
-  
-  
-  <span class="md-ellipsis">
-    Websockets
-    
-  </span>
-  
-
-            <span class="md-nav__icon md-icon"></span>
-          </label>
-        
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_6_label" aria-expanded="false">
-          <label class="md-nav__title" for="__nav_6">
-            <span class="md-nav__icon md-icon"></span>
-            Websockets
-          </label>
-          <ul class="md-nav__list" data-md-scrollfix>
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../websockets/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Overview
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../websockets/profile/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Profile
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../websockets/quotes/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Quotes
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../websockets/market/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Market
-    
-  </span>
-  
-
-      </a>
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../../websockets/hours/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Hours
-    
-  </span>
   
 
       </a>
@@ -1031,36 +779,49 @@
       
         
       
-        
-      
     
     
     
-    
-    <li class="md-nav__item md-nav__item--active md-nav__item--nested">
       
         
         
-        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_7" checked>
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_4" checked>
         
           
-          <label class="md-nav__link" for="__nav_7" id="__nav_7_label" tabindex="0">
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="">
             
   
   
   <span class="md-ellipsis">
+    
+  
     Development
+  
+
     
   </span>
+  
   
 
             <span class="md-nav__icon md-icon"></span>
           </label>
         
-        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_7_label" aria-expanded="true">
-          <label class="md-nav__title" for="__nav_7">
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_4">
             <span class="md-nav__icon md-icon"></span>
-            Development
+            
+  
+    Development
+  
+
           </label>
           <ul class="md-nav__list" data-md-scrollfix>
             
@@ -1085,9 +846,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Contributing
+  
+
     
   </span>
+  
   
 
           <span class="md-nav__icon md-icon"></span>
@@ -1098,9 +864,14 @@
   
   
   <span class="md-ellipsis">
+    
+  
     Contributing
+  
+
     
   </span>
+  
   
 
       </a>
@@ -1121,64 +892,67 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#how-to-report-a-bug" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
-      How to report a bug
+      
+        Quick Start
+      
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-to-request-a-feature" class="md-nav__link">
+  <a href="#useful-commands" class="md-nav__link">
     <span class="md-ellipsis">
-      How to request a feature
+      
+        Useful Commands
+      
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-to-set-up-your-development-environment" class="md-nav__link">
+  <a href="#development-workflow" class="md-nav__link">
     <span class="md-ellipsis">
-      How to set up your development environment
+      
+        Development Workflow
+      
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How to set up your development environment">
+    <nav class="md-nav" aria-label="Development Workflow">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#quick-setup-with-makefile-recommended" class="md-nav__link">
+  <a href="#1-make-your-changes" class="md-nav__link">
     <span class="md-ellipsis">
-      Quick Setup with Makefile (Recommended)
+      
+        1. Make Your Changes
+      
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#manual-setup" class="md-nav__link">
+  <a href="#2-check-your-code" class="md-nav__link">
     <span class="md-ellipsis">
-      Manual Setup
+      
+        2. Check Your Code
+      
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#legacy-setup-with-pip" class="md-nav__link">
+  <a href="#3-test-thoroughly" class="md-nav__link">
     <span class="md-ellipsis">
-      Legacy Setup with pip
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#setting-up-environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      Setting up environment variables
+      
+        3. Test Thoroughly
+      
     </span>
   </a>
   
@@ -1190,118 +964,34 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-to-test-the-project" class="md-nav__link">
+  <a href="#code-standards" class="md-nav__link">
     <span class="md-ellipsis">
-      How to test the project
-    </span>
-  </a>
-  
-</li>
       
-        <li class="md-nav__item">
-  <a href="#local-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      Local development
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Local development">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-makefile-recommended" class="md-nav__link">
-    <span class="md-ellipsis">
-      Using Makefile (Recommended)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-development-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      Manual Development Server
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#docker-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker Development
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Docker Development">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#docker-with-environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker with Environment Variables
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
+        Code Standards
       
-        <li class="md-nav__item">
-  <a href="#how-to-submit-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      How to submit changes
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How to submit changes">
+    <nav class="md-nav" aria-label="Code Standards">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#code-quality-checks" class="md-nav__link">
+  <a href="#write-idiomatic-rust" class="md-nav__link">
     <span class="md-ellipsis">
-      Code Quality Checks
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Code Quality Checks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-makefile-recommended_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Using Makefile (Recommended)
+      
+        Write Idiomatic Rust
+      
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#manual-code-quality" class="md-nav__link">
+  <a href="#document-public-apis" class="md-nav__link">
     <span class="md-ellipsis">
-      Manual Code Quality
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#branch-workflow" class="md-nav__link">
-    <span class="md-ellipsis">
-      Branch Workflow
+      
+        Document Public APIs
+      
     </span>
   </a>
   
@@ -1313,9 +1003,161 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#project-architecture" class="md-nav__link">
+  <a href="#testing-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
-      Project architecture
+      
+        Testing Guidelines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Guidelines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unit-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unit Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#doc-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Doc Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submitting-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submitting Changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Submitting Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-a-branch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create a Branch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-commit-your-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Commit Your Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-push-and-create-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Push and Create PR
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Tasks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Tasks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Help
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
     </span>
   </a>
   
@@ -1325,29 +1167,6 @@
   
 </nav>
       
-    </li>
-  
-
-              
-            
-              
-                
-  
-  
-  
-  
-    <li class="md-nav__item">
-      <a href="../architecture/" class="md-nav__link">
-        
-  
-  
-  <span class="md-ellipsis">
-    Architecture
-    
-  </span>
-  
-
-      </a>
     </li>
   
 
@@ -1387,64 +1206,67 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#how-to-report-a-bug" class="md-nav__link">
+  <a href="#quick-start" class="md-nav__link">
     <span class="md-ellipsis">
-      How to report a bug
+      
+        Quick Start
+      
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-to-request-a-feature" class="md-nav__link">
+  <a href="#useful-commands" class="md-nav__link">
     <span class="md-ellipsis">
-      How to request a feature
+      
+        Useful Commands
+      
     </span>
   </a>
   
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-to-set-up-your-development-environment" class="md-nav__link">
+  <a href="#development-workflow" class="md-nav__link">
     <span class="md-ellipsis">
-      How to set up your development environment
+      
+        Development Workflow
+      
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How to set up your development environment">
+    <nav class="md-nav" aria-label="Development Workflow">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#quick-setup-with-makefile-recommended" class="md-nav__link">
+  <a href="#1-make-your-changes" class="md-nav__link">
     <span class="md-ellipsis">
-      Quick Setup with Makefile (Recommended)
+      
+        1. Make Your Changes
+      
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#manual-setup" class="md-nav__link">
+  <a href="#2-check-your-code" class="md-nav__link">
     <span class="md-ellipsis">
-      Manual Setup
+      
+        2. Check Your Code
+      
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#legacy-setup-with-pip" class="md-nav__link">
+  <a href="#3-test-thoroughly" class="md-nav__link">
     <span class="md-ellipsis">
-      Legacy Setup with pip
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#setting-up-environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      Setting up environment variables
+      
+        3. Test Thoroughly
+      
     </span>
   </a>
   
@@ -1456,118 +1278,34 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#how-to-test-the-project" class="md-nav__link">
+  <a href="#code-standards" class="md-nav__link">
     <span class="md-ellipsis">
-      How to test the project
-    </span>
-  </a>
-  
-</li>
       
-        <li class="md-nav__item">
-  <a href="#local-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      Local development
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Local development">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-makefile-recommended" class="md-nav__link">
-    <span class="md-ellipsis">
-      Using Makefile (Recommended)
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#manual-development-server" class="md-nav__link">
-    <span class="md-ellipsis">
-      Manual Development Server
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#docker-development" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker Development
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Docker Development">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#docker-with-environment-variables" class="md-nav__link">
-    <span class="md-ellipsis">
-      Docker with Environment Variables
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
+        Code Standards
       
-        <li class="md-nav__item">
-  <a href="#how-to-submit-changes" class="md-nav__link">
-    <span class="md-ellipsis">
-      How to submit changes
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="How to submit changes">
+    <nav class="md-nav" aria-label="Code Standards">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
-  <a href="#code-quality-checks" class="md-nav__link">
+  <a href="#write-idiomatic-rust" class="md-nav__link">
     <span class="md-ellipsis">
-      Code Quality Checks
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="Code Quality Checks">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#using-makefile-recommended_1" class="md-nav__link">
-    <span class="md-ellipsis">
-      Using Makefile (Recommended)
+      
+        Write Idiomatic Rust
+      
     </span>
   </a>
   
 </li>
         
           <li class="md-nav__item">
-  <a href="#manual-code-quality" class="md-nav__link">
+  <a href="#document-public-apis" class="md-nav__link">
     <span class="md-ellipsis">
-      Manual Code Quality
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#branch-workflow" class="md-nav__link">
-    <span class="md-ellipsis">
-      Branch Workflow
+      
+        Document Public APIs
+      
     </span>
   </a>
   
@@ -1579,9 +1317,161 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#project-architecture" class="md-nav__link">
+  <a href="#testing-guidelines" class="md-nav__link">
     <span class="md-ellipsis">
-      Project architecture
+      
+        Testing Guidelines
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Testing Guidelines">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#unit-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Unit Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#integration-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Integration Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#doc-tests" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Doc Tests
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#submitting-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Submitting Changes
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Submitting Changes">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-create-a-branch" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Create a Branch
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-commit-your-changes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Commit Your Changes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-push-and-create-pr" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Push and Create PR
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-tasks" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Tasks
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Tasks">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#adding-a-new-endpoint" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Adding a New Endpoint
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#updating-dependencies" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Updating Dependencies
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-help" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Help
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#license" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        License
+      
     </span>
   </a>
   
@@ -1597,6 +1487,7 @@
           
           
             <div class="md-content" data-md-component="content">
+              
               <article class="md-content__inner md-typeset">
                 
                   
@@ -1606,204 +1497,211 @@
   
 
 
-<h1 id="contributor-guide">Contributor Guide<a class="headerlink" href="#contributor-guide" title="Permanent link">&para;</a></h1>
-<p>Thank you for your interest in improving FinanceQuery.
-This project is open-source under the <a href="https://opensource.org/licenses/MIT">MIT license</a> and
-welcomes contributions in the form of bug reports, feature requests, and pull requests.</p>
-<p>Here is a list of important resources for contributors:</p>
-<ul>
-<li><a href="https://github.com/Verdenroz/finance-query">Source Code</a></li>
-<li><a href="https://financequery.apidocumentation.com/reference">Demo</a></li>
-<li><a href="https://verdenroz.github.io/finance-query/">Documentation</a></li>
-<li><a href="https://github.com/Verdenroz/finance-query/issues">Issue Tracker</a></li>
-<li><a href="https://github.com/Verdenroz/finance-query/CODE_OF_CONDUCT.md">Code of Conduct</a></li>
-</ul>
-<h2 id="how-to-report-a-bug">How to report a bug<a class="headerlink" href="#how-to-report-a-bug" title="Permanent link">&para;</a></h2>
-<p>Report bugs on the <a href="https://github.com/Verdenroz/finance-query/issues">Issue Tracker</a>.</p>
-<p>When filing an issue, make sure to answer these questions:</p>
-<ul>
-<li>Which operating system and Python version are you using?</li>
-<li>Which version of this project are you using?</li>
-<li>What did you do?</li>
-<li>What did you expect to see?</li>
-<li>What did you see instead?</li>
-</ul>
-<p>The best way to get your bug fixed is to provide a test case,
-and/or steps to reproduce the issue.</p>
-<h2 id="how-to-request-a-feature">How to request a feature<a class="headerlink" href="#how-to-request-a-feature" title="Permanent link">&para;</a></h2>
-<p>Request features on the <a href="https://github.com/Verdenroz/finance-query/issues">Issue Tracker</a>.</p>
-<h2 id="how-to-set-up-your-development-environment">How to set up your development environment<a class="headerlink" href="#how-to-set-up-your-development-environment" title="Permanent link">&para;</a></h2>
-<p>You need Python 3.11 or newer. We recommend using a virtual environment.</p>
-<h3 id="quick-setup-with-makefile-recommended">Quick Setup with Makefile (Recommended)<a class="headerlink" href="#quick-setup-with-makefile-recommended" title="Permanent link">&para;</a></h3>
-<p>For the fastest setup, use the provided Makefile:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="gp">$ </span>make<span class="w"> </span>install-dev
+<h1 id="contributing">Contributing<a class="headerlink" href="#contributing" title="Permanent link">&para;</a></h1>
+<p>We welcome contributions to FinanceQuery! This guide will help you get started.</p>
+<div class="admonition warning">
+<p class="admonition-title">V1 (Python) is Not Maintained</p>
+<p>The legacy Python implementation in <code>/v1</code> is no longer actively maintained. All development focuses on the Rust library and server. The v1 source code, workflow, and documentation remain available for reference.</p>
+</div>
+<h2 id="quick-start">Quick Start<a class="headerlink" href="#quick-start" title="Permanent link">&para;</a></h2>
+<p>Clone and set up the development environment:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/Verdenroz/finance-query.git
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">cd</span><span class="w"> </span>finance-query
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>make<span class="w"> </span>install-dev<span class="w">  </span><span class="c1"># Installs rustfmt, clippy, prek, sets up pre-commit hooks</span>
 </code></pre></div>
-<p>This will:
-- Install all dependencies using <code>uv</code>
-- Build required Cython extensions for technical indicators
-- Set up pre-commit hooks automatically</p>
-<p>Then you can use these commands for development:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="gp">$ </span>make<span class="w"> </span><span class="nb">help</span><span class="w">        </span><span class="c1"># Show all available commands</span>
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="gp">$ </span>make<span class="w"> </span>build<span class="w">       </span><span class="c1"># Build Cython extensions (required for technical indicators)</span>
-<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="gp">$ </span>make<span class="w"> </span>serve<span class="w">       </span><span class="c1"># Start development server at http://localhost:8000</span>
-<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="gp">$ </span>make<span class="w"> </span><span class="nb">test</span><span class="w">        </span><span class="c1"># Run tests with coverage</span>
-<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="gp">$ </span>make<span class="w"> </span>lint<span class="w">        </span><span class="c1"># Run linting and formatting (pre-commit hooks)</span>
-<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="gp">$ </span>make<span class="w"> </span>docs<span class="w">        </span><span class="c1"># Serve documentation at http://localhost:8001</span>
-<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="gp">$ </span>make<span class="w"> </span>clean<span class="w">       </span><span class="c1"># Clean build artifacts</span>
+<p>This sets up <a href="https://github.com/j178/prek">prek</a> (a faster Rust-based pre-commit) which runs <code>fmt</code>, <code>clippy</code>, and <code>check</code> automatically before each commit.</p>
+<h2 id="useful-commands">Useful Commands<a class="headerlink" href="#useful-commands" title="Permanent link">&para;</a></h2>
+<p>Run <code>make help</code> to see all available commands:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>make<span class="w"> </span>serve<span class="w">             </span><span class="c1"># Start dev server (PORT=8000 by default)</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>make<span class="w"> </span><span class="nb">test</span><span class="w">              </span><span class="c1"># Run ALL tests including network integration tests</span>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a>make<span class="w"> </span>test-fast<span class="w">         </span><span class="c1"># Run only fast tests (excludes network tests)</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>make<span class="w"> </span>fix<span class="w">               </span><span class="c1"># Auto-fix formatting and clippy issues</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>make<span class="w"> </span>lint<span class="w">              </span><span class="c1"># Run pre-commit checks (fmt, clippy, check)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a>make<span class="w"> </span>audit<span class="w">             </span><span class="c1"># Run security audit on dependencies</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>make<span class="w"> </span>docs<span class="w">              </span><span class="c1"># Build and serve MkDocs documentation</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>make<span class="w"> </span>build<span class="w">             </span><span class="c1"># Build library and server in release mode</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a>make<span class="w"> </span>docker-compose<span class="w">    </span><span class="c1"># Start v1 and v2 servers together</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>make<span class="w"> </span>clean<span class="w">             </span><span class="c1"># Clean build artifacts</span>
 </code></pre></div>
-<h3 id="manual-setup">Manual Setup<a class="headerlink" href="#manual-setup" title="Permanent link">&para;</a></h3>
-<p>If you prefer manual setup, you'll need <a href="https://docs.astral.sh/uv/">uv</a> for dependency management:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>uv
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="gp">$ </span>uv<span class="w"> </span>sync<span class="w"> </span>--all-groups
-<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="gp">$ </span>python<span class="w"> </span>setup.py<span class="w"> </span>build_ext<span class="w"> </span>--inplace<span class="w">  </span><span class="c1"># Required for technical indicators</span>
-<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="gp">$ </span>pre-commit<span class="w"> </span>install
+<h2 id="development-workflow">Development Workflow<a class="headerlink" href="#development-workflow" title="Permanent link">&para;</a></h2>
+<h3 id="1-make-your-changes">1. Make Your Changes<a class="headerlink" href="#1-make-your-changes" title="Permanent link">&para;</a></h3>
+<p>Work on the library (<code>src/</code>) or server (<code>server/src/</code>):</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="c1"># Start the dev server</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>make<span class="w"> </span>serve
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1"># Run tests as you work</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>make<span class="w"> </span>test-fast<span class="w">  </span><span class="c1"># Quick tests only</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a>make<span class="w"> </span><span class="nb">test</span><span class="w">       </span><span class="c1"># All tests including network calls</span>
 </code></pre></div>
-<h3 id="legacy-setup-with-pip">Legacy Setup with pip<a class="headerlink" href="#legacy-setup-with-pip" title="Permanent link">&para;</a></h3>
-<p>For environments without <code>uv</code>, you can still use pip:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>venv<span class="w"> </span>venv
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="gp">$ </span><span class="nb">source</span><span class="w"> </span>venv/bin/activate<span class="w">  </span><span class="c1"># On Windows: venv\Scripts\activate</span>
-<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="gp">$ </span>pip<span class="w"> </span>install<span class="w"> </span>-e<span class="w"> </span><span class="s2">&quot;.[dev]&quot;</span>
-<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="gp">$ </span>python<span class="w"> </span>setup.py<span class="w"> </span>build_ext<span class="w"> </span>--inplace<span class="w">  </span><span class="c1"># Required for technical indicators</span>
+<h3 id="2-check-your-code">2. Check Your Code<a class="headerlink" href="#2-check-your-code" title="Permanent link">&para;</a></h3>
+<p>Before committing, run the pre-commit checks:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>make<span class="w"> </span>fix<span class="w">   </span><span class="c1"># Auto-fix formatting and clippy issues</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>make<span class="w"> </span>lint<span class="w">  </span><span class="c1"># Verify all checks pass</span>
 </code></pre></div>
-<h3 id="setting-up-environment-variables">Setting up environment variables<a class="headerlink" href="#setting-up-environment-variables" title="Permanent link">&para;</a></h3>
-<p>Create a <code>.env</code> file in the project root with the following variables:
-See the <code>.env.template</code> file for an example.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a># Basic configuration
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>REDIS_URL=redis://localhost:6379  # Optional, for caching and WebSocket support
-<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>USE_SECURITY=True  # Enable rate limiting and API key authentication
-<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a>ADMIN_API_KEY=your-admin-key-here  # Admin key that bypasses rate limits
-<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>BYPASS_CACHE=False  # Set to True to disable caching during development
+<h3 id="3-test-thoroughly">3. Test Thoroughly<a class="headerlink" href="#3-test-thoroughly" title="Permanent link">&para;</a></h3>
+<p>Run the appropriate tests for your changes:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1"># Library changes</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-p<span class="w"> </span>finance-query
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="c1"># Server changes</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>-p<span class="w"> </span>finance-query-server
 <a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a>
-<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a># Proxy configuration (optional, recommended for production)
-<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>USE_PROXY=False
-<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>PROXY_URL=
-<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>PROXY_TOKEN=  # For whitelisting IPs in proxy service
-<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>
-<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a># Algolia search (optional, uses default public credentials)
-<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a>ALGOLIA_APP_ID=ZTZOECLXBC
-<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a>ALGOLIA_API_KEY=a3882d6ec31c0b1063ede94374616d8a
-<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
-<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a># Logging configuration
-<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a>LOG_LEVEL=DEBUG  # DEBUG, INFO, WARNING, ERROR, CRITICAL
-<a id="__codelineno-4-18" name="__codelineno-4-18" href="#__codelineno-4-18"></a>LOG_FORMAT=text  # json or text
-<a id="__codelineno-4-19" name="__codelineno-4-19" href="#__codelineno-4-19"></a>PERFORMANCE_THRESHOLD_MS=2000  # Slow operation warning threshold
-<a id="__codelineno-4-20" name="__codelineno-4-20" href="#__codelineno-4-20"></a>
-<a id="__codelineno-4-21" name="__codelineno-4-21" href="#__codelineno-4-21"></a># Logo fetching configuration
-<a id="__codelineno-4-22" name="__codelineno-4-22" href="#__codelineno-4-22"></a>DISABLE_LOGO_FETCHING=false  # Set to true to disable logo fetching
-<a id="__codelineno-4-23" name="__codelineno-4-23" href="#__codelineno-4-23"></a>LOGO_TIMEOUT_SECONDS=1  # Timeout for logo requests
-<a id="__codelineno-4-24" name="__codelineno-4-24" href="#__codelineno-4-24"></a>LOGO_CIRCUIT_BREAKER_THRESHOLD=5  # Failures before circuit breaker opens
-<a id="__codelineno-4-25" name="__codelineno-4-25" href="#__codelineno-4-25"></a>LOGO_CIRCUIT_BREAKER_TIMEOUT=300  # Circuit breaker timeout in seconds
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="c1"># Specific test</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>test_ticker_quote
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a><span class="c1"># Integration tests (makes real API calls)</span>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a>cargo<span class="w"> </span><span class="nb">test</span><span class="w"> </span>--<span class="w"> </span>--ignored
 </code></pre></div>
-<h2 id="how-to-test-the-project">How to test the project<a class="headerlink" href="#how-to-test-the-project" title="Permanent link">&para;</a></h2>
-<p>Run the full test suite:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="gp">$ </span>pytest
+<h2 id="code-standards">Code Standards<a class="headerlink" href="#code-standards" title="Permanent link">&para;</a></h2>
+<h3 id="write-idiomatic-rust">Write Idiomatic Rust<a class="headerlink" href="#write-idiomatic-rust" title="Permanent link">&para;</a></h3>
+<p>Use standard patterns and avoid unnecessary complexity:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="c1">// Good - simple and clear</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">pub</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">quote</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">Quote</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="w">    </span><span class="bp">self</span><span class="p">.</span><span class="n">get_quote_data</span><span class="p">().</span><span class="k">await</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="p">}</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1">// Bad - over-engineered</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="k">pub</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">quote</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">Quote</span><span class="p">,</span><span class="w"> </span><span class="nb">Box</span><span class="o">&lt;</span><span class="k">dyn</span><span class="w"> </span><span class="n">std</span><span class="p">::</span><span class="n">error</span><span class="p">::</span><span class="n">Error</span><span class="o">&gt;&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="w">    </span><span class="k">match</span><span class="w"> </span><span class="bp">self</span><span class="p">.</span><span class="n">get_quote_data</span><span class="p">().</span><span class="k">await</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="w">        </span><span class="nb">Ok</span><span class="p">(</span><span class="n">data</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Ok</span><span class="p">(</span><span class="n">data</span><span class="p">),</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="w">        </span><span class="nb">Err</span><span class="p">(</span><span class="n">e</span><span class="p">)</span><span class="w"> </span><span class="o">=&gt;</span><span class="w"> </span><span class="nb">Err</span><span class="p">(</span><span class="nb">Box</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="n">e</span><span class="p">)),</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="p">}</span>
 </code></pre></div>
-<p>You can also run specific test files:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="gp">$ </span>pytest<span class="w"> </span>tests/test_quotes.py
+<h3 id="document-public-apis">Document Public APIs<a class="headerlink" href="#document-public-apis" title="Permanent link">&para;</a></h3>
+<p>Add doc comments to public items:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="sd">/// Fetches the latest quote for the ticker.</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a><span class="sd">///</span>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="sd">/// # Example</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="sd">///</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="sd">/// ```no_run</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="sd">/// use finance_query::Ticker;</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="sd">///</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="sd">/// let ticker = Ticker::new(&quot;AAPL&quot;).await?;</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="sd">/// let quote = ticker.quote(true).await?;</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="sd">/// println!(&quot;Price: ${}&quot;, quote.regular_market_price);</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="sd">/// ```</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="k">pub</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">quote</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">,</span><span class="w"> </span><span class="n">include_logo</span><span class="p">:</span><span class="w"> </span><span class="kt">bool</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">Quote</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="c1">// ...</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="p">}</span>
 </code></pre></div>
-<p>Unit tests are located in the <em>tests</em> directory,
-and are written using the <a href="https://pytest.readthedocs.io/">pytest</a> testing framework.</p>
-<h2 id="local-development">Local development<a class="headerlink" href="#local-development" title="Permanent link">&para;</a></h2>
-<h3 id="using-makefile-recommended">Using Makefile (Recommended)<a class="headerlink" href="#using-makefile-recommended" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="gp">$ </span>make<span class="w"> </span>serve
+<h2 id="testing-guidelines">Testing Guidelines<a class="headerlink" href="#testing-guidelines" title="Permanent link">&para;</a></h2>
+<h3 id="unit-tests">Unit Tests<a class="headerlink" href="#unit-tests" title="Permanent link">&para;</a></h3>
+<p>Keep tests focused and fast:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="cp">#[tokio::test]</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">test_ticker_builder</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">builder</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">)</span>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="w">        </span><span class="p">.</span><span class="n">region</span><span class="p">(</span><span class="n">Region</span><span class="p">::</span><span class="n">UnitedStates</span><span class="p">)</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="w">        </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a><span class="w">        </span><span class="p">.</span><span class="k">await</span>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="w">        </span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a><span class="w">    </span><span class="fm">assert_eq!</span><span class="p">(</span><span class="n">ticker</span><span class="p">.</span><span class="n">symbol</span><span class="p">(),</span><span class="w"> </span><span class="s">&quot;AAPL&quot;</span><span class="p">);</span>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="p">}</span>
 </code></pre></div>
-<h3 id="manual-development-server">Manual Development Server<a class="headerlink" href="#manual-development-server" title="Permanent link">&para;</a></h3>
-<p>To run the application locally:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="gp">$ </span>python<span class="w"> </span>-m<span class="w"> </span>uvicorn<span class="w"> </span>src.main:app<span class="w"> </span>--reload
+<h3 id="integration-tests">Integration Tests<a class="headerlink" href="#integration-tests" title="Permanent link">&para;</a></h3>
+<p>Mark network tests with <code>#[ignore]</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="cp">#[tokio::test]</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a><span class="cp">#[ignore = </span><span class="s">&quot;requires network access&quot;</span><span class="cp">]</span>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">test_real_quote</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">quote</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span><span class="kc">true</span><span class="p">).</span><span class="k">await</span><span class="p">.</span><span class="n">unwrap</span><span class="p">();</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a><span class="w">    </span><span class="fm">assert!</span><span class="p">(</span><span class="o">!</span><span class="n">quote</span><span class="p">.</span><span class="n">symbol</span><span class="p">.</span><span class="n">is_empty</span><span class="p">());</span>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="p">}</span>
 </code></pre></div>
-<p>This will start the API server at <code>http://localhost:8000</code> with automatic reloading enabled.</p>
-<h3 id="docker-development">Docker Development<a class="headerlink" href="#docker-development" title="Permanent link">&para;</a></h3>
-<p>You can also use Docker:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="gp">$ </span>make<span class="w"> </span>docker
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="gp"># </span>Or<span class="w"> </span>manually:
-<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="gp">$ </span>docker<span class="w"> </span>build<span class="w"> </span>-t<span class="w"> </span>finance-query<span class="w"> </span>.
-<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="gp">$ </span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span>finance-query
+<h3 id="doc-tests">Doc Tests<a class="headerlink" href="#doc-tests" title="Permanent link">&para;</a></h3>
+<p>Use <code>no_run</code> for examples that require network access:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="sd">/// # Example</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="sd">///</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="sd">/// ```no_run</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a><span class="sd">/// # use finance_query::Ticker;</span>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="sd">/// # async fn example() -&gt; Result&lt;(), Box&lt;dyn std::error::Error&gt;&gt; {</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="sd">/// let ticker = Ticker::new(&quot;AAPL&quot;).await?;</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="sd">/// let quote = ticker.quote(true).await?;</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="sd">/// # Ok(())</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="sd">/// # }</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="sd">/// ```</span>
 </code></pre></div>
-<h4 id="docker-with-environment-variables">Docker with Environment Variables<a class="headerlink" href="#docker-with-environment-variables" title="Permanent link">&para;</a></h4>
-<p><strong>Build-time configuration</strong> (baked into image):
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="gp">$ </span>docker<span class="w"> </span>build<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="w">  </span>--build-arg<span class="w"> </span><span class="nv">LOG_LEVEL</span><span class="o">=</span>DEBUG<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">  </span>--build-arg<span class="w"> </span><span class="nv">LOG_FORMAT</span><span class="o">=</span>text<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">  </span>--build-arg<span class="w"> </span><span class="nv">DISABLE_LOGO_FETCHING</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">  </span>--build-arg<span class="w"> </span><span class="nv">LOGO_TIMEOUT_SECONDS</span><span class="o">=</span><span class="m">2</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">  </span>-t<span class="w"> </span>finance-query<span class="w"> </span>.
-</code></pre></div></p>
-<p><strong>Runtime configuration</strong> (can be changed when running):
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="gp">$ </span>docker<span class="w"> </span>run<span class="w"> </span>-p<span class="w"> </span><span class="m">8000</span>:8000<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">LOG_LEVEL</span><span class="o">=</span>DEBUG<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">LOG_FORMAT</span><span class="o">=</span>text<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">REDIS_URL</span><span class="o">=</span>redis://host.docker.internal:6379<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">USE_SECURITY</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">ADMIN_API_KEY</span><span class="o">=</span>your-admin-key<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">USE_PROXY</span><span class="o">=</span><span class="nb">true</span><span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">PROXY_URL</span><span class="o">=</span>http://proxy:8080<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="w">  </span>-e<span class="w"> </span><span class="nv">PROXY_TOKEN</span><span class="o">=</span>your-proxy-token<span class="w"> </span><span class="se">\</span>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="w">  </span>finance-query
-</code></pre></div></p>
-<p><strong>Docker Compose example</strong>:
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="nt">version</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;3.8&#39;</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="nt">services</span><span class="p">:</span>
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="w">  </span><span class="nt">api</span><span class="p">:</span>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="w">    </span><span class="nt">build</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">.</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;8000:8000&quot;</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="nt">environment</span><span class="p">:</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LOG_LEVEL=INFO</span>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LOG_FORMAT=json</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">REDIS_URL=redis://redis:6379</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">USE_SECURITY=true</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">ADMIN_API_KEY=your-admin-key</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">DISABLE_LOGO_FETCHING=false</span>
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">LOGO_TIMEOUT_SECONDS=1</span>
-<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">  </span><span class="nt">redis</span><span class="p">:</span>
-<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="w">    </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">redis:alpine</span>
-<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">    </span><span class="nt">ports</span><span class="p">:</span>
-<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="s">&quot;6379:6379&quot;</span>
-</code></pre></div></p>
-<h2 id="how-to-submit-changes">How to submit changes<a class="headerlink" href="#how-to-submit-changes" title="Permanent link">&para;</a></h2>
-<p>Open a <a href="https://github.com/Verdenroz/finance-query/pulls">pull request</a> to submit changes to this project.</p>
-<p>Your pull request needs to meet the following guidelines for acceptance:</p>
+<h2 id="submitting-changes">Submitting Changes<a class="headerlink" href="#submitting-changes" title="Permanent link">&para;</a></h2>
+<h3 id="1-create-a-branch">1. Create a Branch<a class="headerlink" href="#1-create-a-branch" title="Permanent link">&para;</a></h3>
+<p>Use descriptive branch names:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>fix/quote-timezone-handling
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>git<span class="w"> </span>checkout<span class="w"> </span>-b<span class="w"> </span>feat/add-options-chain
+</code></pre></div>
+<h3 id="2-commit-your-changes">2. Commit Your Changes<a class="headerlink" href="#2-commit-your-changes" title="Permanent link">&para;</a></h3>
+<p>Write clear commit messages:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a>git<span class="w"> </span>add<span class="w"> </span>.
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>git<span class="w"> </span>commit<span class="w"> </span>-m<span class="w"> </span><span class="s2">&quot;fix: handle timezone correctly in market hours&quot;</span>
+</code></pre></div>
+<h3 id="3-push-and-create-pr">3. Push and Create PR<a class="headerlink" href="#3-push-and-create-pr" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a>git<span class="w"> </span>push<span class="w"> </span>origin<span class="w"> </span>fix/quote-timezone-handling
+</code></pre></div>
+<p>Open a pull request on GitHub with:</p>
 <ul>
-<li>The test suite must pass without errors and warnings.</li>
-<li>Include unit tests for new functionality.</li>
-<li>If your changes add functionality, update the documentation accordingly.</li>
-<li>Follow the existing code style (Ruff formatting and linting).</li>
+<li>Clear description of what changed and why</li>
+<li>Link to any related issues</li>
+<li>Test results showing everything passes</li>
 </ul>
-<p>Feel free to submit early, though—we can always iterate on this.</p>
-<h3 id="code-quality-checks">Code Quality Checks<a class="headerlink" href="#code-quality-checks" title="Permanent link">&para;</a></h3>
-<h4 id="using-makefile-recommended_1">Using Makefile (Recommended)<a class="headerlink" href="#using-makefile-recommended_1" title="Permanent link">&para;</a></h4>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="gp">$ </span>make<span class="w"> </span>lint
-</code></pre></div>
-<p>This runs all pre-commit hooks including:
-- Ruff linting with auto-fixes
-- Ruff formatting
-- TOML/YAML validation
-- Trailing whitespace removal</p>
-<h4 id="manual-code-quality">Manual Code Quality<a class="headerlink" href="#manual-code-quality" title="Permanent link">&para;</a></h4>
-<p>To run linting and code formatting checks before committing your change:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="gp">$ </span>pre-commit<span class="w"> </span>run<span class="w"> </span>--all-files
-</code></pre></div>
-<p>It is recommended to open an issue before starting work on anything.
-This will allow a chance to talk it over with the owners and validate your approach.</p>
-<h3 id="branch-workflow">Branch Workflow<a class="headerlink" href="#branch-workflow" title="Permanent link">&para;</a></h3>
-<p>FinanceQuery follows a structured branch workflow:</p>
+<h2 id="common-tasks">Common Tasks<a class="headerlink" href="#common-tasks" title="Permanent link">&para;</a></h2>
+<h3 id="adding-a-new-endpoint">Adding a New Endpoint<a class="headerlink" href="#adding-a-new-endpoint" title="Permanent link">&para;</a></h3>
+<p><strong>Library side:</strong></p>
 <ol>
 <li>
-<p><strong>Feature branches</strong>: Create a branch for your feature or bugfix. Branch names should be descriptive and follow this format: <code>feat/your-feature-name</code> or <code>fix/issue-description</code>.</p>
+<p>Add endpoint URL in <code>src/endpoints/</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1">// src/endpoints/quote.rs</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a><span class="k">pub</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">options_chain</span><span class="p">(</span><span class="n">symbol</span><span class="p">:</span><span class="w"> </span><span class="kp">&amp;</span><span class="kt">str</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">String</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="w">    </span><span class="fm">format!</span><span class="p">(</span><span class="s">&quot;{}/v7/finance/options/{}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">BASE_URL</span><span class="p">,</span><span class="w"> </span><span class="n">symbol</span><span class="p">)</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="p">}</span>
+</code></pre></div>
 </li>
 <li>
-<p><strong>Staging branch</strong>: All feature branches must be merged into the <code>staging</code> branch first for integration testing.</p>
+<p>Define model in <code>src/models/</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1">// src/models/options.rs</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="cp">#[derive(Debug, Clone, Deserialize)]</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="k">pub</span><span class="w"> </span><span class="k">struct</span><span class="w"> </span><span class="nc">OptionsChain</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">symbol</span><span class="p">:</span><span class="w"> </span><span class="nb">String</span><span class="p">,</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">    </span><span class="k">pub</span><span class="w"> </span><span class="n">expiration_dates</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="kt">i64</span><span class="o">&gt;</span><span class="p">,</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="c1">// ...</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="p">}</span>
+</code></pre></div>
 </li>
 <li>
-<p><strong>Master branch</strong>: The <code>master</code> branch contains production-ready code. Pull requests to <code>master</code> are only accepted from the <code>staging</code> branch and are automatically restricted by our CI workflow.</p>
+<p>Add method to <code>Ticker</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1">// src/ticker/core.rs</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="k">pub</span><span class="w"> </span><span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">options</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">OptionsChain</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">url</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">endpoints</span><span class="p">::</span><span class="n">options_chain</span><span class="p">(</span><span class="o">&amp;</span><span class="bp">self</span><span class="p">.</span><span class="n">symbol</span><span class="p">);</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">    </span><span class="bp">self</span><span class="p">.</span><span class="n">client</span><span class="p">.</span><span class="n">fetch_json</span><span class="p">(</span><span class="o">&amp;</span><span class="n">url</span><span class="p">).</span><span class="k">await</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="p">}</span>
+</code></pre></div>
 </li>
 </ol>
-<p>This workflow ensures that code in the master branch has been properly reviewed and tested in staging before deployment to production.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>feature/your-feature --&gt; staging --&gt; master
+<p><strong>Server side:</strong></p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">// server/src/main.rs</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="k">async</span><span class="w"> </span><span class="k">fn</span><span class="w"> </span><span class="nf">get_options</span><span class="p">(</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a><span class="w">    </span><span class="n">Path</span><span class="p">(</span><span class="n">symbol</span><span class="p">):</span><span class="w"> </span><span class="nc">Path</span><span class="o">&lt;</span><span class="nb">String</span><span class="o">&gt;</span><span class="p">,</span>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="p">)</span><span class="w"> </span><span class="p">-&gt;</span><span class="w"> </span><span class="nb">Result</span><span class="o">&lt;</span><span class="n">Json</span><span class="o">&lt;</span><span class="n">OptionsChain</span><span class="o">&gt;</span><span class="p">,</span><span class="w"> </span><span class="n">AppError</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="o">&amp;</span><span class="n">symbol</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">options</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">options</span><span class="p">().</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">    </span><span class="nb">Ok</span><span class="p">(</span><span class="n">Json</span><span class="p">(</span><span class="n">options</span><span class="p">))</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="p">}</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="c1">// Register route</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="p">.</span><span class="n">route</span><span class="p">(</span><span class="s">&quot;/v2/options/{symbol}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">get</span><span class="p">(</span><span class="n">get_options</span><span class="p">))</span>
 </code></pre></div>
-<p>Please do not attempt to merge feature branches directly to master as these pull requests will be automatically rejected.</p>
-<h2 id="project-architecture">Project architecture<a class="headerlink" href="#project-architecture" title="Permanent link">&para;</a></h2>
-<p>Please review the <a href="../architecture/">architecture document</a> to understand the project's structure before contributing.</p>
+<h3 id="updating-dependencies">Updating Dependencies<a class="headerlink" href="#updating-dependencies" title="Permanent link">&para;</a></h3>
+<p>Check for outdated dependencies:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>cargo<span class="w"> </span>outdated
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>cargo<span class="w"> </span>update
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>make<span class="w"> </span><span class="nb">test</span><span class="w">  </span><span class="c1"># Ensure everything still works</span>
+</code></pre></div>
+<h2 id="getting-help">Getting Help<a class="headerlink" href="#getting-help" title="Permanent link">&para;</a></h2>
+<ul>
+<li><strong>Questions</strong>: Open a GitHub Discussion</li>
+<li><strong>Bugs</strong>: Open a GitHub Issue with reproduction steps</li>
+<li><strong>Security</strong>: Email security@finance-query.dev (not public issues)</li>
+</ul>
+<h2 id="license">License<a class="headerlink" href="#license" title="Permanent link">&para;</a></h2>
+<p>By contributing, you agree that your contributions will be licensed under the MIT License.</p>
 
 
 
@@ -1824,6 +1722,12 @@ This will allow a chance to talk it over with the owners and validate your appro
 <script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
         </div>
         
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
       </main>
       
         <footer class="md-footer">
@@ -1840,6 +1744,22 @@ This will allow a chance to talk it over with the owners and validate your appro
   
 </div>
       
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Verdenroz/finance-query" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
     </div>
   </div>
 </footer>
@@ -1852,10 +1772,11 @@ This will allow a chance to talk it over with the owners and validate your appro
     
     
       
-      <script id="__config" type="application/json">{"base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.expand", "navigation.indexes", "content.code.copy", "content.code.annotate"], "search": "../../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.expand", "navigation.indexes", "content.code.copy", "content.code.annotate", "navigation.tabs", "navigation.top"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
     
   </body>
