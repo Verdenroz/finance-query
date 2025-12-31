@@ -1,0 +1,56 @@
+{$SERVER_NAME:localhost} {
+    # Caddy automatically enables HTTPS when SERVER_NAME is a real domain
+    # For localhost, it uses HTTP only
+
+    # Health endpoints
+    handle /health {
+        reverse_proxy finance-query-v2:8000
+    }
+
+    handle /ping {
+        reverse_proxy finance-query-v2:8000
+    }
+
+    # V2 API (Rust)
+    handle /v2/* {
+        reverse_proxy finance-query-v2:8000
+    }
+
+    # V2 WebSocket streaming
+    handle /v2/stream {
+        reverse_proxy finance-query-v2:8000
+    }
+
+    # V1 API (Python)
+    handle /v1/* {
+        reverse_proxy finance-query-v1:8000
+    }
+
+    # V1 WebSocket endpoints
+    handle /quotes {
+        reverse_proxy finance-query-v1:8000
+    }
+
+    handle /profile {
+        reverse_proxy finance-query-v1:8000
+    }
+
+    handle /market {
+        reverse_proxy finance-query-v1:8000
+    }
+
+    handle /hours {
+        reverse_proxy finance-query-v1:8000
+    }
+
+    # Default to V2
+    handle {
+        reverse_proxy finance-query-v2:8000
+    }
+
+    # Logging
+    log {
+        output stdout
+        format json
+    }
+}

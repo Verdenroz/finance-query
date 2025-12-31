@@ -1,0 +1,92 @@
+# Production Docker Compose for Hetzner VPS deployment
+# Usage: docker compose -f docker-compose.prod.yml up -d
+
+services:
+  # Caddy reverse proxy with automatic HTTPS
+  caddy:
+    image: caddy:2-alpine
+    container_name: finance-query-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      - SERVER_NAME=${SERVER_NAME:-localhost}
+    depends_on:
+      - finance-query-v1
+      - finance-query-v2
+    networks:
+      - finance-query-network
+
+  # V2 Rust Server
+  finance-query-v2:
+    image: ghcr.io/${GITHUB_REPO:-verdenroz/finance-query}/v2:latest
+    container_name: finance-query-v2
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - server/.env
+    environment:
+      - PORT=8000
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v2/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    networks:
+      - finance-query-network
+
+  # V1 Python Server
+  finance-query-v1:
+    image: ghcr.io/${GITHUB_REPO:-verdenroz/finance-query}/v1:latest
+    container_name: finance-query-v1
+    restart: unless-stopped
+    expose:
+      - "8000"
+    env_file:
+      - v1/.env
+    environment:
+      - LOG_LEVEL=INFO
+      - LOG_FORMAT=json
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - redis
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    networks:
+      - finance-query-network
+
+  # Redis (internal only)
+  redis:
+    image: redis:7-alpine
+    container_name: finance-query-redis
+    restart: unless-stopped
+    volumes:
+      - redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - finance-query-network
+
+networks:
+  finance-query-network:
+    driver: bridge
+
+volumes:
+  redis-data:
+  caddy-data:
+  caddy-config:

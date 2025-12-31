@@ -1,4 +1,5 @@
-.PHONY: help serve install install-dev build test test-fast lint fix audit docs docker docker-compose docker-compose-down clean publish-dry-run
+.PHONY: help serve install install-dev build test test-fast lint fix audit docs docker docker-compose docker-compose-down clean publish-dry-run \
+        prod prod-down prod-logs prod-status prod-build
 
 # Default target
 .DEFAULT_GOAL := help
@@ -104,3 +105,29 @@ publish-dry-run: ## Test publishing to crates.io (dry run)
 	@echo "$(GREEN)Testing crates.io publish (dry run)...$(NC)"
 	$(CARGO) publish -p finance-query-derive --dry-run
 	$(CARGO) publish -p finance-query --dry-run
+
+# =============================================================================
+# Production Docker Compose (docker-compose.prod.yml with Caddy)
+# =============================================================================
+
+prod: ## Start production stack
+	@echo "$(GREEN)Starting production stack...$(NC)"
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml up -d
+	@echo "$(GREEN)✓ Running at http://localhost$(NC)"
+
+prod-build: ## Build and start production stack
+	@echo "$(GREEN)Building production stack...$(NC)"
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml up -d --build
+
+prod-down: ## Stop production stack
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml down
+
+prod-logs: ## View production logs (use SVC=name for specific service)
+	@if [ -n "$(SVC)" ]; then \
+		$(DOCKER_COMPOSE) -f docker-compose.prod.yml logs -f $(SVC); \
+	else \
+		$(DOCKER_COMPOSE) -f docker-compose.prod.yml logs -f; \
+	fi
+
+prod-status: ## Check production container status
+	$(DOCKER_COMPOSE) -f docker-compose.prod.yml ps

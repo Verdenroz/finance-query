@@ -58,6 +58,10 @@ v1/.env
 # Nginx (SSL certs are sensitive)
 nginx/certs/
 
+# Caddy data (auto-generated certs and config)
+caddy-data/
+caddy-config/
+
 # V1 Python artifacts (v1 has its own .gitignore but just in case)
 v1/.venv/
 v1/htmlcov/
