@@ -1,9 +1,9 @@
 asyncapi: 2.6.0
 info:
   title: Finance Query Streaming API
-  version: 2.0.0
+  version: 2.0.1
   description: |
-    Real-time price streaming from Yahoo Finance via WebSocket.
+    Real-time price streaming via WebSocket.
 
     ## Connection Flow
     1. Connect to the WebSocket endpoint
@@ -11,6 +11,10 @@ info:
     3. Receive real-time price updates as they occur
 
 servers:
+  production:
+    url: finance-query.com/v2/stream
+    protocol: wss
+    description: Production server
   development:
     url: localhost:8000/v2/stream
     protocol: ws
@@ -82,7 +86,7 @@ components:
   schemas:
     PriceUpdate:
       type: object
-      description: Real-time price update from Yahoo Finance
+      description: Real-time price update
       properties:
         id:
           type: string

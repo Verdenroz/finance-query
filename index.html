@@ -6,7 +6,7 @@
       <meta charset="utf-8">
       <meta name="viewport" content="width=device-width,initial-scale=1">
       
-        <meta name="description" content="A Rust library for fetching financial data from Yahoo Finance">
+        <meta name="description" content="A Rust library for fetching financial data">
       
       
         <meta name="author" content="Harvey Tseng">
@@ -1121,6 +1121,7 @@
 <a href="https://github.com/Verdenroz/finance-query/actions"><img alt="Build Status" src="https://github.com/Verdenroz/finance-query/workflows/CI/badge.svg" /></a>
 <a href="https://opensource.org/licenses/MIT"><img alt="License: MIT" src="https://img.shields.io/badge/License-MIT-yellow.svg" /></a></p>
 <p><strong>Finance Query</strong> is a Rust library and server for financial data, inspired by the popular <code>yfinance</code> Python library. It provides a simple interface to access real-time quotes, historical charts, and financial statements primarily from Yahoo Finance.</p>
+<p>A free hosted API is available at <strong><a href="https://finance-query.com">finance-query.com</a></strong> — no setup required!</p>
 <p>It is designed to be used in two ways:</p>
 <ul>
 <li><strong>Rust Library</strong>: A type-safe crate for direct integration into your Rust projects.</li>
@@ -1188,24 +1189,24 @@
 </div>
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="c1"># Get detailed quote for Apple</span>
-<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>curl<span class="w"> </span><span class="s2">&quot;http://localhost:8000/v2/quote/AAPL?logo=true&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>curl<span class="w"> </span><span class="s2">&quot;https://finance-query.com/v2/quote/AAPL?logo=true&quot;</span>
 <a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a>
 <a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="c1"># Get historical chart data</span>
-<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>curl<span class="w"> </span><span class="s2">&quot;http://localhost:8000/v2/chart/AAPL?interval=1d&amp;range=1mo&quot;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>curl<span class="w"> </span><span class="s2">&quot;https://finance-query.com/v2/chart/AAPL?interval=1d&amp;range=1mo&quot;</span>
 <a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a>
 <a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="c1"># Search for symbols</span>
-<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>curl<span class="w"> </span><span class="s2">&quot;http://localhost:8000/v2/lookup?q=Apple&quot;</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>curl<span class="w"> </span><span class="s2">&quot;https://finance-query.com/v2/lookup?q=Apple&quot;</span>
 <a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a>
-<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Get predefined screeenrs</span>
-<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>curl<span class="w"> </span><span class="s2">&quot;http://localhost:8000/v2/screeners/most-actives&quot;</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="c1"># Get predefined screeners</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>curl<span class="w"> </span><span class="s2">&quot;https://finance-query.com/v2/screeners/most-actives&quot;</span>
 <a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
 <a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c1"># Get company news</span>
-<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>curl<span class="w"> </span><span class="s2">&quot;http://localhost:8000/v2/news/AAPL&quot;</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>curl<span class="w"> </span><span class="s2">&quot;https://finance-query.com/v2/news/AAPL&quot;</span>
 </code></pre></div>
 </div>
 <div class="tabbed-block">
 <div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// Connect to WebSocket for real-time updates</span>
-<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">ws</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">(</span><span class="s1">&#39;ws://localhost:8000/v2/stream&#39;</span><span class="p">);</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kd">const</span><span class="w"> </span><span class="nx">ws</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="ow">new</span><span class="w"> </span><span class="nx">WebSocket</span><span class="p">(</span><span class="s1">&#39;wss://finance-query.com/v2/stream&#39;</span><span class="p">);</span>
 <a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>
 <a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="nx">ws</span><span class="p">.</span><span class="nx">onopen</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">()</span><span class="w"> </span><span class="p">=&gt;</span><span class="w"> </span><span class="p">{</span>
 <a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">    </span><span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">&#39;Connected to Finance Query WebSocket&#39;</span><span class="p">);</span>
