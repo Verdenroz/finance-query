@@ -83,6 +83,11 @@ pub enum YahooError {
     /// Tokio runtime error
     #[error("Runtime error: {0}")]
     RuntimeError(#[from] std::io::Error),
+
+    /// Indicator calculation error
+    #[cfg(feature = "indicators")]
+    #[error("Indicator calculation error: {0}")]
+    IndicatorError(#[from] crate::indicators::IndicatorError),
 }
 
 /// Error category for logging and metrics

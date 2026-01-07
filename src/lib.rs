@@ -143,3 +143,22 @@ pub mod streaming;
 // The derive macro auto-generates DataFrame conversion for all scalar fields.
 #[cfg(feature = "dataframe")]
 pub use finance_query_derive::ToDataFrame;
+
+// ============================================================================
+// Technical Indicators (requires "indicators" feature)
+// ============================================================================
+// Technical analysis indicators for price data (SMA, EMA, RSI, MACD, Bollinger Bands).
+// When enabled, Chart gets extension methods: chart.sma(), chart.ema(), chart.rsi(), etc.
+#[cfg(feature = "indicators")]
+pub mod indicators;
+
+#[cfg(feature = "indicators")]
+pub use indicators::{BollingerBands, Indicator, IndicatorError, IndicatorResult, MacdResult, atr};
+
+// ============================================================================
+// Backtesting Engine (requires "backtesting" feature)
+// ============================================================================
+// Strategy backtesting with pre-built and custom strategies, position tracking,
+// stop-loss/take-profit, and comprehensive performance metrics.
+#[cfg(feature = "backtesting")]
+pub mod backtesting;

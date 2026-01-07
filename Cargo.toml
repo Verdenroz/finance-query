@@ -35,7 +35,7 @@ path = "src/lib.rs"
 
 [dependencies]
 # HTTP client (core dependency)
-reqwest = { version = "0.12", features = ["json", "cookies", "gzip", "brotli", "blocking"] }
+reqwest = { version = "0.13", features = ["json", "cookies", "gzip", "brotli", "blocking", "query"] }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
@@ -88,6 +88,10 @@ finance-query-derive = { version = "2.0.1", path = "finance-query-derive", optio
 default = []
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars", "dep:finance-query-derive"]
+# Enable technical analysis indicators
+indicators = []
+# Enable backtesting engine for strategy simulation (requires indicators)
+backtesting = ["indicators"]
 
 [package.metadata.docs.rs]
 all-features = true
