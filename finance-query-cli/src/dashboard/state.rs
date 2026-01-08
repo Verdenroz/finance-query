@@ -207,6 +207,11 @@ pub struct App {
     // News tab fields
     pub news_symbol: Option<String>, // None = general news, Some(symbol) = symbol-specific news
     pub is_loading_news: bool,
+    // Detailed quote loading (for Growth & Ownership data)
+    pub is_loading_detailed_quote: bool,
+    pub loading_detailed_symbol: Option<String>,
+    // Scroll positions for detail panels (Trading, Fundamentals, Growth & Ownership)
+    pub detail_scroll: [u16; 3],
 }
 
 /// Sectors view mode - sectors overview or drill-down to industries
@@ -282,6 +287,9 @@ impl App {
             is_loading_sectors: false,
             news_symbol: None,
             is_loading_news: false,
+            is_loading_detailed_quote: false,
+            loading_detailed_symbol: None,
+            detail_scroll: [0, 0, 0],
         })
     }
 
@@ -298,6 +306,8 @@ impl App {
 
         let new_index = (self.selected_index as isize + delta).rem_euclid(len as isize);
         self.selected_index = new_index as usize;
+        // Reset scroll positions when changing symbols
+        self.detail_scroll = [0, 0, 0];
     }
 
     pub fn check_alerts(&mut self) {

@@ -9,6 +9,17 @@ impl App {
             return Ok(());
         };
 
+        // Request detailed quote fetch for the selected symbol (includes growth & ownership data)
+        // This is handled asynchronously in the event loop to avoid blocking the UI
+        if self.active_tab == Tab::Watchlist {
+            // Only start fetch if we're not already loading this symbol
+            let should_fetch = self.loading_detailed_symbol.as_ref() != Some(&symbol);
+            if should_fetch && !self.is_loading_detailed_quote {
+                self.is_loading_detailed_quote = true;
+                self.loading_detailed_symbol = Some(symbol.clone());
+            }
+        }
+
         if self.active_tab == Tab::Charts {
             self.status_message = format!("Fetching chart for {}...", symbol);
             match Ticker::new(&symbol).await {
@@ -104,7 +115,7 @@ impl App {
             Ok(ticker) => match ticker.quote(false).await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
-                    self.status_message = format!("Added {} to watchlist (quote loaded)", symbol);
+                    self.status_message = format!("Added {} to watchlist", symbol);
                 }
                 Err(e) => {
                     self.status_message = format!("Added {} (quote error: {})", symbol, e);
@@ -171,7 +182,7 @@ impl App {
             Ok(ticker) => match ticker.quote(false).await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
-                    self.status_message = format!("Added {} to watchlist (quote loaded)", symbol);
+                    self.status_message = format!("Added {} to watchlist", symbol);
                 }
                 Err(e) => {
                     self.status_message = format!("Added {} (quote error: {})", symbol, e);
@@ -232,7 +243,7 @@ impl App {
             Ok(ticker) => match ticker.quote(false).await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
-                    self.status_message = format!("Added {} to watchlist (quote loaded)", symbol);
+                    self.status_message = format!("Added {} to watchlist", symbol);
                 }
                 Err(e) => {
                     self.status_message = format!("Added {} (quote error: {})", symbol, e);

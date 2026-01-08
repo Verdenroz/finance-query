@@ -213,6 +213,23 @@ pub async fn handle_key_event(app: &mut App, key: event::KeyEvent) -> Result<()>
                 let _ = app.refresh_details().await;
             }
 
+            // Scroll individual detail panels on Watchlist tab (circular)
+            // 1 = Trading, 2 = Fundamentals, 3 = Growth & Ownership
+            // Render uses modulo with actual content length for true circular scrolling
+            KeyCode::Char('1') if app.active_tab == Tab::Watchlist => {
+                app.detail_scroll[0] = app.detail_scroll[0].wrapping_add(1);
+            }
+            KeyCode::Char('2') if app.active_tab == Tab::Watchlist => {
+                app.detail_scroll[1] = app.detail_scroll[1].wrapping_add(1);
+            }
+            KeyCode::Char('3') if app.active_tab == Tab::Watchlist => {
+                app.detail_scroll[2] = app.detail_scroll[2].wrapping_add(1);
+            }
+            // Reset all scroll positions with '0' or Home
+            KeyCode::Char('0') | KeyCode::Home if app.active_tab == Tab::Watchlist => {
+                app.detail_scroll = [0, 0, 0];
+            }
+
             KeyCode::Left
                 if app.focus_pane == FocusPane::Right && app.active_tab == Tab::Charts =>
             {

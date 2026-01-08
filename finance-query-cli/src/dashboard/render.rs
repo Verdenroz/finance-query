@@ -1122,6 +1122,48 @@ fn render_symbol_details(f: &mut Frame, app: &App, area: Rect) {
         ),
     ]));
 
+    // Pre/Post market data right after main price
+    if let Some(q) = quote {
+        let market_state = q.market_state.as_deref().unwrap_or("");
+        if market_state == "PRE" {
+            if let Some(pre_price) = q.pre_market_price.as_ref().and_then(|v| v.raw) {
+                let pre_pct = q
+                    .pre_market_change_percent
+                    .as_ref()
+                    .and_then(|v| v.raw)
+                    .unwrap_or(0.0);
+                let pre_color = if pre_pct >= 0.0 {
+                    Color::Green
+                } else {
+                    Color::Red
+                };
+                left_lines.push(Line::from(vec![
+                    Span::styled("Pre-Mkt ", Style::default().fg(Color::Yellow)),
+                    Span::raw(format!("${:.2} ", pre_price)),
+                    Span::styled(format!("({:+.2}%)", pre_pct), Style::default().fg(pre_color)),
+                ]));
+            }
+        } else if market_state == "POST" {
+            if let Some(post_price) = q.post_market_price.as_ref().and_then(|v| v.raw) {
+                let post_pct = q
+                    .post_market_change_percent
+                    .as_ref()
+                    .and_then(|v| v.raw)
+                    .unwrap_or(0.0);
+                let post_color = if post_pct >= 0.0 {
+                    Color::Green
+                } else {
+                    Color::Red
+                };
+                left_lines.push(Line::from(vec![
+                    Span::styled("After   ", Style::default().fg(Color::Yellow)),
+                    Span::raw(format!("${:.2} ", post_price)),
+                    Span::styled(format!("({:+.2}%)", post_pct), Style::default().fg(post_color)),
+                ]));
+            }
+        }
+    }
+
     left_lines.push(Line::from(""));
 
     if let Some(q) = quote {
@@ -1177,16 +1219,116 @@ fn render_symbol_details(f: &mut Frame, app: &App, area: Rect) {
                 Span::raw(format!("{}{}", format_volume(avg_vol), vol_indicator)),
             ]));
         }
+
+        // 52 Week Change
+        if let Some(w52_change) = q.week_52_change.as_ref().and_then(|v| v.raw) {
+            let w52_color = if w52_change >= 0.0 {
+                Color::Green
+            } else {
+                Color::Red
+            };
+            left_lines.push(Line::from(vec![
+                Span::styled("52W Change  ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!("{:+.2}%", w52_change * 100.0),
+                    Style::default().fg(w52_color),
+                ),
+            ]));
+        }
+
+        // Bid/Ask spread
+        if let (Some(bid), Some(ask)) = (
+            q.bid.as_ref().and_then(|v| v.raw),
+            q.ask.as_ref().and_then(|v| v.raw),
+        ) {
+            if bid > 0.0 && ask > 0.0 {
+                left_lines.push(Line::from(vec![
+                    Span::styled("Bid/Ask     ", Style::default().fg(Color::DarkGray)),
+                    Span::raw(format!("${:.2} / ${:.2}", bid, ask)),
+                ]));
+            }
+        }
+
+        // Shares outstanding and float
+        if let Some(shares) = q.shares_outstanding.as_ref().and_then(|v| v.raw) {
+            left_lines.push(Line::from(vec![
+                Span::styled("Shares Out  ", Style::default().fg(Color::DarkGray)),
+                Span::raw(format_volume(shares)),
+            ]));
+        }
+        if let Some(float) = q.float_shares.as_ref().and_then(|v| v.raw) {
+            left_lines.push(Line::from(vec![
+                Span::styled("Float       ", Style::default().fg(Color::DarkGray)),
+                Span::raw(format_volume(float)),
+            ]));
+        }
+
+        // Short ratio (days to cover)
+        if let Some(short_ratio) = q.short_ratio.as_ref().and_then(|v| v.raw) {
+            let sr_color = if short_ratio > 5.0 {
+                Color::Red // High short interest
+            } else if short_ratio > 2.0 {
+                Color::Yellow
+            } else {
+                Color::White
+            };
+            left_lines.push(Line::from(vec![
+                Span::styled("Short Ratio ", Style::default().fg(Color::DarkGray)),
+                Span::styled(format!("{:.1} days", short_ratio), Style::default().fg(sr_color)),
+            ]));
+        }
+
+        // Price to Book
+        if let Some(pb) = q.price_to_book.as_ref().and_then(|v| v.raw) {
+            left_lines.push(Line::from(vec![
+                Span::styled("P/B         ", Style::default().fg(Color::DarkGray)),
+                Span::raw(format!("{:.2}", pb)),
+            ]));
+        }
+
+        // Ex-Dividend Date
+        if let Some(ex_div) = q.ex_dividend_date.as_ref().and_then(|v| v.raw) {
+            use chrono::{TimeZone, Utc};
+            if let Some(date) = Utc.timestamp_opt(ex_div, 0).single() {
+                let today = Utc::now().date_naive();
+                let ex_date = date.date_naive();
+                let is_upcoming = ex_date >= today;
+                let date_color = if is_upcoming {
+                    Color::Yellow
+                } else {
+                    Color::DarkGray
+                };
+                left_lines.push(Line::from(vec![
+                    Span::styled("Ex-Div Date ", Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        date.format("%Y-%m-%d").to_string(),
+                        Style::default().fg(date_color),
+                    ),
+                ]));
+            }
+        }
     }
 
-    left_lines.push(Line::from(""));
-    left_lines.push(Line::from(Span::styled(
-        "→:Charts  Tab:News",
-        Style::default().fg(Color::DarkGray),
-    )));
-
-    let left_paragraph =
-        Paragraph::new(left_lines).block(Block::default().borders(Borders::ALL).title("Trading"));
+    let trading_height = columns[0].height.saturating_sub(2) as usize; // Account for borders
+    let trading_content_len = left_lines.len();
+    let trading_max_scroll = trading_content_len.saturating_sub(trading_height);
+    let trading_scroll = if trading_max_scroll > 0 {
+        (app.detail_scroll[0] as usize) % (trading_max_scroll + 1)
+    } else {
+        0
+    };
+    let trading_scroll_indicator = if trading_max_scroll > 0 {
+        format!(" [{}↕]", trading_content_len)
+    } else {
+        String::new()
+    };
+    let left_paragraph = Paragraph::new(left_lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!("Trading{}", trading_scroll_indicator)),
+        )
+        .scroll((trading_scroll as u16, 0));
     f.render_widget(left_paragraph, columns[0]);
 
     let mut right_lines = vec![];
@@ -1323,8 +1465,26 @@ fn render_symbol_details(f: &mut Frame, app: &App, area: Rect) {
         )));
     }
 
+    let fund_height = columns[1].height.saturating_sub(2) as usize;
+    let fund_content_len = right_lines.len();
+    let fund_max_scroll = fund_content_len.saturating_sub(fund_height);
+    let fund_scroll = if fund_max_scroll > 0 {
+        (app.detail_scroll[1] as usize) % (fund_max_scroll + 1)
+    } else {
+        0
+    };
+    let fund_scroll_indicator = if fund_max_scroll > 0 {
+        format!(" [{}↕]", fund_content_len)
+    } else {
+        String::new()
+    };
     let right_paragraph = Paragraph::new(right_lines)
-        .block(Block::default().borders(Borders::ALL).title("Fundamentals"));
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!("Fundamentals{}", fund_scroll_indicator)),
+        )
+        .scroll((fund_scroll as u16, 0));
     f.render_widget(right_paragraph, columns[1]);
 
     let mut third_lines = vec![];
@@ -1501,21 +1661,47 @@ fn render_symbol_details(f: &mut Frame, app: &App, area: Rect) {
     }
 
     if third_lines.is_empty() {
-        third_lines.push(Line::from(Span::styled(
-            "Data not available",
-            Style::default().fg(Color::DarkGray),
-        )));
-        third_lines.push(Line::from(Span::styled(
-            "for this symbol",
-            Style::default().fg(Color::DarkGray),
-        )));
+        // Check if we're loading detailed quote for this symbol
+        let is_loading = app.is_loading_detailed_quote
+            && app.loading_detailed_symbol.as_ref() == Some(&symbol.to_string());
+
+        if is_loading {
+            third_lines.push(Line::from(Span::styled(
+                "Loading detailed data...",
+                Style::default().fg(Color::Yellow),
+            )));
+        } else {
+            third_lines.push(Line::from(Span::styled(
+                "Data not available",
+                Style::default().fg(Color::DarkGray),
+            )));
+            third_lines.push(Line::from(Span::styled(
+                "for this symbol",
+                Style::default().fg(Color::DarkGray),
+            )));
+        }
     }
 
-    let third_paragraph = Paragraph::new(third_lines).block(
-        Block::default()
-            .borders(Borders::ALL)
-            .title("Growth & Ownership"),
-    );
+    let growth_height = columns[2].height.saturating_sub(2) as usize;
+    let growth_content_len = third_lines.len();
+    let growth_max_scroll = growth_content_len.saturating_sub(growth_height);
+    let growth_scroll = if growth_max_scroll > 0 {
+        (app.detail_scroll[2] as usize) % (growth_max_scroll + 1)
+    } else {
+        0
+    };
+    let growth_scroll_indicator = if growth_max_scroll > 0 {
+        format!(" [{}↕]", growth_content_len)
+    } else {
+        String::new()
+    };
+    let third_paragraph = Paragraph::new(third_lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(format!("Growth & Ownership{}", growth_scroll_indicator)),
+        )
+        .scroll((growth_scroll as u16, 0));
     f.render_widget(third_paragraph, columns[2]);
 }
 
@@ -2084,7 +2270,10 @@ fn render_status(f: &mut Frame, app: &App, area: Rect) {
                 _ => {
                     // Other tabs have watchlist on left, details on right
                     if app.focus_pane == FocusPane::Left {
-                        "j/k:nav a:add d:delete l/→:focus"
+                        match app.active_tab {
+                            Tab::Watchlist => "j/k:nav a:add d:del 1/2/3:scroll 0:reset",
+                            _ => "j/k:nav a:add d:delete l/→:focus",
+                        }
                     } else {
                         match app.active_tab {
                             Tab::Charts => "←/→:range Esc/h:back",

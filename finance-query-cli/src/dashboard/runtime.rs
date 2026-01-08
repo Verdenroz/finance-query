@@ -62,6 +62,11 @@ async fn run_event_loop(
         tokio::task::JoinHandle<Vec<(finance_query::SectorType, finance_query::Sector)>>,
     > = None;
 
+    // Optional handle for detailed quote fetch task
+    let mut detailed_quote_task: Option<
+        tokio::task::JoinHandle<Option<(String, finance_query::Quote)>>,
+    > = None;
+
     loop {
         terminal.draw(|f| ui(f, app))?;
 
@@ -69,7 +74,25 @@ async fn run_event_loop(
             if let Some(task) = sectors_task.take() {
                 task.abort();
             }
+            if let Some(task) = detailed_quote_task.take() {
+                task.abort();
+            }
             break;
+        }
+
+        // Spawn detailed quote fetch if needed
+        if app.is_loading_detailed_quote && detailed_quote_task.is_none() {
+            if let Some(symbol) = app.loading_detailed_symbol.clone() {
+                detailed_quote_task = Some(tokio::spawn(async move {
+                    match finance_query::Ticker::new(&symbol).await {
+                        Ok(ticker) => match ticker.quote(false).await {
+                            Ok(quote) => Some((symbol, quote)),
+                            Err(_) => None,
+                        },
+                        Err(_) => None,
+                    }
+                }));
+            }
         }
 
         // Spawn parallel sectors fetch if needed
@@ -91,6 +114,20 @@ async fn run_event_loop(
         }
 
         tokio::select! {
+            // Check if detailed quote task completed
+            result = async {
+                match &mut detailed_quote_task {
+                    Some(task) => Some(task.await),
+                    None => futures::future::pending().await,
+                }
+            }, if detailed_quote_task.is_some() => {
+                detailed_quote_task = None;
+                app.is_loading_detailed_quote = false;
+                if let Some(Ok(Some((symbol, quote)))) = result {
+                    app.quotes.insert(symbol, quote);
+                }
+                app.loading_detailed_symbol = None;
+            },
             // Check if sectors task completed
             result = async {
                 match &mut sectors_task {
