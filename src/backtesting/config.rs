@@ -129,20 +129,22 @@ impl BacktestConfig {
         }
 
         if let Some(sl) = self.stop_loss_pct
-            && !(0.0..=1.0).contains(&sl) {
-                return Err(BacktestError::invalid_param(
-                    "stop_loss_pct",
-                    "must be between 0.0 and 1.0",
-                ));
-            }
+            && !(0.0..=1.0).contains(&sl)
+        {
+            return Err(BacktestError::invalid_param(
+                "stop_loss_pct",
+                "must be between 0.0 and 1.0",
+            ));
+        }
 
         if let Some(tp) = self.take_profit_pct
-            && !(0.0..=1.0).contains(&tp) {
-                return Err(BacktestError::invalid_param(
-                    "take_profit_pct",
-                    "must be between 0.0 and 1.0",
-                ));
-            }
+            && !(0.0..=1.0).contains(&tp)
+        {
+            return Err(BacktestError::invalid_param(
+                "take_profit_pct",
+                "must be between 0.0 and 1.0",
+            ));
+        }
 
         Ok(())
     }

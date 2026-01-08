@@ -640,23 +640,26 @@ impl Strategy for DonchianBreakout {
 
         // Breakout above previous upper channel -> go long
         if let Some(prev_up) = prev_upper
-            && close > prev_up && !ctx.has_position() {
-                return Signal::long(candle.timestamp, close)
-                    .with_reason("Donchian upper channel breakout");
-            }
+            && close > prev_up
+            && !ctx.has_position()
+        {
+            return Signal::long(candle.timestamp, close)
+                .with_reason("Donchian upper channel breakout");
+        }
 
         // Breakout below previous lower channel
         if let Some(prev_low) = prev_lower
-            && close < prev_low {
-                if ctx.is_long() {
-                    return Signal::exit(candle.timestamp, close)
-                        .with_reason("Donchian lower channel breakdown - close long");
-                }
-                if !ctx.has_position() && self.allow_short {
-                    return Signal::short(candle.timestamp, close)
-                        .with_reason("Donchian lower channel breakdown");
-                }
+            && close < prev_low
+        {
+            if ctx.is_long() {
+                return Signal::exit(candle.timestamp, close)
+                    .with_reason("Donchian lower channel breakdown - close long");
             }
+            if !ctx.has_position() && self.allow_short {
+                return Signal::short(candle.timestamp, close)
+                    .with_reason("Donchian lower channel breakdown");
+            }
+        }
 
         // Exit long at middle
         if ctx.is_long() && self.exit_at_middle && close <= middle_val {

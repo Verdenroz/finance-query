@@ -237,10 +237,11 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
 
         if ctx.is_short()
             && let Some(ref exit) = self.short_exit_condition
-                && exit.evaluate(ctx) {
-                    return Signal::exit(candle.timestamp, candle.close)
-                        .with_reason(exit.description().to_string());
-                }
+            && exit.evaluate(ctx)
+        {
+            return Signal::exit(candle.timestamp, candle.close)
+                .with_reason(exit.description().to_string());
+        }
 
         // Check entry conditions (when no position)
         if !ctx.has_position() {
@@ -252,10 +253,11 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
 
             // Short entry
             if let Some(ref entry) = self.short_entry_condition
-                && entry.evaluate(ctx) {
-                    return Signal::short(candle.timestamp, candle.close)
-                        .with_reason(entry.description().to_string());
-                }
+                && entry.evaluate(ctx)
+            {
+                return Signal::short(candle.timestamp, candle.close)
+                    .with_reason(entry.description().to_string());
+            }
         }
 
         Signal::hold()

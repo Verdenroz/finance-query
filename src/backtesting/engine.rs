@@ -79,31 +79,31 @@ impl BacktestEngine {
 
             // Check stop-loss / take-profit on existing position
             if let Some(ref pos) = position
-                && let Some(exit_signal) = self.check_sl_tp(pos, candle) {
-                    let exit_price = self.config.apply_exit_slippage(candle.close, pos.is_long());
-                    let exit_commission =
-                        self.config.calculate_commission(exit_price * pos.quantity);
+                && let Some(exit_signal) = self.check_sl_tp(pos, candle)
+            {
+                let exit_price = self.config.apply_exit_slippage(candle.close, pos.is_long());
+                let exit_commission = self.config.calculate_commission(exit_price * pos.quantity);
 
-                    signals.push(SignalRecord {
-                        timestamp: candle.timestamp,
-                        price: candle.close,
-                        direction: SignalDirection::Exit,
-                        strength: 1.0,
-                        reason: exit_signal.reason.clone(),
-                        executed: true,
-                    });
+                signals.push(SignalRecord {
+                    timestamp: candle.timestamp,
+                    price: candle.close,
+                    direction: SignalDirection::Exit,
+                    strength: 1.0,
+                    reason: exit_signal.reason.clone(),
+                    executed: true,
+                });
 
-                    let trade = position.take().unwrap().close(
-                        candle.timestamp,
-                        exit_price,
-                        exit_commission,
-                        exit_signal,
-                    );
+                let trade = position.take().unwrap().close(
+                    candle.timestamp,
+                    exit_price,
+                    exit_commission,
+                    exit_signal,
+                );
 
-                    cash += trade.entry_value() + trade.pnl;
-                    trades.push(trade);
-                    continue; // Skip strategy signal this bar
-                }
+                cash += trade.entry_value() + trade.pnl;
+                trades.push(trade);
+                continue; // Skip strategy signal this bar
+            }
 
             // Skip strategy signals during warmup period
             if i < warmup.saturating_sub(1) {
@@ -156,25 +156,26 @@ impl BacktestEngine {
 
         // Close any open position at end if configured
         if self.config.close_at_end
-            && let Some(pos) = position.take() {
-                let last_candle = candles.last().unwrap();
-                let exit_price = self
-                    .config
-                    .apply_exit_slippage(last_candle.close, pos.is_long());
-                let exit_commission = self.config.calculate_commission(exit_price * pos.quantity);
+            && let Some(pos) = position.take()
+        {
+            let last_candle = candles.last().unwrap();
+            let exit_price = self
+                .config
+                .apply_exit_slippage(last_candle.close, pos.is_long());
+            let exit_commission = self.config.calculate_commission(exit_price * pos.quantity);
 
-                let exit_signal = Signal::exit(last_candle.timestamp, last_candle.close)
-                    .with_reason("End of backtest");
+            let exit_signal = Signal::exit(last_candle.timestamp, last_candle.close)
+                .with_reason("End of backtest");
 
-                let trade = pos.close(
-                    last_candle.timestamp,
-                    exit_price,
-                    exit_commission,
-                    exit_signal,
-                );
-                cash += trade.entry_value() + trade.pnl;
-                trades.push(trade);
-            }
+            let trade = pos.close(
+                last_candle.timestamp,
+                exit_price,
+                exit_commission,
+                exit_signal,
+            );
+            cash += trade.entry_value() + trade.pnl;
+            trades.push(trade);
+        }
 
         // Final equity
         let final_equity = if let Some(ref pos) = position {
@@ -463,23 +464,25 @@ impl BacktestEngine {
 
         // Check stop-loss
         if let Some(sl_pct) = self.config.stop_loss_pct
-            && return_pct <= -sl_pct {
-                return Some(
-                    Signal::exit(candle.timestamp, candle.close)
-                        .with_reason(format!("Stop-loss triggered ({:.1}%)", return_pct * 100.0)),
-                );
-            }
+            && return_pct <= -sl_pct
+        {
+            return Some(
+                Signal::exit(candle.timestamp, candle.close)
+                    .with_reason(format!("Stop-loss triggered ({:.1}%)", return_pct * 100.0)),
+            );
+        }
 
         // Check take-profit
         if let Some(tp_pct) = self.config.take_profit_pct
-            && return_pct >= tp_pct {
-                return Some(
-                    Signal::exit(candle.timestamp, candle.close).with_reason(format!(
-                        "Take-profit triggered ({:.1}%)",
-                        return_pct * 100.0
-                    )),
-                );
-            }
+            && return_pct >= tp_pct
+        {
+            return Some(
+                Signal::exit(candle.timestamp, candle.close).with_reason(format!(
+                    "Take-profit triggered ({:.1}%)",
+                    return_pct * 100.0
+                )),
+            );
+        }
 
         None
     }
@@ -618,12 +621,12 @@ mod tests {
         // Price trends up then down - should trigger crossover signals
         let mut prices = vec![100.0; 30];
         // Make fast SMA cross above slow SMA around bar 15
-        for i in 15..25 {
-            prices[i] = 100.0 + (i - 15) as f64 * 2.0;
+        for (i, price) in prices.iter_mut().enumerate().take(25).skip(15) {
+            *price = 100.0 + (i - 15) as f64 * 2.0;
         }
         // Then cross back down
-        for i in 25..30 {
-            prices[i] = 118.0 - (i - 25) as f64 * 3.0;
+        for (i, price) in prices.iter_mut().enumerate().take(30).skip(25) {
+            *price = 118.0 - (i - 25) as f64 * 3.0;
         }
 
         let candles = make_candles(&prices);
@@ -648,12 +651,12 @@ mod tests {
         // Price drops significantly after entry
         let mut prices = vec![100.0; 20];
         // Trend up to trigger long entry
-        for i in 10..15 {
-            prices[i] = 100.0 + (i - 10) as f64 * 2.0;
+        for (i, price) in prices.iter_mut().enumerate().take(15).skip(10) {
+            *price = 100.0 + (i - 10) as f64 * 2.0;
         }
         // Then crash
-        for i in 15..20 {
-            prices[i] = 108.0 - (i - 15) as f64 * 10.0;
+        for (i, price) in prices.iter_mut().enumerate().take(20).skip(15) {
+            *price = 108.0 - (i - 15) as f64 * 10.0;
         }
 
         let candles = make_candles(&prices);

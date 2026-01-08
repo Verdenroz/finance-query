@@ -117,15 +117,15 @@ impl<C: Condition> Condition for Not<C> {
 /// use finance_query::backtesting::refs::*;
 ///
 /// let conditions = ConditionBuilder::new()
-///     .add(rsi(14).below(30.0))
-///     .add(price().above_ref(sma(200)))
-///     .add(adx(14).above(25.0))
+///     .with_condition(rsi(14).below(30.0))
+///     .with_condition(price().above_ref(sma(200)))
+///     .with_condition(adx(14).above(25.0))
 ///     .all();  // All conditions must be true
 ///
 /// // Or use any() for OR logic
 /// let exit = ConditionBuilder::new()
-///     .add(rsi(14).above(70.0))
-///     .add(stop_loss(0.05))
+///     .with_condition(rsi(14).above(70.0))
+///     .with_condition(stop_loss(0.05))
 ///     .any();  // Any condition can be true
 /// ```
 #[derive(Clone)]
@@ -148,7 +148,7 @@ impl<C: Condition> ConditionBuilder<C> {
     }
 
     /// Add a condition to the builder.
-    pub fn add(mut self, condition: C) -> Self {
+    pub fn with_condition(mut self, condition: C) -> Self {
         self.conditions.push(condition);
         self
     }
@@ -252,8 +252,8 @@ mod tests {
     #[test]
     fn test_all_description() {
         let all = ConditionBuilder::new()
-            .add(always_true())
-            .add(always_false())
+            .with_condition(always_true())
+            .with_condition(always_false())
             .all();
         assert_eq!(all.description(), "ALL(always true AND always false)");
     }
@@ -261,8 +261,8 @@ mod tests {
     #[test]
     fn test_any_description() {
         let any = ConditionBuilder::new()
-            .add(always_true())
-            .add(always_false())
+            .with_condition(always_true())
+            .with_condition(always_false())
             .any();
         assert_eq!(any.description(), "ANY(always true OR always false)");
     }
