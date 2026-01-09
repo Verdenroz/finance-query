@@ -75,7 +75,9 @@ mod tickers;
 // High-level API - Primary interface for most use cases
 // ============================================================================
 pub use ticker::{Ticker, TickerBuilder};
-pub use tickers::{BatchChartsResponse, BatchQuotesResponse, Tickers, TickersBuilder};
+pub use tickers::{
+    BatchChartsResponse, BatchQuotesResponse, BatchSparksResponse, Tickers, TickersBuilder,
+};
 
 // ============================================================================
 // Error types and results
@@ -104,7 +106,7 @@ pub use models::{
     hours::MarketHours, indicators::IndicatorsSummary, industries::Industry, lookup::LookupResults,
     market_summary::MarketSummaryQuote, news::News, options::Options, quote::Quote,
     recommendation::Recommendation, screeners::ScreenerResults, search::SearchResults,
-    sectors::Sector, transcript::Transcript, transcript::TranscriptWithMeta,
+    sectors::Sector, spark::Spark, transcript::Transcript, transcript::TranscriptWithMeta,
     trending::TrendingQuote,
 };
 

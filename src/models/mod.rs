@@ -35,6 +35,8 @@ pub mod screeners;
 pub mod search;
 /// Sector models for market sector data.
 pub mod sectors;
+/// Spark models for batch sparkline data.
+pub mod spark;
 /// Earnings call transcript models.
 pub mod transcript;
 /// Trending tickers models.

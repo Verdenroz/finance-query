@@ -5,4 +5,6 @@
 
 mod core;
 
-pub use core::{BatchChartsResponse, BatchQuotesResponse, Tickers, TickersBuilder};
+pub use core::{
+    BatchChartsResponse, BatchQuotesResponse, BatchSparksResponse, Tickers, TickersBuilder,
+};

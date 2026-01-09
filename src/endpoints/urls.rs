@@ -99,6 +99,9 @@ pub mod api {
     pub fn trending(region: &str) -> String {
         format!("{}/v1/finance/trending/{}", YAHOO_FINANCE_QUERY2, region)
     }
+
+    /// Batch sparkline data endpoint
+    pub const SPARK: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v7/finance/spark");
 }
 
 /// URL builders (functions that construct full URLs with query params)
