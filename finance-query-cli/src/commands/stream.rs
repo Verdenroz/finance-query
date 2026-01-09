@@ -2,7 +2,7 @@ use crate::error::Result;
 use crate::output;
 use clap::Parser;
 use colored::Colorize;
-use finance_query::streaming::PriceStream;
+use finance_query::streaming::{MarketHoursType, PriceStream};
 use futures::StreamExt;
 
 #[derive(Parser)]
@@ -28,9 +28,7 @@ pub async fn execute(args: StreamArgs) -> Result<()> {
 
     // Process price updates as they arrive
     while let Some(price) = stream.next().await {
-        let timestamp = chrono::DateTime::from_timestamp(price.time, 0)
-            .map(|dt| dt.format("%H:%M:%S").to_string())
-            .unwrap_or_else(|| "N/A".to_string());
+        let timestamp = chrono::Local::now().format("%H:%M:%S").to_string();
 
         // Color code the change
         let change_str = if price.change >= 0.0 {
@@ -45,15 +43,16 @@ pub async fn execute(args: StreamArgs) -> Result<()> {
             format!("{:.2}%", price.change_percent).red()
         };
 
+        let market_label = format_market_hours(price.market_hours);
         println!(
-            "{} {} ${:.2} {} {} Vol: {} Market: {:?}",
+            "{} {} ${:.2} {} {} Vol: {} {}",
             timestamp.bright_black(),
             price.id.bright_white().bold(),
             price.price,
             change_str,
             change_pct_str,
             format_volume(price.day_volume),
-            price.market_hours
+            market_label
         );
     }
 
@@ -68,4 +67,33 @@ fn format_volume(volume: i64) -> String {
         v if v >= 1_000 => format!("{:.2}K", v as f64 / 1_000.0),
         _ => volume.to_string(),
     }
+}
+
+/// Format market hours type with colored output
+fn format_market_hours(market_hours: MarketHoursType) -> colored::ColoredString {
+    match market_hours {
+        MarketHoursType::RegularMarket => "Regular".green(),
+        MarketHoursType::PreMarket => {
+            // Distinguish overnight (8 PM - 4 AM ET) from pre-market (4 AM - 9:30 AM ET)
+            if is_overnight_session() {
+                "Overnight".cyan()
+            } else {
+                "Pre-Market".yellow()
+            }
+        }
+        MarketHoursType::PostMarket => "After-Hours".yellow(),
+        MarketHoursType::ExtendedHoursMarket => "Extended".cyan(),
+    }
+}
+
+/// Check if current time is during overnight trading session (8 PM - 4 AM ET)
+fn is_overnight_session() -> bool {
+    use chrono::{Timelike, Utc};
+    use chrono_tz::America::New_York;
+
+    let now_et = Utc::now().with_timezone(&New_York);
+    let hour = now_et.hour();
+
+    // Overnight: 8 PM (20:00) to 4 AM (04:00) ET
+    hour >= 20 || hour < 4
 }

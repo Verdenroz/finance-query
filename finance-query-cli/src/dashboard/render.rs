@@ -1008,7 +1008,7 @@ fn render_symbol_details(f: &mut Frame, app: &App, area: Rect) {
 
     let quote = app.quotes.get(symbol);
 
-    let (price, change, change_pct, day_low, day_high, volume, is_live) =
+    let (price, change, change_pct, day_low, day_high, volume, streaming_market_hours) =
         if let Some(update) = app.price_updates.get(symbol) {
             (
                 update.price as f64,
@@ -1017,7 +1017,7 @@ fn render_symbol_details(f: &mut Frame, app: &App, area: Rect) {
                 Some(update.day_low as f64),
                 Some(update.day_high as f64),
                 update.day_volume,
-                true,
+                Some(update.market_hours),
             )
         } else if let Some(q) = quote {
             let p = q
@@ -1042,7 +1042,7 @@ fn render_symbol_details(f: &mut Frame, app: &App, area: Rect) {
                 .as_ref()
                 .and_then(|v| v.raw)
                 .unwrap_or(0);
-            (p, c, cp, dl, dh, vol, false)
+            (p, c, cp, dl, dh, vol, None)
         } else {
             let paragraph = Paragraph::new(vec![
                 Line::from(Span::styled(
@@ -1070,8 +1070,22 @@ fn render_symbol_details(f: &mut Frame, app: &App, area: Rect) {
     };
 
     let mut left_lines = vec![];
-    let status = if is_live {
-        ("● LIVE", Color::Green)
+    // Use streaming market_hours when available, otherwise fall back to quote's market_state
+    let status = if let Some(market_hours) = streaming_market_hours {
+        use finance_query::streaming::MarketHoursType;
+        match market_hours {
+            MarketHoursType::RegularMarket => ("● LIVE", Color::Green),
+            MarketHoursType::PreMarket => {
+                // Distinguish overnight (8 PM - 4 AM ET) from pre-market (4 AM - 9:30 AM ET)
+                if is_overnight_session() {
+                    ("◐ OVERNIGHT", Color::Cyan)
+                } else {
+                    ("◐ PRE", Color::Yellow)
+                }
+            }
+            MarketHoursType::PostMarket => ("◑ POST", Color::Yellow),
+            MarketHoursType::ExtendedHoursMarket => ("◑ EXT", Color::Yellow),
+        }
     } else if let Some(q) = quote {
         match q.market_state.as_deref().unwrap_or("CLOSED") {
             "REGULAR" => ("● OPEN", Color::Green),
@@ -2561,4 +2575,16 @@ fn format_volume(volume: i64) -> String {
         v if v >= 1_000 => format!("{:.2}K", v as f64 / 1_000.0),
         _ => volume.to_string(),
     }
+}
+
+/// Check if current time is during overnight trading session (8 PM - 4 AM ET)
+fn is_overnight_session() -> bool {
+    use chrono::{Timelike, Utc};
+    use chrono_tz::America::New_York;
+
+    let now_et = Utc::now().with_timezone(&New_York);
+    let hour = now_et.hour();
+
+    // Overnight: 8 PM (20:00) to 4 AM (04:00) ET
+    hour >= 20 || hour < 4
 }
