@@ -2,7 +2,7 @@ use crate::alerts::{Alert, AlertStore};
 use crate::dashboard::storage::{DashboardStorage, Watchlist};
 use crate::portfolio::{Portfolio, PortfolioStorage};
 use finance_query::{
-    Quote, ScreenerQuote, ScreenerType, Sector, SectorType, streaming::PriceUpdate,
+    Quote, ScreenerQuote, ScreenerType, Sector, SectorType, Spark, streaming::PriceUpdate,
 };
 use std::collections::HashMap;
 use tokio::time::{Duration, Interval as TokioInterval, interval};
@@ -212,6 +212,8 @@ pub struct App {
     pub loading_detailed_symbol: Option<String>,
     // Scroll positions for detail panels (Trading, Fundamentals, Growth & Ownership)
     pub detail_scroll: [u16; 3],
+    // Sparkline data for watchlist symbols
+    pub sparklines: HashMap<String, Spark>,
 }
 
 /// Sectors view mode - sectors overview or drill-down to industries
@@ -290,6 +292,7 @@ impl App {
             is_loading_detailed_quote: false,
             loading_detailed_symbol: None,
             detail_scroll: [0, 0, 0],
+            sparklines: HashMap::new(),
         })
     }
 
@@ -442,5 +445,32 @@ impl App {
             return 0.0;
         }
         (self.total_portfolio_profit_loss() / total_cost) * 100.0
+    }
+
+    /// Fetch sparkline data for all watchlist symbols
+    pub async fn fetch_sparklines(&mut self) -> anyhow::Result<()> {
+        use finance_query::{Interval, Tickers, TimeRange};
+
+        if self.current_watchlist.symbols.is_empty() {
+            return Ok(());
+        }
+
+        let symbols: Vec<&str> = self
+            .current_watchlist
+            .symbols
+            .iter()
+            .map(|s| s.as_str())
+            .collect();
+
+        let tickers = Tickers::new(symbols).await?;
+        let result = tickers
+            .spark(Interval::FiveMinutes, TimeRange::OneDay)
+            .await?;
+
+        for (symbol, spark) in result.sparks {
+            self.sparklines.insert(symbol, spark);
+        }
+
+        Ok(())
     }
 }

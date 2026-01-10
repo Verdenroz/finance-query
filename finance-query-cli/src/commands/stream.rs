@@ -95,5 +95,5 @@ fn is_overnight_session() -> bool {
     let hour = now_et.hour();
 
     // Overnight: 8 PM (20:00) to 4 AM (04:00) ET
-    hour >= 20 || hour < 4
+    !(4..20).contains(&hour)
 }

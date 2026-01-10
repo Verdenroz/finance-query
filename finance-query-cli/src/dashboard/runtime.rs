@@ -42,6 +42,7 @@ pub async fn run_dashboard() -> Result<()> {
     let _ = app.fetch_all_quotes().await;
     let _ = app.refresh_details().await;
     let _ = app.refresh_portfolio_prices().await;
+    let _ = app.fetch_sparklines().await;
 
     let result = run_event_loop(&mut terminal, &mut app, price_stream).await;
 
@@ -81,18 +82,19 @@ async fn run_event_loop(
         }
 
         // Spawn detailed quote fetch if needed
-        if app.is_loading_detailed_quote && detailed_quote_task.is_none() {
-            if let Some(symbol) = app.loading_detailed_symbol.clone() {
-                detailed_quote_task = Some(tokio::spawn(async move {
-                    match finance_query::Ticker::new(&symbol).await {
-                        Ok(ticker) => match ticker.quote(false).await {
-                            Ok(quote) => Some((symbol, quote)),
-                            Err(_) => None,
-                        },
+        if app.is_loading_detailed_quote
+            && detailed_quote_task.is_none()
+            && let Some(symbol) = app.loading_detailed_symbol.clone()
+        {
+            detailed_quote_task = Some(tokio::spawn(async move {
+                match finance_query::Ticker::new(&symbol).await {
+                    Ok(ticker) => match ticker.quote(false).await {
+                        Ok(quote) => Some((symbol, quote)),
                         Err(_) => None,
-                    }
-                }));
-            }
+                    },
+                    Err(_) => None,
+                }
+            }));
         }
 
         // Spawn parallel sectors fetch if needed
