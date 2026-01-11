@@ -21,9 +21,22 @@ impl App {
         }
 
         if self.active_tab == Tab::Charts {
-            self.status_message = format!("Fetching chart for {}...", symbol);
+            // Use the selected range with appropriate interval
+            let range_options: [(&str, TimeRange, Interval); 8] = [
+                ("1D", TimeRange::OneDay, Interval::FiveMinutes),
+                ("5D", TimeRange::FiveDays, Interval::FifteenMinutes),
+                ("1M", TimeRange::OneMonth, Interval::OneDay),
+                ("6M", TimeRange::SixMonths, Interval::OneDay),
+                ("YTD", TimeRange::YearToDate, Interval::OneDay),
+                ("1Y", TimeRange::OneYear, Interval::OneDay),
+                ("5Y", TimeRange::FiveYears, Interval::OneWeek),
+                ("Max", TimeRange::Max, Interval::OneWeek),
+            ];
+            let (label, range, interval) = range_options[self.selected_chart_range_idx];
+
+            self.status_message = format!("Fetching chart for {} ({})...", symbol, label);
             match Ticker::new(&symbol).await {
-                Ok(ticker) => match ticker.chart(Interval::OneDay, TimeRange::OneMonth).await {
+                Ok(ticker) => match ticker.chart(interval, range).await {
                     Ok(chart) => {
                         let data: Vec<(f64, f64)> = chart
                             .candles
@@ -33,7 +46,7 @@ impl App {
                         let count = data.len();
                         self.chart_data = Some(data);
                         self.status_message =
-                            format!("Chart loaded for {} ({} points)", symbol, count);
+                            format!("Chart loaded for {} ({}, {} points)", symbol, label, count);
                     }
                     Err(e) => {
                         self.chart_data = None;
@@ -44,53 +57,6 @@ impl App {
                     self.chart_data = None;
                     self.status_message = format!("Failed to create ticker for {}: {}", symbol, e);
                 }
-            }
-        }
-
-        Ok(())
-    }
-
-    pub async fn refresh_details_with_range(&mut self) -> Result<()> {
-        let Some(symbol) = self.selected_symbol().cloned() else {
-            self.chart_data = None;
-            return Ok(());
-        };
-
-        let range_options = [
-            ("1D", TimeRange::OneDay),
-            ("5D", TimeRange::FiveDays),
-            ("1M", TimeRange::OneMonth),
-            ("6M", TimeRange::SixMonths),
-            ("YTD", TimeRange::YearToDate),
-            ("1Y", TimeRange::OneYear),
-            ("5Y", TimeRange::FiveYears),
-            ("Max", TimeRange::Max),
-        ];
-
-        let (_label, range) = range_options[self.selected_chart_range_idx];
-
-        self.status_message = format!("Fetching chart for {} ({})...", symbol, _label);
-        match Ticker::new(&symbol).await {
-            Ok(ticker) => match ticker.chart(Interval::OneDay, range).await {
-                Ok(chart) => {
-                    let data: Vec<(f64, f64)> = chart
-                        .candles
-                        .iter()
-                        .map(|c| (c.timestamp as f64, c.close))
-                        .collect();
-                    let count = data.len();
-                    self.chart_data = Some(data);
-                    self.status_message =
-                        format!("Chart loaded for {} ({}, {} points)", symbol, _label, count);
-                }
-                Err(e) => {
-                    self.chart_data = None;
-                    self.status_message = format!("Chart error for {}: {}", symbol, e);
-                }
-            },
-            Err(e) => {
-                self.chart_data = None;
-                self.status_message = format!("Failed to create ticker for {}: {}", symbol, e);
             }
         }
 

@@ -236,14 +236,14 @@ pub async fn handle_key_event(app: &mut App, key: event::KeyEvent) -> Result<()>
                 const NUM_RANGES: usize = 8;
                 app.selected_chart_range_idx =
                     (app.selected_chart_range_idx + NUM_RANGES - 1) % NUM_RANGES;
-                let _ = app.refresh_details_with_range().await;
+                let _ = app.refresh_details().await;
             }
             KeyCode::Right
                 if app.focus_pane == FocusPane::Right && app.active_tab == Tab::Charts =>
             {
                 const NUM_RANGES: usize = 8;
                 app.selected_chart_range_idx = (app.selected_chart_range_idx + 1) % NUM_RANGES;
-                let _ = app.refresh_details_with_range().await;
+                let _ = app.refresh_details().await;
             }
 
             KeyCode::Left

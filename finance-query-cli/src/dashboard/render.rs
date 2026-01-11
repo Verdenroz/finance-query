@@ -1886,7 +1886,7 @@ fn render_chart_widget(f: &mut Frame, app: &App, area: Rect, symbol: &str, range
     let min_price = prices.iter().cloned().fold(f64::INFINITY, f64::min);
     let max_price = prices.iter().cloned().fold(f64::NEG_INFINITY, f64::max);
     let padding = (max_price - min_price) * 0.05;
-    let y_min = min_price - padding;
+    let y_min = (min_price - padding).max(0.0); // Prices can't be negative
     let y_max = max_price + padding;
 
     let first_price = prices.first().copied().unwrap_or(0.0);

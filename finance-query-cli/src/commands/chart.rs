@@ -34,7 +34,7 @@ pub struct ChartArgs {
     #[arg(short, long, default_value = "1mo")]
     range: String,
 
-    /// Output format (chart, candlestick, table, json, csv)
+    /// Output format (chart, table, json, csv)
     #[arg(short, long, default_value = "chart")]
     output: String,
 
@@ -205,38 +205,64 @@ impl IndicatorType {
     }
 }
 
-fn format_timestamp(timestamp: i64) -> String {
-    chrono::DateTime::from_timestamp(timestamp, 0)
-        .map(|dt| dt.format("%Y-%m-%d").to_string())
+/// Format timestamp based on time range - uses local timezone
+fn format_timestamp_for_range(timestamp: i64, range: TimeRange) -> String {
+    use chrono::{Local, TimeZone};
+
+    Local
+        .timestamp_opt(timestamp, 0)
+        .single()
+        .map(|dt| {
+            match range {
+                // 1D: show time only
+                TimeRange::OneDay => dt.format("%H:%M").to_string(),
+                // 5D: show weekday and time
+                TimeRange::FiveDays => dt.format("%a %H:%M").to_string(),
+                // 1M-1Y: show month and day
+                TimeRange::OneMonth
+                | TimeRange::ThreeMonths
+                | TimeRange::SixMonths
+                | TimeRange::YearToDate
+                | TimeRange::OneYear => dt.format("%b %d").to_string(),
+                // 2Y+: show month and year
+                TimeRange::TwoYears
+                | TimeRange::FiveYears
+                | TimeRange::TenYears
+                | TimeRange::Max => dt.format("%b %Y").to_string(),
+            }
+        })
         .unwrap_or_else(|| "N/A".to_string())
 }
 
 async fn render_interactive_chart(
     symbol: &str,
-    initial_interval: Interval,
+    _initial_interval: Interval,
     initial_range: TimeRange,
 ) -> Result<()> {
-    let range_options = [
-        ("1D", TimeRange::OneDay),
-        ("5D", TimeRange::FiveDays),
-        ("1M", TimeRange::OneMonth),
-        ("6M", TimeRange::SixMonths),
-        ("YTD", TimeRange::YearToDate),
-        ("1Y", TimeRange::OneYear),
-        ("5Y", TimeRange::FiveYears),
-        ("Max", TimeRange::Max),
+    // Range options with appropriate intervals for each range
+    let range_options: [(&str, TimeRange, Interval); 8] = [
+        ("1D", TimeRange::OneDay, Interval::FiveMinutes),
+        ("5D", TimeRange::FiveDays, Interval::FifteenMinutes),
+        ("1M", TimeRange::OneMonth, Interval::OneDay),
+        ("6M", TimeRange::SixMonths, Interval::OneDay),
+        ("YTD", TimeRange::YearToDate, Interval::OneDay),
+        ("1Y", TimeRange::OneYear, Interval::OneDay),
+        ("5Y", TimeRange::FiveYears, Interval::OneWeek),
+        ("Max", TimeRange::Max, Interval::OneWeek),
     ];
 
     let mut selected_range_idx = range_options
         .iter()
-        .position(|(_, r)| std::mem::discriminant(r) == std::mem::discriminant(&initial_range))
+        .position(|(_, r, _)| std::mem::discriminant(r) == std::mem::discriminant(&initial_range))
         .unwrap_or(2); // Default to 1M
 
     let mut current_range = initial_range;
-    let current_interval = initial_interval;
+    let mut current_interval = range_options[selected_range_idx].2;
     let mut chart_data: Option<finance_query::Chart> = None;
     let mut loading = true;
     let mut error_msg: Option<String> = None;
+    let mut focus_mode = false;
+    let mut focus_index: usize = 0;
 
     // Setup terminal
     enable_raw_mode()?;
@@ -271,7 +297,7 @@ async fn render_interactive_chart(
                 .constraints([
                     Constraint::Length(4), // Header with range selector
                     Constraint::Min(0),    // Chart
-                    Constraint::Length(2), // Footer
+                    Constraint::Length(3), // Footer with status and controls
                 ])
                 .split(size);
 
@@ -291,7 +317,7 @@ async fn render_interactive_chart(
                 let range_buttons: Vec<Span> = range_options
                     .iter()
                     .enumerate()
-                    .flat_map(|(idx, (label, _))| {
+                    .flat_map(|(idx, (label, _, _))| {
                         let is_selected = idx == selected_range_idx;
                         vec![
                             if is_selected {
@@ -365,38 +391,52 @@ async fn render_interactive_chart(
                         .iter()
                         .map(|(_, p)| *p)
                         .fold(f64::NEG_INFINITY, f64::max);
-                    let max_index = data.len() as f64;
+                    let max_index = (data.len().saturating_sub(1)) as f64;
 
-                    // Add padding
+                    // Add padding (y_min can't go below 0 for prices)
                     let price_padding = (max_price - min_price) * 0.1;
-                    let y_min = min_price - price_padding;
+                    let y_min = (min_price - price_padding).max(0.0);
                     let y_max = max_price + price_padding;
 
                     let line_color = if is_up { Color::Green } else { Color::Red };
 
-                    // Create dataset
+                    // Clamp focus_index to valid range
+                    if focus_index >= data.len() {
+                        focus_index = data.len().saturating_sub(1);
+                    }
+
+                    // Create main dataset
                     let dataset = Dataset::default()
-                        .name(symbol)
                         .marker(symbols::Marker::Braille)
                         .graph_type(GraphType::Line)
                         .style(Style::default().fg(line_color))
                         .data(&data);
 
-                    // Format time labels
+                    // Create focus marker dataset (vertical line at focus point)
+                    let focus_point_data: Vec<(f64, f64)> = if focus_mode {
+                        let x = focus_index as f64;
+                        vec![(x, y_min), (x, y_max)]
+                    } else {
+                        vec![]
+                    };
+                    let focus_dataset = Dataset::default()
+                        .marker(symbols::Marker::Braille)
+                        .graph_type(GraphType::Line)
+                        .style(Style::default().fg(Color::Yellow))
+                        .data(&focus_point_data);
+
+                    // Get first and last timestamps for minimal x-axis context
+                    let first_time = chart.candles.first().map(|c| c.timestamp).unwrap_or(0);
+                    let last_time = chart.candles.last().map(|c| c.timestamp).unwrap_or(0);
                     let x_labels = vec![
-                        Span::raw(format_timestamp(
-                            chart.candles.first().map(|c| c.timestamp).unwrap_or(0),
-                        )),
-                        Span::raw(format_timestamp(
-                            chart
-                                .candles
-                                .get(data.len() / 2)
-                                .map(|c| c.timestamp)
-                                .unwrap_or(0),
-                        )),
-                        Span::raw(format_timestamp(
-                            chart.candles.last().map(|c| c.timestamp).unwrap_or(0),
-                        )),
+                        Span::styled(
+                            format_timestamp_for_range(first_time, current_range),
+                            Style::default().fg(Color::DarkGray),
+                        ),
+                        Span::styled(
+                            format_timestamp_for_range(last_time, current_range),
+                            Style::default().fg(Color::DarkGray),
+                        ),
                     ];
 
                     // Format price labels
@@ -406,16 +446,56 @@ async fn render_interactive_chart(
                         Span::raw(format!(" {:.2}", y_max)),
                     ];
 
-                    // Create chart
-                    let chart_widget = RatatuiChart::new(vec![dataset])
+                    // Build title - show focus info when in focus mode
+                    let title = if focus_mode {
+                        let focused_candle = &chart.candles[focus_index];
+                        let time_str =
+                            format_timestamp_for_range(focused_candle.timestamp, current_range);
+                        Line::from(vec![
+                            Span::styled(
+                                format!(" {} ", symbol),
+                                Style::default()
+                                    .fg(Color::White)
+                                    .add_modifier(Modifier::BOLD),
+                            ),
+                            Span::styled(
+                                format!(
+                                    "│ {} │ O:{:.2} H:{:.2} L:{:.2} C:{:.2} ",
+                                    time_str,
+                                    focused_candle.open,
+                                    focused_candle.high,
+                                    focused_candle.low,
+                                    focused_candle.close
+                                ),
+                                Style::default().fg(Color::Yellow),
+                            ),
+                        ])
+                    } else {
+                        Line::from(Span::styled(
+                            format!(" {} ", symbol),
+                            Style::default()
+                                .fg(Color::White)
+                                .add_modifier(Modifier::BOLD),
+                        ))
+                    };
+
+                    // Create chart with both datasets
+                    let datasets = if focus_mode {
+                        vec![dataset, focus_dataset]
+                    } else {
+                        vec![dataset]
+                    };
+
+                    let chart_widget = RatatuiChart::new(datasets)
                         .block(
                             Block::default()
+                                .title(title)
                                 .borders(Borders::ALL)
                                 .border_style(Style::default().fg(Color::DarkGray)),
                         )
                         .x_axis(
                             ratatui::widgets::Axis::default()
-                                .style(Style::default().fg(Color::Gray))
+                                .style(Style::default().fg(Color::DarkGray))
                                 .bounds([0.0, max_index])
                                 .labels(x_labels),
                         )
@@ -446,23 +526,54 @@ async fn render_interactive_chart(
                 f.render_widget(error_text, chunks[1]);
             }
 
-            // Footer with help text
-            let footer = Paragraph::new(Line::from(vec![
+            // Footer with status and controls
+            let interval_str = match current_interval {
+                Interval::OneMinute => "1m",
+                Interval::FiveMinutes => "5m",
+                Interval::FifteenMinutes => "15m",
+                Interval::ThirtyMinutes => "30m",
+                Interval::OneHour => "1h",
+                Interval::OneDay => "1d",
+                Interval::OneWeek => "1wk",
+                Interval::OneMonth => "1mo",
+                Interval::ThreeMonths => "3mo",
+            };
+            let status_text = if loading {
+                Span::styled(" Loading...", Style::default().fg(Color::Yellow))
+            } else if let Some(ref chart) = chart_data {
                 Span::styled(
-                    "←/→",
-                    Style::default()
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(" Change range  ", Style::default().fg(Color::DarkGray)),
-                Span::styled(
-                    "q/Esc/Ctrl+C",
-                    Style::default()
-                        .fg(Color::White)
-                        .add_modifier(Modifier::BOLD),
-                ),
-                Span::styled(" Quit", Style::default().fg(Color::DarkGray)),
-            ]))
+                    format!(" {} | {} pts", interval_str, chart.candles.len()),
+                    Style::default().fg(Color::Cyan),
+                )
+            } else {
+                Span::raw("")
+            };
+
+            let footer_spans = if focus_mode {
+                vec![
+                    status_text,
+                    Span::styled("  │  ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("←/→", Style::default().fg(Color::Yellow)),
+                    Span::styled(":trace  ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("Enter/Esc", Style::default().fg(Color::White)),
+                    Span::styled(":exit  ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("q", Style::default().fg(Color::Red)),
+                    Span::styled(":quit", Style::default().fg(Color::DarkGray)),
+                ]
+            } else {
+                vec![
+                    status_text,
+                    Span::styled("  │  ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("Tab/←/→", Style::default().fg(Color::White)),
+                    Span::styled(":range  ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("Enter", Style::default().fg(Color::Yellow)),
+                    Span::styled(":trace  ", Style::default().fg(Color::DarkGray)),
+                    Span::styled("q", Style::default().fg(Color::Red)),
+                    Span::styled(":quit", Style::default().fg(Color::DarkGray)),
+                ]
+            };
+
+            let footer = Paragraph::new(Line::from(footer_spans))
             .block(
                 Block::default()
                     .borders(Borders::ALL)
@@ -475,21 +586,72 @@ async fn render_interactive_chart(
         if event::poll(std::time::Duration::from_millis(100))?
             && let Event::Key(key) = event::read()?
         {
+            let data_len = chart_data.as_ref().map(|c| c.candles.len()).unwrap_or(0);
+
             match key.code {
-                KeyCode::Char('q') | KeyCode::Esc => break,
+                KeyCode::Char('q') => break,
                 KeyCode::Char('c') if key.modifiers.contains(KeyModifiers::CONTROL) => break,
+                KeyCode::Esc => {
+                    if focus_mode {
+                        focus_mode = false;
+                    } else {
+                        break;
+                    }
+                }
+                KeyCode::Enter => {
+                    if focus_mode {
+                        focus_mode = false;
+                    } else if data_len > 0 {
+                        focus_mode = true;
+                        focus_index = data_len / 2; // Start in the middle
+                    }
+                }
                 KeyCode::Left | KeyCode::Char('h') => {
-                    if selected_range_idx > 0 {
+                    if focus_mode {
+                        focus_index = focus_index.saturating_sub(1);
+                    } else if selected_range_idx > 0 {
                         selected_range_idx -= 1;
                         current_range = range_options[selected_range_idx].1;
+                        current_interval = range_options[selected_range_idx].2;
                         loading = true;
                     }
                 }
                 KeyCode::Right | KeyCode::Char('l') => {
-                    if selected_range_idx < range_options.len() - 1 {
+                    if focus_mode {
+                        if focus_index < data_len.saturating_sub(1) {
+                            focus_index += 1;
+                        }
+                    } else if selected_range_idx < range_options.len() - 1 {
                         selected_range_idx += 1;
                         current_range = range_options[selected_range_idx].1;
+                        current_interval = range_options[selected_range_idx].2;
                         loading = true;
+                    }
+                }
+                KeyCode::BackTab => {
+                    if !focus_mode && selected_range_idx > 0 {
+                        selected_range_idx -= 1;
+                        current_range = range_options[selected_range_idx].1;
+                        current_interval = range_options[selected_range_idx].2;
+                        loading = true;
+                    }
+                }
+                KeyCode::Tab => {
+                    if !focus_mode && selected_range_idx < range_options.len() - 1 {
+                        selected_range_idx += 1;
+                        current_range = range_options[selected_range_idx].1;
+                        current_interval = range_options[selected_range_idx].2;
+                        loading = true;
+                    }
+                }
+                KeyCode::Home => {
+                    if focus_mode {
+                        focus_index = 0;
+                    }
+                }
+                KeyCode::End => {
+                    if focus_mode {
+                        focus_index = data_len.saturating_sub(1);
                     }
                 }
                 _ => {}
@@ -512,15 +674,15 @@ pub async fn execute(args: ChartArgs) -> Result<()> {
     // Parse range
     let range = parse_range(&args.range)?;
 
-    // Interactive mode is default for chart/candlestick output
+    // Interactive mode is default for chart output
     match args.output.to_lowercase().as_str() {
-        "chart" | "candlestick" => {
+        "chart" => {
             return render_interactive_chart(&args.symbol, interval, range).await;
         }
         "table" | "json" | "csv" => {}
         _ => {
             return Err(crate::error::CliError::InvalidArgument(format!(
-                "Invalid output format '{}'. Valid: chart, candlestick, table, json, csv",
+                "Invalid output format '{}'. Valid: chart, table, json, csv",
                 args.output
             )));
         }
