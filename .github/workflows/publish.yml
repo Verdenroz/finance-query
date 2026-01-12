@@ -53,9 +53,24 @@ jobs:
       - name: Publish finance-query
         run: cargo publish -p finance-query --token ${{ secrets.CRATES_IO_TOKEN }}
 
+      - name: Extract CHANGELOG for this version
+        id: changelog
+        run: |
+          TAG_VERSION=${GITHUB_REF#refs/tags/v}
+          CHANGELOG_CONTENT=$(bash .github/scripts/extract_changelog.sh "$TAG_VERSION" CHANGELOG.md || echo "")
+          if [ -z "$CHANGELOG_CONTENT" ]; then
+            echo "No CHANGELOG entry found for version $TAG_VERSION, using auto-generated notes"
+            echo "use_auto=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_auto=false" >> $GITHUB_OUTPUT
+            # Save to file to preserve formatting
+            echo "$CHANGELOG_CONTENT" > /tmp/release_notes.md
+          fi
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          generate_release_notes: true
+          body_path: ${{ steps.changelog.outputs.use_auto == 'false' && '/tmp/release_notes.md' || '' }}
+          generate_release_notes: ${{ steps.changelog.outputs.use_auto == 'true' }}
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
