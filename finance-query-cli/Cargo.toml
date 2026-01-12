@@ -3,13 +3,35 @@ name = "finance-query-cli"
 version = "0.1.0"
 edition = "2024"
 authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
-description = "Command-line interface for finance-query"
+description = "Command-line tool for real-time financial data, technical analysis, and market intelligence"
 license = "MIT"
 repository = "https://github.com/Verdenroz/finance-query"
 homepage = "https://github.com/Verdenroz/finance-query"
+documentation = "https://docs.rs/finance-query-cli"
 readme = "README.md"
 keywords = ["finance", "yahoo", "stocks", "cli", "market-data"]
 categories = ["command-line-utilities", "finance"]
+exclude = [".gitignore", "*.db", "*.db-shm", "*.db-wal"]
+# Include assets for README screenshots on crates.io
+include = [
+    "src/**/*",
+    "Cargo.toml",
+    "README.md",
+    "assets/screenshots/*.png",
+    "assets/screenshots/*.jpg",
+    "assets/screenshots/*.gif"
+]
+
+# Metadata for docs.rs
+[package.metadata.docs.rs]
+all-features = false
+default-target = "x86_64-unknown-linux-gnu"
+
+# Binary installation name
+[package.metadata.binstall]
+pkg-url = "{ repo }/releases/download/cli-v{ version }/{ name }-{ target }.tar.gz"
+bin-dir = "{ bin }{ binary-ext }"
+pkg-fmt = "tgz"
 
 [[bin]]
 name = "fq"
@@ -43,6 +65,7 @@ thiserror = "2.0"
 
 # Date and time formatting
 chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
 
 # Progress indicators
 indicatif = "0.18.3"
