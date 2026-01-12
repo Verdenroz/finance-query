@@ -12,61 +12,129 @@ tokio = { version = "1", features = ["full"] }
 
 ### Optional Features
 
-Enable features like `dataframe` for Polars integration:
-
 ```toml
 [dependencies]
-finance-query = { version = "2.0", features = ["dataframe"] }
+finance-query = { version = "2.0", features = ["dataframe", "backtesting"] }
 ```
 
-## Basic Usage
+| Feature | Description |
+|---------|-------------|
+| `dataframe` | Polars DataFrame integration for data analysis |
+| `backtesting` | Strategy backtesting engine (includes `indicators`) |
+| `indicators` | 52+ technical indicators (auto-enabled with `backtesting`) |
 
-### Ticker API
-
-The `Ticker` struct is your entry point for symbol-specific data (quotes, charts, financials).
+## Quick Example
 
 ```rust
-use finance_query::Ticker;
+use finance_query::{Ticker, Interval, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // 1. Create a ticker
     let ticker = Ticker::new("AAPL").await?;
 
-    // 2. Fetch data (lazy loaded)
+    // Get quote
     let quote = ticker.quote(true).await?;
-    println!("{} price: ${:?}", quote.symbol, quote.regular_market_price);
+    println!("{}: ${:.2}", quote.symbol, quote.regular_market_price.unwrap_or(0.0));
 
-    // 3. Get historical data
-    let chart = ticker.chart(
-        finance_query::Interval::OneDay, 
-        finance_query::TimeRange::OneMonth
-    ).await?;
-    println!("Retrieved {} candles", chart.candles.len());
+    // Get chart
+    let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    println!("Candles: {}", chart.candles.len());
 
     Ok(())
 }
 ```
 
-### General Functions
+## Key Features
 
-Use the `finance` module for market-wide queries like search, screeners, and news.
+### 📊 Stock Data & Analysis
 
 ```rust
-use finance_query::{finance, SearchOptions};
+// Quotes, financials, options, news
+let ticker = Ticker::new("MSFT").await?;
+let quote = ticker.quote(true).await?; // fetch quote with logo if available
+let financials = ticker.financial_data().await?;
+let options = ticker.options(None).await?;
+```
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Search for a company and get news
-    let options = SearchOptions::new().news_count(5);
-    let results = finance::search("NVIDIA", &options).await?;
+→ [Ticker API](ticker.md) for complete reference
 
-    println!("Found {} quotes", results.quotes.len());
-    
-    for news in results.news {
-        println!("News: {} ({})", news.title, news.publisher);
-    }
+### 📦 Batch Operations
 
-    Ok(())
+```rust
+// Fetch multiple symbols efficiently
+let tickers = Tickers::new(vec!["AAPL", "MSFT", "GOOGL"]).await?;
+let quotes = tickers.quotes(true).await?; // fetch quotes with logos if available
+let sparks = tickers.spark(Interval::OneDay, TimeRange::FiveDays).await?;
+```
+
+→ [Batch Tickers](tickers.md) for multi-symbol operations
+
+### 🔍 Market Discovery
+
+```rust
+use finance_query::{finance, ScreenerType};
+
+// Search, screeners, trending stocks
+let results = finance::search("Tesla", &SearchOptions::default()).await?;
+let actives = finance::screener(ScreenerType::MostActives, None).await?;
+let trending = finance::trending(None).await?;
+```
+
+→ [Finance Module](finance.md) for market-wide data
+
+### 📊 DataFrame Support
+
+```rust
+// Convert to Polars DataFrames
+let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+let df = chart.to_dataframe()?;
+```
+
+→ [DataFrame Support](dataframe.md) for data analysis
+
+### 📈 Technical Indicators
+
+```rust
+// 52+ indicators: RSI, MACD, Bollinger Bands, etc.
+let indicators = ticker.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
+
+if let Some(rsi) = indicators.rsi_14 {
+    println!("RSI: {:.2}", rsi);
 }
 ```
+
+→ [Technical Indicators](indicators.md) for all available indicators
+
+### 🔬 Backtesting
+
+```rust
+use finance_query::backtesting::SmaCrossover;
+
+// Test strategies against historical data
+let result = ticker.backtest(
+    SmaCrossover::new(10, 20),
+    Interval::OneDay,
+    TimeRange::OneYear,
+    None,
+).await?;
+
+println!("Return: {:.2}%", result.metrics.total_return_pct);
+```
+
+→ [Backtesting](backtesting.md) for strategy building
+
+## Next Steps
+
+**Start Here:**
+
+- [Ticker API](ticker.md) - Single symbol operations
+- [Technical Indicators](indicators.md) - RSI, MACD, Bollinger Bands, and more
+- [Backtesting](backtesting.md) - Test trading strategies
+
+**Advanced:**
+
+- [Batch Tickers](tickers.md) - Multi-symbol efficiency
+- [Finance Module](finance.md) - Market-wide searches
+- [DataFrame Support](dataframe.md) - Data analysis with Polars
+- [Configuration](configuration.md) - Regional settings and customization
+- [Models Reference](models.md) - Response type documentation

@@ -1,7 +1,7 @@
 site_name: Finance Query
 site_url: https://verdenroz.github.io/finance-query/
 site_author: Harvey Tseng
-site_description: A Rust library for fetching financial data from Yahoo Finance
+site_description: Rust library, CLI, and server for financial data
 
 repo_url: https://github.com/Verdenroz/finance-query
 repo_name: Verdenroz/finance-query
@@ -65,6 +65,12 @@ nav:
       - DataFrame Support: library/dataframe.md
       - Configuration: library/configuration.md
       - Models: library/models.md
+      - Indicators: library/indicators.md
+      - Backtesting: library/backtesting.md
+  - CLI:
+      - Installation & Quick Start: cli/installation.md
+      - Commands: cli/commands.md
+      - Examples: cli/examples.md
   - Server:
       - REST API Reference: server/api-reference.md
       - WebSocket API Reference: server/websocket-api-reference.md

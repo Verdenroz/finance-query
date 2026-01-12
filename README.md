@@ -9,11 +9,11 @@
 [![CI](https://github.com/Verdenroz/finance-query/actions/workflows/ci.yml/badge.svg)](https://github.com/Verdenroz/finance-query/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Rust library and HTTP/WebSocket server for fetching financial data from Yahoo Finance.
+Rust library, CLI, and HTTP server for querying financial data.
 
 ## Hosted API
 
-A free hosted version is available at **[finance-query.com](https://finance-query.com)**:
+Free hosted version at **[finance-query.com](https://finance-query.com)**:
 
 ```bash
 # Get a quote
@@ -25,10 +25,10 @@ wscat -c "wss://finance-query.com/v2/stream"
 
 ## What's in This Repository
 
-This repository mtaintains two services:
-
-- **Library** (`finance-query`) - Rust crate for programmatic access to Yahoo Finance data
-- **Server** (`finance-query-server`) - HTTP REST API and WebSocket server built on the library
+- **Library** (`finance-query`) - Rust crate for programmatic access to Yahoo Finance
+- **CLI** (`finance-query-cli`) - Command-line tool for market data, technical analysis, and backtesting
+- **Server** (`finance-query-server`) - HTTP REST API and WebSocket server
+- **Derive Macros** (`finance-query-derive`) - Procedural macros for Polars DataFrame integration
 
 ## Quick Start
 
@@ -58,6 +58,32 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 }
 ```
 
+### CLI
+
+Install `fq` (the command-line tool):
+
+```bash
+# Pre-built binary (Linux/macOS)
+curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Verdenroz/finance-query/releases/latest/download/finance-query-cli-installer.sh | sh
+
+# Or from crates.io
+cargo install finance-query-cli
+```
+
+Quick examples:
+
+```bash
+fq quote AAPL MSFT GOOGL          # Get quotes
+fq stream AAPL TSLA NVDA          # Live prices
+fq chart AAPL -r 6mo              # Interactive price chart
+fq indicator AAPL --indicator rsi:14  # Technical indicators
+fq backtest AAPL --preset swing   # Strategy backtesting
+fq dashboard                      # Market dashboard
+fq alerts add AAPL price-above:200  # Price alerts with notifications
+```
+
+See [finance-query-cli/README.md](finance-query-cli/README.md) for full documentation.
+
 ### Server
 
 Run the server locally (requires [Rust](https://rustup.rs/)):
@@ -78,17 +104,24 @@ The v2 server provides REST endpoints at `/v2/*` and WebSocket streaming at `/v2
 
 ## Documentation
 
-**Full documentation is available at [verdenroz.github.io/finance-query](https://verdenroz.github.io/finance-query)**
+**Package guides:**
 
-- [Library Guide](https://verdenroz.github.io/finance-query/library/getting-started/) - Getting started with the Rust library
-- [REST API Reference](https://verdenroz.github.io/finance-query/server/api-reference/) - Interactive OpenAPI documentation
-- [WebSocket API Reference](https://verdenroz.github.io/finance-query/server/websocket-api-reference/) - Real-time streaming API
-- [Contributing](https://verdenroz.github.io/finance-query/development/contributing/) - Development setup and guidelines
+- [CLI](finance-query-cli/README.md) - Command-line tool with examples, installation, and features
+- [Server](server/README.md) - REST API and WebSocket server setup and endpoints
+- [Derive Macros](finance-query-derive/README.md) - Procedural macros for Polars DataFrame support
 
-Additional resources:
+**Full documentation at [verdenroz.github.io/finance-query](https://verdenroz.github.io/finance-query):**
 
-- [Rust API Docs](https://docs.rs/finance-query) - Detailed API documentation on docs.rs
-- [Crates.io](https://crates.io/crates/finance-query) - Published crate
+- [Library Getting Started](https://verdenroz.github.io/finance-query/library/getting-started/)
+- [REST API Reference](https://verdenroz.github.io/finance-query/server/api-reference/)
+- [WebSocket API](https://verdenroz.github.io/finance-query/server/websocket-api-reference/)
+- [Contributing](https://verdenroz.github.io/finance-query/development/contributing/)
+
+**API Documentation:**
+
+- [Rust Docs](https://docs.rs/finance-query) - Library API on docs.rs
+- [Crates.io](https://crates.io/crates/finance-query) - Published library
+- [CLI on Crates.io](https://crates.io/crates/finance-query-cli) - Published CLI
 
 ## Legacy Python Version (v1)
 

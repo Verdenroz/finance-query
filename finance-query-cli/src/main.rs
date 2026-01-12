@@ -185,18 +185,16 @@
 //! fq stream AAPL MSFT TSLA NVDA
 //! ```
 //!
-//! ### Calculate Multiple Indicators
+//! ### Calculate Technical Indicators
 //! ```bash
-//! fq indicator AAPL --rsi 14 --sma 20,50,200 --interval 1d --range 6mo
+//! fq indicator AAPL --indicator rsi:14 --no-tui
+//! fq indicator AAPL --indicator sma:20,50,200 -i 1d -r 6mo --no-tui
 //! ```
 //!
-//! ### Backtest SMA Crossover Strategy
+//! ### Backtest Trading Strategies
 //! ```bash
-//! fq backtest AAPL \
-//!   --strategy sma-crossover \
-//!   --fast 10 --slow 20 \
-//!   --interval 1d --range 1y \
-//!   --initial-capital 10000
+//! fq backtest AAPL --preset swing
+//! fq backtest AAPL --preset trend --json
 //! ```
 //!
 //! ### Get Earnings Call Transcript
@@ -211,7 +209,8 @@
 //!
 //! ### Set Up Price Alerts
 //! ```bash
-//! fq alerts add AAPL --above 200 --below 150
+//! fq alerts add AAPL price-above:200
+//! fq alerts add AAPL price-below:150
 //! fq alerts list
 //! fq alerts check  # Check all alerts and notify
 //! ```

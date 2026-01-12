@@ -158,11 +158,14 @@ fq chart AAPL -r 1mo -o csv
 ### Technical Indicators
 
 ```bash
-# Single indicator
-fq indicator AAPL --rsi 14
+# Interactive TUI (select indicators interactively)
+fq indicator AAPL
 
-# Multiple indicators
-fq indicator AAPL --rsi 14 --macd 12,26,9 --sma 20,50,200
+# Single indicator (non-interactive)
+fq indicator AAPL --indicator rsi:14 --no-tui
+
+# Multiple indicators (run separately)
+fq indicator AAPL --indicator sma:20,50,200 --no-tui
 
 # Available indicators: sma, ema, rsi, macd, bollinger, atr,
 # stochastic, adx, obv, vwap, cci, williamsr, stochrsi, psar,
@@ -177,8 +180,11 @@ fq indicator AAPL --rsi 14 --macd 12,26,9 --sma 20,50,200
 # Interactive backtest (TUI)
 fq backtest AAPL
 
-# With specific strategy
-fq backtest AAPL --strategy sma-crossover --fast 10 --slow 20
+# With preset strategy
+fq backtest AAPL --preset swing
+fq backtest AAPL --preset trend
+
+# Available presets: swing, day, trend, mean-reversion, conservative, aggressive
 ```
 
 ![Backtest](assets/screenshots/backtest.png)
@@ -199,8 +205,12 @@ fq options AAPL --expiration 2024-12-20
 
 ```bash
 # Add price alerts
-fq alerts add AAPL --above 200
-fq alerts add TSLA --below 150
+fq alerts add AAPL price-above:200
+fq alerts add TSLA price-below:150
+
+# Other alert types
+fq alerts add AAPL change-above:5  # Alert on 5%+ change
+fq alerts add TSLA volume-spike:2.0  # Alert on 2x volume spike
 
 # List active alerts
 fq alerts list
