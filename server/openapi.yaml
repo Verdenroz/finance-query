@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Finance Query v2
-  version: 2.0.1
+  version: 2.1.0
   description: |
     REST API for fetching financial data from Yahoo Finance.
     Provides real-time quotes, historical data, news, options, and more.

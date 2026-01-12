@@ -1,13 +1,13 @@
 [workspace]
-members = ["server", "finance-query-derive"]
+members = ["server", "finance-query-derive", "finance-query-cli"]
 resolver = "2"
 
 [package]
 name = "finance-query"
-version = "2.0.1"
+version = "2.1.0"
 edition = "2024"
 authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
-description = "A Rust library for fetching financial data from Yahoo Finance"
+description = "A Rust library for querying financial data"
 license = "MIT"
 repository = "https://github.com/Verdenroz/finance-query"
 homepage = "https://github.com/Verdenroz/finance-query"
@@ -75,14 +75,14 @@ tracing = "0.1"
 scraper = "0.25.0"
 
 # WebSocket streaming support
-tokio-tungstenite = { version = "0.28.0", features = ["native-tls"] }
+tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
 prost = "0.14.1"
 base64 = "0.22"
 
 # Optional: DataFrame support
 polars = { version = "0.52", optional = true, default-features = false, features = ["lazy"] }
-finance-query-derive = { version = "2.0.1", path = "finance-query-derive", optional = true }
+finance-query-derive = { version = "2.1.0", path = "finance-query-derive", optional = true }
 
 [features]
 default = []
@@ -111,3 +111,8 @@ strip = true
 
 [profile.dev]
 opt-level = 0
+
+# The profile that 'dist' will build with
+[profile.dist]
+inherits = "release"
+lto = "thin"
