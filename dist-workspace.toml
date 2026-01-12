@@ -17,5 +17,6 @@ install-path = "CARGO_HOME"
 hosting = "github"
 # Whether to install an updater program
 install-updater = false
-# Use cli-v prefix for CLI releases to avoid conflict with library v* tags
-tag-namespace = "cli-v"
+# Use finance-query-cli- prefix for CLI releases to avoid conflict with library v* tags
+# cargo-dist automatically adds the dash, so tags should be: finance-query-cli-0.1.0, finance-query-cli-0.2.0, etc.
+tag-namespace = "finance-query-cli"
