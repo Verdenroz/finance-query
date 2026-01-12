@@ -208,35 +208,36 @@ fn render_watchlist(f: &mut Frame, app: &App, area: Rect) {
         // Render sparkline with per-bar colors (green above open, red below)
         if sparkline_width >= 4
             && let Some(spark) = app.sparklines.get(symbol)
-                && !spark.closes.is_empty() {
-                    use ratatui::widgets::SparklineBar;
+            && !spark.closes.is_empty()
+        {
+            use ratatui::widgets::SparklineBar;
 
-                    let min = spark.min_close().unwrap_or(0.0);
-                    let max = spark.max_close().unwrap_or(100.0);
-                    let range = (max - min).max(0.01);
+            let min = spark.min_close().unwrap_or(0.0);
+            let max = spark.max_close().unwrap_or(100.0);
+            let range = (max - min).max(0.01);
 
-                    // Reference price is the first price (open)
-                    let open_price = spark.closes[0];
+            // Reference price is the first price (open)
+            let open_price = spark.closes[0];
 
-                    // Create bars with individual colors based on price vs open
-                    let bars: Vec<SparklineBar> = spark
-                        .closes
-                        .iter()
-                        .map(|&price| {
-                            let value = ((price - min) / range * 100.0) as u64;
-                            let color = if price >= open_price {
-                                Color::Green
-                            } else {
-                                Color::Red
-                            };
-                            SparklineBar::from(value).style(Style::default().fg(color))
-                        })
-                        .collect();
+            // Create bars with individual colors based on price vs open
+            let bars: Vec<SparklineBar> = spark
+                .closes
+                .iter()
+                .map(|&price| {
+                    let value = ((price - min) / range * 100.0) as u64;
+                    let color = if price >= open_price {
+                        Color::Green
+                    } else {
+                        Color::Red
+                    };
+                    SparklineBar::from(value).style(Style::default().fg(color))
+                })
+                .collect();
 
-                    let sparkline = Sparkline::default().data(bars);
+            let sparkline = Sparkline::default().data(bars);
 
-                    f.render_widget(sparkline, spark_area);
-                }
+            f.render_widget(sparkline, spark_area);
+        }
     }
 }
 

@@ -573,8 +573,7 @@ async fn render_interactive_chart(
                 ]
             };
 
-            let footer = Paragraph::new(Line::from(footer_spans))
-            .block(
+            let footer = Paragraph::new(Line::from(footer_spans)).block(
                 Block::default()
                     .borders(Borders::ALL)
                     .border_style(Style::default().fg(Color::DarkGray)),
