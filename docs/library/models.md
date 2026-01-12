@@ -177,58 +177,68 @@ pub struct Quote {
     pub quote_type: Option<String>,
     pub currency: Option<String>,
 
-    // Pricing
-    pub regular_market_price: Option<f64>,
-    pub regular_market_change: Option<f64>,
-    pub regular_market_change_percent: Option<f64>,
+    // Pricing (wrapped in FormattedValue)
+    pub regular_market_price: Option<FormattedValue<f64>>,
+    pub regular_market_change: Option<FormattedValue<f64>>,
+    pub regular_market_change_percent: Option<FormattedValue<f64>>,
     pub regular_market_time: Option<i64>,
-    pub regular_market_day_high: Option<f64>,
-    pub regular_market_day_low: Option<f64>,
-    pub regular_market_volume: Option<i64>,
-    pub regular_market_previous_close: Option<f64>,
-    pub regular_market_open: Option<f64>,
+    pub regular_market_day_high: Option<FormattedValue<f64>>,
+    pub regular_market_day_low: Option<FormattedValue<f64>>,
+    pub regular_market_volume: Option<FormattedValue<i64>>,
+    pub regular_market_previous_close: Option<FormattedValue<f64>>,
+    pub regular_market_open: Option<FormattedValue<f64>>,
 
-    // Extended hours
-    pub pre_market_price: Option<f64>,
-    pub pre_market_change: Option<f64>,
-    pub pre_market_change_percent: Option<f64>,
-    pub post_market_price: Option<f64>,
-    pub post_market_change: Option<f64>,
-    pub post_market_change_percent: Option<f64>,
+    // Extended hours (wrapped in FormattedValue)
+    pub pre_market_price: Option<FormattedValue<f64>>,
+    pub pre_market_change: Option<FormattedValue<f64>>,
+    pub pre_market_change_percent: Option<FormattedValue<f64>>,
+    pub post_market_price: Option<FormattedValue<f64>>,
+    pub post_market_change: Option<FormattedValue<f64>>,
+    pub post_market_change_percent: Option<FormattedValue<f64>>,
 
-    // Valuation
-    pub market_cap: Option<i64>,
-    pub trailing_pe: Option<f64>,
-    pub forward_pe: Option<f64>,
-    pub price_to_book: Option<f64>,
-    pub enterprise_value: Option<i64>,
+    // Valuation (wrapped in FormattedValue)
+    pub market_cap: Option<FormattedValue<i64>>,
+    pub trailing_pe: Option<FormattedValue<f64>>,
+    pub forward_pe: Option<FormattedValue<f64>>,
+    pub price_to_book: Option<FormattedValue<f64>>,
+    pub enterprise_value: Option<FormattedValue<i64>>,
 
-    // Range
-    pub fifty_two_week_low: Option<f64>,
-    pub fifty_two_week_high: Option<f64>,
-    pub fifty_day_average: Option<f64>,
-    pub two_hundred_day_average: Option<f64>,
+    // Range (wrapped in FormattedValue)
+    pub fifty_two_week_low: Option<FormattedValue<f64>>,
+    pub fifty_two_week_high: Option<FormattedValue<f64>>,
+    pub fifty_day_average: Option<FormattedValue<f64>>,
+    pub two_hundred_day_average: Option<FormattedValue<f64>>,
 
-    // Dividends
-    pub dividend_rate: Option<f64>,
-    pub dividend_yield: Option<f64>,
-    pub ex_dividend_date: Option<i64>,
+    // Dividends (wrapped in FormattedValue)
+    pub dividend_rate: Option<FormattedValue<f64>>,
+    pub dividend_yield: Option<FormattedValue<f64>>,
+    pub ex_dividend_date: Option<FormattedValue<i64>>,
 
-    // Shares
-    pub shares_outstanding: Option<i64>,
-    pub float_shares: Option<i64>,
+    // Shares (wrapped in FormattedValue)
+    pub shares_outstanding: Option<FormattedValue<i64>>,
+    pub float_shares: Option<FormattedValue<i64>>,
 
-    // Financials
-    pub total_revenue: Option<i64>,
-    pub revenue_per_share: Option<f64>,
-    pub profit_margins: Option<f64>,
-    pub operating_margins: Option<f64>,
-    pub ebitda: Option<i64>,
-    pub trailing_eps: Option<f64>,
-    pub forward_eps: Option<f64>,
+    // Financials (wrapped in FormattedValue)
+    pub total_revenue: Option<FormattedValue<i64>>,
+    pub revenue_per_share: Option<FormattedValue<f64>>,
+    pub profit_margins: Option<FormattedValue<f64>>,
+    pub operating_margins: Option<FormattedValue<f64>>,
+    pub ebitda: Option<FormattedValue<i64>>,
+    pub trailing_eps: Option<FormattedValue<f64>>,
+    pub forward_eps: Option<FormattedValue<f64>>,
 
     // ... and many more optional fields
 }
+```
+
+**Important:** Most numeric fields in Quote are wrapped in `FormattedValue<T>`, not plain Option<T>. The `FormattedValue<T>` struct contains:
+- `raw: Option<T>` - The actual numeric value
+- `fmt: Option<String>` - Formatted string (e.g., "150.25")
+- `long_fmt: Option<String>` - Long format string (e.g., "150.25000")
+
+Access numeric values using `.as_ref().and_then(|v| v.raw)`:
+```rust
+let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
 ```
 
 **Field Precedence:** For duplicate fields across modules:
@@ -247,16 +257,18 @@ Individual quote modules provide more detailed, structured data. All are `Option
 
 ```rust
 pub struct Price {
-    pub symbol: String,
-    pub market_state: String,           // "REGULAR", "PRE", "POST", "CLOSED"
-    pub currency: String,
-    pub regular_market_price: Option<f64>,
+    pub symbol: Option<String>,
+    pub market_state: Option<String>,           // "REGULAR", "PRE", "POST", "CLOSED"
+    pub currency: Option<String>,
+    pub regular_market_price: Option<FormattedValue<f64>>,
     pub regular_market_time: Option<i64>,
-    pub regular_market_change: Option<f64>,
-    pub regular_market_change_percent: Option<f64>,
+    pub regular_market_change: Option<FormattedValue<f64>>,
+    pub regular_market_change_percent: Option<FormattedValue<f64>>,
     // ... more pricing fields
 }
 ```
+
+**Note:** Most numeric fields are wrapped in `FormattedValue<T>` which contains `raw: Option<T>`, `fmt: Option<String>`, and `long_fmt: Option<String>`. Access the numeric value via `.as_ref().and_then(|v| v.raw)`.
 
 **Obtained via:** `ticker.price().await?`
 
@@ -264,20 +276,22 @@ pub struct Price {
 
 ```rust
 pub struct SummaryDetail {
-    pub market_cap: Option<i64>,
-    pub trailing_pe: Option<f64>,
-    pub forward_pe: Option<f64>,
-    pub peg_ratio: Option<f64>,
-    pub dividend_rate: Option<f64>,
-    pub dividend_yield: Option<f64>,
-    pub beta: Option<f64>,
-    pub fifty_two_week_low: Option<f64>,
-    pub fifty_two_week_high: Option<f64>,
-    pub fifty_day_average: Option<f64>,
-    pub two_hundred_day_average: Option<f64>,
+    pub market_cap: Option<FormattedValue<i64>>,
+    pub trailing_pe: Option<FormattedValue<f64>>,
+    pub forward_pe: Option<FormattedValue<f64>>,
+    pub peg_ratio: Option<Value>,  // Generic JSON value
+    pub dividend_rate: Option<FormattedValue<f64>>,
+    pub dividend_yield: Option<FormattedValue<f64>>,
+    pub beta: Option<FormattedValue<f64>>,
+    pub fifty_two_week_low: Option<FormattedValue<f64>>,
+    pub fifty_two_week_high: Option<FormattedValue<f64>>,
+    pub fifty_day_average: Option<FormattedValue<f64>>,
+    pub two_hundred_day_average: Option<FormattedValue<f64>>,
     // ... more summary fields
 }
 ```
+
+**Note:** Numeric fields are wrapped in `FormattedValue<T>`. Access values via `.as_ref().and_then(|v| v.raw)`.
 
 **Obtained via:** `ticker.summary_detail().await?`
 
@@ -285,35 +299,37 @@ pub struct SummaryDetail {
 
 ```rust
 pub struct FinancialData {
-    pub total_cash: Option<i64>,
-    pub total_cash_per_share: Option<f64>,
-    pub ebitda: Option<i64>,
-    pub total_debt: Option<i64>,
-    pub total_revenue: Option<i64>,
-    pub debt_to_equity: Option<f64>,
-    pub revenue_per_share: Option<f64>,
-    pub return_on_assets: Option<f64>,
-    pub return_on_equity: Option<f64>,
-    pub gross_profits: Option<i64>,
-    pub free_cash_flow: Option<i64>,
-    pub operating_cash_flow: Option<i64>,
-    pub earnings_growth: Option<f64>,
-    pub revenue_growth: Option<f64>,
-    pub gross_margins: Option<f64>,
-    pub ebitda_margins: Option<f64>,
-    pub operating_margins: Option<f64>,
-    pub profit_margins: Option<f64>,
-    pub current_price: Option<f64>,
-    pub target_high_price: Option<f64>,
-    pub target_low_price: Option<f64>,
-    pub target_mean_price: Option<f64>,
-    pub target_median_price: Option<f64>,
-    pub recommendation_mean: Option<f64>,
+    pub total_cash: Option<FormattedValue<i64>>,
+    pub total_cash_per_share: Option<FormattedValue<f64>>,
+    pub ebitda: Option<FormattedValue<i64>>,
+    pub total_debt: Option<FormattedValue<i64>>,
+    pub total_revenue: Option<FormattedValue<i64>>,
+    pub debt_to_equity: Option<FormattedValue<f64>>,
+    pub revenue_per_share: Option<FormattedValue<f64>>,
+    pub return_on_assets: Option<FormattedValue<f64>>,
+    pub return_on_equity: Option<FormattedValue<f64>>,
+    pub gross_profits: Option<FormattedValue<i64>>,
+    pub free_cashflow: Option<FormattedValue<i64>>,  // Note: field name is 'free_cashflow'
+    pub operating_cashflow: Option<FormattedValue<i64>>,  // Note: field name is 'operating_cashflow'
+    pub earnings_growth: Option<FormattedValue<f64>>,
+    pub revenue_growth: Option<FormattedValue<f64>>,
+    pub gross_margins: Option<FormattedValue<f64>>,
+    pub ebitda_margins: Option<FormattedValue<f64>>,
+    pub operating_margins: Option<FormattedValue<f64>>,
+    pub profit_margins: Option<FormattedValue<f64>>,
+    pub current_price: Option<FormattedValue<f64>>,
+    pub target_high_price: Option<FormattedValue<f64>>,
+    pub target_low_price: Option<FormattedValue<f64>>,
+    pub target_mean_price: Option<FormattedValue<f64>>,
+    pub target_median_price: Option<FormattedValue<f64>>,
+    pub recommendation_mean: Option<FormattedValue<f64>>,
     pub recommendation_key: Option<String>,
-    pub number_of_analyst_opinions: Option<i64>,
+    pub number_of_analyst_opinions: Option<FormattedValue<i64>>,
     // ... more financial fields
 }
 ```
+
+**Note:** Numeric fields are wrapped in `FormattedValue<T>`. Access values via `.as_ref().and_then(|v| v.raw)`.
 
 **Obtained via:** `ticker.financial_data().await?`
 
@@ -343,35 +359,37 @@ pub struct AssetProfile {
 
 ```rust
 pub struct DefaultKeyStatistics {
-    pub enterprise_value: Option<i64>,
-    pub forward_pe: Option<f64>,
-    pub profit_margins: Option<f64>,
-    pub float_shares: Option<i64>,
-    pub shares_outstanding: Option<i64>,
-    pub shares_short: Option<i64>,
-    pub shares_short_prior_month: Option<i64>,
-    pub shares_short_previous_month_date: Option<i64>,
-    pub date_short_interest: Option<i64>,
-    pub shares_percent_shares_out: Option<f64>,
-    pub held_percent_insiders: Option<f64>,
-    pub held_percent_institutions: Option<f64>,
-    pub short_ratio: Option<f64>,
-    pub short_percent_of_float: Option<f64>,
-    pub beta: Option<f64>,
-    pub book_value: Option<f64>,
-    pub price_to_book: Option<f64>,
-    pub last_fiscal_year_end: Option<i64>,
-    pub next_fiscal_year_end: Option<i64>,
-    pub most_recent_quarter: Option<i64>,
-    pub earnings_quarterly_growth: Option<f64>,
-    pub trailing_eps: Option<f64>,
-    pub forward_eps: Option<f64>,
-    pub peg_ratio: Option<f64>,
+    pub enterprise_value: Option<FormattedValue<i64>>,
+    pub forward_pe: Option<FormattedValue<f64>>,
+    pub profit_margins: Option<FormattedValue<f64>>,
+    pub float_shares: Option<FormattedValue<i64>>,
+    pub shares_outstanding: Option<FormattedValue<i64>>,
+    pub shares_short: Option<FormattedValue<i64>>,
+    pub shares_short_prior_month: Option<FormattedValue<i64>>,
+    pub shares_short_previous_month_date: Option<FormattedValue<i64>>,
+    pub date_short_interest: Option<FormattedValue<i64>>,
+    pub shares_percent_shares_out: Option<FormattedValue<f64>>,
+    pub held_percent_insiders: Option<FormattedValue<f64>>,
+    pub held_percent_institutions: Option<FormattedValue<f64>>,
+    pub short_ratio: Option<FormattedValue<f64>>,
+    pub short_percent_of_float: Option<FormattedValue<f64>>,
+    pub beta: Option<FormattedValue<f64>>,
+    pub book_value: Option<FormattedValue<f64>>,
+    pub price_to_book: Option<FormattedValue<f64>>,
+    pub last_fiscal_year_end: Option<FormattedValue<i64>>,
+    pub next_fiscal_year_end: Option<FormattedValue<i64>>,
+    pub most_recent_quarter: Option<FormattedValue<i64>>,
+    pub earnings_quarterly_growth: Option<FormattedValue<f64>>,
+    pub trailing_eps: Option<FormattedValue<f64>>,
+    pub forward_eps: Option<FormattedValue<f64>>,
+    pub peg_ratio: Option<Value>,  // Generic JSON value
     pub last_split_factor: Option<String>,
-    pub last_split_date: Option<i64>,
+    pub last_split_date: Option<FormattedValue<i64>>,
     // ... more stats
 }
 ```
+
+**Note:** Numeric fields are wrapped in `FormattedValue<T>`. Access values via `.as_ref().and_then(|v| v.raw)`.
 
 **Obtained via:** `ticker.key_stats().await?`
 
@@ -917,17 +935,34 @@ let df = rec.to_dataframe()?;
 
 ## Working with Optional Fields
 
-Most fields in Yahoo Finance responses are `Option<T>` because data availability varies by symbol and asset type.
+Most fields in Yahoo Finance responses are `Option<T>` because data availability varies by symbol and asset type. Additionally, most **numeric** fields in quote-related structs (Quote, Price, SummaryDetail, FinancialData, DefaultKeyStatistics) are wrapped in `FormattedValue<T>`.
 
-### Safe Pattern Matching
+### Understanding FormattedValue
+
+`FormattedValue<T>` provides both the raw numeric value and formatted strings:
 
 ```rust
-// Recommended: Use if let or match
-if let Some(market_cap) = quote.market_cap {
+pub struct FormattedValue<T> {
+    pub raw: Option<T>,         // The actual number
+    pub fmt: Option<String>,     // Short format: "150.25"
+    pub long_fmt: Option<String>, // Long format: "150.250000"
+}
+```
+
+### Safe Pattern Matching with FormattedValue
+
+```rust
+// Access numeric value from Quote fields
+if let Some(market_cap) = quote.market_cap.as_ref().and_then(|v| v.raw) {
     println!("Market cap: ${}", market_cap);
 }
 
-// For nested options
+// Access formatted string
+if let Some(price_fmt) = quote.regular_market_price.as_ref().and_then(|v| v.fmt.as_ref()) {
+    println!("Price (formatted): {}", price_fmt);
+}
+
+// For non-numeric optional fields (strings, etc.)
 if let Some(profile) = ticker.asset_profile().await? {
     if let Some(sector) = profile.sector {
         println!("Sector: {}", sector);
@@ -938,22 +973,38 @@ if let Some(profile) = ticker.asset_profile().await? {
 ### Unwrapping Safely
 
 ```rust
-// Only use unwrap() when you're certain the value exists
-let price = quote.regular_market_price.unwrap_or(0.0);
+// With FormattedValue fields - unwrap with default
+let price = quote.regular_market_price
+    .as_ref()
+    .and_then(|v| v.raw)
+    .unwrap_or(0.0);
 
-// Or use expect() with a message
+// Non-optional fields
 let symbol = quote.symbol; // symbol is NOT optional
 
-// For vectors
-if let Some(sma) = &indicators.sma20 {
-    if let Some(&last_value) = sma.last() {
-        println!("SMA(20): {:.2}", last_value);
-    }
+// IndicatorsSummary fields are plain Option<f64>, not FormattedValue
+if let Some(sma_20) = indicators.sma_20 {
+    println!("SMA(20): {:.2}", sma_20);
 }
+```
+
+### Helper Pattern for Multiple FormattedValues
+
+```rust
+// Extract raw values safely
+fn get_raw<T: Copy>(fv: &Option<FormattedValue<T>>) -> Option<T> {
+    fv.as_ref().and_then(|v| v.raw)
+}
+
+// Usage
+let price = get_raw(&quote.regular_market_price).unwrap_or(0.0);
+let market_cap = get_raw(&quote.market_cap).unwrap_or(0);
 ```
 
 ## Next Steps
 
 - [Ticker API Reference](ticker.md) - Methods to obtain these models
+- [Technical Indicators](indicators.md) - Indicator data structures and usage
+- [Backtesting](backtesting.md) - Backtest result models and metrics
 - [DataFrame Support](dataframe.md) - Convert models to Polars DataFrames for analysis
 - [Configuration](configuration.md) - Configure regional settings and network options

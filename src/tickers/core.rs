@@ -9,6 +9,8 @@ use crate::models::chart::Chart;
 use crate::models::chart::response::ChartResponse;
 use crate::models::chart::result::ChartResult;
 use crate::models::quote::Quote;
+use crate::models::spark::Spark;
+use crate::models::spark::response::SparkResponse;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -81,6 +83,44 @@ impl BatchChartsResponse {
     /// Number of successfully fetched charts
     pub fn success_count(&self) -> usize {
         self.charts.len()
+    }
+
+    /// Number of failed symbols
+    pub fn error_count(&self) -> usize {
+        self.errors.len()
+    }
+
+    /// Check if all symbols were successful
+    pub fn all_successful(&self) -> bool {
+        self.errors.is_empty()
+    }
+}
+
+/// Response containing spark data for multiple symbols.
+///
+/// Spark data is optimized for sparkline rendering with only close prices.
+/// Unlike charts, spark data is fetched in a single batch request.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+#[non_exhaustive]
+pub struct BatchSparksResponse {
+    /// Successfully fetched sparks, keyed by symbol
+    pub sparks: HashMap<String, Spark>,
+    /// Symbols that failed to fetch, with error messages
+    pub errors: HashMap<String, String>,
+}
+
+impl BatchSparksResponse {
+    pub(crate) fn new() -> Self {
+        Self {
+            sparks: HashMap::new(),
+            errors: HashMap::new(),
+        }
+    }
+
+    /// Number of successfully fetched sparks
+    pub fn success_count(&self) -> usize {
+        self.sparks.len()
     }
 
     /// Number of failed symbols
@@ -521,6 +561,83 @@ impl Tickers {
             })
     }
 
+    /// Batch fetch spark data for all symbols in a single request.
+    ///
+    /// Spark data is optimized for sparkline rendering, returning only close prices.
+    /// Unlike `charts()`, this fetches all symbols in ONE API call, making it
+    /// much more efficient for displaying price trends on dashboards or watchlists.
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - Time interval between data points (e.g., `Interval::FiveMinutes`)
+    /// * `range` - Time range to fetch (e.g., `TimeRange::OneDay`)
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Tickers, Interval, TimeRange};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tickers = Tickers::new(["AAPL", "MSFT", "GOOGL"]).await?;
+    /// let sparks = tickers.spark(Interval::FiveMinutes, TimeRange::OneDay).await?;
+    ///
+    /// for (symbol, spark) in &sparks.sparks {
+    ///     if let Some(change) = spark.percent_change() {
+    ///         println!("{}: {:.2}%", symbol, change);
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn spark(&self, interval: Interval, range: TimeRange) -> Result<BatchSparksResponse> {
+        let symbols_ref: Vec<&str> = self.symbols.iter().map(|s| s.as_str()).collect();
+
+        let json =
+            crate::endpoints::spark::fetch(&self.client, &symbols_ref, interval, range).await?;
+
+        let mut response = BatchSparksResponse::new();
+
+        match SparkResponse::from_json(json) {
+            Ok(spark_response) => {
+                if let Some(results) = spark_response.spark.result {
+                    for result in &results {
+                        if let Some(spark) = Spark::from_response(
+                            result,
+                            Some(interval.as_str().to_string()),
+                            Some(range.as_str().to_string()),
+                        ) {
+                            response.sparks.insert(result.symbol.clone(), spark);
+                        } else {
+                            response.errors.insert(
+                                result.symbol.clone(),
+                                "Failed to parse spark data".to_string(),
+                            );
+                        }
+                    }
+                }
+
+                // Track missing symbols
+                for symbol in &self.symbols {
+                    if !response.sparks.contains_key(symbol)
+                        && !response.errors.contains_key(symbol)
+                    {
+                        response
+                            .errors
+                            .insert(symbol.clone(), "Symbol not found in response".to_string());
+                    }
+                }
+            }
+            Err(e) => {
+                // If parsing failed entirely, mark all symbols as errored
+                for symbol in &self.symbols {
+                    response.errors.insert(symbol.clone(), e.to_string());
+                }
+            }
+        }
+
+        Ok(response)
+    }
+
     /// Clear all caches
     pub async fn clear_cache(&self) {
         self.quote_cache.write().await.clear();
@@ -551,5 +668,25 @@ mod tests {
             .unwrap();
 
         assert!(result.success_count() > 0);
+    }
+
+    #[tokio::test]
+    #[ignore = "requires network access"]
+    async fn test_tickers_spark() {
+        let tickers = Tickers::new(["AAPL", "MSFT", "GOOGL"]).await.unwrap();
+        let result = tickers
+            .spark(Interval::FiveMinutes, TimeRange::OneDay)
+            .await
+            .unwrap();
+
+        assert!(result.success_count() > 0);
+
+        // Verify spark data structure
+        if let Some(spark) = result.sparks.get("AAPL") {
+            assert!(!spark.closes.is_empty());
+            assert_eq!(spark.symbol, "AAPL");
+            // Verify helper methods work
+            assert!(spark.percent_change().is_some());
+        }
     }
 }

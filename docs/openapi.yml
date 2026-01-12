@@ -1,16 +1,13 @@
 openapi: 3.0.3
 info:
-  title: Finance Query API
-  version: 2.0.1
+  title: Finance Query
+  version: 2.1.0
   description: |
-    Combined REST API for fetching financial data.
-    Includes endpoints from Finance Query v2 and the legacy v1 API.
+    REST API for fetching financial data from Yahoo Finance.
+    Provides real-time quotes, historical data, news, options, and more.
   contact:
     name: Finance Query
     url: https://github.com/verdenroz/finance-query
-  license:
-    name: MIT License
-    identifier: MIT
 
 servers:
   - url: https://finance-query.com
@@ -40,30 +37,19 @@ tags:
   - name: Holders
     description: Institutional and insider holdings
   - name: Screeners
-    description: Predefined Yahoo Finance screeners
+    description: Predefined Yahoo Finance screeners (equity and fund filters)
   - name: Sectors
-    description: Market sector data
+    description: Market sector data (GICS sectors)
   - name: Industries
-    description: Market industry data
+    description: Market industry data (sub-sectors)
   - name: Search
     description: Symbol and company search
-  - name: Historical Prices
-    description: v1 Historical data
-  - name: Market Movers
-    description: v1 Actives, Gainers, Losers
-  - name: Indices
-    description: v1 Market Indices
-  - name: Earnings Transcripts
-    description: v1 Earnings Call Transcripts
 
 paths:
-  # ==========================================
-  # V2 Endpoints
-  # ==========================================
   /v2/health:
     get:
       tags: [Health]
-      summary: Health check (v2)
+      summary: Health check
       description: Check API health status
       responses:
         '200':
@@ -83,7 +69,7 @@ paths:
   /v2/ping:
     get:
       tags: [Health]
-      summary: Ping endpoint (v2)
+      summary: Ping endpoint
       description: Simple ping-pong endpoint
       responses:
         '200':
@@ -117,6 +103,19 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/HoursResponse'
+              example:
+                markets:
+                  - id: us
+                    name: U.S. markets
+                    status: closed
+                    message: U.S. markets closed
+                    open: "2025-12-26T14:30:00Z"
+                    close: "2025-12-26T21:00:00Z"
+                    time: "2025-12-27T01:06:14Z"
+                    timezone: America/New_York
+                    timezoneShort: EST
+                    gmtOffset: -18000
+                    dst: false
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -156,7 +155,8 @@ paths:
     get:
       tags: [Quotes]
       summary: Get quotes for multiple symbols
-      description: Fetch quote data for multiple stock symbols in a single batch request.
+      description: |
+        Fetch quote data for multiple stock symbols in a single batch request.
       parameters:
         - name: symbols
           in: query
@@ -175,11 +175,23 @@ paths:
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Batch quotes response
+          description: Batch quotes response with successful quotes and any errors
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BatchQuotesResponse'
+              example:
+                quotes:
+                  AAPL:
+                    symbol: AAPL
+                    shortName: Apple Inc.
+                    regularMarketPrice: 182.52
+                  MSFT:
+                    symbol: MSFT
+                    shortName: Microsoft Corporation
+                    regularMarketPrice: 378.91
+                errors:
+                  INVALID: "Symbol not found in response"
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -189,6 +201,7 @@ paths:
     get:
       tags: [Quotes]
       summary: Get similar stock recommendations
+      description: Get recommended similar stocks for a given symbol
       parameters:
         - name: symbol
           in: path
@@ -201,6 +214,7 @@ paths:
           schema:
             type: integer
             default: 5
+          description: Maximum number of recommendations
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -214,6 +228,7 @@ paths:
     get:
       tags: [Charts]
       summary: Get historical chart data
+      description: Fetch OHLCV candlestick data for a symbol
       parameters:
         - name: symbol
           in: path
@@ -227,21 +242,24 @@ paths:
             type: string
             enum: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
             default: 1d
+          description: Chart interval
         - name: range
           in: query
           schema:
             type: string
             enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
             default: 1mo
+          description: Time range
         - name: events
           in: query
           schema:
             type: boolean
             default: false
+          description: Include dividends, splits, and capital gains in response
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Chart data
+          description: Chart data (with optional events)
           content:
             application/json:
               schema:
@@ -251,14 +269,17 @@ paths:
                     properties:
                       dividends:
                         type: array
+                        description: Dividend events (when events=true)
                         items:
                           $ref: '#/components/schemas/Dividend'
                       splits:
                         type: array
+                        description: Stock split events (when events=true)
                         items:
                           $ref: '#/components/schemas/Split'
                       capitalGains:
                         type: array
+                        description: Capital gain distributions (when events=true)
                         items:
                           $ref: '#/components/schemas/CapitalGain'
 
@@ -266,17 +287,21 @@ paths:
     get:
       tags: [Charts]
       summary: Get dividend history
+      description: Fetch historical dividend payments for a symbol
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          example: AAPL
         - name: range
           in: query
           schema:
             type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
             default: max
+          description: Time range for dividend history
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -287,22 +312,35 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Dividend'
+              example:
+                - timestamp: 1739197800
+                  amount: 0.25
+                - timestamp: 1747056600
+                  amount: 0.26
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/splits/{symbol}:
     get:
       tags: [Charts]
       summary: Get stock split history
+      description: Fetch historical stock splits for a symbol
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          example: AAPL
         - name: range
           in: query
           schema:
             type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
             default: max
+          description: Time range for split history
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -313,43 +351,144 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Split'
+              example:
+                - timestamp: 1598880600
+                  numerator: 4.0
+                  denominator: 1.0
+                  ratio: "4:1"
+                - timestamp: 1402320600
+                  numerator: 7.0
+                  denominator: 1.0
+                  ratio: "7:1"
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/capital-gains/{symbol}:
     get:
       tags: [Charts]
       summary: Get capital gains distribution history
+      description: |
+        Fetch historical capital gains distributions for a symbol.
+        Primarily relevant for mutual funds; most stocks return an empty array.
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          example: VFIAX
         - name: range
           in: query
           schema:
             type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
             default: max
+          description: Time range for capital gains history
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Capital gains history
+          description: Capital gains distribution history
           content:
             application/json:
               schema:
                 type: array
                 items:
                   $ref: '#/components/schemas/CapitalGain'
+              example:
+                - timestamp: 1702640400
+                  amount: 5.23
+                - timestamp: 1671104400
+                  amount: 4.87
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/spark:
+    get:
+      tags: [Charts]
+      summary: Get batch sparkline data
+      description: |
+        Fetch lightweight chart data for multiple symbols in a single request.
+        Optimized for rendering sparkline charts, returning only close prices.
+        More efficient than multiple /chart calls when displaying price trends
+        for watchlists, dashboards, or portfolio views.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,GOOGL
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+            default: 1d
+          description: Chart interval
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: 1mo
+          description: Time range
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch spark data with successful sparks and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchSparksResponse'
+              example:
+                sparks:
+                  AAPL:
+                    symbol: AAPL
+                    closes: [258.61, 258.08, 258.29, 257.04, 256.73]
+                    timestamps: [1767969000, 1767969300, 1767969600, 1767969900, 1767970200]
+                    interval: "5m"
+                    range: "1d"
+                    meta:
+                      symbol: AAPL
+                      currency: USD
+                      exchangeName: NMS
+                      regularMarketPrice: 258.44
+                      previousClose: 259.04
+                  MSFT:
+                    symbol: MSFT
+                    closes: [474.47, 475.20, 475.46, 472.99]
+                    timestamps: [1767969000, 1767969300, 1767969600, 1767969900]
+                    interval: "5m"
+                    range: "1d"
+                    meta:
+                      symbol: MSFT
+                      currency: USD
+                      exchangeName: NMS
+                      regularMarketPrice: 477.35
+                      previousClose: 478.11
+                errors: {}
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/indicators/{symbol}:
     get:
       tags: [Indicators]
       summary: Get technical indicators
+      description: Calculate technical analysis indicators from chart data
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          example: AAPL
         - name: interval
           in: query
           schema:
@@ -373,32 +512,40 @@ paths:
     get:
       tags: [Quotes]
       summary: Get world market indices
+      description: |
+        Fetch quotes for world market indices, optionally filtered by region.
       parameters:
         - name: region
           in: query
+          required: false
           schema:
             type: string
             enum: [americas, europe, asia-pacific, middle-east-africa, currencies]
+          description: Filter by region (returns all if not specified)
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Batch quotes response for indices
+          description: Batch quotes response for world indices
           content:
             application/json:
               schema:
                 $ref: '#/components/schemas/BatchQuotesResponse'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/news:
     get:
       tags: [News]
       summary: Get general market news
+      description: Fetch general financial market news
       parameters:
         - name: count
           in: query
           schema:
             type: integer
             default: 10
+          description: Number of articles to return
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -412,12 +559,14 @@ paths:
     get:
       tags: [News]
       summary: Get news for a symbol
+      description: Fetch news articles related to a specific stock
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          example: AAPL
         - name: count
           in: query
           schema:
@@ -436,16 +585,19 @@ paths:
     get:
       tags: [Options]
       summary: Get options chain
+      description: Fetch options contracts for a symbol
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          example: AAPL
         - name: date
           in: query
           schema:
             type: integer
+          description: Expiration date (Unix timestamp)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -458,25 +610,33 @@ paths:
   /v2/financials/{symbol}/{statement}:
     get:
       tags: [Financials]
-      summary: Get financial statements (v2)
+      summary: Get financial statements
+      description: |
+        Fetch financial statement data (income statement, balance sheet, or cash flow) for a symbol.
+        Returns historical data with metrics organized by date.
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          description: Stock symbol
+          example: AAPL
         - name: statement
           in: path
           required: true
           schema:
             type: string
             enum: [income, balance, cashflow]
+          description: Type of financial statement
+          example: income
         - name: frequency
           in: query
           schema:
             type: string
             enum: [annual, quarterly]
             default: annual
+          description: Data frequency (annual or quarterly)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -485,6 +645,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/FinancialStatement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           description: Symbol not found or no data available
           content:
@@ -496,12 +658,14 @@ paths:
     get:
       tags: [Quotes]
       summary: Get quote type
+      description: Get the type of quote (EQUITY, ETF, etc.)
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          example: AAPL
       responses:
         '200':
           description: Quote type
@@ -514,18 +678,31 @@ paths:
     get:
       tags: [Holders]
       summary: Get holder data
+      description: |
+        Fetch holder data for a symbol by type.
+        Available types:
+        - major: Major institutional holders
+        - institutional: Institutional holder positions
+        - mutualfund: Mutual fund holder positions
+        - insider-transactions: Insider trading transactions
+        - insider-purchases: Insider purchase history
+        - insider-roster: List of company insiders
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          description: Stock symbol
+          example: AAPL
         - name: type
           in: path
           required: true
           schema:
             type: string
             enum: [major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster]
+          description: Type of holder data
+          example: major
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -534,23 +711,36 @@ paths:
             application/json:
               schema:
                 type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/analysis/{symbol}/{type}:
     get:
       tags: [Analysis]
       summary: Get analysis data
+      description: |
+        Fetch analysis data for a symbol by type.
+        Available types:
+        - recommendations: Analyst recommendation trends over time
+        - upgrades-downgrades: Analyst rating changes
+        - earnings-estimate: Analyst earnings estimates
+        - earnings-history: Historical earnings data
       parameters:
         - name: symbol
           in: path
           required: true
           schema:
             type: string
+          description: Stock symbol
+          example: AAPL
         - name: type
           in: path
           required: true
           schema:
             type: string
             enum: [recommendations, upgrades-downgrades, earnings-estimate, earnings-history]
+          description: Type of analysis data
+          example: recommendations
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -559,23 +749,65 @@ paths:
             application/json:
               schema:
                 type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/screeners/{screener_type}:
     get:
       tags: [Screeners]
       summary: Get screener results
+      description: |
+        Fetch stocks or funds matching predefined screener criteria.
+
+        **Equity Screeners (9):**
+        - `aggressive-small-caps`: Small caps with high EPS growth
+        - `day-gainers`: Top gaining stocks (>3% change, >$2B market cap)
+        - `day-losers`: Top losing stocks (<-2.5% change, >$2B market cap)
+        - `growth-technology-stocks`: Tech stocks with 25%+ revenue/EPS growth
+        - `most-actives`: Most actively traded by volume
+        - `most-shorted-stocks`: Highest short interest percentage
+        - `small-cap-gainers`: Small cap gainers (<$2B market cap)
+        - `undervalued-growth-stocks`: Low P/E with high EPS growth
+        - `undervalued-large-caps`: Large caps with low P/E and PEG
+
+        **Fund Screeners (6):**
+        - `conservative-foreign-funds`: Low-risk foreign large cap funds
+        - `high-yield-bond`: High yield bond funds
+        - `portfolio-anchors`: Large blend core funds
+        - `solid-large-growth-funds`: Large growth funds
+        - `solid-midcap-growth-funds`: Mid-cap growth funds
+        - `top-mutual-funds`: Top performing mutual funds
       parameters:
         - name: screener_type
           in: path
           required: true
           schema:
             type: string
+            enum:
+              - aggressive-small-caps
+              - day-gainers
+              - day-losers
+              - growth-technology-stocks
+              - most-actives
+              - most-shorted-stocks
+              - small-cap-gainers
+              - undervalued-growth-stocks
+              - undervalued-large-caps
+              - conservative-foreign-funds
+              - high-yield-bond
+              - portfolio-anchors
+              - solid-large-growth-funds
+              - solid-midcap-growth-funds
+              - top-mutual-funds
+          description: Predefined screener type (kebab-case)
+          example: most-actives
         - name: count
           in: query
           schema:
             type: integer
             default: 25
             maximum: 250
+          description: Number of results to return (max 250)
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
       responses:
@@ -585,17 +817,120 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ScreenersResponse'
+              example:
+                quotes:
+                  - symbol: NVDA
+                    shortName: NVIDIA Corporation
+                    quoteType: EQUITY
+                    regularMarketPrice:
+                      raw: 134.70
+                      fmt: "134.70"
+                    regularMarketChangePercent:
+                      raw: 1.85
+                      fmt: "1.85%"
+                type: most_actives
+                description: "Stocks ordered in descending order by intraday trade volume"
+                lastUpdated: 1735315200
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/screeners/custom:
     post:
       tags: [Screeners]
       summary: Custom screener query
+      description: |
+        Build custom screener queries with flexible filtering criteria.
+
+        **Quote Types:**
+        - `EQUITY` - Stocks (default)
+        - `MUTUALFUND` - Mutual funds
+
+        **Operators:**
+        - `eq` - Equal to (for string fields like region, sector)
+        - `gt` - Greater than
+        - `gte` - Greater than or equal
+        - `lt` - Less than
+        - `lte` - Less than or equal
+        - `btwn` - Between (requires array value: `[min, max]`)
+
+        **Common Equity Fields:**
+        - `region` - Market region (e.g., "us", "gb")
+        - `sector` - Industry sector (e.g., "Technology", "Healthcare")
+        - `industry` - Specific industry
+        - `exchange` - Exchange code (e.g., "NMS", "NYQ")
+        - `intradaymarketcap` - Market capitalization
+        - `intradayprice` - Current price
+        - `percentchange` - Percent change
+        - `avgdailyvol3m` - 3-month average daily volume
+        - `peratio.lasttwelvemonths` - P/E ratio (TTM)
+        - `forward_dividend_yield` - Forward dividend yield
+        - `returnonequity.lasttwelvemonths` - Return on equity
+        - `short_percentage_of_float.value` - Short interest % of float
+        - `esg_score` - ESG score
+
+        **Common Fund Fields:**
+        - `categoryname` - Fund category (e.g., "Large Growth")
+        - `performanceratingoverall` - Morningstar rating (1-5)
+        - `riskratingoverall` - Risk rating (1-5)
       requestBody:
         required: true
         content:
           application/json:
             schema:
               $ref: '#/components/schemas/CustomScreenerRequest'
+            examples:
+              highVolumeLargeCaps:
+                summary: Large cap stocks with high volume
+                value:
+                  quoteType: EQUITY
+                  size: 10
+                  sortField: intradaymarketcap
+                  sortType: DESC
+                  filters:
+                    - field: region
+                      operator: eq
+                      value: us
+                    - field: intradaymarketcap
+                      operator: gt
+                      value: 100000000000
+                    - field: avgdailyvol3m
+                      operator: gt
+                      value: 1000000
+              highDividend:
+                summary: High dividend yield stocks
+                value:
+                  quoteType: EQUITY
+                  size: 25
+                  sortField: forward_dividend_yield
+                  sortType: DESC
+                  filters:
+                    - field: region
+                      operator: eq
+                      value: us
+                    - field: forward_dividend_yield
+                      operator: gt
+                      value: 4
+              priceRange:
+                summary: Stocks in price range $50-$100
+                value:
+                  quoteType: EQUITY
+                  size: 20
+                  filters:
+                    - field: region
+                      operator: eq
+                      value: us
+                    - field: intradayprice
+                      operator: btwn
+                      value: [50, 100]
+              topRatedFunds:
+                summary: Top rated mutual funds
+                value:
+                  quoteType: MUTUALFUND
+                  size: 10
+                  filters:
+                    - field: performanceratingoverall
+                      operator: gte
+                      value: 4
       responses:
         '200':
           description: Custom screener results
@@ -603,17 +938,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ScreenersResponse'
+              example:
+                quotes:
+                  - symbol: NVDA
+                    shortName: NVIDIA Corporation
+                    quoteType: EQUITY
+                    regularMarketPrice: 134.70
+                    regularMarketChangePercent: 1.85
+                type: custom
+                description: "Custom screener query results"
+                total: 2432
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/sectors/{sector_type}:
     get:
       tags: [Sectors]
       summary: Get sector data
+      description: |
+        Fetch comprehensive data for a market sector including overview, performance,
+        top companies, ETFs, mutual funds, industries, and research reports.
+
+        **Available Sectors (11 GICS Sectors):**
+        - `technology` - Technology (30.38% market weight)
+        - `financial-services` - Financial Services (13.74%)
+        - `consumer-cyclical` - Consumer Cyclical (10.15%)
+        - `communication-services` - Communication Services (9.55%)
+        - `healthcare` - Healthcare (10.52%)
+        - `industrials` - Industrials (8.27%)
+        - `consumer-defensive` - Consumer Defensive (5.72%)
+        - `energy` - Energy (3.24%)
+        - `basic-materials` - Basic Materials (1.86%)
+        - `real-estate` - Real Estate (2.32%)
+        - `utilities` - Utilities (2.46%)
       parameters:
         - name: sector_type
           in: path
           required: true
           schema:
             type: string
+            enum:
+              - technology
+              - financial-services
+              - consumer-cyclical
+              - communication-services
+              - healthcare
+              - industrials
+              - consumer-defensive
+              - energy
+              - basic-materials
+              - real-estate
+              - utilities
+          description: Sector type (kebab-case)
+          example: technology
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
       responses:
@@ -623,17 +1000,60 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SectorResponse'
+              example:
+                name: Technology
+                slug: technology
+                overview:
+                  companiesCount: 828
+                  marketWeight: 0.3038
+                  description: "Companies in the technology sector..."
+                performance:
+                  dayChangePercent: 0.00008798734
+                  ytdChangePercent: 0.21215253
+                  oneYearChangePercent: 0.18625236
+                  threeYearChangePercent: 1.542715
+                  fiveYearChangePercent: 1.2627318
+                topCompanies:
+                  - symbol: NVDA
+                    name: NVIDIA Corporation
+                    lastPrice: 190.53
+                    marketCap: 4638833880279
+                    marketWeight: 0.19622724
+                    rating: Strong Buy
+                industries:
+                  - name: Semiconductors
+                    key: semiconductors
+                    marketWeight: 0.3401587
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/industries/{industry_key}:
     get:
       tags: [Industries]
       summary: Get industry data
+      description: |
+        Fetch comprehensive data for a market industry including overview, performance,
+        top companies, top performing companies, top growth companies, and research reports.
+
+        Industry keys can be discovered from the `/v2/sectors/{sector}` endpoint, which returns
+        the industries within each sector.
+
+        **Example industry keys:**
+        - `semiconductors` (Technology)
+        - `software-infrastructure` (Technology)
+        - `banks-diversified` (Financial Services)
+        - `biotechnology` (Healthcare)
+        - `internet-retail` (Consumer Cyclical)
+        - `oil-gas-integrated` (Energy)
+        - `aerospace-defense` (Industrials)
       parameters:
         - name: industry_key
           in: path
           required: true
           schema:
             type: string
+          description: Industry key/slug (discoverable from sectors endpoint)
+          example: semiconductors
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
       responses:
@@ -643,11 +1063,52 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/IndustryResponse'
+              example:
+                name: Semiconductors
+                key: semiconductors
+                sectorName: Technology
+                sectorKey: technology
+                overview:
+                  companiesCount: 59
+                  marketCap: 8057445154816
+                  marketWeight: 0.3401587
+                  description: "Semiconductor companies that design, manufacture..."
+                performance:
+                  dayChangePercent: 0.0000075706953
+                  ytdChangePercent: 0.44191968
+                  oneYearChangePercent: 0.4046737
+                benchmark:
+                  name: S&P 500
+                  ytdChangePercent: 0.17318612
+                topCompanies:
+                  - symbol: NVDA
+                    name: NVIDIA Corporation
+                    lastPrice: 190.53
+                    marketCap: 4638833880279
+                    marketWeight: 0.57597184
+                    rating: Strong Buy
+                topPerformingCompanies:
+                  - symbol: LASR
+                    name: nLIGHT, Inc.
+                    ytdReturn: 2.7369
+                topGrowthCompanies:
+                  - symbol: MU
+                    name: Micron Technology, Inc.
+                    growthEstimate: 5.846153846153847
+        '404':
+          description: Industry not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
 
   /v2/currencies:
     get:
       tags: [Market]
       summary: Get available currencies
+      description: |
+        Fetch available currency pairs from Yahoo Finance.
+        Returns a list of currency pairs that can be used for forex trading/tracking.
       responses:
         '200':
           description: List of available currencies
@@ -657,11 +1118,25 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Currency'
+              example:
+                - shortName: "USD/EUR"
+                  longName: "USD/EUR"
+                  symbol: "USDEUR=X"
+                  localLongName: "USD/EUR"
+                - shortName: "USD/JPY"
+                  longName: "USD/JPY"
+                  symbol: "USDJPY=X"
+                  localLongName: "USD/JPY"
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/exchanges:
     get:
       tags: [Market]
       summary: Get supported exchanges
+      description: |
+        Fetch list of supported exchanges from Yahoo Finance.
+        Returns exchanges with their symbol suffixes and data delay information.
       responses:
         '200':
           description: List of supported exchanges
@@ -671,17 +1146,34 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Exchange'
+              example:
+                - region: "United States of America"
+                  market: "Nasdaq Stock Exchange"
+                  suffix: "N/A"
+                  delay: "Real-time"
+                  dataProvider: "ICE Data Services"
+                - region: "Japan"
+                  market: "Tokyo Stock Exchange"
+                  suffix: ".T"
+                  delay: "20 min"
+                  dataProvider: "ICE Data Services"
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/market-summary:
     get:
       tags: [Market]
       summary: Get market summary
+      description: |
+        Fetch market summary with major indices, currencies, and commodities.
+        Returns real-time data for key market indicators.
       parameters:
         - name: region
           in: query
           required: false
           schema:
             $ref: '#/components/schemas/Region'
+          description: Region code for localization (defaults to US)
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
       responses:
@@ -693,17 +1185,33 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/MarketSummaryQuote'
+              example:
+                - symbol: "^GSPC"
+                  fullExchangeName: "SNP"
+                  exchange: "SNP"
+                  shortName: "S&P 500"
+                  quoteType: "INDEX"
+                  marketState: "CLOSED"
+                  regularMarketPrice: 5970.84
+                  regularMarketChange: -64.16
+                  regularMarketChangePercent: -1.06
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/trending:
     get:
       tags: [Market]
       summary: Get trending tickers
+      description: |
+        Fetch trending stock symbols for a specific region.
+        Returns the most popular/trending stocks based on Yahoo Finance data.
       parameters:
         - name: region
           in: query
           required: false
           schema:
             $ref: '#/components/schemas/Region'
+          description: Region code for localization (defaults to US)
       responses:
         '200':
           description: List of trending tickers
@@ -713,51 +1221,71 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/TrendingQuote'
+              example:
+                - symbol: "NVDA"
+                - symbol: "TSLA"
+                - symbol: "AAPL"
+                - symbol: "AMD"
+                - symbol: "PLTR"
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /v2/search:
     get:
       tags: [Search]
-      summary: Search symbols and companies (v2)
+      summary: Search symbols and companies
+      description: |
+        Search for stock symbols, companies, news, and research reports on Yahoo Finance.
+        Supports fuzzy matching, logo URLs, and cultural assets (NFT indices).
       parameters:
         - name: q
           in: query
           required: true
           schema:
             type: string
+          description: Search query
+          example: Apple
         - name: quotes
           in: query
           schema:
             type: integer
             default: 10
+          description: Maximum number of quote results
         - name: news
           in: query
           schema:
             type: integer
             default: 0
+          description: Maximum number of news results (0 to disable)
         - name: fuzzy
           in: query
           schema:
             type: boolean
             default: false
+          description: Enable fuzzy matching for typos
         - name: logo
           in: query
           schema:
             type: boolean
             default: true
+          description: Include logo URLs in results
         - name: research
           in: query
           schema:
             type: boolean
             default: false
+          description: Include research reports in results
         - name: cultural
           in: query
           schema:
             type: boolean
             default: false
+          description: Include cultural assets (NFT indices) in results
         - name: region
           in: query
           schema:
             $ref: '#/components/schemas/Region'
+          description: Region for language/localization settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -766,38 +1294,79 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/SearchResponse'
+              example:
+                count: 6
+                quotes:
+                  - symbol: AAPL
+                    shortName: Apple Inc.
+                    longName: Apple Inc.
+                    quoteType: EQUITY
+                    exchange: NMS
+                    exchDisp: NASDAQ
+                    typeDisp: Equity
+                    sector: Technology
+                    sectorDisp: Technology
+                    industry: Consumer Electronics
+                    industryDisp: Consumer Electronics
+                    logoUrl: "https://s.yimg.com/lb/..."
+                    score: 100000.0
+                    isYahooFinance: true
+                news:
+                  - uuid: "abc123"
+                    title: "Apple announces new product"
+                    publisher: "Reuters"
+                    link: "https://..."
+                    providerPublishTime: 1735315200
+                    type: STORY
+                researchReports:
+                  - reportHeadline: "Apple Q4 Analysis"
+                    author: "John Doe"
+                    provider: "Argus Research"
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/lookup:
     get:
       tags: [Search]
       summary: Look up symbols by type
+      description: |
+        Type-filtered symbol lookup. Unlike search, lookup specializes in discovering tickers
+        filtered by asset type (equity, ETF, mutual fund, index, future, currency, cryptocurrency).
+
+        Optionally fetches logo URLs via an additional API call when `logo=true`.
       parameters:
         - name: q
           in: query
           required: true
           schema:
             type: string
+          description: Lookup query
+          example: Apple
         - name: type
           in: query
           schema:
             type: string
             enum: [all, equity, mutualfund, etf, index, future, currency, cryptocurrency]
             default: all
+          description: Asset type filter
         - name: count
           in: query
           schema:
             type: integer
             default: 25
             maximum: 100
+          description: Maximum number of results
         - name: logo
           in: query
           schema:
             type: boolean
             default: false
+          description: Include logo URLs (requires additional API call)
         - name: region
           in: query
           schema:
             $ref: '#/components/schemas/Region'
+          description: Region for language/localization settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -806,11 +1375,47 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/LookupResponse'
+              examples:
+                equity:
+                  summary: Equity lookup
+                  value:
+                    count: 3
+                    start: 0
+                    quotes:
+                      - symbol: AAPL
+                        shortName: Apple Inc.
+                        quoteType: equity
+                        exchange: NMS
+                        regularMarketPrice: 273.40
+                        regularMarketChange: -0.41
+                      - symbol: APLE
+                        shortName: Apple Hospitality REIT, Inc.
+                        quoteType: equity
+                        exchange: NYQ
+                        regularMarketPrice: 12.04
+                        regularMarketChange: -0.05
+                withLogo:
+                  summary: With logo URLs
+                  value:
+                    count: 1
+                    start: 0
+                    quotes:
+                      - symbol: NVDA
+                        shortName: NVIDIA Corporation
+                        quoteType: equity
+                        exchange: NMS
+                        regularMarketPrice: 190.53
+                        regularMarketChange: 1.92
+                        logoUrl: "https://s.yimg.com/lb/brands/50x50_nvidia.png"
+                        companyLogoUrl: "https://s.yimg.com/lb/brands/50x50_nvidia.png"
+        '400':
+          $ref: '#/components/responses/BadRequest'
 
   /v2/transcripts/{symbol}:
     get:
       tags: [Analysis]
       summary: Get earnings transcript
+      description: Fetch earnings call transcript for a symbol. Returns the latest transcript by default, or a specific quarter/year if provided.
       parameters:
         - name: symbol
           in: path
@@ -818,6 +1423,7 @@ paths:
           schema:
             type: string
             default: AAPL
+          description: Stock symbol (e.g., AAPL, MSFT)
         - name: quarter
           in: query
           required: false
@@ -825,12 +1431,14 @@ paths:
             type: string
             enum: [Q1, Q2, Q3, Q4]
             default: Q4
+          description: Fiscal quarter (defaults to latest)
         - name: year
           in: query
           required: false
           schema:
             type: integer
             default: 2025
+          description: Fiscal year (defaults to latest)
       responses:
         '200':
           description: Earnings transcript
@@ -843,6 +1451,7 @@ paths:
     get:
       tags: [Analysis]
       summary: Get all earnings transcripts
+      description: Fetch all available earnings call transcripts for a symbol
       parameters:
         - name: symbol
           in: path
@@ -850,11 +1459,13 @@ paths:
           schema:
             type: string
             default: AAPL
+          description: Stock symbol (e.g., AAPL, MSFT)
         - name: limit
           in: query
           required: false
           schema:
             type: integer
+          description: Maximum number of transcripts to return
       responses:
         '200':
           description: List of earnings transcripts
@@ -865,1138 +1476,7 @@ paths:
                 items:
                   $ref: '#/components/schemas/TranscriptWithMeta'
 
-  # ==========================================
-  # V1 Endpoints (Imported from openapi.json)
-  # ==========================================
-  /v1/health:
-    get:
-      tags: [Health]
-      summary: Health V1
-      description: Health check endpoint
-      operationId: health_v1_v1_health_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema: {}
-
-  /v1/ping:
-    get:
-      tags: [Health]
-      summary: Ping V1
-      description: Ping endpoint
-      operationId: ping_v1_v1_ping_get
-      responses:
-        '200':
-          description: Successful Response
-          content:
-            application/json:
-              schema: {}
-
-  /hours:
-    get:
-      tags: [Hours]
-      summary: Get the current market status (v1)
-      description: Returns the current status of the market (open, closed, early close, pre-market, after-market).
-      operationId: get_market_hours_hours_get
-      security:
-        - APIKeyHeader: []
-      responses:
-        '200':
-          description: Market status
-          content:
-            application/json:
-              schema: {}
-
-  /v1/quotes:
-    get:
-      tags: [Quotes]
-      summary: Get detailed data for multiple stocks (v1)
-      description: Returns detailed quote data including all available fields for multiple stocks.
-      operationId: get_quote_v1_quotes_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbols
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Symbols
-            description: Comma-separated list of stock symbols
-          description: Comma-separated list of stock symbols
-      responses:
-        '200':
-          description: Successfully retrieved quotes
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/QuoteV1'
-        '404':
-          description: Symbol not found
-          content:
-            application/json:
-              example:
-                detail: Symbol not found
-        '422':
-          description: Validation error of query parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/simple-quotes:
-    get:
-      tags: [Quotes]
-      summary: Get summary data for multiple stocks
-      description: Returns a simplified version of quote data for multiple stocks, including only symbols, names, prices, changes, and logos.
-      operationId: get_simple_quote_v1_simple_quotes_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbols
-          in: query
-          required: true
-          schema:
-            type: string
-            title: Symbols
-            description: Comma-separated list of stock symbols
-          description: Comma-separated list of stock symbols
-      responses:
-        '200':
-          description: Successfully retrieved quotes
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SimpleQuote'
-        '404':
-          description: Symbol not found
-          content:
-            application/json:
-              example:
-                detail: Symbol not found
-        '422':
-          description: Validation error of query parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/historical:
-    get:
-      tags: [Historical Prices]
-      summary: Get historical data for a stock
-      description: Returns historical data, including its date and OHLCV, for a stock symbol based on the time period and interval provided.
-      operationId: get_time_series_v1_historical_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: query
-          required: true
-          schema:
-            type: string
-            description: The symbol of the stock to get historical data for.
-            title: Symbol
-          description: The symbol of the stock to get historical data for.
-        - name: range
-          in: query
-          required: true
-          schema:
-            $ref: '#/components/schemas/TimeRange'
-            description: The range of time for the historical data.
-          description: The range of time for the historical data.
-        - name: interval
-          in: query
-          required: true
-          schema:
-            $ref: '#/components/schemas/Interval'
-            description: The interval for the historical data.
-          description: The interval for the historical data.
-        - name: epoch
-          in: query
-          required: false
-          schema:
-            type: boolean
-            description: Whether to format dates as strings or use epoch timestamps.
-            default: false
-            title: Epoch
-          description: Whether to format dates as strings or use epoch timestamps.
-      responses:
-        '200':
-          description: Successfully retrieved historical data
-          content:
-            application/json:
-              schema:
-                type: object
-                additionalProperties:
-                  $ref: '#/components/schemas/HistoricalData'
-        '400':
-          description: Bad request
-          content:
-            application/json:
-              example:
-                detail: "If interval is 1m, 5m, 15m or 30m, time period must be 1mo or less"
-        '404':
-          description: Symbol not found
-          content:
-            application/json:
-              example:
-                detail: Symbol not found
-        '422':
-          description: Validation error of query parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/actives:
-    get:
-      tags: [Market Movers]
-      summary: Get list of most active stocks
-      description: Returns summary data for the most active stocks during the current trading session.
-      operationId: actives_v1_actives_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: count
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/MoverCount'
-            description: Number of movers to retrieve
-            default: "50"
-          description: Number of movers to retrieve
-      responses:
-        '200':
-          description: Successful retrieved most active stocks
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MarketMover'
-        '422':
-          description: Validation error of query parameters
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/gainers:
-    get:
-      tags: [Market Movers]
-      summary: Get list of stocks with the highest price increase
-      operationId: gainers_v1_gainers_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: count
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/MoverCount'
-            default: "50"
-      responses:
-        '200':
-          description: Successfully retrieved top gaining stocks
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MarketMover'
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/losers:
-    get:
-      tags: [Market Movers]
-      summary: Get list of stocks with the highest price decrease
-      operationId: losers_v1_losers_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: count
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/MoverCount'
-            default: "50"
-      responses:
-        '200':
-          description: Successfully retrieved top losing stocks
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MarketMover'
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/similar:
-    get:
-      tags: [Quotes]
-      summary: Get similar quotes to a queried symbol
-      operationId: similar_quotes_v1_similar_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: limit
-          in: query
-          required: false
-          schema:
-            type: integer
-            maximum: 20
-            minimum: 1
-            default: 10
-      responses:
-        '200':
-          description: Similar stocks found.
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SimpleQuote'
-        '404':
-          description: No similar stocks found or invalid symbol.
-        '422':
-          description: Unprocessable Entity
-
-  /v1/news:
-    get:
-      tags: [News]
-      summary: Get financial news (v1)
-      operationId: get_news_v1_news_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: null
-      responses:
-        '200':
-          description: Successfully retrieved news
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/NewsV1'
-        '404':
-          description: No news found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/indices:
-    get:
-      tags: [Indices]
-      summary: Get major world market indices performance (v1)
-      operationId: market_indices_v1_indices_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: index
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: array
-                items:
-                  $ref: '#/components/schemas/Index'
-              - type: null
-        - name: region
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - $ref: '#/components/schemas/RegionV1'
-              - type: null
-      responses:
-        '200':
-          description: Successfully retrieved indices
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/MarketIndex'
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/sectors:
-    get:
-      tags: [Sectors]
-      summary: Get summary performance for all sectors (v1)
-      operationId: sectors_v1_sectors_get
-      responses:
-        '200':
-          description: Successfully retrieved sector information
-          content:
-            application/json:
-              schema:
-                items:
-                  $ref: '#/components/schemas/MarketSector'
-                type: array
-      security:
-        - APIKeyHeader: []
-
-  /v1/sectors/symbol/{symbol}:
-    get:
-      tags: [Sectors]
-      summary: Get summary sector performance of a quote
-      operationId: sector_by_symbol_v1_sectors_symbol__symbol__get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved sector information
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MarketSector'
-        '404':
-          description: Sector not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/sectors/details/{sector}:
-    get:
-      tags: [Sectors]
-      summary: Get a more comprehensive summary of an individual sector
-      operationId: sector_details_v1_sectors_details__sector__get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: sector
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/Sector'
-      responses:
-        '200':
-          description: Successfully retrieved sector information
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MarketSectorDetails'
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/search:
-    get:
-      tags: [Search]
-      summary: Get stocks by name or symbol (v1)
-      operationId: search_v1_search_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: query
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: hits
-          in: query
-          required: false
-          schema:
-            type: integer
-            maximum: 100
-            minimum: 1
-            default: 50
-        - name: type
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - $ref: '#/components/schemas/Type'
-              - type: null
-        - name: yahoo
-          in: query
-          required: false
-          schema:
-            type: boolean
-            default: false
-      responses:
-        '200':
-          description: Search results returned successfully
-          content:
-            application/json:
-              schema:
-                type: array
-                items:
-                  $ref: '#/components/schemas/SearchResult'
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/indicator:
-    get:
-      tags: [Technical Indicators]
-      summary: Get technical indicator data over time for a stock
-      operationId: technical_indicator_v1_indicator_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: function
-          in: query
-          required: true
-          schema:
-            $ref: '#/components/schemas/Indicator'
-        - name: symbol
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: range
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - $ref: '#/components/schemas/TimeRange'
-              - type: null
-        - name: interval
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - $ref: '#/components/schemas/Interval'
-              - type: null
-        - name: epoch
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: boolean
-              - type: null
-      responses:
-        '200':
-          description: The technical indicator data for the stock.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/TechnicalIndicator'
-        '400':
-          description: Invalid parameter
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/indicators:
-    get:
-      tags: [Technical Indicators]
-      summary: Get latest technical indicators for a symbol (v1)
-      operationId: technical_indicators_v1_indicators_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: interval
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/Interval'
-        - name: functions
-          in: query
-          required: false
-          schema:
-            anyOf:
-              - type: string
-              - type: null
-      responses:
-        '200':
-          description: The technical analysis summary for the stock.
-          content:
-            application/json:
-              schema: {}
-        '400':
-          description: Invalid parameter
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/stream/quotes:
-    get:
-      tags: [SSE]
-      summary: Stream stock quotes by SSE
-      operationId: stream_quotes_v1_stream_quotes_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbols
-          in: query
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Stream stock quotes by SSE
-          content:
-            application/json:
-              schema: {}
-            text/event-stream:
-              example: "quote: [...]\n\n"
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/financials/{symbol}:
-    get:
-      tags: [Financials]
-      summary: Get financial statements for a stock (v1)
-      operationId: financials_v1_financials__symbol__get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: statement
-          in: query
-          required: true
-          schema:
-            $ref: '#/components/schemas/StatementType'
-        - name: frequency
-          in: query
-          required: false
-          schema:
-            $ref: '#/components/schemas/FrequencyV1'
-      responses:
-        '200':
-          description: Successfully retrieved financial statement
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/FinancialStatementV1'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/holders/{symbol}/major:
-    get:
-      tags: [Holders]
-      summary: Get major holders breakdown (v1)
-      operationId: get_major_holders_v1_holders__symbol__major_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved major holders breakdown
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MajorHoldersResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/holders/{symbol}/institutional:
-    get:
-      tags: [Holders]
-      summary: Get institutional holders (v1)
-      operationId: get_institutional_holders_v1_holders__symbol__institutional_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved institutional holders
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InstitutionalHoldersResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/holders/{symbol}/mutualfund:
-    get:
-      tags: [Holders]
-      summary: Get mutual fund holders (v1)
-      operationId: get_mutualfund_holders_v1_holders__symbol__mutualfund_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved mutual fund holders
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/MutualFundHoldersResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/holders/{symbol}/insider-transactions:
-    get:
-      tags: [Holders]
-      summary: Get insider transactions (v1)
-      operationId: get_insider_transactions_v1_holders__symbol__insider_transactions_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved insider transactions
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InsiderTransactionsResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/holders/{symbol}/insider-purchases:
-    get:
-      tags: [Holders]
-      summary: Get insider purchases summary (v1)
-      operationId: get_insider_purchases_v1_holders__symbol__insider_purchases_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved insider purchases summary
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InsiderPurchasesResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/holders/{symbol}/insider-roster:
-    get:
-      tags: [Holders]
-      summary: Get insider roster (v1)
-      operationId: get_insider_roster_v1_holders__symbol__insider_roster_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved insider roster
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/InsiderRosterResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/analysis/{symbol}/recommendations:
-    get:
-      tags: [Analysis]
-      summary: Get analyst recommendations (v1)
-      operationId: get_recommendations_v1_analysis__symbol__recommendations_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved analyst recommendations
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RecommendationsResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/analysis/{symbol}/upgrades-downgrades:
-    get:
-      tags: [Analysis]
-      summary: Get analyst upgrades and downgrades (v1)
-      operationId: get_upgrades_downgrades_v1_analysis__symbol__upgrades_downgrades_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved upgrades and downgrades
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UpgradesDowngradesResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/analysis/{symbol}/price-targets:
-    get:
-      tags: [Analysis]
-      summary: Get analyst price targets (v1)
-      operationId: get_price_targets_v1_analysis__symbol__price_targets_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved price targets
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/PriceTargetsResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/analysis/{symbol}/earnings-estimate:
-    get:
-      tags: [Analysis]
-      summary: Get earnings estimates (v1)
-      operationId: get_earnings_estimate_v1_analysis__symbol__earnings_estimate_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved earnings estimates
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EarningsEstimateResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/analysis/{symbol}/revenue-estimate:
-    get:
-      tags: [Analysis]
-      summary: Get revenue estimates (v1)
-      operationId: get_revenue_estimate_v1_analysis__symbol__revenue_estimate_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved revenue estimates
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RevenueEstimateResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/analysis/{symbol}/earnings-history:
-    get:
-      tags: [Analysis]
-      summary: Get historical earnings (v1)
-      operationId: get_earnings_history_v1_analysis__symbol__earnings_history_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved earnings history
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EarningsHistoryResponse'
-        '404':
-          description: Symbol not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/earnings-transcript/{symbol}:
-    get:
-      tags: [Earnings Transcripts]
-      summary: Get available earnings calls for a stock (v1)
-      operationId: get_earnings_calls_list_endpoint_v1_earnings_transcript__symbol__get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved earnings calls list
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EarningsCallsList'
-        '404':
-          description: No earnings calls found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/earnings-transcript/{symbol}/latest:
-    get:
-      tags: [Earnings Transcripts]
-      summary: Get latest earnings call transcript (v1)
-      operationId: get_latest_earnings_transcript_endpoint_v1_earnings_transcript__symbol__latest_get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-      responses:
-        '200':
-          description: Successfully retrieved latest earnings transcript
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EarningsTranscriptV1'
-        '404':
-          description: No earnings calls found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
-  /v1/earnings-transcript/{symbol}/{quarter}/{year}:
-    get:
-      tags: [Earnings Transcripts]
-      summary: Get specific earnings call transcript (v1)
-      operationId: get_specific_earnings_transcript_endpoint_v1_earnings_transcript__symbol___quarter___year__get
-      security:
-        - APIKeyHeader: []
-      parameters:
-        - name: symbol
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: quarter
-          in: path
-          required: true
-          schema:
-            $ref: '#/components/schemas/Quarter'
-        - name: year
-          in: path
-          required: true
-          schema:
-            type: integer
-      responses:
-        '200':
-          description: Successfully retrieved earnings transcript
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/EarningsTranscriptV1'
-        '404':
-          description: Earnings call not found
-        '422':
-          description: Validation error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/ValidationErrorResponse'
-
 components:
-  securitySchemes:
-    APIKeyHeader:
-      type: apiKey
-      in: header
-      name: x-api-key
-
   parameters:
     Format:
       name: format
@@ -2005,7 +1485,8 @@ components:
         type: string
         enum: [raw, pretty, both]
         default: raw
-      description: Controls how FormattedValue fields are displayed
+      description: |
+        Controls how FormattedValue fields are displayed
     Fields:
       name: fields
       in: query
@@ -2013,15 +1494,13 @@ components:
       schema:
         type: string
         nullable: true
-      description: Comma-separated list of field names to include in response
+      description: |
+        Comma-separated list of field names to include in response, defaults to all fields if not specified
 
   schemas:
-    # -------------------
-    # V2 Schemas
-    # -------------------
     Quote:
       type: object
-      description: Stock quote data (v2)
+      description: Stock quote data
       properties:
         symbol:
           type: string
@@ -2057,7 +1536,7 @@ components:
 
     Transcript:
       type: object
-      description: Earnings call transcript (v2)
+      description: Earnings call transcript
       properties:
         transcriptContent:
           type: object
@@ -2119,6 +1598,7 @@ components:
 
     TranscriptWithMeta:
       type: object
+      description: Transcript with additional metadata from earnings call list
       properties:
         eventId:
           type: string
@@ -2137,15 +1617,29 @@ components:
 
     BatchQuotesResponse:
       type: object
+      description: Response from batch quotes endpoint with successful quotes and errors
       properties:
         quotes:
           type: object
+          description: Successfully fetched quotes, keyed by symbol
           additionalProperties:
             $ref: '#/components/schemas/Quote'
+          example:
+            AAPL:
+              symbol: AAPL
+              shortName: Apple Inc.
+              regularMarketPrice: 182.52
+            MSFT:
+              symbol: MSFT
+              shortName: Microsoft Corporation
+              regularMarketPrice: 378.91
         errors:
           type: object
+          description: Symbols that failed to fetch, with error messages
           additionalProperties:
             type: string
+          example:
+            INVALID: "Symbol not found in response"
 
     Chart:
       type: object
@@ -2221,41 +1715,61 @@ components:
 
     Dividend:
       type: object
+      description: Dividend payment event
       properties:
         timestamp:
           type: integer
           format: int64
+          description: Unix timestamp of the dividend ex-date
+          example: 1739197800
         amount:
           type: number
           format: double
+          description: Dividend amount per share
+          example: 0.25
 
     Split:
       type: object
+      description: Stock split event
       properties:
         timestamp:
           type: integer
           format: int64
+          description: Unix timestamp of the split date
+          example: 1598880600
         numerator:
           type: number
           format: double
+          description: Split numerator (shares received)
+          example: 4.0
         denominator:
           type: number
           format: double
+          description: Split denominator (shares held)
+          example: 1.0
         ratio:
           type: string
+          description: Human-readable split ratio
+          example: "4:1"
 
     CapitalGain:
       type: object
+      description: Capital gain distribution event (primarily for mutual funds)
       properties:
         timestamp:
           type: integer
           format: int64
+          description: Unix timestamp of the distribution date
+          example: 1702640400
         amount:
           type: number
           format: double
+          description: Capital gain distribution amount per share
+          example: 5.23
 
     IndicatorsSummary:
       type: object
+      description: Technical analysis indicators
       properties:
         sma_10:
           type: number
@@ -2434,53 +1948,77 @@ components:
 
     FinancialStatement:
       type: object
-      description: Financial statement data (v2)
+      description: Financial statement data organized by metric and date
       properties:
         symbol:
           type: string
+          description: Stock symbol
           example: AAPL
         statementType:
           type: string
+          description: Type of statement (income, balance, cashflow)
           example: income
         frequency:
           type: string
+          description: Data frequency (annual or quarterly)
           example: annual
         statement:
           type: object
+          description: Financial metrics mapped to date-value pairs
           additionalProperties:
             type: object
             additionalProperties:
               type: number
+          example:
+            TotalRevenue:
+              "2024-09-30": 391035000000
+              "2023-09-30": 383285000000
+            NetIncome:
+              "2024-09-30": 100913000000
+              "2023-09-30": 96995000000
 
     ScreenersResponse:
       type: object
+      description: Response from screener endpoint
       properties:
         quotes:
           type: array
+          description: Array of quotes matching the screener criteria
           items:
             $ref: '#/components/schemas/ScreenerQuote'
         type:
           type: string
+          description: Screener type identifier (e.g., "most_actives", "day_gainers")
+          example: most_actives
         description:
           type: string
+          description: Human-readable description of the screener
+          example: "Stocks ordered in descending order by intraday trade volume"
         lastUpdated:
           type: integer
           format: int64
+          description: Unix timestamp of last data update
+          example: 1735315200
 
     ScreenerQuote:
       type: object
+      description: Quote data from a screener result
       properties:
         symbol:
           type: string
+          example: NVDA
         shortName:
           type: string
+          example: NVIDIA Corporation
         longName:
           type: string
           nullable: true
         quoteType:
           type: string
+          example: EQUITY
         exchange:
           type: string
+          example: NMS
         regularMarketPrice:
           $ref: '#/components/schemas/FormattedValue'
         regularMarketChange:
@@ -2504,55 +2042,71 @@ components:
         averageAnalystRating:
           type: string
           nullable: true
+          example: "1.3 - Strong Buy"
 
     FormattedValue:
       type: object
+      description: Yahoo Finance formatted value with raw and display formats
       properties:
         raw:
           type: number
+          description: Raw numeric value
         fmt:
           type: string
+          description: Formatted display string
           nullable: true
         longFmt:
           type: string
+          description: Long formatted display string
           nullable: true
 
     CustomScreenerRequest:
       type: object
+      description: Request body for custom screener queries
       properties:
         quoteType:
           type: string
           enum: [EQUITY, MUTUALFUND]
           default: EQUITY
+          description: Type of securities to screen
         size:
           type: integer
           minimum: 1
           maximum: 250
           default: 25
+          description: Number of results to return
         offset:
           type: integer
           minimum: 0
           default: 0
+          description: Pagination offset
         sortField:
           type: string
+          description: Field to sort by (e.g., "intradaymarketcap", "percentchange")
+          example: intradaymarketcap
         sortType:
           type: string
           enum: [ASC, DESC]
           default: DESC
+          description: Sort direction
         filters:
           type: array
+          description: Filter conditions to apply
           items:
             $ref: '#/components/schemas/FilterCondition'
         format:
           type: string
           enum: [raw, pretty, both]
           default: raw
+          description: Response value format
         fields:
           type: string
+          description: Comma-separated fields to include in response
           nullable: true
 
     FilterCondition:
       type: object
+      description: A single filter condition
       required:
         - field
         - operator
@@ -2560,9 +2114,13 @@ components:
       properties:
         field:
           type: string
+          description: Field name to filter on
+          example: region
         operator:
           type: string
           enum: [eq, gt, gte, lt, lte, btwn]
+          description: Comparison operator
+          example: eq
         value:
           oneOf:
             - type: string
@@ -2570,119 +2128,161 @@ components:
             - type: array
               items:
                 type: number
+          description: Filter value (use array for "btwn" operator)
+          example: us
 
     SectorResponse:
       type: object
+      description: Comprehensive sector data
       properties:
         name:
           type: string
+          description: Sector display name
+          example: Technology
         slug:
           type: string
           nullable: true
+          description: URL-friendly sector identifier
+          example: technology
         overview:
           $ref: '#/components/schemas/SectorOverview'
         performance:
           $ref: '#/components/schemas/SectorPerformance'
         topCompanies:
           type: array
+          description: Top companies in the sector by market cap
           items:
             $ref: '#/components/schemas/SectorCompany'
         etfs:
           type: array
+          description: ETFs tracking this sector
           items:
             $ref: '#/components/schemas/SectorETF'
         mutualFunds:
           type: array
+          description: Mutual funds focused on this sector
           items:
             $ref: '#/components/schemas/SectorMutualFund'
         industries:
           type: array
+          description: Industries within this sector
           items:
             $ref: '#/components/schemas/Industry'
         researchReports:
           type: array
+          description: Research reports for this sector
           items:
             $ref: '#/components/schemas/ResearchReport'
 
     SectorOverview:
       type: object
+      description: Sector overview statistics
       properties:
         description:
           type: string
           nullable: true
+          description: Sector description
         companiesCount:
           type: integer
           nullable: true
+          description: Number of companies in the sector
+          example: 828
         marketWeight:
           type: number
           format: double
           nullable: true
+          description: Sector weight in the overall market (0-1)
+          example: 0.3038
 
     SectorPerformance:
       type: object
+      description: Sector performance metrics
       properties:
         dayChangePercent:
           type: number
           format: double
           nullable: true
+          description: Daily change percentage
         ytdChangePercent:
           type: number
           format: double
           nullable: true
+          description: Year-to-date change percentage
         oneYearChangePercent:
           type: number
           format: double
           nullable: true
+          description: 1-year change percentage
         threeYearChangePercent:
           type: number
           format: double
           nullable: true
+          description: 3-year change percentage
         fiveYearChangePercent:
           type: number
           format: double
           nullable: true
+          description: 5-year change percentage
 
     SectorCompany:
       type: object
+      description: Company within a sector
       properties:
         symbol:
           type: string
+          description: Stock ticker symbol
+          example: NVDA
         name:
           type: string
           nullable: true
+          description: Company name
+          example: NVIDIA Corporation
         lastPrice:
           type: number
           format: double
           nullable: true
+          description: Last traded price
+          example: 190.53
         marketCap:
           type: number
           format: double
           nullable: true
+          description: Market capitalization
+          example: 4638833880279
         marketWeight:
           type: number
           format: double
           nullable: true
+          description: Weight within the sector (0-1)
+          example: 0.19622724
         dayChangePercent:
           type: number
           format: double
           nullable: true
+          description: Daily change percentage
         ytdReturn:
           type: number
           format: double
           nullable: true
+          description: Year-to-date return
         rating:
           type: string
           nullable: true
+          description: Analyst rating
+          example: Strong Buy
         targetPrice:
           type: number
           format: double
           nullable: true
+          description: Analyst target price
 
     SectorETF:
       type: object
+      description: ETF tracking the sector
       properties:
         symbol:
           type: string
+          example: XLK
         name:
           type: string
           nullable: true
@@ -2709,6 +2309,7 @@ components:
 
     SectorMutualFund:
       type: object
+      description: Mutual fund focused on the sector
       properties:
         symbol:
           type: string
@@ -2738,22 +2339,31 @@ components:
         morningstarRating:
           type: integer
           nullable: true
+          description: Morningstar rating (1-5)
 
     Industry:
       type: object
+      description: Industry within a sector
       properties:
         name:
           type: string
+          description: Industry name
+          example: Semiconductors
         key:
           type: string
           nullable: true
+          description: Industry key/slug
+          example: semiconductors
         symbol:
           type: string
           nullable: true
+          description: Industry index symbol
+          example: "^YH31130020"
         marketWeight:
           type: number
           format: double
           nullable: true
+          description: Weight within the sector
         dayChangePercent:
           type: number
           format: double
@@ -2765,6 +2375,7 @@ components:
 
     ResearchReport:
       type: object
+      description: Research report for the sector
       properties:
         id:
           type: string
@@ -2779,23 +2390,35 @@ components:
           type: integer
           format: int64
           nullable: true
+          description: Unix timestamp of publication
 
     IndustryResponse:
       type: object
+      description: Comprehensive industry data
       properties:
         name:
           type: string
+          description: Industry display name
+          example: Semiconductors
         key:
           type: string
+          description: Industry key/slug for API calls
+          example: semiconductors
         symbol:
           type: string
           nullable: true
+          description: Industry index symbol
+          example: "^YH31130020"
         sectorName:
           type: string
           nullable: true
+          description: Parent sector name
+          example: Technology
         sectorKey:
           type: string
           nullable: true
+          description: Parent sector key
+          example: technology
         overview:
           $ref: '#/components/schemas/IndustryOverview'
         performance:
@@ -2804,45 +2427,59 @@ components:
           $ref: '#/components/schemas/BenchmarkPerformance'
         topCompanies:
           type: array
+          description: Top companies by market cap
           items:
             $ref: '#/components/schemas/IndustryCompany'
         topPerformingCompanies:
           type: array
+          description: Top performing companies by YTD return
           items:
             $ref: '#/components/schemas/PerformingCompany'
         topGrowthCompanies:
           type: array
+          description: Top growth companies by growth estimate
           items:
             $ref: '#/components/schemas/GrowthCompany'
         researchReports:
           type: array
+          description: Research reports for this industry
           items:
             $ref: '#/components/schemas/IndustryResearchReport'
 
     IndustryOverview:
       type: object
+      description: Industry overview statistics
       properties:
         description:
           type: string
           nullable: true
+          description: Industry description
         companiesCount:
           type: integer
           nullable: true
+          description: Number of companies in the industry
+          example: 59
         marketCap:
           type: number
           format: double
           nullable: true
+          description: Total market cap
+          example: 8057445154816
         marketWeight:
           type: number
           format: double
           nullable: true
+          description: Industry weight within the sector (0-1)
+          example: 0.3401587
         employeeCount:
           type: integer
           format: int64
           nullable: true
+          description: Total employee count
 
     IndustryPerformance:
       type: object
+      description: Industry performance metrics
       properties:
         dayChangePercent:
           type: number
@@ -2867,10 +2504,13 @@ components:
 
     BenchmarkPerformance:
       type: object
+      description: Benchmark performance for comparison (e.g., S&P 500)
       properties:
         name:
           type: string
           nullable: true
+          description: Benchmark name
+          example: S&P 500
         dayChangePercent:
           type: number
           format: double
@@ -2894,12 +2534,15 @@ components:
 
     IndustryCompany:
       type: object
+      description: Company within an industry
       properties:
         symbol:
           type: string
+          example: NVDA
         name:
           type: string
           nullable: true
+          example: NVIDIA Corporation
         lastPrice:
           type: number
           format: double
@@ -2912,6 +2555,7 @@ components:
           type: number
           format: double
           nullable: true
+          description: Weight within the industry (0-1)
         dayChangePercent:
           type: number
           format: double
@@ -2923,6 +2567,7 @@ components:
         rating:
           type: string
           nullable: true
+          example: Strong Buy
         targetPrice:
           type: number
           format: double
@@ -2930,9 +2575,11 @@ components:
 
     PerformingCompany:
       type: object
+      description: Top performing company by YTD return
       properties:
         symbol:
           type: string
+          example: LASR
         name:
           type: string
           nullable: true
@@ -2944,6 +2591,7 @@ components:
           type: number
           format: double
           nullable: true
+          description: Year-to-date return (e.g., 2.7369 = 273.69%)
         targetPrice:
           type: number
           format: double
@@ -2951,9 +2599,11 @@ components:
 
     GrowthCompany:
       type: object
+      description: Top growth company by growth estimate
       properties:
         symbol:
           type: string
+          example: MU
         name:
           type: string
           nullable: true
@@ -2969,9 +2619,11 @@ components:
           type: number
           format: double
           nullable: true
+          description: Growth estimate (e.g., 5.84 = 584%)
 
     IndustryResearchReport:
       type: object
+      description: Research report for an industry
       properties:
         id:
           type: string
@@ -2982,15 +2634,19 @@ components:
         provider:
           type: string
           nullable: true
+          example: Argus Research
         reportDate:
           type: string
           nullable: true
+          description: Report date (ISO 8601)
         reportType:
           type: string
           nullable: true
+          example: Quantitative Report
         investmentRating:
           type: string
           nullable: true
+          example: Bullish
         targetPrice:
           type: number
           format: double
@@ -2998,112 +2654,157 @@ components:
         targetPriceStatus:
           type: string
           nullable: true
+          example: Increased
 
     SearchResponse:
       type: object
+      description: Search results containing quotes, news, and research reports
       properties:
         count:
           type: integer
           nullable: true
+          description: Total count of results
         quotes:
           type: array
+          description: Matching quotes (stocks, ETFs, indices, cultural assets)
           items:
             $ref: '#/components/schemas/SearchQuote'
         news:
           type: array
           nullable: true
+          description: Related news articles (when news count > 0)
           items:
             $ref: '#/components/schemas/SearchNews'
         researchReports:
           type: array
           nullable: true
+          description: Research reports (when research is enabled)
           items:
             $ref: '#/components/schemas/SearchResearchReport'
         totalTime:
           type: integer
           format: int64
           nullable: true
+          description: Total search time in milliseconds
 
     SearchQuote:
       type: object
+      description: A quote result from search
       properties:
         symbol:
           type: string
+          description: Stock/index symbol
+          example: AAPL
         shortName:
           type: string
           nullable: true
+          description: Short company name
+          example: Apple Inc.
         longName:
           type: string
           nullable: true
+          description: Full company name
+          example: Apple Inc.
         quoteType:
           type: string
           nullable: true
+          description: Quote type (EQUITY, ETF, INDEX, MUTUALFUND, CURRENCY, etc.)
+          example: EQUITY
         exchange:
           type: string
           nullable: true
+          description: Exchange code
+          example: NMS
         exchDisp:
           type: string
           nullable: true
+          description: Exchange display name
+          example: NASDAQ
         typeDisp:
           type: string
           nullable: true
+          description: Type display name (Equity, ETF, Index, Cultural Asset)
+          example: Equity
         industry:
           type: string
           nullable: true
+          description: Industry key
+          example: consumer-electronics
         industryDisp:
           type: string
           nullable: true
+          description: Industry display name
+          example: Consumer Electronics
         sector:
           type: string
           nullable: true
+          description: Sector key
+          example: technology
         sectorDisp:
           type: string
           nullable: true
+          description: Sector display name
+          example: Technology
         isYahooFinance:
           type: boolean
           nullable: true
+          description: Whether this is a Yahoo Finance symbol
         dispSecIndFlag:
           type: boolean
           nullable: true
+          description: Display sector/industry flag
         logoUrl:
           type: string
           nullable: true
+          description: Company logo URL
+          example: "https://s.yimg.com/lb/logos/AAPL_300.png"
         score:
           type: number
           format: double
           nullable: true
+          description: Search relevance score
         index:
           type: string
           nullable: true
+          description: Index membership
         prevName:
           type: string
           nullable: true
+          description: Previous company name (if renamed)
         nameChangeDate:
           type: string
           nullable: true
+          description: Date of name change
 
     SearchNews:
       type: object
+      description: A news result from search
       properties:
         uuid:
           type: string
           nullable: true
+          description: Unique news article identifier
         title:
           type: string
           nullable: true
+          description: Article title
         publisher:
           type: string
           nullable: true
+          description: Publisher name
         link:
           type: string
           nullable: true
+          description: Article URL
         providerPublishTime:
           type: integer
           format: int64
           nullable: true
+          description: Publication timestamp (Unix epoch seconds)
         type:
           type: string
           nullable: true
+          description: Article type (STORY, VIDEO, etc.)
         thumbnail:
           $ref: '#/components/schemas/NewsThumbnail'
         relatedTickers:
@@ -3111,92 +2812,125 @@ components:
           nullable: true
           items:
             type: string
+          description: Related stock symbols
 
     SearchResearchReport:
       type: object
+      description: A research report from search results
       properties:
         reportHeadline:
           type: string
           nullable: true
+          description: Report headline/title
         author:
           type: string
           nullable: true
+          description: Report author
         reportDate:
           type: integer
           format: int64
           nullable: true
+          description: Report date (Unix timestamp)
         id:
           type: string
           nullable: true
+          description: Report ID
         provider:
           type: string
           nullable: true
+          description: Research provider
+          example: Argus Research
 
     LookupResponse:
       type: object
+      description: Lookup results containing type-filtered quotes
       properties:
         quotes:
           type: array
+          description: Matching quotes filtered by asset type
           items:
             $ref: '#/components/schemas/LookupQuote'
         start:
           type: integer
           nullable: true
+          description: Starting index
         count:
           type: integer
           nullable: true
+          description: Total result count
 
     LookupQuote:
       type: object
+      description: A quote result from lookup
       properties:
         symbol:
           type: string
+          description: Stock/asset symbol
+          example: AAPL
         shortName:
           type: string
           nullable: true
+          description: Short name
+          example: Apple Inc.
         longName:
           type: string
           nullable: true
+          description: Full name
         quoteType:
           type: string
           nullable: true
+          description: Asset type (equity, etf, mutualfund, index, future, currency, cryptocurrency)
+          example: equity
         exchange:
           type: string
           nullable: true
+          description: Exchange code
+          example: NMS
         exchDisp:
           type: string
           nullable: true
+          description: Exchange display name
         typeDisp:
           type: string
           nullable: true
+          description: Type display name
         industry:
           type: string
           nullable: true
+          description: Industry classification
         sector:
           type: string
           nullable: true
+          description: Sector classification
         regularMarketPrice:
           type: number
           format: double
           nullable: true
+          description: Current/last price
         regularMarketChange:
           type: number
           format: double
           nullable: true
+          description: Price change
         regularMarketChangePercent:
           type: number
           format: double
           nullable: true
+          description: Price change percent
         regularMarketPreviousClose:
           type: number
           format: double
           nullable: true
+          description: Previous close price
         logoUrl:
           type: string
           nullable: true
+          description: Company logo URL (when logo=true)
+          example: "https://s.yimg.com/lb/brands/50x50_nvidia.png"
         companyLogoUrl:
           type: string
           nullable: true
+          description: Alternate company logo URL (when logo=true)
 
     Error:
       type: object
@@ -3208,54 +2942,87 @@ components:
 
     Currency:
       type: object
+      description: Currency pair information
       properties:
         shortName:
           type: string
           nullable: true
+          description: Short name (e.g., "USD/EUR")
+          example: "USD/EUR"
         longName:
           type: string
           nullable: true
+          description: Long name (e.g., "USD/EUR")
+          example: "USD/EUR"
         symbol:
           type: string
           nullable: true
+          description: Symbol (e.g., "USDEUR=X")
+          example: "USDEUR=X"
         localLongName:
           type: string
           nullable: true
+          description: Local long name
+          example: "USD/EUR"
 
     Exchange:
       type: object
+      description: Supported exchange information
       properties:
         region:
           type: string
+          description: Region where the exchange operates
+          example: "Japan"
         market:
           type: string
+          description: Name of the market or index
+          example: "Tokyo Stock Exchange"
         suffix:
           type: string
+          description: Symbol suffix for this exchange (N/A if none needed)
+          example: ".T"
         delay:
           type: string
+          description: Data delay (e.g., "Real-time", "15 min", "20 min")
+          example: "20 min"
         dataProvider:
           type: string
+          description: Data provider name
+          example: "ICE Data Services"
 
     MarketSummaryQuote:
       type: object
+      description: Market summary quote (index, currency, commodity, etc.)
       properties:
         symbol:
           type: string
+          description: Stock/index symbol
+          example: "^GSPC"
         fullExchangeName:
           type: string
           nullable: true
+          description: Full market name
+          example: "SNP"
         exchange:
           type: string
           nullable: true
+          description: Exchange code
+          example: "SNP"
         shortName:
           type: string
           nullable: true
+          description: Short name
+          example: "S&P 500"
         quoteType:
           type: string
           nullable: true
+          description: Quote type (INDEX, CURRENCY, FUTURE, etc.)
+          example: "INDEX"
         marketState:
           type: string
           nullable: true
+          description: Market state (REGULAR, PRE, POST, CLOSED)
+          example: "CLOSED"
         regularMarketPrice:
           $ref: '#/components/schemas/FormattedValue'
         regularMarketChange:
@@ -3271,6 +3038,7 @@ components:
 
     SparkData:
       type: object
+      description: Spark chart mini-data for market summary
       properties:
         close:
           type: array
@@ -3278,66 +3046,75 @@ components:
           items:
             type: number
             nullable: true
+          description: Close prices
         timestamp:
           type: array
           nullable: true
           items:
             type: integer
             format: int64
+          description: Timestamps
         symbol:
           type: string
           nullable: true
+          description: Symbol
         previousClose:
           type: number
           format: double
           nullable: true
+          description: Previous close
         chartPreviousClose:
           type: number
           format: double
           nullable: true
+          description: Chart previous close
 
     TrendingQuote:
       type: object
+      description: A trending stock/symbol
       properties:
         symbol:
           type: string
+          description: Stock symbol
+          example: "NVDA"
 
     Region:
       type: string
       description: Market region code
       enum:
-        - AR
-        - AU
-        - BR
-        - CA
-        - CN
-        - DK
-        - FI
-        - FR
-        - DE
-        - GR
-        - HK
-        - IN
-        - IL
-        - IT
-        - MY
-        - NZ
-        - NO
-        - PT
-        - RU
-        - SG
-        - ES
-        - SE
-        - TW
-        - TH
-        - TR
-        - GB
-        - US
-        - VN
+        - AR  # Argentina
+        - AU  # Australia
+        - BR  # Brazil
+        - CA  # Canada
+        - CN  # China
+        - DK  # Denmark
+        - FI  # Finland
+        - FR  # France
+        - DE  # Germany
+        - GR  # Greece
+        - HK  # Hong Kong
+        - IN  # India
+        - IL  # Israel
+        - IT  # Italy
+        - MY  # Malaysia
+        - NZ  # New Zealand
+        - NO  # Norway
+        - PT  # Portugal
+        - RU  # Russia
+        - SG  # Singapore
+        - ES  # Spain
+        - SE  # Sweden
+        - TW  # Taiwan
+        - TH  # Thailand
+        - TR  # Turkey
+        - GB  # United Kingdom
+        - US  # United States
+        - VN  # Vietnam
       default: US
 
     HoursResponse:
       type: object
+      description: Market hours response containing market time data
       properties:
         markets:
           type: array
@@ -3346,1905 +3123,125 @@ components:
 
     MarketTime:
       type: object
+      description: Market time information for a specific region
       properties:
         id:
           type: string
+          description: Market identifier (e.g., "us", "jp", "gb")
+          example: us
         name:
           type: string
+          description: Human-readable market name
+          example: U.S. markets
         status:
           type: string
+          description: Current market status (e.g., "open", "closed")
+          example: closed
         message:
           type: string
+          description: Status message
+          example: U.S. markets closed
         open:
           type: string
           format: date-time
+          description: Market open time (ISO 8601)
+          example: "2025-12-26T14:30:00Z"
         close:
           type: string
           format: date-time
+          description: Market close time (ISO 8601)
+          example: "2025-12-26T21:00:00Z"
         time:
           type: string
           format: date-time
+          description: Current time (ISO 8601)
+          example: "2025-12-27T01:06:14Z"
         timezone:
           type: string
+          description: Timezone name (IANA format)
+          example: America/New_York
         timezoneShort:
           type: string
+          description: Short timezone name
+          example: EST
         gmtOffset:
           type: integer
+          description: GMT offset in seconds
+          example: -18000
         dst:
           type: boolean
+          description: Whether daylight saving time is in effect
+          example: false
 
-    # -------------------
-    # V1 Schemas (Imported & Renamed on Collision)
-    # -------------------
-    EarningsCallListing:
-      properties:
-        quarter:
-          anyOf:
-            - type: string
-            - type: null
-          title: Quarter
-          description: Quarter (e.g., 'Q1', 'Q2')
-        year:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Year
-          description: Year of the earnings call
-        title:
-          type: string
-          title: Title
-          description: Title of the earnings call
-        url:
-          type: string
-          title: Url
-          description: URL to the earnings call page
+    BatchSparksResponse:
       type: object
-      required:
-        - title
-        - url
-      title: EarningsCallListing
-      description: Single earnings call metadata
-
-    EarningsCallsList:
+      description: Response from batch spark endpoint with successful sparks and errors
       properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        earnings_calls:
-          items:
-            $ref: '#/components/schemas/EarningsCallListing'
-          type: array
-          title: Earnings Calls
-          description: List of available earnings calls
-        total:
-          type: integer
-          title: Total
-          description: Total number of earnings calls
-      type: object
-      required:
-        - symbol
-        - earnings_calls
-        - total
-      title: EarningsCallsList
-      description: List of available earnings calls for a symbol
-
-    EarningsEstimate:
-      properties:
-        estimates:
+        sparks:
+          type: object
+          description: Successfully fetched sparks, keyed by symbol
           additionalProperties:
-            type: object
-          type: object
-          title: Estimates
-          description: Earnings estimates data with periods as keys and estimate details as values
-      type: object
-      required:
-        - estimates
-      title: EarningsEstimate
-      description: Earnings estimate data
-
-    EarningsEstimateResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        earnings_estimate:
-          $ref: '#/components/schemas/EarningsEstimate'
-      type: object
-      required:
-        - symbol
-        - earnings_estimate
-      title: EarningsEstimateResponse
-      description: Earnings estimates response
-
-    EarningsHistoryItem:
-      properties:
-        date:
-          type: string
-          format: date-time
-          title: Date
-          description: Earnings date
-        eps_actual:
-          anyOf:
-            - type: number
-            - type: null
-          title: Eps Actual
-          description: Actual EPS
-        eps_estimate:
-          anyOf:
-            - type: number
-            - type: null
-          title: Eps Estimate
-          description: Estimated EPS
-        surprise:
-          anyOf:
-            - type: number
-            - type: null
-          title: Surprise
-          description: EPS surprise
-        surprise_percent:
-          anyOf:
-            - type: number
-            - type: null
-          title: Surprise Percent
-          description: EPS surprise percentage
-      type: object
-      required:
-        - date
-      title: EarningsHistoryItem
-      description: Historical earnings data item
-
-    EarningsHistoryResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        earnings_history:
-          items:
-            $ref: '#/components/schemas/EarningsHistoryItem'
-          type: array
-          title: Earnings History
-          description: Historical earnings data
-      type: object
-      required:
-        - symbol
-        - earnings_history
-      title: EarningsHistoryResponse
-      description: Historical earnings response
-
-    EarningsTranscriptV1:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        quarter:
-          type: string
-          title: Quarter
-          description: Quarter (e.g., 'Q1', 'Q2')
-        year:
-          type: integer
-          title: Year
-          description: Year of the earnings call
-        date:
-          type: string
-          format: date-time
-          title: Date
-          description: Date of the earnings call
-        title:
-          type: string
-          title: Title
-          description: Title of the earnings call
-        speakers:
-          items:
-            $ref: '#/components/schemas/TranscriptSpeaker'
-          type: array
-          title: Speakers
-          description: List of speakers
-        paragraphs:
-          items:
-            $ref: '#/components/schemas/TranscriptParagraph'
-          type: array
-          title: Paragraphs
-          description: Transcript paragraphs
-        metadata:
-          additionalProperties: true
-          type: object
-          title: Metadata
-          description: Additional metadata
-      type: object
-      required:
-        - symbol
-        - quarter
-        - year
-        - date
-        - title
-        - speakers
-        - paragraphs
-      title: EarningsTranscript
-      description: Full earnings call transcript
-
-    FinancialStatementV1:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-          examples:
-            - AAPL
-        statement_type:
-          $ref: '#/components/schemas/StatementType'
-          description: Type of financial statement
-          examples:
-            - income
-        frequency:
-          $ref: '#/components/schemas/FrequencyV1'
-          description: Frequency of the financial statement
-          examples:
-            - annual
-        statement:
-          additionalProperties:
-            additionalProperties: true
-            type: object
-          type: object
-          title: Statement
-          description: Financial statement data, with metrics as keys and a dictionary of dates and values
-      type: object
-      required:
-        - symbol
-        - statement_type
-        - frequency
-        - statement
-      title: FinancialStatement
-
-    FrequencyV1:
-      type: string
-      enum:
-        - annual
-        - quarterly
-      title: Frequency
-
-    HistoricalData:
-      properties:
-        open:
-          type: number
-          title: Open
-          description: Opening price
-          examples:
-            - 145
-        high:
-          type: number
-          title: High
-          description: Highest price
-          examples:
-            - 145
-        low:
-          type: number
-          title: Low
-          description: Lowest price
-          examples:
-            - 145
-        close:
-          type: number
-          title: Close
-          description: Closing price
-          examples:
-            - 145
-        adjClose:
-          anyOf:
-            - type: number
-            - type: null
-          title: Adjclose
-          description: Adjusted closing price
-          examples:
-            - 145
-        volume:
-          type: integer
-          title: Volume
-          description: Volume traded
-          examples:
-            - 1000000
-      type: object
-      required:
-        - open
-        - high
-        - low
-        - close
-        - volume
-      title: HistoricalData
-
-    Index:
-      type: string
-      enum:
-        - snp
-        - djia
-        - nasdaq
-        - nyse-composite
-        - nyse-amex
-        - rut
-        - vix
-        - tsx-composite
-        - ibovespa
-        - ipc-mexico
-        - ipsa
-        - merval
-        - ivbx
-        - ibrx-50
-        - ftse-100
-        - dax
-        - cac-40
-        - euro-stoxx-50
-        - euronext-100
-        - bel-20
-        - moex
-        - aex
-        - ibex-35
-        - ftse-mib
-        - smi
-        - psi
-        - atx
-        - omxs30
-        - omxc25
-        - wig20
-        - budapest-se
-        - moex-russia
-        - rtsi
-        - hang-seng
-        - sti
-        - sensex
-        - idx-composite
-        - ftse-bursa
-        - kospi
-        - twse
-        - nikkei-225
-        - shanghai
-        - szse-component
-        - set
-        - nifty-50
-        - nifty-200
-        - psei-composite
-        - china-a50
-        - dj-shanghai
-        - india-vix
-        - egx-30
-        - jse-40
-        - ftse-jse
-        - afr-40
-        - raf-40
-        - sa-40
-        - alt-15
-        - ta-125
-        - ta-35
-        - tadawul-all-share
-        - tamayuz
-        - bist-100
-        - asx-200
-        - all-ordinaries
-        - nzx-50
-        - usd
-        - msci-europe
-        - gbp
-        - euro
-        - yen
-        - australian
-        - msci-world
-        - cboe-uk-100
-      title: Index
-
-    Indicator:
-      type: string
-      enum:
-        - SMA
-        - EMA
-        - WMA
-        - VWMA
-        - RSI
-        - SRSI
-        - STOCH
-        - CCI
-        - OBV
-        - BBANDS
-        - AROON
-        - ADX
-        - MACD
-        - SUPERTREND
-        - ICHIMOKU
-      title: Indicator
-
-    IndicatorData:
-      properties: {}
-      type: object
-      title: IndicatorData
-      description: Base class for all technical indicators
-
-    InsiderPurchase:
-      properties:
-        period:
-          type: string
-          title: Period
-          description: Time period for the data
-        purchases_shares:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Purchases Shares
-          description: Shares purchased
-        purchases_transactions:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Purchases Transactions
-          description: Number of purchase transactions
-        sales_shares:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Sales Shares
-          description: Shares sold
-        sales_transactions:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Sales Transactions
-          description: Number of sale transactions
-        net_shares:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Net Shares
-          description: Net shares purchased/sold
-        net_transactions:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Net Transactions
-          description: Net transactions
-        total_insider_shares:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Total Insider Shares
-          description: Total insider shares held
-        net_percent_insider_shares:
-          anyOf:
-            - type: number
-            - type: null
-          title: Net Percent Insider Shares
-          description: Net % of insider shares
-        buy_percent_insider_shares:
-          anyOf:
-            - type: number
-            - type: null
-          title: Buy Percent Insider Shares
-          description: "% buy shares"
-        sell_percent_insider_shares:
-          anyOf:
-            - type: number
-            - type: null
-          title: Sell Percent Insider Shares
-          description: "% sell shares"
-      type: object
-      required:
-        - period
-      title: InsiderPurchase
-      description: Insider purchase activity summary
-
-    InsiderPurchasesResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        summary:
-          $ref: '#/components/schemas/InsiderPurchase'
-      type: object
-      required:
-        - symbol
-        - summary
-      title: InsiderPurchasesResponse
-      description: Insider purchases summary response
-
-    InsiderRosterMember:
-      properties:
-        name:
-          type: string
-          title: Name
-          description: Insider name
-        position:
-          type: string
-          title: Position
-          description: Position/relation
-        most_recent_transaction:
-          anyOf:
-            - type: string
-            - type: null
-          title: Most Recent Transaction
-          description: Most recent transaction
-        latest_transaction_date:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: null
-          title: Latest Transaction Date
-          description: Latest transaction date
-        shares_owned_directly:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Shares Owned Directly
-          description: Shares owned directly
-        shares_owned_indirectly:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Shares Owned Indirectly
-          description: Shares owned indirectly
-        position_direct_date:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: null
-          title: Position Direct Date
-          description: Position direct date
-      type: object
-      required:
-        - name
-        - position
-      title: InsiderRosterMember
-      description: Individual insider roster member
-
-    InsiderRosterResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        roster:
-          items:
-            $ref: '#/components/schemas/InsiderRosterMember'
-          type: array
-          title: Roster
-          description: List of company insiders
-      type: object
-      required:
-        - symbol
-        - roster
-      title: InsiderRosterResponse
-      description: Insider roster response
-
-    InsiderTransaction:
-      properties:
-        start_date:
-          type: string
-          format: date-time
-          title: Start Date
-          description: Transaction start date
-        insider:
-          type: string
-          title: Insider
-          description: Insider name
-        position:
-          type: string
-          title: Position
-          description: Insider position/relation
-        transaction:
-          type: string
-          title: Transaction
-          description: Transaction description
-        shares:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Shares
-          description: Number of shares
-        value:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Value
-          description: Transaction value
-        ownership:
-          anyOf:
-            - type: string
-            - type: null
-          title: Ownership
-          description: Ownership type (direct/indirect)
-      type: object
-      required:
-        - start_date
-        - insider
-        - position
-        - transaction
-      title: InsiderTransaction
-      description: Individual insider transaction
-
-    InsiderTransactionsResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        transactions:
-          items:
-            $ref: '#/components/schemas/InsiderTransaction'
-          type: array
-          title: Transactions
-          description: List of insider transactions
-      type: object
-      required:
-        - symbol
-        - transactions
-      title: InsiderTransactionsResponse
-      description: Insider transactions response
-
-    InstitutionalHolder:
-      properties:
-        holder:
-          type: string
-          title: Holder
-          description: Institution name
-        shares:
-          type: integer
-          title: Shares
-          description: Number of shares held
-        date_reported:
-          type: string
-          format: date-time
-          title: Date Reported
-          description: Date of last report
-        percent_out:
-          anyOf:
-            - type: number
-            - type: null
-          title: Percent Out
-          description: Percentage of outstanding shares
-        value:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Value
-          description: Value of holdings
-      type: object
-      required:
-        - holder
-        - shares
-        - date_reported
-      title: InstitutionalHolder
-      description: Individual institutional holder
-
-    InstitutionalHoldersResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        holders:
-          items:
-            $ref: '#/components/schemas/InstitutionalHolder'
-          type: array
-          title: Holders
-          description: List of institutional holders
-      type: object
-      required:
-        - symbol
-        - holders
-      title: InstitutionalHoldersResponse
-      description: Institutional holders response
-
-    Interval:
-      type: string
-      enum:
-        - 1m
-        - 5m
-        - 15m
-        - 30m
-        - 1h
-        - 1d
-        - 1wk
-        - 1mo
-      title: Interval
-
-    MajorHoldersBreakdown:
-      properties:
-        breakdown_data:
-          additionalProperties: true
-          type: object
-          title: Breakdown Data
-          description: Major holders breakdown with metrics as keys and values
-          examples:
-            - insidersPercentHeld: 0.1
-              institutionsPercentHeld: 0.85
-      type: object
-      required:
-        - breakdown_data
-      title: MajorHoldersBreakdown
-      description: Major holders breakdown data
-
-    MajorHoldersResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        breakdown:
-          $ref: '#/components/schemas/MajorHoldersBreakdown'
-      type: object
-      required:
-        - symbol
-        - breakdown
-      title: MajorHoldersResponse
-      description: Major holders breakdown response
-
-    MarketIndex:
-      properties:
-        name:
-          type: string
-          title: Name
-          description: Name of the index
-          examples:
-            - S&P 500
-        value:
-          type: number
-          title: Value
-          description: Current value of the index
-          examples:
-            - 4300
-        change:
-          type: string
-          title: Change
-          description: Change in the index value
-          examples:
-            - "+10.00"
-        percentChange:
-          type: string
-          title: Percentchange
-          description: Percentage change in the index value
-          examples:
-            - "+0.23%"
-        fiveDaysReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Fivedaysreturn
-          description: Five days return of the company
-          examples:
-            - "-19.35%"
-        oneMonthReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Onemonthreturn
-          description: One month return of the company
-          examples:
-            - "-28.48%"
-        threeMonthReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Threemonthreturn
-          description: Three month return of the company
-          examples:
-            - "-14.02%"
-        sixMonthReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Sixmonthreturn
-          description: Six month return of the company
-          examples:
-            - 36.39%
-        ytdReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Ytdreturn
-          description: Year to date return of the company
-          examples:
-            - "+10.00%"
-        yearReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Yearreturn
-          description: One year return of the company
-          examples:
-            - "+20.00%"
-        threeYearReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Threeyearreturn
-          description: Three year return of the company
-          examples:
-            - "+30.00%"
-        fiveYearReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Fiveyearreturn
-          description: Five year return of the company
-          examples:
-            - "+40.00%"
-        tenYearReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Tenyearreturn
-          description: Ten year return of the company
-          examples:
-            - 2,005.31%
-        maxReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Maxreturn
-          description: Maximum return of the company
-          examples:
-            - 22,857.89%
-      type: object
-      required:
-        - name
-        - value
-        - change
-        - percentChange
-      title: MarketIndex
-
-    MarketMover:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-          examples:
-            - AAPL
-        name:
-          type: string
-          title: Name
-          description: Company name
-          examples:
-            - Apple Inc.
-        price:
-          type: string
-          title: Price
-          description: Last traded price of the stock
-          examples:
-            - "145.86"
-        change:
-          type: string
-          title: Change
-          description: Change in the stock price
-          examples:
-            - "+1.00"
-        percentChange:
-          type: string
-          title: Percentchange
-          description: Percentage change in the stock price
-          examples:
-            - "+0.69%"
-      type: object
-      required:
-        - symbol
-        - name
-        - price
-        - change
-        - percentChange
-      title: MarketMover
-
-    MarketSector:
-      properties:
-        sector:
-          type: string
-          title: Sector name
-        dayReturn:
-          type: string
-          title: Day return
-        ytdReturn:
-          type: string
-          title: Year to date return
-        yearReturn:
-          type: string
-          title: Year return
-        threeYearReturn:
-          type: string
-          title: Three year return
-        fiveYearReturn:
-          type: string
-          title: Five year return
-      type: object
-      required:
-        - sector
-        - dayReturn
-        - ytdReturn
-        - yearReturn
-        - threeYearReturn
-        - fiveYearReturn
-      title: MarketSector
-
-    MarketSectorDetails:
-      properties:
-        sector:
-          type: string
-          title: Sector name
-        dayReturn:
-          type: string
-          title: Day return
-        ytdReturn:
-          type: string
-          title: Year to date return
-        yearReturn:
-          type: string
-          title: Year return
-        threeYearReturn:
-          type: string
-          title: Three year return
-        fiveYearReturn:
-          type: string
-          title: Five year return
-        marketCap:
-          type: string
-          title: Market capitalization
-        marketWeight:
-          type: string
-          title: Market weight
-        industries:
-          type: integer
-          title: Number of industries
-        companies:
-          type: integer
-          title: Number of companies
-        topIndustries:
-          items:
-            type: string
-          type: array
-          title: Top industries in the sector
-        topCompanies:
-          items:
-            type: string
-          type: array
-          title: Top companies in the sector
-      type: object
-      required:
-        - sector
-        - dayReturn
-        - ytdReturn
-        - yearReturn
-        - threeYearReturn
-        - fiveYearReturn
-        - marketCap
-        - marketWeight
-        - industries
-        - companies
-        - topIndustries
-        - topCompanies
-      title: MarketSectorDetails
-
-    MoverCount:
-      type: string
-      enum:
-        - "25"
-        - "50"
-        - "100"
-      title: MoverCount
-
-    MutualFundHolder:
-      properties:
-        holder:
-          type: string
-          title: Holder
-          description: Fund name
-        shares:
-          type: integer
-          title: Shares
-          description: Number of shares held
-        date_reported:
-          type: string
-          format: date-time
-          title: Date Reported
-          description: Date of last report
-        percent_out:
-          anyOf:
-            - type: number
-            - type: null
-          title: Percent Out
-          description: Percentage of outstanding shares
-        value:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Value
-          description: Value of holdings
-      type: object
-      required:
-        - holder
-        - shares
-        - date_reported
-      title: MutualFundHolder
-      description: Individual mutual fund holder
-
-    MutualFundHoldersResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        holders:
-          items:
-            $ref: '#/components/schemas/MutualFundHolder'
-          type: array
-          title: Holders
-          description: List of mutual fund holders
-      type: object
-      required:
-        - symbol
-        - holders
-      title: MutualFundHoldersResponse
-      description: Mutual fund holders response
-
-    NewsV1:
-      properties:
-        title:
-          type: string
-          title: Title
-          description: Title of the news article
-          examples:
-            - New iPhone released!
-        link:
-          type: string
-          title: Link
-          description: Link to the news article
-          examples:
-            - https://www.example.com
-        source:
-          type: string
-          title: Source
-          description: Source of the news article
-          examples:
-            - CNN
-        img:
-          type: string
-          title: Img
-          description: Image of the news article
-          examples:
-            - https://www.example.com/image.jpg
-        time:
-          type: string
-          title: Time
-          description: Time relative to current time when the news was published
-          examples:
-            - 1 day ago
-      type: object
-      required:
-        - title
-        - link
-        - source
-        - img
-        - time
-      title: News
-
-    PriceTarget:
-      properties:
-        current:
-          anyOf:
-            - type: number
-            - type: null
-          title: Current
-          description: Current price
-        mean:
-          anyOf:
-            - type: number
-            - type: null
-          title: Mean
-          description: Mean price target
-        median:
-          anyOf:
-            - type: number
-            - type: null
-          title: Median
-          description: Median price target
-        low:
-          anyOf:
-            - type: number
-            - type: null
-          title: Low
-          description: Low price target
-        high:
-          anyOf:
-            - type: number
-            - type: null
-          title: High
-          description: High price target
-      type: object
-      title: PriceTarget
-      description: Analyst price targets
-
-    PriceTargetsResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        price_targets:
-          $ref: '#/components/schemas/PriceTarget'
-          description: Consensus price target data
-      type: object
-      required:
-        - symbol
-        - price_targets
-      title: PriceTargetsResponse
-      description: Analyst price targets response
-
-    Quarter:
-      type: string
-      enum:
-        - Q1
-        - Q2
-        - Q3
-        - Q4
-      title: Quarter
-      description: Quarter enum for earnings calls
-
-    QuoteV1:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-          examples:
-            - AAPL
-        name:
-          type: string
-          title: Name
-          description: Company name
-          examples:
-            - Apple Inc.
-        price:
-          type: string
-          title: Price
-          description: Last traded price of the stock
-          examples:
-            - "145.00"
-        preMarketPrice:
-          anyOf:
-            - type: string
-            - type: null
-          title: Premarketprice
-          description: After hours price of the stock
-          examples:
-            - "145.50"
-        afterHoursPrice:
-          anyOf:
-            - type: string
-            - type: null
-          title: Afterhoursprice
-          description: After hours price of the stock
-          examples:
-            - "145.50"
-        change:
-          type: string
-          title: Change
-          description: Change in the stock price
-          examples:
-            - "+1.00"
-        percentChange:
-          type: string
-          title: Percentchange
-          description: Percentage change in the stock price
-          examples:
-            - "+0.69%"
-        open:
-          anyOf:
-            - type: string
-            - type: null
-          title: Open
-          description: Opening price of the stock
-          examples:
-            - "144.00"
-        high:
-          anyOf:
-            - type: string
-            - type: null
-          title: High
-          description: Highest day price of the stock
-          examples:
-            - "146.00"
-        low:
-          anyOf:
-            - type: string
-            - type: null
-          title: Low
-          description: Lowest day price of the stock
-          examples:
-            - "143.00"
-        yearHigh:
-          anyOf:
-            - type: string
-            - type: null
-          title: Yearhigh
-          description: 52-week high price of the stock
-          examples:
-            - "150.00"
-        yearLow:
-          anyOf:
-            - type: string
-            - type: null
-          title: Yearlow
-          description: 52-week low price of the stock
-          examples:
-            - "100.00"
-        volume:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Volume
-          description: Volume of the stock
-          examples:
-            - 1000000
-        avgVolume:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Avgvolume
-          description: Average volume of the stock
-          examples:
-            - 2000000
-        marketCap:
-          anyOf:
-            - type: string
-            - type: null
-          title: Marketcap
-          description: Market capitalization of the stock
-          examples:
-            - 2.5T
-        beta:
-          anyOf:
-            - type: string
-            - type: null
-          title: Beta
-          description: Beta of the stock
-          examples:
-            - 1.23
-        pe:
-          anyOf:
-            - type: string
-            - type: null
-          title: Pe
-          description: Price to earnings ratio of the stock
-          examples:
-            - "30.00"
-        eps:
-          anyOf:
-            - type: string
-            - type: null
-          title: Eps
-          description: Earnings per share of the stock
-          examples:
-            - "4.50"
-        dividend:
-          anyOf:
-            - type: string
-            - type: null
-          title: Dividend
-          description: Dividend yield of the stock
-          examples:
-            - "0.82"
-        yield:
-          anyOf:
-            - type: string
-            - type: null
-          title: Yield
-          description: Dividend yield of the stock
-          examples:
-            - 1.3%
-        exDividend:
-          anyOf:
-            - type: string
-            - type: null
-          title: Exdividend
-          description: Ex-dividend date of the stock
-          examples:
-            - Feb 5, 2024
-        netAssets:
-          anyOf:
-            - type: string
-            - type: null
-          title: Netassets
-          description: Net assets of the stock
-          examples:
-            - 10.5B
-        nav:
-          anyOf:
-            - type: string
-            - type: null
-          title: Nav
-          description: Net asset value of the stock
-          examples:
-            - "100.00"
-        expenseRatio:
-          anyOf:
-            - type: string
-            - type: null
-          title: Expenseratio
-          description: Expense ratio of the stock
-          examples:
-            - 0.05%
-        category:
-          anyOf:
-            - type: string
-            - type: null
-          title: Category
-          description: Category of the fund
-          examples:
-            - Large Growth
-        lastCapitalGain:
-          anyOf:
-            - type: string
-            - type: null
-          title: Lastcapitalgain
-          description: Last capital gain of the fund
-          examples:
-            - "10.00"
-        morningstarRating:
-          anyOf:
-            - type: string
-            - type: null
-          title: Morningstarrating
-          description: Morningstar rating of the fund
-          examples:
-            - ★★
-        morningstarRiskRating:
-          anyOf:
-            - type: string
-            - type: null
-          title: Morningstarriskrating
-          description: Morningstar risk rating of the fund
-          examples:
-            - Low
-        holdingsTurnover:
-          anyOf:
-            - type: string
-            - type: null
-          title: Holdingsturnover
-          description: Holdings turnover of the fund
-          examples:
-            - 5.00%
-        earningsDate:
-          anyOf:
-            - type: string
-            - type: null
-          title: Earningsdate
-          description: Next earnings date of the stock
-          examples:
-            - Apr 23, 2024
-        lastDividend:
-          anyOf:
-            - type: string
-            - type: null
-          title: Lastdividend
-          description: Last dividend of the fund
-          examples:
-            - "0.82"
-        inceptionDate:
-          anyOf:
-            - type: string
-            - type: null
-          title: Inceptiondate
-          description: Inception date of the fund
-          examples:
-            - Jan 1, 2020
-        sector:
-          anyOf:
-            - type: string
-            - type: null
-          title: Sector
-          description: Sector of the company
-          examples:
-            - Technology
-        industry:
-          anyOf:
-            - type: string
-            - type: null
-          title: Industry
-          description: Industry of the company
-          examples:
-            - Consumer Electronics
-        about:
-          anyOf:
-            - type: string
-            - type: null
-          title: About
-          description: About the company
-          examples:
-            - Apple Inc. designs, manufactures, and markets smartphones, personal computers, tablets, wearables, and accessories worldwide.
-        employees:
-          anyOf:
-            - type: string
-            - type: null
-          title: Employees
-          description: Number of employees in the company
-          examples:
-            - "150,000"
-        fiveDaysReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Fivedaysreturn
-          description: Five days return of the company
-          examples:
-            - "-19.35%"
-        oneMonthReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Onemonthreturn
-          description: One month return of the company
-          examples:
-            - "-28.48%"
-        threeMonthReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Threemonthreturn
-          description: Three month return of the company
-          examples:
-            - "-14.02%"
-        sixMonthReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Sixmonthreturn
-          description: Six month return of the company
-          examples:
-            - 36.39%
-        ytdReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Ytdreturn
-          description: Year to date return of the company
-          examples:
-            - "+10.00%"
-        yearReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Yearreturn
-          description: One year return of the company
-          examples:
-            - "+20.00%"
-        threeYearReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Threeyearreturn
-          description: Three year return of the company
-          examples:
-            - "+30.00%"
-        fiveYearReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Fiveyearreturn
-          description: Five year return of the company
-          examples:
-            - "+40.00%"
-        tenYearReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Tenyearreturn
-          description: Ten year return of the company
-          examples:
-            - 2,005.31%
-        maxReturn:
-          anyOf:
-            - type: string
-            - type: null
-          title: Maxreturn
-          description: Maximum return of the company
-          examples:
-            - 22,857.89%
-        logo:
-          anyOf:
-            - type: string
-            - type: null
-          title: Logo
-          description: Company logo
-          examples:
-            - https://img.logo.dev/apple.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true
-      type: object
-      required:
-        - symbol
-        - name
-        - price
-        - change
-        - percentChange
-      title: Quote
-
-    RecommendationData:
-      properties:
-        period:
-          type: string
-          title: Period
-          description: Time period for recommendations
-        strong_buy:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Strong Buy
-          description: Number of strong buy recommendations
-        buy:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Buy
-          description: Number of buy recommendations
-        hold:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Hold
-          description: Number of hold recommendations
-        sell:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Sell
-          description: Number of sell recommendations
-        strong_sell:
-          anyOf:
-            - type: integer
-            - type: null
-          title: Strong Sell
-          description: Number of strong sell recommendations
-      type: object
-      required:
-        - period
-      title: RecommendationData
-      description: Analyst recommendations data
-
-    RecommendationsResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        recommendations:
-          items:
-            $ref: '#/components/schemas/RecommendationData'
-          type: array
-          title: Recommendations
-          description: List of analyst recommendations by period
-      type: object
-      required:
-        - symbol
-        - recommendations
-      title: RecommendationsResponse
-      description: Analyst recommendations response
-
-    RegionV1:
-      type: string
-      enum:
-        - US
-        - NA
-        - SA
-        - EU
-        - AS
-        - AF
-        - ME
-        - OCE
-        - global
-      title: Region
-
-    RevenueEstimate:
-      properties:
-        estimates:
-          additionalProperties:
-            type: object
-          type: object
-          title: Estimates
-          description: Revenue estimates data with periods as keys and estimate details as values
-      type: object
-      required:
-        - estimates
-      title: RevenueEstimate
-      description: Revenue estimate data
-
-    RevenueEstimateResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        revenue_estimate:
-          $ref: '#/components/schemas/RevenueEstimate'
-      type: object
-      required:
-        - symbol
-        - revenue_estimate
-      title: RevenueEstimateResponse
-      description: Revenue estimates response
-
-    SearchResult:
-      properties:
-        name:
-          type: string
-          title: Name
-          description: The name of the company
-          examples:
-            - Apple Inc.
-        symbol:
-          type: string
-          title: Symbol
-          description: The stock symbol of the company
-          examples:
-            - AAPL
-        exchange:
-          type: string
-          title: Exchange
-          description: The exchange the security is traded on
-          examples:
-            - NASDAQ
-        type:
-          type: string
-          title: Type
-          description: The type of security
-          examples:
-            - stock
-      type: object
-      required:
-        - name
-        - symbol
-        - exchange
-        - type
-      title: SearchResult
-
-    Sector:
-      type: string
-      enum:
-        - Basic Materials
-        - Communication Services
-        - Consumer Cyclical
-        - Consumer Defensive
-        - Energy
-        - Financial Services
-        - Healthcare
-        - Industrials
-        - Real Estate
-        - Technology
-        - Utilities
-      title: Sector
-
-    SimpleQuote:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-          examples:
-            - AAPL
-        name:
-          type: string
-          title: Name
-          description: Company name
-          examples:
-            - Apple Inc.
-        price:
-          type: string
-          title: Price
-          description: Last traded price of the stock
-          examples:
-            - "145.00"
-        preMarketPrice:
-          anyOf:
-            - type: string
-            - type: null
-          title: Premarketprice
-          description: After hours price of the stock
-          examples:
-            - "145.50"
-        afterHoursPrice:
-          anyOf:
-            - type: string
-            - type: null
-          title: Afterhoursprice
-          description: After hours price of the stock
-          examples:
-            - "145.50"
-        change:
-          type: string
-          title: Change
-          description: Change in the stock price
-          examples:
-            - "+1.00"
-        percentChange:
-          type: string
-          title: Percentchange
-          description: Percentage change in the stock price
-          examples:
-            - "+0.69%"
-        logo:
-          anyOf:
-            - type: string
-            - type: null
-          title: Logo
-          description: Company logo
-          examples:
-            - https://img.logo.dev/apple.com?token=pk_Xd1Cdye3QYmCOXzcvxhxyw&retina=true
-      type: object
-      required:
-        - symbol
-        - name
-        - price
-        - change
-        - percentChange
-      title: SimpleQuote
-
-    StatementType:
-      type: string
-      enum:
-        - income
-        - balance
-        - cashflow
-      title: StatementType
-
-    TechnicalIndicator:
-      properties:
-        type:
-          $ref: '#/components/schemas/Indicator'
-          description: The type of technical indicator
-          examples:
-            - SMA
-        Technical Analysis:
-          additionalProperties:
-            $ref: '#/components/schemas/IndicatorData'
-          type: object
-          title: Technical Analysis
-          description: Dates with indicators for the stock
-          examples:
-            - 2021-07-09:
-                value: 30
-      type: object
-      required:
-        - type
-        - Technical Analysis
-      title: TechnicalIndicator
-
-    TimeRange:
-      type: string
-      enum:
-        - 1d
-        - 5d
-        - 1mo
-        - 3mo
-        - 6mo
-        - ytd
-        - 1y
-        - 2y
-        - 5y
-        - 10y
-        - max
-      title: TimeRange
-
-    TranscriptParagraph:
-      properties:
-        speaker:
-          type: string
-          title: Speaker
-          description: Speaker name
-        text:
-          type: string
-          title: Text
-          description: Paragraph text
-      type: object
-      required:
-        - speaker
-        - text
-      title: TranscriptParagraph
-      description: Single paragraph in the transcript
-
-    TranscriptSpeaker:
-      properties:
-        name:
-          type: string
-          title: Name
-          description: Speaker name
-        role:
-          anyOf:
-            - type: string
-            - type: null
-          title: Role
-          description: Speaker role/title
-        company:
-          anyOf:
-            - type: string
-            - type: null
-          title: Company
-          description: Speaker company
-      type: object
-      required:
-        - name
-      title: TranscriptSpeaker
-      description: Speaker information
-
-    Type:
-      type: string
-      enum:
-        - stock
-        - etf
-        - trust
-      title: Type
-
-    UpgradeDowngrade:
-      properties:
-        firm:
-          type: string
-          title: Firm
-          description: Analyst firm name
-        to_grade:
-          anyOf:
-            - type: string
-            - type: null
-          title: To Grade
-          description: New rating grade
-        from_grade:
-          anyOf:
-            - type: string
-            - type: null
-          title: From Grade
-          description: Previous rating grade
-        action:
-          anyOf:
-            - type: string
-            - type: null
-          title: Action
-          description: Action taken (upgrade/downgrade)
-        date:
-          anyOf:
-            - type: string
-              format: date-time
-            - type: null
-          title: Date
-          description: Date of the action
-      type: object
-      required:
-        - firm
-      title: UpgradeDowngrade
-      description: Individual analyst upgrade/downgrade
-
-    UpgradesDowngradesResponse:
-      properties:
-        symbol:
-          type: string
-          title: Symbol
-          description: Stock symbol
-        upgrades_downgrades:
-          items:
-            $ref: '#/components/schemas/UpgradeDowngrade'
-          type: array
-          title: Upgrades Downgrades
-          description: List of analyst rating changes
-      type: object
-      required:
-        - symbol
-        - upgrades_downgrades
-      title: UpgradesDowngradesResponse
-      description: Analyst upgrades and downgrades response
-
-    ValidationErrorResponse:
-      properties:
-        detail:
-          type: string
-          title: Detail
-          default: Invalid request
+            $ref: '#/components/schemas/Spark'
         errors:
-          additionalProperties:
-            items:
-              type: string
-            type: array
           type: object
-          title: Errors
-          default: {}
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    Spark:
       type: object
-      title: ValidationErrorResponse
+      properties:
+        symbol:
+          type: string
+        closes:
+          type: array
+          items:
+            type: number
+        timestamps:
+          type: array
+          items:
+            type: integer
+            format: int64
+        interval:
+          type: string
+        range:
+          type: string
+        meta:
+          $ref: '#/components/schemas/SparkMeta'
+
+    SparkMeta:
+      type: object
+      description: Metadata for spark chart data
+      properties:
+        symbol:
+          type: string
+          description: Stock symbol
+        currency:
+          type: string
+          description: Currency code
+        exchangeName:
+          type: string
+          description: Exchange name
+        regularMarketPrice:
+          type: number
+          format: double
+          description: Current regular market price
+        previousClose:
+          type: number
+          format: double
+          description: Previous closing price
+
+  responses:
+    BadRequest:
+      description: Bad request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+
+    InternalError:
+      description: Internal server error
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'

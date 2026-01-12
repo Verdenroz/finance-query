@@ -276,6 +276,19 @@ struct ChartQuery {
     fields: Option<String>,
 }
 
+/// Query parameters for /v2/spark
+#[derive(Deserialize)]
+struct SparkQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    #[serde(default = "default_interval")]
+    interval: String,
+    #[serde(default = "default_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
 #[derive(Deserialize)]
 struct RangeQuery {
     #[serde(default = "default_max_range")]
@@ -633,6 +646,8 @@ fn api_routes() -> Router {
         .route("/search", get(search))
         // GET /v2/sectors/{sector_type}
         .route("/sectors/{sector_type}", get(get_sector))
+        // GET /v2/spark?symbols=<csv>&interval=<str>&range=<str>
+        .route("/spark", get(get_spark))
         // GET /v2/splits/{symbol}?range=<str>
         .route("/splits/{symbol}", get(get_splits))
         // GET /v2/stream - WebSocket real-time price streaming
@@ -1058,6 +1073,65 @@ async fn get_chart(
         }
         Err(e) => {
             error!("Failed to fetch chart data for {}: {}", symbol, e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/spark
+///
+/// Batch fetch sparkline data for multiple symbols in a single request.
+/// Optimized for rendering sparkline charts with only close prices.
+///
+/// Query: `symbols` (comma-separated, required), `interval` (default "1d"), `range` (default "1mo")
+async fn get_spark(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<SparkQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort(); // Sort for consistent cache key
+    let interval = parse_interval(&params.interval);
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching spark data for {} symbols (interval={}, range={})",
+        symbols.len(),
+        params.interval,
+        params.range
+    );
+
+    // Cache key: sorted symbols + interval + range
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key("spark", &[&symbols_key, &params.interval, &params.range]);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::SPARK,
+            cache::is_market_open(),
+            || async move {
+                let tickers = Tickers::new(symbols).await?;
+                let batch_response = tickers.spark(interval, range).await?;
+                info!(
+                    "Spark fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch spark data: {}", e);
             into_error_response(e)
         }
     }

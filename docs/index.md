@@ -9,13 +9,14 @@
 [![Build Status](https://github.com/Verdenroz/finance-query/workflows/CI/badge.svg)](https://github.com/Verdenroz/finance-query/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Finance Query** is a Rust library and server for financial data, inspired by the popular `yfinance` Python library. It provides a simple interface to access real-time quotes, historical charts, and financial statements primarily from Yahoo Finance.
+**Finance Query** is a Rust library, CLI, and server for financial data, inspired by the popular `yfinance` Python library. It provides access to real-time quotes, historical charts, technical analysis, and financial statements primarily from Yahoo Finance.
 
 A free hosted API is available at **[finance-query.com](https://finance-query.com)** — no setup required!
 
-It is designed to be used in two ways:
+It is designed to be used in three ways:
 
 *   **Rust Library**: A type-safe crate for direct integration into your Rust projects.
+*   **Command-Line Tool**: Interactive `fq` tool for market data, analysis, and trading.
 *   **REST & WebSocket Server**: A standalone service that exposes the library's functionality over HTTP.
 
 ---
@@ -33,9 +34,40 @@ It is designed to be used in two ways:
     *   [Ticker API](library/ticker.md)
     *   [Batch Tickers](library/tickers.md)
     *   [Finance Module](library/finance.md)
+    *   [Technical Indicators](library/indicators.md)
+    *   [Backtesting](library/backtesting.md)
     *   [DataFrame Support](library/dataframe.md)
     *   [Models](library/models.md)
     *   [Configuration](library/configuration.md)
+
+=== "CLI"
+
+    ### Getting Started
+
+    Install the command-line tool:
+
+    ```bash
+    cargo install finance-query-cli
+    ```
+
+    Or download pre-built binaries for [Linux, macOS, and Windows](cli/installation.md).
+
+    ### Quick Start
+
+    ```bash
+    fq quote AAPL                              # Get a quote
+    fq stream AAPL TSLA NVDA                   # Live prices
+    fq chart AAPL -r 6mo                       # Interactive chart
+    fq indicator AAPL --indicator rsi:14 --no-tui  # Technical analysis
+    fq backtest AAPL --preset swing            # Backtest strategy
+    fq dashboard                               # Interactive dashboard
+    ```
+
+    ### Reference
+
+    *   [Installation & Quick Start](cli/installation.md)
+    *   [Commands Reference](cli/commands.md)
+    *   [Examples](cli/examples.md)
 
 === "Server"
 
@@ -86,6 +118,31 @@ Finance Query is ready to use out of the box. Here's how to get stock data:
 
         Ok(())
     }
+    ```
+
+=== "CLI"
+
+    ```bash
+    # Get a stock quote
+    fq quote AAPL
+
+    # Multiple quotes
+    fq quote AAPL MSFT GOOGL AMZN
+
+    # Stream live prices
+    fq stream AAPL TSLA NVDA
+
+    # Interactive price chart
+    fq chart AAPL -r 6mo
+
+    # Technical indicators
+    fq indicator AAPL --indicator rsi:14 --no-tui
+
+    # Backtest a strategy
+    fq backtest AAPL --preset swing
+
+    # Market dashboard
+    fq dashboard
     ```
 
 === "REST API"

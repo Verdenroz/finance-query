@@ -1,6 +1,6 @@
 //! # finance-query
 //!
-//! A Rust library for fetching financial data from Yahoo Finance.
+//! A Rust library for querying financial data.
 //! Inspired by yfinance, with smart lazy loading for efficient data fetching.
 //!
 //! ## Quick Start
@@ -75,7 +75,9 @@ mod tickers;
 // High-level API - Primary interface for most use cases
 // ============================================================================
 pub use ticker::{Ticker, TickerBuilder};
-pub use tickers::{BatchChartsResponse, BatchQuotesResponse, Tickers, TickersBuilder};
+pub use tickers::{
+    BatchChartsResponse, BatchQuotesResponse, BatchSparksResponse, Tickers, TickersBuilder,
+};
 
 // ============================================================================
 // Error types and results
@@ -101,10 +103,10 @@ pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, Value
 // ============================================================================
 pub use models::{
     chart::Chart, currencies::Currency, exchanges::Exchange, financials::FinancialStatement,
-    hours::MarketHours, indicators::IndicatorsSummary, industries::Industry, lookup::LookupResults,
+    hours::MarketHours, industries::Industry, lookup::LookupResults,
     market_summary::MarketSummaryQuote, news::News, options::Options, quote::Quote,
     recommendation::Recommendation, screeners::ScreenerResults, search::SearchResults,
-    sectors::Sector, transcript::Transcript, transcript::TranscriptWithMeta,
+    sectors::Sector, spark::Spark, transcript::Transcript, transcript::TranscriptWithMeta,
     trending::TrendingQuote,
 };
 
@@ -143,3 +145,42 @@ pub mod streaming;
 // The derive macro auto-generates DataFrame conversion for all scalar fields.
 #[cfg(feature = "dataframe")]
 pub use finance_query_derive::ToDataFrame;
+
+// ============================================================================
+// Technical Indicators (requires "indicators" feature)
+// ============================================================================
+// Technical analysis indicators for price data (SMA, EMA, RSI, MACD, Bollinger Bands).
+// When enabled, Chart gets extension methods: chart.sma(), chart.ema(), chart.rsi(), etc.
+#[cfg(feature = "indicators")]
+pub mod indicators;
+
+#[cfg(feature = "indicators")]
+pub use indicators::{
+    // Summary types
+    AroonData,
+    // Individual indicator types
+    BollingerBands,
+    BollingerBandsData,
+    BullBearPowerData,
+    DonchianChannelsData,
+    ElderRayData,
+    IchimokuData,
+    Indicator,
+    IndicatorError,
+    IndicatorResult,
+    IndicatorsSummary,
+    KeltnerChannelsData,
+    MacdData,
+    MacdResult,
+    StochasticData,
+    SuperTrendData,
+    atr,
+};
+
+// ============================================================================
+// Backtesting Engine (requires "backtesting" feature)
+// ============================================================================
+// Strategy backtesting with pre-built and custom strategies, position tracking,
+// stop-loss/take-profit, and comprehensive performance metrics.
+#[cfg(feature = "backtesting")]
+pub mod backtesting;

@@ -57,6 +57,9 @@ pub mod ttl {
     /// Chart data: 60s open, 10m closed
     pub const CHART: CacheTtl = CacheTtl::new(60, 600);
 
+    /// Spark data (batch sparklines): 30s open, 5m closed
+    pub const SPARK: CacheTtl = CacheTtl::new(30, 300);
+
     /// Sector data: 5m open, 1h closed
     pub const SECTORS: CacheTtl = CacheTtl::new(300, 3600);
 

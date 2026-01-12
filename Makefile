@@ -1,5 +1,5 @@
 .PHONY: help serve install install-dev build test test-fast lint fix audit docs docker docker-compose docker-compose-down clean publish-dry-run \
-        prod prod-down prod-logs prod-status prod-build
+        prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html
 
 # Default target
 .DEFAULT_GOAL := help
@@ -131,3 +131,90 @@ prod-logs: ## View production logs (use SVC=name for specific service)
 
 prod-status: ## Check production container status
 	$(DOCKER_COMPOSE) -f docker-compose.prod.yml ps
+
+# =============================================================================
+# Version bumping
+# =============================================================================
+
+bump: ## Bump version for core + server + derive + API specs (usage: make bump VERSION=x.y.z)
+ifndef VERSION
+	$(error VERSION is required. Usage: make bump VERSION=x.y.z)
+endif
+	@echo "$(GREEN)Bumping version to $(VERSION)...$(NC)"
+	@# Update root Cargo.toml package version
+	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' Cargo.toml
+	@# Update finance-query-derive dependency version in root Cargo.toml
+	@sed -i 's/finance-query-derive = { version = "[^"]*"/finance-query-derive = { version = "$(VERSION)"/' Cargo.toml
+	@# Update server Cargo.toml
+	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' server/Cargo.toml
+	@# Update derive Cargo.toml
+	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-derive/Cargo.toml
+	@# Update server OpenAPI version
+	@sed -i 's/^  version: [0-9.]*$$/  version: $(VERSION)/' server/openapi.yaml
+	@# Update server AsyncAPI version
+	@sed -i 's/^  version: [0-9.]*$$/  version: $(VERSION)/' server/asyncapi.yaml
+	@# Copy server specs to docs
+	@cp server/openapi.yaml docs/openapi.yml
+	@cp server/asyncapi.yaml docs/asyncapi.yaml
+	@echo "$(GREEN)Regenerating API docs HTML...$(NC)"
+	@$(MAKE) -s generate-api-html
+	@echo "$(GREEN)✓ Version bumped to $(VERSION)$(NC)"
+	@echo "$(YELLOW)Updated files:$(NC)"
+	@echo "  - Cargo.toml"
+	@echo "  - server/Cargo.toml"
+	@echo "  - finance-query-derive/Cargo.toml"
+	@echo "  - server/openapi.yaml"
+	@echo "  - server/asyncapi.yaml"
+	@echo "  - docs/openapi.yml"
+	@echo "  - docs/asyncapi.yaml"
+	@echo "  - docs/server/openapi-html/index.html"
+	@echo "  - docs/server/asyncapi-html/index.html"
+
+bump-cli: ## Bump version for CLI only (usage: make bump-cli VERSION=x.y.z)
+ifndef VERSION
+	$(error VERSION is required. Usage: make bump-cli VERSION=x.y.z)
+endif
+	@echo "$(GREEN)Bumping CLI version to $(VERSION)...$(NC)"
+	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-cli/Cargo.toml
+	@echo "$(GREEN)✓ CLI version bumped to $(VERSION)$(NC)"
+	@echo "$(YELLOW)Updated files:$(NC)"
+	@echo "  - finance-query-cli/Cargo.toml"
+
+generate-api-html: ## Regenerate OpenAPI and AsyncAPI HTML docs from server specs
+	@echo "$(GREEN)Generating OpenAPI HTML...$(NC)"
+	@python3 -c '\
+import yaml, json; \
+spec = json.dumps(yaml.safe_load(open("server/openapi.yaml")), indent=2); \
+html = """<!DOCTYPE html>\n\
+<html lang="en">\n\
+<head>\n\
+  <meta charset="UTF-8">\n\
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">\n\
+  <title>Finance Query API</title>\n\
+  <link rel="stylesheet" type="text/css" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css">\n\
+  <style>\n\
+    html { box-sizing: border-box; overflow-y: scroll; }\n\
+    *, *:before, *:after { box-sizing: inherit; }\n\
+    body { margin: 0; background: #fafafa; }\n\
+    .swagger-ui .topbar { display: none; }\n\
+  </style>\n\
+</head>\n\
+<body>\n\
+  <div id="swagger-ui"></div>\n\
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>\n\
+  <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-standalone-preset.js"></script>\n\
+  <script>\n\
+    window.onload = function() {\n\
+      window.ui = SwaggerUIBundle({\n\
+        spec: """ + spec + """,\n\
+        dom_id: "#swagger-ui",\n\
+        presets: [SwaggerUIBundle.presets.apis, SwaggerUIStandalonePreset],\n\
+        layout: "StandaloneLayout"\n\
+      });\n\
+    };\n\
+  </script>\n\
+</body>\n\
+</html>"""; \
+open("docs/server/openapi-html/index.html", "w").write(html)'
+	@echo "$(GREEN)Generating AsyncAPI HTML...$(NC)"
+	@npx -y @asyncapi/generator@2 server/asyncapi.yaml @asyncapi/html-template -o docs/server/asyncapi-html -p singleFile=true --force-write

@@ -40,7 +40,8 @@ let response = tickers.quotes(true).await?;
 
 // Process successful quotes
 for (symbol, quote) in &response.quotes {
-    println!("{} Price: ${:.2}", symbol, quote.regular_market_price.unwrap_or(0.0));
+    let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("{} Price: ${:.2}", symbol, price);
     if let Some(logo) = &quote.logo_url {
         println!("  Logo: {}", logo);
     }
@@ -88,6 +89,66 @@ for (symbol, error) in &response.errors {
 `BatchChartsResponse` contains:
 
 - `charts`: `HashMap<String, Chart>` - Successfully fetched charts grouped by symbol
+- `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+
+## Spark Data
+
+Fetch lightweight sparkline data for all symbols in a single batch request. Spark provides only timestamps and close prices, optimized for rendering sparklines in dashboards and watchlists.
+
+```rust
+use finance_query::{Interval, TimeRange};
+
+// Fetch spark data for all symbols
+let response = tickers.spark(Interval::OneDay, TimeRange::FiveDays).await?;
+
+// Process successful sparks
+for (symbol, spark) in &response.sparks {
+    println!("{}: {} data points", symbol, spark.len());
+
+    if let Some(change) = spark.percent_change() {
+        println!("  Change: {:+.2}%", change);
+    }
+
+    if let Some(min) = spark.min_close() {
+        println!("  Low: ${:.2}", min);
+    }
+
+    if let Some(max) = spark.max_close() {
+        println!("  High: ${:.2}", max);
+    }
+}
+
+// Handle errors
+for (symbol, error) in &response.errors {
+    eprintln!("Failed to fetch spark for {}: {}", symbol, error);
+}
+```
+
+### Spark Structure
+
+Each `Spark` contains:
+
+- `symbol`: Stock symbol
+- `meta`: Chart metadata (currency, exchange, timezone)
+- `timestamps`: Vec of Unix timestamps
+- `closes`: Vec of close prices
+- `interval`: Time interval (e.g., "1d", "1h")
+- `range`: Time range (e.g., "5d", "1mo")
+
+### Available Methods
+
+- `.len()` - Number of data points
+- `.is_empty()` - Check if empty
+- `.price_change()` - Absolute price change (last - first)
+- `.percent_change()` - Percentage change
+- `.min_close()` - Minimum close price
+- `.max_close()` - Maximum close price
+
+### Response Structure
+
+`BatchSparksResponse` contains:
+
+- `sparks`: `HashMap<String, Spark>` - Successfully fetched sparks grouped by symbol
 - `errors`: `HashMap<String, String>` - Error messages grouped by symbol
 
 ## Individual Access
@@ -138,8 +199,9 @@ let response3 = tickers.quotes(false).await?; // Network request
     }
 
     // Process successful results
-    for quote in &quotes_response.quotes {
-        println!("{}: ${}", quote.symbol, quote.regular_market_price);
+    for (symbol, quote) in &quotes_response.quotes {
+        let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+        println!("{}: ${:.2}", symbol, price);
     }
 
     // Second operation - uses cached data (no network request)
@@ -152,3 +214,10 @@ let response3 = tickers.quotes(false).await?; // Network request
     let tickers2 = Tickers::new(vec!["AAPL", "GOOGL"]).await?;
     let charts = tickers2.charts(Interval::OneDay, TimeRange::OneMonth).await?;
     ```
+
+## Next Steps
+
+- [Ticker API](ticker.md) - Detailed operations for single symbols (financials, options, news)
+- [DataFrame Support](dataframe.md) - Convert batch responses to Polars DataFrames for analysis
+- [Configuration](configuration.md) - Customize regional settings and network options
+- [Models Reference](models.md) - Understanding response types

@@ -21,7 +21,9 @@ let results = finance::search("Apple", &SearchOptions::default()).await?;
 println!("Found {} results", results.result_count());
 
 for quote in &results.quotes {
-    println!("{} ({}): {}", quote.symbol, quote.exchange, quote.name);
+    let exchange = quote.exchange.as_deref().unwrap_or("N/A");
+    let name = quote.short_name.as_deref().unwrap_or("N/A");
+    println!("{} ({}): {}", quote.symbol, exchange, name);
 }
 
 // Advanced search with options
@@ -71,7 +73,8 @@ let options = LookupOptions::new()
 
 let results = finance::lookup("tech", &options).await?;
 for quote in &results.quotes {
-    println!("{}: {} - {:?}", quote.symbol, quote.name, quote.logo_url);
+    let name = quote.short_name.as_deref().unwrap_or("N/A");
+    println!("{}: {} - {:?}", quote.symbol, name, quote.logo_url);
 }
 ```
 
@@ -102,11 +105,9 @@ let summary = finance::market_summary(None).await?;
 let summary = finance::market_summary(Some(Region::Canada)).await?;
 
 for quote in &summary {
-    println!("{}: ${:?} ({:+.2}%)",
-        quote.symbol,
-        quote.regular_market_price,
-        quote.regular_market_change_percent.unwrap_or(0.0)
-    );
+    let price = quote.regular_market_price.as_ref().and_then(|v| v.raw);
+    let change_pct = quote.regular_market_change_percent.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("{}: ${:?} ({:+.2}%)", quote.symbol, price, change_pct);
 }
 ```
 
@@ -117,10 +118,10 @@ Get trending stocks for a region:
 ```rust
 let trending = finance::trending(None).await?;
 // Or specify region
-let trending = finance::trending(Some(Region::Japan)).await?;
+let trending = finance::trending(Some(Region::Singapore)).await?;
 
 for quote in &trending {
-    println!("{}: {}", quote.symbol, quote.short_name.as_deref().unwrap_or(""));
+    println!("{}", quote.symbol);
 }
 ```
 
@@ -135,8 +136,11 @@ let hours = finance::hours(None).await?;
 // Japan market hours
 let hours = finance::hours(Some("JP")).await?;
 
-println!("Market state: {}", hours.market_state);
-println!("Is open: {}", hours.is_market_open);
+for market in &hours.markets {
+    println!("{}: {}", market.name, market.status);
+    println!("  Open: {:?}", market.open);
+    println!("  Close: {:?}", market.close);
+}
 ```
 
 ### Indices
@@ -153,9 +157,11 @@ println!("Fetched {} indices", all.success_count());
 // Only Americas indices (^DJI, ^GSPC, ^IXIC, etc.)
 let americas = finance::indices(Some(IndicesRegion::Americas)).await?;
 for (symbol, quote) in &americas.quotes {
-    if let (Some(price), Some(change_pct)) =
-        (quote.regular_market_price, quote.regular_market_change_percent) {
-        println!("{}: {:.2} ({:+.2}%)", symbol, price, change_pct);
+    if let (Some(price_fv), Some(change_pct_fv)) =
+        (&quote.regular_market_price, &quote.regular_market_change_percent) {
+        if let (Some(price), Some(change_pct)) = (price_fv.raw, change_pct_fv.raw) {
+            println!("{}: {:.2} ({:+.2}%)", symbol, price, change_pct);
+        }
     }
 }
 
@@ -191,13 +197,9 @@ let actives = finance::screener(ScreenerType::MostActives, 25).await?;
 let losers = finance::screener(ScreenerType::DayLosers, 25).await?;
 
 // Process results
-for result in gainers.finance.result {
-    for quote in result.quotes {
-        println!("{}: {:+.2}%",
-            quote.symbol,
-            quote.regular_market_change_percent.unwrap_or(0.0)
-        );
-    }
+for quote in &gainers.quotes {
+    let change_pct = quote.regular_market_change_percent.raw.unwrap_or(0.0);
+    println!("{}: {:+.2}%", quote.symbol, change_pct);
 }
 ```
 
@@ -280,8 +282,10 @@ if let Some(overview) = &tech.overview {
     if let Some(count) = overview.companies_count {
         println!("  Companies: {}", count);
     }
-    if let Some(market_cap) = overview.market_cap {
-        println!("  Market Cap: ${:.2}B", market_cap / 1_000_000_000.0);
+    if let Some(market_cap_fv) = &overview.market_cap {
+        if let Some(market_cap) = market_cap_fv.raw {
+            println!("  Market Cap: ${:.2}B", market_cap / 1_000_000_000.0);
+        }
     }
 }
 
@@ -292,14 +296,10 @@ for company in tech.top_companies.iter().take(10) {
 }
 
 // Sector ETFs
-if let Some(etfs) = &tech.etfs {
-    println!("Sector ETFs: {}", etfs.len());
-}
+println!("Sector ETFs: {}", tech.top_etfs.len());
 
 // Industries in this sector
-if let Some(industries) = &tech.industries {
-    println!("Industries: {}", industries.len());
-}
+println!("Industries: {}", tech.industries.len());
 ```
 
 **Available SectorTypes:**
@@ -372,7 +372,7 @@ Fetch earnings call transcripts:
 // Get the latest transcript
 let latest = finance::earnings_transcript("AAPL", None, None).await?;
 println!("Quarter: {} {}", latest.quarter(), latest.year());
-println!("Participants: {}", latest.participants.len());
+println!("Speakers: {}", latest.transcript_content.speaker_mapping.len());
 
 // Get specific quarter
 let q4_2024 = finance::earnings_transcript("AAPL", Some("Q4"), Some(2024)).await?;
@@ -423,7 +423,9 @@ Get list of available currency pairs:
 let currencies = finance::currencies().await?;
 
 for currency in &currencies {
-    println!("{}: {}", currency.symbol, currency.name);
+    let symbol = currency.symbol.as_deref().unwrap_or("N/A");
+    let name = currency.short_name.as_deref().unwrap_or("N/A");
+    println!("{}: {}", symbol, name);
 }
 ```
 

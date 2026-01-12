@@ -20,5 +20,6 @@ pub mod recommendations;
 pub mod screeners;
 pub mod search;
 pub mod sectors;
+pub mod spark;
 pub mod transcripts;
 pub mod trending;

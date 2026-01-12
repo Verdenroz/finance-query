@@ -126,14 +126,18 @@ use finance_query::{finance, ScreenerType};
 
 let gainers = finance::screener(ScreenerType::DayGainers, 50).await?;
 
-// Extract quotes and convert to DataFrame
-for result in gainers.finance.result {
-    let df = result.quotes.to_dataframe()?;
-    println!("{}", df);
-}
+// Convert to DataFrame
+let df = gainers.to_dataframe()?;
+println!("{}", df);
 ```
 
 ### Indicators
+
+!!! note "Feature Flag Required"
+    The `indicators()` method requires the `indicators` feature flag:
+    ```toml
+    finance-query = { version = "2.0", features = ["dataframe", "indicators"] }
+    ```
 
 Convert technical indicators to DataFrame:
 
@@ -155,6 +159,10 @@ println!("MACD: {:?}", df.column("macd")?);
 
 ### Filtering Data
 
+!!! warning "Polars API Updates"
+    The Polars API has evolved significantly. The filtering examples below use an older API style.
+    For current Polars 0.52+ API, refer to the [Polars Documentation](https://docs.pola.rs/).
+
 ```rust
 use polars::prelude::*;
 
@@ -162,12 +170,11 @@ let ticker = Ticker::new("AAPL").await?;
 let chart = ticker.chart(Interval::OneDay, TimeRange::SixMonths).await?;
 let df = chart.to_dataframe()?;
 
-// Filter high volume days
-let high_volume = df.filter(
-    &df.column("volume")?.gt(50_000_000)?
-)?;
+// For filtering with current Polars API, see Polars documentation
+// Older API example (may need updates):
+// let high_volume = df.filter(&df.column("volume")?.gt(50_000_000)?)?;
 
-println!("High volume days: {}", high_volume.height());
+println!("Total days: {}", df.height());
 ```
 
 ### Computing Statistics
@@ -235,16 +242,14 @@ use polars::prelude::*;
 
 let gainers = finance::screener(ScreenerType::DayGainers, 100).await?;
 
-for result in gainers.finance.result {
-    let mut df = result.quotes.to_dataframe()?;
+let mut df = gainers.to_dataframe()?;
 
-    // Sort by market cap descending
-    df = df.sort(["market_cap"], SortMultipleOptions::default().with_order_descending(true))?;
+// Sort by market cap descending
+df = df.sort(["market_cap"], SortMultipleOptions::default().with_order_descending(true))?;
 
-    // Get top 10
-    let top_10 = df.head(Some(10));
-    println!("{}", top_10);
-}
+// Get top 10
+let top_10 = df.head(Some(10));
+println!("{}", top_10);
 ```
 
 ### Aggregations
@@ -379,23 +384,22 @@ println!("{}", ma20);
 
 ### Joining DataFrames
 
+!!! warning "Polars API Updates"
+    The join API may require importing additional traits in newer Polars versions.
+    Refer to the [Polars Documentation](https://docs.pola.rs/) for current API.
+
 ```rust
 use polars::prelude::*;
 
 let aapl_chart = aapl.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 let aapl_divs = aapl.dividends(TimeRange::OneMonth).await?;
 
-let mut price_df = aapl_chart.to_dataframe()?;
-let mut div_df = aapl_divs.to_dataframe()?;
+let price_df = aapl_chart.to_dataframe()?;
+let div_df = Dividend::vec_to_dataframe(&aapl_divs)?;
 
-// Join prices with dividends on timestamp
-let joined = price_df.left_join(
-    &div_df,
-    ["timestamp"],
-    ["timestamp"],
-)?;
-
-println!("{}", joined);
+// Note: left_join API may require trait imports in newer Polars versions
+// Example: use polars_ops::frame::join::DataFrameJoinOps;
+// let joined = price_df.left_join(&div_df, ["timestamp"], ["timestamp"])?;
 ```
 
 ### Custom Analysis
@@ -434,9 +438,9 @@ Many types support converting `Vec<T>` to DataFrame:
 ```rust
 // Vec of dividends to DataFrame
 let dividends = ticker.dividends(TimeRange::FiveYears).await?;
-let df = dividends.to_dataframe()?;
+let df = Dividend::vec_to_dataframe(&dividends)?;
 
-// Vec of quotes to DataFrame
+// SearchQuotes wrapper has to_dataframe() method
 let results = finance::search("tech", &SearchOptions::default()).await?;
 let df = results.quotes.to_dataframe()?;
 ```
@@ -490,6 +494,8 @@ match chart.to_dataframe() {
 ## Next Steps
 
 - [Ticker API](ticker.md) - Methods that return DataFrame-compatible types
+- [Technical Indicators](indicators.md) - Convert indicator results to DataFrames for analysis
+- [Backtesting](backtesting.md) - Analyze backtest results in DataFrames
 - [Finance Module](finance.md) - Market-wide data with DataFrame support
 - [Models](models.md) - All response types and their structures
 - [Polars Documentation](https://docs.pola.rs/) - Complete Polars guide

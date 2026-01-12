@@ -1,6 +1,86 @@
-//! Derive macros for finance-query library.
+//! # finance-query-derive
 //!
-//! Provides `#[derive(ToDataFrame)]` for automatic DataFrame conversion.
+//! Procedural macros for the `finance-query` library.
+//!
+//! This crate provides derive macros that automatically generate code for working with
+//! financial data structures, particularly for integration with the Polars DataFrame library.
+//!
+//! ## Features
+//!
+//! - **`ToDataFrame`**: Automatically implement DataFrame conversion for structs
+//!
+//! ## Usage
+//!
+//! This crate is automatically included when you enable the `dataframe` feature in `finance-query`:
+//!
+//! ```toml
+//! [dependencies]
+//! finance-query = { version = "2.0", features = ["dataframe"] }
+//! ```
+//!
+//! ## Example
+//!
+//! ```ignore
+//! use finance_query::ToDataFrame;
+//! use polars::prelude::*;
+//!
+//! #[derive(ToDataFrame)]
+//! struct Quote {
+//!     symbol: String,
+//!     price: Option<f64>,
+//!     volume: Option<i64>,
+//! }
+//!
+//! // Automatically generates:
+//! // - to_dataframe(&self) -> PolarsResult<DataFrame>
+//! // - vec_to_dataframe(&[Self]) -> PolarsResult<DataFrame>
+//!
+//! let quote = Quote {
+//!     symbol: "AAPL".to_string(),
+//!     price: Some(150.0),
+//!     volume: Some(1000000),
+//! };
+//!
+//! let df = quote.to_dataframe()?;
+//! ```
+//!
+//! ## Supported Types
+//!
+//! The `ToDataFrame` derive macro supports the following field types:
+//!
+//! - **Primitives**: `i32`, `i64`, `u32`, `u64`, `f64`, `bool`
+//! - **Strings**: `String`, `Option<String>`
+//! - **Optional primitives**: `Option<i32>`, `Option<f64>`, etc.
+//! - **FormattedValue**: `Option<FormattedValue<f64>>`, `Option<FormattedValue<i64>>`
+//!   (automatically extracts the `.raw` field)
+//!
+//! Complex types like nested structs and vectors are automatically skipped and won't
+//! appear in the generated DataFrame.
+//!
+//! ## Generated Methods
+//!
+//! For each struct with `#[derive(ToDataFrame)]`, two methods are generated:
+//!
+//! ### `to_dataframe(&self)`
+//!
+//! Converts a single instance to a one-row DataFrame:
+//!
+//! ```ignore
+//! let quote = Quote { /* ... */ };
+//! let df: DataFrame = quote.to_dataframe()?;
+//! ```
+//!
+//! ### `vec_to_dataframe(items: &[Self])`
+//!
+//! Converts a slice of instances to a multi-row DataFrame:
+//!
+//! ```ignore
+//! let quotes = vec![quote1, quote2, quote3];
+//! let df: DataFrame = Quote::vec_to_dataframe(&quotes)?;
+//! ```
+
+#![warn(missing_docs)]
+#![warn(rustdoc::missing_crate_level_docs)]
 
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;

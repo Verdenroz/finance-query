@@ -61,13 +61,14 @@ Get a comprehensive quote with all key metrics:
 let quote = ticker.quote(true).await?;
 
 println!("Symbol: {}", quote.symbol);
-println!("Name: {}", quote.short_name);
-println!("Price: ${:.2}", quote.regular_market_price);
-println!("Change: {:+.2} ({:+.2}%)",
-    quote.regular_market_change,
-    quote.regular_market_change_percent
-);
-println!("Market Cap: ${}", quote.market_cap);
+println!("Name: {}", quote.short_name.as_deref().unwrap_or("N/A"));
+let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+println!("Price: ${:.2}", price);
+let change = quote.regular_market_change.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+let change_pct = quote.regular_market_change_percent.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+println!("Change: {:+.2} ({:+.2}%)", change, change_pct);
+let market_cap = quote.market_cap.as_ref().and_then(|v| v.raw).unwrap_or(0);
+println!("Market Cap: ${}", market_cap);
 println!("Logo: {:?}", quote.logo_url);
 println!("Company Logo: {:?}", quote.company_logo_url);
 ```
@@ -82,24 +83,31 @@ Access specific quote modules directly. All modules are fetched together on firs
 // First access triggers ONE API call for ALL modules
 let price = ticker.price().await?;
 if let Some(p) = price {
-    println!("Market State: {}", p.market_state);
-    println!("Currency: {}", p.currency);
+    println!("Market State: {}", p.market_state.as_deref().unwrap_or("N/A"));
+    println!("Currency: {}", p.currency.as_deref().unwrap_or("N/A"));
 }
 
 // Subsequent calls use cached data (no network request)
 let financial_data = ticker.financial_data().await?;
 if let Some(fd) = financial_data {
-    println!("Revenue: ${}", fd.total_revenue);
-    println!("Profit Margin: {:.2}%", fd.profit_margins * 100.0);
-    println!("EPS: ${:.2}", fd.trailing_eps);
+    let revenue = fd.total_revenue.as_ref().and_then(|v| v.raw).unwrap_or(0);
+    println!("Revenue: ${}", revenue);
+    let profit_margins = fd.profit_margins.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("Profit Margin: {:.2}%", profit_margins * 100.0);
+}
+
+// Get EPS from DefaultKeyStatistics
+if let Some(stats) = ticker.key_stats().await? {
+    let eps = stats.trailing_eps.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("EPS: ${:.2}", eps);
 }
 
 let profile = ticker.asset_profile().await?;
 if let Some(prof) = profile {
-    println!("Sector: {}", prof.sector);
-    println!("Industry: {}", prof.industry);
-    println!("Website: {}", prof.website);
-    println!("Description: {}", prof.long_business_summary);
+    println!("Sector: {}", prof.sector.as_deref().unwrap_or("N/A"));
+    println!("Industry: {}", prof.industry.as_deref().unwrap_or("N/A"));
+    println!("Website: {}", prof.website.as_deref().unwrap_or("N/A"));
+    println!("Description: {}", prof.long_business_summary.as_deref().unwrap_or("N/A"));
 }
 ```
 
@@ -138,18 +146,23 @@ let ticker = Ticker::new("MSFT").await?;
 // Get financial health
 if let Some(fd) = ticker.financial_data().await? {
     println!("Financials:");
-    println!("  Revenue: ${:.2}B", fd.total_revenue / 1e9);
-    println!("  Profit Margin: {:.2}%", fd.profit_margins * 100.0);
-    println!("  ROE: {:.2}%", fd.return_on_equity * 100.0);
-    println!("  Debt to Equity: {:.2}", fd.debt_to_equity);
+    let revenue = fd.total_revenue.as_ref().and_then(|v| v.raw).unwrap_or(0) as f64;
+    println!("  Revenue: ${:.2}B", revenue / 1e9);
+    let profit_margins = fd.profit_margins.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("  Profit Margin: {:.2}%", profit_margins * 100.0);
+    let roe = fd.return_on_equity.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("  ROE: {:.2}%", roe * 100.0);
+    let dte = fd.debt_to_equity.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("  Debt to Equity: {:.2}", dte);
 }
 
 // Get valuation
 if let Some(sd) = ticker.summary_detail().await? {
     println!("\nValuation:");
-    println!("  P/E Ratio: {:.2}", sd.trailing_pe);
-    println!("  Forward P/E: {:.2}", sd.forward_pe);
-    println!("  PEG Ratio: {:.2}", sd.peg_ratio);
+    let trailing_pe = sd.trailing_pe.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("  P/E Ratio: {:.2}", trailing_pe);
+    let forward_pe = sd.forward_pe.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+    println!("  Forward P/E: {:.2}", forward_pe);
 }
 
 // Get analyst sentiment
@@ -178,9 +191,9 @@ use finance_query::{Interval, TimeRange};
 let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 
 println!("Symbol: {}", chart.meta.symbol);
-println!("Currency: {}", chart.meta.currency);
-println!("Exchange: {}", chart.meta.exchange_name);
-println!("Timezone: {}", chart.meta.timezone);
+println!("Currency: {}", chart.meta.currency.as_deref().unwrap_or("N/A"));
+println!("Exchange: {}", chart.meta.exchange_name.as_deref().unwrap_or("N/A"));
+println!("Timezone: {}", chart.meta.timezone.as_deref().unwrap_or("N/A"));
 
 for candle in &chart.candles {
     println!(
@@ -266,123 +279,86 @@ for gain in &gains {
 
 ### Technical Indicators
 
-Get pre-calculated technical indicators:
+Calculate technical indicators with three approaches:
+
+#### 1. Summary API
+
+Get all 52+ pre-calculated indicators at once:
 
 ```rust
 use finance_query::{Interval, TimeRange};
 
 let indicators = ticker.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
 
-// Moving Averages
-if let Some(sma20) = &indicators.sma_20 {
-    println!("SMA(20): {:.2}", sma20.last().unwrap());
-}
-if let Some(ema50) = &indicators.ema_50 {
-    println!("EMA(50): {:.2}", ema50.last().unwrap());
-}
-
-// RSI
-if let Some(rsi14) = &indicators.rsi_14 {
-    let rsi = rsi14.last().unwrap();
+// Simple indicators (Option<f64>)
+if let Some(rsi) = indicators.rsi_14 {
     println!("RSI(14): {:.2}", rsi);
-    if rsi < 30.0 {
-        println!("  -> Oversold");
-    } else if rsi > 70.0 {
-        println!("  -> Overbought");
-    }
+    if rsi < 30.0 { println!("  -> Oversold"); }
+    else if rsi > 70.0 { println!("  -> Overbought"); }
 }
 
-// MACD
+if let Some(sma) = indicators.sma_200 {
+    println!("SMA(200): {:.2}", sma);
+}
+
+// Compound indicators (Option<Struct>)
 if let Some(macd) = &indicators.macd {
-    let last = macd.last().unwrap();
-    println!("MACD: {:.4}", last.macd);
-    println!("Signal: {:.4}", last.signal);
-    println!("Histogram: {:.4}", last.histogram);
-
-    if last.macd > last.signal {
-        println!("  -> Bullish crossover");
+    if let Some(line) = macd.macd {
+        if let Some(signal) = macd.signal {
+            println!("MACD: {:.4} | Signal: {:.4}", line, signal);
+            if line > signal { println!("  -> Bullish"); }
+        }
     }
 }
 
-// Bollinger Bands
 if let Some(bb) = &indicators.bollinger_bands {
-    let last = bb.last().unwrap();
-    println!("Bollinger Bands:");
-    println!("  Upper: {:.2}", last.upper);
-    println!("  Middle: {:.2}", last.middle);
-    println!("  Lower: {:.2}", last.lower);
-}
-
-// Stochastic Oscillator
-if let Some(stoch) = &indicators.stochastic {
-    let last = stoch.last().unwrap();
-    println!("Stochastic %K: {:.2}, %D: {:.2}", last.k, last.d);
-}
-
-// ATR (Average True Range)
-if let Some(atr) = &indicators.atr_14 {
-    println!("ATR(14): {:.2}", atr.last().unwrap());
+    if let Some(upper) = bb.upper {
+        if let Some(lower) = bb.lower {
+            println!("Bollinger: Upper={:.2}, Lower={:.2}", upper, lower);
+        }
+    }
 }
 ```
 
-**Available Indicators (52 total):**
+#### 2. Chart Extension Methods
 
-**Moving Averages (21):**
+Calculate specific indicators with any period:
 
-- SMA: 10, 20, 50, 100, 200
-- EMA: 10, 20, 50, 100, 200
-- WMA: 10, 20, 50, 100, 200
-- DEMA: 20
-- TEMA: 20
-- HMA: 20
-- VWMA: 20
-- ALMA: 9
-- McGinley Dynamic: 20
+```rust
+let chart = ticker.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
 
-**Momentum Oscillators (10):**
+// Custom periods
+let sma_15 = chart.sma(15);
+let rsi_21 = chart.rsi(21)?;
+let macd = chart.macd(8, 21, 5)?;  // Fast, slow, signal
 
-- RSI: 14
-- Stochastic: 14, 3
-- Stochastic RSI: 14, 14
-- CCI: 20
-- Williams %R: 14
-- ROC: 12
-- Momentum: 10
-- CMO: 14
-- Awesome Oscillator
-- Coppock Curve
+// Access latest value
+if let Some(&latest_rsi) = rsi_21.last().and_then(|v| v.as_ref()) {
+    println!("RSI(21): {:.2}", latest_rsi);
+}
+```
 
-**Trend Indicators (8):**
+#### 3. Direct Functions
 
-- MACD: 12, 26, 9
-- ADX: 14
-- Aroon: 25
-- SuperTrend: 10, 3.0
-- Ichimoku Cloud
-- Parabolic SAR
-- Bull Bear Power
-- Elder Ray Index
+Use indicator functions directly with custom data:
 
-**Volatility (6):**
+```rust
+use finance_query::indicators::{sma, rsi};
 
-- Bollinger Bands: 20, 2.0
-- ATR: 14
-- Keltner Channels: 20, 10, 2.0
-- Donchian Channels: 20
-- True Range
-- Choppiness Index: 14
+let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+let closes: Vec<f64> = chart.candles.iter().map(|c| c.close).collect();
 
-**Volume (7):**
+let sma_25 = sma(&closes, 25);
+let rsi_10 = rsi(&closes, 10)?;
 
-- OBV (On-Balance Volume)
-- MFI: 14
-- CMF: 20
-- Chaikin Oscillator
-- Accumulation/Distribution
-- VWAP
-- Balance of Power
+if let Some(&latest) = rsi_10.last().and_then(|v| v.as_ref()) {
+    println!("RSI(10): {:.2}", latest);
+}
+```
 
-All indicators are `Option<Vec<T>>` - use pattern matching to handle cases where data isn't available.
+!!! tip "See Also"
+    For complete indicator documentation including all 52+ available indicators, see [Indicators](indicators.md).
+
 
 ## Recommendations
 
@@ -438,11 +414,13 @@ let cashflow = ticker.financials(
 ```
 
 **Statement Types:**
+
 - `StatementType::Income` - Income statement (revenue, expenses, profit)
 - `StatementType::Balance` - Balance sheet (assets, liabilities, equity)
 - `StatementType::CashFlow` - Cash flow statement (operating, investing, financing)
 
 **Frequencies:**
+
 - `Frequency::Annual` - Yearly statements
 - `Frequency::Quarterly` - Quarterly statements
 
@@ -639,6 +617,9 @@ let recs_again = ticker.recommendations(10).await?;  // cached
 
 ## Next Steps
 
-- [Configuration](configuration.md) - Customize language, region, and network settings
+- [Technical Indicators](indicators.md) - Access 52+ technical indicators for analysis
+- [Backtesting](backtesting.md) - Test trading strategies against historical data
+- [Batch Tickers](tickers.md) - Efficient operations for multiple symbols
 - [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis
+- [Configuration](configuration.md) - Customize language, region, and network settings
 - [Models Reference](models.md) - Detailed documentation of all response types

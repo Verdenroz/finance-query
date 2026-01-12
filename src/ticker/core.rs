@@ -211,6 +211,8 @@ impl TickerBuilder {
             news_cache: Arc::new(tokio::sync::RwLock::new(None)),
             options_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             financials_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            #[cfg(feature = "indicators")]
+            indicators_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
         })
     }
 }
@@ -255,6 +257,10 @@ pub struct Ticker {
                 FinancialStatement,
             >,
         >,
+    >,
+    #[cfg(feature = "indicators")]
+    indicators_cache: Arc<
+        tokio::sync::RwLock<HashMap<(Interval, TimeRange), crate::indicators::IndicatorsSummary>>,
     >,
 }
 
@@ -675,18 +681,380 @@ impl Ticker {
     /// # Ok(())
     /// # }
     /// ```
+    #[cfg(feature = "indicators")]
     pub async fn indicators(
         &self,
         interval: Interval,
         range: TimeRange,
-    ) -> Result<crate::models::indicators::IndicatorsSummary> {
-        // Fetch chart data
+    ) -> Result<crate::indicators::IndicatorsSummary> {
+        // Check cache first (read lock)
+        {
+            let cache = self.indicators_cache.read().await;
+            if let Some(cached) = cache.get(&(interval, range)) {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch chart data (this is also cached!)
         let chart = self.chart(interval, range).await?;
 
         // Calculate indicators from candles
-        Ok(crate::models::indicators::calculate_indicators(
-            &chart.candles,
-        ))
+        let indicators = crate::indicators::summary::calculate_indicators(&chart.candles);
+
+        // Cache the result (write lock)
+        {
+            let mut cache = self.indicators_cache.write().await;
+            cache.insert((interval, range), indicators.clone());
+        }
+
+        Ok(indicators)
+    }
+
+    /// Calculate a specific technical indicator over a time range.
+    ///
+    /// Returns the full time series for the requested indicator, not just the latest value.
+    /// This is useful when you need historical indicator values for analysis or charting.
+    ///
+    /// # Arguments
+    ///
+    /// * `indicator` - The indicator to calculate (from `crate::indicators::Indicator`)
+    /// * `interval` - Time interval for candles (1d, 1h, etc.)
+    /// * `range` - Time range for historical data
+    ///
+    /// # Returns
+    ///
+    /// An `IndicatorResult` containing the full time series. Access the data using match:
+    /// - `IndicatorResult::Series(values)` - for simple indicators (SMA, EMA, RSI, ATR, OBV, VWAP, WMA)
+    /// - `IndicatorResult::Macd(data)` - for MACD (macd_line, signal_line, histogram)
+    /// - `IndicatorResult::Bollinger(data)` - for Bollinger Bands (upper, middle, lower)
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Interval, TimeRange};
+    /// use finance_query::indicators::{Indicator, IndicatorResult};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = Ticker::new("AAPL").await?;
+    ///
+    /// // Calculate 14-period RSI
+    /// let result = ticker.indicator(
+    ///     Indicator::Rsi(14),
+    ///     Interval::OneDay,
+    ///     TimeRange::ThreeMonths
+    /// ).await?;
+    ///
+    /// match result {
+    ///     IndicatorResult::Series(values) => {
+    ///         println!("Latest RSI: {:?}", values.last());
+    ///     }
+    ///     _ => {}
+    /// }
+    ///
+    /// // Calculate MACD
+    /// let macd_result = ticker.indicator(
+    ///     Indicator::Macd { fast: 12, slow: 26, signal: 9 },
+    ///     Interval::OneDay,
+    ///     TimeRange::SixMonths
+    /// ).await?;
+    ///
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "indicators")]
+    pub async fn indicator(
+        &self,
+        indicator: crate::indicators::Indicator,
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<crate::indicators::IndicatorResult> {
+        use crate::indicators::{Indicator, IndicatorResult};
+
+        // Fetch chart data
+        let chart = self.chart(interval, range).await?;
+
+        // Calculate the requested indicator
+        let result = match indicator {
+            Indicator::Sma(period) => IndicatorResult::Series(chart.sma(period)),
+            Indicator::Ema(period) => IndicatorResult::Series(chart.ema(period)),
+            Indicator::Rsi(period) => IndicatorResult::Series(chart.rsi(period)?),
+            Indicator::Macd { fast, slow, signal } => {
+                IndicatorResult::Macd(chart.macd(fast, slow, signal)?)
+            }
+            Indicator::Bollinger { period, std_dev } => {
+                IndicatorResult::Bollinger(chart.bollinger_bands(period, std_dev)?)
+            }
+            Indicator::Atr(period) => IndicatorResult::Series(chart.atr(period)?),
+            Indicator::Obv => {
+                use crate::indicators::obv;
+                IndicatorResult::Series(obv(&chart.close_prices(), &chart.volumes())?)
+            }
+            Indicator::Vwap => {
+                use crate::indicators::vwap;
+                IndicatorResult::Series(vwap(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    &chart.volumes(),
+                )?)
+            }
+            Indicator::Wma(period) => {
+                use crate::indicators::wma;
+                IndicatorResult::Series(wma(&chart.close_prices(), period)?)
+            }
+            Indicator::Dema(period) => {
+                use crate::indicators::dema;
+                IndicatorResult::Series(dema(&chart.close_prices(), period)?)
+            }
+            Indicator::Tema(period) => {
+                use crate::indicators::tema;
+                IndicatorResult::Series(tema(&chart.close_prices(), period)?)
+            }
+            Indicator::Hma(period) => {
+                use crate::indicators::hma;
+                IndicatorResult::Series(hma(&chart.close_prices(), period)?)
+            }
+            Indicator::Vwma(period) => {
+                use crate::indicators::vwma;
+                IndicatorResult::Series(vwma(&chart.close_prices(), &chart.volumes(), period)?)
+            }
+            Indicator::Alma {
+                period,
+                offset,
+                sigma,
+            } => {
+                use crate::indicators::alma;
+                IndicatorResult::Series(alma(&chart.close_prices(), period, offset, sigma)?)
+            }
+            Indicator::McginleyDynamic(period) => {
+                use crate::indicators::mcginley_dynamic;
+                IndicatorResult::Series(mcginley_dynamic(&chart.close_prices(), period)?)
+            }
+            Indicator::Stochastic {
+                k_period,
+                k_slow: _,
+                d_period,
+            } => {
+                use crate::indicators::stochastic;
+                IndicatorResult::Stochastic(stochastic(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    k_period,
+                    d_period,
+                )?)
+            }
+            Indicator::StochasticRsi {
+                rsi_period,
+                stoch_period,
+                k_period: _,
+                d_period: _,
+            } => {
+                use crate::indicators::stochastic_rsi;
+                IndicatorResult::Series(stochastic_rsi(
+                    &chart.close_prices(),
+                    rsi_period,
+                    stoch_period,
+                )?)
+            }
+            Indicator::Cci(period) => {
+                use crate::indicators::cci;
+                IndicatorResult::Series(cci(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    period,
+                )?)
+            }
+            Indicator::WilliamsR(period) => {
+                use crate::indicators::williams_r;
+                IndicatorResult::Series(williams_r(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    period,
+                )?)
+            }
+            Indicator::Roc(period) => {
+                use crate::indicators::roc;
+                IndicatorResult::Series(roc(&chart.close_prices(), period)?)
+            }
+            Indicator::Momentum(period) => {
+                use crate::indicators::momentum;
+                IndicatorResult::Series(momentum(&chart.close_prices(), period)?)
+            }
+            Indicator::Cmo(period) => {
+                use crate::indicators::cmo;
+                IndicatorResult::Series(cmo(&chart.close_prices(), period)?)
+            }
+            Indicator::AwesomeOscillator { fast: _, slow: _ } => {
+                use crate::indicators::awesome_oscillator;
+                IndicatorResult::Series(awesome_oscillator(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                )?)
+            }
+            Indicator::CoppockCurve {
+                wma_period: _,
+                long_roc: _,
+                short_roc: _,
+            } => {
+                use crate::indicators::coppock_curve;
+                IndicatorResult::Series(coppock_curve(&chart.close_prices())?)
+            }
+            Indicator::Adx(period) => {
+                use crate::indicators::adx;
+                IndicatorResult::Series(adx(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    period,
+                )?)
+            }
+            Indicator::Aroon(period) => {
+                use crate::indicators::aroon;
+                IndicatorResult::Aroon(aroon(&chart.high_prices(), &chart.low_prices(), period)?)
+            }
+            Indicator::Supertrend { period, multiplier } => {
+                use crate::indicators::supertrend;
+                IndicatorResult::SuperTrend(supertrend(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    period,
+                    multiplier,
+                )?)
+            }
+            Indicator::Ichimoku {
+                conversion: _,
+                base: _,
+                lagging: _,
+                displacement: _,
+            } => {
+                use crate::indicators::ichimoku;
+                IndicatorResult::Ichimoku(ichimoku(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                )?)
+            }
+            Indicator::ParabolicSar { step, max } => {
+                use crate::indicators::parabolic_sar;
+                IndicatorResult::Series(parabolic_sar(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    step,
+                    max,
+                )?)
+            }
+            Indicator::BullBearPower(_period) => {
+                use crate::indicators::bull_bear_power;
+                IndicatorResult::BullBearPower(bull_bear_power(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                )?)
+            }
+            Indicator::ElderRay(_period) => {
+                use crate::indicators::elder_ray;
+                IndicatorResult::ElderRay(elder_ray(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                )?)
+            }
+            Indicator::KeltnerChannels {
+                period,
+                multiplier,
+                atr_period,
+            } => {
+                use crate::indicators::keltner_channels;
+                IndicatorResult::Keltner(keltner_channels(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    period,
+                    atr_period,
+                    multiplier,
+                )?)
+            }
+            Indicator::DonchianChannels(period) => {
+                use crate::indicators::donchian_channels;
+                IndicatorResult::Donchian(donchian_channels(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    period,
+                )?)
+            }
+            Indicator::TrueRange => {
+                use crate::indicators::true_range;
+                IndicatorResult::Series(true_range(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                )?)
+            }
+            Indicator::ChoppinessIndex(period) => {
+                use crate::indicators::choppiness_index;
+                IndicatorResult::Series(choppiness_index(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    period,
+                )?)
+            }
+            Indicator::Mfi(period) => {
+                use crate::indicators::mfi;
+                IndicatorResult::Series(mfi(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    &chart.volumes(),
+                    period,
+                )?)
+            }
+            Indicator::Cmf(period) => {
+                use crate::indicators::cmf;
+                IndicatorResult::Series(cmf(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    &chart.volumes(),
+                    period,
+                )?)
+            }
+            Indicator::ChaikinOscillator => {
+                use crate::indicators::chaikin_oscillator;
+                IndicatorResult::Series(chaikin_oscillator(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    &chart.volumes(),
+                )?)
+            }
+            Indicator::AccumulationDistribution => {
+                use crate::indicators::accumulation_distribution;
+                IndicatorResult::Series(accumulation_distribution(
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    &chart.volumes(),
+                )?)
+            }
+            Indicator::BalanceOfPower(period) => {
+                use crate::indicators::balance_of_power;
+                IndicatorResult::Series(balance_of_power(
+                    &chart.open_prices(),
+                    &chart.high_prices(),
+                    &chart.low_prices(),
+                    &chart.close_prices(),
+                    period,
+                )?)
+            }
+        };
+
+        Ok(result)
     }
 
     /// Get analyst recommendations
@@ -850,5 +1218,76 @@ impl Ticker {
         }
 
         Ok(options)
+    }
+
+    /// Run a backtest with the given strategy and configuration.
+    ///
+    /// # Arguments
+    ///
+    /// * `strategy` - Trading strategy implementing the Strategy trait
+    /// * `interval` - Candle interval (1d, 1h, etc.)
+    /// * `range` - Time range for historical data
+    /// * `config` - Backtest configuration (optional, uses defaults if None)
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Interval, TimeRange};
+    /// use finance_query::backtesting::{SmaCrossover, BacktestConfig};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = Ticker::new("AAPL").await?;
+    ///
+    /// // Simple backtest with defaults
+    /// let strategy = SmaCrossover::new(10, 20);
+    /// let result = ticker.backtest(
+    ///     strategy,
+    ///     Interval::OneDay,
+    ///     TimeRange::OneYear,
+    ///     None,
+    /// ).await?;
+    ///
+    /// println!("{}", result.summary());
+    /// println!("Total trades: {}", result.trades.len());
+    ///
+    /// // With custom config
+    /// let config = BacktestConfig::builder()
+    ///     .initial_capital(50_000.0)
+    ///     .commission_pct(0.001)
+    ///     .stop_loss_pct(0.05)
+    ///     .allow_short(true)
+    ///     .build()?;
+    ///
+    /// let result = ticker.backtest(
+    ///     SmaCrossover::new(5, 20).with_short(true),
+    ///     Interval::OneDay,
+    ///     TimeRange::TwoYears,
+    ///     Some(config),
+    /// ).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "backtesting")]
+    pub async fn backtest<S: crate::backtesting::Strategy>(
+        &self,
+        strategy: S,
+        interval: Interval,
+        range: TimeRange,
+        config: Option<crate::backtesting::BacktestConfig>,
+    ) -> crate::backtesting::Result<crate::backtesting::BacktestResult> {
+        use crate::backtesting::BacktestEngine;
+
+        let config = config.unwrap_or_default();
+        config.validate()?;
+
+        // Fetch chart data
+        let chart = self
+            .chart(interval, range)
+            .await
+            .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
+
+        // Run backtest engine
+        let engine = BacktestEngine::new(config);
+        engine.run(&self.core.symbol, &chart.candles, strategy)
     }
 }

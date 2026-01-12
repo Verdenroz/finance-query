@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Finance Query v2
-  version: 2.0.1
+  version: 2.1.0
   description: |
     REST API for fetching financial data from Yahoo Finance.
     Provides real-time quotes, historical data, news, options, and more.
@@ -401,6 +401,77 @@ paths:
                   amount: 5.23
                 - timestamp: 1671104400
                   amount: 4.87
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/spark:
+    get:
+      tags: [Charts]
+      summary: Get batch sparkline data
+      description: |
+        Fetch lightweight chart data for multiple symbols in a single request.
+        Optimized for rendering sparkline charts, returning only close prices.
+        More efficient than multiple /chart calls when displaying price trends
+        for watchlists, dashboards, or portfolio views.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,GOOGL
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+            default: 1d
+          description: Chart interval
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: 1mo
+          description: Time range
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch spark data with successful sparks and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchSparksResponse'
+              example:
+                sparks:
+                  AAPL:
+                    symbol: AAPL
+                    closes: [258.61, 258.08, 258.29, 257.04, 256.73]
+                    timestamps: [1767969000, 1767969300, 1767969600, 1767969900, 1767970200]
+                    interval: "5m"
+                    range: "1d"
+                    meta:
+                      symbol: AAPL
+                      currency: USD
+                      exchangeName: NMS
+                      regularMarketPrice: 258.44
+                      previousClose: 259.04
+                  MSFT:
+                    symbol: MSFT
+                    closes: [474.47, 475.20, 475.46, 472.99]
+                    timestamps: [1767969000, 1767969300, 1767969600, 1767969900]
+                    interval: "5m"
+                    range: "1d"
+                    meta:
+                      symbol: MSFT
+                      currency: USD
+                      exchangeName: NMS
+                      regularMarketPrice: 477.35
+                      previousClose: 478.11
+                errors: {}
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -3101,6 +3172,64 @@ components:
           type: boolean
           description: Whether daylight saving time is in effect
           example: false
+
+    BatchSparksResponse:
+      type: object
+      description: Response from batch spark endpoint with successful sparks and errors
+      properties:
+        sparks:
+          type: object
+          description: Successfully fetched sparks, keyed by symbol
+          additionalProperties:
+            $ref: '#/components/schemas/Spark'
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    Spark:
+      type: object
+      properties:
+        symbol:
+          type: string
+        closes:
+          type: array
+          items:
+            type: number
+        timestamps:
+          type: array
+          items:
+            type: integer
+            format: int64
+        interval:
+          type: string
+        range:
+          type: string
+        meta:
+          $ref: '#/components/schemas/SparkMeta'
+
+    SparkMeta:
+      type: object
+      description: Metadata for spark chart data
+      properties:
+        symbol:
+          type: string
+          description: Stock symbol
+        currency:
+          type: string
+          description: Currency code
+        exchangeName:
+          type: string
+          description: Exchange name
+        regularMarketPrice:
+          type: number
+          format: double
+          description: Current regular market price
+        previousClose:
+          type: number
+          format: double
+          description: Previous closing price
 
   responses:
     BadRequest:

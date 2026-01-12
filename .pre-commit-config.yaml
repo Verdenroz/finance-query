@@ -2,20 +2,20 @@ repos:
   # Rust pre-commit hooks
   - repo: local
     hooks:
-      # Check Rust code formatting
+      # Auto-fix Rust code formatting
       - id: fmt
         name: cargo fmt
-        description: Check Rust code formatting with rustfmt
-        entry: cargo fmt --all -- --check
+        description: Format Rust code with rustfmt
+        entry: cargo fmt --all
         language: system
         types: [rust]
         pass_filenames: false
 
-      # Run Clippy linter on workspace
+      # Run Clippy linter with auto-fix
       - id: clippy
         name: cargo clippy
-        description: Run clippy linter on all targets
-        entry: bash -c 'cargo clippy --workspace --all-targets --all-features -- -D warnings'
+        description: Run clippy linter with auto-fix on all targets
+        entry: bash -c 'cargo clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged -- -D warnings 2>/dev/null || cargo clippy --workspace --all-targets --all-features -- -D warnings'
         language: system
         types: [rust]
         pass_filenames: false

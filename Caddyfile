@@ -33,7 +33,7 @@
         reverse_proxy finance-query-v1:8000
     }
 
-    handle /profile {
+    handle /profile* {
         reverse_proxy finance-query-v1:8000
     }
 
