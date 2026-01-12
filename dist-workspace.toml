@@ -18,4 +18,4 @@ hosting = "github"
 # Whether to install an updater program
 install-updater = false
 # Use cli-v prefix for CLI releases to avoid conflict with library v* tags
-tag-namespace = "cli-"
+tag-namespace = "cli-v"
