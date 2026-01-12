@@ -211,6 +211,8 @@ impl TickerBuilder {
             news_cache: Arc::new(tokio::sync::RwLock::new(None)),
             options_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             financials_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            #[cfg(feature = "indicators")]
+            indicators_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
         })
     }
 }
@@ -255,6 +257,10 @@ pub struct Ticker {
                 FinancialStatement,
             >,
         >,
+    >,
+    #[cfg(feature = "indicators")]
+    indicators_cache: Arc<
+        tokio::sync::RwLock<HashMap<(Interval, TimeRange), crate::indicators::IndicatorsSummary>>,
     >,
 }
 
@@ -675,18 +681,33 @@ impl Ticker {
     /// # Ok(())
     /// # }
     /// ```
+    #[cfg(feature = "indicators")]
     pub async fn indicators(
         &self,
         interval: Interval,
         range: TimeRange,
-    ) -> Result<crate::models::indicators::IndicatorsSummary> {
-        // Fetch chart data
+    ) -> Result<crate::indicators::IndicatorsSummary> {
+        // Check cache first (read lock)
+        {
+            let cache = self.indicators_cache.read().await;
+            if let Some(cached) = cache.get(&(interval, range)) {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch chart data (this is also cached!)
         let chart = self.chart(interval, range).await?;
 
         // Calculate indicators from candles
-        Ok(crate::models::indicators::calculate_indicators(
-            &chart.candles,
-        ))
+        let indicators = crate::indicators::summary::calculate_indicators(&chart.candles);
+
+        // Cache the result (write lock)
+        {
+            let mut cache = self.indicators_cache.write().await;
+            cache.insert((interval, range), indicators.clone());
+        }
+
+        Ok(indicators)
     }
 
     /// Calculate a specific technical indicator over a time range.

@@ -81,6 +81,9 @@ mod vwma;
 mod williams_r;
 mod wma;
 
+// Summary module for batch indicator calculations
+pub mod summary;
+
 // Re-export all indicators
 pub use accumulation_distribution::accumulation_distribution;
 pub use adx::adx;
@@ -122,6 +125,12 @@ pub use vwap::vwap;
 pub use vwma::vwma;
 pub use williams_r::williams_r;
 pub use wma::wma;
+
+// Re-export summary types
+pub use summary::{
+    AroonData, BollingerBandsData, BullBearPowerData, DonchianChannelsData, ElderRayData,
+    IchimokuData, IndicatorsSummary, KeltnerChannelsData, MacdData, StochasticData, SuperTrendData,
+};
 
 // Re-export Indicator enum for easy access
 pub use Indicator as IndicatorType;

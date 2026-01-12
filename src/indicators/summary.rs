@@ -1,116 +1,214 @@
-//! Internal technical indicators calculation module.
+//! Indicators summary module.
 //!
-//! This module is NOT part of the public API. Users access indicators through
-//! `Ticker::indicators()` and `AsyncTicker::indicators()` methods only.
+//! Provides the `IndicatorsSummary` type which calculates and returns the latest
+//! values for all 52+ technical indicators at once.
+//!
+//! This module reuses the main indicator implementations and extracts the last value,
+//! ensuring consistency and eliminating code duplication.
 
-mod momentum;
-mod moving_avg;
-mod trend;
-mod volatility;
-mod volume;
+use crate::Candle;
+use crate::indicators::{
+    accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
+    bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
+    coppock_curve, dema, donchian_channels, elder_ray, ema, hma, ichimoku, keltner_channels, macd,
+    mcginley_dynamic, mfi, momentum, obv, parabolic_sar, roc, rsi, sma, stochastic, stochastic_rsi,
+    supertrend, tema, true_range, vwap, vwma, williams_r, wma,
+};
 
-use crate::models::chart::Candle;
+/// Extract the last non-None value from a time series.
+///
+/// Iterates from the end of the series to find the most recent valid value.
+#[inline]
+fn last_value(series: &[Option<f64>]) -> Option<f64> {
+    series.iter().rev().find_map(|&v| v)
+}
+
+/// Helper to extract last value from Result-returning indicators
+#[inline]
+fn last_from_result(result: crate::indicators::Result<Vec<Option<f64>>>) -> Option<f64> {
+    result.ok().and_then(|v| last_value(&v))
+}
 
 /// Calculate all technical indicators from candle data.
 ///
 /// Returns the latest values for all implemented indicators.
+/// Reuses the main indicator implementations for consistency.
 pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
     if candles.is_empty() {
         return IndicatorsSummary::default();
     }
 
-    let (closes, highs, lows, opens, volumes) = prepare_data(candles);
-
-    IndicatorsSummary {
-        // === MOVING AVERAGES ===
-        // Simple Moving Averages
-        sma_10: moving_avg::sma(&closes, 10),
-        sma_20: moving_avg::sma(&closes, 20),
-        sma_50: moving_avg::sma(&closes, 50),
-        sma_100: moving_avg::sma(&closes, 100),
-        sma_200: moving_avg::sma(&closes, 200),
-        // Exponential Moving Averages
-        ema_10: moving_avg::ema(&closes, 10),
-        ema_20: moving_avg::ema(&closes, 20),
-        ema_50: moving_avg::ema(&closes, 50),
-        ema_100: moving_avg::ema(&closes, 100),
-        ema_200: moving_avg::ema(&closes, 200),
-        // Weighted Moving Averages
-        wma_10: moving_avg::wma(&closes, 10),
-        wma_20: moving_avg::wma(&closes, 20),
-        wma_50: moving_avg::wma(&closes, 50),
-        wma_100: moving_avg::wma(&closes, 100),
-        wma_200: moving_avg::wma(&closes, 200),
-        // Advanced Moving Averages
-        dema_20: moving_avg::dema(&closes, 20),
-        tema_20: moving_avg::tema(&closes, 20),
-        hma_20: moving_avg::hma(&closes, 20),
-        vwma_20: moving_avg::vwma(&closes, &volumes, 20),
-        alma_9: moving_avg::alma(&closes, 9, 0.85, 6.0),
-        mcginley_dynamic_20: moving_avg::mcginley_dynamic(&closes, 20),
-
-        // === MOMENTUM OSCILLATORS ===
-        rsi_14: momentum::rsi(&closes, 14),
-        stochastic: {
-            let (k, d) = momentum::stochastic(&highs, &lows, &closes, 14, 3);
-            Some(StochasticData { k, d })
-        },
-        stochastic_rsi: momentum::stochastic_rsi(&closes, 14, 14).map(|k| StochasticData {
-            k: Some(k),
-            d: None,
-        }),
-        cci_20: momentum::cci(&highs, &lows, &closes, 20),
-        williams_r_14: momentum::williams_r(&highs, &lows, &closes, 14),
-        roc_12: momentum::roc(&closes, 12),
-        momentum_10: momentum::momentum(&closes, 10),
-        cmo_14: momentum::cmo(&closes, 14),
-        awesome_oscillator: momentum::awesome_oscillator(&highs, &lows),
-        coppock_curve: momentum::coppock_curve(&closes),
-
-        // === TREND INDICATORS ===
-        macd: Some(trend::macd(&closes, 12, 26, 9)),
-        adx_14: trend::adx(&highs, &lows, &closes, 14),
-        aroon: Some(trend::aroon(&highs, &lows, 25)),
-        supertrend: Some(trend::supertrend(&highs, &lows, &closes, 10, 3.0)),
-        ichimoku: Some(trend::ichimoku(&highs, &lows, &closes)),
-        parabolic_sar: trend::parabolic_sar(&highs, &lows, &closes, 0.02, 0.2),
-        bull_bear_power: Some(trend::bull_bear_power(&highs, &lows, &closes)),
-        elder_ray_index: Some(trend::elder_ray(&highs, &lows, &closes)),
-
-        // === VOLATILITY INDICATORS ===
-        bollinger_bands: Some(volatility::bollinger_bands(&closes, 20, 2.0)),
-        keltner_channels: Some(volatility::keltner_channels(
-            &highs, &lows, &closes, 20, 10, 2.0,
-        )),
-        donchian_channels: Some(volatility::donchian_channels(&highs, &lows, 20)),
-        atr_14: volatility::atr(&highs, &lows, &closes, 14),
-        true_range: volatility::true_range(&highs, &lows, &closes),
-        choppiness_index_14: volatility::choppiness_index(&highs, &lows, &closes, 14),
-
-        // === VOLUME INDICATORS ===
-        obv: volume::obv(&closes, &volumes),
-        mfi_14: volume::mfi(&highs, &lows, &closes, &volumes, 14),
-        cmf_20: volume::cmf(&highs, &lows, &closes, &volumes, 20),
-        chaikin_oscillator: volume::chaikin_oscillator(&highs, &lows, &closes, &volumes),
-        accumulation_distribution: volume::accumulation_distribution(
-            &highs, &lows, &closes, &volumes,
-        ),
-        vwap: volume::vwap(&highs, &lows, &closes, &volumes),
-        balance_of_power: volume::balance_of_power(&opens, &highs, &lows, &closes),
-    }
-}
-
-/// Price data extracted from candles
-type PriceData = (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>);
-
-/// Extract price data arrays from candles
-fn prepare_data(candles: &[Candle]) -> PriceData {
+    // Extract price data from candles
     let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
     let highs: Vec<f64> = candles.iter().map(|c| c.high).collect();
     let lows: Vec<f64> = candles.iter().map(|c| c.low).collect();
     let opens: Vec<f64> = candles.iter().map(|c| c.open).collect();
     let volumes: Vec<f64> = candles.iter().map(|c| c.volume as f64).collect();
-    (closes, highs, lows, opens, volumes)
+
+    IndicatorsSummary {
+        // === MOVING AVERAGES ===
+        // Simple Moving Averages
+        sma_10: last_value(&sma(&closes, 10)),
+        sma_20: last_value(&sma(&closes, 20)),
+        sma_50: last_value(&sma(&closes, 50)),
+        sma_100: last_value(&sma(&closes, 100)),
+        sma_200: last_value(&sma(&closes, 200)),
+
+        // Exponential Moving Averages
+        ema_10: last_value(&ema(&closes, 10)),
+        ema_20: last_value(&ema(&closes, 20)),
+        ema_50: last_value(&ema(&closes, 50)),
+        ema_100: last_value(&ema(&closes, 100)),
+        ema_200: last_value(&ema(&closes, 200)),
+
+        // Weighted Moving Averages (Result types)
+        wma_10: wma(&closes, 10).ok().and_then(|v| last_value(&v)),
+        wma_20: wma(&closes, 20).ok().and_then(|v| last_value(&v)),
+        wma_50: wma(&closes, 50).ok().and_then(|v| last_value(&v)),
+        wma_100: wma(&closes, 100).ok().and_then(|v| last_value(&v)),
+        wma_200: wma(&closes, 200).ok().and_then(|v| last_value(&v)),
+
+        // Advanced Moving Averages (Result types)
+        dema_20: dema(&closes, 20).ok().and_then(|v| last_value(&v)),
+        tema_20: tema(&closes, 20).ok().and_then(|v| last_value(&v)),
+        hma_20: hma(&closes, 20).ok().and_then(|v| last_value(&v)),
+        vwma_20: vwma(&closes, &volumes, 20)
+            .ok()
+            .and_then(|v| last_value(&v)),
+        alma_9: alma(&closes, 9, 0.85, 6.0)
+            .ok()
+            .and_then(|v| last_value(&v)),
+        mcginley_dynamic_20: mcginley_dynamic(&closes, 20)
+            .ok()
+            .and_then(|v| last_value(&v)),
+
+        // === MOMENTUM OSCILLATORS ===
+        rsi_14: last_from_result(rsi(&closes, 14)),
+        stochastic: {
+            stochastic(&highs, &lows, &closes, 14, 3)
+                .ok()
+                .map(|result| StochasticData {
+                    k: last_value(&result.k),
+                    d: last_value(&result.d),
+                })
+        },
+        stochastic_rsi: {
+            stochastic_rsi(&closes, 14, 14).ok().and_then(|result| {
+                last_value(&result).map(|k| StochasticData {
+                    k: Some(k),
+                    d: None,
+                })
+            })
+        },
+        cci_20: last_from_result(cci(&highs, &lows, &closes, 20)),
+        williams_r_14: last_from_result(williams_r(&highs, &lows, &closes, 14)),
+        roc_12: last_from_result(roc(&closes, 12)),
+        momentum_10: last_from_result(momentum(&closes, 10)),
+        cmo_14: last_from_result(cmo(&closes, 14)),
+        awesome_oscillator: last_from_result(awesome_oscillator(&highs, &lows)),
+        coppock_curve: last_from_result(coppock_curve(&closes)),
+
+        // === TREND INDICATORS ===
+        macd: {
+            macd(&closes, 12, 26, 9).ok().map(|result| MacdData {
+                macd: last_value(&result.macd_line),
+                signal: last_value(&result.signal_line),
+                histogram: last_value(&result.histogram),
+            })
+        },
+        adx_14: last_from_result(adx(&highs, &lows, &closes, 14)),
+        aroon: {
+            aroon(&highs, &lows, 25).ok().map(|result| AroonData {
+                aroon_up: last_value(&result.aroon_up),
+                aroon_down: last_value(&result.aroon_down),
+            })
+        },
+        supertrend: {
+            supertrend(&highs, &lows, &closes, 10, 3.0)
+                .ok()
+                .map(|result| SuperTrendData {
+                    value: last_value(&result.value),
+                    trend: result.is_uptrend.last().and_then(|&v| v).map(|v| {
+                        if v {
+                            "up".to_string()
+                        } else {
+                            "down".to_string()
+                        }
+                    }),
+                })
+        },
+        ichimoku: {
+            ichimoku(&highs, &lows, &closes)
+                .ok()
+                .map(|result| IchimokuData {
+                    conversion_line: last_value(&result.conversion_line),
+                    base_line: last_value(&result.base_line),
+                    leading_span_a: last_value(&result.leading_span_a),
+                    leading_span_b: last_value(&result.leading_span_b),
+                    lagging_span: last_value(&result.lagging_span),
+                })
+        },
+        parabolic_sar: last_from_result(parabolic_sar(&highs, &lows, &closes, 0.02, 0.2)),
+        bull_bear_power: {
+            bull_bear_power(&highs, &lows, &closes)
+                .ok()
+                .map(|result| BullBearPowerData {
+                    bull_power: last_value(&result.bull_power),
+                    bear_power: last_value(&result.bear_power),
+                })
+        },
+        elder_ray_index: {
+            elder_ray(&highs, &lows, &closes)
+                .ok()
+                .map(|result| ElderRayData {
+                    bull_power: last_value(&result.bull_power),
+                    bear_power: last_value(&result.bear_power),
+                })
+        },
+
+        // === VOLATILITY INDICATORS ===
+        bollinger_bands: {
+            bollinger_bands(&closes, 20, 2.0)
+                .ok()
+                .map(|result| BollingerBandsData {
+                    upper: last_value(&result.upper),
+                    middle: last_value(&result.middle),
+                    lower: last_value(&result.lower),
+                })
+        },
+        keltner_channels: {
+            keltner_channels(&highs, &lows, &closes, 20, 10, 2.0)
+                .ok()
+                .map(|result| KeltnerChannelsData {
+                    upper: last_value(&result.upper),
+                    middle: last_value(&result.middle),
+                    lower: last_value(&result.lower),
+                })
+        },
+        donchian_channels: {
+            donchian_channels(&highs, &lows, 20)
+                .ok()
+                .map(|result| DonchianChannelsData {
+                    upper: last_value(&result.upper),
+                    middle: last_value(&result.middle),
+                    lower: last_value(&result.lower),
+                })
+        },
+        atr_14: last_from_result(atr(&highs, &lows, &closes, 14)),
+        true_range: last_from_result(true_range(&highs, &lows, &closes)),
+        choppiness_index_14: last_from_result(choppiness_index(&highs, &lows, &closes, 14)),
+
+        // === VOLUME INDICATORS ===
+        obv: last_from_result(obv(&closes, &volumes)),
+        mfi_14: last_from_result(mfi(&highs, &lows, &closes, &volumes, 14)),
+        cmf_20: last_from_result(cmf(&highs, &lows, &closes, &volumes, 20)),
+        chaikin_oscillator: last_from_result(chaikin_oscillator(&highs, &lows, &closes, &volumes)),
+        accumulation_distribution: last_from_result(accumulation_distribution(
+            &highs, &lows, &closes, &volumes,
+        )),
+        vwap: last_from_result(vwap(&highs, &lows, &closes, &volumes)),
+        balance_of_power: last_from_result(balance_of_power(&opens, &highs, &lows, &closes, None)),
+    }
 }
 
 /// Summary of all calculated technical indicators
@@ -431,21 +529,4 @@ pub struct ElderRayData {
     /// Bear power value
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bear_power: Option<f64>,
-}
-
-// === Helper Functions ===
-
-/// Round to 2 decimal places
-#[inline]
-pub(crate) fn round2(value: f64) -> f64 {
-    (value * 100.0).round() / 100.0
-}
-
-/// Get last value from vector, rounded to 2 decimals, handling NaN/Inf
-#[inline]
-#[allow(dead_code)]
-pub(crate) fn last(values: &[f64]) -> Option<f64> {
-    values
-        .last()
-        .and_then(|&v| if v.is_finite() { Some(round2(v)) } else { None })
 }

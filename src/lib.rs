@@ -1,6 +1,6 @@
 //! # finance-query
 //!
-//! A Rust library for fetching financial data from Yahoo Finance.
+//! A Rust library for querying financial data.
 //! Inspired by yfinance, with smart lazy loading for efficient data fetching.
 //!
 //! ## Quick Start
@@ -103,7 +103,7 @@ pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, Value
 // ============================================================================
 pub use models::{
     chart::Chart, currencies::Currency, exchanges::Exchange, financials::FinancialStatement,
-    hours::MarketHours, indicators::IndicatorsSummary, industries::Industry, lookup::LookupResults,
+    hours::MarketHours, industries::Industry, lookup::LookupResults,
     market_summary::MarketSummaryQuote, news::News, options::Options, quote::Quote,
     recommendation::Recommendation, screeners::ScreenerResults, search::SearchResults,
     sectors::Sector, spark::Spark, transcript::Transcript, transcript::TranscriptWithMeta,
@@ -155,7 +155,27 @@ pub use finance_query_derive::ToDataFrame;
 pub mod indicators;
 
 #[cfg(feature = "indicators")]
-pub use indicators::{BollingerBands, Indicator, IndicatorError, IndicatorResult, MacdResult, atr};
+pub use indicators::{
+    // Summary types
+    AroonData,
+    // Individual indicator types
+    BollingerBands,
+    BollingerBandsData,
+    BullBearPowerData,
+    DonchianChannelsData,
+    ElderRayData,
+    IchimokuData,
+    Indicator,
+    IndicatorError,
+    IndicatorResult,
+    IndicatorsSummary,
+    KeltnerChannelsData,
+    MacdData,
+    MacdResult,
+    StochasticData,
+    SuperTrendData,
+    atr,
+};
 
 // ============================================================================
 // Backtesting Engine (requires "backtesting" feature)

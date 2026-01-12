@@ -13,8 +13,6 @@ pub mod exchanges;
 pub mod financials;
 /// Market hours models.
 pub mod hours;
-/// Technical indicators models.
-pub mod indicators;
 /// Industry models for market industry data.
 pub mod industries;
 /// Lookup models for type-filtered symbol discovery.
