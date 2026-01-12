@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Finance library (our own)
-finance-query = { path = ".." }
+finance-query = { path = "..", features = ["indicators"] }
 
 # Web framework
 axum = { version = "0.8.7", features = ["ws", "macros"] }
