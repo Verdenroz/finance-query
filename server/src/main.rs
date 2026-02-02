@@ -1,4 +1,5 @@
 mod cache;
+mod metrics;
 mod rate_limit;
 
 use axum::{
@@ -541,6 +542,9 @@ async fn main() {
     // Initialize tracing/logging
     init_tracing();
 
+    // Initialize metrics
+    metrics::init();
+
     info!("Finance Query server initializing...");
 
     // Build application with routes
@@ -595,12 +599,31 @@ async fn create_app() -> Router {
         // Nest all API routes under /v2
         .nest("/v2", api_routes())
         .layer(Extension(state))
+        .layer(middleware::from_fn(metrics_middleware))
         .layer(middleware::from_fn_with_state(
             rate_limiter,
             rate_limit::rate_limit_middleware,
         ))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
+}
+
+/// Metrics middleware to track request counts and latencies
+async fn metrics_middleware(
+    request: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let method = request.method().to_string();
+    let path = request.uri().path().to_string();
+
+    let timer = metrics::RequestTimer::new(method, path);
+
+    let response = next.run(request).await;
+    let status = response.status().as_u16();
+
+    timer.observe(status);
+
+    response
 }
 
 /// API routes
@@ -673,6 +696,8 @@ fn api_routes() -> Router {
         .route("/transcripts/{symbol}/all", get(get_transcripts))
         // GET /v2/trending?region=<str>
         .route("/trending", get(get_trending))
+        // GET /v2/metrics - Prometheus metrics endpoint
+        .route("/metrics", get(get_metrics))
 }
 
 /// GET /health
@@ -697,6 +722,18 @@ async fn ping() -> impl IntoResponse {
     };
 
     Json(response)
+}
+
+/// GET /metrics
+///
+/// Prometheus metrics endpoint in text format
+async fn get_metrics() -> impl IntoResponse {
+    let metrics = metrics::gather();
+    (
+        StatusCode::OK,
+        [("Content-Type", "text/plain; version=0.0.4")],
+        metrics,
+    )
 }
 
 /// GET /v2/quote/{symbol}
@@ -2590,11 +2627,23 @@ async fn ws_stream_handler(
     Extension(state): Extension<AppState>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
+    // Track new WebSocket connection
+    metrics::WEBSOCKET_CONNECTIONS.inc();
     ws.on_upgrade(move |socket| handle_stream_socket(state, socket))
+}
+
+/// RAII guard to decrement WebSocket connection count on drop
+struct ConnectionGuard;
+
+impl Drop for ConnectionGuard {
+    fn drop(&mut self) {
+        metrics::WEBSOCKET_CONNECTIONS.dec();
+    }
 }
 
 /// Handle the WebSocket connection for streaming
 async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
+    let _guard = ConnectionGuard; // Ensures connection count is decremented on exit
     info!("New streaming WebSocket connection");
 
     // Wait for initial subscription message

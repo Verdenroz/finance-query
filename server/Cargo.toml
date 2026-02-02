@@ -60,6 +60,10 @@ uuid = { version = "1", features = ["v4", "serde"] }
 # URL parsing
 url = "2"
 
+# Metrics
+prometheus = "0.14"
+lazy_static = "1.5"
+
 [dev-dependencies]
 # Testing
 tokio-test = "0.4"

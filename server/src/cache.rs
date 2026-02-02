@@ -170,6 +170,8 @@ impl Cache {
         let conn = self.conn.as_ref()?;
         let mut conn = conn.as_ref().clone();
 
+        let timer = crate::metrics::CacheTimer::new("get");
+
         match redis::cmd("GET")
             .arg(key)
             .query_async::<Option<String>>(&mut conn)
@@ -178,19 +180,25 @@ impl Cache {
             Ok(Some(data)) => match serde_json::from_str(&data) {
                 Ok(value) => {
                     tracing::debug!(key = %key, "Cache HIT");
+                    crate::metrics::CACHE_HITS.inc();
+                    timer.observe();
                     Some(value)
                 }
                 Err(e) => {
                     tracing::warn!(key = %key, error = %e, "Cache deserialize error");
+                    timer.observe();
                     None
                 }
             },
             Ok(None) => {
                 tracing::debug!(key = %key, "Cache MISS");
+                crate::metrics::CACHE_MISSES.inc();
+                timer.observe();
                 None
             }
             Err(e) => {
                 tracing::warn!(key = %key, error = %e, "Cache GET error");
+                timer.observe();
                 None
             }
         }
@@ -209,11 +217,13 @@ impl Cache {
         };
 
         let mut conn = conn.as_ref().clone();
+        let timer = crate::metrics::CacheTimer::new("set");
 
         let data = match serde_json::to_string(value) {
             Ok(d) => d,
             Err(e) => {
                 tracing::warn!(key = %key, error = %e, "Cache serialize error");
+                timer.observe();
                 return;
             }
         };
@@ -229,6 +239,8 @@ impl Cache {
         } else {
             tracing::debug!(key = %key, ttl = ttl_seconds, "Cache SET");
         }
+
+        timer.observe();
     }
 
     #[cfg(not(feature = "redis-cache"))]
