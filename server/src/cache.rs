@@ -263,25 +263,26 @@ impl Cache {
     }
 }
 
-/// Simple market hours check (US market: 9:30 AM - 4:00 PM ET, Mon-Fri)
+/// Check if US stock market is currently open (9:30 AM - 4:00 PM ET, Mon-Fri)
 pub fn is_market_open() -> bool {
     use chrono::{Datelike, Timelike, Utc};
+    use chrono_tz::America::New_York;
 
-    let now = Utc::now();
-    let weekday = now.weekday();
+    // Get current time in US Eastern timezone
+    let now_et = Utc::now().with_timezone(&New_York);
+    let weekday = now_et.weekday();
 
     // Weekend check
     if weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun {
         return false;
     }
 
-    // Convert UTC to ET (simplified: UTC-5, ignoring DST for now)
-    let et_hour = (now.hour() as i32 - 5).rem_euclid(24) as u32;
-    let et_minute = now.minute();
+    let hour = now_et.hour();
+    let minute = now_et.minute();
 
     // Market hours: 9:30 AM - 4:00 PM ET
-    let after_open = et_hour > 9 || (et_hour == 9 && et_minute >= 30);
-    let before_close = et_hour < 16;
+    let after_open = hour > 9 || (hour == 9 && minute >= 30);
+    let before_close = hour < 16;
 
     after_open && before_close
 }

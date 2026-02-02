@@ -1436,6 +1436,7 @@ dependencies = [
  "anyhow",
  "axum",
  "chrono",
+ "chrono-tz",
  "dotenvy",
  "finance-query",
  "futures-util",
