@@ -1,4 +1,5 @@
 mod cache;
+mod rate_limit;
 
 use axum::{
     Router,
@@ -7,6 +8,7 @@ use axum::{
         ws::{Message, WebSocket},
     },
     http::{HeaderValue, Method, StatusCode},
+    middleware,
     response::{IntoResponse, Json},
     routing::{get, post},
 };
@@ -16,6 +18,7 @@ use finance_query::{
     Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query, streaming::PriceStream,
 };
 use futures_util::{SinkExt, StreamExt};
+use rate_limit::{RateLimitConfig, RateLimiterState};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
@@ -568,6 +571,14 @@ async fn create_app() -> Router {
     let redis_url = std::env::var("REDIS_URL").ok();
     let cache = Cache::new(redis_url.as_deref()).await;
 
+    // Configure rate limiting
+    let rate_limit_config = RateLimitConfig::from_env();
+    let rate_limiter = RateLimiterState::new(rate_limit_config.clone());
+    info!(
+        "Rate limiting enabled: {} requests/minute",
+        rate_limit_config.requests_per_minute
+    );
+
     let state = AppState {
         cache,
         stream_hub: StreamHub::new(),
@@ -584,6 +595,10 @@ async fn create_app() -> Router {
         // Nest all API routes under /v2
         .nest("/v2", api_routes())
         .layer(Extension(state))
+        .layer(middleware::from_fn_with_state(
+            rate_limiter,
+            rate_limit::rate_limit_middleware,
+        ))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
 }
