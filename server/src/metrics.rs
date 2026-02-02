@@ -6,7 +6,10 @@ use lazy_static::lazy_static;
 use prometheus::{
     Counter, CounterVec, Gauge, HistogramOpts, HistogramVec, Opts, Registry, TextEncoder,
 };
+use std::sync::Once;
 use std::time::Instant;
+
+static INIT: Once = Once::new();
 
 lazy_static! {
     /// Global metrics registry
@@ -117,77 +120,50 @@ lazy_static! {
         "Total number of requests rejected due to rate limiting"
     )
     .expect("Failed to create rate limit rejections counter");
-
-    // === Upstream API Metrics ===
-
-    /// Yahoo Finance API calls
-    pub static ref YAHOO_API_CALLS: CounterVec = CounterVec::new(
-        Opts::new("yahoo_api_calls_total", "Total Yahoo Finance API calls")
-            .namespace("finance_query"),
-        &["endpoint", "status"]
-    )
-    .expect("Failed to create Yahoo API calls counter");
-
-    /// Yahoo Finance API call duration
-    pub static ref YAHOO_API_DURATION: HistogramVec = HistogramVec::new(
-        HistogramOpts::new(
-            "yahoo_api_duration_seconds",
-            "Yahoo Finance API call duration in seconds"
-        )
-        .namespace("finance_query")
-        .buckets(vec![0.1, 0.25, 0.5, 1.0, 2.0, 5.0, 10.0, 30.0]),
-        &["endpoint"]
-    )
-    .expect("Failed to create Yahoo API duration histogram");
 }
 
 /// Initialize metrics registry
 pub fn init() {
-    // Register all metrics
-    REGISTRY
-        .register(Box::new(HTTP_REQUESTS_TOTAL.clone()))
-        .expect("Failed to register HTTP_REQUESTS_TOTAL");
-    REGISTRY
-        .register(Box::new(HTTP_REQUEST_DURATION.clone()))
-        .expect("Failed to register HTTP_REQUEST_DURATION");
-    REGISTRY
-        .register(Box::new(HTTP_REQUESTS_IN_FLIGHT.clone()))
-        .expect("Failed to register HTTP_REQUESTS_IN_FLIGHT");
-    REGISTRY
-        .register(Box::new(CACHE_HITS.clone()))
-        .expect("Failed to register CACHE_HITS");
-    REGISTRY
-        .register(Box::new(CACHE_MISSES.clone()))
-        .expect("Failed to register CACHE_MISSES");
-    REGISTRY
-        .register(Box::new(CACHE_OPERATION_DURATION.clone()))
-        .expect("Failed to register CACHE_OPERATION_DURATION");
-    REGISTRY
-        .register(Box::new(WEBSOCKET_CONNECTIONS.clone()))
-        .expect("Failed to register WEBSOCKET_CONNECTIONS");
-    REGISTRY
-        .register(Box::new(WEBSOCKET_MESSAGES_SENT.clone()))
-        .expect("Failed to register WEBSOCKET_MESSAGES_SENT");
-    REGISTRY
-        .register(Box::new(WEBSOCKET_MESSAGES_RECEIVED.clone()))
-        .expect("Failed to register WEBSOCKET_MESSAGES_RECEIVED");
-    REGISTRY
-        .register(Box::new(WEBSOCKET_SYMBOLS_SUBSCRIBED.clone()))
-        .expect("Failed to register WEBSOCKET_SYMBOLS_SUBSCRIBED");
-    REGISTRY
-        .register(Box::new(ERRORS_TOTAL.clone()))
-        .expect("Failed to register ERRORS_TOTAL");
-    REGISTRY
-        .register(Box::new(RATE_LIMIT_REJECTIONS.clone()))
-        .expect("Failed to register RATE_LIMIT_REJECTIONS");
-    REGISTRY
-        .register(Box::new(YAHOO_API_CALLS.clone()))
-        .expect("Failed to register YAHOO_API_CALLS");
-    REGISTRY
-        .register(Box::new(YAHOO_API_DURATION.clone()))
-        .expect("Failed to register YAHOO_API_DURATION");
+    INIT.call_once(|| {
+        REGISTRY
+            .register(Box::new(HTTP_REQUESTS_TOTAL.clone()))
+            .expect("Failed to register HTTP_REQUESTS_TOTAL");
+        REGISTRY
+            .register(Box::new(HTTP_REQUEST_DURATION.clone()))
+            .expect("Failed to register HTTP_REQUEST_DURATION");
+        REGISTRY
+            .register(Box::new(HTTP_REQUESTS_IN_FLIGHT.clone()))
+            .expect("Failed to register HTTP_REQUESTS_IN_FLIGHT");
+        REGISTRY
+            .register(Box::new(CACHE_HITS.clone()))
+            .expect("Failed to register CACHE_HITS");
+        REGISTRY
+            .register(Box::new(CACHE_MISSES.clone()))
+            .expect("Failed to register CACHE_MISSES");
+        REGISTRY
+            .register(Box::new(CACHE_OPERATION_DURATION.clone()))
+            .expect("Failed to register CACHE_OPERATION_DURATION");
+        REGISTRY
+            .register(Box::new(WEBSOCKET_CONNECTIONS.clone()))
+            .expect("Failed to register WEBSOCKET_CONNECTIONS");
+        REGISTRY
+            .register(Box::new(WEBSOCKET_MESSAGES_SENT.clone()))
+            .expect("Failed to register WEBSOCKET_MESSAGES_SENT");
+        REGISTRY
+            .register(Box::new(WEBSOCKET_MESSAGES_RECEIVED.clone()))
+            .expect("Failed to register WEBSOCKET_MESSAGES_RECEIVED");
+        REGISTRY
+            .register(Box::new(WEBSOCKET_SYMBOLS_SUBSCRIBED.clone()))
+            .expect("Failed to register WEBSOCKET_SYMBOLS_SUBSCRIBED");
+        REGISTRY
+            .register(Box::new(ERRORS_TOTAL.clone()))
+            .expect("Failed to register ERRORS_TOTAL");
+        REGISTRY
+            .register(Box::new(RATE_LIMIT_REJECTIONS.clone()))
+            .expect("Failed to register RATE_LIMIT_REJECTIONS");
 
-    tracing::info!("Prometheus metrics initialized");
+        tracing::info!("Prometheus metrics initialized");
+    });
 }
 
 /// Gather and encode metrics in Prometheus text format
@@ -281,10 +257,17 @@ mod tests {
     #[test]
     fn test_metrics_gathering() {
         init();
+
+        // Generate some metrics data
+        HTTP_REQUESTS_TOTAL
+            .with_label_values(&["GET", "/v2/health", "200"])
+            .inc();
+        CACHE_HITS.inc();
+
         let output = gather();
 
-        // Should contain metric names
-        assert!(output.contains("http_requests_total"));
+        // Should contain metric names (with namespace prefix)
+        assert!(output.contains("finance_query_http_requests_total"));
         assert!(output.contains("cache_hits_total"));
     }
 

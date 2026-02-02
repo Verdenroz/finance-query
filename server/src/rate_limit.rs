@@ -100,6 +100,9 @@ pub async fn rate_limit_middleware(
 
             warn!("Rate limit exceeded (retry after {} seconds)", retry_after);
 
+            // Track rate limit rejection
+            crate::metrics::RATE_LIMIT_REJECTIONS.inc();
+
             let error_response = RateLimitError {
                 error: "Rate limit exceeded".to_string(),
                 message: format!(

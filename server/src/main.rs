@@ -812,6 +812,17 @@ fn error_response(e: YahooError) -> impl IntoResponse {
 fn into_error_response(e: Box<dyn std::error::Error + Send + Sync>) -> axum::response::Response {
     // Try to downcast to YahooError first to get proper HTTP status codes
     if let Some(yahoo_err) = e.downcast_ref::<YahooError>() {
+        // Track error by type
+        let error_type = match yahoo_err {
+            YahooError::SymbolNotFound { .. } => "symbol_not_found",
+            YahooError::AuthenticationFailed { .. } => "authentication_failed",
+            YahooError::RateLimited { .. } => "rate_limited",
+            YahooError::Timeout { .. } => "timeout",
+            YahooError::ServerError { .. } => "server_error",
+            _ => "other",
+        };
+        metrics::ERRORS_TOTAL.with_label_values(&[error_type]).inc();
+
         // Map YahooError to appropriate HTTP status codes
         let status = match yahoo_err {
             YahooError::SymbolNotFound { .. } => StatusCode::NOT_FOUND,
@@ -834,6 +845,9 @@ fn into_error_response(e: Box<dyn std::error::Error + Send + Sync>) -> axum::res
     }
 
     // Fallback for other errors (e.g., serialization errors)
+    metrics::ERRORS_TOTAL
+        .with_label_values(&["serialization"])
+        .inc();
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         Json(serde_json::json!({
@@ -2648,7 +2662,10 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
 
     // Wait for initial subscription message
     let symbols = match wait_for_subscription(&mut socket).await {
-        Some(symbols) => symbols,
+        Some(symbols) => {
+            metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
+            symbols
+        }
         None => {
             warn!("WebSocket closed before subscription");
             return;
@@ -2656,6 +2673,7 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
     };
 
     info!("Starting stream for symbols: {:?}", symbols);
+    metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(symbols.len() as f64);
 
     // Ref-counted subscribe (shared upstream stream).
     if let Err(e) = state.stream_hub.subscribe_symbols(&symbols).await {
@@ -2726,6 +2744,7 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
                                 if sender.send(Message::Text(json.into())).await.is_err() {
                                     break;
                                 }
+                                metrics::WEBSOCKET_MESSAGES_SENT.inc();
                             }
                         }
                         None => break,
@@ -2743,6 +2762,7 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
             match msg {
                 Message::Text(text) => {
                     if let Ok(cmd) = serde_json::from_str::<StreamCommand>(&text) {
+                        metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
                         info!("Received stream command: {:?}", cmd);
 
                         if let Some(symbols) = cmd.subscribe {
@@ -2756,23 +2776,30 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
                                 }
                             }
 
-                            if !newly_added.is_empty()
-                                && let Err(e) = stream_hub.subscribe_symbols(&newly_added).await
-                            {
-                                error!("Failed to subscribe symbols: {}", e);
-                                {
-                                    let mut subs = subscriptions_for_recv.write().await;
-                                    for s in &newly_added {
-                                        subs.remove(s);
+                            if !newly_added.is_empty() {
+                                if let Err(e) = stream_hub.subscribe_symbols(&newly_added).await {
+                                    error!("Failed to subscribe symbols: {}", e);
+                                    {
+                                        let mut subs = subscriptions_for_recv.write().await;
+                                        for s in &newly_added {
+                                            subs.remove(s);
+                                        }
                                     }
+                                    let _ = out_tx
+                                        .send(Message::Text(
+                                            serde_json::json!({"error": e.to_string()})
+                                                .to_string()
+                                                .into(),
+                                        ))
+                                        .await;
+                                } else {
+                                    // Update symbol count on successful subscription
+                                    let count = {
+                                        let subs = subscriptions_for_recv.read().await;
+                                        subs.len()
+                                    };
+                                    metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(count as f64);
                                 }
-                                let _ = out_tx
-                                    .send(Message::Text(
-                                        serde_json::json!({"error": e.to_string()})
-                                            .to_string()
-                                            .into(),
-                                    ))
-                                    .await;
                             }
                         }
 
@@ -2789,6 +2816,12 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
 
                             if !removed.is_empty() {
                                 stream_hub.unsubscribe_symbols(&removed).await;
+                                // Update symbol count after unsubscription
+                                let count = {
+                                    let subs = subscriptions_for_recv.read().await;
+                                    subs.len()
+                                };
+                                metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(count as f64);
                             }
                         }
                     }
