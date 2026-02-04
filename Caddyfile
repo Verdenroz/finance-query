@@ -60,16 +60,17 @@
     }
 
     # Monitoring (protected with basic auth)
+    # Password hash is injected by caddy-entrypoint.sh
     handle /grafana* {
-        basicauth {
-            admin {$MONITORING_PASSWORD}
+        basicauth * {
+            admin {{HASHED_PASSWORD}}
         }
         reverse_proxy grafana:3000
     }
 
     handle /prometheus* {
-        basicauth {
-            admin {$MONITORING_PASSWORD}
+        basicauth * {
+            admin {{HASHED_PASSWORD}}
         }
         reverse_proxy prometheus:9090
     }
