@@ -246,6 +246,8 @@ services:
       - '--storage.tsdb.retention.time=30d'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.external-url=https://finance-query.com/prometheus'
+      - '--web.route-prefix=/prometheus'
     depends_on:
       finance-query-v2:
         condition: service_healthy
