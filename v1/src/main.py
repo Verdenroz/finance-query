@@ -89,8 +89,10 @@ async def lifespan(app: FastAPI):
                 app.state.connection_manager = RedisConnectionManager(redis)
                 logger.info("Redis connection established")
             except Exception as e:
-                logger.critical("Failed to initialize Redis connection", extra={"error": str(e)}, exc_info=True)
-                raise
+                logger.warning("Failed to initialize Redis connection, falling back to in-memory mode", extra={"error": str(e)})
+                redis = None
+                app.state.redis = None
+                app.state.connection_manager = ConnectionManager()
         else:
             logger.info("Redis not configured, using in-memory connection manager")
             redis = None

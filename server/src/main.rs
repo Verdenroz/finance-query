@@ -1,4 +1,6 @@
 mod cache;
+mod metrics;
+mod rate_limit;
 
 use axum::{
     Router,
@@ -7,6 +9,7 @@ use axum::{
         ws::{Message, WebSocket},
     },
     http::{HeaderValue, Method, StatusCode},
+    middleware,
     response::{IntoResponse, Json},
     routing::{get, post},
 };
@@ -16,6 +19,7 @@ use finance_query::{
     Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query, streaming::PriceStream,
 };
 use futures_util::{SinkExt, StreamExt};
+use rate_limit::{RateLimitConfig, RateLimiterState};
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::net::SocketAddr;
@@ -538,6 +542,9 @@ async fn main() {
     // Initialize tracing/logging
     init_tracing();
 
+    // Initialize metrics
+    metrics::init();
+
     info!("Finance Query server initializing...");
 
     // Build application with routes
@@ -568,6 +575,14 @@ async fn create_app() -> Router {
     let redis_url = std::env::var("REDIS_URL").ok();
     let cache = Cache::new(redis_url.as_deref()).await;
 
+    // Configure rate limiting
+    let rate_limit_config = RateLimitConfig::from_env();
+    let rate_limiter = RateLimiterState::new(rate_limit_config.clone());
+    info!(
+        "Rate limiting enabled: {} requests/minute",
+        rate_limit_config.requests_per_minute
+    );
+
     let state = AppState {
         cache,
         stream_hub: StreamHub::new(),
@@ -584,8 +599,31 @@ async fn create_app() -> Router {
         // Nest all API routes under /v2
         .nest("/v2", api_routes())
         .layer(Extension(state))
+        .layer(middleware::from_fn(metrics_middleware))
+        .layer(middleware::from_fn_with_state(
+            rate_limiter,
+            rate_limit::rate_limit_middleware,
+        ))
         .layer(cors)
         .layer(TraceLayer::new_for_http())
+}
+
+/// Metrics middleware to track request counts and latencies
+async fn metrics_middleware(
+    request: axum::http::Request<axum::body::Body>,
+    next: axum::middleware::Next,
+) -> axum::response::Response {
+    let method = request.method().to_string();
+    let path = request.uri().path().to_string();
+
+    let timer = metrics::RequestTimer::new(method, path);
+
+    let response = next.run(request).await;
+    let status = response.status().as_u16();
+
+    timer.observe(status);
+
+    response
 }
 
 /// API routes
@@ -658,6 +696,8 @@ fn api_routes() -> Router {
         .route("/transcripts/{symbol}/all", get(get_transcripts))
         // GET /v2/trending?region=<str>
         .route("/trending", get(get_trending))
+        // GET /v2/metrics - Prometheus metrics endpoint
+        .route("/metrics", get(get_metrics))
 }
 
 /// GET /health
@@ -682,6 +722,18 @@ async fn ping() -> impl IntoResponse {
     };
 
     Json(response)
+}
+
+/// GET /metrics
+///
+/// Prometheus metrics endpoint in text format
+async fn get_metrics() -> impl IntoResponse {
+    let metrics = metrics::gather();
+    (
+        StatusCode::OK,
+        [("Content-Type", "text/plain; version=0.0.4")],
+        metrics,
+    )
 }
 
 /// GET /v2/quote/{symbol}
@@ -760,6 +812,17 @@ fn error_response(e: YahooError) -> impl IntoResponse {
 fn into_error_response(e: Box<dyn std::error::Error + Send + Sync>) -> axum::response::Response {
     // Try to downcast to YahooError first to get proper HTTP status codes
     if let Some(yahoo_err) = e.downcast_ref::<YahooError>() {
+        // Track error by type
+        let error_type = match yahoo_err {
+            YahooError::SymbolNotFound { .. } => "symbol_not_found",
+            YahooError::AuthenticationFailed { .. } => "authentication_failed",
+            YahooError::RateLimited { .. } => "rate_limited",
+            YahooError::Timeout { .. } => "timeout",
+            YahooError::ServerError { .. } => "server_error",
+            _ => "other",
+        };
+        metrics::ERRORS_TOTAL.with_label_values(&[error_type]).inc();
+
         // Map YahooError to appropriate HTTP status codes
         let status = match yahoo_err {
             YahooError::SymbolNotFound { .. } => StatusCode::NOT_FOUND,
@@ -782,6 +845,9 @@ fn into_error_response(e: Box<dyn std::error::Error + Send + Sync>) -> axum::res
     }
 
     // Fallback for other errors (e.g., serialization errors)
+    metrics::ERRORS_TOTAL
+        .with_label_values(&["serialization"])
+        .inc();
     (
         StatusCode::INTERNAL_SERVER_ERROR,
         Json(serde_json::json!({
@@ -2575,16 +2641,31 @@ async fn ws_stream_handler(
     Extension(state): Extension<AppState>,
     ws: WebSocketUpgrade,
 ) -> impl IntoResponse {
+    // Track new WebSocket connection
+    metrics::WEBSOCKET_CONNECTIONS.inc();
     ws.on_upgrade(move |socket| handle_stream_socket(state, socket))
+}
+
+/// RAII guard to decrement WebSocket connection count on drop
+struct ConnectionGuard;
+
+impl Drop for ConnectionGuard {
+    fn drop(&mut self) {
+        metrics::WEBSOCKET_CONNECTIONS.dec();
+    }
 }
 
 /// Handle the WebSocket connection for streaming
 async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
+    let _guard = ConnectionGuard; // Ensures connection count is decremented on exit
     info!("New streaming WebSocket connection");
 
     // Wait for initial subscription message
     let symbols = match wait_for_subscription(&mut socket).await {
-        Some(symbols) => symbols,
+        Some(symbols) => {
+            metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
+            symbols
+        }
         None => {
             warn!("WebSocket closed before subscription");
             return;
@@ -2592,6 +2673,7 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
     };
 
     info!("Starting stream for symbols: {:?}", symbols);
+    metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(symbols.len() as f64);
 
     // Ref-counted subscribe (shared upstream stream).
     if let Err(e) = state.stream_hub.subscribe_symbols(&symbols).await {
@@ -2662,6 +2744,7 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
                                 if sender.send(Message::Text(json.into())).await.is_err() {
                                     break;
                                 }
+                                metrics::WEBSOCKET_MESSAGES_SENT.inc();
                             }
                         }
                         None => break,
@@ -2679,6 +2762,7 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
             match msg {
                 Message::Text(text) => {
                     if let Ok(cmd) = serde_json::from_str::<StreamCommand>(&text) {
+                        metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
                         info!("Received stream command: {:?}", cmd);
 
                         if let Some(symbols) = cmd.subscribe {
@@ -2692,23 +2776,30 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
                                 }
                             }
 
-                            if !newly_added.is_empty()
-                                && let Err(e) = stream_hub.subscribe_symbols(&newly_added).await
-                            {
-                                error!("Failed to subscribe symbols: {}", e);
-                                {
-                                    let mut subs = subscriptions_for_recv.write().await;
-                                    for s in &newly_added {
-                                        subs.remove(s);
+                            if !newly_added.is_empty() {
+                                if let Err(e) = stream_hub.subscribe_symbols(&newly_added).await {
+                                    error!("Failed to subscribe symbols: {}", e);
+                                    {
+                                        let mut subs = subscriptions_for_recv.write().await;
+                                        for s in &newly_added {
+                                            subs.remove(s);
+                                        }
                                     }
+                                    let _ = out_tx
+                                        .send(Message::Text(
+                                            serde_json::json!({"error": e.to_string()})
+                                                .to_string()
+                                                .into(),
+                                        ))
+                                        .await;
+                                } else {
+                                    // Update symbol count on successful subscription
+                                    let count = {
+                                        let subs = subscriptions_for_recv.read().await;
+                                        subs.len()
+                                    };
+                                    metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(count as f64);
                                 }
-                                let _ = out_tx
-                                    .send(Message::Text(
-                                        serde_json::json!({"error": e.to_string()})
-                                            .to_string()
-                                            .into(),
-                                    ))
-                                    .await;
                             }
                         }
 
@@ -2725,6 +2816,12 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
 
                             if !removed.is_empty() {
                                 stream_hub.unsubscribe_symbols(&removed).await;
+                                // Update symbol count after unsubscription
+                                let count = {
+                                    let subs = subscriptions_for_recv.read().await;
+                                    subs.len()
+                                };
+                                metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(count as f64);
                             }
                         }
                     }

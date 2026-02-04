@@ -1,6 +1,5 @@
-from datetime import datetime
+from datetime import UTC, datetime
 
-import pytz
 from fastapi import APIRouter, Depends, Security
 from fastapi.security import APIKeyHeader
 
@@ -64,5 +63,5 @@ router = APIRouter()
 )
 async def get_market_hours(market_schedule: MarketSchedule = Depends(MarketSchedule)):
     status, reason = market_schedule.get_market_status()
-    result = {"status": status, "reason": reason, "timestamp": datetime.now(pytz.UTC).isoformat()}
+    result = {"status": status, "reason": reason, "timestamp": datetime.now(UTC).isoformat()}
     return result

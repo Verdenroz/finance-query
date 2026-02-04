@@ -170,6 +170,8 @@ impl Cache {
         let conn = self.conn.as_ref()?;
         let mut conn = conn.as_ref().clone();
 
+        let timer = crate::metrics::CacheTimer::new("get");
+
         match redis::cmd("GET")
             .arg(key)
             .query_async::<Option<String>>(&mut conn)
@@ -178,19 +180,25 @@ impl Cache {
             Ok(Some(data)) => match serde_json::from_str(&data) {
                 Ok(value) => {
                     tracing::debug!(key = %key, "Cache HIT");
+                    crate::metrics::CACHE_HITS.inc();
+                    timer.observe();
                     Some(value)
                 }
                 Err(e) => {
                     tracing::warn!(key = %key, error = %e, "Cache deserialize error");
+                    timer.observe();
                     None
                 }
             },
             Ok(None) => {
                 tracing::debug!(key = %key, "Cache MISS");
+                crate::metrics::CACHE_MISSES.inc();
+                timer.observe();
                 None
             }
             Err(e) => {
                 tracing::warn!(key = %key, error = %e, "Cache GET error");
+                timer.observe();
                 None
             }
         }
@@ -209,11 +217,13 @@ impl Cache {
         };
 
         let mut conn = conn.as_ref().clone();
+        let timer = crate::metrics::CacheTimer::new("set");
 
         let data = match serde_json::to_string(value) {
             Ok(d) => d,
             Err(e) => {
                 tracing::warn!(key = %key, error = %e, "Cache serialize error");
+                timer.observe();
                 return;
             }
         };
@@ -229,6 +239,8 @@ impl Cache {
         } else {
             tracing::debug!(key = %key, ttl = ttl_seconds, "Cache SET");
         }
+
+        timer.observe();
     }
 
     #[cfg(not(feature = "redis-cache"))]
@@ -263,25 +275,26 @@ impl Cache {
     }
 }
 
-/// Simple market hours check (US market: 9:30 AM - 4:00 PM ET, Mon-Fri)
+/// Check if US stock market is currently open (9:30 AM - 4:00 PM ET, Mon-Fri)
 pub fn is_market_open() -> bool {
     use chrono::{Datelike, Timelike, Utc};
+    use chrono_tz::America::New_York;
 
-    let now = Utc::now();
-    let weekday = now.weekday();
+    // Get current time in US Eastern timezone
+    let now_et = Utc::now().with_timezone(&New_York);
+    let weekday = now_et.weekday();
 
     // Weekend check
     if weekday == chrono::Weekday::Sat || weekday == chrono::Weekday::Sun {
         return false;
     }
 
-    // Convert UTC to ET (simplified: UTC-5, ignoring DST for now)
-    let et_hour = (now.hour() as i32 - 5).rem_euclid(24) as u32;
-    let et_minute = now.minute();
+    let hour = now_et.hour();
+    let minute = now_et.minute();
 
     // Market hours: 9:30 AM - 4:00 PM ET
-    let after_open = et_hour > 9 || (et_hour == 9 && et_minute >= 30);
-    let before_close = et_hour < 16;
+    let after_open = hour > 9 || (hour == 9 && minute >= 30);
+    let before_close = hour < 16;
 
     after_open && before_close
 }

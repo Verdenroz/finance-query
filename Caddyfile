@@ -2,6 +2,20 @@
     # Caddy automatically enables HTTPS when SERVER_NAME is a real domain
     # For localhost, it uses HTTP only
 
+    # Security headers
+    header {
+        # Prevent clickjacking
+        X-Frame-Options "SAMEORIGIN"
+        # Prevent MIME type sniffing
+        X-Content-Type-Options "nosniff"
+        # Enable XSS protection
+        X-XSS-Protection "1; mode=block"
+        # Referrer policy
+        Referrer-Policy "strict-origin-when-cross-origin"
+        # Remove server header
+        -Server
+    }
+
     # Health endpoints
     handle /health {
         rewrite * /v2/health
@@ -43,6 +57,22 @@
 
     handle /hours {
         reverse_proxy finance-query-v1:8000
+    }
+
+    # Monitoring (protected with basic auth)
+    # Password hash is injected by caddy-entrypoint.sh
+    handle /grafana* {
+        basicauth * {
+            admin {{HASHED_PASSWORD}}
+        }
+        reverse_proxy grafana:3000
+    }
+
+    handle /prometheus* {
+        basicauth * {
+            admin {{HASHED_PASSWORD}}
+        }
+        reverse_proxy prometheus:9090
     }
 
     # Root path shows health status

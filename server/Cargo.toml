@@ -49,6 +49,7 @@ dotenvy = "0.15"
 
 # Date and time
 chrono = { version = "0.4", features = ["serde"] }
+chrono-tz = "0.10"
 
 # Rate limiting
 governor = "0.10.2"
@@ -58,6 +59,10 @@ uuid = { version = "1", features = ["v4", "serde"] }
 
 # URL parsing
 url = "2"
+
+# Metrics
+prometheus = "0.14"
+lazy_static = "1.5"
 
 [dev-dependencies]
 # Testing

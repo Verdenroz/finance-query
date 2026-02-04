@@ -1,7 +1,6 @@
 import asyncio
-from datetime import datetime
+from datetime import UTC, datetime
 
-import pytz
 from fastapi import APIRouter
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
@@ -276,7 +275,7 @@ async def market_status_websocket(
         Fetches the market status information.
         """
         current_status, reason = market_schedule.get_market_status()
-        return {"status": current_status, "reason": reason, "timestamp": datetime.now(pytz.UTC).isoformat()}
+        return {"status": current_status, "reason": reason, "timestamp": datetime.now(UTC).isoformat()}
 
     channel = "hours"
     await handle_websocket_connection(websocket, channel, get_market_status_info, connection_manager)

@@ -53,11 +53,13 @@ All endpoints are prefixed with `/v2`.
 - `GET /v2/lookup` - Symbol search
 - `GET /v2/hours/:exchange` - Market hours
 - `GET /v2/health` - Health check
+- `GET /v2/metrics` - Prometheus metrics (text format)
 
 ## Features
 
-- **Redis caching** (enabled by default) - Disable with `--no-default-features`
-- **Rate limiting** - Configurable per-endpoint limits
+- **Redis caching** (enabled by default with market-hours-aware TTLs) - Disable with `--no-default-features`
+- **Rate limiting** - Governor-based rate limiting (60 requests/minute by default, configurable via `RATE_LIMIT_PER_MINUTE`)
+- **Graceful shutdown** - Handles SIGTERM/SIGINT for clean WebSocket closure
 - **CORS** - Configured for cross-origin requests
 - **Compression** - gzip/brotli response compression
 
