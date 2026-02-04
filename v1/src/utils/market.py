@@ -1,8 +1,7 @@
 from datetime import date, datetime, time, timedelta
 from enum import Enum
 from typing import Optional
-
-import pytz
+from zoneinfo import ZoneInfo
 
 
 class MarketStatus(str, Enum):
@@ -135,7 +134,7 @@ class MarketSchedule:
         self.full_holidays.update(weekend_adjustments)
 
     def get_market_status(self) -> tuple[MarketStatus, Optional[str]]:
-        et_tz = pytz.timezone("America/New_York")
+        et_tz = ZoneInfo("America/New_York")
         current_et = datetime.now(et_tz)
         current_date = current_et.date()
         current_time = current_et.time()
