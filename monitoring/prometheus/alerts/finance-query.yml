@@ -1,0 +1,43 @@
+# Prometheus alerting rules - CRITICAL server health issues only
+
+groups:
+  - name: critical_health
+    interval: 30s
+    rules:
+      # Finance Query V2 service is down
+      - alert: ServiceDown
+        expr: up{job="finance-query-v2"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: finance-query-v2
+        annotations:
+          summary: "Finance Query V2 is DOWN"
+          description: "The main API service has been unreachable for 2+ minutes"
+
+      # Critical error rate spike (>10%)
+      - alert: CriticalErrorRate
+        expr: |
+          (
+            sum(rate(finance_query_errors_total[5m]))
+            /
+            sum(rate(finance_query_http_requests_total[5m]))
+          ) > 0.10
+        for: 5m
+        labels:
+          severity: critical
+          service: finance-query-v2
+        annotations:
+          summary: "CRITICAL: High error rate"
+          description: "Error rate at {{ $value | humanizePercentage }} (threshold: 10%). Service may be failing."
+
+      # Redis unreachable (fallback to in-memory mode)
+      - alert: RedisCacheDown
+        expr: up{job="redis"} == 0
+        for: 3m
+        labels:
+          severity: critical
+          service: redis
+        annotations:
+          summary: "Redis cache is UNREACHABLE"
+          description: "Redis has been unreachable for 3+ minutes. API is using in-memory fallback - cache will not persist across restarts."

@@ -38,25 +38,28 @@ lazy_static! {
     .expect("Failed to create HTTP request duration histogram");
 
     /// Active HTTP requests currently being processed
-    pub static ref HTTP_REQUESTS_IN_FLIGHT: Gauge = Gauge::new(
-        "http_requests_in_flight",
-        "Number of HTTP requests currently being processed"
+    pub static ref HTTP_REQUESTS_IN_FLIGHT: Gauge = Gauge::with_opts(
+        Opts::new(
+            "http_requests_in_flight",
+            "Number of HTTP requests currently being processed"
+        )
+        .namespace("finance_query")
     )
     .expect("Failed to create in-flight requests gauge");
 
     // === Cache Metrics ===
 
     /// Cache hits
-    pub static ref CACHE_HITS: Counter = Counter::new(
-        "cache_hits_total",
-        "Total number of cache hits"
+    pub static ref CACHE_HITS: Counter = Counter::with_opts(
+        Opts::new("cache_hits_total", "Total number of cache hits")
+            .namespace("finance_query")
     )
     .expect("Failed to create cache hits counter");
 
     /// Cache misses
-    pub static ref CACHE_MISSES: Counter = Counter::new(
-        "cache_misses_total",
-        "Total number of cache misses"
+    pub static ref CACHE_MISSES: Counter = Counter::with_opts(
+        Opts::new("cache_misses_total", "Total number of cache misses")
+            .namespace("finance_query")
     )
     .expect("Failed to create cache misses counter");
 
@@ -75,30 +78,42 @@ lazy_static! {
     // === WebSocket Metrics ===
 
     /// Active WebSocket connections
-    pub static ref WEBSOCKET_CONNECTIONS: Gauge = Gauge::new(
-        "websocket_connections_active",
-        "Number of active WebSocket connections"
+    pub static ref WEBSOCKET_CONNECTIONS: Gauge = Gauge::with_opts(
+        Opts::new(
+            "websocket_connections_active",
+            "Number of active WebSocket connections"
+        )
+        .namespace("finance_query")
     )
     .expect("Failed to create WebSocket connections gauge");
 
     /// Total WebSocket messages sent
-    pub static ref WEBSOCKET_MESSAGES_SENT: Counter = Counter::new(
-        "websocket_messages_sent_total",
-        "Total number of WebSocket messages sent"
+    pub static ref WEBSOCKET_MESSAGES_SENT: Counter = Counter::with_opts(
+        Opts::new(
+            "websocket_messages_sent_total",
+            "Total number of WebSocket messages sent"
+        )
+        .namespace("finance_query")
     )
     .expect("Failed to create WebSocket messages sent counter");
 
     /// Total WebSocket messages received
-    pub static ref WEBSOCKET_MESSAGES_RECEIVED: Counter = Counter::new(
-        "websocket_messages_received_total",
-        "Total number of WebSocket messages received"
+    pub static ref WEBSOCKET_MESSAGES_RECEIVED: Counter = Counter::with_opts(
+        Opts::new(
+            "websocket_messages_received_total",
+            "Total number of WebSocket messages received"
+        )
+        .namespace("finance_query")
     )
     .expect("Failed to create WebSocket messages received counter");
 
     /// WebSocket symbol subscriptions
-    pub static ref WEBSOCKET_SYMBOLS_SUBSCRIBED: Gauge = Gauge::new(
-        "websocket_symbols_subscribed",
-        "Number of unique symbols currently subscribed to"
+    pub static ref WEBSOCKET_SYMBOLS_SUBSCRIBED: Gauge = Gauge::with_opts(
+        Opts::new(
+            "websocket_symbols_subscribed",
+            "Number of unique symbols currently subscribed to"
+        )
+        .namespace("finance_query")
     )
     .expect("Failed to create WebSocket symbols gauge");
 
@@ -115,9 +130,12 @@ lazy_static! {
     // === Rate Limiting Metrics ===
 
     /// Total rate limit rejections
-    pub static ref RATE_LIMIT_REJECTIONS: Counter = Counter::new(
-        "rate_limit_rejections_total",
-        "Total number of requests rejected due to rate limiting"
+    pub static ref RATE_LIMIT_REJECTIONS: Counter = Counter::with_opts(
+        Opts::new(
+            "rate_limit_rejections_total",
+            "Total number of requests rejected due to rate limiting"
+        )
+        .namespace("finance_query")
     )
     .expect("Failed to create rate limit rejections counter");
 }
