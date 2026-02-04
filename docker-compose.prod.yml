@@ -39,7 +39,7 @@ services:
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:2019/metrics"]
+      test: ["CMD", "curl", "-f", "-s", "-o", "/dev/null", "http://localhost:2019/config/"]
       interval: 30s
       timeout: 10s
       retries: 3
