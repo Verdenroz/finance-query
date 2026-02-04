@@ -72,6 +72,7 @@
         basicauth * {
             admin {{HASHED_PASSWORD}}
         }
+        uri strip_prefix /prometheus
         reverse_proxy prometheus:9090
     }
 
