@@ -203,7 +203,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "100 * (rate(cache_hits_total[5m]) / (rate(cache_hits_total[5m]) + rate(cache_misses_total[5m])))",
+          "expr": "100 * (rate(finance_query_cache_hits_total[5m]) / (rate(finance_query_cache_hits_total[5m]) + rate(finance_query_cache_misses_total[5m])))",
           "refId": "A"
         }
       ],
@@ -253,7 +253,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "websocket_connections_active",
+          "expr": "finance_query_websocket_connections_active",
           "refId": "A"
         }
       ],
@@ -303,7 +303,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "websocket_symbols_subscribed",
+          "expr": "finance_query_websocket_symbols_subscribed",
           "refId": "A"
         }
       ],
@@ -379,12 +379,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(cache_hits_total[5m])",
+          "expr": "rate(finance_query_cache_hits_total[5m])",
           "legendFormat": "Cache Hits",
           "refId": "A"
         },
         {
-          "expr": "rate(cache_misses_total[5m])",
+          "expr": "rate(finance_query_cache_misses_total[5m])",
           "legendFormat": "Cache Misses",
           "refId": "B"
         }
@@ -461,12 +461,12 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(websocket_messages_sent_total[5m])",
+          "expr": "rate(finance_query_websocket_messages_sent_total[5m])",
           "legendFormat": "Messages Sent",
           "refId": "A"
         },
         {
-          "expr": "rate(websocket_messages_received_total[5m])",
+          "expr": "rate(finance_query_websocket_messages_received_total[5m])",
           "legendFormat": "Messages Received",
           "refId": "B"
         }
@@ -628,7 +628,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "rate(rate_limit_rejections_total[5m]) * 60",
+          "expr": "rate(finance_query_rate_limit_rejections_total[5m]) * 60",
           "refId": "A"
         }
       ],
@@ -704,7 +704,7 @@
       "pluginVersion": "8.0.0",
       "targets": [
         {
-          "expr": "http_requests_in_flight",
+          "expr": "finance_query_http_requests_in_flight",
           "legendFormat": "In-Flight Requests",
           "refId": "A"
         }
