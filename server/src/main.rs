@@ -15,8 +15,9 @@ use axum::{
 };
 use cache::Cache;
 use finance_query::{
-    Frequency, Interval, Region, ScreenerQuery, ScreenerType, SectorType, StatementType, Ticker,
-    Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query, streaming::PriceStream,
+    EdgarClient, Frequency, Interval, Region, ScreenerQuery, ScreenerType, SectorType,
+    StatementType, Ticker, Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query,
+    streaming::PriceStream,
 };
 use futures_util::{SinkExt, StreamExt};
 use rate_limit::{RateLimitConfig, RateLimiterState};
@@ -33,6 +34,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 struct AppState {
     cache: Cache,
     stream_hub: StreamHub,
+    edgar_client: Option<Arc<EdgarClient>>,
 }
 
 /// Process-wide hub that maintains a single upstream Yahoo Finance stream.
@@ -406,6 +408,27 @@ fn parse_frequency(s: &str) -> Frequency {
     }
 }
 
+// EDGAR query structs
+#[derive(Deserialize)]
+struct EdgarSearchQuery {
+    /// Search query string (required)
+    q: String,
+    /// Comma-separated form types (e.g., "10-K,10-Q")
+    forms: Option<String>,
+    /// Start date in YYYY-MM-DD format
+    start_date: Option<String>,
+    /// End date in YYYY-MM-DD format
+    end_date: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct EdgarFieldsQuery {
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
 fn parse_statement_type(s: &str) -> Option<StatementType> {
     match s.to_lowercase().as_str() {
         "income" => Some(StatementType::Income),
@@ -575,6 +598,27 @@ async fn create_app() -> Router {
     let redis_url = std::env::var("REDIS_URL").ok();
     let cache = Cache::new(redis_url.as_deref()).await;
 
+    // Initialize EDGAR client (optional - requires contact email)
+    let edgar_client = std::env::var("EDGAR_EMAIL")
+        .ok()
+        .and_then(|email| {
+            finance_query::EdgarClientBuilder::new(email)
+                .app_name("finance-query-server")
+                .build()
+                .map_err(|e| {
+                    warn!("Failed to initialize EDGAR client: {}", e);
+                    e
+                })
+                .ok()
+        })
+        .map(Arc::new);
+
+    if edgar_client.is_some() {
+        info!("EDGAR client initialized");
+    } else {
+        info!("EDGAR client not configured (set EDGAR_EMAIL to enable)");
+    }
+
     // Configure rate limiting
     let rate_limit_config = RateLimitConfig::from_env();
     let rate_limiter = RateLimiterState::new(rate_limit_config.clone());
@@ -586,6 +630,7 @@ async fn create_app() -> Router {
     let state = AppState {
         cache,
         stream_hub: StreamHub::new(),
+        edgar_client,
     };
 
     // Configure CORS
@@ -640,6 +685,14 @@ fn api_routes() -> Router {
         .route("/currencies", get(get_currencies))
         // GET /v2/dividends/{symbol}?range=<str>
         .route("/dividends/{symbol}", get(get_dividends))
+        // GET /v2/edgar/cik/{symbol}
+        .route("/edgar/cik/{symbol}", get(get_edgar_cik))
+        // GET /v2/edgar/facts/{symbol}
+        .route("/edgar/facts/{symbol}", get(get_edgar_facts))
+        // GET /v2/edgar/search?q=<string>&forms=<csv>&start_date=<date>&end_date=<date>
+        .route("/edgar/search", get(get_edgar_search))
+        // GET /v2/edgar/submissions/{symbol}
+        .route("/edgar/submissions/{symbol}", get(get_edgar_submissions))
         // GET /v2/exchanges
         .route("/exchanges", get(get_exchanges))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
@@ -2604,6 +2657,251 @@ async fn get_trending(
         Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
             error!("Failed to fetch trending tickers: {}", e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/edgar/cik/{symbol}
+///
+/// Resolve a ticker symbol to its SEC CIK number.
+/// Requires EDGAR_EMAIL environment variable to be set.
+async fn get_edgar_cik(
+    Extension(state): Extension<AppState>,
+    Path(symbol): Path<String>,
+    Query(params): Query<EdgarFieldsQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Resolving CIK for symbol: {}", symbol);
+
+    let edgar_client =
+        match &state.edgar_client {
+            Some(client) => client,
+            None => return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "error": "EDGAR client not configured. Set EDGAR_EMAIL environment variable."
+                })),
+            )
+                .into_response(),
+        };
+
+    let cache_key = Cache::key("edgar_cik", &[&symbol.to_uppercase()]);
+    let symbol_clone = symbol.clone();
+    let edgar_clone = Arc::clone(edgar_client);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS, // CIK mappings don't change often
+            false,                // Always use cache, regardless of market hours
+            || async move {
+                let cik = finance::edgar_cik(&edgar_clone, &symbol_clone).await?;
+                let json = serde_json::json!({ "symbol": symbol_clone, "cik": cik });
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to resolve CIK for {}: {}", symbol, e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/edgar/submissions/{symbol}
+///
+/// Fetch SEC filing history and company metadata.
+/// Requires EDGAR_EMAIL environment variable to be set.
+async fn get_edgar_submissions(
+    Extension(state): Extension<AppState>,
+    Path(symbol): Path<String>,
+    Query(params): Query<EdgarFieldsQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching EDGAR submissions for symbol: {}", symbol);
+
+    let edgar_client =
+        match &state.edgar_client {
+            Some(client) => client,
+            None => return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "error": "EDGAR client not configured. Set EDGAR_EMAIL environment variable."
+                })),
+            )
+                .into_response(),
+        };
+
+    let cache_key = Cache::key("edgar_submissions", &[&symbol.to_uppercase()]);
+    let symbol_clone = symbol.clone();
+    let edgar_clone = Arc::clone(edgar_client);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            false, // Always use cache
+            || async move {
+                let submissions = finance::edgar_submissions(&edgar_clone, &symbol_clone).await?;
+                let json = serde_json::to_value(&submissions)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch EDGAR submissions for {}: {}", symbol, e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/edgar/facts/{symbol}
+///
+/// Fetch structured XBRL financial data from SEC.
+/// Requires EDGAR_EMAIL environment variable to be set.
+async fn get_edgar_facts(
+    Extension(state): Extension<AppState>,
+    Path(symbol): Path<String>,
+    Query(params): Query<EdgarFieldsQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching EDGAR company facts for symbol: {}", symbol);
+
+    let edgar_client =
+        match &state.edgar_client {
+            Some(client) => client,
+            None => return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "error": "EDGAR client not configured. Set EDGAR_EMAIL environment variable."
+                })),
+            )
+                .into_response(),
+        };
+
+    let cache_key = Cache::key("edgar_facts", &[&symbol.to_uppercase()]);
+    let symbol_clone = symbol.clone();
+    let edgar_clone = Arc::clone(edgar_client);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            false, // Always use cache
+            || async move {
+                let facts = finance::edgar_company_facts(&edgar_clone, &symbol_clone).await?;
+                let json = serde_json::to_value(&facts)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch EDGAR company facts for {}: {}", symbol, e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/edgar/search
+///
+/// Search SEC EDGAR filings by text content.
+/// Requires EDGAR_EMAIL environment variable to be set.
+///
+/// Query parameters:
+/// - `q`: Search query string (required)
+/// - `forms`: Comma-separated form types (e.g., "10-K,10-Q")
+/// - `start_date`: Start date in YYYY-MM-DD format
+/// - `end_date`: End date in YYYY-MM-DD format
+async fn get_edgar_search(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<EdgarSearchQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Searching EDGAR: query={}, forms={:?}, start={:?}, end={:?}",
+        params.q, params.forms, params.start_date, params.end_date
+    );
+
+    let edgar_client =
+        match &state.edgar_client {
+            Some(client) => client,
+            None => return (
+                StatusCode::SERVICE_UNAVAILABLE,
+                Json(serde_json::json!({
+                    "error": "EDGAR client not configured. Set EDGAR_EMAIL environment variable."
+                })),
+            )
+                .into_response(),
+        };
+
+    // Build cache key from all query parameters
+    let cache_parts = [
+        params.q.clone(),
+        params.forms.clone().unwrap_or_default(),
+        params.start_date.clone().unwrap_or_default(),
+        params.end_date.clone().unwrap_or_default(),
+    ];
+    let cache_key = Cache::key(
+        "edgar_search",
+        &cache_parts.iter().map(|s| s.as_str()).collect::<Vec<_>>(),
+    );
+
+    let query = params.q.clone();
+    let forms = params.forms.clone();
+    let start_date = params.start_date.clone();
+    let end_date = params.end_date.clone();
+    let edgar_clone = Arc::clone(edgar_client);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            false, // Always use cache
+            || async move {
+                let forms_vec: Option<Vec<&str>> = forms.as_ref().map(|f| f.split(',').collect());
+                let results = finance::edgar_search(
+                    &edgar_clone,
+                    &query,
+                    forms_vec.as_deref(),
+                    start_date.as_deref(),
+                    end_date.as_deref(),
+                )
+                .await?;
+                let json = serde_json::to_value(&results)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to search EDGAR: {}", e);
             into_error_response(e)
         }
     }

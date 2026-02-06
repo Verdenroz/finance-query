@@ -3,8 +3,10 @@ info:
   title: Finance Query v2
   version: 2.1.0
   description: |
-    REST API for fetching financial data from Yahoo Finance.
-    Provides real-time quotes, historical data, news, options, and more.
+    REST API for fetching financial data from Yahoo Finance and SEC EDGAR.
+    Provides real-time quotes, historical data, news, options, SEC filings, and more.
+
+    EDGAR endpoints require EDGAR_EMAIL environment variable to be configured.
   contact:
     name: Finance Query
     url: https://github.com/verdenroz/finance-query
@@ -44,6 +46,8 @@ tags:
     description: Market industry data (sub-sectors)
   - name: Search
     description: Symbol and company search
+  - name: EDGAR
+    description: SEC EDGAR filings and XBRL data
 
 paths:
   /v2/health:
@@ -1129,6 +1133,200 @@ paths:
                   localLongName: "USD/JPY"
         '500':
           $ref: '#/components/responses/InternalError'
+
+  /v2/edgar/cik/{symbol}:
+    get:
+      tags: [EDGAR]
+      summary: Resolve ticker to CIK
+      description: |
+        Resolve a ticker symbol to its SEC CIK (Central Index Key) number.
+        Requires EDGAR_EMAIL environment variable to be configured.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+            example: AAPL
+          description: Stock ticker symbol
+        - $ref: '#/components/parameters/FieldsParam'
+      responses:
+        '200':
+          description: CIK resolved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  symbol:
+                    type: string
+                    example: AAPL
+                  cik:
+                    type: integer
+                    example: 320193
+        '404':
+          description: Symbol not found in SEC database
+        '503':
+          description: EDGAR client not configured
+
+  /v2/edgar/submissions/{symbol}:
+    get:
+      tags: [EDGAR]
+      summary: Get SEC filing history
+      description: |
+        Fetch filing history and company metadata from SEC EDGAR.
+        Returns up to 1000 most recent filings with company information.
+        Requires EDGAR_EMAIL environment variable to be configured.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+            example: AAPL
+          description: Stock ticker symbol
+        - $ref: '#/components/parameters/FieldsParam'
+      responses:
+        '200':
+          description: Filing history retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cik:
+                    type: string
+                    example: "0000320193"
+                  name:
+                    type: string
+                    example: "Apple Inc."
+                  sic:
+                    type: string
+                    example: "3571"
+                  sicDescription:
+                    type: string
+                    example: "Electronic Computers"
+                  ein:
+                    type: string
+                    example: "942404110"
+                  website:
+                    type: string
+                    example: "https://www.apple.com"
+                  filings:
+                    type: object
+                    description: Recent filings (up to 1000)
+        '404':
+          description: Symbol not found
+        '503':
+          description: EDGAR client not configured
+
+  /v2/edgar/facts/{symbol}:
+    get:
+      tags: [EDGAR]
+      summary: Get XBRL financial data
+      description: |
+        Fetch structured XBRL financial data from SEC EDGAR.
+        Returns all extracted XBRL facts organized by taxonomy (us-gaap, ifrs, dei).
+        Response can be several MB for major companies.
+        Requires EDGAR_EMAIL environment variable to be configured.
+      parameters:
+        - name: symbol
+          in: path
+          required: true
+          schema:
+            type: string
+            example: AAPL
+          description: Stock ticker symbol
+        - $ref: '#/components/parameters/FieldsParam'
+      responses:
+        '200':
+          description: XBRL facts retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  cik:
+                    type: integer
+                    example: 320193
+                  entityName:
+                    type: string
+                    example: "Apple Inc."
+                  facts:
+                    type: object
+                    description: Facts organized by taxonomy (us-gaap, ifrs, dei)
+        '404':
+          description: Symbol not found
+        '503':
+          description: EDGAR client not configured
+
+  /v2/edgar/search:
+    get:
+      tags: [EDGAR]
+      summary: Search SEC filings
+      description: |
+        Full-text search across SEC EDGAR filings.
+        Search by keywords with optional form type and date filters.
+        Requires EDGAR_EMAIL environment variable to be configured.
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema:
+            type: string
+            example: artificial intelligence
+          description: Search query string
+        - name: forms
+          in: query
+          required: false
+          schema:
+            type: string
+            example: "10-K,10-Q"
+          description: Comma-separated form types to filter (e.g., "10-K,10-Q,8-K")
+        - name: start_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2024-01-01"
+          description: Start date in YYYY-MM-DD format
+        - name: end_date
+          in: query
+          required: false
+          schema:
+            type: string
+            format: date
+            example: "2024-12-31"
+          description: End date in YYYY-MM-DD format
+        - $ref: '#/components/parameters/FieldsParam'
+      responses:
+        '200':
+          description: Search results
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  hits:
+                    type: object
+                    properties:
+                      total:
+                        type: object
+                        properties:
+                          value:
+                            type: integer
+                            example: 10000
+                          relation:
+                            type: string
+                            example: "gte"
+                      hits:
+                        type: array
+                        items:
+                          type: object
+                          description: Search hit with _source containing filing data
+        '503':
+          description: EDGAR client not configured
 
   /v2/exchanges:
     get:
