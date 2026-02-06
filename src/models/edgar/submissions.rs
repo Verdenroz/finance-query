@@ -3,7 +3,25 @@
 //! Models for the filing history and company metadata from
 //! `https://data.sec.gov/submissions/CIK{padded}.json`.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
+
+/// Deserialize empty strings as None
+fn deserialize_empty_string_as_none<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let s = Option::<String>::deserialize(deserializer)?;
+    Ok(s.filter(|s| !s.is_empty()))
+}
+
+/// Deserialize Vec<String>, filtering out empty strings
+fn deserialize_vec_string_filter_empty<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let vec = Vec::<String>::deserialize(deserializer)?;
+    Ok(vec.into_iter().filter(|s| !s.is_empty()).collect())
+}
 
 /// Full submissions response for a company from SEC EDGAR.
 ///
@@ -14,23 +32,23 @@ use serde::{Deserialize, Serialize};
 #[non_exhaustive]
 pub struct EdgarSubmissions {
     /// CIK number (as string)
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub cik: Option<String>,
 
     /// Company name
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub name: Option<String>,
 
     /// Entity type (e.g., "operating")
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub entity_type: Option<String>,
 
     /// Standard Industrial Classification code
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub sic: Option<String>,
 
     /// SIC description
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub sic_description: Option<String>,
 
     /// Ticker symbols associated with this entity
@@ -42,23 +60,23 @@ pub struct EdgarSubmissions {
     pub exchanges: Vec<String>,
 
     /// State of incorporation
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub state_of_incorporation: Option<String>,
 
     /// Fiscal year end (MMDD format, e.g., "0930" for September 30)
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub fiscal_year_end: Option<String>,
 
     /// Employer Identification Number
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub ein: Option<String>,
 
-    /// Company website
-    #[serde(default)]
+    /// Company website (often empty in SEC data)
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub website: Option<String>,
 
     /// Filer category (e.g., "Large accelerated filer")
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub category: Option<String>,
 
     /// Whether insider transaction data exists for this entity as owner (0 or 1)
@@ -94,7 +112,7 @@ pub struct EdgarFilings {
 #[non_exhaustive]
 pub struct EdgarFilingFile {
     /// Filename of the additional filings JSON (relative to submissions URL)
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub name: Option<String>,
 
     /// Number of filings in this file
@@ -102,11 +120,11 @@ pub struct EdgarFilingFile {
     pub filing_count: Option<u32>,
 
     /// Earliest filing date in this file
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub filing_from: Option<String>,
 
     /// Latest filing date in this file
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_empty_string_as_none")]
     pub filing_to: Option<String>,
 }
 
@@ -119,23 +137,23 @@ pub struct EdgarFilingFile {
 #[non_exhaustive]
 pub struct EdgarFilingRecent {
     /// Accession numbers (unique filing identifiers)
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_vec_string_filter_empty")]
     pub accession_number: Vec<String>,
 
     /// Filing dates (YYYY-MM-DD)
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_vec_string_filter_empty")]
     pub filing_date: Vec<String>,
 
-    /// Report dates (YYYY-MM-DD)
-    #[serde(default)]
+    /// Report dates (YYYY-MM-DD, may be empty for some form types)
+    #[serde(default, deserialize_with = "deserialize_vec_string_filter_empty")]
     pub report_date: Vec<String>,
 
     /// Acceptance date-times
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_vec_string_filter_empty")]
     pub acceptance_date_time: Vec<String>,
 
     /// Form types (10-K, 10-Q, 8-K, etc.)
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_vec_string_filter_empty")]
     pub form: Vec<String>,
 
     /// Filing sizes in bytes
@@ -151,11 +169,11 @@ pub struct EdgarFilingRecent {
     pub is_inline_xbrl: Vec<u8>,
 
     /// Primary document filenames
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_vec_string_filter_empty")]
     pub primary_document: Vec<String>,
 
     /// Primary document descriptions
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_vec_string_filter_empty")]
     pub primary_doc_description: Vec<String>,
 }
 
@@ -314,6 +332,51 @@ mod tests {
         assert_eq!(individual[0].form, "10-K");
         assert_eq!(individual[1].form, "10-Q");
         assert!(individual[0].is_xbrl);
+    }
+
+    #[test]
+    fn test_empty_string_deserialization() {
+        let json = r#"{
+            "cik": "0000320193",
+            "name": "Test Company",
+            "website": "",
+            "ein": "",
+            "tickers": [],
+            "exchanges": [],
+            "filings": {
+                "recent": {
+                    "accessionNumber": ["123"],
+                    "filingDate": ["2024-01-01"],
+                    "reportDate": [""],
+                    "acceptanceDateTime": [""],
+                    "form": ["4"],
+                    "size": [100],
+                    "isXBRL": [0],
+                    "isInlineXBRL": [0],
+                    "primaryDocument": ["doc.xml"],
+                    "primaryDocDescription": [""]
+                }
+            }
+        }"#;
+
+        let submissions: EdgarSubmissions = serde_json::from_str(json).unwrap();
+        assert_eq!(submissions.name.as_deref(), Some("Test Company"));
+        // Empty strings should be None
+        assert_eq!(submissions.website, None);
+        assert_eq!(submissions.ein, None);
+
+        let filings = submissions.filings.as_ref().unwrap();
+        let recent = filings.recent.as_ref().unwrap();
+        // Empty strings should be filtered out from Vec<String>
+        assert_eq!(recent.accession_number, vec!["123"]);
+        assert_eq!(recent.report_date, Vec::<String>::new()); // Empty string filtered out
+        assert_eq!(recent.acceptance_date_time, Vec::<String>::new()); // Empty string filtered out
+        assert_eq!(recent.primary_doc_description, Vec::<String>::new()); // Empty string filtered out
+
+        // Test round-trip: serialize back to JSON and verify None becomes null
+        let serialized = serde_json::to_value(&submissions).unwrap();
+        assert_eq!(serialized["website"], serde_json::Value::Null);
+        assert_eq!(serialized["ein"], serde_json::Value::Null);
     }
 
     #[test]
