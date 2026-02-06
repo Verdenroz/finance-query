@@ -127,6 +127,7 @@ impl TickerCoreData {
 pub struct TickerBuilder {
     symbol: String,
     config: ClientConfig,
+    edgar_client: Option<Arc<crate::edgar::EdgarClient>>,
 }
 
 impl TickerBuilder {
@@ -134,6 +135,7 @@ impl TickerBuilder {
         Self {
             symbol: symbol.into(),
             config: ClientConfig::default(),
+            edgar_client: None,
         }
     }
 
@@ -197,6 +199,29 @@ impl TickerBuilder {
         self
     }
 
+    /// Set an EDGAR client for SEC filing data access.
+    ///
+    /// When set, enables `edgar_submissions()` and `edgar_company_facts()` methods
+    /// on the built [`Ticker`].
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, EdgarClientBuilder};
+    /// use std::sync::Arc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let edgar = Arc::new(EdgarClientBuilder::new("user@example.com").build()?);
+    /// let ticker = Ticker::builder("AAPL").edgar(edgar).build().await?;
+    /// let submissions = ticker.edgar_submissions().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn edgar(mut self, client: Arc<crate::edgar::EdgarClient>) -> Self {
+        self.edgar_client = Some(client);
+        self
+    }
+
     /// Build the Ticker instance
     pub async fn build(self) -> Result<Ticker> {
         let client = Arc::new(YahooClient::new(self.config).await?);
@@ -213,6 +238,9 @@ impl TickerBuilder {
             financials_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
             #[cfg(feature = "indicators")]
             indicators_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            edgar_client: self.edgar_client,
+            edgar_submissions_cache: Arc::new(tokio::sync::RwLock::new(None)),
+            edgar_facts_cache: Arc::new(tokio::sync::RwLock::new(None)),
         })
     }
 }
@@ -262,6 +290,10 @@ pub struct Ticker {
     indicators_cache: Arc<
         tokio::sync::RwLock<HashMap<(Interval, TimeRange), crate::indicators::IndicatorsSummary>>,
     >,
+    edgar_client: Option<Arc<crate::edgar::EdgarClient>>,
+    edgar_submissions_cache:
+        Arc<tokio::sync::RwLock<Option<crate::models::edgar::EdgarSubmissions>>>,
+    edgar_facts_cache: Arc<tokio::sync::RwLock<Option<crate::models::edgar::CompanyFacts>>>,
 }
 
 impl Ticker {
@@ -1289,5 +1321,113 @@ impl Ticker {
         // Run backtest engine
         let engine = BacktestEngine::new(config);
         engine.run(&self.core.symbol, &chart.candles, strategy)
+    }
+
+    // ========================================================================
+    // SEC EDGAR
+    // ========================================================================
+
+    /// Get SEC EDGAR filing history for this symbol.
+    ///
+    /// Returns company metadata and recent filings. Results are cached for
+    /// the lifetime of this `Ticker` instance.
+    ///
+    /// Requires an EDGAR client to be configured via the builder.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, EdgarClientBuilder};
+    /// use std::sync::Arc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let edgar = Arc::new(EdgarClientBuilder::new("user@example.com").build()?);
+    /// let ticker = Ticker::builder("AAPL").edgar(edgar).build().await?;
+    ///
+    /// let submissions = ticker.edgar_submissions().await?;
+    /// println!("Company: {:?}", submissions.name);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn edgar_submissions(&self) -> Result<crate::models::edgar::EdgarSubmissions> {
+        let edgar = self.edgar_client.as_ref().ok_or_else(|| {
+            crate::error::YahooError::InvalidParameter {
+                param: "edgar_client".to_string(),
+                reason: "EDGAR client not configured. Use Ticker::builder(symbol).edgar(client).build().".to_string(),
+            }
+        })?;
+
+        // Check cache
+        {
+            let cache = self.edgar_submissions_cache.read().await;
+            if let Some(cached) = cache.as_ref() {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch
+        let cik = edgar.resolve_cik(&self.core.symbol).await?;
+        let submissions = edgar.submissions(cik).await?;
+
+        // Cache
+        {
+            let mut cache = self.edgar_submissions_cache.write().await;
+            *cache = Some(submissions.clone());
+        }
+
+        Ok(submissions)
+    }
+
+    /// Get SEC EDGAR company facts (structured XBRL financial data) for this symbol.
+    ///
+    /// Returns all extracted XBRL facts organized by taxonomy. Results are cached
+    /// for the lifetime of this `Ticker` instance.
+    ///
+    /// Requires an EDGAR client to be configured via the builder.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, EdgarClientBuilder};
+    /// use std::sync::Arc;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let edgar = Arc::new(EdgarClientBuilder::new("user@example.com").build()?);
+    /// let ticker = Ticker::builder("AAPL").edgar(edgar).build().await?;
+    ///
+    /// let facts = ticker.edgar_company_facts().await?;
+    /// if let Some(revenue) = facts.get_us_gaap_fact("Revenue") {
+    ///     println!("Revenue data points: {:?}", revenue.units.keys().collect::<Vec<_>>());
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn edgar_company_facts(&self) -> Result<crate::models::edgar::CompanyFacts> {
+        let edgar = self.edgar_client.as_ref().ok_or_else(|| {
+            crate::error::YahooError::InvalidParameter {
+                param: "edgar_client".to_string(),
+                reason: "EDGAR client not configured. Use Ticker::builder(symbol).edgar(client).build().".to_string(),
+            }
+        })?;
+
+        // Check cache
+        {
+            let cache = self.edgar_facts_cache.read().await;
+            if let Some(cached) = cache.as_ref() {
+                return Ok(cached.clone());
+            }
+        }
+
+        // Fetch
+        let cik = edgar.resolve_cik(&self.core.symbol).await?;
+        let facts = edgar.company_facts(cik).await?;
+
+        // Cache
+        {
+            let mut cache = self.edgar_facts_cache.write().await;
+            *cache = Some(facts.clone());
+        }
+
+        Ok(facts)
     }
 }

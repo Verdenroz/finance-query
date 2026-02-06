@@ -467,3 +467,161 @@ pub async fn trending(
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_trending(region).await
 }
+
+// ============================================================================
+// SEC EDGAR API
+// ============================================================================
+
+/// Look up a CIK number for a ticker symbol via SEC EDGAR.
+///
+/// The CIK (Central Index Key) is the unique identifier used by the SEC
+/// to identify companies. The mapping is cached on first call.
+///
+/// # Arguments
+///
+/// * `edgar` - An EDGAR client instance (constructed via [`crate::EdgarClientBuilder`])
+/// * `symbol` - Ticker symbol (e.g., "AAPL", "MSFT")
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, EdgarClientBuilder};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+/// let cik = finance::edgar_cik(&edgar, "AAPL").await?;
+/// println!("AAPL CIK: {}", cik);
+/// # Ok(())
+/// # }
+/// ```
+pub async fn edgar_cik(edgar: &crate::edgar::EdgarClient, symbol: &str) -> Result<u64> {
+    edgar.resolve_cik(symbol).await
+}
+
+/// Fetch SEC EDGAR filing history (submissions) for a symbol.
+///
+/// Returns company metadata and the most recent ~1000 filings, with references
+/// to additional history files for older filings.
+///
+/// # Arguments
+///
+/// * `edgar` - An EDGAR client instance
+/// * `symbol` - Ticker symbol (e.g., "AAPL")
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, EdgarClientBuilder};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+/// let submissions = finance::edgar_submissions(&edgar, "AAPL").await?;
+/// println!("Company: {:?}", submissions.name);
+///
+/// if let Some(filings) = &submissions.filings {
+///     if let Some(recent) = &filings.recent {
+///         for filing in recent.to_filings().iter().take(5) {
+///             println!("{}: {} ({})", filing.filing_date, filing.form, filing.primary_doc_description);
+///         }
+///     }
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn edgar_submissions(
+    edgar: &crate::edgar::EdgarClient,
+    symbol: &str,
+) -> Result<crate::models::edgar::EdgarSubmissions> {
+    let cik = edgar.resolve_cik(symbol).await?;
+    edgar.submissions(cik).await
+}
+
+/// Fetch SEC EDGAR company facts (structured XBRL financial data) for a symbol.
+///
+/// Returns all extracted XBRL facts organized by taxonomy (us-gaap, ifrs, dei).
+/// This includes historical financial statement values like revenue, assets,
+/// liabilities, EPS, etc.
+///
+/// # Arguments
+///
+/// * `edgar` - An EDGAR client instance
+/// * `symbol` - Ticker symbol (e.g., "AAPL")
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, EdgarClientBuilder};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+/// let facts = finance::edgar_company_facts(&edgar, "AAPL").await?;
+///
+/// if let Some(revenue) = facts.get_us_gaap_fact("Revenue") {
+///     if let Some(usd) = revenue.units.get("USD") {
+///         for point in usd.iter().take(3) {
+///             println!("FY{:?} {:?}: ${:?}", point.fy, point.fp, point.val);
+///         }
+///     }
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn edgar_company_facts(
+    edgar: &crate::edgar::EdgarClient,
+    symbol: &str,
+) -> Result<crate::models::edgar::CompanyFacts> {
+    let cik = edgar.resolve_cik(symbol).await?;
+    edgar.company_facts(cik).await
+}
+
+/// Search SEC EDGAR filings by text content.
+///
+/// Searches across all EDGAR filing text since 2001 using the
+/// full-text search (EFTS) API.
+///
+/// # Arguments
+///
+/// * `edgar` - An EDGAR client instance
+/// * `query` - Search term or phrase
+/// * `forms` - Optional form type filter (e.g., `&["10-K", "10-Q"]`)
+/// * `start_date` - Optional start date filter (YYYY-MM-DD)
+/// * `end_date` - Optional end date filter (YYYY-MM-DD)
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::{finance, EdgarClientBuilder};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+/// let results = finance::edgar_search(
+///     &edgar,
+///     "artificial intelligence",
+///     Some(&["10-K"]),
+///     Some("2024-01-01"),
+///     None,
+/// ).await?;
+///
+/// if let Some(hits_container) = &results.hits {
+///     for hit in &hits_container.hits {
+///         if let Some(source) = &hit._source {
+///             println!("{}: {:?} ({:?})",
+///                 source.form.as_deref().unwrap_or("?"),
+///                 source.display_names,
+///                 source.file_date,
+///             );
+///         }
+///     }
+/// }
+/// # Ok(())
+/// # }
+/// ```
+pub async fn edgar_search(
+    edgar: &crate::edgar::EdgarClient,
+    query: &str,
+    forms: Option<&[&str]>,
+    start_date: Option<&str>,
+    end_date: Option<&str>,
+) -> Result<crate::models::edgar::EdgarSearchResults> {
+    edgar.search(query, forms, start_date, end_date).await
+}

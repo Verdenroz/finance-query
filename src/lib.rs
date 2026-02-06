@@ -56,6 +56,8 @@
 
 // === Modules ===
 // Public modules
+/// SEC EDGAR API client for filing history, XBRL data, and full-text search.
+pub mod edgar;
 /// Error types and result definitions.
 pub mod error;
 /// Non-symbol-specific operations (search, lookup, screeners, market data, etc.).
@@ -87,6 +89,7 @@ pub use error::{Result, YahooError};
 // ============================================================================
 // Options - Configure API requests
 // ============================================================================
+pub use edgar::{EdgarClient, EdgarClientBuilder};
 pub use finance::{LookupOptions, LookupType, SearchOptions};
 
 // ============================================================================
@@ -102,11 +105,25 @@ pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, Value
 // Response types - Top-level types returned by API methods
 // ============================================================================
 pub use models::{
-    chart::Chart, currencies::Currency, exchanges::Exchange, financials::FinancialStatement,
-    hours::MarketHours, industries::Industry, lookup::LookupResults,
-    market_summary::MarketSummaryQuote, news::News, options::Options, quote::Quote,
-    recommendation::Recommendation, screeners::ScreenerResults, search::SearchResults,
-    sectors::Sector, spark::Spark, transcript::Transcript, transcript::TranscriptWithMeta,
+    chart::Chart,
+    currencies::Currency,
+    edgar::{CompanyFacts, EdgarSearchResults, EdgarSubmissions},
+    exchanges::Exchange,
+    financials::FinancialStatement,
+    hours::MarketHours,
+    industries::Industry,
+    lookup::LookupResults,
+    market_summary::MarketSummaryQuote,
+    news::News,
+    options::Options,
+    quote::Quote,
+    recommendation::Recommendation,
+    screeners::ScreenerResults,
+    search::SearchResults,
+    sectors::Sector,
+    spark::Spark,
+    transcript::Transcript,
+    transcript::TranscriptWithMeta,
     trending::TrendingQuote,
 };
 
@@ -115,6 +132,11 @@ pub use models::{
 // ============================================================================
 pub use models::{
     chart::{Candle, CapitalGain, ChartMeta, Dividend, Split},
+    edgar::{
+        CikEntry, EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSearchHit,
+        EdgarSearchHitsContainer, EdgarSearchSource, EdgarSearchTotal, FactConcept, FactUnit,
+        FactsByTaxonomy,
+    },
     hours::MarketTime,
     lookup::LookupQuote,
     market_summary::SparkData,
