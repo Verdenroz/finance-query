@@ -219,6 +219,30 @@ impl EdgarFilingRecent {
             })
             .collect()
     }
+
+    /// Convert filings to a polars DataFrame (requires `dataframe` feature).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # #[cfg(feature = "dataframe")]
+    /// # use finance_query::EdgarSubmissions;
+    /// # #[cfg(feature = "dataframe")]
+    /// # fn example(submissions: EdgarSubmissions) -> Result<(), Box<dyn std::error::Error>> {
+    /// if let Some(filings) = &submissions.filings {
+    ///     if let Some(recent) = &filings.recent {
+    ///         let df = recent.to_dataframe()?;
+    ///         println!("Filings DataFrame: {:?}", df);
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "dataframe")]
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        let filings = self.to_filings();
+        EdgarFiling::vec_to_dataframe(&filings)
+    }
 }
 
 /// A single SEC filing with metadata.
@@ -226,6 +250,7 @@ impl EdgarFilingRecent {
 /// Derived from the parallel arrays in [`EdgarFilingRecent`] via
 /// [`to_filings()`](EdgarFilingRecent::to_filings).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EdgarFiling {
     /// Accession number (unique filing identifier, e.g., "0000320193-24-000123")
@@ -286,6 +311,30 @@ impl EdgarFiling {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "dataframe")]
+    fn test_edgar_filing_dataframe_conversion() {
+        let filings_data = EdgarFilingRecent {
+            accession_number: vec!["0000320193-24-000123".to_string()],
+            filing_date: vec!["2024-11-01".to_string()],
+            report_date: vec!["2024-09-28".to_string()],
+            acceptance_date_time: vec!["2024-11-01T16:30:00.000Z".to_string()],
+            form: vec!["10-K".to_string()],
+            size: vec![15000000],
+            is_xbrl: vec![1],
+            is_inline_xbrl: vec![1],
+            primary_document: vec!["aapl-20240928.htm".to_string()],
+            primary_doc_description: vec!["10-K".to_string()],
+        };
+
+        let df = filings_data.to_dataframe().unwrap();
+        assert_eq!(df.height(), 1);
+        let col_names = df.get_column_names_owned();
+        assert!(col_names.iter().any(|n| n.as_str() == "accession_number"));
+        assert!(col_names.iter().any(|n| n.as_str() == "filing_date"));
+        assert!(col_names.iter().any(|n| n.as_str() == "form"));
+    }
 
     #[test]
     fn test_deserialize_submissions() {

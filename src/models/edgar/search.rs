@@ -18,6 +18,38 @@ pub struct EdgarSearchResults {
     pub hits: Option<EdgarSearchHitsContainer>,
 }
 
+#[cfg(feature = "dataframe")]
+impl EdgarSearchResults {
+    /// Convert search results to a polars DataFrame.
+    ///
+    /// Extracts the `_source` data from each hit and converts to a DataFrame.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # #[cfg(feature = "dataframe")]
+    /// # use finance_query::edgar::EdgarClient;
+    /// # #[cfg(feature = "dataframe")]
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// # let client = EdgarClient::new("user@example.com")?;
+    /// let results = client.search("revenue", Some("10-K"), None, None, 100).await?;
+    /// let df = results.to_dataframe()?;
+    /// println!("Search results DataFrame: {:?}", df);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        let sources: Vec<EdgarSearchSource> = self
+            .hits
+            .as_ref()
+            .map(|h| &h.hits)
+            .map(|hits| hits.iter().filter_map(|hit| hit._source.clone()).collect())
+            .unwrap_or_default();
+
+        EdgarSearchSource::vec_to_dataframe(&sources)
+    }
+}
+
 /// Container for search hits with metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -71,6 +103,7 @@ pub struct EdgarSearchHit {
 
 /// Source data for a search hit containing the actual filing information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct EdgarSearchSource {
     /// CIK numbers (as strings)
@@ -109,6 +142,42 @@ pub struct EdgarSearchSource {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "dataframe")]
+    fn test_search_results_dataframe_conversion() {
+        let results = EdgarSearchResults {
+            query: Some(serde_json::json!({"query": {"match": {"doc_text": "test"}}})),
+            hits: Some(EdgarSearchHitsContainer {
+                total: Some(EdgarSearchTotal {
+                    value: Some(1),
+                    relation: Some("eq".to_string()),
+                }),
+                max_score: Some(1.5),
+                hits: vec![EdgarSearchHit {
+                    _index: Some("edgar-filings".to_string()),
+                    _id: Some("1".to_string()),
+                    _score: Some(1.5),
+                    _source: Some(EdgarSearchSource {
+                        ciks: vec!["320193".to_string()],
+                        file_date: Some("2024-11-01".to_string()),
+                        form: Some("10-K".to_string()),
+                        adsh: Some("0000320193-24-000123".to_string()),
+                        display_names: vec!["Apple Inc. (AAPL)".to_string()],
+                        period_ending: Some("2024-09-28".to_string()),
+                        root_forms: vec!["10-K".to_string()],
+                        sics: vec!["3571".to_string()],
+                    }),
+                }],
+            }),
+        };
+
+        let df = results.to_dataframe().unwrap();
+        assert_eq!(df.height(), 1);
+        let col_names = df.get_column_names_owned();
+        assert!(col_names.iter().any(|n| n.as_str() == "form"));
+        assert!(col_names.iter().any(|n| n.as_str() == "file_date"));
+    }
 
     #[test]
     fn test_deserialize_search_results() {

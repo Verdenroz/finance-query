@@ -94,10 +94,97 @@ pub struct FactConcept {
     pub units: HashMap<String, Vec<FactUnit>>,
 }
 
+#[cfg(feature = "dataframe")]
+impl FactConcept {
+    /// Convert all data points from a specific unit to a polars DataFrame.
+    ///
+    /// # Arguments
+    ///
+    /// * `unit` - The unit of measure (e.g., "USD", "shares", "pure")
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # #[cfg(feature = "dataframe")]
+    /// # use finance_query::CompanyFacts;
+    /// # #[cfg(feature = "dataframe")]
+    /// # fn example(facts: CompanyFacts) -> Result<(), Box<dyn std::error::Error>> {
+    /// if let Some(revenue) = facts.get_us_gaap_fact("Revenue") {
+    ///     // Convert USD revenue data to DataFrame
+    ///     if let Some(df) = revenue.to_dataframe_for_unit("USD")? {
+    ///         println!("Revenue in USD: {:?}", df);
+    ///     }
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn to_dataframe_for_unit(
+        &self,
+        unit: &str,
+    ) -> ::polars::prelude::PolarsResult<Option<::polars::prelude::DataFrame>> {
+        if let Some(data_points) = self.units.get(unit) {
+            Ok(Some(FactUnit::vec_to_dataframe(data_points)?))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Convert all data points from all units to a single polars DataFrame.
+    ///
+    /// Adds a "unit" column to distinguish between different units of measure.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # #[cfg(feature = "dataframe")]
+    /// # use finance_query::CompanyFacts;
+    /// # #[cfg(feature = "dataframe")]
+    /// # fn example(facts: CompanyFacts) -> Result<(), Box<dyn std::error::Error>> {
+    /// if let Some(revenue) = facts.get_us_gaap_fact("Revenue") {
+    ///     let df = revenue.to_dataframe()?;
+    ///     println!("All revenue data: {:?}", df);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
+        use ::polars::prelude::*;
+
+        // Collect all data points with their unit labels
+        let mut all_data: Vec<(String, FactUnit)> = Vec::new();
+        for (unit, data_points) in &self.units {
+            for point in data_points {
+                all_data.push((unit.clone(), point.clone()));
+            }
+        }
+
+        if all_data.is_empty() {
+            // Return empty DataFrame with correct schema
+            return Ok(DataFrame::empty());
+        }
+
+        // Extract unit column
+        let units: Vec<String> = all_data.iter().map(|(u, _)| u.clone()).collect();
+
+        // Extract fact units (without unit field)
+        let facts: Vec<FactUnit> = all_data.into_iter().map(|(_, f)| f).collect();
+
+        // Convert facts to DataFrame
+        let mut df = FactUnit::vec_to_dataframe(&facts)?;
+
+        // Add unit column at the beginning
+        let unit_series = Series::new("unit".into(), units);
+        df.insert_column(0, unit_series)?;
+
+        Ok(df)
+    }
+}
+
 /// A single data point for an XBRL fact.
 ///
 /// Represents one reported value from a specific filing and period.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[non_exhaustive]
 pub struct FactUnit {
     /// Start date of the reporting period (for duration facts, e.g., revenue)
@@ -140,6 +227,46 @@ pub struct FactUnit {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    #[cfg(feature = "dataframe")]
+    fn test_fact_concept_dataframe_conversion() {
+        let mut units = HashMap::new();
+        units.insert(
+            "USD".to_string(),
+            vec![FactUnit {
+                start: Some("2023-10-01".to_string()),
+                end: Some("2024-09-30".to_string()),
+                val: Some(391035000000.0),
+                accn: Some("0000320193-24-000123".to_string()),
+                fy: Some(2024),
+                fp: Some("FY".to_string()),
+                form: Some("10-K".to_string()),
+                filed: Some("2024-11-01".to_string()),
+                frame: Some("CY2024".to_string()),
+            }],
+        );
+
+        let concept = FactConcept {
+            label: Some("Revenue".to_string()),
+            description: Some("Total revenue".to_string()),
+            units,
+        };
+
+        // Test single unit conversion
+        let df = concept.to_dataframe_for_unit("USD").unwrap().unwrap();
+        assert_eq!(df.height(), 1);
+        let col_names = df.get_column_names_owned();
+        assert!(col_names.iter().any(|n| n.as_str() == "val"));
+        assert!(col_names.iter().any(|n| n.as_str() == "fy"));
+
+        // Test all units conversion (includes unit column)
+        let df = concept.to_dataframe().unwrap();
+        assert_eq!(df.height(), 1);
+        let col_names = df.get_column_names_owned();
+        assert!(col_names.iter().any(|n| n.as_str() == "unit"));
+        assert!(col_names.iter().any(|n| n.as_str() == "val"));
+    }
 
     #[test]
     fn test_deserialize_company_facts() {
