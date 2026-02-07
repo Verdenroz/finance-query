@@ -62,6 +62,7 @@ nav:
       - Ticker: library/ticker.md
       - Batch Tickers: library/tickers.md
       - Finance Module: library/finance.md
+      - EDGAR: library/edgar.md
       - DataFrame Support: library/dataframe.md
       - Configuration: library/configuration.md
       - Models: library/models.md

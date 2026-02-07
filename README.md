@@ -25,7 +25,7 @@ wscat -c "wss://finance-query.com/v2/stream"
 
 ## What's in This Repository
 
-- **Library** (`finance-query`) - Rust crate for programmatic access to Yahoo Finance
+- **Library** (`finance-query`) - Core logic
 - **CLI** (`finance-query-cli`) - Command-line tool for market data, technical analysis, and backtesting
 - **Server** (`finance-query-server`) - HTTP REST API and WebSocket server
 - **Derive Macros** (`finance-query-derive`) - Procedural macros for Polars DataFrame integration
@@ -44,7 +44,7 @@ finance-query = "2.0"
 finance-query = { version = "2.0", features = ["dataframe"] }
 ```
 
-Basic usage:
+**Single symbol:**
 
 ```rust
 use finance_query::Ticker;
@@ -53,7 +53,65 @@ use finance_query::Ticker;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticker = Ticker::new("AAPL").await?;
     let quote = ticker.quote(true).await?;
-    println!("{}: ${}", quote.short_name, quote.regular_market_price);
+
+    if let Some(price) = quote.regular_market_price.as_ref().and_then(|v| v.raw) {
+        println!("AAPL: ${:.2}", price);
+    }
+    Ok(())
+}
+```
+
+**Batch operations:**
+
+```rust
+use finance_query::{Tickers, Interval, TimeRange};
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Fetch quotes for multiple symbols in one request
+    let tickers = Tickers::new(vec!["AAPL", "MSFT", "GOOGL"]).await?;
+    let response = tickers.quotes(true).await?;
+
+    for (symbol, quote) in &response.quotes {
+        if let Some(price) = quote.regular_market_price.as_ref().and_then(|v| v.raw) {
+            println!("{}: ${:.2}", symbol, price);
+        }
+    }
+    Ok(())
+}
+```
+
+**SEC EDGAR filings:**
+
+```rust
+use finance_query::EdgarClientBuilder;
+
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let edgar = EdgarClientBuilder::new("your.email@example.com").build()?;
+
+    // Resolve ticker to CIK
+    let cik = edgar.resolve_cik("AAPL").await?;
+
+    // Get filing history
+    let submissions = edgar.submissions(cik).await?;
+    if let Some(name) = &submissions.name {
+        println!("Company: {}", name);
+    }
+
+    // Get XBRL financial data
+    let facts = edgar.company_facts(cik).await?;
+    if let Some(us_gaap) = facts.facts.get("us-gaap") {
+        if let Some(revenue) = us_gaap.0.get("Revenues") {
+            if let Some(usd) = revenue.units.get("USD") {
+                for point in usd.iter().take(3) {
+                    if let (Some(fy), Some(val)) = (point.fy, point.val) {
+                        println!("FY {}: ${}", fy, val);
+                    }
+                }
+            }
+        }
+    }
     Ok(())
 }
 ```
@@ -113,6 +171,10 @@ The v2 server provides REST endpoints at `/v2/*` and WebSocket streaming at `/v2
 **Full documentation at [verdenroz.github.io/finance-query](https://verdenroz.github.io/finance-query):**
 
 - [Library Getting Started](https://verdenroz.github.io/finance-query/library/getting-started/)
+- [Ticker API](https://verdenroz.github.io/finance-query/library/ticker/) - Single symbol operations
+- [Tickers API](https://verdenroz.github.io/finance-query/library/tickers/) - Batch operations
+- [EDGAR API](https://verdenroz.github.io/finance-query/library/edgar/) - SEC filings
+- [Finance Module](https://verdenroz.github.io/finance-query/library/finance/) - Market-wide data
 - [REST API Reference](https://verdenroz.github.io/finance-query/server/api-reference/)
 - [WebSocket API](https://verdenroz.github.io/finance-query/server/websocket-api-reference/)
 - [Contributing](https://verdenroz.github.io/finance-query/development/contributing/)
