@@ -481,6 +481,308 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /v2/charts:
+    get:
+      tags: [Charts]
+      summary: Get batch historical chart data
+      description: |
+        Fetch OHLCV candlestick data for multiple symbols in a single batch request.
+        More efficient than multiple /chart/{symbol} calls when displaying charts
+        for watchlists or portfolios.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,GOOGL
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+            default: 1d
+          description: Chart interval
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: 1mo
+          description: Time range
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch chart data with successful charts and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchChartsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/dividends:
+    get:
+      tags: [Charts]
+      summary: Get batch dividend history
+      description: |
+        Fetch dividend history for multiple symbols in a single batch request.
+        Returns dividends filtered by the specified time range.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,KO
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: 1y
+          description: Time range for dividend history
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch dividend data with successful results and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchDividendsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/splits:
+    get:
+      tags: [Charts]
+      summary: Get batch stock split history
+      description: |
+        Fetch stock split history for multiple symbols in a single batch request.
+        Returns splits filtered by the specified time range.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,TSLA,NVDA
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: 5y
+          description: Time range for split history
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch split data with successful results and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchSplitsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/capital-gains:
+    get:
+      tags: [Charts]
+      summary: Get batch capital gains history
+      description: |
+        Fetch capital gains distribution history for multiple symbols (mainly mutual funds/ETFs).
+        Returns capital gains filtered by the specified time range.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: SPY,VOO,VTI
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: 2y
+          description: Time range for capital gains history
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch capital gains data with successful results and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchCapitalGainsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/financials:
+    get:
+      tags: [Financials]
+      summary: Get batch financial statements
+      description: |
+        Fetch financial statements (income, balance, cashflow) for multiple symbols.
+        More efficient than multiple /financials/{symbol}/{statement} calls.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,GOOGL
+        - name: statement
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [income, balance, cashflow]
+          description: Type of financial statement
+        - name: frequency
+          in: query
+          schema:
+            type: string
+            enum: [annual, quarterly]
+            default: annual
+          description: Statement frequency
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch financial statements with successful results and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchFinancialsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/recommendations:
+    get:
+      tags: [Analysis]
+      summary: Get batch stock recommendations
+      description: |
+        Fetch similar stock recommendations for multiple symbols in a single batch request.
+        Returns recommended stocks and analyst ratings.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,GOOGL
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+          description: Maximum number of recommendations per symbol
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch recommendations with successful results and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchRecommendationsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/options:
+    get:
+      tags: [Options]
+      summary: Get batch options chains
+      description: |
+        Fetch options chains for multiple symbols in a single batch request.
+        More efficient than multiple /options/{symbol} calls.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,SPY
+        - name: date
+          in: query
+          schema:
+            type: integer
+            format: int64
+          description: Unix timestamp for expiration date (optional, defaults to nearest expiration)
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch options data with successful results and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchOptionsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /v2/indicators:
+    get:
+      tags: [Indicators]
+      summary: Get batch technical indicators
+      description: |
+        Calculate technical analysis indicators for multiple symbols in a single batch request.
+        More efficient than multiple /indicators/{symbol} calls when analyzing portfolios.
+      parameters:
+        - name: symbols
+          in: query
+          required: true
+          schema:
+            type: string
+          description: Comma-separated list of symbols
+          example: AAPL,MSFT,GOOGL
+        - name: interval
+          in: query
+          schema:
+            type: string
+            enum: [1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo]
+            default: 1d
+          description: Chart interval
+        - name: range
+          in: query
+          schema:
+            type: string
+            enum: [1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max]
+            default: 1mo
+          description: Time range
+        - $ref: '#/components/parameters/Fields'
+      responses:
+        '200':
+          description: Batch indicators with successful results and any errors
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/BatchIndicatorsResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '501':
+          description: Indicators feature not enabled on server
+
   /v2/indicators/{symbol}:
     get:
       tags: [Indicators]
@@ -1149,7 +1451,7 @@ paths:
             type: string
             example: AAPL
           description: Stock ticker symbol
-        - $ref: '#/components/parameters/FieldsParam'
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: CIK resolved successfully
@@ -1185,7 +1487,7 @@ paths:
             type: string
             example: AAPL
           description: Stock ticker symbol
-        - $ref: '#/components/parameters/FieldsParam'
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Filing history retrieved successfully
@@ -1237,7 +1539,7 @@ paths:
             type: string
             example: AAPL
           description: Stock ticker symbol
-        - $ref: '#/components/parameters/FieldsParam'
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: XBRL facts retrieved successfully
@@ -1299,7 +1601,7 @@ paths:
             format: date
             example: "2024-12-31"
           description: End date in YYYY-MM-DD format
-        - $ref: '#/components/parameters/FieldsParam'
+        - $ref: '#/components/parameters/Fields'
       responses:
         '200':
           description: Search results
@@ -3383,6 +3685,132 @@ components:
         errors:
           type: object
           description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    BatchChartsResponse:
+      type: object
+      description: Response from batch charts endpoint with successful charts and errors
+      properties:
+        charts:
+          type: object
+          description: Successfully fetched charts, keyed by symbol
+          additionalProperties:
+            $ref: '#/components/schemas/Chart'
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    BatchDividendsResponse:
+      type: object
+      description: Response from batch dividends endpoint with successful dividend lists and errors
+      properties:
+        dividends:
+          type: object
+          description: Successfully fetched dividend histories, keyed by symbol
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/Dividend'
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    BatchSplitsResponse:
+      type: object
+      description: Response from batch splits endpoint with successful split lists and errors
+      properties:
+        splits:
+          type: object
+          description: Successfully fetched split histories, keyed by symbol
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/Split'
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    BatchCapitalGainsResponse:
+      type: object
+      description: Response from batch capital gains endpoint with successful capital gains lists and errors
+      properties:
+        capital_gains:
+          type: object
+          description: Successfully fetched capital gains histories, keyed by symbol
+          additionalProperties:
+            type: array
+            items:
+              $ref: '#/components/schemas/CapitalGain'
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    BatchFinancialsResponse:
+      type: object
+      description: Response from batch financials endpoint with successful financial statements and errors
+      properties:
+        financials:
+          type: object
+          description: Successfully fetched financial statements, keyed by symbol
+          additionalProperties:
+            $ref: '#/components/schemas/FinancialStatement'
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    BatchRecommendationsResponse:
+      type: object
+      description: Response from batch recommendations endpoint with successful recommendations and errors
+      properties:
+        recommendations:
+          type: object
+          description: Successfully fetched recommendations, keyed by symbol
+          additionalProperties:
+            $ref: '#/components/schemas/Recommendation'
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    BatchOptionsResponse:
+      type: object
+      description: Response from batch options endpoint with successful options chains and errors
+      properties:
+        options:
+          type: object
+          description: Successfully fetched options chains, keyed by symbol
+          additionalProperties:
+            $ref: '#/components/schemas/Options'
+        errors:
+          type: object
+          description: Symbols that failed to fetch, with error messages
+          additionalProperties:
+            type: string
+
+    BatchIndicatorsResponse:
+      type: object
+      description: Response from batch indicators endpoint with successful indicator summaries and errors
+      properties:
+        indicators:
+          type: object
+          description: Successfully calculated indicators, keyed by symbol
+          additionalProperties:
+            $ref: '#/components/schemas/IndicatorsSummary'
+        errors:
+          type: object
+          description: Symbols that failed to calculate, with error messages
           additionalProperties:
             type: string
 

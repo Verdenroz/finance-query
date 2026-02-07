@@ -296,6 +296,96 @@ struct SparkQuery {
 }
 
 #[derive(Deserialize)]
+struct BatchChartsQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    #[serde(default = "default_interval")]
+    interval: String,
+    #[serde(default = "default_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BatchDividendsQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    #[serde(default = "default_max_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BatchSplitsQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    #[serde(default = "default_max_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BatchCapitalGainsQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    #[serde(default = "default_max_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BatchFinancialsQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    /// Statement type (required): income, balance, cashflow
+    statement: String,
+    #[serde(default = "default_frequency")]
+    frequency: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BatchRecommendationsQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    #[serde(default = "default_recommendations_limit")]
+    limit: u32,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+fn default_recommendations_limit() -> u32 {
+    10
+}
+
+#[derive(Deserialize)]
+struct BatchOptionsQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    /// Expiration date (Unix timestamp, optional)
+    date: Option<i64>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct BatchIndicatorsQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    #[serde(default = "default_interval")]
+    interval: String,
+    #[serde(default = "default_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+#[derive(Deserialize)]
 struct RangeQuery {
     #[serde(default = "default_max_range")]
     range: String,
@@ -557,6 +647,434 @@ fn default_range() -> String {
     std::env::var("DEFAULT_RANGE").unwrap_or_else(|_| defaults::DEFAULT_RANGE.to_string())
 }
 
+// ===== BATCH ENDPOINTS =====
+
+/// GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>
+async fn get_batch_charts(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<BatchChartsQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort();
+    let interval = parse_interval(&params.interval);
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching batch charts for {} symbols (interval={}, range={})",
+        symbols.len(),
+        params.interval,
+        params.range
+    );
+
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key("charts", &[&symbols_key, &params.interval, &params.range]);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::CHART,
+            cache::is_market_open(),
+            || async move {
+                let tickers = Tickers::new(symbols).await?;
+                let batch_response = tickers.charts(interval, range).await?;
+                info!(
+                    "Charts fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Batch charts error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+/// GET /v2/dividends?symbols=<csv>&range=<str>
+async fn get_batch_dividends(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<BatchDividendsQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort();
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching batch dividends for {} symbols (range={})",
+        symbols.len(),
+        params.range
+    );
+
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key("dividends", &[&symbols_key, &params.range]);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HISTORICAL,
+            cache::is_market_open(),
+            || async move {
+                let tickers = Tickers::new(symbols).await?;
+                let batch_response = tickers.dividends(range).await?;
+                info!(
+                    "Dividends fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Batch dividends error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+/// GET /v2/splits?symbols=<csv>&range=<str>
+async fn get_batch_splits(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<BatchSplitsQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort();
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching batch splits for {} symbols (range={})",
+        symbols.len(),
+        params.range
+    );
+
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key("splits", &[&symbols_key, &params.range]);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HISTORICAL,
+            cache::is_market_open(),
+            || async move {
+                let tickers = Tickers::new(symbols).await?;
+                let batch_response = tickers.splits(range).await?;
+                info!(
+                    "Splits fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Batch splits error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+/// GET /v2/capital-gains?symbols=<csv>&range=<str>
+async fn get_batch_capital_gains(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<BatchCapitalGainsQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort();
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching batch capital gains for {} symbols (range={})",
+        symbols.len(),
+        params.range
+    );
+
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key("capital-gains", &[&symbols_key, &params.range]);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HISTORICAL,
+            cache::is_market_open(),
+            || async move {
+                let tickers = Tickers::new(symbols).await?;
+                let batch_response = tickers.capital_gains(range).await?;
+                info!(
+                    "Capital gains fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Batch capital gains error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+/// GET /v2/financials?symbols=<csv>&statement=<str>&frequency=<str>
+async fn get_batch_financials(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<BatchFinancialsQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort();
+
+    let statement_type = match parse_statement_type(&params.statement) {
+        Some(st) => st,
+        None => {
+            let error = serde_json::json!({
+                "error": format!("Invalid statement type: '{}'. Valid types: income, balance, cashflow", params.statement),
+                "status": 400
+            });
+            return (StatusCode::BAD_REQUEST, Json(error)).into_response();
+        }
+    };
+
+    let frequency = parse_frequency(&params.frequency);
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching batch financials for {} symbols (statement={}, frequency={})",
+        symbols.len(),
+        params.statement,
+        params.frequency
+    );
+
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key(
+        "financials",
+        &[&symbols_key, &params.statement, &params.frequency],
+    );
+
+    match state
+        .cache
+        .get_or_fetch(&cache_key, cache::ttl::FINANCIALS, false, || async move {
+            let tickers = Tickers::new(symbols).await?;
+            let batch_response = tickers.financials(statement_type, frequency).await?;
+            info!(
+                "Financials fetch complete: {} success, {} errors",
+                batch_response.success_count(),
+                batch_response.error_count()
+            );
+            let json = serde_json::to_value(&batch_response)
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+            Ok(json)
+        })
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Batch financials error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+/// GET /v2/recommendations?symbols=<csv>&limit=<u32>
+async fn get_batch_recommendations(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<BatchRecommendationsQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort();
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching batch recommendations for {} symbols (limit={})",
+        symbols.len(),
+        params.limit
+    );
+
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key(
+        "recommendations",
+        &[&symbols_key, &params.limit.to_string()],
+    );
+
+    match state
+        .cache
+        .get_or_fetch(&cache_key, cache::ttl::ANALYSIS, false, || async move {
+            let tickers = Tickers::new(symbols).await?;
+            let batch_response = tickers.recommendations(params.limit).await?;
+            info!(
+                "Recommendations fetch complete: {} success, {} errors",
+                batch_response.success_count(),
+                batch_response.error_count()
+            );
+            let json = serde_json::to_value(&batch_response)
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+            Ok(json)
+        })
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Batch recommendations error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+/// GET /v2/options?symbols=<csv>&date=<i64>
+async fn get_batch_options(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<BatchOptionsQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort();
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching batch options for {} symbols (date={:?})",
+        symbols.len(),
+        params.date
+    );
+
+    let symbols_key = symbols.join(",").to_uppercase();
+    let date_str = params
+        .date
+        .map(|d| d.to_string())
+        .unwrap_or_else(|| "latest".to_string());
+    let cache_key = Cache::key("options", &[&symbols_key, &date_str]);
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::OPTIONS,
+            cache::is_market_open(),
+            || async move {
+                let tickers = Tickers::new(symbols).await?;
+                let batch_response = tickers.options(params.date).await?;
+                info!(
+                    "Options fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Batch options error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
+/// GET /v2/indicators?symbols=<csv>&interval=<str>&range=<str>
+async fn get_batch_indicators(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<BatchIndicatorsQuery>,
+) -> impl IntoResponse {
+    let mut symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    symbols.sort();
+    let interval = parse_interval(&params.interval);
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching batch indicators for {} symbols (interval={}, range={})",
+        symbols.len(),
+        params.interval,
+        params.range
+    );
+
+    let symbols_key = symbols.join(",").to_uppercase();
+    let cache_key = Cache::key(
+        "indicators",
+        &[&symbols_key, &params.interval, &params.range],
+    );
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::INDICATORS,
+            cache::is_market_open(),
+            || async move {
+                let tickers = Tickers::new(symbols).await?;
+                let batch_response = tickers.indicators(interval, range).await?;
+                info!(
+                    "Indicators fetch complete: {} success, {} errors",
+                    batch_response.success_count(),
+                    batch_response.error_count()
+                );
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Batch indicators error: {}", e);
+            (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()).into_response()
+        }
+    }
+}
+
 #[tokio::main]
 async fn main() {
     // Load environment variables from .env file
@@ -679,12 +1197,18 @@ fn api_routes() -> Router {
         .route("/analysis/{symbol}/{analysis_type}", get(get_analysis))
         // GET /v2/capital-gains/{symbol}?range=<str>
         .route("/capital-gains/{symbol}", get(get_capital_gains))
+        // GET /v2/capital-gains?symbols=<csv>&range=<str>
+        .route("/capital-gains", get(get_batch_capital_gains))
         // GET /v2/chart/{symbol}?interval=<str>&range=<str>&events=<bool>
         .route("/chart/{symbol}", get(get_chart))
+        // GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>
+        .route("/charts", get(get_batch_charts))
         // GET /v2/currencies
         .route("/currencies", get(get_currencies))
         // GET /v2/dividends/{symbol}?range=<str>
         .route("/dividends/{symbol}", get(get_dividends))
+        // GET /v2/dividends?symbols=<csv>&range=<str>
+        .route("/dividends", get(get_batch_dividends))
         // GET /v2/edgar/cik/{symbol}
         .route("/edgar/cik/{symbol}", get(get_edgar_cik))
         // GET /v2/edgar/facts/{symbol}
@@ -697,6 +1221,8 @@ fn api_routes() -> Router {
         .route("/exchanges", get(get_exchanges))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route("/financials/{symbol}/{statement}", get(get_financials))
+        // GET /v2/financials?symbols=<csv>&statement=<str>&frequency=<str>
+        .route("/financials", get(get_batch_financials))
         // GET /v2/health - version-prefixed health check
         .route("/health", get(health_check))
         // GET /v2/holders/{symbol}/{holder_type}
@@ -705,6 +1231,8 @@ fn api_routes() -> Router {
         .route("/hours", get(get_hours))
         // GET /v2/indicators/{symbol}?interval=<str>&range=<str>
         .route("/indicators/{symbol}", get(get_indicators))
+        // GET /v2/indicators?symbols=<csv>&interval=<str>&range=<str>
+        .route("/indicators", get(get_batch_indicators))
         // GET /v2/indices?format=<raw|pretty|both>
         .route("/indices", get(get_indices))
         // GET /v2/industries/{industry_key}
@@ -719,6 +1247,8 @@ fn api_routes() -> Router {
         .route("/news/{symbol}", get(get_news))
         // GET /v2/options/{symbol}?date=<i64>
         .route("/options/{symbol}", get(get_options))
+        // GET /v2/options?symbols=<csv>&date=<i64>
+        .route("/options", get(get_batch_options))
         // GET /v2/ping - version-prefixed ping
         .route("/ping", get(ping))
         // GET /v2/quote/{symbol}?logo=<bool>
@@ -729,6 +1259,8 @@ fn api_routes() -> Router {
         .route("/quotes", get(get_quotes))
         // GET /v2/recommendations/{symbol}?limit=<u32>
         .route("/recommendations/{symbol}", get(get_recommendations))
+        // GET /v2/recommendations?symbols=<csv>&limit=<u32>
+        .route("/recommendations", get(get_batch_recommendations))
         // GET /v2/screeners/{screener_type}?count=<u32>
         .route("/screeners/{screener_type}", get(get_screeners))
         // POST /v2/screeners/custom
@@ -741,6 +1273,8 @@ fn api_routes() -> Router {
         .route("/spark", get(get_spark))
         // GET /v2/splits/{symbol}?range=<str>
         .route("/splits/{symbol}", get(get_splits))
+        // GET /v2/splits?symbols=<csv>&range=<str>
+        .route("/splits", get(get_batch_splits))
         // GET /v2/stream - WebSocket real-time price streaming
         .route("/stream", get(ws_stream_handler))
         // GET /v2/transcripts/{symbol}?quarter=<str>&year=<i32>
