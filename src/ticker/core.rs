@@ -439,7 +439,26 @@ macros::define_quote_accessors! {
     /// Get summary profile
     summary_profile -> SummaryProfile, "summaryProfile",
 
-    /// Get SEC filings
+    /// Get SEC filings (limited Yahoo Finance data)
+    ///
+    /// **DEPRECATED:** This method returns limited SEC filing metadata from Yahoo Finance.
+    /// For comprehensive filing data directly from SEC EDGAR, use `edgar_submissions()` instead.
+    ///
+    /// To use EDGAR methods, configure an EDGAR client:
+    /// ```no_run
+    /// # use finance_query::{Ticker, EdgarClientBuilder};
+    /// # use std::sync::Arc;
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let edgar = Arc::new(EdgarClientBuilder::new("user@example.com").build()?);
+    /// let ticker = Ticker::builder("AAPL").edgar(edgar).build().await?;
+    /// let submissions = ticker.edgar_submissions().await?;  // Comprehensive EDGAR data
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[deprecated(
+        since = "2.2.0",
+        note = "Use `edgar_submissions()` for comprehensive SEC EDGAR data instead of limited Yahoo Finance metadata"
+    )]
     sec_filings -> SecFilings, "secFilings",
 
     /// Get upgrade/downgrade history
