@@ -509,6 +509,10 @@ struct EdgarSearchQuery {
     start_date: Option<String>,
     /// End date in YYYY-MM-DD format
     end_date: Option<String>,
+    /// Pagination offset (default: 0)
+    from: Option<usize>,
+    /// Page size (default: 100, max: 100)
+    size: Option<usize>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
 }
@@ -3367,14 +3371,16 @@ async fn get_edgar_facts(
 /// - `forms`: Comma-separated form types (e.g., "10-K,10-Q")
 /// - `start_date`: Start date in YYYY-MM-DD format
 /// - `end_date`: End date in YYYY-MM-DD format
+/// - `from`: Pagination offset (default: 0)
+/// - `size`: Page size (default: 100, max: 100)
 async fn get_edgar_search(
     Extension(state): Extension<AppState>,
     Query(params): Query<EdgarSearchQuery>,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
     info!(
-        "Searching EDGAR: query={}, forms={:?}, start={:?}, end={:?}",
-        params.q, params.forms, params.start_date, params.end_date
+        "Searching EDGAR: query={}, forms={:?}, start={:?}, end={:?}, from={:?}, size={:?}",
+        params.q, params.forms, params.start_date, params.end_date, params.from, params.size
     );
 
     let edgar_client =
@@ -3395,6 +3401,8 @@ async fn get_edgar_search(
         params.forms.clone().unwrap_or_default(),
         params.start_date.clone().unwrap_or_default(),
         params.end_date.clone().unwrap_or_default(),
+        params.from.map(|f| f.to_string()).unwrap_or_default(),
+        params.size.map(|s| s.to_string()).unwrap_or_default(),
     ];
     let cache_key = Cache::key(
         "edgar_search",
@@ -3405,6 +3413,8 @@ async fn get_edgar_search(
     let forms = params.forms.clone();
     let start_date = params.start_date.clone();
     let end_date = params.end_date.clone();
+    let from = params.from;
+    let size = params.size;
     let edgar_clone = Arc::clone(edgar_client);
 
     match state
@@ -3421,6 +3431,8 @@ async fn get_edgar_search(
                     forms_vec.as_deref(),
                     start_date.as_deref(),
                     end_date.as_deref(),
+                    from,
+                    size,
                 )
                 .await?;
                 let json = serde_json::to_value(&results)

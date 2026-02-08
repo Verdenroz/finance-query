@@ -291,6 +291,8 @@ impl EdgarClient {
     /// * `forms` - Optional form type filter (e.g., `&["10-K", "10-Q"]`)
     /// * `start_date` - Optional start date (YYYY-MM-DD)
     /// * `end_date` - Optional end date (YYYY-MM-DD)
+    /// * `from` - Optional pagination offset (default: 0)
+    /// * `size` - Optional page size (default: 100, max: 100)
     ///
     /// # Example
     ///
@@ -304,6 +306,8 @@ impl EdgarClient {
     ///     Some(&["10-K"]),
     ///     Some("2024-01-01"),
     ///     None,
+    ///     Some(0),   // First page
+    ///     Some(100), // 100 results per page
     /// ).await?;
     /// if let Some(hits_container) = &results.hits {
     ///     for hit in &hits_container.hits {
@@ -321,6 +325,8 @@ impl EdgarClient {
         forms: Option<&[&str]>,
         start_date: Option<&str>,
         end_date: Option<&str>,
+        from: Option<usize>,
+        size: Option<usize>,
     ) -> Result<EdgarSearchResults> {
         let mut params: Vec<(&str, String)> = vec![("q", query.to_string())];
 
@@ -336,6 +342,12 @@ impl EdgarClient {
                 params.push(("dateRange", "custom".to_string()));
             }
             params.push(("enddt", end.to_string()));
+        }
+        if let Some(from) = from {
+            params.push(("from", from.to_string()));
+        }
+        if let Some(size) = size {
+            params.push(("size", size.to_string()));
         }
 
         let response = self
@@ -437,7 +449,14 @@ mod tests {
     async fn test_edgar_search() {
         let client = EdgarClientBuilder::new("test@example.com").build().unwrap();
         let results = client
-            .search("artificial intelligence", Some(&["10-K"]), None, None)
+            .search(
+                "artificial intelligence",
+                Some(&["10-K"]),
+                None,
+                None,
+                None,
+                None,
+            )
             .await
             .unwrap();
         assert!(results.hits.is_some());

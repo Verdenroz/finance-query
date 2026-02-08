@@ -600,6 +600,8 @@ pub async fn edgar_company_facts(
 ///     Some(&["10-K"]),
 ///     Some("2024-01-01"),
 ///     None,
+///     None,
+///     None,
 /// ).await?;
 ///
 /// if let Some(hits_container) = &results.hits {
@@ -622,6 +624,10 @@ pub async fn edgar_search(
     forms: Option<&[&str]>,
     start_date: Option<&str>,
     end_date: Option<&str>,
+    from: Option<usize>,
+    size: Option<usize>,
 ) -> Result<crate::models::edgar::EdgarSearchResults> {
-    edgar.search(query, forms, start_date, end_date).await
+    edgar
+        .search(query, forms, start_date, end_date, from, size)
+        .await
 }

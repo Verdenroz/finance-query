@@ -276,6 +276,37 @@ pub struct EdgarFiling {
 }
 
 impl EdgarFiling {
+    /// Create a new EdgarFiling instance.
+    ///
+    /// This constructor is provided to support creating EdgarFiling instances outside
+    /// the library crate, since the struct is marked `#[non_exhaustive]`.
+    #[allow(clippy::too_many_arguments)]
+    pub fn new(
+        accession_number: String,
+        filing_date: String,
+        report_date: String,
+        acceptance_date_time: String,
+        form: String,
+        size: u64,
+        is_xbrl: bool,
+        is_inline_xbrl: bool,
+        primary_document: String,
+        primary_doc_description: String,
+    ) -> Self {
+        Self {
+            accession_number,
+            filing_date,
+            report_date,
+            acceptance_date_time,
+            form,
+            size,
+            is_xbrl,
+            is_inline_xbrl,
+            primary_document,
+            primary_doc_description,
+        }
+    }
+
     /// Get the URL to view this filing on SEC EDGAR.
     ///
     /// # Example
@@ -300,11 +331,30 @@ impl EdgarFiling {
     /// # }
     /// ```
     pub fn edgar_url(&self) -> String {
+        // Accession number format: CIK-YY-SEQUENCE (e.g., "0000320193-24-000123")
+        // Extract CIK (digits before first dash) and remove all dashes for URL path
+        let cik = self
+            .accession_number
+            .split('-')
+            .next()
+            .unwrap_or("")
+            .trim_start_matches('0'); // Remove leading zeros for URL
         let accession_no_dashes = self.accession_number.replace('-', "");
-        format!(
-            "https://www.sec.gov/Archives/edgar/data/{}/{}",
-            accession_no_dashes, self.primary_document
-        )
+
+        if self.primary_document.is_empty() {
+            // For search results without primary_document, link to the filing directory
+            // SEC will show the file listing where users can click the report
+            format!(
+                "https://www.sec.gov/cgi-bin/viewer?action=view&cik={}&accession_number={}&xbrl_type=v",
+                cik, accession_no_dashes
+            )
+        } else {
+            // For submissions with primary_document, link directly to document
+            format!(
+                "https://www.sec.gov/Archives/edgar/data/{}/{}/{}",
+                cik, accession_no_dashes, self.primary_document
+            )
+        }
     }
 }
 
@@ -431,21 +481,50 @@ mod tests {
     #[test]
     fn test_edgar_filing_url() {
         let filing = EdgarFiling {
-            accession_number: "0000320193-24-000123".to_string(),
-            filing_date: "2024-11-01".to_string(),
-            report_date: "2024-09-28".to_string(),
+            accession_number: "0000320193-25-000079".to_string(),
+            filing_date: "2025-10-30".to_string(),
+            report_date: "2025-09-27".to_string(),
             acceptance_date_time: String::new(),
             form: "10-K".to_string(),
             size: 15000000,
             is_xbrl: true,
             is_inline_xbrl: true,
-            primary_document: "aapl-20240928.htm".to_string(),
+            primary_document: "aapl-20250927.htm".to_string(),
             primary_doc_description: "10-K".to_string(),
         };
 
+        let url = filing.edgar_url();
         assert_eq!(
-            filing.edgar_url(),
-            "https://www.sec.gov/Archives/edgar/data/000032019324000123/aapl-20240928.htm"
+            url,
+            "https://www.sec.gov/Archives/edgar/data/320193/000032019325000079/aapl-20250927.htm"
         );
+
+        // Verify URL format is correct (can be manually verified in browser)
+        println!("Apple 10-K URL: {}", url);
+    }
+
+    #[test]
+    fn test_edgar_filing_url_with_different_cik() {
+        let filing = EdgarFiling {
+            accession_number: "0000950170-25-100235".to_string(),
+            filing_date: "2025-08-01".to_string(),
+            report_date: "2025-06-30".to_string(),
+            acceptance_date_time: String::new(),
+            form: "10-K".to_string(),
+            size: 8000000,
+            is_xbrl: true,
+            is_inline_xbrl: true,
+            primary_document: "msft-20250630.htm".to_string(),
+            primary_doc_description: "10-K".to_string(),
+        };
+
+        let url = filing.edgar_url();
+        assert_eq!(
+            url,
+            "https://www.sec.gov/Archives/edgar/data/950170/000095017025100235/msft-20250630.htm"
+        );
+
+        // Verify URL format is correct (can be manually verified in browser)
+        println!("Microsoft 10-K URL: {}", url);
     }
 }
