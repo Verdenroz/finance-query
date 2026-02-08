@@ -177,13 +177,90 @@ Institutional and insider ownership.
 fq holders AAPL                # Shareholding data
 ```
 
-### `filings`
+### `edgar`
 
-SEC filings (10-K, 10-Q, 8-K, etc).
+Interactive SEC EDGAR filings browser (TUI). Browse company filings by symbol or search across all filings.
+
+!!! note "EDGAR Email Required"
+    SEC requires a contact email in the User-Agent header. Set via `--email` or `EDGAR_EMAIL` environment variable.
 
 ```bash
-fq filings AAPL                # Latest filings
+# Set email (required by SEC)
+export EDGAR_EMAIL="user@example.com"
+
+# Open TUI ready to search
+fq edgar                                   # Start with empty search prompt
+
+# Browse filings by company symbol
+fq edgar AAPL                              # Browse all AAPL filings interactively
+
+# Search across all filings from command line
+fq edgar --search "artificial intelligence"  # Search all companies
+fq edgar -s "climate risk" -f 10-K           # Search only 10-K filings
+fq edgar -s "acquisition" --start-date 2024-01-01  # Date-filtered search
 ```
+
+**Interactive Controls:**
+
+- `↑/↓, j/k` - Navigate filings
+- `←/→` - Previous/next page (search mode only)
+- `PgUp/PgDn, Ctrl+d/u` - Page up/down within current page
+- `Home/End, g/G` - Jump to top/bottom of current page
+- `Enter, o` - Open filing in browser
+- `f` - Cycle filters (10-K → 10-Q → 8-K → 4 → S-1 → DEF 14A → 10-K/A → 10-Q/A → S-3 → 20-F → All)
+- `r` - Reset filter (show all filings)
+- `/` - Search all filings (in-TUI search)
+- `s` - Search by symbol (switch to symbol mode)
+- `q, Esc, Ctrl+C` - Quit
+
+**Symbol Mode Features:**
+
+- Browse ~1,000 recent filings for a company
+- Company metadata (name, CIK)
+- Color-coded form types (10-K green, 10-Q cyan, 8-K yellow)
+- Filing metadata: date, report date, size, accession number
+- Filter by form type interactively
+
+**Search Mode Features:**
+
+- Full-text search across all SEC filings
+- Pagination support - navigate through thousands of results (←/→ or n/p keys)
+- Filter by form type (`-f 10-K`, `-f 10-Q`, etc.)
+- Date range filtering (`--start-date`, `--end-date`)
+- Interactive navigation of search results
+- Page indicator shows current page and total matches
+- Open any filing directly in browser
+
+**Options:**
+
+- `-s, --search` - Full-text search query (omit for symbol mode)
+- `-f, --form-type` - Filter by form type (10-K, 10-Q, 8-K, 4, S-1, DEF 14A, etc.)
+- `--start-date` - Start date for search (YYYY-MM-DD, search mode only)
+- `--end-date` - End date for search (YYYY-MM-DD, search mode only)
+- `-e, --email` - Contact email for SEC User-Agent (or set `EDGAR_EMAIL` env var)
+
+### `facts`
+
+Get XBRL company facts from SEC EDGAR.
+
+```bash
+# Set email (required by SEC)
+export EDGAR_EMAIL="user@example.com"
+
+fq facts AAPL                  # All key financial facts
+fq facts AAPL --concept GrossProfit  # Specific concept
+fq facts AAPL --unit USD       # Filter by unit
+fq facts AAPL -o json          # JSON output
+```
+
+**Options:**
+
+- `-c, --concept` - Specific XBRL concept (e.g., "Revenue", "Assets", "NetIncomeLoss")
+- `-u, --unit` - Filter by unit (e.g., "USD", "shares")
+- `-l, --limit` - Max data points per concept (default: 10)
+- `-o, --format` - Output format (table, json, csv)
+
+**Common concepts:** Revenue, GrossProfit, OperatingIncomeLoss, NetIncomeLoss, EarningsPerShareBasic, Assets, Liabilities, StockholdersEquity, CashAndCashEquivalentsAtCarryingValue
 
 ### `transcript`
 

@@ -2,6 +2,85 @@
 
 Real-world examples for common use cases.
 
+## SEC EDGAR Research
+
+### Browse Company Filings Interactively
+
+```bash
+# Set your email (required by SEC)
+export EDGAR_EMAIL="analyst@example.com"
+
+# Option 1: Start with empty search prompt
+fq edgar
+# Type your search query and press Enter
+
+# Option 2: Browse specific company
+fq edgar AAPL
+# Navigate with arrow keys, press '/' to search, 'f' to filter, Enter to open
+```
+
+### Search for Specific Topics in Filings
+
+```bash
+export EDGAR_EMAIL="analyst@example.com"
+
+# Find all filings mentioning "artificial intelligence"
+fq edgar --search "artificial intelligence"
+
+# Search only 10-K annual reports
+fq edgar -s "risk factors" -f 10-K
+
+# Search within date range
+fq edgar -s "climate change" --start-date 2024-01-01 --end-date 2024-12-31
+
+# Multiple form types
+fq edgar -s "supply chain" -f 10-K -f 10-Q
+
+# Interactive TUI for all searches - navigate with arrows, open with Enter
+```
+
+### Analyze XBRL Financial Data
+
+```bash
+export EDGAR_EMAIL="analyst@example.com"
+
+# Get all key financial facts
+fq facts AAPL
+
+# Get specific concept (Revenue)
+fq facts AAPL --concept Revenue
+
+# Filter by fiscal year and unit
+fq facts AAPL --concept Revenue --unit USD --limit 5
+
+# Multiple concepts for comparison
+fq facts AAPL --concept Assets -o json
+fq facts AAPL --concept Liabilities -o json
+
+# Export to CSV for analysis
+fq facts MSFT --concept NetIncomeLoss --unit USD -o csv > msft_income.csv
+```
+
+### Combined EDGAR Workflow
+
+```bash
+export EDGAR_EMAIL="analyst@example.com"
+
+# 1. Browse recent filings
+fq edgar TSLA
+
+# 2. Get financial facts
+fq facts TSLA --concept Revenue
+fq facts TSLA --concept Assets
+
+# 3. Search for specific disclosures
+fq edgar -s "risk factors" --start-date 2024-01-01
+
+# 4. Compare with competitors
+fq facts F --concept Revenue     # Ford
+fq facts GM --concept Revenue    # GM
+```
+
 ## Stock Research
 
 ### Get a company overview
