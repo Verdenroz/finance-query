@@ -79,8 +79,6 @@ pub struct EdgarArgs {
 }
 
 pub async fn execute(args: EdgarArgs) -> Result<()> {
-    use finance_query::EdgarClientBuilder;
-
     let email = args.email.ok_or_else(|| {
         crate::error::CliError::InvalidArgument(
             "EDGAR email required. Provide via --email or set EDGAR_EMAIL environment variable"
@@ -88,43 +86,43 @@ pub async fn execute(args: EdgarArgs) -> Result<()> {
         )
     })?;
 
+    // Initialize EDGAR singleton
+    finance_query::edgar::init_with_config(
+        email.clone(),
+        "finance-query-cli",
+        std::time::Duration::from_secs(30),
+    )?;
+
     // Branch based on symbol vs search mode vs empty
     match (args.symbol, args.search) {
         (Some(symbol), None) => {
             // Symbol mode: browse filings for a specific company
-            let edgar_client = EdgarClientBuilder::new(email.clone())
-                .app_name("finance-query-cli")
-                .build()?;
-            let cik = edgar_client.resolve_cik(&symbol).await?;
-            let submissions = edgar_client.submissions(cik).await?;
-            crate::edgar::run_symbol(symbol, submissions, email)?;
+            let cik = finance_query::edgar::resolve_cik(&symbol).await?;
+            let submissions = finance_query::edgar::submissions(cik).await?;
+            crate::edgar::run_symbol(symbol, submissions)?;
         }
         (None, Some(query)) => {
             // Search mode: full-text search across all filings
-            let edgar_client = EdgarClientBuilder::new(email.clone())
-                .app_name("finance-query-cli")
-                .build()?;
             let forms: Option<Vec<&str>> = args
                 .form_type
                 .as_ref()
                 .map(|types| types.iter().map(|ft| ft.as_str()).collect());
 
-            let results = edgar_client
-                .search(
-                    &query,
-                    forms.as_deref(),
-                    args.start_date.as_deref(),
-                    args.end_date.as_deref(),
-                    None, // from
-                    None, // size
-                )
-                .await?;
+            let results = finance_query::edgar::search(
+                &query,
+                forms.as_deref(),
+                args.start_date.as_deref(),
+                args.end_date.as_deref(),
+                None, // from
+                None, // size
+            )
+            .await?;
 
-            crate::edgar::run_search(query, results, email)?;
+            crate::edgar::run_search(query, results)?;
         }
         (None, None) => {
             // Empty mode: start TUI ready for search
-            crate::edgar::run_empty(email)?;
+            crate::edgar::run_empty()?;
         }
         (Some(_), Some(_)) => {
             // This shouldn't happen due to conflicts_with, but handle it

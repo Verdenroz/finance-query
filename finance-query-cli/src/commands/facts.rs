@@ -2,7 +2,7 @@ use crate::error::Result;
 use crate::output::{self, OutputFormat};
 use clap::Parser;
 use colored::Colorize;
-use finance_query::{CompanyFacts, EdgarClientBuilder};
+use finance_query::CompanyFacts;
 use serde::Serialize;
 use tabled::Tabled;
 
@@ -54,15 +54,18 @@ pub async fn execute(args: FactsArgs) -> Result<()> {
         )
     })?;
 
-    let edgar_client = EdgarClientBuilder::new(email)
-        .app_name("finance-query-cli")
-        .build()?;
+    // Initialize EDGAR singleton
+    finance_query::edgar::init_with_config(
+        email,
+        "finance-query-cli",
+        std::time::Duration::from_secs(30),
+    )?;
 
     // Resolve symbol to CIK
-    let cik = edgar_client.resolve_cik(&args.symbol).await?;
+    let cik = finance_query::edgar::resolve_cik(&args.symbol).await?;
 
     // Fetch company facts
-    let facts = edgar_client.company_facts(cik).await?;
+    let facts = finance_query::edgar::company_facts(cik).await?;
 
     if format == OutputFormat::Json {
         println!("{}", serde_json::to_string_pretty(&facts)?);

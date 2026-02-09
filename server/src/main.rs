@@ -15,8 +15,8 @@ use axum::{
 };
 use cache::Cache;
 use finance_query::{
-    EdgarClient, Frequency, Interval, Region, ScreenerQuery, ScreenerType, SectorType,
-    StatementType, Ticker, Tickers, TimeRange, ValueFormat, YahooError, finance, screener_query,
+    FinanceError, Frequency, Interval, Region, ScreenerQuery, ScreenerType, SectorType,
+    StatementType, Ticker, Tickers, TimeRange, ValueFormat, finance, screener_query,
     streaming::PriceStream,
 };
 use futures_util::{SinkExt, StreamExt};
@@ -34,7 +34,6 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 struct AppState {
     cache: Cache,
     stream_hub: StreamHub,
-    edgar_client: Option<Arc<EdgarClient>>,
 }
 
 /// Process-wide hub that maintains a single upstream Yahoo Finance stream.
@@ -62,7 +61,7 @@ impl StreamHub {
         inner.upstream.as_ref().map(|s| s.resubscribe())
     }
 
-    async fn subscribe_symbols(&self, symbols: &[String]) -> Result<(), YahooError> {
+    async fn subscribe_symbols(&self, symbols: &[String]) -> Result<(), FinanceError> {
         let unique: HashSet<String> = symbols
             .iter()
             .map(|s| s.trim())
@@ -1121,22 +1120,15 @@ async fn create_app() -> Router {
     let cache = Cache::new(redis_url.as_deref()).await;
 
     // Initialize EDGAR client (optional - requires contact email)
-    let edgar_client = std::env::var("EDGAR_EMAIL")
-        .ok()
-        .and_then(|email| {
-            finance_query::EdgarClientBuilder::new(email)
-                .app_name("finance-query-server")
-                .build()
-                .map_err(|e| {
-                    warn!("Failed to initialize EDGAR client: {}", e);
-                    e
-                })
-                .ok()
-        })
-        .map(Arc::new);
-
-    if edgar_client.is_some() {
-        info!("EDGAR client initialized");
+    if let Ok(email) = std::env::var("EDGAR_EMAIL") {
+        match finance_query::edgar::init_with_config(
+            email,
+            "finance-query-server",
+            std::time::Duration::from_secs(30),
+        ) {
+            Ok(_) => info!("EDGAR client initialized"),
+            Err(e) => warn!("Failed to initialize EDGAR client: {}", e),
+        }
     } else {
         info!("EDGAR client not configured (set EDGAR_EMAIL to enable)");
     }
@@ -1152,7 +1144,6 @@ async fn create_app() -> Router {
     let state = AppState {
         cache,
         stream_hub: StreamHub::new(),
-        edgar_client,
     };
 
     // Configure CORS
@@ -1380,13 +1371,13 @@ async fn get_quote(
 }
 
 // Helper to convert error to response
-fn error_response(e: YahooError) -> impl IntoResponse {
+fn error_response(e: FinanceError) -> impl IntoResponse {
     let status = match e {
-        YahooError::SymbolNotFound { .. } => StatusCode::NOT_FOUND,
-        YahooError::AuthenticationFailed { .. } => StatusCode::UNAUTHORIZED,
-        YahooError::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
-        YahooError::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
-        YahooError::ServerError { status, .. } => {
+        FinanceError::SymbolNotFound { .. } => StatusCode::NOT_FOUND,
+        FinanceError::AuthenticationFailed { .. } => StatusCode::UNAUTHORIZED,
+        FinanceError::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
+        FinanceError::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
+        FinanceError::ServerError { status, .. } => {
             StatusCode::from_u16(status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
         }
         _ => StatusCode::INTERNAL_SERVER_ERROR,
@@ -1399,28 +1390,28 @@ fn error_response(e: YahooError) -> impl IntoResponse {
 }
 
 /// Converts generic errors from get_or_fetch into HTTP responses
-/// Attempts to downcast to YahooError to preserve HTTP status code mapping
+/// Attempts to downcast to FinanceError to preserve HTTP status code mapping
 fn into_error_response(e: Box<dyn std::error::Error + Send + Sync>) -> axum::response::Response {
-    // Try to downcast to YahooError first to get proper HTTP status codes
-    if let Some(yahoo_err) = e.downcast_ref::<YahooError>() {
+    // Try to downcast to FinanceError first to get proper HTTP status codes
+    if let Some(yahoo_err) = e.downcast_ref::<FinanceError>() {
         // Track error by type
         let error_type = match yahoo_err {
-            YahooError::SymbolNotFound { .. } => "symbol_not_found",
-            YahooError::AuthenticationFailed { .. } => "authentication_failed",
-            YahooError::RateLimited { .. } => "rate_limited",
-            YahooError::Timeout { .. } => "timeout",
-            YahooError::ServerError { .. } => "server_error",
+            FinanceError::SymbolNotFound { .. } => "symbol_not_found",
+            FinanceError::AuthenticationFailed { .. } => "authentication_failed",
+            FinanceError::RateLimited { .. } => "rate_limited",
+            FinanceError::Timeout { .. } => "timeout",
+            FinanceError::ServerError { .. } => "server_error",
             _ => "other",
         };
         metrics::ERRORS_TOTAL.with_label_values(&[error_type]).inc();
 
-        // Map YahooError to appropriate HTTP status codes
+        // Map FinanceError to appropriate HTTP status codes
         let status = match yahoo_err {
-            YahooError::SymbolNotFound { .. } => StatusCode::NOT_FOUND,
-            YahooError::AuthenticationFailed { .. } => StatusCode::UNAUTHORIZED,
-            YahooError::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
-            YahooError::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
-            YahooError::ServerError { status, .. } => {
+            FinanceError::SymbolNotFound { .. } => StatusCode::NOT_FOUND,
+            FinanceError::AuthenticationFailed { .. } => StatusCode::UNAUTHORIZED,
+            FinanceError::RateLimited { .. } => StatusCode::TOO_MANY_REQUESTS,
+            FinanceError::Timeout { .. } => StatusCode::REQUEST_TIMEOUT,
+            FinanceError::ServerError { status, .. } => {
                 StatusCode::from_u16(*status).unwrap_or(StatusCode::INTERNAL_SERVER_ERROR)
             }
             _ => StatusCode::INTERNAL_SERVER_ERROR,
@@ -3212,21 +3203,8 @@ async fn get_edgar_cik(
     let fields = parse_fields(params.fields.as_deref());
     info!("Resolving CIK for symbol: {}", symbol);
 
-    let edgar_client =
-        match &state.edgar_client {
-            Some(client) => client,
-            None => return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({
-                    "error": "EDGAR client not configured. Set EDGAR_EMAIL environment variable."
-                })),
-            )
-                .into_response(),
-        };
-
     let cache_key = Cache::key("edgar_cik", &[&symbol.to_uppercase()]);
     let symbol_clone = symbol.clone();
-    let edgar_clone = Arc::clone(edgar_client);
 
     match state
         .cache
@@ -3235,7 +3213,7 @@ async fn get_edgar_cik(
             cache::ttl::ANALYSIS, // CIK mappings don't change often
             false,                // Always use cache, regardless of market hours
             || async move {
-                let cik = finance::edgar_cik(&edgar_clone, &symbol_clone).await?;
+                let cik = finance_query::edgar::resolve_cik(&symbol_clone).await?;
                 let json = serde_json::json!({ "symbol": symbol_clone, "cik": cik });
                 Ok(json)
             },
@@ -3265,21 +3243,8 @@ async fn get_edgar_submissions(
     let fields = parse_fields(params.fields.as_deref());
     info!("Fetching EDGAR submissions for symbol: {}", symbol);
 
-    let edgar_client =
-        match &state.edgar_client {
-            Some(client) => client,
-            None => return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({
-                    "error": "EDGAR client not configured. Set EDGAR_EMAIL environment variable."
-                })),
-            )
-                .into_response(),
-        };
-
     let cache_key = Cache::key("edgar_submissions", &[&symbol.to_uppercase()]);
     let symbol_clone = symbol.clone();
-    let edgar_clone = Arc::clone(edgar_client);
 
     match state
         .cache
@@ -3288,7 +3253,8 @@ async fn get_edgar_submissions(
             cache::ttl::ANALYSIS,
             false, // Always use cache
             || async move {
-                let submissions = finance::edgar_submissions(&edgar_clone, &symbol_clone).await?;
+                let cik = finance_query::edgar::resolve_cik(&symbol_clone).await?;
+                let submissions = finance_query::edgar::submissions(cik).await?;
                 let json = serde_json::to_value(&submissions)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                 Ok(json)
@@ -3319,21 +3285,8 @@ async fn get_edgar_facts(
     let fields = parse_fields(params.fields.as_deref());
     info!("Fetching EDGAR company facts for symbol: {}", symbol);
 
-    let edgar_client =
-        match &state.edgar_client {
-            Some(client) => client,
-            None => return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({
-                    "error": "EDGAR client not configured. Set EDGAR_EMAIL environment variable."
-                })),
-            )
-                .into_response(),
-        };
-
     let cache_key = Cache::key("edgar_facts", &[&symbol.to_uppercase()]);
     let symbol_clone = symbol.clone();
-    let edgar_clone = Arc::clone(edgar_client);
 
     match state
         .cache
@@ -3342,7 +3295,8 @@ async fn get_edgar_facts(
             cache::ttl::ANALYSIS,
             false, // Always use cache
             || async move {
-                let facts = finance::edgar_company_facts(&edgar_clone, &symbol_clone).await?;
+                let cik = finance_query::edgar::resolve_cik(&symbol_clone).await?;
+                let facts = finance_query::edgar::company_facts(cik).await?;
                 let json = serde_json::to_value(&facts)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                 Ok(json)
@@ -3383,18 +3337,6 @@ async fn get_edgar_search(
         params.q, params.forms, params.start_date, params.end_date, params.from, params.size
     );
 
-    let edgar_client =
-        match &state.edgar_client {
-            Some(client) => client,
-            None => return (
-                StatusCode::SERVICE_UNAVAILABLE,
-                Json(serde_json::json!({
-                    "error": "EDGAR client not configured. Set EDGAR_EMAIL environment variable."
-                })),
-            )
-                .into_response(),
-        };
-
     // Build cache key from all query parameters
     let cache_parts = [
         params.q.clone(),
@@ -3415,7 +3357,6 @@ async fn get_edgar_search(
     let end_date = params.end_date.clone();
     let from = params.from;
     let size = params.size;
-    let edgar_clone = Arc::clone(edgar_client);
 
     match state
         .cache
@@ -3425,8 +3366,7 @@ async fn get_edgar_search(
             false, // Always use cache
             || async move {
                 let forms_vec: Option<Vec<&str>> = forms.as_ref().map(|f| f.split(',').collect());
-                let results = finance::edgar_search(
-                    &edgar_clone,
+                let results = finance_query::edgar::search(
                     &query,
                     forms_vec.as_deref(),
                     start_date.as_deref(),

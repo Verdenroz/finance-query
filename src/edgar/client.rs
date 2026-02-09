@@ -5,7 +5,7 @@
 
 use super::rate_limiter::RateLimiter;
 use crate::endpoints::edgar as urls;
-use crate::error::{Result, YahooError};
+use crate::error::{FinanceError, Result};
 use crate::models::edgar::{CompanyFacts, EdgarSearchResults, EdgarSubmissions};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -17,19 +17,7 @@ use tracing::{debug, info};
 ///
 /// The SEC requires all automated requests to include a User-Agent header
 /// with a contact email address. This builder enforces that requirement.
-///
-/// # Example
-///
-/// ```no_run
-/// use finance_query::EdgarClientBuilder;
-///
-/// let client = EdgarClientBuilder::new("user@example.com")
-///     .app_name("my-app")
-///     .timeout(std::time::Duration::from_secs(60))
-///     .build()
-///     .unwrap();
-/// ```
-pub struct EdgarClientBuilder {
+pub(super) struct EdgarClientBuilder {
     email: String,
     app_name: String,
     timeout: Duration,
@@ -70,7 +58,7 @@ impl EdgarClientBuilder {
             .user_agent(&user_agent)
             .timeout(self.timeout)
             .build()
-            .map_err(YahooError::HttpError)?;
+            .map_err(FinanceError::HttpError)?;
 
         info!("EDGAR client initialized with User-Agent: {}", user_agent);
 
@@ -86,20 +74,7 @@ impl EdgarClientBuilder {
 ///
 /// Handles rate limiting (10 req/sec) and CIK caching internally.
 /// Must be constructed via [`EdgarClientBuilder`] which requires a contact email.
-///
-/// # Example
-///
-/// ```no_run
-/// use finance_query::EdgarClientBuilder;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let edgar = EdgarClientBuilder::new("user@example.com").build()?;
-/// let cik = edgar.resolve_cik("AAPL").await?;
-/// println!("Apple CIK: {}", cik);
-/// # Ok(())
-/// # }
-/// ```
-pub struct EdgarClient {
+pub(super) struct EdgarClient {
     http: reqwest::Client,
     rate_limiter: Arc<RateLimiter>,
     cik_cache: Arc<RwLock<Option<HashMap<String, u64>>>>,
@@ -115,7 +90,7 @@ impl EdgarClient {
             .get(url)
             .send()
             .await
-            .map_err(YahooError::HttpError)?;
+            .map_err(FinanceError::HttpError)?;
 
         let status = response.status().as_u16();
         if !response.status().is_success() {
@@ -138,7 +113,7 @@ impl EdgarClient {
             .query(params)
             .send()
             .await
-            .map_err(YahooError::HttpError)?;
+            .map_err(FinanceError::HttpError)?;
 
         let status = response.status().as_u16();
         if !response.status().is_success() {
@@ -147,26 +122,26 @@ impl EdgarClient {
         Ok(response)
     }
 
-    fn map_status(status: u16, url: &str) -> YahooError {
+    fn map_status(status: u16, url: &str) -> FinanceError {
         match status {
-            403 => YahooError::AuthenticationFailed {
+            403 => FinanceError::AuthenticationFailed {
                 context: format!(
                     "EDGAR returned 403 Forbidden for {}. Ensure User-Agent includes a valid contact email.",
                     url
                 ),
             },
-            404 => YahooError::SymbolNotFound {
+            404 => FinanceError::SymbolNotFound {
                 symbol: None,
                 context: format!("EDGAR resource not found: {}", url),
             },
-            429 => YahooError::RateLimited {
+            429 => FinanceError::RateLimited {
                 retry_after: Some(1),
             },
-            status @ 500.. => YahooError::ServerError {
+            status @ 500.. => FinanceError::ServerError {
                 status,
                 context: format!("EDGAR server error for {}", url),
             },
-            _ => YahooError::UnexpectedResponse(format!(
+            _ => FinanceError::UnexpectedResponse(format!(
                 "EDGAR returned unexpected status {} for {}",
                 status, url
             )),
@@ -200,7 +175,7 @@ impl EdgarClient {
         let map = cache.as_ref().unwrap();
         map.get(&symbol.to_uppercase())
             .copied()
-            .ok_or_else(|| YahooError::SymbolNotFound {
+            .ok_or_else(|| FinanceError::SymbolNotFound {
                 symbol: Some(symbol.to_string()),
                 context: "Symbol not found in SEC EDGAR CIK database".to_string(),
             })
@@ -226,7 +201,7 @@ impl EdgarClient {
 
         // Fetch the full mapping
         let response = self.get(urls::COMPANY_TICKERS).await?;
-        let json: serde_json::Value = response.json().await.map_err(YahooError::HttpError)?;
+        let json: serde_json::Value = response.json().await.map_err(FinanceError::HttpError)?;
 
         // Parse: {"0":{"cik_str":320193,"ticker":"AAPL","title":"Apple Inc"},...}
         let mut map = HashMap::new();
@@ -262,7 +237,7 @@ impl EdgarClient {
     pub async fn submissions(&self, cik: u64) -> Result<EdgarSubmissions> {
         let url = urls::submissions(cik);
         let response = self.get(&url).await?;
-        response.json().await.map_err(YahooError::HttpError)
+        response.json().await.map_err(FinanceError::HttpError)
     }
 
     // ========================================================================
@@ -276,7 +251,7 @@ impl EdgarClient {
     pub async fn company_facts(&self, cik: u64) -> Result<CompanyFacts> {
         let url = urls::company_facts(cik);
         let response = self.get(&url).await?;
-        response.json().await.map_err(YahooError::HttpError)
+        response.json().await.map_err(FinanceError::HttpError)
     }
 
     // ========================================================================
@@ -330,30 +305,25 @@ impl EdgarClient {
     ) -> Result<EdgarSearchResults> {
         let mut params: Vec<(&str, String)> = vec![("q", query.to_string())];
 
-        if let Some(forms) = forms {
-            params.push(("forms", forms.join(",")));
-        }
-        if let Some(start) = start_date {
-            params.push(("dateRange", "custom".to_string()));
-            params.push(("startdt", start.to_string()));
-        }
-        if let Some(end) = end_date {
-            if start_date.is_none() {
-                params.push(("dateRange", "custom".to_string()));
-            }
-            params.push(("enddt", end.to_string()));
-        }
-        if let Some(from) = from {
-            params.push(("from", from.to_string()));
-        }
-        if let Some(size) = size {
-            params.push(("size", size.to_string()));
-        }
+        // Add optional parameters
+        let has_date_filter = start_date.is_some() || end_date.is_some();
+        params.extend(
+            [
+                forms.map(|f| ("forms", f.join(","))),
+                has_date_filter.then(|| ("dateRange", "custom".to_string())),
+                start_date.map(|s| ("startdt", s.to_string())),
+                end_date.map(|e| ("enddt", e.to_string())),
+                from.map(|f| ("from", f.to_string())),
+                size.map(|s| ("size", s.to_string())),
+            ]
+            .into_iter()
+            .flatten(),
+        );
 
         let response = self
             .get_with_params(urls::FULL_TEXT_SEARCH, &params)
             .await?;
-        response.json().await.map_err(YahooError::HttpError)
+        response.json().await.map_err(FinanceError::HttpError)
     }
 }
 
@@ -377,19 +347,19 @@ mod tests {
     fn test_map_status_codes() {
         assert!(matches!(
             EdgarClient::map_status(403, "test"),
-            YahooError::AuthenticationFailed { .. }
+            FinanceError::AuthenticationFailed { .. }
         ));
         assert!(matches!(
             EdgarClient::map_status(404, "test"),
-            YahooError::SymbolNotFound { .. }
+            FinanceError::SymbolNotFound { .. }
         ));
         assert!(matches!(
             EdgarClient::map_status(429, "test"),
-            YahooError::RateLimited { .. }
+            FinanceError::RateLimited { .. }
         ));
         assert!(matches!(
             EdgarClient::map_status(500, "test"),
-            YahooError::ServerError { .. }
+            FinanceError::ServerError { .. }
         ));
     }
 
