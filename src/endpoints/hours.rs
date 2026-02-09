@@ -45,8 +45,10 @@ pub async fn fetch(client: &YahooClient, region: Option<&str>) -> Result<MarketH
 
 /// Parse Yahoo Finance hours response into clean MarketHours
 fn parse_hours_response(json: &serde_json::Value) -> Result<MarketHours> {
-    MarketHours::from_response(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
-        field: "hours".to_string(),
-        context: e,
+    MarketHours::from_response(json).map_err(|e| {
+        crate::error::FinanceError::ResponseStructureError {
+            field: "hours".to_string(),
+            context: e,
+        }
     })
 }

@@ -39,7 +39,7 @@ pub async fn fetch(client: &YahooClient, sector_type: SectorType) -> Result<Sect
 
 /// Parse Yahoo Finance sector response into clean Sector
 fn parse_sector_response(json: &serde_json::Value) -> Result<Sector> {
-    Sector::from_response(json).map_err(|e| crate::error::YahooError::ResponseStructureError {
+    Sector::from_response(json).map_err(|e| crate::error::FinanceError::ResponseStructureError {
         field: "sector".to_string(),
         context: e,
     })

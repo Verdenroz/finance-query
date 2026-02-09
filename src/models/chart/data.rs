@@ -2,6 +2,7 @@
 ///
 /// Contains the fully typed Chart structure for historical data.
 use super::{Candle, ChartMeta};
+use crate::constants::{Interval, TimeRange};
 use serde::{Deserialize, Serialize};
 
 /// Fully typed chart data
@@ -23,13 +24,13 @@ pub struct Chart {
     /// OHLCV candles/bars
     pub candles: Vec<Candle>,
 
-    /// Time interval used (e.g., "1d", "1h")
+    /// Time interval used (e.g., `Interval::OneDay`)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub interval: Option<String>,
+    pub interval: Option<Interval>,
 
-    /// Time range used (e.g., "1mo", "1y")
+    /// Time range used (e.g., `TimeRange::OneYear`)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub range: Option<String>,
+    pub range: Option<TimeRange>,
 }
 
 #[cfg(feature = "dataframe")]

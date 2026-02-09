@@ -1,9 +1,7 @@
 use crate::auth::YahooAuth;
 use crate::constants::{Interval, Region, TimeRange};
-use crate::error::{Result, YahooError};
-use std::sync::Arc;
+use crate::error::{FinanceError, Result};
 use std::time::Duration;
-use tokio::sync::RwLock;
 use tracing::{debug, info};
 
 // ============================================================================
@@ -29,10 +27,8 @@ pub(crate) const API_PARAM_PAD_TIMESERIES: &str = "true";
 #[derive(Debug, Clone)]
 pub struct ClientConfig {
     /// HTTP request timeout
-    #[allow(dead_code)]
     pub timeout: Duration,
     /// Optional proxy URL
-    #[allow(dead_code)]
     pub proxy: Option<String>,
     /// Language code for API requests (e.g., "en-US", "ja-JP", "de-DE")
     pub lang: String,
@@ -172,31 +168,30 @@ impl ClientConfigBuilder {
 ///
 /// This client handles authentication and provides methods to fetch data from Yahoo Finance.
 pub struct YahooClient {
-    /// HTTP client with cookie store enabled
-    http: Arc<RwLock<reqwest::Client>>,
-    /// Authentication data (crumb token)
-    auth: Arc<RwLock<YahooAuth>>,
+    /// Authentication data (crumb + HTTP client with cookies).
+    /// Immutable after construction — no lock needed.
+    auth: YahooAuth,
     /// Client configuration
     config: ClientConfig,
 }
 
 impl YahooClient {
     /// HTTP error mapping
-    fn map_http_status(status: u16) -> YahooError {
+    fn map_http_status(status: u16) -> FinanceError {
         match status {
-            401 => YahooError::AuthenticationFailed {
+            401 => FinanceError::AuthenticationFailed {
                 context: "HTTP 401 Unauthorized".to_string(),
             },
-            404 => YahooError::SymbolNotFound {
+            404 => FinanceError::SymbolNotFound {
                 symbol: None,
                 context: "HTTP 404 Not Found".to_string(),
             },
-            429 => YahooError::RateLimited { retry_after: None },
-            status if status >= 500 => YahooError::ServerError {
+            429 => FinanceError::RateLimited { retry_after: None },
+            status if status >= 500 => FinanceError::ServerError {
                 status,
                 context: format!("HTTP {}", status),
             },
-            _ => YahooError::UnexpectedResponse(format!("HTTP {}", status)),
+            _ => FinanceError::UnexpectedResponse(format!("HTTP {}", status)),
         }
     }
 
@@ -220,14 +215,7 @@ impl YahooClient {
         // Authenticate with the provided configuration (timeout, proxy)
         let auth = YahooAuth::authenticate_with_config(&config).await?;
 
-        // Use the authenticated HTTP client (which has the cookies and config applied)
-        let http = auth.http_client.clone();
-
-        Ok(Self {
-            http: Arc::new(RwLock::new(http)),
-            auth: Arc::new(RwLock::new(auth)),
-            config: config.clone(),
-        })
+        Ok(Self { auth, config })
     }
 
     /// Make a GET request to Yahoo Finance with authentication
@@ -237,22 +225,22 @@ impl YahooClient {
     /// - Includes cookies via reqwest's cookie store
     /// - Sets proper headers
     pub async fn request_with_crumb(&self, url: &str) -> Result<reqwest::Response> {
-        let auth = self.auth.read().await;
-
-        // Use the auth's HTTP client directly - it has the cookies from authentication
-        // NOT self.http because that's a clone without the cookie store
-        let request = auth.http_client.get(url).query(&[("crumb", &auth.crumb)]);
+        let request = self
+            .auth
+            .http_client
+            .get(url)
+            .query(&[("crumb", &self.auth.crumb)]);
 
         debug!("Making request to {}", url);
 
         // Send request
         let response = request.send().await.map_err(|e| {
             if e.is_timeout() {
-                YahooError::Timeout {
+                FinanceError::Timeout {
                     timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
                 }
             } else {
-                YahooError::HttpError(e)
+                FinanceError::HttpError(e)
             }
         })?;
 
@@ -263,41 +251,6 @@ impl YahooClient {
         }
 
         Ok(response)
-    }
-
-    /// Refresh authentication if needed
-    ///
-    /// This checks if the current authentication is expired and refreshes it if necessary.
-    #[allow(dead_code)]
-    pub async fn refresh_auth_if_needed(&self) -> Result<()> {
-        let auth = self.auth.read().await;
-
-        if auth.is_expired() && auth.can_refresh() {
-            drop(auth); // Release read lock
-
-            // Acquire write locks and refresh
-            let mut auth = self.auth.write().await;
-            let mut http = self.http.write().await;
-
-            // Double-check in case another task already refreshed
-            if auth.is_expired() && auth.can_refresh() {
-                info!("Refreshing Yahoo Finance authentication");
-                let new_auth = YahooAuth::authenticate().await?;
-                *http = new_auth.http_client.clone();
-                *auth = new_auth;
-            }
-        }
-
-        Ok(())
-    }
-
-    /// Get a clone of the underlying HTTP client
-    ///
-    /// This can be useful for advanced use cases where you need direct access to the client.
-    /// Note: This is an async method because the client is behind a RwLock.
-    #[allow(dead_code)]
-    pub async fn http_client(&self) -> reqwest::Client {
-        self.http.read().await.clone()
     }
 
     /// Get the client configuration
@@ -380,32 +333,31 @@ impl YahooClient {
         url: &str,
         body: &T,
     ) -> Result<reqwest::Response> {
-        let auth = self.auth.read().await;
-
         // Build URL with crumb
         let url_with_crumb = format!(
             "{}{}crumb={}",
             url,
             if url.contains('?') { "&" } else { "?" },
-            auth.crumb
+            self.auth.crumb
         );
 
-        let request = auth
+        let request = self
+            .auth
             .http_client
             .post(&url_with_crumb)
             .header("Content-Type", "application/json")
-            .header("x-crumb", &auth.crumb)
+            .header("x-crumb", &self.auth.crumb)
             .json(body);
 
         debug!("Making POST request to {}", url_with_crumb);
 
         let response = request.send().await.map_err(|e| {
             if e.is_timeout() {
-                YahooError::Timeout {
+                FinanceError::Timeout {
                     timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
                 }
             } else {
-                YahooError::HttpError(e)
+                FinanceError::HttpError(e)
             }
         })?;
 
@@ -423,42 +375,25 @@ impl YahooClient {
         url: &str,
         params: &T,
     ) -> Result<reqwest::Response> {
-        let auth = self.auth.read().await;
-
-        // Use the auth's HTTP client directly - it has the cookies from authentication
-        let request = auth
+        let request = self
+            .auth
             .http_client
             .get(url)
-            .query(&[("crumb", &auth.crumb)])
+            .query(&[("crumb", &self.auth.crumb)])
             .query(params);
 
-        // Log the full request URL with all parameters.
-        // (This is critical for debugging Yahoo endpoints where query params like `type` are strict.)
-        if let Some(full_url) = request
-            .try_clone()
-            .and_then(|r| r.build().ok())
-            .map(|r| r.url().to_string())
-        {
-            debug!("Full request URL: {}", full_url);
-            info!(
-                "Request to: {} (lang={}, region={})",
-                full_url, self.config.lang, self.config.region
-            );
-        } else {
-            debug!("Making request to {}", url);
-            info!(
-                "Request to: {} (lang={}, region={})",
-                url, self.config.lang, self.config.region
-            );
-        }
+        debug!(
+            "Making request to {} (lang={}, region={})",
+            url, self.config.lang, self.config.region
+        );
 
         let response = request.send().await.map_err(|e| {
             if e.is_timeout() {
-                YahooError::Timeout {
+                FinanceError::Timeout {
                     timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
                 }
             } else {
-                YahooError::HttpError(e)
+                FinanceError::HttpError(e)
             }
         })?;
 
@@ -483,7 +418,7 @@ impl YahooClient {
     /// # Ok(())
     /// # }
     /// ```
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) async fn get_quotes(&self, symbols: &[&str]) -> Result<serde_json::Value> {
         crate::endpoints::quotes::fetch(self, symbols).await
     }
@@ -507,6 +442,17 @@ impl YahooClient {
         range: TimeRange,
     ) -> Result<serde_json::Value> {
         crate::endpoints::chart::fetch(self, symbol, interval, range).await
+    }
+
+    /// Fetch chart data for a symbol using absolute date boundaries
+    pub async fn get_chart_range(
+        &self,
+        symbol: &str,
+        interval: Interval,
+        start: i64,
+        end: i64,
+    ) -> Result<serde_json::Value> {
+        crate::endpoints::chart::fetch_with_dates(self, symbol, interval, start, end).await
     }
 
     /// Search for quotes and news
@@ -623,7 +569,7 @@ impl YahooClient {
     /// # Ok(())
     /// # }
     /// ```
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub(crate) async fn get_quote_type(&self, symbol: &str) -> Result<serde_json::Value> {
         crate::endpoints::quote_type::fetch(self, symbol).await
     }

@@ -79,14 +79,14 @@ impl FinancialStatement {
     ) -> Result<Self> {
         let raw_response: RawTimeseriesResponse =
             serde_json::from_value(raw.clone()).map_err(|e| {
-                crate::error::YahooError::ResponseStructureError {
+                crate::error::FinanceError::ResponseStructureError {
                     field: "timeseries".to_string(),
                     context: format!("Failed to parse financials response: {}", e),
                 }
             })?;
 
         if raw_response.timeseries.result.is_empty() {
-            return Err(crate::error::YahooError::SymbolNotFound {
+            return Err(crate::error::FinanceError::SymbolNotFound {
                 symbol: Some(symbol.to_string()),
                 context: format!(
                     "No {} {} data found",
@@ -146,7 +146,7 @@ impl FinancialStatement {
         }
 
         if statement.is_empty() {
-            return Err(crate::error::YahooError::SymbolNotFound {
+            return Err(crate::error::FinanceError::SymbolNotFound {
                 symbol: Some(symbol.to_string()),
                 context: format!(
                     "No {} {} data found",

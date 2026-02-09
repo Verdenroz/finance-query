@@ -84,12 +84,11 @@ pub use tickers::{
 // ============================================================================
 // Error types and results
 // ============================================================================
-pub use error::{Result, YahooError};
+pub use error::{FinanceError, Result};
 
 // ============================================================================
 // Options - Configure API requests
 // ============================================================================
-pub use edgar::{EdgarClient, EdgarClientBuilder};
 pub use finance::{LookupOptions, LookupType, SearchOptions};
 
 // ============================================================================
