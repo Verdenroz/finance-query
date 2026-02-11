@@ -8,134 +8,72 @@ use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
 use crate::models::chart::events::ChartEvents;
 use crate::models::chart::response::ChartResponse;
-use crate::models::chart::result::ChartResult;
 use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
 use crate::models::financials::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::{
     AssetProfile, CalendarEvents, DefaultKeyStatistics, Earnings, EarningsHistory, EarningsTrend,
-    FinancialData, FundOwnership, InsiderHolders, InsiderTransactions, InstitutionOwnership,
+    EquityPerformance, FinancialData, FundOwnership, FundPerformance, FundProfile, IndexTrend,
+    IndustryTrend, InsiderHolders, InsiderTransactions, InstitutionOwnership,
     MajorHoldersBreakdown, Module, NetSharePurchaseActivity, Price, Quote, QuoteSummaryResponse,
-    QuoteTypeData, RecommendationTrend, SecFilings, SummaryDetail, SummaryProfile,
-    UpgradeDowngradeHistory,
+    QuoteTypeData, RecommendationTrend, SecFilings, SectorTrend, SummaryDetail, SummaryProfile,
+    TopHoldings, UpgradeDowngradeHistory,
 };
 use crate::models::recommendation::Recommendation;
 use crate::models::recommendation::response::RecommendationResponse;
+use crate::utils::{CacheEntry, EVICTION_THRESHOLD, filter_by_range};
 use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::sync::{Arc, OnceLock};
+use std::time::Duration;
+use tokio::sync::RwLock;
 
-/// Trait for types with a timestamp field
-trait HasTimestamp {
-    fn timestamp(&self) -> i64;
-}
+// Type aliases to keep struct definitions readable.
+type Cache<T> = Arc<RwLock<Option<CacheEntry<T>>>>;
+type MapCache<K, V> = Arc<RwLock<HashMap<K, CacheEntry<V>>>>;
 
-impl HasTimestamp for Dividend {
-    fn timestamp(&self) -> i64 {
-        self.timestamp
-    }
-}
-
-impl HasTimestamp for Split {
-    fn timestamp(&self) -> i64 {
-        self.timestamp
-    }
-}
-
-impl HasTimestamp for CapitalGain {
-    fn timestamp(&self) -> i64 {
-        self.timestamp
-    }
-}
-
-/// Calculate cutoff timestamp for a given time range
-fn range_to_cutoff(range: TimeRange) -> i64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
-
-    const DAY: i64 = 86400;
-
-    match range {
-        TimeRange::OneDay => now - DAY,
-        TimeRange::FiveDays => now - 5 * DAY,
-        TimeRange::OneMonth => now - 30 * DAY,
-        TimeRange::ThreeMonths => now - 90 * DAY,
-        TimeRange::SixMonths => now - 180 * DAY,
-        TimeRange::OneYear => now - 365 * DAY,
-        TimeRange::TwoYears => now - 2 * 365 * DAY,
-        TimeRange::FiveYears => now - 5 * 365 * DAY,
-        TimeRange::TenYears => now - 10 * 365 * DAY,
-        TimeRange::YearToDate => {
-            // Approximate: ~days since Jan 1 of current year
-            // Using rough calculation (could use chrono for precision)
-            let days_in_year = (now % (365 * DAY)) / DAY;
-            now - days_in_year * DAY
-        }
-        TimeRange::Max => 0, // No cutoff
-    }
-}
-
-/// Filter a list of timestamped items by time range
-fn filter_by_range<T: HasTimestamp>(items: Vec<T>, range: TimeRange) -> Vec<T> {
-    match range {
-        TimeRange::Max => items,
-        range => {
-            let cutoff = range_to_cutoff(range);
-            items
-                .into_iter()
-                .filter(|item| item.timestamp() >= cutoff)
-                .collect()
-        }
-    }
-}
-
-// Core ticker helpers
-struct TickerCoreData {
-    symbol: String,
-}
-
-impl TickerCoreData {
-    fn new(symbol: impl Into<String>) -> Self {
-        Self {
-            symbol: symbol.into(),
-        }
-    }
-
-    /// Builds the quote summary URL with all modules
-    fn build_quote_summary_url(&self) -> String {
-        let url = crate::endpoints::urls::api::quote_summary(&self.symbol);
-        let quote_modules = Module::all();
-        let module_str = quote_modules
-            .iter()
-            .map(|m| m.as_str())
-            .collect::<Vec<_>>()
-            .join(",");
-        format!("{}?modules={}", url, module_str)
-    }
-
-    /// Parses quote summary response from JSON
-    fn parse_quote_summary(&self, json: serde_json::Value) -> Result<QuoteSummaryResponse> {
-        QuoteSummaryResponse::from_json(json, &self.symbol)
-    }
-}
+/// Opaque handle to a shared Yahoo Finance client session.
+///
+/// Allows multiple [`Ticker`] and [`Tickers`](crate::Tickers) instances to share
+/// a single authenticated session, avoiding redundant authentication handshakes.
+///
+/// Obtain a handle from an existing `Ticker` via [`Ticker::client_handle()`],
+/// then pass it to other builders via `.client()`.
+///
+/// # Example
+///
+/// ```no_run
+/// use finance_query::Ticker;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let aapl = Ticker::new("AAPL").await?;
+/// let handle = aapl.client_handle();
+///
+/// // Share the same session — no additional auth
+/// let msft = Ticker::builder("MSFT").client(handle.clone()).build().await?;
+/// let googl = Ticker::builder("GOOGL").client(handle).build().await?;
+/// # Ok(())
+/// # }
+/// ```
+#[derive(Clone)]
+pub struct ClientHandle(pub(crate) Arc<YahooClient>);
 
 /// Builder for Ticker
 ///
 /// Provides a fluent API for constructing Ticker instances.
 pub struct TickerBuilder {
-    symbol: String,
+    symbol: Arc<str>,
     config: ClientConfig,
-    edgar_client: Option<Arc<crate::edgar::EdgarClient>>,
+    shared_client: Option<ClientHandle>,
+    cache_ttl: Option<Duration>,
 }
 
 impl TickerBuilder {
     fn new(symbol: impl Into<String>) -> Self {
         Self {
-            symbol: symbol.into(),
+            symbol: symbol.into().into(),
             config: ClientConfig::default(),
-            edgar_client: None,
+            shared_client: None,
+            cache_ttl: None,
         }
     }
 
@@ -199,48 +137,86 @@ impl TickerBuilder {
         self
     }
 
-    /// Set an EDGAR client for SEC filing data access.
+    /// Share an existing authenticated session instead of creating a new one.
     ///
-    /// When set, enables `edgar_submissions()` and `edgar_company_facts()` methods
-    /// on the built [`Ticker`].
+    /// This avoids redundant authentication when you need multiple `Ticker`
+    /// instances or want to share a session between `Ticker` and [`Tickers`].
+    ///
+    /// Obtain a [`ClientHandle`] from any existing `Ticker` via
+    /// [`Ticker::client_handle()`].
+    ///
+    /// When set, the builder's `config`, `timeout`, `proxy`, `lang`, and `region`
+    /// settings are ignored (the shared session's configuration is used instead).
     ///
     /// # Example
     ///
     /// ```no_run
-    /// use finance_query::{Ticker, EdgarClientBuilder};
-    /// use std::sync::Arc;
+    /// use finance_query::Ticker;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let edgar = Arc::new(EdgarClientBuilder::new("user@example.com").build()?);
-    /// let ticker = Ticker::builder("AAPL").edgar(edgar).build().await?;
-    /// let submissions = ticker.edgar_submissions().await?;
+    /// let aapl = Ticker::new("AAPL").await?;
+    /// let handle = aapl.client_handle();
+    ///
+    /// let msft = Ticker::builder("MSFT").client(handle.clone()).build().await?;
+    /// let googl = Ticker::builder("GOOGL").client(handle).build().await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub fn edgar(mut self, client: Arc<crate::edgar::EdgarClient>) -> Self {
-        self.edgar_client = Some(client);
+    pub fn client(mut self, handle: ClientHandle) -> Self {
+        self.shared_client = Some(handle);
+        self
+    }
+
+    /// Enable response caching with a time-to-live.
+    ///
+    /// By default caching is **disabled** — every call fetches fresh data.
+    /// When enabled, responses are reused until the TTL expires, then
+    /// automatically re-fetched. Expired entries in map-based caches
+    /// (chart, options, financials) are evicted on the next write to
+    /// limit memory growth.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::Ticker;
+    /// use std::time::Duration;
+    ///
+    /// let ticker = Ticker::builder("AAPL")
+    ///     .cache(Duration::from_secs(30))
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn cache(mut self, ttl: Duration) -> Self {
+        self.cache_ttl = Some(ttl);
         self
     }
 
     /// Build the Ticker instance
     pub async fn build(self) -> Result<Ticker> {
-        let client = Arc::new(YahooClient::new(self.config).await?);
+        let client = match self.shared_client {
+            Some(handle) => handle.0,
+            None => Arc::new(YahooClient::new(self.config).await?),
+        };
 
         Ok(Ticker {
-            core: TickerCoreData::new(self.symbol),
+            symbol: self.symbol,
             client,
-            quote_summary: Arc::new(tokio::sync::RwLock::new(None)),
-            chart_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
-            events_cache: Arc::new(tokio::sync::RwLock::new(None)),
-            recommendations_cache: Arc::new(tokio::sync::RwLock::new(None)),
-            news_cache: Arc::new(tokio::sync::RwLock::new(None)),
-            options_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
-            financials_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
+            cache_ttl: self.cache_ttl,
+            quote_summary: Default::default(),
+            quote_summary_fetch: Arc::new(tokio::sync::Mutex::new(())),
+            chart_cache: Default::default(),
+            events_cache: Default::default(),
+            recommendations_cache: Default::default(),
+            news_cache: Default::default(),
+            options_cache: Default::default(),
+            financials_cache: Default::default(),
             #[cfg(feature = "indicators")]
-            indicators_cache: Arc::new(tokio::sync::RwLock::new(HashMap::new())),
-            edgar_client: self.edgar_client,
-            edgar_submissions_cache: Arc::new(tokio::sync::RwLock::new(None)),
-            edgar_facts_cache: Arc::new(tokio::sync::RwLock::new(None)),
+            indicators_cache: Default::default(),
+            edgar_submissions_cache: Default::default(),
+            edgar_facts_cache: Default::default(),
         })
     }
 }
@@ -269,31 +245,26 @@ impl TickerBuilder {
 /// # Ok(())
 /// # }
 /// ```
+#[derive(Clone)]
 pub struct Ticker {
-    core: TickerCoreData,
+    symbol: Arc<str>,
     client: Arc<YahooClient>,
-    quote_summary: Arc<tokio::sync::RwLock<Option<QuoteSummaryResponse>>>,
-    chart_cache: Arc<tokio::sync::RwLock<HashMap<(Interval, TimeRange), ChartResult>>>,
-    events_cache: Arc<tokio::sync::RwLock<Option<ChartEvents>>>,
-    recommendations_cache: Arc<tokio::sync::RwLock<Option<RecommendationResponse>>>,
-    news_cache: Arc<tokio::sync::RwLock<Option<Vec<crate::models::news::News>>>>,
-    options_cache: Arc<tokio::sync::RwLock<HashMap<Option<i64>, Options>>>,
-    financials_cache: Arc<
-        tokio::sync::RwLock<
-            HashMap<
-                (crate::constants::StatementType, crate::constants::Frequency),
-                FinancialStatement,
-            >,
-        >,
+    cache_ttl: Option<Duration>,
+    quote_summary: Cache<QuoteSummaryResponse>,
+    quote_summary_fetch: Arc<tokio::sync::Mutex<()>>,
+    chart_cache: MapCache<(Interval, TimeRange), Chart>,
+    events_cache: Cache<ChartEvents>,
+    recommendations_cache: Cache<RecommendationResponse>,
+    news_cache: Cache<Vec<crate::models::news::News>>,
+    options_cache: MapCache<Option<i64>, Options>,
+    financials_cache: MapCache<
+        (crate::constants::StatementType, crate::constants::Frequency),
+        FinancialStatement,
     >,
     #[cfg(feature = "indicators")]
-    indicators_cache: Arc<
-        tokio::sync::RwLock<HashMap<(Interval, TimeRange), crate::indicators::IndicatorsSummary>>,
-    >,
-    edgar_client: Option<Arc<crate::edgar::EdgarClient>>,
-    edgar_submissions_cache:
-        Arc<tokio::sync::RwLock<Option<crate::models::edgar::EdgarSubmissions>>>,
-    edgar_facts_cache: Arc<tokio::sync::RwLock<Option<crate::models::edgar::CompanyFacts>>>,
+    indicators_cache: MapCache<(Interval, TimeRange), crate::indicators::IndicatorsSummary>,
+    edgar_submissions_cache: Cache<crate::models::edgar::EdgarSubmissions>,
+    edgar_facts_cache: Cache<crate::models::edgar::CompanyFacts>,
 }
 
 impl Ticker {
@@ -349,108 +320,203 @@ impl Ticker {
 
     /// Returns the ticker symbol
     pub fn symbol(&self) -> &str {
-        &self.core.symbol
+        &self.symbol
     }
 
-    /// Ensures quote summary is loaded
-    async fn ensure_quote_summary_loaded(&self) -> Result<()> {
-        // Quick read check
+    /// Returns a shareable handle to this ticker's authenticated session.
+    ///
+    /// Pass the handle to other [`Ticker`] or [`Tickers`](crate::Tickers) builders
+    /// via `.client()` to reuse the same session without re-authenticating.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let aapl = Ticker::new("AAPL").await?;
+    /// let handle = aapl.client_handle();
+    ///
+    /// let msft = Ticker::builder("MSFT").client(handle).build().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn client_handle(&self) -> ClientHandle {
+        ClientHandle(Arc::clone(&self.client))
+    }
+
+    /// Returns `true` if a cache entry exists and has not exceeded the TTL.
+    ///
+    /// Returns `false` when caching is disabled (`cache_ttl` is `None`).
+    #[inline]
+    fn is_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
+        CacheEntry::is_fresh_with_ttl(entry, self.cache_ttl)
+    }
+
+    /// Insert into a map cache, amortizing stale-entry eviction.
+    ///
+    /// Only sweeps stale entries when the map exceeds [`EVICTION_THRESHOLD`],
+    /// avoiding O(n) scans on every write.
+    #[inline]
+    fn cache_insert<K: Eq + std::hash::Hash, V>(
+        &self,
+        map: &mut HashMap<K, CacheEntry<V>>,
+        key: K,
+        value: V,
+    ) {
+        if let Some(ttl) = self.cache_ttl {
+            if map.len() >= EVICTION_THRESHOLD {
+                map.retain(|_, entry| entry.is_fresh(ttl));
+            }
+            map.insert(key, CacheEntry::new(value));
+        }
+    }
+
+    /// Helper to construct Recommendation from RecommendationResponse with limit
+    fn build_recommendation_with_limit(
+        &self,
+        response: &RecommendationResponse,
+        limit: u32,
+    ) -> Recommendation {
+        Recommendation {
+            symbol: self.symbol.to_string(),
+            recommendations: response
+                .finance
+                .result
+                .iter()
+                .flat_map(|r| &r.recommended_symbols)
+                .take(limit as usize)
+                .cloned()
+                .collect(),
+        }
+    }
+
+    /// Builds the quote summary URL with all modules.
+    ///
+    /// The module list is computed once and reused across all Ticker instances.
+    fn build_quote_summary_url(&self) -> String {
+        static MODULES_PARAM: OnceLock<String> = OnceLock::new();
+        let modules = MODULES_PARAM.get_or_init(|| {
+            Module::all()
+                .iter()
+                .map(|m| m.as_str())
+                .collect::<Vec<_>>()
+                .join(",")
+        });
+        let url = crate::endpoints::urls::api::quote_summary(&self.symbol);
+        format!("{}?modules={}", url, modules)
+    }
+
+    /// Ensures quote summary is loaded and returns a read guard.
+    ///
+    /// Fast path: read lock only.
+    /// Slow path: serialized fetch (mutex), HTTP I/O with no lock held, brief write lock update.
+    async fn ensure_and_read_quote_summary(
+        &self,
+    ) -> Result<tokio::sync::RwLockReadGuard<'_, Option<CacheEntry<QuoteSummaryResponse>>>> {
+        // Fast path: cache hit
         {
             let cache = self.quote_summary.read().await;
-            if cache.is_some() {
-                return Ok(());
+            if self.is_cache_fresh(cache.as_ref()) {
+                return Ok(cache);
             }
         }
 
-        // Acquire write lock
-        let mut cache = self.quote_summary.write().await;
+        // Slow path: serialize fetch operations to prevent duplicate requests
+        let _fetch_guard = self.quote_summary_fetch.lock().await;
 
-        // Double-check (another task may have loaded while we waited)
-        if cache.is_some() {
-            return Ok(());
+        // Double-check: another task may have fetched while we waited on mutex
+        {
+            let cache = self.quote_summary.read().await;
+            if self.is_cache_fresh(cache.as_ref()) {
+                return Ok(cache);
+            }
         }
 
-        // Fetch using core's URL builder
-        let url = self.core.build_quote_summary_url();
+        // HTTP I/O with NO lock held — critical for concurrent readers
+        let url = self.build_quote_summary_url();
         let http_response = self.client.request_with_crumb(&url).await?;
         let json = http_response.json::<serde_json::Value>().await?;
+        let response = QuoteSummaryResponse::from_json(json, &self.symbol)?;
 
-        // Parse using core's parser
-        let response = self.core.parse_quote_summary(json)?;
-        *cache = Some(response);
+        // Brief write lock to update cache
+        {
+            let mut cache = self.quote_summary.write().await;
+            *cache = Some(CacheEntry::new(response));
+        }
 
-        Ok(())
+        // Fetch mutex released automatically, return read guard
+        Ok(self.quote_summary.read().await)
     }
 }
 
 // Generate quote summary accessor methods using macro to eliminate duplication.
 macros::define_quote_accessors! {
     /// Get price information
-    price -> Price, "price",
+    price -> Price, price,
 
     /// Get summary detail
-    summary_detail -> SummaryDetail, "summaryDetail",
+    summary_detail -> SummaryDetail, summary_detail,
 
     /// Get financial data
-    financial_data -> FinancialData, "financialData",
+    financial_data -> FinancialData, financial_data,
 
     /// Get key statistics
-    key_stats -> DefaultKeyStatistics, "defaultKeyStatistics",
+    key_stats -> DefaultKeyStatistics, default_key_statistics,
 
     /// Get asset profile
-    asset_profile -> AssetProfile, "assetProfile",
+    asset_profile -> AssetProfile, asset_profile,
 
     /// Get calendar events
-    calendar_events -> CalendarEvents, "calendarEvents",
+    calendar_events -> CalendarEvents, calendar_events,
 
     /// Get earnings
-    earnings -> Earnings, "earnings",
+    earnings -> Earnings, earnings,
 
     /// Get earnings trend
-    earnings_trend -> EarningsTrend, "earningsTrend",
+    earnings_trend -> EarningsTrend, earnings_trend,
 
     /// Get earnings history
-    earnings_history -> EarningsHistory, "earningsHistory",
+    earnings_history -> EarningsHistory, earnings_history,
 
     /// Get recommendation trend
-    recommendation_trend -> RecommendationTrend, "recommendationTrend",
+    recommendation_trend -> RecommendationTrend, recommendation_trend,
 
     /// Get insider holders
-    insider_holders -> InsiderHolders, "insiderHolders",
+    insider_holders -> InsiderHolders, insider_holders,
 
     /// Get insider transactions
-    insider_transactions -> InsiderTransactions, "insiderTransactions",
+    insider_transactions -> InsiderTransactions, insider_transactions,
 
     /// Get institution ownership
-    institution_ownership -> InstitutionOwnership, "institutionOwnership",
+    institution_ownership -> InstitutionOwnership, institution_ownership,
 
     /// Get fund ownership
-    fund_ownership -> FundOwnership, "fundOwnership",
+    fund_ownership -> FundOwnership, fund_ownership,
 
     /// Get major holders breakdown
-    major_holders -> MajorHoldersBreakdown, "majorHoldersBreakdown",
+    major_holders -> MajorHoldersBreakdown, major_holders_breakdown,
 
     /// Get net share purchase activity
-    share_purchase_activity -> NetSharePurchaseActivity, "netSharePurchaseActivity",
+    share_purchase_activity -> NetSharePurchaseActivity, net_share_purchase_activity,
 
     /// Get quote type
-    quote_type -> QuoteTypeData, "quoteType",
+    quote_type -> QuoteTypeData, quote_type,
 
     /// Get summary profile
-    summary_profile -> SummaryProfile, "summaryProfile",
+    summary_profile -> SummaryProfile, summary_profile,
 
     /// Get SEC filings (limited Yahoo Finance data)
     ///
     /// **DEPRECATED:** This method returns limited SEC filing metadata from Yahoo Finance.
     /// For comprehensive filing data directly from SEC EDGAR, use `edgar_submissions()` instead.
     ///
-    /// To use EDGAR methods, configure an EDGAR client:
+    /// To use EDGAR methods:
     /// ```no_run
-    /// # use finance_query::{Ticker, EdgarClientBuilder};
-    /// # use std::sync::Arc;
+    /// # use finance_query::{Ticker, edgar};
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let edgar = Arc::new(EdgarClientBuilder::new("user@example.com").build()?);
-    /// let ticker = Ticker::builder("AAPL").edgar(edgar).build().await?;
+    /// edgar::init("user@example.com")?;
+    /// let ticker = Ticker::new("AAPL").await?;
     /// let submissions = ticker.edgar_submissions().await?;  // Comprehensive EDGAR data
     /// # Ok(())
     /// # }
@@ -459,10 +525,46 @@ macros::define_quote_accessors! {
         since = "2.2.0",
         note = "Use `edgar_submissions()` for comprehensive SEC EDGAR data instead of limited Yahoo Finance metadata"
     )]
-    sec_filings -> SecFilings, "secFilings",
+    sec_filings -> SecFilings, sec_filings,
 
     /// Get upgrade/downgrade history
-    grading_history -> UpgradeDowngradeHistory, "upgradeDowngradeHistory",
+    grading_history -> UpgradeDowngradeHistory, upgrade_downgrade_history,
+
+    /// Get fund performance data (returns, trailing returns, risk statistics)
+    ///
+    /// Primarily relevant for ETFs and mutual funds. Returns `None` for equities.
+    fund_performance -> FundPerformance, fund_performance,
+
+    /// Get fund profile (category, family, fees, legal type)
+    ///
+    /// Primarily relevant for ETFs and mutual funds. Returns `None` for equities.
+    fund_profile -> FundProfile, fund_profile,
+
+    /// Get top holdings for ETFs and mutual funds
+    ///
+    /// Includes top stock/bond holdings with weights and sector weightings.
+    /// Returns `None` for equities.
+    top_holdings -> TopHoldings, top_holdings,
+
+    /// Get index trend data (P/E estimates and growth rates)
+    ///
+    /// Contains trend data for the symbol's associated index.
+    index_trend -> IndexTrend, index_trend,
+
+    /// Get industry trend data
+    ///
+    /// Contains P/E and growth estimates for the symbol's industry.
+    industry_trend -> IndustryTrend, industry_trend,
+
+    /// Get sector trend data
+    ///
+    /// Contains P/E and growth estimates for the symbol's sector.
+    sector_trend -> SectorTrend, sector_trend,
+
+    /// Get equity performance vs benchmark
+    ///
+    /// Performance comparison across multiple time periods.
+    equity_performance -> EquityPerformance, equity_performance,
 }
 
 impl Ticker {
@@ -475,129 +577,187 @@ impl Ticker {
     /// When `include_logo` is true, fetches both quote summary and logo URL in parallel
     /// using tokio::join! for minimal latency impact (~0-100ms overhead).
     pub async fn quote(&self, include_logo: bool) -> Result<Quote> {
+        let not_found = || crate::error::FinanceError::SymbolNotFound {
+            symbol: Some(self.symbol.to_string()),
+            context: "Quote summary not loaded".to_string(),
+        };
+
         if include_logo {
-            // Parallel fetch: quoteSummary AND logo
-            let (quote_result, logo_result) = tokio::join!(
-                self.ensure_quote_summary_loaded(),
-                self.client.get_logo_url(&self.core.symbol)
+            // Ensure quote summary is loaded in background while we fetch logos
+            let (cache_result, logo_result) = tokio::join!(
+                self.ensure_and_read_quote_summary(),
+                self.client.get_logo_url(&self.symbol)
             );
-
-            // Handle quoteSummary result (required)
-            quote_result?;
-
-            // Get cached quote summary
-            let cache = self.quote_summary.read().await;
-            let response =
-                cache
-                    .as_ref()
-                    .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
-                        symbol: Some(self.core.symbol.clone()),
-                        context: "Quote summary not loaded".to_string(),
-                    })?;
-
-            // Create Quote with logos (logo_result is (Option<String>, Option<String>))
+            let cache = cache_result?;
+            let entry = cache.as_ref().ok_or_else(not_found)?;
             let (logo_url, company_logo_url) = logo_result;
-            Ok(Quote::from_response(response, logo_url, company_logo_url))
+            Ok(Quote::from_response(
+                &entry.value,
+                logo_url,
+                company_logo_url,
+            ))
         } else {
-            // Original behavior - no logo fetch
-            self.ensure_quote_summary_loaded().await?;
-
-            let cache = self.quote_summary.read().await;
-            let response =
-                cache
-                    .as_ref()
-                    .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
-                        symbol: Some(self.core.symbol.clone()),
-                        context: "Quote summary not loaded".to_string(),
-                    })?;
-
-            Ok(Quote::from_response(response, None, None))
+            let cache = self.ensure_and_read_quote_summary().await?;
+            let entry = cache.as_ref().ok_or_else(not_found)?;
+            Ok(Quote::from_response(&entry.value, None, None))
         }
     }
 
     /// Get historical chart data
     pub async fn chart(&self, interval: Interval, range: TimeRange) -> Result<Chart> {
-        // Check cache first
+        // Fast path: return cached Chart directly (no re-parsing)
         {
             let cache = self.chart_cache.read().await;
-            if let Some(cached) = cache.get(&(interval, range)) {
-                return Ok(Chart {
-                    symbol: self.core.symbol.clone(),
-                    meta: cached.meta.clone(),
-                    candles: cached.to_candles(),
-                    interval: Some(interval.as_str().to_string()),
-                    range: Some(range.as_str().to_string()),
-                });
+            if let Some(entry) = cache.get(&(interval, range))
+                && self.is_cache_fresh(Some(entry))
+            {
+                return Ok(entry.value.clone());
             }
         }
 
-        // Fetch using client delegation
-        let json = self
-            .client
-            .get_chart(&self.core.symbol, interval, range)
-            .await?;
+        // Fetch from Yahoo
+        let json = self.client.get_chart(&self.symbol, interval, range).await?;
+        let chart_result = Self::parse_chart_result(json, &self.symbol)?;
+
+        // Always update events when we have fresh data from Yahoo
+        if let Some(events) = &chart_result.events {
+            let mut events_cache = self.events_cache.write().await;
+            *events_cache = Some(CacheEntry::new(events.clone()));
+        }
+
+        // Materialize Chart from raw result — this is the only place to_candles() runs
+        let chart = Chart {
+            symbol: self.symbol.to_string(),
+            meta: chart_result.meta.clone(),
+            candles: chart_result.to_candles(),
+            interval: Some(interval),
+            range: Some(range),
+        };
+
+        // Only clone when caching is enabled to avoid unnecessary allocations
+        if self.cache_ttl.is_some() {
+            let ret = chart.clone();
+            let mut cache = self.chart_cache.write().await;
+            self.cache_insert(&mut cache, (interval, range), chart);
+            Ok(ret)
+        } else {
+            Ok(chart)
+        }
+    }
+
+    /// Parse a ChartResult from raw JSON, returning a descriptive error on failure.
+    fn parse_chart_result(
+        json: serde_json::Value,
+        symbol: &str,
+    ) -> Result<crate::models::chart::result::ChartResult> {
         let response = ChartResponse::from_json(json).map_err(|e| {
-            crate::error::YahooError::ResponseStructureError {
+            crate::error::FinanceError::ResponseStructureError {
                 field: "chart".to_string(),
                 context: e.to_string(),
             }
         })?;
 
-        let mut results =
+        let results =
             response
                 .chart
                 .result
-                .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
-                    symbol: Some(self.core.symbol.clone()),
+                .ok_or_else(|| crate::error::FinanceError::SymbolNotFound {
+                    symbol: Some(symbol.to_string()),
                     context: "Chart data not found".to_string(),
                 })?;
 
-        let result = results
-            .pop()
-            .ok_or_else(|| crate::error::YahooError::SymbolNotFound {
-                symbol: Some(self.core.symbol.clone()),
+        results
+            .into_iter()
+            .next()
+            .ok_or_else(|| crate::error::FinanceError::SymbolNotFound {
+                symbol: Some(symbol.to_string()),
                 context: "Chart data empty".to_string(),
-            })?;
+            })
+    }
 
-        let candles = result.to_candles();
-        let meta = result.meta.clone();
+    /// Get historical chart data for a custom date range.
+    ///
+    /// Unlike [`chart()`](Self::chart) which uses predefined time ranges,
+    /// this method accepts absolute start/end timestamps for precise date control.
+    ///
+    /// Results are **not cached** since custom ranges have unbounded key space.
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - Time interval between data points
+    /// * `start` - Start date as Unix timestamp (seconds since epoch)
+    /// * `end` - End date as Unix timestamp (seconds since epoch)
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, Interval};
+    /// use chrono::NaiveDate;
+    ///
+    /// let ticker = Ticker::new("AAPL").await?;
+    ///
+    /// // Q3 2024
+    /// let start = NaiveDate::from_ymd_opt(2024, 7, 1).unwrap()
+    ///     .and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
+    /// let end = NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()
+    ///     .and_hms_opt(23, 59, 59).unwrap().and_utc().timestamp();
+    ///
+    /// let chart = ticker.chart_range(Interval::OneDay, start, end).await?;
+    /// println!("Q3 2024 candles: {}", chart.candles.len());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn chart_range(&self, interval: Interval, start: i64, end: i64) -> Result<Chart> {
+        let json = self
+            .client
+            .get_chart_range(&self.symbol, interval, start, end)
+            .await?;
+        let chart_result = Self::parse_chart_result(json, &self.symbol)?;
 
-        // Cache events on first chart fetch (events are complete history, only cache once)
-        {
+        // Always update events when we have fresh data from Yahoo
+        if let Some(events) = &chart_result.events {
             let mut events_cache = self.events_cache.write().await;
-            if events_cache.is_none() {
-                *events_cache = result.events.clone();
-            }
-        }
-
-        // Cache the result
-        {
-            let mut cache = self.chart_cache.write().await;
-            cache.insert((interval, range), result);
+            *events_cache = Some(CacheEntry::new(events.clone()));
         }
 
         Ok(Chart {
-            symbol: self.core.symbol.clone(),
-            meta,
-            candles,
-            interval: Some(interval.as_str().to_string()),
-            range: Some(range.as_str().to_string()),
+            symbol: self.symbol.to_string(),
+            meta: chart_result.meta.clone(),
+            candles: chart_result.to_candles(),
+            interval: Some(interval),
+            range: None,
         })
     }
 
-    /// Ensures events data is loaded (fetches chart with max range if not cached)
+    /// Ensures events data is loaded (fetches events only if not cached)
     async fn ensure_events_loaded(&self) -> Result<()> {
         // Quick read check
         {
             let cache = self.events_cache.read().await;
-            if cache.is_some() {
+            if self.is_cache_fresh(cache.as_ref()) {
                 return Ok(());
             }
         }
 
-        // Fetch chart with max range to get all events
-        // Using daily interval with max range gives us complete dividend/split history
-        self.chart(Interval::OneDay, TimeRange::Max).await?;
+        // Fetch events using max range with 1d interval to get all historical events
+        // Using 1d interval minimizes candle count compared to shorter intervals
+        let json = crate::endpoints::chart::fetch(
+            &self.client,
+            &self.symbol,
+            Interval::OneDay,
+            TimeRange::Max,
+        )
+        .await?;
+        let chart_result = Self::parse_chart_result(json, &self.symbol)?;
+
+        // Write to events cache unconditionally for temporary storage during this method
+        // Note: when cache_ttl is None, is_cache_fresh() returns false, so this will
+        // be refetched on the next call to dividends()/splits()/capital_gains().
+        // Cache empty ChartEvents when Yahoo returns no events to prevent infinite refetch loops
+        let mut events_cache = self.events_cache.write().await;
+        *events_cache = Some(CacheEntry::new(chart_result.events.unwrap_or_default()));
+
         Ok(())
     }
 
@@ -630,7 +790,10 @@ impl Ticker {
         self.ensure_events_loaded().await?;
 
         let cache = self.events_cache.read().await;
-        let all = cache.as_ref().map(|e| e.to_dividends()).unwrap_or_default();
+        let all = cache
+            .as_ref()
+            .map(|e| e.value.to_dividends())
+            .unwrap_or_default();
 
         Ok(filter_by_range(all, range))
     }
@@ -664,7 +827,10 @@ impl Ticker {
         self.ensure_events_loaded().await?;
 
         let cache = self.events_cache.read().await;
-        let all = cache.as_ref().map(|e| e.to_splits()).unwrap_or_default();
+        let all = cache
+            .as_ref()
+            .map(|e| e.value.to_splits())
+            .unwrap_or_default();
 
         Ok(filter_by_range(all, range))
     }
@@ -701,7 +867,7 @@ impl Ticker {
         let cache = self.events_cache.read().await;
         let all = cache
             .as_ref()
-            .map(|e| e.to_capital_gains())
+            .map(|e| e.value.to_capital_gains())
             .unwrap_or_default();
 
         Ok(filter_by_range(all, range))
@@ -741,8 +907,10 @@ impl Ticker {
         // Check cache first (read lock)
         {
             let cache = self.indicators_cache.read().await;
-            if let Some(cached) = cache.get(&(interval, range)) {
-                return Ok(cached.clone());
+            if let Some(entry) = cache.get(&(interval, range))
+                && self.is_cache_fresh(Some(entry))
+            {
+                return Ok(entry.value.clone());
             }
         }
 
@@ -752,13 +920,14 @@ impl Ticker {
         // Calculate indicators from candles
         let indicators = crate::indicators::summary::calculate_indicators(&chart.candles);
 
-        // Cache the result (write lock)
-        {
+        // Only clone when caching is enabled
+        if self.cache_ttl.is_some() {
             let mut cache = self.indicators_cache.write().await;
-            cache.insert((interval, range), indicators.clone());
+            self.cache_insert(&mut cache, (interval, range), indicators.clone());
+            Ok(indicators)
+        } else {
+            Ok(indicators)
         }
-
-        Ok(indicators)
     }
 
     /// Calculate a specific technical indicator over a time range.
@@ -825,6 +994,7 @@ impl Ticker {
         let chart = self.chart(interval, range).await?;
 
         // Calculate the requested indicator
+        // Note: Price vectors are extracted lazily within each arm to avoid waste
         let result = match indicator {
             Indicator::Sma(period) => IndicatorResult::Series(chart.sma(period)),
             Indicator::Ema(period) => IndicatorResult::Series(chart.ema(period)),
@@ -837,270 +1007,252 @@ impl Ticker {
             }
             Indicator::Atr(period) => IndicatorResult::Series(chart.atr(period)?),
             Indicator::Obv => {
-                use crate::indicators::obv;
-                IndicatorResult::Series(obv(&chart.close_prices(), &chart.volumes())?)
+                let closes = chart.close_prices();
+                let volumes = chart.volumes();
+                IndicatorResult::Series(crate::indicators::obv(&closes, &volumes)?)
             }
             Indicator::Vwap => {
-                use crate::indicators::vwap;
-                IndicatorResult::Series(vwap(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    &chart.volumes(),
-                )?)
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                let volumes = chart.volumes();
+                IndicatorResult::Series(crate::indicators::vwap(&highs, &lows, &closes, &volumes)?)
             }
             Indicator::Wma(period) => {
-                use crate::indicators::wma;
-                IndicatorResult::Series(wma(&chart.close_prices(), period)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::wma(&closes, period)?)
             }
             Indicator::Dema(period) => {
-                use crate::indicators::dema;
-                IndicatorResult::Series(dema(&chart.close_prices(), period)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::dema(&closes, period)?)
             }
             Indicator::Tema(period) => {
-                use crate::indicators::tema;
-                IndicatorResult::Series(tema(&chart.close_prices(), period)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::tema(&closes, period)?)
             }
             Indicator::Hma(period) => {
-                use crate::indicators::hma;
-                IndicatorResult::Series(hma(&chart.close_prices(), period)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::hma(&closes, period)?)
             }
             Indicator::Vwma(period) => {
-                use crate::indicators::vwma;
-                IndicatorResult::Series(vwma(&chart.close_prices(), &chart.volumes(), period)?)
+                let closes = chart.close_prices();
+                let volumes = chart.volumes();
+                IndicatorResult::Series(crate::indicators::vwma(&closes, &volumes, period)?)
             }
             Indicator::Alma {
                 period,
                 offset,
                 sigma,
             } => {
-                use crate::indicators::alma;
-                IndicatorResult::Series(alma(&chart.close_prices(), period, offset, sigma)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::alma(&closes, period, offset, sigma)?)
             }
             Indicator::McginleyDynamic(period) => {
-                use crate::indicators::mcginley_dynamic;
-                IndicatorResult::Series(mcginley_dynamic(&chart.close_prices(), period)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::mcginley_dynamic(&closes, period)?)
             }
             Indicator::Stochastic {
                 k_period,
-                k_slow: _,
+                k_slow: _k_slow,
                 d_period,
             } => {
-                use crate::indicators::stochastic;
-                IndicatorResult::Stochastic(stochastic(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    k_period,
-                    d_period,
+                // TODO: k_slow parameter not yet used (no smoothing applied)
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Stochastic(crate::indicators::stochastic(
+                    &highs, &lows, &closes, k_period, d_period,
                 )?)
             }
             Indicator::StochasticRsi {
                 rsi_period,
                 stoch_period,
-                k_period: _,
-                d_period: _,
+                k_period: _k_period,
+                d_period: _d_period,
             } => {
-                use crate::indicators::stochastic_rsi;
-                IndicatorResult::Series(stochastic_rsi(
-                    &chart.close_prices(),
+                // TODO: k_period/d_period smoothing not yet implemented
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::stochastic_rsi(
+                    &closes,
                     rsi_period,
                     stoch_period,
                 )?)
             }
             Indicator::Cci(period) => {
-                use crate::indicators::cci;
-                IndicatorResult::Series(cci(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    period,
-                )?)
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::cci(&highs, &lows, &closes, period)?)
             }
             Indicator::WilliamsR(period) => {
-                use crate::indicators::williams_r;
-                IndicatorResult::Series(williams_r(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    period,
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::williams_r(
+                    &highs, &lows, &closes, period,
                 )?)
             }
             Indicator::Roc(period) => {
-                use crate::indicators::roc;
-                IndicatorResult::Series(roc(&chart.close_prices(), period)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::roc(&closes, period)?)
             }
             Indicator::Momentum(period) => {
-                use crate::indicators::momentum;
-                IndicatorResult::Series(momentum(&chart.close_prices(), period)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::momentum(&closes, period)?)
             }
             Indicator::Cmo(period) => {
-                use crate::indicators::cmo;
-                IndicatorResult::Series(cmo(&chart.close_prices(), period)?)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::cmo(&closes, period)?)
             }
-            Indicator::AwesomeOscillator { fast: _, slow: _ } => {
-                use crate::indicators::awesome_oscillator;
-                IndicatorResult::Series(awesome_oscillator(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                )?)
+            Indicator::AwesomeOscillator {
+                fast: _fast,
+                slow: _slow,
+            } => {
+                // TODO: custom fast/slow periods not yet supported; uses defaults (5, 34)
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                IndicatorResult::Series(crate::indicators::awesome_oscillator(&highs, &lows)?)
             }
             Indicator::CoppockCurve {
-                wma_period: _,
-                long_roc: _,
-                short_roc: _,
+                wma_period: _wma_period,
+                long_roc: _long_roc,
+                short_roc: _short_roc,
             } => {
-                use crate::indicators::coppock_curve;
-                IndicatorResult::Series(coppock_curve(&chart.close_prices())?)
+                // TODO: custom wma_period/long_roc/short_roc not yet supported; uses defaults (10, 14, 11)
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::coppock_curve(&closes)?)
             }
             Indicator::Adx(period) => {
-                use crate::indicators::adx;
-                IndicatorResult::Series(adx(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    period,
-                )?)
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::adx(&highs, &lows, &closes, period)?)
             }
             Indicator::Aroon(period) => {
-                use crate::indicators::aroon;
-                IndicatorResult::Aroon(aroon(&chart.high_prices(), &chart.low_prices(), period)?)
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                IndicatorResult::Aroon(crate::indicators::aroon(&highs, &lows, period)?)
             }
             Indicator::Supertrend { period, multiplier } => {
-                use crate::indicators::supertrend;
-                IndicatorResult::SuperTrend(supertrend(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    period,
-                    multiplier,
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::SuperTrend(crate::indicators::supertrend(
+                    &highs, &lows, &closes, period, multiplier,
                 )?)
             }
             Indicator::Ichimoku {
-                conversion: _,
-                base: _,
-                lagging: _,
-                displacement: _,
+                conversion: _conversion,
+                base: _base,
+                lagging: _lagging,
+                displacement: _displacement,
             } => {
-                use crate::indicators::ichimoku;
-                IndicatorResult::Ichimoku(ichimoku(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                )?)
+                // TODO: custom periods not yet supported; uses traditional values (9, 26, 52, 26)
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Ichimoku(crate::indicators::ichimoku(&highs, &lows, &closes)?)
             }
             Indicator::ParabolicSar { step, max } => {
-                use crate::indicators::parabolic_sar;
-                IndicatorResult::Series(parabolic_sar(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    step,
-                    max,
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::parabolic_sar(
+                    &highs, &lows, &closes, step, max,
                 )?)
             }
             Indicator::BullBearPower(_period) => {
-                use crate::indicators::bull_bear_power;
-                IndicatorResult::BullBearPower(bull_bear_power(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
+                // TODO: period parameter not yet used; currently uses EMA(13) internally
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::BullBearPower(crate::indicators::bull_bear_power(
+                    &highs, &lows, &closes,
                 )?)
             }
             Indicator::ElderRay(_period) => {
-                use crate::indicators::elder_ray;
-                IndicatorResult::ElderRay(elder_ray(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                )?)
+                // TODO: period parameter not yet used; currently uses EMA(13) internally
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::ElderRay(crate::indicators::elder_ray(&highs, &lows, &closes)?)
             }
             Indicator::KeltnerChannels {
                 period,
                 multiplier,
                 atr_period,
             } => {
-                use crate::indicators::keltner_channels;
-                IndicatorResult::Keltner(keltner_channels(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    period,
-                    atr_period,
-                    multiplier,
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Keltner(crate::indicators::keltner_channels(
+                    &highs, &lows, &closes, period, atr_period, multiplier,
                 )?)
             }
             Indicator::DonchianChannels(period) => {
-                use crate::indicators::donchian_channels;
-                IndicatorResult::Donchian(donchian_channels(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    period,
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                IndicatorResult::Donchian(crate::indicators::donchian_channels(
+                    &highs, &lows, period,
                 )?)
             }
             Indicator::TrueRange => {
-                use crate::indicators::true_range;
-                IndicatorResult::Series(true_range(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                )?)
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::true_range(&highs, &lows, &closes)?)
             }
             Indicator::ChoppinessIndex(period) => {
-                use crate::indicators::choppiness_index;
-                IndicatorResult::Series(choppiness_index(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    period,
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::choppiness_index(
+                    &highs, &lows, &closes, period,
                 )?)
             }
             Indicator::Mfi(period) => {
-                use crate::indicators::mfi;
-                IndicatorResult::Series(mfi(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    &chart.volumes(),
-                    period,
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                let volumes = chart.volumes();
+                IndicatorResult::Series(crate::indicators::mfi(
+                    &highs, &lows, &closes, &volumes, period,
                 )?)
             }
             Indicator::Cmf(period) => {
-                use crate::indicators::cmf;
-                IndicatorResult::Series(cmf(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    &chart.volumes(),
-                    period,
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                let volumes = chart.volumes();
+                IndicatorResult::Series(crate::indicators::cmf(
+                    &highs, &lows, &closes, &volumes, period,
                 )?)
             }
             Indicator::ChaikinOscillator => {
-                use crate::indicators::chaikin_oscillator;
-                IndicatorResult::Series(chaikin_oscillator(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    &chart.volumes(),
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                let volumes = chart.volumes();
+                IndicatorResult::Series(crate::indicators::chaikin_oscillator(
+                    &highs, &lows, &closes, &volumes,
                 )?)
             }
             Indicator::AccumulationDistribution => {
-                use crate::indicators::accumulation_distribution;
-                IndicatorResult::Series(accumulation_distribution(
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    &chart.volumes(),
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                let volumes = chart.volumes();
+                IndicatorResult::Series(crate::indicators::accumulation_distribution(
+                    &highs, &lows, &closes, &volumes,
                 )?)
             }
             Indicator::BalanceOfPower(period) => {
-                use crate::indicators::balance_of_power;
-                IndicatorResult::Series(balance_of_power(
-                    &chart.open_prices(),
-                    &chart.high_prices(),
-                    &chart.low_prices(),
-                    &chart.close_prices(),
-                    period,
+                let opens = chart.open_prices();
+                let highs = chart.high_prices();
+                let lows = chart.low_prices();
+                let closes = chart.close_prices();
+                IndicatorResult::Series(crate::indicators::balance_of_power(
+                    &opens, &highs, &lows, &closes, period,
                 )?)
             }
         };
@@ -1110,51 +1262,34 @@ impl Ticker {
 
     /// Get analyst recommendations
     pub async fn recommendations(&self, limit: u32) -> Result<Recommendation> {
-        // Check cache
+        // Check cache (always fetches max from server, truncated to limit on return)
         {
             let cache = self.recommendations_cache.read().await;
-            if let Some(cached) = cache.as_ref() {
-                return Ok(Recommendation {
-                    symbol: self.core.symbol.clone(),
-                    recommendations: cached
-                        .finance
-                        .result
-                        .iter()
-                        .flat_map(|r| &r.recommended_symbols)
-                        .cloned()
-                        .collect(),
-                });
+            if let Some(entry) = cache.as_ref()
+                && self.is_cache_fresh(Some(entry))
+            {
+                return Ok(self.build_recommendation_with_limit(&entry.value, limit));
             }
         }
 
-        // Fetch using client delegation
-        let json = self
-            .client
-            .get_recommendations(&self.core.symbol, limit)
-            .await?;
+        // Always fetch server maximum (no limit restriction to maximize cache utility)
+        let json = self.client.get_recommendations(&self.symbol, 15).await?;
         let response = RecommendationResponse::from_json(json).map_err(|e| {
-            crate::error::YahooError::ResponseStructureError {
+            crate::error::FinanceError::ResponseStructureError {
                 field: "finance".to_string(),
                 context: e.to_string(),
             }
         })?;
 
-        // Cache
-        {
+        // Cache full response, return truncated result
+        if self.cache_ttl.is_some() {
             let mut cache = self.recommendations_cache.write().await;
-            *cache = Some(response.clone());
+            *cache = Some(CacheEntry::new(response));
+            let entry = cache.as_ref().unwrap();
+            return Ok(self.build_recommendation_with_limit(&entry.value, limit));
         }
 
-        Ok(Recommendation {
-            symbol: self.core.symbol.clone(),
-            recommendations: response
-                .finance
-                .result
-                .iter()
-                .flat_map(|r| &r.recommended_symbols)
-                .cloned()
-                .collect(),
-        })
+        Ok(self.build_recommendation_with_limit(&response, limit))
     }
 
     /// Get financial statements
@@ -1186,24 +1321,27 @@ impl Ticker {
         // Check cache
         {
             let cache = self.financials_cache.read().await;
-            if let Some(cached) = cache.get(&cache_key) {
-                return Ok(cached.clone());
+            if let Some(entry) = cache.get(&cache_key)
+                && self.is_cache_fresh(Some(entry))
+            {
+                return Ok(entry.value.clone());
             }
         }
 
         // Fetch financials
         let financials = self
             .client
-            .get_financials(&self.core.symbol, statement_type, frequency)
+            .get_financials(&self.symbol, statement_type, frequency)
             .await?;
 
-        // Update cache
-        {
+        // Only clone when caching is enabled
+        if self.cache_ttl.is_some() {
             let mut cache = self.financials_cache.write().await;
-            cache.insert(cache_key, financials.clone());
+            self.cache_insert(&mut cache, cache_key, financials.clone());
+            Ok(financials)
+        } else {
+            Ok(financials)
         }
-
-        Ok(financials)
     }
 
     /// Get news articles for this symbol
@@ -1226,21 +1364,22 @@ impl Ticker {
         // Check cache
         {
             let cache = self.news_cache.read().await;
-            if let Some(cached) = cache.as_ref() {
-                return Ok(cached.clone());
+            if self.is_cache_fresh(cache.as_ref()) {
+                return Ok(cache.as_ref().unwrap().value.clone());
             }
         }
 
         // Fetch news
-        let news = crate::scrapers::stockanalysis::scrape_symbol_news(&self.core.symbol).await?;
+        let news = crate::scrapers::stockanalysis::scrape_symbol_news(&self.symbol).await?;
 
-        // Update cache
-        {
+        // Only clone when caching is enabled
+        if self.cache_ttl.is_some() {
             let mut cache = self.news_cache.write().await;
-            *cache = Some(news.clone());
+            *cache = Some(CacheEntry::new(news.clone()));
+            Ok(news)
+        } else {
+            Ok(news)
         }
-
-        Ok(news)
     }
 
     /// Get options chain
@@ -1248,27 +1387,30 @@ impl Ticker {
         // Check cache
         {
             let cache = self.options_cache.read().await;
-            if let Some(cached) = cache.get(&date) {
-                return Ok(cached.clone());
+            if let Some(entry) = cache.get(&date)
+                && self.is_cache_fresh(Some(entry))
+            {
+                return Ok(entry.value.clone());
             }
         }
 
         // Fetch options
-        let json = self.client.get_options(&self.core.symbol, date).await?;
+        let json = self.client.get_options(&self.symbol, date).await?;
         let options: Options = serde_json::from_value(json).map_err(|e| {
-            crate::error::YahooError::ResponseStructureError {
+            crate::error::FinanceError::ResponseStructureError {
                 field: "options".to_string(),
                 context: e.to_string(),
             }
         })?;
 
-        // Update cache
-        {
+        // Only clone when caching is enabled
+        if self.cache_ttl.is_some() {
             let mut cache = self.options_cache.write().await;
-            cache.insert(date, options.clone());
+            self.cache_insert(&mut cache, date, options.clone());
+            Ok(options)
+        } else {
+            Ok(options)
         }
-
-        Ok(options)
     }
 
     /// Run a backtest with the given strategy and configuration.
@@ -1339,7 +1481,7 @@ impl Ticker {
 
         // Run backtest engine
         let engine = BacktestEngine::new(config);
-        engine.run(&self.core.symbol, &chart.candles, strategy)
+        engine.run(&self.symbol, &chart.candles, strategy)
     }
 
     // ========================================================================
@@ -1351,17 +1493,16 @@ impl Ticker {
     /// Returns company metadata and recent filings. Results are cached for
     /// the lifetime of this `Ticker` instance.
     ///
-    /// Requires an EDGAR client to be configured via the builder.
+    /// Requires EDGAR to be initialized via `edgar::init(email)`.
     ///
     /// # Example
     ///
     /// ```no_run
-    /// use finance_query::{Ticker, EdgarClientBuilder};
-    /// use std::sync::Arc;
+    /// use finance_query::{Ticker, edgar};
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let edgar = Arc::new(EdgarClientBuilder::new("user@example.com").build()?);
-    /// let ticker = Ticker::builder("AAPL").edgar(edgar).build().await?;
+    /// edgar::init("user@example.com")?;
+    /// let ticker = Ticker::new("AAPL").await?;
     ///
     /// let submissions = ticker.edgar_submissions().await?;
     /// println!("Company: {:?}", submissions.name);
@@ -1369,32 +1510,26 @@ impl Ticker {
     /// # }
     /// ```
     pub async fn edgar_submissions(&self) -> Result<crate::models::edgar::EdgarSubmissions> {
-        let edgar = self.edgar_client.as_ref().ok_or_else(|| {
-            crate::error::YahooError::InvalidParameter {
-                param: "edgar_client".to_string(),
-                reason: "EDGAR client not configured. Use Ticker::builder(symbol).edgar(client).build().".to_string(),
-            }
-        })?;
-
         // Check cache
         {
             let cache = self.edgar_submissions_cache.read().await;
-            if let Some(cached) = cache.as_ref() {
-                return Ok(cached.clone());
+            if self.is_cache_fresh(cache.as_ref()) {
+                return Ok(cache.as_ref().unwrap().value.clone());
             }
         }
 
-        // Fetch
-        let cik = edgar.resolve_cik(&self.core.symbol).await?;
-        let submissions = edgar.submissions(cik).await?;
+        // Fetch using singleton
+        let cik = crate::edgar::resolve_cik(&self.symbol).await?;
+        let submissions = crate::edgar::submissions(cik).await?;
 
-        // Cache
-        {
+        // Only clone when caching is enabled
+        if self.cache_ttl.is_some() {
             let mut cache = self.edgar_submissions_cache.write().await;
-            *cache = Some(submissions.clone());
+            *cache = Some(CacheEntry::new(submissions.clone()));
+            Ok(submissions)
+        } else {
+            Ok(submissions)
         }
-
-        Ok(submissions)
     }
 
     /// Get SEC EDGAR company facts (structured XBRL financial data) for this symbol.
@@ -1402,17 +1537,16 @@ impl Ticker {
     /// Returns all extracted XBRL facts organized by taxonomy. Results are cached
     /// for the lifetime of this `Ticker` instance.
     ///
-    /// Requires an EDGAR client to be configured via the builder.
+    /// Requires EDGAR to be initialized via `edgar::init(email)`.
     ///
     /// # Example
     ///
     /// ```no_run
-    /// use finance_query::{Ticker, EdgarClientBuilder};
-    /// use std::sync::Arc;
+    /// use finance_query::{Ticker, edgar};
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let edgar = Arc::new(EdgarClientBuilder::new("user@example.com").build()?);
-    /// let ticker = Ticker::builder("AAPL").edgar(edgar).build().await?;
+    /// edgar::init("user@example.com")?;
+    /// let ticker = Ticker::new("AAPL").await?;
     ///
     /// let facts = ticker.edgar_company_facts().await?;
     /// if let Some(revenue) = facts.get_us_gaap_fact("Revenue") {
@@ -1422,31 +1556,112 @@ impl Ticker {
     /// # }
     /// ```
     pub async fn edgar_company_facts(&self) -> Result<crate::models::edgar::CompanyFacts> {
-        let edgar = self.edgar_client.as_ref().ok_or_else(|| {
-            crate::error::YahooError::InvalidParameter {
-                param: "edgar_client".to_string(),
-                reason: "EDGAR client not configured. Use Ticker::builder(symbol).edgar(client).build().".to_string(),
-            }
-        })?;
-
         // Check cache
         {
             let cache = self.edgar_facts_cache.read().await;
-            if let Some(cached) = cache.as_ref() {
-                return Ok(cached.clone());
+            if self.is_cache_fresh(cache.as_ref()) {
+                return Ok(cache.as_ref().unwrap().value.clone());
             }
         }
 
-        // Fetch
-        let cik = edgar.resolve_cik(&self.core.symbol).await?;
-        let facts = edgar.company_facts(cik).await?;
+        // Fetch using singleton
+        let cik = crate::edgar::resolve_cik(&self.symbol).await?;
+        let facts = crate::edgar::company_facts(cik).await?;
 
-        // Cache
-        {
+        // Only clone when caching is enabled
+        if self.cache_ttl.is_some() {
             let mut cache = self.edgar_facts_cache.write().await;
-            *cache = Some(facts.clone());
+            *cache = Some(CacheEntry::new(facts.clone()));
+            Ok(facts)
+        } else {
+            Ok(facts)
         }
+    }
 
-        Ok(facts)
+    // ========================================================================
+    // Cache Management
+    // ========================================================================
+
+    /// Clear all cached data, forcing fresh fetches on next access.
+    ///
+    /// Use this when you need up-to-date data from a long-lived `Ticker` instance.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::Ticker;
+    ///
+    /// let ticker = Ticker::new("AAPL").await?;
+    /// let quote = ticker.quote(false).await?; // fetches from API
+    ///
+    /// // ... some time later ...
+    /// ticker.clear_cache().await;
+    /// let fresh_quote = ticker.quote(false).await?; // fetches again
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn clear_cache(&self) {
+        // Acquire all independent write locks in parallel
+        tokio::join!(
+            async {
+                *self.quote_summary.write().await = None;
+            },
+            async {
+                self.chart_cache.write().await.clear();
+            },
+            async {
+                *self.events_cache.write().await = None;
+            },
+            async {
+                *self.recommendations_cache.write().await = None;
+            },
+            async {
+                *self.news_cache.write().await = None;
+            },
+            async {
+                self.options_cache.write().await.clear();
+            },
+            async {
+                self.financials_cache.write().await.clear();
+            },
+            async {
+                *self.edgar_submissions_cache.write().await = None;
+            },
+            async {
+                *self.edgar_facts_cache.write().await = None;
+            },
+            async {
+                #[cfg(feature = "indicators")]
+                self.indicators_cache.write().await.clear();
+            },
+        );
+    }
+
+    /// Clear only the cached quote summary data.
+    ///
+    /// The next call to any quote accessor (e.g., `price()`, `financial_data()`)
+    /// will re-fetch all quote modules from the API.
+    pub async fn clear_quote_cache(&self) {
+        *self.quote_summary.write().await = None;
+    }
+
+    /// Clear only the cached chart and events data.
+    ///
+    /// The next call to `chart()`, `dividends()`, `splits()`, or `capital_gains()`
+    /// will re-fetch from the API.
+    pub async fn clear_chart_cache(&self) {
+        tokio::join!(
+            async {
+                self.chart_cache.write().await.clear();
+            },
+            async {
+                *self.events_cache.write().await = None;
+            },
+            async {
+                #[cfg(feature = "indicators")]
+                self.indicators_cache.write().await.clear();
+            }
+        );
     }
 }

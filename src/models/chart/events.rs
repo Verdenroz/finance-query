@@ -4,9 +4,13 @@
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
+use std::sync::OnceLock;
 
 /// Chart events containing dividends, splits, and capital gains
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+///
+/// Events are deserialized from HashMaps, then lazily converted to sorted vectors
+/// on first access and cached for subsequent calls.
+#[derive(Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ChartEvents {
     /// Dividend events keyed by timestamp
@@ -18,6 +22,16 @@ pub(crate) struct ChartEvents {
     /// Capital gain events keyed by timestamp
     #[serde(default)]
     pub capital_gains: HashMap<String, CapitalGainEvent>,
+
+    /// Cached sorted dividend vector (computed once on first access)
+    #[serde(skip)]
+    dividends_cache: OnceLock<Vec<Dividend>>,
+    /// Cached sorted splits vector (computed once on first access)
+    #[serde(skip)]
+    splits_cache: OnceLock<Vec<Split>>,
+    /// Cached sorted capital gains vector (computed once on first access)
+    #[serde(skip)]
+    capital_gains_cache: OnceLock<Vec<CapitalGain>>,
 }
 
 /// Raw dividend event from Yahoo Finance
@@ -95,48 +109,82 @@ pub struct CapitalGain {
     pub amount: f64,
 }
 
+impl Clone for ChartEvents {
+    fn clone(&self) -> Self {
+        // Helper to clone OnceLock if initialized
+        fn clone_cache<T: Clone>(cache: &OnceLock<T>) -> OnceLock<T> {
+            let new_cache = OnceLock::new();
+            if let Some(value) = cache.get() {
+                let _ = new_cache.set(value.clone());
+            }
+            new_cache
+        }
+
+        Self {
+            dividends: self.dividends.clone(),
+            splits: self.splits.clone(),
+            capital_gains: self.capital_gains.clone(),
+            dividends_cache: clone_cache(&self.dividends_cache),
+            splits_cache: clone_cache(&self.splits_cache),
+            capital_gains_cache: clone_cache(&self.capital_gains_cache),
+        }
+    }
+}
+
 impl ChartEvents {
-    /// Convert to sorted list of dividends
+    /// Get sorted list of dividends (cached after first call)
     pub(crate) fn to_dividends(&self) -> Vec<Dividend> {
-        let mut dividends: Vec<Dividend> = self
-            .dividends
-            .values()
-            .map(|d| Dividend {
-                timestamp: d.date,
-                amount: d.amount,
+        self.dividends_cache
+            .get_or_init(|| {
+                let mut dividends: Vec<Dividend> = self
+                    .dividends
+                    .values()
+                    .map(|d| Dividend {
+                        timestamp: d.date,
+                        amount: d.amount,
+                    })
+                    .collect();
+                dividends.sort_by_key(|d| d.timestamp);
+                dividends
             })
-            .collect();
-        dividends.sort_by_key(|d| d.timestamp);
-        dividends
+            .clone()
     }
 
-    /// Convert to sorted list of splits
+    /// Get sorted list of splits (cached after first call)
     pub(crate) fn to_splits(&self) -> Vec<Split> {
-        let mut splits: Vec<Split> = self
-            .splits
-            .values()
-            .map(|s| Split {
-                timestamp: s.date,
-                numerator: s.numerator,
-                denominator: s.denominator,
-                ratio: s.split_ratio.clone(),
+        self.splits_cache
+            .get_or_init(|| {
+                let mut splits: Vec<Split> = self
+                    .splits
+                    .values()
+                    .map(|s| Split {
+                        timestamp: s.date,
+                        numerator: s.numerator,
+                        denominator: s.denominator,
+                        ratio: s.split_ratio.clone(),
+                    })
+                    .collect();
+                splits.sort_by_key(|s| s.timestamp);
+                splits
             })
-            .collect();
-        splits.sort_by_key(|s| s.timestamp);
-        splits
+            .clone()
     }
 
-    /// Convert to sorted list of capital gains
+    /// Get sorted list of capital gains (cached after first call)
     pub(crate) fn to_capital_gains(&self) -> Vec<CapitalGain> {
-        let mut gains: Vec<CapitalGain> = self
-            .capital_gains
-            .values()
-            .map(|g| CapitalGain {
-                timestamp: g.date,
-                amount: g.amount,
+        self.capital_gains_cache
+            .get_or_init(|| {
+                let mut gains: Vec<CapitalGain> = self
+                    .capital_gains
+                    .values()
+                    .map(|g| CapitalGain {
+                        timestamp: g.date,
+                        amount: g.amount,
+                    })
+                    .collect();
+                gains.sort_by_key(|g| g.timestamp);
+                gains
             })
-            .collect();
-        gains.sort_by_key(|g| g.timestamp);
-        gains
+            .clone()
     }
 }

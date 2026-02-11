@@ -72,14 +72,20 @@ mod models;
 mod scrapers;
 mod ticker;
 mod tickers;
+mod utils;
 
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
-pub use ticker::{Ticker, TickerBuilder};
+pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 pub use tickers::{
-    BatchChartsResponse, BatchQuotesResponse, BatchSparksResponse, Tickers, TickersBuilder,
+    BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
+    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
+    BatchRecommendationsResponse, BatchSparksResponse, Tickers, TickersBuilder,
 };
+
+#[cfg(feature = "indicators")]
+pub use tickers::BatchIndicatorsResponse;
 
 // ============================================================================
 // Error types and results
@@ -205,3 +211,14 @@ pub use indicators::{
 // stop-loss/take-profit, and comprehensive performance metrics.
 #[cfg(feature = "backtesting")]
 pub mod backtesting;
+
+// ============================================================================
+// Compile-time thread-safety assertions
+// ============================================================================
+// Ticker and Tickers must be Send + Sync so they can be shared across
+// async tasks and held across .await points (e.g., in Arc, tokio::spawn).
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+    let _ = assert_send_sync::<Ticker>;
+    let _ = assert_send_sync::<Tickers>;
+};

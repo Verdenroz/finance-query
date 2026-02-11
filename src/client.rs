@@ -195,6 +195,17 @@ impl YahooClient {
         }
     }
 
+    /// Map reqwest errors to FinanceError, using configured timeout for error messages
+    fn map_request_error(&self, e: reqwest::Error) -> FinanceError {
+        if e.is_timeout() {
+            FinanceError::Timeout {
+                timeout_ms: self.config.timeout.as_millis() as u64,
+            }
+        } else {
+            FinanceError::HttpError(e)
+        }
+    }
+
     /// Create a new Yahoo Finance client
     ///
     /// This will perform authentication with Yahoo Finance immediately.
@@ -234,15 +245,10 @@ impl YahooClient {
         debug!("Making request to {}", url);
 
         // Send request
-        let response = request.send().await.map_err(|e| {
-            if e.is_timeout() {
-                FinanceError::Timeout {
-                    timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
-                }
-            } else {
-                FinanceError::HttpError(e)
-            }
-        })?;
+        let response = request
+            .send()
+            .await
+            .map_err(|e| self.map_request_error(e))?;
 
         // Check response status
         let status = response.status();
@@ -351,15 +357,10 @@ impl YahooClient {
 
         debug!("Making POST request to {}", url_with_crumb);
 
-        let response = request.send().await.map_err(|e| {
-            if e.is_timeout() {
-                FinanceError::Timeout {
-                    timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
-                }
-            } else {
-                FinanceError::HttpError(e)
-            }
-        })?;
+        let response = request
+            .send()
+            .await
+            .map_err(|e| self.map_request_error(e))?;
 
         let status = response.status();
         if !status.is_success() {
@@ -387,15 +388,10 @@ impl YahooClient {
             url, self.config.lang, self.config.region
         );
 
-        let response = request.send().await.map_err(|e| {
-            if e.is_timeout() {
-                FinanceError::Timeout {
-                    timeout_ms: DEFAULT_TIMEOUT.as_millis() as u64,
-                }
-            } else {
-                FinanceError::HttpError(e)
-            }
-        })?;
+        let response = request
+            .send()
+            .await
+            .map_err(|e| self.map_request_error(e))?;
 
         let status = response.status();
         if !status.is_success() {
