@@ -84,23 +84,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 **SEC EDGAR filings:**
 
 ```rust
-use finance_query::EdgarClientBuilder;
+use finance_query::edgar;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let edgar = EdgarClientBuilder::new("your.email@example.com").build()?;
+    edgar::init("your.email@example.com")?;
 
     // Resolve ticker to CIK
-    let cik = edgar.resolve_cik("AAPL").await?;
+    let cik = edgar::resolve_cik("AAPL").await?;
 
     // Get filing history
-    let submissions = edgar.submissions(cik).await?;
+    let submissions = edgar::submissions(cik).await?;
     if let Some(name) = &submissions.name {
         println!("Company: {}", name);
     }
 
     // Get XBRL financial data
-    let facts = edgar.company_facts(cik).await?;
+    let facts = edgar::company_facts(cik).await?;
     if let Some(us_gaap) = facts.facts.get("us-gaap") {
         if let Some(revenue) = us_gaap.0.get("Revenues") {
             if let Some(usd) = revenue.units.get("USD") {

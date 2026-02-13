@@ -6,7 +6,7 @@
 use super::rate_limiter::RateLimiter;
 use crate::endpoints::edgar as urls;
 use crate::error::{FinanceError, Result};
-use crate::models::edgar::{CompanyFacts, EdgarSearchResults, EdgarSubmissions};
+use crate::models::edgar::{CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -250,6 +250,14 @@ impl EdgarClient {
     /// This can be a large response (several MB for major companies).
     pub async fn company_facts(&self, cik: u64) -> Result<CompanyFacts> {
         let url = urls::company_facts(cik);
+        let response = self.get(&url).await?;
+        response.json().await.map_err(FinanceError::HttpError)
+    }
+
+    /// Fetch the filing index for a specific accession number.
+    pub async fn filing_index(&self, accession_number: &str) -> Result<EdgarFilingIndex> {
+        let (cik, accession_no_dashes) = super::accession_parts(accession_number)?;
+        let url = urls::filing_index(&cik, &accession_no_dashes);
         let response = self.get(&url).await?;
         response.json().await.map_err(FinanceError::HttpError)
     }

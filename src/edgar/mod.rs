@@ -40,7 +40,7 @@ mod client;
 mod rate_limiter;
 
 use crate::error::{FinanceError, Result};
-use crate::models::edgar::{CompanyFacts, EdgarSearchResults, EdgarSubmissions};
+use crate::models::edgar::{CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions};
 use client::{EdgarClient, EdgarClientBuilder};
 use std::sync::OnceLock;
 use std::time::Duration;
@@ -136,6 +136,25 @@ fn client() -> Result<&'static EdgarClient> {
         })
 }
 
+fn accession_parts(accession_number: &str) -> Result<(String, String)> {
+    let cik_part = accession_number
+        .split('-')
+        .next()
+        .unwrap_or("")
+        .trim_start_matches('0')
+        .to_string();
+    let accession_no_dashes = accession_number.replace('-', "");
+
+    if cik_part.is_empty() || accession_no_dashes.is_empty() {
+        return Err(FinanceError::InvalidParameter {
+            param: "accession_number".to_string(),
+            reason: "Invalid accession number format".to_string(),
+        });
+    }
+
+    Ok((cik_part, accession_no_dashes))
+}
+
 /// Resolve a ticker symbol to its SEC CIK number.
 ///
 /// The ticker-to-CIK mapping is fetched once and cached process-wide.
@@ -206,6 +225,27 @@ pub async fn submissions(cik: u64) -> Result<EdgarSubmissions> {
 /// ```
 pub async fn company_facts(cik: u64) -> Result<CompanyFacts> {
     client()?.company_facts(cik).await
+}
+
+/// Fetch the filing index for a specific accession number.
+///
+/// This provides the file list for a filing, which can be used to locate
+/// the primary HTML document and file sizes.
+///
+/// # Example
+///
+/// ```no_run
+/// use finance_query::edgar;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// edgar::init("user@example.com")?;
+/// let index = edgar::filing_index("0000320193-24-000123").await?;
+/// println!("Files: {}", index.directory.item.len());
+/// # Ok(())
+/// # }
+/// ```
+pub async fn filing_index(accession_number: &str) -> Result<EdgarFilingIndex> {
+    client()?.filing_index(accession_number).await
 }
 
 /// Search SEC EDGAR filings by text content.

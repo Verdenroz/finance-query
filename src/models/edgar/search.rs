@@ -28,11 +28,11 @@ impl EdgarSearchResults {
     ///
     /// ```no_run
     /// # #[cfg(feature = "dataframe")]
-    /// # use finance_query::edgar::EdgarClient;
+    /// # use finance_query::edgar;
     /// # #[cfg(feature = "dataframe")]
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// # let client = EdgarClient::new("user@example.com")?;
-    /// let results = client.search("revenue", Some("10-K"), None, None, 100).await?;
+    /// # edgar::init("user@example.com")?;
+    /// let results = edgar::search("revenue", Some(&["10-K"]), None, None, None, Some(100)).await?;
     /// let df = results.to_dataframe()?;
     /// println!("Search results DataFrame: {:?}", df);
     /// # Ok(())

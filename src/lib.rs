@@ -137,6 +137,7 @@ pub use models::{
 // ============================================================================
 pub use models::{
     chart::{Candle, CapitalGain, ChartMeta, Dividend, Split},
+    edgar::filing_index::{EdgarFilingIndex, EdgarFilingIndexItem},
     edgar::{
         CikEntry, EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSearchHit,
         EdgarSearchHitsContainer, EdgarSearchSource, EdgarSearchTotal, FactConcept, FactUnit,

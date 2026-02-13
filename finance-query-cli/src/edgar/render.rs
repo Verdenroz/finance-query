@@ -257,8 +257,12 @@ fn render_filings_list(f: &mut Frame, app: &mut App, area: Rect) {
                 Style::default().fg(form_color).add_modifier(Modifier::BOLD)
             };
 
-            // Format size
-            let size_str = format_bytes(filing.size);
+            // Format size (search results don't provide size)
+            let size_str = if filing.size == 0 && filing.primary_document.is_empty() {
+                "N/A".to_string()
+            } else {
+                format_bytes(filing.size)
+            };
 
             // Build filing display
             let content = vec![

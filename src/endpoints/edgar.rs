@@ -26,6 +26,14 @@ pub fn company_facts(cik: u64) -> String {
 /// Full-text search endpoint (EFTS).
 pub const FULL_TEXT_SEARCH: &str = "https://efts.sec.gov/LATEST/search-index";
 
+/// Build the filing index URL for a CIK and accession (no dashes).
+pub fn filing_index(cik: &str, accession_no_dashes: &str) -> String {
+    format!(
+        "https://data.sec.gov/Archives/edgar/data/{}/{}/index.json",
+        cik, accession_no_dashes
+    )
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

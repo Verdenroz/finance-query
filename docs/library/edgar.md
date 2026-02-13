@@ -3,40 +3,41 @@
 The EDGAR module provides access to SEC (Securities and Exchange Commission) EDGAR filings and XBRL financial data. All EDGAR APIs are free and public, requiring only a proper User-Agent header with a contact email.
 
 !!! info "Contact Email Required"
-    SEC EDGAR requires all automated requests to include a User-Agent header with a valid contact email address. The `EdgarClientBuilder` enforces this requirement.
+    SEC EDGAR requires all automated requests to include a User-Agent header with a valid contact email address. Call `edgar::init(email)` once per process.
 
-## Client Construction
+## Initialization
 
-### Basic Construction
+### Basic Initialization
 
 ```rust
-use finance_query::EdgarClientBuilder;
+use finance_query::edgar;
 
 // Required: Contact email for SEC compliance
-let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+edgar::init("user@example.com")?;
 ```
 
 ### Advanced Configuration
 
 ```rust
-use finance_query::EdgarClientBuilder;
+use finance_query::edgar;
 use std::time::Duration;
 
-let edgar = EdgarClientBuilder::new("user@example.com")
-    .app_name("my-financial-app")           // Optional: default is "finance-query"
-    .timeout(Duration::from_secs(60))       // Optional: default is 30 seconds
-    .build()?;
+edgar::init_with_config(
+    "user@example.com",
+    "my-financial-app",       // Optional: default is "finance-query"
+    Duration::from_secs(60),   // Optional: default is 30 seconds
+)?;
 ```
 
 ## Rate Limiting
 
-The `EdgarClient` automatically handles SEC's rate limit of 10 requests per second. You don't need to manage rate limiting manually.
+The EDGAR client automatically handles SEC's rate limit of 10 requests per second. You don't need to manage rate limiting manually.
 
 ```rust
 // These requests are automatically rate-limited
-let cik1 = edgar.resolve_cik("AAPL").await?;
-let cik2 = edgar.resolve_cik("MSFT").await?;
-let cik3 = edgar.resolve_cik("GOOGL").await?;
+let cik1 = edgar::resolve_cik("AAPL").await?;
+let cik2 = edgar::resolve_cik("MSFT").await?;
+let cik3 = edgar::resolve_cik("GOOGL").await?;
 // Executed at max 10 req/sec automatically
 ```
 
@@ -45,19 +46,19 @@ let cik3 = edgar.resolve_cik("GOOGL").await?;
 Convert a stock ticker symbol to its SEC Central Index Key (CIK) number. The ticker-to-CIK mapping is fetched once and cached for the lifetime of the client.
 
 ```rust
-use finance_query::EdgarClientBuilder;
+use finance_query::edgar;
 
-let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+edgar::init("user@example.com")?;
 
 // Resolve ticker to CIK (cached after first fetch)
-let cik = edgar.resolve_cik("AAPL").await?;
+let cik = edgar::resolve_cik("AAPL").await?;
 println!("Apple CIK: {}", cik); // Output: Apple CIK: 320193
 
 // Subsequent lookups use the cache (no network request)
-let cik2 = edgar.resolve_cik("AAPL").await?; // Instant
+let cik2 = edgar::resolve_cik("AAPL").await?; // Instant
 
 // Case-insensitive lookup
-let cik3 = edgar.resolve_cik("aapl").await?; // Also works
+let cik3 = edgar::resolve_cik("aapl").await?; // Also works
 ```
 
 ### CIK Structure
@@ -73,15 +74,15 @@ A CIK is a unique 10-digit identifier assigned by the SEC to companies and indiv
 Fetch filing history and company metadata from SEC EDGAR. Returns the most recent ~1000 filings inline, with references to additional history files for older filings.
 
 ```rust
-use finance_query::EdgarClientBuilder;
+use finance_query::edgar;
 
-let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+edgar::init("user@example.com")?;
 
 // Get CIK first
-let cik = edgar.resolve_cik("AAPL").await?;
+let cik = edgar::resolve_cik("AAPL").await?;
 
 // Fetch filing history
-let submissions = edgar.submissions(cik).await?;
+let submissions = edgar::submissions(cik).await?;
 
 // Company information
 if let Some(name) = &submissions.name {
@@ -133,15 +134,15 @@ The `EdgarSubmissions` response contains:
 Fetch structured XBRL financial data from SEC EDGAR. Returns all extracted XBRL facts organized by taxonomy (us-gaap, ifrs, dei). This can be a large response (several MB for major companies).
 
 ```rust
-use finance_query::EdgarClientBuilder;
+use finance_query::edgar;
 
-let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+edgar::init("user@example.com")?;
 
 // Get CIK
-let cik = edgar.resolve_cik("AAPL").await?;
+let cik = edgar::resolve_cik("AAPL").await?;
 
 // Fetch company facts
-let facts = edgar.company_facts(cik).await?;
+let facts = edgar::company_facts(cik).await?;
 
 // Access financial data by taxonomy and concept
 if let Some(us_gaap) = facts.facts.get("us-gaap") {
@@ -207,12 +208,12 @@ if let Some(us_gaap) = facts.facts.get("us-gaap") {
 Search SEC EDGAR filings by text content with optional filters for form type and date range.
 
 ```rust
-use finance_query::EdgarClientBuilder;
+use finance_query::edgar;
 
-let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+edgar::init("user@example.com")?;
 
 // Basic search
-let results = edgar.search(
+let results = edgar::search(
     "artificial intelligence",
     None,    // No form filter
     None,    // No start date
@@ -248,7 +249,7 @@ if let Some(hits) = &results.hits {
 
 ```rust
 // Search for 10-K filings only
-let results = edgar.search(
+let results = edgar::search(
     "machine learning",
     Some(&["10-K"]),              // Only 10-K forms
     Some("2024-01-01"),           // From Jan 1, 2024
@@ -260,16 +261,16 @@ let results = edgar.search(
 
 ```rust
 // Annual reports
-edgar.search("query", Some(&["10-K"]), None, None).await?;
+edgar::search("query", Some(&["10-K"]), None, None).await?;
 
 // Quarterly reports
-edgar.search("query", Some(&["10-Q"]), None, None).await?;
+edgar::search("query", Some(&["10-Q"]), None, None).await?;
 
 // Current events
-edgar.search("query", Some(&["8-K"]), None, None).await?;
+edgar::search("query", Some(&["8-K"]), None, None).await?;
 
 // Multiple form types
-edgar.search("query", Some(&["10-K", "10-Q", "8-K"]), None, None).await?;
+edgar::search("query", Some(&["10-K", "10-Q", "8-K"]), None, None).await?;
 ```
 
 ## Complete Example
@@ -277,20 +278,20 @@ edgar.search("query", Some(&["10-K", "10-Q", "8-K"]), None, None).await?;
 Here's a complete example combining all EDGAR features:
 
 ```rust
-use finance_query::EdgarClientBuilder;
+use finance_query::edgar;
 
 async fn analyze_company(ticker: &str) -> Result<(), Box<dyn std::error::Error>> {
     // Create EDGAR client
-    let edgar = EdgarClientBuilder::new("user@example.com").build()?;
+    edgar::init("user@example.com")?;
 
     // Step 1: Resolve ticker to CIK
     println!("Resolving {} to CIK...", ticker);
-    let cik = edgar.resolve_cik(ticker).await?;
+    let cik = edgar::resolve_cik(ticker).await?;
     println!("CIK: {}\n", cik);
 
     // Step 2: Get filing history
     println!("Fetching filing history...");
-    let submissions = edgar.submissions(cik).await?;
+    let submissions = edgar::submissions(cik).await?;
     if let Some(name) = &submissions.name {
         println!("Company: {}", name);
     }
@@ -314,7 +315,7 @@ async fn analyze_company(ticker: &str) -> Result<(), Box<dyn std::error::Error>>
 
     // Step 3: Get company facts (XBRL data)
     println!("\nFetching XBRL financial data...");
-    let facts = edgar.company_facts(cik).await?;
+    let facts = edgar::company_facts(cik).await?;
 
     if let Some(us_gaap) = facts.facts.get("us-gaap") {
         // Show revenue trend (FactsByTaxonomy is a tuple struct, access with .0)
@@ -344,7 +345,7 @@ async fn analyze_company(ticker: &str) -> Result<(), Box<dyn std::error::Error>>
 
     // Step 4: Search for AI mentions in recent filings
     println!("\nSearching for 'artificial intelligence' mentions...");
-    let search_results = edgar.search(
+    let search_results = edgar::search(
         "artificial intelligence",
         Some(&["10-K", "10-Q"]),
         Some("2024-01-01"),

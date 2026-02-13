@@ -4,7 +4,7 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use finance_query::{EdgarFiling, EdgarSearchResults, EdgarSubmissions};
+use finance_query::{EdgarFiling, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions};
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::io;
 pub enum AppMode {
@@ -36,6 +36,66 @@ pub struct App {
     pub search_input: String,
     pub symbol_input: String,
     pub error_message: Option<String>,
+}
+
+fn select_primary_document<'a>(
+    form: &str,
+    index: &'a EdgarFilingIndex,
+) -> Option<&'a finance_query::EdgarFilingIndexItem> {
+    let form_upper = form.to_uppercase();
+    let mut html_items: Vec<&finance_query::EdgarFilingIndexItem> = index
+        .directory
+        .item
+        .iter()
+        .filter(|item| {
+            let name = item.name.to_lowercase();
+            name.ends_with(".htm") || name.ends_with(".html")
+        })
+        .collect();
+
+    html_items.sort_by_key(|item| item.name.len());
+
+    html_items
+        .iter()
+        .find(|item| item.item_type.to_uppercase() == form_upper)
+        .copied()
+        .or_else(|| html_items.first().copied())
+}
+
+fn build_filing_doc_url(accession_number: &str, file_name: &str) -> Option<String> {
+    let cik = accession_number
+        .split('-')
+        .next()
+        .unwrap_or("")
+        .trim_start_matches('0');
+    let accession_no_dashes = accession_number.replace('-', "");
+
+    if cik.is_empty() || accession_no_dashes.is_empty() || file_name.is_empty() {
+        return None;
+    }
+
+    Some(format!(
+        "https://www.sec.gov/Archives/edgar/data/{}/{}/{}",
+        cik, accession_no_dashes, file_name
+    ))
+}
+
+fn build_filing_index_url(accession_number: &str) -> Option<String> {
+    let cik = accession_number
+        .split('-')
+        .next()
+        .unwrap_or("")
+        .trim_start_matches('0');
+    let accession_no_dashes = accession_number.replace('-', "");
+
+    if cik.is_empty() || accession_no_dashes.is_empty() {
+        return None;
+    }
+
+    Some(format!(
+        "https://www.sec.gov/Archives/edgar/data/{}/{}/index.html",
+        cik, accession_no_dashes
+    ))
 }
 impl App {
     pub fn new_empty() -> Self {
@@ -94,10 +154,15 @@ impl App {
             .map(|h| &h.hits)
             .map(|hits| {
                 hits.iter()
-                    .filter_map(|hit| hit._source.as_ref())
-                    .map(|source| {
+                    .filter_map(|hit| hit._source.as_ref().map(|source| (hit, source)))
+                    .map(|(hit, source)| {
+                        let accession = source
+                            .adsh
+                            .clone()
+                            .or_else(|| hit._id.clone())
+                            .unwrap_or_default();
                         EdgarFiling::new(
-                            source.adsh.clone().unwrap_or_default(),
+                            accession,
                             source.file_date.clone().unwrap_or_default(),
                             source.period_ending.clone().unwrap_or_default(),
                             String::new(), // acceptance_date_time not available in search
@@ -151,12 +216,86 @@ impl App {
     pub fn jump_to_bottom(&mut self) {
         self.selected_index = self.filings.len().saturating_sub(1);
     }
-    pub fn open_selected_filing(&self) -> Result<()> {
-        if let Some(filing) = self.filings.get(self.selected_index) {
-            let url = filing.edgar_url();
-            open_url(&url)?;
+    pub fn open_selected_filing(&mut self) -> Result<()> {
+        let Some(filing) = self.filings.get(self.selected_index).cloned() else {
+            return Ok(());
+        };
+
+        if filing.accession_number.is_empty() {
+            self.error_message = Some(
+                "Missing accession number in search result. Try symbol browse instead.".to_string(),
+            );
+            return Ok(());
         }
+
+        let mut url = filing.edgar_url();
+        let mut resolved_doc = filing.primary_document.clone();
+        let mut resolved_size = filing.size;
+
+        if filing.primary_document.is_empty() {
+            let accession = filing.accession_number.clone();
+            let form = filing.form.clone();
+            let accession_for_fetch = accession.clone();
+            let index_result = tokio::task::block_in_place(|| {
+                tokio::runtime::Handle::current().block_on(async move {
+                    finance_query::edgar::filing_index(&accession_for_fetch).await
+                })
+            });
+
+            if let Ok(index) = index_result {
+                if let Some(item) = select_primary_document(&form, &index)
+                    && let Some(doc_url) = build_filing_doc_url(&accession, &item.name)
+                {
+                    url = doc_url;
+                    resolved_doc = item.name.clone();
+                    resolved_size = item.size;
+                } else if let Some(index_url) = build_filing_index_url(&accession) {
+                    url = index_url;
+                }
+            } else if let Some(index_url) = build_filing_index_url(&accession) {
+                self.error_message = Some(
+                    "Failed to resolve primary document; opening filing index instead.".to_string(),
+                );
+                url = index_url;
+            }
+        }
+
+        open_url(&url)?;
+
+        if !resolved_doc.is_empty() || resolved_size != filing.size {
+            self.update_filing_metadata(&filing.accession_number, resolved_doc, resolved_size);
+        }
+
         Ok(())
+    }
+
+    fn update_filing_metadata(
+        &mut self,
+        accession_number: &str,
+        primary_document: String,
+        size: u64,
+    ) {
+        for filing in &mut self.filings {
+            if filing.accession_number == accession_number {
+                if !primary_document.is_empty() {
+                    filing.primary_document = primary_document.clone();
+                }
+                if size != 0 {
+                    filing.size = size;
+                }
+            }
+        }
+
+        for filing in &mut self.unfiltered_filings {
+            if filing.accession_number == accession_number {
+                if !primary_document.is_empty() {
+                    filing.primary_document = primary_document.clone();
+                }
+                if size != 0 {
+                    filing.size = size;
+                }
+            }
+        }
     }
     pub fn start_search_input(&mut self) {
         self.input_mode = InputMode::SearchInput;
@@ -216,10 +355,15 @@ impl App {
             .map(|h| &h.hits)
             .map(|hits| {
                 hits.iter()
-                    .filter_map(|hit| hit._source.as_ref())
-                    .map(|source| {
+                    .filter_map(|hit| hit._source.as_ref().map(|source| (hit, source)))
+                    .map(|(hit, source)| {
+                        let accession = source
+                            .adsh
+                            .clone()
+                            .or_else(|| hit._id.clone())
+                            .unwrap_or_default();
                         EdgarFiling::new(
-                            source.adsh.clone().unwrap_or_default(),
+                            accession,
                             source.file_date.clone().unwrap_or_default(),
                             source.period_ending.clone().unwrap_or_default(),
                             String::new(),
@@ -376,10 +520,15 @@ impl App {
             .map(|h| &h.hits)
             .map(|hits| {
                 hits.iter()
-                    .filter_map(|hit| hit._source.as_ref())
-                    .map(|source| {
+                    .filter_map(|hit| hit._source.as_ref().map(|source| (hit, source)))
+                    .map(|(hit, source)| {
+                        let accession = source
+                            .adsh
+                            .clone()
+                            .or_else(|| hit._id.clone())
+                            .unwrap_or_default();
                         EdgarFiling::new(
-                            source.adsh.clone().unwrap_or_default(),
+                            accession,
                             source.file_date.clone().unwrap_or_default(),
                             source.period_ending.clone().unwrap_or_default(),
                             String::new(),
