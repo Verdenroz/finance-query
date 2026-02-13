@@ -1,3 +1,4 @@
+use crate::config::resolve_edgar_email;
 use crate::error::Result;
 use crate::output::{self, OutputFormat};
 use clap::Parser;
@@ -47,12 +48,7 @@ struct FactRow {
 pub async fn execute(args: FactsArgs) -> Result<()> {
     let format = OutputFormat::from_str(&args.output)?;
 
-    let email = args.email.ok_or_else(|| {
-        crate::error::CliError::InvalidArgument(
-            "EDGAR email required. Provide via --email or set EDGAR_EMAIL environment variable"
-                .to_string(),
-        )
-    })?;
+    let email = resolve_edgar_email(args.email)?;
 
     // Initialize EDGAR singleton
     finance_query::edgar::init_with_config(

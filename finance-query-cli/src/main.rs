@@ -227,6 +227,7 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 pub(crate) mod alerts;
 mod backtest;
 mod commands;
+mod config;
 mod dashboard;
 mod edgar;
 mod error;

@@ -17,12 +17,18 @@ fq edgar
 # Option 2: Browse specific company
 fq edgar AAPL
 # Navigate with arrow keys, press '/' to search, 'f' to filter, Enter to open
+
+# Or persist it once
+fq edgar --email analyst@example.com
 ```
 
 ### Search for Specific Topics in Filings
 
 ```bash
 export EDGAR_EMAIL="analyst@example.com"
+
+# Or persist it once
+fq edgar --email analyst@example.com
 
 # Find all filings mentioning "artificial intelligence"
 fq edgar --search "artificial intelligence"
@@ -43,6 +49,9 @@ fq edgar -s "supply chain" -f 10-K -f 10-Q
 
 ```bash
 export EDGAR_EMAIL="analyst@example.com"
+
+# Or persist it once
+fq facts --email analyst@example.com AAPL
 
 # Get all key financial facts
 fq facts AAPL
@@ -65,6 +74,9 @@ fq facts MSFT --concept NetIncomeLoss --unit USD -o csv > msft_income.csv
 
 ```bash
 export EDGAR_EMAIL="analyst@example.com"
+
+# Or persist it once
+fq edgar --email analyst@example.com
 
 # 1. Browse recent filings
 fq edgar TSLA

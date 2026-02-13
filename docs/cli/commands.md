@@ -182,7 +182,7 @@ fq holders AAPL                # Shareholding data
 Interactive SEC EDGAR filings browser (TUI). Browse company filings by symbol or search across all filings.
 
 !!! note "EDGAR Email Required"
-    SEC requires a contact email in the User-Agent header. Set via `--email` or `EDGAR_EMAIL` environment variable.
+  SEC requires a contact email in the User-Agent header. Provide it once via `--email` or `EDGAR_EMAIL` and `fq` will persist it for future runs. If no email is set, `fq` prompts you to enter one.
 
 ```bash
 # Set email (required by SEC)
@@ -190,6 +190,9 @@ export EDGAR_EMAIL="user@example.com"
 
 # Open TUI ready to search
 fq edgar                                   # Start with empty search prompt
+
+# Or persist it once
+fq edgar --email user@example.com
 
 # Browse filings by company symbol
 fq edgar AAPL                              # Browse all AAPL filings interactively
@@ -243,9 +246,15 @@ fq edgar -s "acquisition" --start-date 2024-01-01  # Date-filtered search
 
 Get XBRL company facts from SEC EDGAR.
 
+!!! note "EDGAR Email Required"
+  SEC requires a contact email in the User-Agent header. Provide it once via `--email` or `EDGAR_EMAIL` and `fq` will persist it for future runs. If no email is set, `fq` prompts you to enter one.
+
 ```bash
 # Set email (required by SEC)
 export EDGAR_EMAIL="user@example.com"
+
+# Or persist it once
+fq facts --email user@example.com AAPL
 
 fq facts AAPL                  # All key financial facts
 fq facts AAPL --concept GrossProfit  # Specific concept
