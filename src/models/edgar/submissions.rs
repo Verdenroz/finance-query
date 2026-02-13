@@ -312,12 +312,12 @@ impl EdgarFiling {
     /// # Example
     ///
     /// ```no_run
-    /// use finance_query::{EdgarClientBuilder, Ticker};
+    /// use finance_query::edgar;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let edgar = EdgarClientBuilder::new("user@example.com").build()?;
-    /// let ticker = Ticker::builder("AAPL").edgar(std::sync::Arc::new(edgar)).build().await?;
-    /// let submissions = ticker.edgar_submissions().await?;
+    /// edgar::init("user@example.com")?;
+    /// let cik = edgar::resolve_cik("AAPL").await?;
+    /// let submissions = edgar::submissions(cik).await?;
     ///
     /// if let Some(filings) = &submissions.filings {
     ///     if let Some(recent) = &filings.recent {

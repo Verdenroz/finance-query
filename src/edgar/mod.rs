@@ -235,7 +235,7 @@ pub async fn company_facts(cik: u64) -> Result<CompanyFacts> {
 ///     Some(100),
 /// ).await?;
 /// if let Some(hits_container) = &results.hits {
-///     println!("Found {} results", hits_container.total.as_ref().map(|t| t.value).unwrap_or(0));
+///     println!("Found {} results", hits_container.total.as_ref().and_then(|t| t.value).unwrap_or(0));
 /// }
 /// # Ok(())
 /// # }

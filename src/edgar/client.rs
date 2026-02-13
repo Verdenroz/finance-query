@@ -160,11 +160,11 @@ impl EdgarClient {
     /// # Example
     ///
     /// ```no_run
-    /// use finance_query::EdgarClientBuilder;
+    /// use finance_query::edgar;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let edgar = EdgarClientBuilder::new("user@example.com").build()?;
-    /// let cik = edgar.resolve_cik("AAPL").await?;
+    /// edgar::init("user@example.com")?;
+    /// let cik = edgar::resolve_cik("AAPL").await?;
     /// assert_eq!(cik, 320193);
     /// # Ok(())
     /// # }
@@ -272,11 +272,11 @@ impl EdgarClient {
     /// # Example
     ///
     /// ```no_run
-    /// use finance_query::EdgarClientBuilder;
+    /// use finance_query::edgar;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let edgar = EdgarClientBuilder::new("user@example.com").build()?;
-    /// let results = edgar.search(
+    /// edgar::init("user@example.com")?;
+    /// let results = edgar::search(
     ///     "artificial intelligence",
     ///     Some(&["10-K"]),
     ///     Some("2024-01-01"),
