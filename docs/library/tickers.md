@@ -36,7 +36,8 @@ Fetch quotes for all symbols in a single API call. This is significantly more ef
 
 ```rust
 // Fetch quotes for all symbols, including their logos if available
-let response = tickers.quotes(true).await?;
+let tickers = Tickers::builder(vec!["AAPL", "MSFT"]).logo().build().await?;
+let response = tickers.quotes().await?;
 
 // Process successful quotes
 for (symbol, quote) in &response.quotes {
@@ -434,7 +435,7 @@ tickers.remove_symbols(&["MSFT", "TSLA"]).await;
 println!("After removing: {:?}", tickers.symbols());
 
 // Fetch quotes for current symbols
-let response = tickers.quotes(false).await?;
+let response = tickers.quotes().await?;
 // Response will only include AAPL, GOOGL, NVDA
 ```
 
@@ -447,7 +448,7 @@ You can also access individual symbols from the `Tickers` instance. If the data 
 
 ```rust
 // Get single quote (uses cache if available)
-let aapl = tickers.quote("AAPL", true).await?;
+let aapl = tickers.quote("AAPL").await?;
 
 // Get single chart (uses cache if available)
 let msft_chart = tickers.chart("MSFT", Interval::OneDay, TimeRange::OneMonth).await?;
@@ -459,14 +460,14 @@ let msft_chart = tickers.chart("MSFT", Interval::OneDay, TimeRange::OneMonth).aw
 
 ```rust
 // First call: Network request
-let response1 = tickers.quotes(false).await?;
+let response1 = tickers.quotes().await?;
 
 // Second call: Returns cached data (no network request)
-let response2 = tickers.quotes(false).await?;
+let response2 = tickers.quotes().await?;
 
 // Clear cache to force fresh data
 tickers.clear_cache().await;
-let response3 = tickers.quotes(false).await?; // Network request
+let response3 = tickers.quotes().await?; // Network request
 ```
 
 ## Best Practices
@@ -478,10 +479,10 @@ let response3 = tickers.quotes(false).await?; // Network request
 
     ```rust
     // Good: Reuse Tickers instance for multiple operations
-    let tickers = Tickers::new(vec!["AAPL", "GOOGL", "INVALID", "MSFT"]).await?;
+    let tickers = Tickers::builder(vec!["AAPL", "GOOGL", "INVALID", "MSFT"]).logo().build().await?;
 
     // First operation - fetches data
-    let quotes_response = tickers.quotes(true).await?;
+    let quotes_response = tickers.quotes().await?;
 
     // Handle partial failures - check which symbols failed
     for (symbol, error) in &quotes_response.errors {
@@ -499,9 +500,9 @@ let response3 = tickers.quotes(false).await?; // Network request
 
     // Less efficient: Creating new instances each time
     // (loses caching benefits, re-authenticates with Yahoo each time)
-    let tickers1 = Tickers::new(vec!["AAPL", "GOOGL"]).await?;
-    let quotes = tickers1.quotes(true).await?;
-    let tickers2 = Tickers::new(vec!["AAPL", "GOOGL"]).await?;
+    let tickers1 = Tickers::builder(vec!["AAPL", "GOOGL"]).logo().build().await?;
+    let quotes = tickers1.quotes().await?;
+    let tickers2 = Tickers::builder(vec!["AAPL", "GOOGL"]).logo().build().await?;
     let charts = tickers2.charts(Interval::OneDay, TimeRange::OneMonth).await?;
     ```
 

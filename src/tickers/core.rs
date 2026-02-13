@@ -113,6 +113,7 @@ pub struct TickersBuilder {
     shared_client: Option<crate::ticker::ClientHandle>,
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
+    include_logo: bool,
 }
 
 impl TickersBuilder {
@@ -127,6 +128,7 @@ impl TickersBuilder {
             shared_client: None,
             max_concurrency: DEFAULT_MAX_CONCURRENCY,
             cache_ttl: None,
+            include_logo: false,
         }
     }
 
@@ -237,6 +239,15 @@ impl TickersBuilder {
         self
     }
 
+    /// Include company logo URLs in quote responses.
+    ///
+    /// When enabled, `quotes()` will fetch logo URLs in parallel with the
+    /// quote batch request, adding a small extra request.
+    pub fn logo(mut self) -> Self {
+        self.include_logo = true;
+        self
+    }
+
     /// Build the Tickers instance
     pub async fn build(self) -> Result<Tickers> {
         let client = match self.shared_client {
@@ -249,6 +260,7 @@ impl TickersBuilder {
             client,
             max_concurrency: self.max_concurrency,
             cache_ttl: self.cache_ttl,
+            include_logo: self.include_logo,
             quote_cache: Default::default(),
             chart_cache: Default::default(),
             events_cache: Default::default(),
@@ -292,7 +304,7 @@ impl TickersBuilder {
 /// let tickers = Tickers::new(["AAPL", "MSFT", "GOOGL"]).await?;
 ///
 /// // Batch fetch all quotes (single API call)
-/// let quotes = tickers.quotes(false).await?;
+/// let quotes = tickers.quotes().await?;
 /// for (symbol, quote) in &quotes.quotes {
 ///     let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
 ///     println!("{}: ${:.2}", symbol, price);
@@ -309,6 +321,7 @@ pub struct Tickers {
     client: Arc<YahooClient>,
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
+    include_logo: bool,
     quote_cache: QuoteCache,
     chart_cache: ChartCache,
     events_cache: EventsCache,
@@ -437,15 +450,14 @@ impl Tickers {
         }
     }
 
-    /// Batch fetch quotes for all symbols
+    /// Batch fetch quotes for all symbols.
     ///
     /// Uses /v7/finance/quote endpoint - fetches all symbols in a single API call.
-    /// When `include_logo` is true, makes a parallel call for logo URLs.
+    /// When logos are enabled, makes a parallel call for logo URLs.
     ///
-    /// # Arguments
-    ///
-    /// * `include_logo` - Whether to fetch company logo URLs
-    pub async fn quotes(&self, include_logo: bool) -> Result<BatchQuotesResponse> {
+    /// Use [`TickersBuilder::logo()`](TickersBuilder::logo) to enable logo fetching
+    /// for this tickers instance.
+    pub async fn quotes(&self) -> Result<BatchQuotesResponse> {
         // Fast path: check if all symbols are cached
         {
             let cache = self.quote_cache.read().await;
@@ -486,7 +498,7 @@ impl Tickers {
 
         // Yahoo requires separate calls for quotes vs logos
         // When include_logo=true, fetch both in parallel
-        let (json, logos) = if include_logo {
+        let (json, logos) = if self.include_logo {
             let quote_future = crate::endpoints::quotes::fetch_with_fields(
                 &self.client,
                 &symbols_ref,
@@ -599,7 +611,7 @@ impl Tickers {
     }
 
     /// Get a specific quote by symbol (from cache or fetch all)
-    pub async fn quote(&self, symbol: &str, include_logo: bool) -> Result<Quote> {
+    pub async fn quote(&self, symbol: &str) -> Result<Quote> {
         {
             let cache = self.quote_cache.read().await;
             if let Some(entry) = cache.get(symbol)
@@ -609,7 +621,7 @@ impl Tickers {
             }
         }
 
-        let response = self.quotes(include_logo).await?;
+        let response = self.quotes().await?;
 
         response
             .quotes
@@ -1728,7 +1740,7 @@ mod tests {
     #[ignore] // Requires network access
     async fn test_tickers_quotes() {
         let tickers = Tickers::new(["AAPL", "MSFT", "GOOGL"]).await.unwrap();
-        let result = tickers.quotes(false).await.unwrap();
+        let result = tickers.quotes().await.unwrap();
 
         assert!(result.success_count() > 0);
     }
@@ -1940,7 +1952,7 @@ mod tests {
         assert_eq!(tickers.len(), 3);
 
         // Fetch some data to populate caches
-        let _ = tickers.quotes(false).await;
+        let _ = tickers.quotes().await;
 
         // Remove one symbol
         tickers.remove_symbols(&["MSFT"]).await;
@@ -1950,7 +1962,7 @@ mod tests {
         assert!(tickers.symbols().contains(&"GOOGL"));
 
         // Verify cache was cleared
-        let quotes = tickers.quotes(false).await.unwrap();
+        let quotes = tickers.quotes().await.unwrap();
         assert!(!quotes.quotes.contains_key("MSFT"));
         assert_eq!(quotes.quotes.len(), 2);
     }

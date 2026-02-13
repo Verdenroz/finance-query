@@ -1349,8 +1349,10 @@ async fn get_quote(
             cache::ttl::QUOTES,
             cache::is_market_open(),
             || async move {
-                let ticker = Ticker::new(&symbol_clone).await?;
-                let quote = ticker.quote(logo).await?;
+                let builder = Ticker::builder(&symbol_clone);
+                let builder = if logo { builder.logo() } else { builder };
+                let ticker = builder.build().await?;
+                let quote = ticker.quote().await?;
                 info!("Successfully fetched quote for {}", symbol_clone);
                 let json = serde_json::to_value(&quote)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
@@ -1510,8 +1512,10 @@ async fn get_quotes(
             cache::is_market_open(),
             || async move {
                 // Use Tickers for batch fetching (single API call)
-                let tickers = Tickers::new(symbols).await?;
-                let batch_response = tickers.quotes(logo).await?;
+                let builder = Tickers::builder(symbols);
+                let builder = if logo { builder.logo() } else { builder };
+                let tickers = builder.build().await?;
+                let batch_response = tickers.quotes().await?;
                 info!(
                     "Batch fetch complete: {} success, {} errors",
                     batch_response.success_count(),

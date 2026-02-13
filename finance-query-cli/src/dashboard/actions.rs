@@ -78,7 +78,7 @@ impl App {
 
         self.status_message = format!("Fetching quote for {}...", symbol);
         match Ticker::new(&symbol).await {
-            Ok(ticker) => match ticker.quote(false).await {
+            Ok(ticker) => match ticker.quote().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
                     self.status_message = format!("Added {} to watchlist", symbol);
@@ -145,7 +145,7 @@ impl App {
         self.status_message = format!("Added {} to watchlist", symbol);
 
         match Ticker::new(&symbol).await {
-            Ok(ticker) => match ticker.quote(false).await {
+            Ok(ticker) => match ticker.quote().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
                     self.status_message = format!("Added {} to watchlist", symbol);
@@ -206,7 +206,7 @@ impl App {
         self.status_message = format!("Added {} to watchlist", symbol);
 
         match Ticker::new(&symbol).await {
-            Ok(ticker) => match ticker.quote(false).await {
+            Ok(ticker) => match ticker.quote().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
                     self.status_message = format!("Added {} to watchlist", symbol);
@@ -231,7 +231,7 @@ impl App {
         self.status_message = "Fetching quotes...".to_string();
 
         match Tickers::new(&self.current_watchlist.symbols).await {
-            Ok(tickers) => match tickers.quotes(false).await {
+            Ok(tickers) => match tickers.quotes().await {
                 Ok(response) => {
                     for (symbol, quote) in response.quotes {
                         self.quotes.insert(symbol, quote);
@@ -278,7 +278,7 @@ impl App {
 
         let symbols = self.portfolio.symbols();
         match Tickers::new(&symbols).await {
-            Ok(tickers) => match tickers.quotes(false).await {
+            Ok(tickers) => match tickers.quotes().await {
                 Ok(response) => {
                     self.portfolio_prices.clear();
                     for (symbol, quote) in &response.quotes {

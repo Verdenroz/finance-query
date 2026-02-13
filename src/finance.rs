@@ -308,7 +308,7 @@ pub async fn indices(
     };
 
     let tickers = Tickers::new(symbols).await?;
-    tickers.quotes(false).await
+    tickers.quotes().await
 }
 
 /// Fetch detailed sector data from Yahoo Finance

@@ -51,8 +51,8 @@ use finance_query::Ticker;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let ticker = Ticker::new("AAPL").await?;
-    let quote = ticker.quote(true).await?;
+    let ticker = Ticker::builder("AAPL").logo().build().await?;
+    let quote = ticker.quote().await?;
 
     if let Some(price) = quote.regular_market_price.as_ref().and_then(|v| v.raw) {
         println!("AAPL: ${:.2}", price);
@@ -69,8 +69,8 @@ use finance_query::{Tickers, Interval, TimeRange};
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Fetch quotes for multiple symbols in one request
-    let tickers = Tickers::new(vec!["AAPL", "MSFT", "GOOGL"]).await?;
-    let response = tickers.quotes(true).await?;
+    let tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL"]).logo().build().await?;
+    let response = tickers.quotes().await?;
 
     for (symbol, quote) in &response.quotes {
         if let Some(price) = quote.regular_market_price.as_ref().and_then(|v| v.raw) {

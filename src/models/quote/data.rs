@@ -26,8 +26,8 @@ use super::{
 /// ```no_run
 /// # use finance_query::Ticker;
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let ticker = Ticker::new("AAPL").await?;
-/// let quote = ticker.quote(true).await?;  // include_logo = true
+/// let ticker = Ticker::builder("AAPL").logo().build().await?;
+/// let quote = ticker.quote().await?;
 /// println!("Price: {:?}", quote.regular_market_price);
 /// # Ok(())
 /// # }

@@ -65,6 +65,7 @@ pub struct TickerBuilder {
     config: ClientConfig,
     shared_client: Option<ClientHandle>,
     cache_ttl: Option<Duration>,
+    include_logo: bool,
 }
 
 impl TickerBuilder {
@@ -74,6 +75,7 @@ impl TickerBuilder {
             config: ClientConfig::default(),
             shared_client: None,
             cache_ttl: None,
+            include_logo: false,
         }
     }
 
@@ -194,6 +196,15 @@ impl TickerBuilder {
         self
     }
 
+    /// Include company logo URLs in quote responses.
+    ///
+    /// When enabled, `quote()` will fetch logo URLs in parallel with the
+    /// quote summary, adding a small extra request.
+    pub fn logo(mut self) -> Self {
+        self.include_logo = true;
+        self
+    }
+
     /// Build the Ticker instance
     pub async fn build(self) -> Result<Ticker> {
         let client = match self.shared_client {
@@ -205,6 +216,7 @@ impl TickerBuilder {
             symbol: self.symbol,
             client,
             cache_ttl: self.cache_ttl,
+            include_logo: self.include_logo,
             quote_summary: Default::default(),
             quote_summary_fetch: Arc::new(tokio::sync::Mutex::new(())),
             chart_cache: Default::default(),
@@ -235,7 +247,7 @@ impl TickerBuilder {
 /// let ticker = Ticker::new("AAPL").await?;
 ///
 /// // Get quote data
-/// let quote = ticker.quote(false).await?;
+/// let quote = ticker.quote().await?;
 /// println!("Price: {:?}", quote.regular_market_price);
 ///
 /// // Get chart data
@@ -250,6 +262,7 @@ pub struct Ticker {
     symbol: Arc<str>,
     client: Arc<YahooClient>,
     cache_ttl: Option<Duration>,
+    include_logo: bool,
     quote_summary: Cache<QuoteSummaryResponse>,
     quote_summary_fetch: Arc<tokio::sync::Mutex<()>>,
     chart_cache: MapCache<(Interval, TimeRange), Chart>,
@@ -568,21 +581,20 @@ macros::define_quote_accessors! {
 }
 
 impl Ticker {
-    /// Get full quote data with optional logo URL
+    /// Get full quote data, optionally including logo URLs.
     ///
-    /// # Arguments
+    /// Use [`TickerBuilder::logo()`](TickerBuilder::logo) to enable logo fetching
+    /// for this ticker instance.
     ///
-    /// * `include_logo` - Whether to fetch and include the company logo URL
-    ///
-    /// When `include_logo` is true, fetches both quote summary and logo URL in parallel
+    /// When logos are enabled, fetches both quote summary and logo URL in parallel
     /// using tokio::join! for minimal latency impact (~0-100ms overhead).
-    pub async fn quote(&self, include_logo: bool) -> Result<Quote> {
+    pub async fn quote(&self) -> Result<Quote> {
         let not_found = || crate::error::FinanceError::SymbolNotFound {
             symbol: Some(self.symbol.to_string()),
             context: "Quote summary not loaded".to_string(),
         };
 
-        if include_logo {
+        if self.include_logo {
             // Ensure quote summary is loaded in background while we fetch logos
             let (cache_result, logo_result) = tokio::join!(
                 self.ensure_and_read_quote_summary(),
@@ -1593,11 +1605,11 @@ impl Ticker {
     /// use finance_query::Ticker;
     ///
     /// let ticker = Ticker::new("AAPL").await?;
-    /// let quote = ticker.quote(false).await?; // fetches from API
+    /// let quote = ticker.quote().await?; // fetches from API
     ///
     /// // ... some time later ...
     /// ticker.clear_cache().await;
-    /// let fresh_quote = ticker.quote(false).await?; // fetches again
+    /// let fresh_quote = ticker.quote().await?; // fetches again
     /// # Ok(())
     /// # }
     /// ```
