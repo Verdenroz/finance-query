@@ -4,7 +4,7 @@
 //! Supports fetching by symbol with optional quarter/year filters.
 
 use crate::client::YahooClient;
-use crate::error::{Result, YahooError};
+use crate::error::{FinanceError, Result};
 use crate::models::quote::quote_type::QuoteTypeResponse;
 use crate::models::transcript::{Transcript, TranscriptWithMeta};
 use crate::scrapers::yahoo_earnings::{EarningsCall, scrape_earnings_calls};
@@ -43,7 +43,7 @@ pub(crate) async fn get_quartr_id(client: &YahooClient, symbol: &str) -> Result<
         .result
         .first()
         .and_then(|r| r.quartr_id.clone())
-        .ok_or_else(|| YahooError::ResponseStructureError {
+        .ok_or_else(|| FinanceError::ResponseStructureError {
             field: "quartrId".to_string(),
             context: format!("No quartrId found for symbol {}", symbol),
         })
@@ -130,7 +130,7 @@ pub async fn fetch_all_for_symbol(
         .collect();
 
     if results.is_empty() {
-        return Err(YahooError::ResponseStructureError {
+        return Err(FinanceError::ResponseStructureError {
             field: "transcripts".to_string(),
             context: format!("No transcripts could be fetched for {}", symbol),
         });
@@ -154,7 +154,7 @@ fn find_matching_call<'a>(
                     c.quarter.as_ref().map(|cq| cq.to_uppercase()) == Some(q_upper.clone())
                         && c.year == Some(y)
                 })
-                .ok_or_else(|| YahooError::ResponseStructureError {
+                .ok_or_else(|| FinanceError::ResponseStructureError {
                     field: "earnings_call".to_string(),
                     context: format!("No earnings call found for {} {}", q, y),
                 })
@@ -164,20 +164,20 @@ fn find_matching_call<'a>(
             calls
                 .iter()
                 .find(|c| c.quarter.as_ref().map(|cq| cq.to_uppercase()) == Some(q_upper.clone()))
-                .ok_or_else(|| YahooError::ResponseStructureError {
+                .ok_or_else(|| FinanceError::ResponseStructureError {
                     field: "earnings_call".to_string(),
                     context: format!("No earnings call found for quarter {}", q),
                 })
         }
         (None, Some(y)) => calls.iter().find(|c| c.year == Some(y)).ok_or_else(|| {
-            YahooError::ResponseStructureError {
+            FinanceError::ResponseStructureError {
                 field: "earnings_call".to_string(),
                 context: format!("No earnings call found for year {}", y),
             }
         }),
         (None, None) => calls
             .first()
-            .ok_or_else(|| YahooError::ResponseStructureError {
+            .ok_or_else(|| FinanceError::ResponseStructureError {
                 field: "earnings_call".to_string(),
                 context: "No earnings calls available".to_string(),
             }),

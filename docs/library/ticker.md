@@ -58,7 +58,8 @@ Get a comprehensive quote with all key metrics:
 
 ```rust
 // Get quote with logo URL
-let quote = ticker.quote(true).await?;
+let ticker = Ticker::builder("AAPL").logo().build().await?;
+let quote = ticker.quote().await?;
 
 println!("Symbol: {}", quote.symbol);
 println!("Name: {}", quote.short_name.as_deref().unwrap_or("N/A"));
@@ -602,15 +603,15 @@ let recs_again = ticker.recommendations(10).await?;  // cached
 
     ```rust
     // Good: Reuse ticker for multiple operations
-    let ticker = Ticker::new("AAPL").await?;
-    let quote = ticker.quote(true).await?;
+    let ticker = Ticker::builder("AAPL").logo().build().await?;
+    let quote = ticker.quote().await?;
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     let profile = ticker.asset_profile().await?;
 
     // Less efficient: Creating new tickers each time
     // (loses caching benefits, re-authenticates with Yahoo each time)
-    let ticker1 = Ticker::new("AAPL").await?;
-    let quote = ticker1.quote(true).await?;
+    let ticker1 = Ticker::builder("AAPL").logo().build().await?;
+    let quote = ticker1.quote().await?;
     let ticker2 = Ticker::new("AAPL").await?;
     let chart = ticker2.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     ```

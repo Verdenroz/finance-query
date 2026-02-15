@@ -1,6 +1,6 @@
 # fq - Finance Query CLI
 
-[![Crates.io](https://img.shields.io/crates/v/finance-query-cli.svg)](https://crates.io/crates/finance-query-cli)
+[![CLI Version](https://img.shields.io/github/v/release/Verdenroz/finance-query?filter=finance-query-cli-*&label=version)](https://github.com/Verdenroz/finance-query/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 Command-line tool for financial data. Supports stocks, ETFs, crypto, currencies, and indices.
@@ -79,7 +79,8 @@ Run `fq --help` for the full list, or `fq <command> --help` for details on any c
 | `news` | Recent news articles |
 | `recommendations` | Analyst buy/hold/sell ratings |
 | `holders` | Institutional and insider ownership |
-| `filings` | SEC filings (10-K, 10-Q, 8-K) |
+| `edgar` | Interactive SEC EDGAR filings browser (TUI) |
+| `facts` | Structured XBRL financial data from EDGAR |
 | `transcript` | Earnings call transcripts |
 | `grades` | Analyst upgrade/downgrade history |
 
@@ -123,6 +124,22 @@ Export to file:
 
 ```bash
 fq chart AAPL -r 1y -o csv > aapl_2024.csv
+```
+
+## Configuration
+
+### EDGAR Email Persistence
+
+EDGAR commands require a contact email. Provide it once with `--email` (or `EDGAR_EMAIL`),
+and `fq` will persist it to `~/.config/fq/config.json` and reuse it automatically.
+
+```bash
+# First run: set and persist
+fq edgar --email you@example.com
+
+# Next runs: no email needed
+fq edgar
+fq facts AAPL
 ```
 
 ## Examples
@@ -200,6 +217,18 @@ fq options AAPL --expiration 2024-12-20
 ```
 
 ![Options](assets/screenshots/options.png)
+
+### EDGAR Filings
+
+```bash
+# Interactive EDGAR filings browser (TUI)
+fq edgar AAPL
+
+# Full-text search across filings
+fq edgar --search "artificial intelligence"
+```
+
+![EDGAR](assets/screenshots/edgar.png)
 
 ### Alerts
 

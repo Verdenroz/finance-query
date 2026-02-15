@@ -5,7 +5,7 @@ pub type Result<T> = std::result::Result<T, CliError>;
 #[derive(Error, Debug)]
 pub enum CliError {
     #[error("Finance query error: {0}")]
-    FinanceQuery(#[from] finance_query::YahooError),
+    FinanceQuery(#[from] finance_query::FinanceError),
 
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),

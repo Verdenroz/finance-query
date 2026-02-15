@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 /// Information about a supported exchange.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct Exchange {
     /// Country or region where the exchange operates.

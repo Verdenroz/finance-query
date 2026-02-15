@@ -17,7 +17,7 @@ use tokio_tungstenite::{connect_async, tungstenite::Message};
 use tracing::{debug, error, info, warn};
 
 use super::pricing::{PriceUpdate, PricingData, PricingDecodeError};
-use crate::error::YahooError;
+use crate::error::FinanceError;
 
 /// Result type for streaming operations
 pub type StreamResult<T> = std::result::Result<T, StreamError>;
@@ -45,9 +45,9 @@ impl std::fmt::Display for StreamError {
 
 impl std::error::Error for StreamError {}
 
-impl From<StreamError> for YahooError {
+impl From<StreamError> for FinanceError {
     fn from(e: StreamError) -> Self {
-        YahooError::ResponseStructureError {
+        FinanceError::ResponseStructureError {
             field: "streaming".to_string(),
             context: e.to_string(),
         }

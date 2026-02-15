@@ -64,7 +64,7 @@ pub async fn execute(args: InfoArgs) -> Result<()> {
 
     // Fetch full quote data
     let ticker = Ticker::new(&args.symbol).await?;
-    let quote = ticker.quote(false).await?;
+    let quote = ticker.quote().await?;
 
     // For JSON/CSV output, return structured data
     if format != OutputFormat::Table {

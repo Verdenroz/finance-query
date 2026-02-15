@@ -97,7 +97,7 @@
 //! ### Fundamental Data
 //! - **Financials**: Income statements, balance sheets, cash flow
 //! - **Profile**: Company info, sector, industry, executives
-//! - **Filings**: SEC documents (10-K, 10-Q, 8-K)
+//! - **EDGAR**: SEC filings browser with XBRL financial data
 //! - **Earnings**: Dates, estimates, history, call transcripts
 //!
 //! ### Market Intelligence
@@ -135,7 +135,8 @@
 //! - `profile` - Company profile
 //! - `financials` - Financial statements
 //! - `earnings` - Earnings data
-//! - `filings` - SEC filings
+//! - `edgar` - Interactive SEC filings browser (TUI)
+//! - `facts` - Structured XBRL financial data from EDGAR
 //! - `transcript` - Earnings call transcripts
 //! - `news` - Recent news
 //! - `recommendations` - Analyst recommendations
@@ -226,7 +227,9 @@ use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitEx
 pub(crate) mod alerts;
 mod backtest;
 mod commands;
+mod config;
 mod dashboard;
+mod edgar;
 mod error;
 mod indicator;
 pub(crate) mod options;
@@ -292,8 +295,11 @@ enum Commands {
     /// Get company profile (sector, industry, description, executives)
     Profile(commands::profile::ProfileArgs),
 
-    /// Get SEC filings (10-K, 10-Q, 8-K)
-    Filings(commands::filings::FilingsArgs),
+    /// Interactive SEC EDGAR filings browser - browse by symbol or search all filings (TUI)
+    Edgar(commands::edgar::EdgarArgs),
+
+    /// Get structured XBRL financial data from SEC EDGAR
+    Facts(commands::facts::FactsArgs),
 
     /// Get financial statements (income, balance, cash flow)
     Financials(commands::financials::FinancialsArgs),
@@ -381,7 +387,8 @@ async fn main() -> Result<()> {
         Commands::Recommendations(args) => commands::recommendations::execute(args).await,
         Commands::Options(args) => commands::options::execute(args).await,
         Commands::Profile(args) => commands::profile::execute(args).await,
-        Commands::Filings(args) => commands::filings::execute(args).await,
+        Commands::Edgar(args) => commands::edgar::execute(args).await,
+        Commands::Facts(args) => commands::facts::execute(args).await,
         Commands::Financials(args) => commands::financials::execute(args).await,
         Commands::Grades(args) => commands::grades::execute(args).await,
         Commands::Lookup(args) => commands::lookup::execute(args).await,

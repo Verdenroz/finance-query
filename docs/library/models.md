@@ -246,7 +246,8 @@ let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.
 
 **Obtained via:**
 ```rust
-let quote = ticker.quote(true).await?;  // true = include logo URLs
+let ticker = Ticker::builder("AAPL").logo().build().await?;
+let quote = ticker.quote().await?;
 ```
 
 ### Quote Modules
@@ -925,7 +926,7 @@ let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 let df = chart.to_dataframe()?;
 
 // Convert quote to DataFrame
-let quote = ticker.quote(true).await?;
+let quote = ticker.quote().await?;
 let df = quote.to_dataframe()?;
 
 // Convert recommendations to DataFrame

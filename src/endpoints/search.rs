@@ -123,7 +123,7 @@ pub async fn fetch(
     options: &SearchOptions,
 ) -> Result<serde_json::Value> {
     if query.trim().is_empty() {
-        return Err(crate::error::YahooError::InvalidParameter {
+        return Err(crate::error::FinanceError::InvalidParameter {
             param: "query".to_string(),
             reason: "Empty search query".to_string(),
         });

@@ -309,26 +309,29 @@ ValueFormat::Both    // Both raw and pretty values
     // US stock
     let apple = Ticker::builder("AAPL")
         .region(Region::UnitedStates)
+        .logo()
         .build()
         .await?;
 
     // Taiwan stock
     let tsmc = Ticker::builder("2330.TW")
         .region(Region::Taiwan)
+        .logo()
         .build()
         .await?;
 
     // German stock
     let sap = Ticker::builder("SAP.DE")
         .region(Region::Germany)
+        .logo()
         .build()
         .await?;
 
     // Fetch quotes in parallel
     let (apple_quote, tsmc_quote, sap_quote) = tokio::join!(
-        apple.quote(true),
-        tsmc.quote(true),
-        sap.quote(true)
+        apple.quote(),
+        tsmc.quote(),
+        sap.quote()
     );
     ```
 

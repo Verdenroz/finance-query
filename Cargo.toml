@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "finance-query"
-version = "2.1.0"
+version = "2.2.0"
 edition = "2024"
 authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
 description = "A Rust library for querying financial data"
@@ -82,7 +82,7 @@ base64 = "0.22"
 
 # Optional: DataFrame support
 polars = { version = "0.52", optional = true, default-features = false, features = ["lazy"] }
-finance-query-derive = { version = "2.1.0", path = "finance-query-derive", optional = true }
+finance-query-derive = { version = "2.2.0", path = "finance-query-derive", optional = true }
 
 [features]
 default = []

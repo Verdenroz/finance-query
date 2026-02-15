@@ -6,4 +6,4 @@
 mod core;
 mod macros;
 
-pub use core::{Ticker, TickerBuilder};
+pub use core::{ClientHandle, Ticker, TickerBuilder};

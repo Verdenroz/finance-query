@@ -56,6 +56,8 @@
 
 // === Modules ===
 // Public modules
+/// SEC EDGAR API client for filing history, XBRL data, and full-text search.
+pub mod edgar;
 /// Error types and result definitions.
 pub mod error;
 /// Non-symbol-specific operations (search, lookup, screeners, market data, etc.).
@@ -70,19 +72,25 @@ mod models;
 mod scrapers;
 mod ticker;
 mod tickers;
+mod utils;
 
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
-pub use ticker::{Ticker, TickerBuilder};
+pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 pub use tickers::{
-    BatchChartsResponse, BatchQuotesResponse, BatchSparksResponse, Tickers, TickersBuilder,
+    BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
+    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
+    BatchRecommendationsResponse, BatchSparksResponse, Tickers, TickersBuilder,
 };
+
+#[cfg(feature = "indicators")]
+pub use tickers::BatchIndicatorsResponse;
 
 // ============================================================================
 // Error types and results
 // ============================================================================
-pub use error::{Result, YahooError};
+pub use error::{FinanceError, Result};
 
 // ============================================================================
 // Options - Configure API requests
@@ -102,11 +110,25 @@ pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, Value
 // Response types - Top-level types returned by API methods
 // ============================================================================
 pub use models::{
-    chart::Chart, currencies::Currency, exchanges::Exchange, financials::FinancialStatement,
-    hours::MarketHours, industries::Industry, lookup::LookupResults,
-    market_summary::MarketSummaryQuote, news::News, options::Options, quote::Quote,
-    recommendation::Recommendation, screeners::ScreenerResults, search::SearchResults,
-    sectors::Sector, spark::Spark, transcript::Transcript, transcript::TranscriptWithMeta,
+    chart::Chart,
+    currencies::Currency,
+    edgar::{CompanyFacts, EdgarSearchResults, EdgarSubmissions},
+    exchanges::Exchange,
+    financials::FinancialStatement,
+    hours::MarketHours,
+    industries::Industry,
+    lookup::LookupResults,
+    market_summary::MarketSummaryQuote,
+    news::News,
+    options::Options,
+    quote::Quote,
+    recommendation::Recommendation,
+    screeners::ScreenerResults,
+    search::SearchResults,
+    sectors::Sector,
+    spark::Spark,
+    transcript::Transcript,
+    transcript::TranscriptWithMeta,
     trending::TrendingQuote,
 };
 
@@ -115,6 +137,12 @@ pub use models::{
 // ============================================================================
 pub use models::{
     chart::{Candle, CapitalGain, ChartMeta, Dividend, Split},
+    edgar::filing_index::{EdgarFilingIndex, EdgarFilingIndexItem},
+    edgar::{
+        CikEntry, EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSearchHit,
+        EdgarSearchHitsContainer, EdgarSearchSource, EdgarSearchTotal, FactConcept, FactUnit,
+        FactsByTaxonomy,
+    },
     hours::MarketTime,
     lookup::LookupQuote,
     market_summary::SparkData,
@@ -184,3 +212,14 @@ pub use indicators::{
 // stop-loss/take-profit, and comprehensive performance metrics.
 #[cfg(feature = "backtesting")]
 pub mod backtesting;
+
+// ============================================================================
+// Compile-time thread-safety assertions
+// ============================================================================
+// Ticker and Tickers must be Send + Sync so they can be shared across
+// async tasks and held across .await points (e.g., in Arc, tokio::spawn).
+const _: () = {
+    const fn assert_send_sync<T: Send + Sync>() {}
+    let _ = assert_send_sync::<Ticker>;
+    let _ = assert_send_sync::<Tickers>;
+};

@@ -13,10 +13,10 @@
 /// ```ignore
 /// define_quote_accessors! {
 ///     /// Get price information
-///     price -> Price, "price",
+///     price -> Price, price,
 ///
 ///     /// Get summary detail
-///     summary_detail -> SummaryDetail, "summaryDetail",
+///     summary_detail -> SummaryDetail, summary_detail,
 /// }
 /// ```
 ///
@@ -26,21 +26,20 @@
 /// Each method:
 /// 1. Ensures quote summary data is loaded
 /// 2. Reads from cache
-/// 3. Extracts and returns the typed module data
+/// 3. Clones and returns the typed module data
 macro_rules! define_quote_accessors {
     (
         $(
             $(#[$meta:meta])*
-            $method_name:ident -> $return_type:ty, $module_name:literal
+            $method_name:ident -> $return_type:ty, $field_name:ident
         ),* $(,)?
     ) => {
         impl Ticker {
             $(
                 $(#[$meta])*
-                pub async fn $method_name(&self) -> Result<Option<$return_type>> {
-                    self.ensure_quote_summary_loaded().await?;
-                    let cache = self.quote_summary.read().await;
-                    Ok(cache.as_ref().and_then(|r| r.get_typed($module_name).ok()))
+                pub async fn $method_name(&self) -> crate::error::Result<Option<$return_type>> {
+                    let cache = self.ensure_and_read_quote_summary().await?;
+                    Ok(cache.as_ref().and_then(|e| e.value.$field_name.clone()))
                 }
             )*
         }

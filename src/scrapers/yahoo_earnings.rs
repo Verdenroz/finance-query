@@ -3,7 +3,7 @@
 //! Scrapes the quote page to get a list of available earnings call transcripts,
 //! extracting event IDs needed to fetch full transcripts.
 
-use crate::error::{Result, YahooError};
+use crate::error::{FinanceError, Result};
 use regex::Regex;
 use std::collections::HashSet;
 use tracing::info;
@@ -65,14 +65,14 @@ pub(crate) async fn scrape_earnings_calls(symbol: &str) -> Result<Vec<EarningsCa
     let response = client.get(&url).send().await?;
 
     if response.status() == reqwest::StatusCode::NOT_FOUND {
-        return Err(YahooError::SymbolNotFound {
+        return Err(FinanceError::SymbolNotFound {
             symbol: Some(symbol.to_string()),
             context: "Quote page not found".to_string(),
         });
     }
 
     if !response.status().is_success() {
-        return Err(YahooError::ServerError {
+        return Err(FinanceError::ServerError {
             status: response.status().as_u16(),
             context: format!("Failed to fetch quote page for {}", symbol),
         });
@@ -131,7 +131,7 @@ fn parse_earnings_calls(html: &str, symbol: &str) -> Result<Vec<EarningsCall>> {
     }
 
     if calls.is_empty() {
-        return Err(YahooError::ResponseStructureError {
+        return Err(FinanceError::ResponseStructureError {
             field: "earnings_calls".to_string(),
             context: format!("No earnings calls found for {}", symbol),
         });

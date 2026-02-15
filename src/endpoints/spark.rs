@@ -40,7 +40,7 @@ pub async fn fetch(
     range: TimeRange,
 ) -> Result<serde_json::Value> {
     if symbols.is_empty() {
-        return Err(crate::error::YahooError::InvalidParameter {
+        return Err(crate::error::FinanceError::InvalidParameter {
             param: "symbols".to_string(),
             reason: "At least one symbol is required".to_string(),
         });

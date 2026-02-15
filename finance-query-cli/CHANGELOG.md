@@ -7,6 +7,29 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-14
+
+### Added
+- **`edgar` command**: Unified TUI for SEC EDGAR data, replacing `filings`
+  - `fq edgar submissions <SYMBOL>` — full filing history with interactive TUI viewer
+  - `fq edgar facts <SYMBOL>` — XBRL company facts (us-gaap, ifrs, dei taxonomies)
+  - `fq edgar search <QUERY>` — full-text filing search with form type and date filters
+  - Email address persisted to `~/.config/fq/config.toml` — no need to re-enter each session
+- **`portfolio` command**: Portfolio tracking with local SQLite database
+- **Config persistence** (`src/config.rs`): User preferences saved across sessions
+
+### Changed
+- **Breaking**: `filings` command replaced by `edgar` — update any scripts or aliases using `fq filings`
+
+### Removed
+- `filings` command (use `fq edgar submissions <SYMBOL>` instead)
+
+### Documentation
+- Updated command reference with `edgar` subcommand examples
+- New CLI examples page (`docs/cli/examples.md`)
+- Installation guide updates
+- Added EDGAR TUI screenshot
+
 ## [0.1.0] - 2026-01-13
 
 ### Added
@@ -76,5 +99,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide for all platforms
 - Screenshots of TUI interfaces
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/cli-v0.1.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/cli-v0.2.0...HEAD
+[0.2.0]: https://github.com/Verdenroz/finance-query/compare/cli-v0.1.0...cli-v0.2.0
 [0.1.0]: https://github.com/Verdenroz/finance-query/releases/tag/cli-v0.1.0

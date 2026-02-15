@@ -4,7 +4,13 @@
 //! for multiple symbols with optimized batch operations.
 
 mod core;
+mod macros;
 
 pub use core::{
-    BatchChartsResponse, BatchQuotesResponse, BatchSparksResponse, Tickers, TickersBuilder,
+    BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
+    BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
+    BatchRecommendationsResponse, BatchSparksResponse, Tickers, TickersBuilder,
 };
+
+#[cfg(feature = "indicators")]
+pub use core::BatchIndicatorsResponse;

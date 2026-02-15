@@ -88,7 +88,7 @@ async fn run_event_loop(
         {
             detailed_quote_task = Some(tokio::spawn(async move {
                 match finance_query::Ticker::new(&symbol).await {
-                    Ok(ticker) => match ticker.quote(false).await {
+                    Ok(ticker) => match ticker.quote().await {
                         Ok(quote) => Some((symbol, quote)),
                         Err(_) => None,
                     },

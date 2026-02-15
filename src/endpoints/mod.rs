@@ -8,6 +8,7 @@ pub mod urls;
 pub mod chart;
 pub mod common;
 pub mod currencies;
+pub mod edgar;
 pub mod financials;
 pub mod hours;
 pub mod industries;

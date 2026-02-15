@@ -86,7 +86,7 @@ pub async fn fetch_custom(client: &YahooClient, query: ScreenerQuery) -> Result<
 /// Handles all Yahoo-specific nested structure and data transformation internally.
 fn parse_screeners_response(json: &serde_json::Value) -> Result<ScreenerResults> {
     ScreenerResults::from_response(json).map_err(|e| {
-        crate::error::YahooError::ResponseStructureError {
+        crate::error::FinanceError::ResponseStructureError {
             field: "screeners".to_string(),
             context: e,
         }
@@ -96,7 +96,7 @@ fn parse_screeners_response(json: &serde_json::Value) -> Result<ScreenerResults>
 /// Parse Yahoo Finance custom screener response into clean ScreenerResults
 fn parse_custom_screeners_response(json: &serde_json::Value) -> Result<ScreenerResults> {
     ScreenerResults::from_custom_response(json).map_err(|e| {
-        crate::error::YahooError::ResponseStructureError {
+        crate::error::FinanceError::ResponseStructureError {
             field: "custom_screener".to_string(),
             context: e,
         }

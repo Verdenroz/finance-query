@@ -30,10 +30,10 @@ use finance_query::{Ticker, Interval, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let ticker = Ticker::new("AAPL").await?;
+    let ticker = Ticker::builder("AAPL").logo().build().await?;
 
     // Get quote
-    let quote = ticker.quote(true).await?;
+    let quote = ticker.quote().await?;
     println!("{}: ${:.2}", quote.symbol, quote.regular_market_price.unwrap_or(0.0));
 
     // Get chart
@@ -50,8 +50,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ```rust
 // Quotes, financials, options, news
-let ticker = Ticker::new("MSFT").await?;
-let quote = ticker.quote(true).await?; // fetch quote with logo if available
+let ticker = Ticker::builder("MSFT").logo().build().await?;
+let quote = ticker.quote().await?; // fetch quote with logo if available
 let financials = ticker.financial_data().await?;
 let options = ticker.options(None).await?;
 ```
@@ -62,8 +62,8 @@ let options = ticker.options(None).await?;
 
 ```rust
 // Fetch multiple symbols efficiently
-let tickers = Tickers::new(vec!["AAPL", "MSFT", "GOOGL"]).await?;
-let quotes = tickers.quotes(true).await?; // fetch quotes with logos if available
+let tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL"]).logo().build().await?;
+let quotes = tickers.quotes().await?; // fetch quotes with logos if available
 let sparks = tickers.spark(Interval::OneDay, TimeRange::FiveDays).await?;
 ```
 

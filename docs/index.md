@@ -108,8 +108,8 @@ Finance Query is ready to use out of the box. Here's how to get stock data:
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Get detailed quote for Apple
-        let ticker = Ticker::new("AAPL").await?;
-        let quote = ticker.quote(true).await?;
+        let ticker = Ticker::builder("AAPL").logo().build().await?;
+        let quote = ticker.quote().await?;
         println!("{} price: ${:?}", quote.symbol, quote.regular_market_price);
 
         // Get historical charts

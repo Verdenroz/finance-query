@@ -175,7 +175,7 @@ impl App {
         self.status_message = "Checking alerts...".to_string();
 
         match Tickers::new(&unique_symbols).await {
-            Ok(tickers) => match tickers.quotes(false).await {
+            Ok(tickers) => match tickers.quotes().await {
                 Ok(response) => {
                     let mut triggered_count = 0;
                     for alert in &enabled {

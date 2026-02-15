@@ -1,6 +1,6 @@
 [package]
 name = "finance-query-derive"
-version = "2.1.0"
+version = "2.2.0"
 edition = "2024"
 authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
 description = "Derive macros for finance-query library"

@@ -1,6 +1,6 @@
 use crate::client::ClientConfig;
 use crate::endpoints::urls::{api, base};
-use crate::error::{Result, YahooError};
+use crate::error::{FinanceError, Result};
 use reqwest::Proxy;
 use std::time::{Duration, Instant};
 use tracing::{debug, info, warn};
@@ -16,11 +16,11 @@ const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 const AUTH_TIMEOUT: Duration = Duration::from_secs(15);
 
 /// Minimum interval between auth refreshes (prevent excessive refreshing)
-#[allow(dead_code)]
+#[cfg(test)]
 const MIN_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
 
 /// Maximum age of auth before considering it stale
-#[allow(dead_code)]
+#[cfg(test)]
 const AUTH_MAX_AGE: Duration = Duration::from_secs(3600); // 1 hour
 
 /// Yahoo Finance authentication data
@@ -44,16 +44,6 @@ impl std::fmt::Debug for YahooAuth {
 }
 
 impl YahooAuth {
-    /// Authenticate with Yahoo Finance and obtain cookies + crumb
-    ///
-    /// This performs the full authentication flow:
-    /// Visit fc.yahoo.com to establish session and get cookies
-    /// Request crumb token from Yahoo Finance API
-    /// If primary method fails, fall back to CSRF token method
-    pub async fn authenticate() -> Result<Self> {
-        Self::authenticate_with_config(&ClientConfig::default()).await
-    }
-
     /// Authenticate with Yahoo Finance using custom configuration
     ///
     /// Allows specifying timeout and proxy settings for the HTTP client.
@@ -71,25 +61,25 @@ impl YahooAuth {
         if let Some(proxy_url) = &config.proxy {
             debug!("Configuring proxy: {}", proxy_url);
             let proxy = Proxy::all(proxy_url)
-                .map_err(|e| YahooError::InternalError(format!("Invalid proxy URL: {}", e)))?;
+                .map_err(|e| FinanceError::InternalError(format!("Invalid proxy URL: {}", e)))?;
             builder = builder.proxy(proxy);
         }
 
         let client = builder.build().map_err(|e| {
-            YahooError::InternalError(format!("Failed to create HTTP client: {}", e))
+            FinanceError::InternalError(format!("Failed to create HTTP client: {}", e))
         })?;
 
         // Visit fc.yahoo.com to establish session
         debug!("Visiting {} to establish session", base::YAHOO_FC);
         client.get(base::YAHOO_FC).send().await.map_err(|e| {
-            YahooError::InternalError(format!("Failed to establish session: {}", e))
+            FinanceError::InternalError(format!("Failed to establish session: {}", e))
         })?;
 
         // Try to get crumb from query1
         debug!("Attempting to fetch crumb from query1");
         let crumb = get_crumb(&client, api::CRUMB_QUERY1).await.map_err(|e| {
             warn!("Failed to fetch crumb: {}", e);
-            YahooError::AuthenticationFailed {
+            FinanceError::AuthenticationFailed {
                 context: format!("Failed to fetch crumb: {}", e),
             }
         })?;
@@ -103,13 +93,13 @@ impl YahooAuth {
     }
 
     /// Check if authentication is still valid
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn is_expired(&self) -> bool {
         self.last_refresh.elapsed() > AUTH_MAX_AGE
     }
 
     /// Check if enough time has passed to allow refresh
-    #[allow(dead_code)]
+    #[cfg(test)]
     pub fn can_refresh(&self) -> bool {
         self.last_refresh.elapsed() >= MIN_REFRESH_INTERVAL
     }
@@ -121,23 +111,22 @@ async fn get_crumb(client: &reqwest::Client, crumb_url: &str) -> Result<String> 
         .get(crumb_url)
         .send()
         .await
-        .map_err(|e| YahooError::InternalError(format!("Crumb request failed: {}", e)))?;
+        .map_err(|e| FinanceError::InternalError(format!("Crumb request failed: {}", e)))?;
 
     if !response.status().is_success() {
-        return Err(YahooError::InternalError(format!(
+        return Err(FinanceError::InternalError(format!(
             "Crumb request returned status {}",
             response.status()
         )));
     }
 
-    let crumb = response
-        .text()
-        .await
-        .map_err(|e| YahooError::InternalError(format!("Failed to read crumb response: {}", e)))?;
+    let crumb = response.text().await.map_err(|e| {
+        FinanceError::InternalError(format!("Failed to read crumb response: {}", e))
+    })?;
 
     // Validate crumb (should not contain HTML)
     if crumb.contains("<html") || crumb.contains("<!DOCTYPE") {
-        return Err(YahooError::InternalError(
+        return Err(FinanceError::InternalError(
             "Crumb response contains HTML instead of token".to_string(),
         ));
     }
@@ -154,9 +143,9 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore] // Ignore by default as it makes real network requests
+    #[ignore = "requires network access"]
     async fn test_authenticate() {
-        let auth = YahooAuth::authenticate().await;
+        let auth = YahooAuth::authenticate_with_config(&ClientConfig::default()).await;
         assert!(auth.is_ok());
 
         let auth = auth.unwrap();

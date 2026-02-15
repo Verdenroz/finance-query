@@ -7,6 +7,8 @@
 pub mod chart;
 /// Currency models.
 pub mod currencies;
+/// SEC EDGAR data models for filing history, XBRL financial data, and full-text search.
+pub mod edgar;
 /// Exchange models for supported markets.
 pub mod exchanges;
 /// Financials (fundamentals-timeseries) models.

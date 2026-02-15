@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 /// Predefined screener types for Yahoo Finance
 pub mod screener_types {
     /// Enum of all predefined Yahoo Finance screeners
@@ -1151,30 +1153,37 @@ impl Frequency {
 }
 
 /// Chart intervals
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Interval {
     /// 1 minute
+    #[serde(rename = "1m")]
     OneMinute,
     /// 5 minutes
+    #[serde(rename = "5m")]
     FiveMinutes,
     /// 15 minutes
+    #[serde(rename = "15m")]
     FifteenMinutes,
     /// 30 minutes
+    #[serde(rename = "30m")]
     ThirtyMinutes,
     /// 1 hour
+    #[serde(rename = "1h")]
     OneHour,
     /// 1 day
+    #[serde(rename = "1d")]
     OneDay,
     /// 1 week
+    #[serde(rename = "1wk")]
     OneWeek,
     /// 1 month
+    #[serde(rename = "1mo")]
     OneMonth,
     /// 3 months
+    #[serde(rename = "3mo")]
     ThreeMonths,
 }
 
-#[allow(dead_code)]
 impl Interval {
     /// Convert interval to Yahoo Finance API format
     pub fn as_str(&self) -> &'static str {
@@ -1192,35 +1201,50 @@ impl Interval {
     }
 }
 
+impl std::fmt::Display for Interval {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 /// Time ranges for chart data
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-#[allow(dead_code)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TimeRange {
     /// 1 day
+    #[serde(rename = "1d")]
     OneDay,
     /// 5 days
+    #[serde(rename = "5d")]
     FiveDays,
     /// 1 month
+    #[serde(rename = "1mo")]
     OneMonth,
     /// 3 months
+    #[serde(rename = "3mo")]
     ThreeMonths,
     /// 6 months
+    #[serde(rename = "6mo")]
     SixMonths,
     /// 1 year
+    #[serde(rename = "1y")]
     OneYear,
     /// 2 years
+    #[serde(rename = "2y")]
     TwoYears,
     /// 5 years
+    #[serde(rename = "5y")]
     FiveYears,
     /// 10 years
+    #[serde(rename = "10y")]
     TenYears,
     /// Year to date
+    #[serde(rename = "ytd")]
     YearToDate,
     /// Maximum available
+    #[serde(rename = "max")]
     Max,
 }
 
-#[allow(dead_code)]
 impl TimeRange {
     /// Convert time range to Yahoo Finance API format
     pub fn as_str(&self) -> &'static str {
@@ -1237,6 +1261,12 @@ impl TimeRange {
             TimeRange::YearToDate => "ytd",
             TimeRange::Max => "max",
         }
+    }
+}
+
+impl std::fmt::Display for TimeRange {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
