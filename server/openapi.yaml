@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Finance Query v2
-  version: 2.1.0
+  version: 2.2.0
   description: |
     REST API for fetching financial data from Yahoo Finance and SEC EDGAR.
     Provides real-time quotes, historical data, news, options, SEC filings, and more.
@@ -65,10 +65,14 @@ paths:
                 properties:
                   status:
                     type: string
-                    example: ok
+                    example: healthy
                   version:
                     type: string
-                    example: 2.0.0
+                    example: 2.1.0
+                  timestamp:
+                    type: string
+                    format: date-time
+                    description: Current server timestamp (ISO 8601)
 
   /v2/ping:
     get:
@@ -86,6 +90,22 @@ paths:
                   message:
                     type: string
                     example: pong
+
+  /v2/metrics:
+    get:
+      tags: [Health]
+      summary: Prometheus metrics
+      description: |
+        Exposes Prometheus-format metrics for monitoring.
+        Returns request counts, latencies, and error rates per endpoint.
+      responses:
+        '200':
+          description: Prometheus metrics in text format
+          content:
+            text/plain:
+              schema:
+                type: string
+                description: Prometheus exposition format metrics
 
   /v2/hours:
     get:
@@ -844,7 +864,7 @@ paths:
     get:
       tags: [News]
       summary: Get general market news
-      description: Fetch general financial market news
+      description: Fetch general financial market news (scraped from stockanalysis.com)
       parameters:
         - name: count
           in: query
@@ -859,13 +879,21 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NewsResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/NewsArticle'
+              example:
+                - title: "Fed holds rates steady amid inflation concerns"
+                  link: "https://www.reuters.com/article/fed-rates"
+                  source: "Reuters"
+                  img: "https://cdn.snapi.dev/images/v1/f/e/d/gen1.jpg"
+                  time: "2 hours ago"
 
   /v2/news/{symbol}:
     get:
       tags: [News]
       summary: Get news for a symbol
-      description: Fetch news articles related to a specific stock
+      description: Fetch news articles related to a specific stock (scraped from stockanalysis.com)
       parameters:
         - name: symbol
           in: path
@@ -881,11 +909,19 @@ paths:
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Symbol news
+          description: Symbol news array
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/NewsResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/NewsArticle'
+              example:
+                - title: "Apple announces new iPhone model"
+                  link: "https://www.reuters.com/article/apple-iphone"
+                  source: "Reuters"
+                  img: "https://cdn.snapi.dev/images/v1/a/p/p/aapl1.jpg"
+                  time: "1 hour ago"
 
   /v2/options/{symbol}:
     get:
@@ -1105,7 +1141,7 @@ paths:
               - solid-large-growth-funds
               - solid-midcap-growth-funds
               - top-mutual-funds
-          description: Predefined screener type (kebab-case)
+          description: Predefined screener type
           example: most-actives
         - name: count
           in: query
@@ -1295,7 +1331,7 @@ paths:
               - basic-materials
               - real-estate
               - utilities
-          description: Sector type (kebab-case)
+          description: Sector type
           example: technology
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
@@ -1308,7 +1344,8 @@ paths:
                 $ref: '#/components/schemas/SectorResponse'
               example:
                 name: Technology
-                slug: technology
+                key: technology
+                symbol: "^YH311"
                 overview:
                   companiesCount: 828
                   marketWeight: 0.3038
@@ -1319,6 +1356,11 @@ paths:
                   oneYearChangePercent: 0.18625236
                   threeYearChangePercent: 1.542715
                   fiveYearChangePercent: 1.2627318
+                benchmark:
+                  dayChangePercent: 0.00049908913
+                  ytdChangePercent: -0.00871
+                  oneYearChangePercent: 0.12957759
+                benchmarkName: S&P 500
                 topCompanies:
                   - symbol: NVDA
                     name: NVIDIA Corporation
@@ -1647,12 +1689,12 @@ paths:
                 items:
                   $ref: '#/components/schemas/Exchange'
               example:
-                - region: "United States of America"
+                - country: "United States of America"
                   market: "Nasdaq Stock Exchange"
                   suffix: "N/A"
                   delay: "Real-time"
                   dataProvider: "ICE Data Services"
-                - region: "Japan"
+                - country: "Japan"
                   market: "Tokyo Stock Exchange"
                   suffix: ".T"
                   delay: "20 min"
@@ -2269,112 +2311,411 @@ components:
 
     IndicatorsSummary:
       type: object
-      description: Technical analysis indicators
+      description: |
+        Technical analysis indicators summary. All fields are optional — only those computable
+        from the available data range are included. Field names are camelCase.
       properties:
-        sma_10:
+        # === MOVING AVERAGES ===
+        sma10:
           type: number
           nullable: true
-        sma_20:
+          description: Simple Moving Average (10-period)
+        sma20:
           type: number
           nullable: true
-        sma_50:
+          description: Simple Moving Average (20-period)
+        sma50:
           type: number
           nullable: true
-        ema_20:
+          description: Simple Moving Average (50-period)
+        sma100:
           type: number
           nullable: true
-        rsi_14:
+          description: Simple Moving Average (100-period)
+        sma200:
           type: number
           nullable: true
+          description: Simple Moving Average (200-period)
+        ema10:
+          type: number
+          nullable: true
+          description: Exponential Moving Average (10-period)
+        ema20:
+          type: number
+          nullable: true
+          description: Exponential Moving Average (20-period)
+        ema50:
+          type: number
+          nullable: true
+          description: Exponential Moving Average (50-period)
+        ema100:
+          type: number
+          nullable: true
+          description: Exponential Moving Average (100-period)
+        ema200:
+          type: number
+          nullable: true
+          description: Exponential Moving Average (200-period)
+        wma10:
+          type: number
+          nullable: true
+          description: Weighted Moving Average (10-period)
+        wma20:
+          type: number
+          nullable: true
+          description: Weighted Moving Average (20-period)
+        wma50:
+          type: number
+          nullable: true
+          description: Weighted Moving Average (50-period)
+        wma100:
+          type: number
+          nullable: true
+          description: Weighted Moving Average (100-period)
+        wma200:
+          type: number
+          nullable: true
+          description: Weighted Moving Average (200-period)
+        dema20:
+          type: number
+          nullable: true
+          description: Double Exponential Moving Average (20-period)
+        tema20:
+          type: number
+          nullable: true
+          description: Triple Exponential Moving Average (20-period)
+        hma20:
+          type: number
+          nullable: true
+          description: Hull Moving Average (20-period)
+        vwma20:
+          type: number
+          nullable: true
+          description: Volume Weighted Moving Average (20-period)
+        alma9:
+          type: number
+          nullable: true
+          description: Arnaud Legoux Moving Average (9-period)
+        mcginleyDynamic20:
+          type: number
+          nullable: true
+          description: McGinley Dynamic indicator (20-period)
+        # === MOMENTUM OSCILLATORS ===
+        rsi14:
+          type: number
+          nullable: true
+          description: Relative Strength Index (14-period)
+        stochastic:
+          $ref: '#/components/schemas/StochasticData'
+        stochasticRsi:
+          $ref: '#/components/schemas/StochasticData'
+        cci20:
+          type: number
+          nullable: true
+          description: Commodity Channel Index (20-period)
+        williamsR14:
+          type: number
+          nullable: true
+          description: Williams %R (14-period)
+        roc12:
+          type: number
+          nullable: true
+          description: Rate of Change (12-period)
+        momentum10:
+          type: number
+          nullable: true
+          description: Momentum oscillator (10-period)
+        cmo14:
+          type: number
+          nullable: true
+          description: Chande Momentum Oscillator (14-period)
+        awesomeOscillator:
+          type: number
+          nullable: true
+          description: Awesome Oscillator (5/34-period)
+        coppockCurve:
+          type: number
+          nullable: true
+          description: Coppock Curve
+        # === TREND INDICATORS ===
         macd:
           $ref: '#/components/schemas/MacdData'
-        bollinger_bands:
+        adx14:
+          type: number
+          nullable: true
+          description: Average Directional Index (14-period)
+        aroon:
+          $ref: '#/components/schemas/AroonData'
+        supertrend:
+          $ref: '#/components/schemas/SuperTrendData'
+        ichimoku:
+          $ref: '#/components/schemas/IchimokuData'
+        parabolicSar:
+          type: number
+          nullable: true
+          description: Parabolic SAR
+        bullBearPower:
+          $ref: '#/components/schemas/BullBearPowerData'
+        elderRayIndex:
+          $ref: '#/components/schemas/ElderRayData'
+        # === VOLATILITY INDICATORS ===
+        bollingerBands:
           $ref: '#/components/schemas/BollingerBandsData'
+        keltnerChannels:
+          $ref: '#/components/schemas/ChannelData'
+        donchianChannels:
+          $ref: '#/components/schemas/ChannelData'
+        atr14:
+          type: number
+          nullable: true
+          description: Average True Range (14-period)
+        trueRange:
+          type: number
+          nullable: true
+          description: True Range (current candle)
+        choppinessIndex14:
+          type: number
+          nullable: true
+          description: Choppiness Index (14-period)
+        # === VOLUME INDICATORS ===
+        obv:
+          type: number
+          nullable: true
+          description: On-Balance Volume
+        mfi14:
+          type: number
+          nullable: true
+          description: Money Flow Index (14-period)
+        cmf20:
+          type: number
+          nullable: true
+          description: Chaikin Money Flow (20-period)
+        chaikinOscillator:
+          type: number
+          nullable: true
+          description: Chaikin Oscillator (3/10-period)
+        accumulationDistribution:
+          type: number
+          nullable: true
+          description: Accumulation/Distribution Line
+        vwap:
+          type: number
+          nullable: true
+          description: Volume Weighted Average Price
+        balanceOfPower:
+          type: number
+          nullable: true
+          description: Balance of Power indicator
+
+    StochasticData:
+      type: object
+      nullable: true
+      properties:
+        k:
+          type: number
+          nullable: true
+          description: Stochastic %K line
+        d:
+          type: number
+          nullable: true
+          description: Stochastic %D signal line
 
     MacdData:
       type: object
+      nullable: true
       properties:
         macd:
           type: number
           nullable: true
+          description: MACD line (fast EMA - slow EMA)
         signal:
           type: number
           nullable: true
+          description: Signal line (EMA of MACD)
         histogram:
           type: number
           nullable: true
+          description: MACD histogram (MACD - signal)
+
+    AroonData:
+      type: object
+      nullable: true
+      properties:
+        aroonUp:
+          type: number
+          nullable: true
+          description: Aroon Up line (0-100)
+        aroonDown:
+          type: number
+          nullable: true
+          description: Aroon Down line (0-100)
+
+    SuperTrendData:
+      type: object
+      nullable: true
+      properties:
+        value:
+          type: number
+          nullable: true
+          description: SuperTrend line value
+        trend:
+          type: string
+          nullable: true
+          enum: [up, down]
+          description: Current trend direction
+
+    IchimokuData:
+      type: object
+      nullable: true
+      properties:
+        conversionLine:
+          type: number
+          nullable: true
+          description: Tenkan-sen (9-period)
+        baseLine:
+          type: number
+          nullable: true
+          description: Kijun-sen (26-period)
+        leadingSpanA:
+          type: number
+          nullable: true
+          description: Senkou Span A (leading)
+        leadingSpanB:
+          type: number
+          nullable: true
+          description: Senkou Span B (leading)
+        laggingSpan:
+          type: number
+          nullable: true
+          description: Chikou Span (lagging)
+
+    BullBearPowerData:
+      type: object
+      nullable: true
+      properties:
+        bullPower:
+          type: number
+          nullable: true
+          description: Bull Power (High - EMA)
+        bearPower:
+          type: number
+          nullable: true
+          description: Bear Power (Low - EMA)
+
+    ElderRayData:
+      type: object
+      nullable: true
+      properties:
+        bullPower:
+          type: number
+          nullable: true
+          description: Elder Ray Bull Power
+        bearPower:
+          type: number
+          nullable: true
+          description: Elder Ray Bear Power
 
     BollingerBandsData:
       type: object
+      nullable: true
       properties:
         upper:
           type: number
           nullable: true
+          description: Upper Bollinger Band (middle + 2σ)
         middle:
           type: number
           nullable: true
+          description: Middle Band (SMA 20)
         lower:
           type: number
           nullable: true
+          description: Lower Bollinger Band (middle - 2σ)
 
-    NewsResponse:
+    ChannelData:
       type: object
+      nullable: true
+      description: Three-line channel indicator (Keltner Channels or Donchian Channels)
       properties:
-        count:
-          type: integer
-        news:
-          type: array
-          items:
-            $ref: '#/components/schemas/NewsArticle'
+        upper:
+          type: number
+          nullable: true
+          description: Upper channel line
+        middle:
+          type: number
+          nullable: true
+          description: Middle channel line
+        lower:
+          type: number
+          nullable: true
+          description: Lower channel line
 
     NewsArticle:
       type: object
+      description: A scraped news article from stockanalysis.com
       properties:
-        uuid:
-          type: string
         title:
           type: string
-        publisher:
-          type: string
+          description: Article headline
+          example: "Fed holds rates steady amid inflation concerns"
         link:
           type: string
-        providerPublishTime:
-          type: integer
-        type:
+          description: URL to the full article
+          example: "https://www.reuters.com/article/fed-rates"
+        source:
           type: string
-        thumbnail:
-          $ref: '#/components/schemas/NewsThumbnail'
-
-    NewsThumbnail:
-      type: object
-      properties:
-        resolutions:
-          type: array
-          items:
-            type: object
-            properties:
-              url:
-                type: string
-              width:
-                type: integer
-              height:
-                type: integer
+          description: News publisher/source name
+          example: Reuters
+        img:
+          type: string
+          description: Thumbnail image URL (may be "/logo.svg" for fallback)
+          example: "https://cdn.snapi.dev/images/v1/f/e/d/gen1.jpg"
+        time:
+          type: string
+          description: Relative publication time (e.g., "2 hours ago", "1 day ago")
+          example: "2 hours ago"
 
     OptionsResponse:
       type: object
+      description: Yahoo Finance options chain response wrapper
       properties:
+        optionChain:
+          type: object
+          properties:
+            result:
+              type: array
+              items:
+                $ref: '#/components/schemas/OptionChainResult'
+            error:
+              nullable: true
+              description: Error object if request failed
+
+    OptionChainResult:
+      type: object
+      description: Options data for an underlying symbol
+      properties:
+        underlyingSymbol:
+          type: string
+          nullable: true
+          example: AAPL
         expirationDates:
           type: array
+          description: Available expiration dates (Unix timestamps)
           items:
             type: integer
+            format: int64
         strikes:
           type: array
+          description: Available strike prices
           items:
             type: number
+            format: double
         hasMiniOptions:
           type: boolean
+          nullable: true
         options:
           type: array
+          description: Option chains by expiration date
           items:
             $ref: '#/components/schemas/OptionChain'
 
@@ -2383,8 +2724,10 @@ components:
       properties:
         expirationDate:
           type: integer
+          format: int64
         hasMiniOptions:
           type: boolean
+          nullable: true
         calls:
           type: array
           items:
@@ -2443,8 +2786,12 @@ components:
       properties:
         symbol:
           type: string
-        recommendationPercent:
+          description: Recommended stock symbol
+          example: AMZN
+        score:
           type: number
+          format: double
+          description: Recommendation similarity score (higher = more similar)
 
     FinancialStatement:
       type: object
@@ -2497,8 +2844,14 @@ components:
         lastUpdated:
           type: integer
           format: int64
-          description: Unix timestamp of last data update
-          example: 1735315200
+          nullable: true
+          description: Timestamp of last data update (milliseconds for custom screener, seconds for predefined)
+          example: 1747133602605
+        total:
+          type: integer
+          format: int64
+          nullable: true
+          description: Total number of matching results (only present in custom screener responses, for pagination)
 
     ScreenerQuote:
       type: object
@@ -2639,26 +2992,37 @@ components:
           type: string
           description: Sector display name
           example: Technology
-        slug:
+        key:
+          type: string
+          description: Sector key used for API calls
+          example: technology
+        symbol:
           type: string
           nullable: true
-          description: URL-friendly sector identifier
-          example: technology
+          description: Sector index symbol
+          example: "^YH311"
         overview:
           $ref: '#/components/schemas/SectorOverview'
         performance:
           $ref: '#/components/schemas/SectorPerformance'
+        benchmark:
+          $ref: '#/components/schemas/SectorPerformance'
+        benchmarkName:
+          type: string
+          nullable: true
+          description: Benchmark name for comparison
+          example: S&P 500
         topCompanies:
           type: array
           description: Top companies in the sector by market cap
           items:
             $ref: '#/components/schemas/SectorCompany'
-        etfs:
+        topEtfs:
           type: array
           description: ETFs tracking this sector
           items:
             $ref: '#/components/schemas/SectorETF'
-        mutualFunds:
+        topMutualFunds:
           type: array
           description: Mutual funds focused on this sector
           items:
@@ -2687,12 +3051,26 @@ components:
           nullable: true
           description: Number of companies in the sector
           example: 828
+        marketCap:
+          type: number
+          format: double
+          nullable: true
+          description: Total market capitalization (raw value)
         marketWeight:
           type: number
           format: double
           nullable: true
           description: Sector weight in the overall market (0-1)
           example: 0.3038
+        industriesCount:
+          type: integer
+          nullable: true
+          description: Number of industries within the sector
+        employeeCount:
+          type: integer
+          format: int64
+          nullable: true
+          description: Total employee count across sector companies
 
     SectorPerformance:
       type: object
@@ -2790,22 +3168,22 @@ components:
           type: number
           format: double
           nullable: true
-        dayChangePercent:
+          description: Last traded price (raw value)
+        netAssets:
           type: number
           format: double
           nullable: true
-        ytdReturn:
-          type: number
-          format: double
-          nullable: true
-        totalAssets:
-          type: number
-          format: double
-          nullable: true
+          description: Net assets under management (raw value)
         expenseRatio:
           type: number
           format: double
           nullable: true
+          description: Expense ratio (raw value)
+        ytdReturn:
+          type: number
+          format: double
+          nullable: true
+          description: Year-to-date return (raw value)
 
     SectorMutualFund:
       type: object
@@ -2820,26 +3198,22 @@ components:
           type: number
           format: double
           nullable: true
-        dayChangePercent:
+          description: Last traded price / NAV (raw value)
+        netAssets:
           type: number
           format: double
           nullable: true
-        ytdReturn:
-          type: number
-          format: double
-          nullable: true
-        totalAssets:
-          type: number
-          format: double
-          nullable: true
+          description: Net assets under management (raw value)
         expenseRatio:
           type: number
           format: double
           nullable: true
-        morningstarRating:
-          type: integer
+          description: Expense ratio (raw value)
+        ytdReturn:
+          type: number
+          format: double
           nullable: true
-          description: Morningstar rating (1-5)
+          description: Year-to-date return (raw value)
 
     Industry:
       type: object
@@ -2879,18 +3253,40 @@ components:
       properties:
         id:
           type: string
-          nullable: true
-        title:
+          description: Report identifier
+        headline:
           type: string
           nullable: true
+          description: Report headline (may contain HTML)
         provider:
           type: string
           nullable: true
-        publishedAt:
-          type: integer
-          format: int64
+          description: Research provider (e.g., "Argus Research", "Morningstar")
+        reportDate:
+          type: string
           nullable: true
-          description: Unix timestamp of publication
+          description: Report publication date (ISO 8601)
+        reportTitle:
+          type: string
+          nullable: true
+          description: Full report title
+        reportType:
+          type: string
+          nullable: true
+          description: Report type (e.g., "Technical Analysis", "Analyst Report")
+        targetPrice:
+          type: number
+          format: double
+          nullable: true
+          description: Analyst target price
+        targetPriceStatus:
+          type: string
+          nullable: true
+          description: Target price status (e.g., "Maintained", "Raised", "Lowered")
+        investmentRating:
+          type: string
+          nullable: true
+          description: Investment rating (e.g., "Bullish", "Bearish")
 
     IndustryResponse:
       type: object
@@ -3469,9 +3865,9 @@ components:
       type: object
       description: Supported exchange information
       properties:
-        region:
+        country:
           type: string
-          description: Region where the exchange operates
+          description: Country or region where the exchange operates
           example: "Japan"
         market:
           type: string
@@ -3847,15 +4243,75 @@ components:
           description: Currency code
         exchangeName:
           type: string
-          description: Exchange name
+          nullable: true
+        fullExchangeName:
+          type: string
+          nullable: true
+        instrumentType:
+          type: string
+          nullable: true
+        firstTradeDate:
+          type: integer
+          format: int64
+          nullable: true
+        regularMarketTime:
+          type: integer
+          format: int64
+          nullable: true
+        gmtOffset:
+          type: integer
+          nullable: true
+          description: GMT offset in seconds
+        timezone:
+          type: string
+          nullable: true
+        exchangeTimezoneName:
+          type: string
+          nullable: true
         regularMarketPrice:
           type: number
           format: double
-          description: Current regular market price
+          nullable: true
+        regularMarketDayHigh:
+          type: number
+          format: double
+          nullable: true
+        regularMarketDayLow:
+          type: number
+          format: double
+          nullable: true
+        regularMarketVolume:
+          type: integer
+          format: int64
+          nullable: true
+        chartPreviousClose:
+          type: number
+          format: double
+          nullable: true
         previousClose:
           type: number
           format: double
-          description: Previous closing price
+          nullable: true
+        fiftyTwoWeekHigh:
+          type: number
+          format: double
+          nullable: true
+        fiftyTwoWeekLow:
+          type: number
+          format: double
+          nullable: true
+        dataGranularity:
+          type: string
+          nullable: true
+        range:
+          type: string
+          nullable: true
+        priceHint:
+          type: integer
+          nullable: true
+        hasPrePostMarketData:
+          type: boolean
+          nullable: true
 
   responses:
     BadRequest:
