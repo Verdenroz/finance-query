@@ -76,7 +76,7 @@ Single quote to DataFrame:
 
 ```rust
 let ticker = Ticker::new("NVDA").await?;
-let quote = ticker.quote(false).await?;
+let quote = ticker.quote().await?;
 
 // Convert to single-row DataFrame
 let df = quote.to_dataframe()?;
@@ -450,7 +450,7 @@ let df = results.quotes.to_dataframe()?;
 Individual structs create single-row DataFrames:
 
 ```rust
-let quote = ticker.quote(false).await?;
+let quote = ticker.quote().await?;
 let df = quote.to_dataframe()?;  // 1 row, 30+ columns
 ```
 

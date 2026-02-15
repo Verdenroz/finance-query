@@ -89,7 +89,12 @@ fq <command> --help
 
 ## Data Storage
 
-The CLI stores alerts, watchlists, and configuration in:
+The CLI stores alerts and watchlists in:
 
 - **Linux/macOS:** `~/.local/share/fq/`
 - **Windows:** `%APPDATA%\fq\`
+
+EDGAR email configuration is stored in:
+
+- **Linux/macOS:** `~/.config/fq/config.json`
+- **Windows:** `%APPDATA%\fq\config.json`

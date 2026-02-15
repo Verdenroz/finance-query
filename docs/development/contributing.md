@@ -110,11 +110,11 @@ Add doc comments to public items:
 /// ```no_run
 /// use finance_query::Ticker;
 ///
-/// let ticker = Ticker::new("AAPL").await?;
-/// let quote = ticker.quote(true).await?;
+/// let ticker = Ticker::builder("AAPL").logo().build().await?;
+/// let quote = ticker.quote().await?;
 /// println!("Price: ${}", quote.regular_market_price);
 /// ```
-pub async fn quote(&self, include_logo: bool) -> Result<Quote> {
+pub async fn quote(&self) -> Result<Quote> {
     // ...
 }
 ```
@@ -146,8 +146,8 @@ Mark network tests with `#[ignore]`:
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_real_quote() {
-    let ticker = Ticker::new("AAPL").await.unwrap();
-    let quote = ticker.quote(true).await.unwrap();
+    let ticker = Ticker::builder("AAPL").logo().build().await.unwrap();
+    let quote = ticker.quote().await.unwrap();
     assert!(!quote.symbol.is_empty());
 }
 ```
@@ -162,8 +162,8 @@ Use `no_run` for examples that require network access:
 /// ```no_run
 /// # use finance_query::Ticker;
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let ticker = Ticker::new("AAPL").await?;
-/// let quote = ticker.quote(true).await?;
+/// let ticker = Ticker::builder("AAPL").logo().build().await?;
+/// let quote = ticker.quote().await?;
 /// # Ok(())
 /// # }
 /// ```

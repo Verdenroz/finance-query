@@ -53,6 +53,48 @@ pub async fn fetch(
     Ok(response.json().await?)
 }
 
+/// Fetch chart data for a symbol using absolute date boundaries.
+///
+/// Uses Yahoo's `period1`/`period2` parameters instead of a relative range.
+///
+/// # Arguments
+///
+/// * `client` - The Yahoo Finance client
+/// * `symbol` - Stock symbol (e.g., "AAPL")
+/// * `interval` - Time interval between data points
+/// * `start` - Start date as Unix timestamp (seconds)
+/// * `end` - End date as Unix timestamp (seconds)
+pub async fn fetch_with_dates(
+    client: &YahooClient,
+    symbol: &str,
+    interval: Interval,
+    start: i64,
+    end: i64,
+) -> Result<serde_json::Value> {
+    super::common::validate_symbol(symbol)?;
+
+    info!(
+        "Fetching chart for {} ({}, period1={}, period2={})",
+        symbol,
+        interval.as_str(),
+        start,
+        end
+    );
+
+    let url = api::chart(symbol);
+    let start_str = start.to_string();
+    let end_str = end.to_string();
+    let params = [
+        ("interval", interval.as_str()),
+        ("period1", start_str.as_str()),
+        ("period2", end_str.as_str()),
+        ("events", "div|split|capitalGain"),
+    ];
+    let response = client.request_with_params(&url, &params).await?;
+
+    Ok(response.json().await?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

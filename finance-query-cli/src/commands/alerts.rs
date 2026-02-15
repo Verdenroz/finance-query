@@ -263,7 +263,7 @@ async fn check_alerts(show_only_triggered: bool) -> Result<()> {
 
     // Fetch quotes
     let tickers = Tickers::new(&unique_symbols).await?;
-    let response = tickers.quotes(false).await?;
+    let response = tickers.quotes().await?;
 
     let mut triggered_count = 0;
     let mut triggered_ids = Vec::new();
@@ -569,7 +569,7 @@ async fn watch_alerts(interval_secs: u64, verbose: bool) -> Result<()> {
             }
         };
 
-        let response = match tickers.quotes(false).await {
+        let response = match tickers.quotes().await {
             Ok(r) => r,
             Err(e) => {
                 if verbose {

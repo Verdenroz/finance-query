@@ -3,7 +3,7 @@
 //! Scrapes the Yahoo Finance help page to get a list of supported exchanges
 //! with their suffixes and data providers.
 
-use crate::error::{Result, YahooError};
+use crate::error::{FinanceError, Result};
 use crate::models::exchanges::Exchange;
 use scraper::{Html, Selector};
 use tracing::info;
@@ -19,7 +19,7 @@ pub async fn scrape_exchanges() -> Result<Vec<Exchange>> {
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
         .build()
-        .map_err(YahooError::HttpError)?;
+        .map_err(FinanceError::HttpError)?;
 
     let response = client.get(EXCHANGES_URL).send().await?;
     let html = response.text().await?;
@@ -32,23 +32,24 @@ fn parse_exchanges_html(html: &str) -> Result<Vec<Exchange>> {
     let document = Html::parse_document(html);
 
     let table_selector =
-        Selector::parse("table").map_err(|_| YahooError::ResponseStructureError {
+        Selector::parse("table").map_err(|_| FinanceError::ResponseStructureError {
             field: "table".to_string(),
             context: "Failed to parse table selector".to_string(),
         })?;
 
-    let row_selector = Selector::parse("tr").map_err(|_| YahooError::ResponseStructureError {
+    let row_selector = Selector::parse("tr").map_err(|_| FinanceError::ResponseStructureError {
         field: "tr".to_string(),
         context: "Failed to parse row selector".to_string(),
     })?;
 
-    let cell_selector = Selector::parse("td").map_err(|_| YahooError::ResponseStructureError {
-        field: "td".to_string(),
-        context: "Failed to parse cell selector".to_string(),
-    })?;
+    let cell_selector =
+        Selector::parse("td").map_err(|_| FinanceError::ResponseStructureError {
+            field: "td".to_string(),
+            context: "Failed to parse cell selector".to_string(),
+        })?;
 
     let table = document.select(&table_selector).next().ok_or_else(|| {
-        YahooError::ResponseStructureError {
+        FinanceError::ResponseStructureError {
             field: "table".to_string(),
             context: "No table found in exchanges page".to_string(),
         }
@@ -80,7 +81,7 @@ fn parse_exchanges_html(html: &str) -> Result<Vec<Exchange>> {
     }
 
     if exchanges.is_empty() {
-        return Err(YahooError::ResponseStructureError {
+        return Err(FinanceError::ResponseStructureError {
             field: "exchanges".to_string(),
             context: "No exchanges found in table".to_string(),
         });

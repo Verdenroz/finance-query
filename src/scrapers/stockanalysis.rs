@@ -2,7 +2,7 @@
 //!
 //! Scrapes news from stockanalysis.com
 
-use crate::error::{Result, YahooError};
+use crate::error::{FinanceError, Result};
 use crate::models::news::News;
 use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
@@ -182,7 +182,7 @@ pub(crate) async fn scrape_symbol_news(symbol: &str) -> Result<Vec<News>> {
         }
     }
 
-    Err(YahooError::SymbolNotFound {
+    Err(FinanceError::SymbolNotFound {
         symbol: Some(symbol.to_string()),
         context: "Could not find news for symbol".to_string(),
     })
@@ -201,7 +201,7 @@ pub(crate) async fn scrape_general_news() -> Result<Vec<News>> {
     let response = client.get(url).send().await?;
 
     if !response.status().is_success() {
-        return Err(YahooError::ServerError {
+        return Err(FinanceError::ServerError {
             status: response.status().as_u16(),
             context: "Failed to fetch news".to_string(),
         });
@@ -212,7 +212,7 @@ pub(crate) async fn scrape_general_news() -> Result<Vec<News>> {
     let news = parse_news(&html)?;
 
     if news.is_empty() {
-        return Err(YahooError::ResponseStructureError {
+        return Err(FinanceError::ResponseStructureError {
             field: "news".to_string(),
             context: "No news articles found".to_string(),
         });

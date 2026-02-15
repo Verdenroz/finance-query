@@ -2,8 +2,8 @@ use thiserror::Error;
 
 /// Main error type for the library
 #[derive(Error, Debug)]
-pub enum YahooError {
-    /// Authentication with Yahoo Finance failed
+pub enum FinanceError {
+    /// Authentication failed (Yahoo Finance, SEC EDGAR, etc.)
     #[error("Authentication failed: {context}")]
     AuthenticationFailed {
         /// Error context
@@ -68,7 +68,7 @@ pub enum YahooError {
         context: String,
     },
 
-    /// Unexpected response from Yahoo Finance
+    /// Unexpected API response
     #[error("Unexpected response: {0}")]
     UnexpectedResponse(String),
 
@@ -76,7 +76,7 @@ pub enum YahooError {
     #[error("Internal error: {0}")]
     InternalError(String),
 
-    /// API error from Yahoo Finance
+    /// General API error
     #[error("API error: {0}")]
     ApiError(String),
 
@@ -112,32 +112,32 @@ pub enum ErrorCategory {
 }
 
 /// Type alias for Error (for consistency with common Rust patterns)
-pub type Error = YahooError;
+pub type Error = FinanceError;
 
 /// Result type alias for library operations
-pub type Result<T> = std::result::Result<T, YahooError>;
+pub type Result<T> = std::result::Result<T, FinanceError>;
 
-impl YahooError {
+impl FinanceError {
     /// Check if this error is retriable
     pub fn is_retriable(&self) -> bool {
         matches!(
             self,
-            YahooError::Timeout { .. }
-                | YahooError::RateLimited { .. }
-                | YahooError::HttpError(_)
-                | YahooError::AuthenticationFailed { .. }
-                | YahooError::ServerError { .. }
+            FinanceError::Timeout { .. }
+                | FinanceError::RateLimited { .. }
+                | FinanceError::HttpError(_)
+                | FinanceError::AuthenticationFailed { .. }
+                | FinanceError::ServerError { .. }
         )
     }
 
     /// Check if this error indicates an authentication issue
     pub fn is_auth_error(&self) -> bool {
-        matches!(self, YahooError::AuthenticationFailed { .. })
+        matches!(self, FinanceError::AuthenticationFailed { .. })
     }
 
     /// Check if this error indicates a not found issue
     pub fn is_not_found(&self) -> bool {
-        matches!(self, YahooError::SymbolNotFound { .. })
+        matches!(self, FinanceError::SymbolNotFound { .. })
     }
 
     /// Get retry delay in seconds (for exponential backoff)
@@ -206,7 +206,7 @@ impl YahooError {
 }
 
 // Backward compatibility: Allow ParseError to be created from String
-impl YahooError {
+impl FinanceError {
     /// Create a ParseError from a string (for backward compatibility)
     #[deprecated(since = "2.0.0", note = "Use ResponseStructureError instead")]
     pub fn parse_error(msg: impl Into<String>) -> Self {
@@ -224,30 +224,30 @@ mod tests {
 
     #[test]
     fn test_error_is_retriable() {
-        assert!(YahooError::Timeout { timeout_ms: 5000 }.is_retriable());
-        assert!(YahooError::RateLimited { retry_after: None }.is_retriable());
+        assert!(FinanceError::Timeout { timeout_ms: 5000 }.is_retriable());
+        assert!(FinanceError::RateLimited { retry_after: None }.is_retriable());
         assert!(
-            YahooError::AuthenticationFailed {
+            FinanceError::AuthenticationFailed {
                 context: "test".to_string()
             }
             .is_retriable()
         );
         assert!(
-            YahooError::ServerError {
+            FinanceError::ServerError {
                 status: 500,
                 context: "test".to_string()
             }
             .is_retriable()
         );
         assert!(
-            !YahooError::SymbolNotFound {
+            !FinanceError::SymbolNotFound {
                 symbol: Some("AAPL".to_string()),
                 context: "test".to_string()
             }
             .is_retriable()
         );
         assert!(
-            !YahooError::InvalidParameter {
+            !FinanceError::InvalidParameter {
                 param: "test".to_string(),
                 reason: "invalid".to_string()
             }
@@ -258,41 +258,41 @@ mod tests {
     #[test]
     fn test_error_is_auth_error() {
         assert!(
-            YahooError::AuthenticationFailed {
+            FinanceError::AuthenticationFailed {
                 context: "test".to_string()
             }
             .is_auth_error()
         );
-        assert!(!YahooError::Timeout { timeout_ms: 5000 }.is_auth_error());
+        assert!(!FinanceError::Timeout { timeout_ms: 5000 }.is_auth_error());
     }
 
     #[test]
     fn test_error_is_not_found() {
         assert!(
-            YahooError::SymbolNotFound {
+            FinanceError::SymbolNotFound {
                 symbol: Some("AAPL".to_string()),
                 context: "test".to_string()
             }
             .is_not_found()
         );
-        assert!(!YahooError::Timeout { timeout_ms: 5000 }.is_not_found());
+        assert!(!FinanceError::Timeout { timeout_ms: 5000 }.is_not_found());
     }
 
     #[test]
     fn test_retry_after_secs() {
         assert_eq!(
-            YahooError::RateLimited {
+            FinanceError::RateLimited {
                 retry_after: Some(10)
             }
             .retry_after_secs(),
             Some(10)
         );
         assert_eq!(
-            YahooError::Timeout { timeout_ms: 5000 }.retry_after_secs(),
+            FinanceError::Timeout { timeout_ms: 5000 }.retry_after_secs(),
             Some(2)
         );
         assert_eq!(
-            YahooError::ServerError {
+            FinanceError::ServerError {
                 status: 503,
                 context: "test".to_string()
             }
@@ -300,7 +300,7 @@ mod tests {
             Some(5)
         );
         assert_eq!(
-            YahooError::SymbolNotFound {
+            FinanceError::SymbolNotFound {
                 symbol: None,
                 context: "test".to_string()
             }
@@ -312,22 +312,22 @@ mod tests {
     #[test]
     fn test_error_category() {
         assert_eq!(
-            YahooError::AuthenticationFailed {
+            FinanceError::AuthenticationFailed {
                 context: "test".to_string()
             }
             .category(),
             ErrorCategory::Auth
         );
         assert_eq!(
-            YahooError::RateLimited { retry_after: None }.category(),
+            FinanceError::RateLimited { retry_after: None }.category(),
             ErrorCategory::RateLimit
         );
         assert_eq!(
-            YahooError::Timeout { timeout_ms: 5000 }.category(),
+            FinanceError::Timeout { timeout_ms: 5000 }.category(),
             ErrorCategory::Timeout
         );
         assert_eq!(
-            YahooError::SymbolNotFound {
+            FinanceError::SymbolNotFound {
                 symbol: None,
                 context: "test".to_string()
             }
@@ -338,13 +338,13 @@ mod tests {
 
     #[test]
     fn test_with_symbol() {
-        let error = YahooError::SymbolNotFound {
+        let error = FinanceError::SymbolNotFound {
             symbol: None,
             context: "test".to_string(),
         }
         .with_symbol("AAPL");
 
-        if let YahooError::SymbolNotFound { symbol, .. } = error {
+        if let FinanceError::SymbolNotFound { symbol, .. } = error {
             assert_eq!(symbol, Some("AAPL".to_string()));
         } else {
             panic!("Expected SymbolNotFound");
@@ -353,12 +353,12 @@ mod tests {
 
     #[test]
     fn test_with_context() {
-        let error = YahooError::AuthenticationFailed {
+        let error = FinanceError::AuthenticationFailed {
             context: "old".to_string(),
         }
         .with_context("new context");
 
-        if let YahooError::AuthenticationFailed { context } = error {
+        if let FinanceError::AuthenticationFailed { context } = error {
             assert_eq!(context, "new context");
         } else {
             panic!("Expected AuthenticationFailed");
