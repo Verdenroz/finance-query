@@ -1,6 +1,6 @@
 [package]
 name = "finance-query-cli"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2024"
 authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
 description = "Command-line tool for real-time financial data, technical analysis, and market intelligence"
