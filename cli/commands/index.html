@@ -425,6 +425,8 @@
       
         
       
+        
+      
     
     
     
@@ -569,6 +571,34 @@
     
   
     Finance Module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/edgar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDGAR
   
 
     
@@ -1081,10 +1111,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#filings" class="md-nav__link">
+  <a href="#edgar" class="md-nav__link">
     <span class="md-ellipsis">
       
-        filings
+        edgar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#facts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        facts
       
     </span>
   </a>
@@ -1789,10 +1830,21 @@
 </li>
         
           <li class="md-nav__item">
-  <a href="#filings" class="md-nav__link">
+  <a href="#edgar" class="md-nav__link">
     <span class="md-ellipsis">
       
-        filings
+        edgar
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#facts" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        facts
       
     </span>
   </a>
@@ -2153,31 +2205,114 @@
 <p>Institutional and insider ownership.</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>fq<span class="w"> </span>holders<span class="w"> </span>AAPL<span class="w">                </span><span class="c1"># Shareholding data</span>
 </code></pre></div>
-<h3 id="filings"><code>filings</code><a class="headerlink" href="#filings" title="Permanent link">&para;</a></h3>
-<p>SEC filings (10-K, 10-Q, 8-K, etc).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a>fq<span class="w"> </span>filings<span class="w"> </span>AAPL<span class="w">                </span><span class="c1"># Latest filings</span>
+<h3 id="edgar"><code>edgar</code><a class="headerlink" href="#edgar" title="Permanent link">&para;</a></h3>
+<p>Interactive SEC EDGAR filings browser (TUI). Browse company filings by symbol or search across all filings.</p>
+<div class="admonition note">
+<p class="admonition-title">EDGAR Email Required</p>
+</div>
+<p>SEC requires a contact email in the User-Agent header. Provide it once via <code>--email</code> or <code>EDGAR_EMAIL</code> and <code>fq</code> will persist it for future runs. If no email is set, <code>fq</code> prompts you to enter one.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Set email (required by SEC)</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">EDGAR_EMAIL</span><span class="o">=</span><span class="s2">&quot;user@example.com&quot;</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Open TUI ready to search</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>fq<span class="w"> </span>edgar<span class="w">                                   </span><span class="c1"># Start with empty search prompt</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="c1"># Or persist it once</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>fq<span class="w"> </span>edgar<span class="w"> </span>--email<span class="w"> </span>user@example.com
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="c1"># Browse filings by company symbol</span>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>fq<span class="w"> </span>edgar<span class="w"> </span>AAPL<span class="w">                              </span><span class="c1"># Browse all AAPL filings interactively</span>
+<a id="__codelineno-15-12" name="__codelineno-15-12" href="#__codelineno-15-12"></a>
+<a id="__codelineno-15-13" name="__codelineno-15-13" href="#__codelineno-15-13"></a><span class="c1"># Search across all filings from command line</span>
+<a id="__codelineno-15-14" name="__codelineno-15-14" href="#__codelineno-15-14"></a>fq<span class="w"> </span>edgar<span class="w"> </span>--search<span class="w"> </span><span class="s2">&quot;artificial intelligence&quot;</span><span class="w">  </span><span class="c1"># Search all companies</span>
+<a id="__codelineno-15-15" name="__codelineno-15-15" href="#__codelineno-15-15"></a>fq<span class="w"> </span>edgar<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;climate risk&quot;</span><span class="w"> </span>-f<span class="w"> </span><span class="m">10</span>-K<span class="w">           </span><span class="c1"># Search only 10-K filings</span>
+<a id="__codelineno-15-16" name="__codelineno-15-16" href="#__codelineno-15-16"></a>fq<span class="w"> </span>edgar<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;acquisition&quot;</span><span class="w"> </span>--start-date<span class="w"> </span><span class="m">2024</span>-01-01<span class="w">  </span><span class="c1"># Date-filtered search</span>
 </code></pre></div>
+<p><strong>Interactive Controls:</strong></p>
+<ul>
+<li><code>↑/↓, j/k</code> - Navigate filings</li>
+<li><code>←/→</code> - Previous/next page (search mode only)</li>
+<li><code>PgUp/PgDn, Ctrl+d/u</code> - Page up/down within current page</li>
+<li><code>Home/End, g/G</code> - Jump to top/bottom of current page</li>
+<li><code>Enter, o</code> - Open filing in browser</li>
+<li><code>f</code> - Cycle filters (10-K → 10-Q → 8-K → 4 → S-1 → DEF 14A → 10-K/A → 10-Q/A → S-3 → 20-F → All)</li>
+<li><code>r</code> - Reset filter (show all filings)</li>
+<li><code>/</code> - Search all filings (in-TUI search)</li>
+<li><code>s</code> - Search by symbol (switch to symbol mode)</li>
+<li><code>q, Esc, Ctrl+C</code> - Quit</li>
+</ul>
+<p><strong>Symbol Mode Features:</strong></p>
+<ul>
+<li>Browse ~1,000 recent filings for a company</li>
+<li>Company metadata (name, CIK)</li>
+<li>Color-coded form types (10-K green, 10-Q cyan, 8-K yellow)</li>
+<li>Filing metadata: date, report date, size, accession number</li>
+<li>Filter by form type interactively</li>
+</ul>
+<p><strong>Search Mode Features:</strong></p>
+<ul>
+<li>Full-text search across all SEC filings</li>
+<li>Pagination support - navigate through thousands of results (←/→ or n/p keys)</li>
+<li>Filter by form type (<code>-f 10-K</code>, <code>-f 10-Q</code>, etc.)</li>
+<li>Date range filtering (<code>--start-date</code>, <code>--end-date</code>)</li>
+<li>Interactive navigation of search results</li>
+<li>Page indicator shows current page and total matches</li>
+<li>Open any filing directly in browser</li>
+</ul>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>-s, --search</code> - Full-text search query (omit for symbol mode)</li>
+<li><code>-f, --form-type</code> - Filter by form type (10-K, 10-Q, 8-K, 4, S-1, DEF 14A, etc.)</li>
+<li><code>--start-date</code> - Start date for search (YYYY-MM-DD, search mode only)</li>
+<li><code>--end-date</code> - End date for search (YYYY-MM-DD, search mode only)</li>
+<li><code>-e, --email</code> - Contact email for SEC User-Agent (or set <code>EDGAR_EMAIL</code> env var)</li>
+</ul>
+<h3 id="facts"><code>facts</code><a class="headerlink" href="#facts" title="Permanent link">&para;</a></h3>
+<p>Get XBRL company facts from SEC EDGAR.</p>
+<div class="admonition note">
+<p class="admonition-title">EDGAR Email Required</p>
+</div>
+<p>SEC requires a contact email in the User-Agent header. Provide it once via <code>--email</code> or <code>EDGAR_EMAIL</code> and <code>fq</code> will persist it for future runs. If no email is set, <code>fq</code> prompts you to enter one.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Set email (required by SEC)</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">EDGAR_EMAIL</span><span class="o">=</span><span class="s2">&quot;user@example.com&quot;</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Or persist it once</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>fq<span class="w"> </span>facts<span class="w"> </span>--email<span class="w"> </span>user@example.com<span class="w"> </span>AAPL
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL<span class="w">                  </span><span class="c1"># All key financial facts</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL<span class="w"> </span>--concept<span class="w"> </span>GrossProfit<span class="w">  </span><span class="c1"># Specific concept</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL<span class="w"> </span>--unit<span class="w"> </span>USD<span class="w">       </span><span class="c1"># Filter by unit</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w">          </span><span class="c1"># JSON output</span>
+</code></pre></div>
+<p><strong>Options:</strong></p>
+<ul>
+<li><code>-c, --concept</code> - Specific XBRL concept (e.g., "Revenue", "Assets", "NetIncomeLoss")</li>
+<li><code>-u, --unit</code> - Filter by unit (e.g., "USD", "shares")</li>
+<li><code>-l, --limit</code> - Max data points per concept (default: 10)</li>
+<li><code>-o, --format</code> - Output format (table, json, csv)</li>
+</ul>
+<p><strong>Common concepts:</strong> Revenue, GrossProfit, OperatingIncomeLoss, NetIncomeLoss, EarningsPerShareBasic, Assets, Liabilities, StockholdersEquity, CashAndCashEquivalentsAtCarryingValue</p>
 <h3 id="transcript"><code>transcript</code><a class="headerlink" href="#transcript" title="Permanent link">&para;</a></h3>
 <p>Earnings call transcripts.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a>fq<span class="w"> </span>transcript<span class="w"> </span>AAPL<span class="w">             </span><span class="c1"># Latest transcript</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>fq<span class="w"> </span>transcript<span class="w"> </span>AAPL<span class="w"> </span>--quarter<span class="w"> </span><span class="m">2024</span>-Q1<span class="w">  </span><span class="c1"># Specific quarter</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>fq<span class="w"> </span>transcript<span class="w"> </span>AAPL<span class="w">             </span><span class="c1"># Latest transcript</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>fq<span class="w"> </span>transcript<span class="w"> </span>AAPL<span class="w"> </span>--quarter<span class="w"> </span><span class="m">2024</span>-Q1<span class="w">  </span><span class="c1"># Specific quarter</span>
 </code></pre></div>
 <h3 id="grades"><code>grades</code><a class="headerlink" href="#grades" title="Permanent link">&para;</a></h3>
 <p>Analyst upgrade/downgrade history.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a>fq<span class="w"> </span>grades<span class="w"> </span>AAPL<span class="w">                 </span><span class="c1"># Rating changes</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>fq<span class="w"> </span>grades<span class="w"> </span>AAPL<span class="w">                 </span><span class="c1"># Rating changes</span>
 </code></pre></div>
 <h2 id="technical-analysis-commands">Technical Analysis Commands<a class="headerlink" href="#technical-analysis-commands" title="Permanent link">&para;</a></h2>
 <h3 id="indicator"><code>indicator</code><a class="headerlink" href="#indicator" title="Permanent link">&para;</a></h3>
 <p>Calculate 40+ technical indicators.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w">                             </span><span class="c1"># Interactive TUI (choose indicators)</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w">          </span><span class="c1"># RSI with period 14</span>
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w">   </span><span class="c1"># SMAs</span>
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>macd:12,26,9<span class="w">    </span><span class="c1"># MACD</span>
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>bollinger:20,2<span class="w">  </span><span class="c1"># Bollinger Bands</span>
-<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
-<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1"># Non-interactive with range/interval</span>
-<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>-i<span class="w"> </span>1d<span class="w"> </span>-r<span class="w"> </span>6mo
-<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w"> </span>--no-tui<span class="w"> </span>-o<span class="w"> </span>csv
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w">                             </span><span class="c1"># Interactive TUI (choose indicators)</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w">          </span><span class="c1"># RSI with period 14</span>
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w">   </span><span class="c1"># SMAs</span>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>macd:12,26,9<span class="w">    </span><span class="c1"># MACD</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>bollinger:20,2<span class="w">  </span><span class="c1"># Bollinger Bands</span>
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="c1"># Non-interactive with range/interval</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>-i<span class="w"> </span>1d<span class="w"> </span>-r<span class="w"> </span>6mo
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w"> </span>--no-tui<span class="w"> </span>-o<span class="w"> </span>csv
 </code></pre></div>
 <p><strong>Available indicators:</strong>
 sma, ema, rsi, macd, bollinger, atr, stochastic, adx, obv, vwap, cci, williamsr, stochrsi, psar, supertrend, mfi, ichimoku, donchian</p>
@@ -2192,11 +2327,11 @@ sma, ema, rsi, macd, bollinger, atr, stochastic, adx, obv, vwap, cci, williamsr,
 </ul>
 <h3 id="backtest"><code>backtest</code><a class="headerlink" href="#backtest" title="Permanent link">&para;</a></h3>
 <p>Test trading strategies with performance metrics.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w">               </span><span class="c1"># Interactive backtest TUI</span>
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>swing<span class="w">      </span><span class="c1"># Use swing trading preset</span>
-<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>trend<span class="w">      </span><span class="c1"># Use trend following preset</span>
-<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--json<span class="w">              </span><span class="c1"># Output JSON instead of TUI</span>
-<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--no-tui<span class="w"> </span>--preset<span class="w"> </span>aggressive<span class="w">  </span><span class="c1"># Run preset without TUI</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w">               </span><span class="c1"># Interactive backtest TUI</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>swing<span class="w">      </span><span class="c1"># Use swing trading preset</span>
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>trend<span class="w">      </span><span class="c1"># Use trend following preset</span>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--json<span class="w">              </span><span class="c1"># Output JSON instead of TUI</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--no-tui<span class="w"> </span>--preset<span class="w"> </span>aggressive<span class="w">  </span><span class="c1"># Run preset without TUI</span>
 </code></pre></div>
 <p><strong>Available presets:</strong> swing, day, trend, mean-reversion, conservative, aggressive</p>
 <p><strong>Options:</strong></p>
@@ -2208,69 +2343,69 @@ sma, ema, rsi, macd, bollinger, atr, stochastic, adx, obv, vwap, cci, williamsr,
 <h2 id="options-dividends-commands">Options &amp; Dividends Commands<a class="headerlink" href="#options-dividends-commands" title="Permanent link">&para;</a></h2>
 <h3 id="options"><code>options</code><a class="headerlink" href="#options" title="Permanent link">&para;</a></h3>
 <p>Interactive options chain explorer (TUI).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a>fq<span class="w"> </span>options<span class="w"> </span>AAPL<span class="w">                </span><span class="c1"># Latest expiration</span>
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>fq<span class="w"> </span>options<span class="w"> </span>AAPL<span class="w"> </span>--expiration<span class="w"> </span><span class="m">2024</span>-12-20<span class="w">  </span><span class="c1"># Specific date</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>fq<span class="w"> </span>options<span class="w"> </span>AAPL<span class="w">                </span><span class="c1"># Latest expiration</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>fq<span class="w"> </span>options<span class="w"> </span>AAPL<span class="w"> </span>--expiration<span class="w"> </span><span class="m">2024</span>-12-20<span class="w">  </span><span class="c1"># Specific date</span>
 </code></pre></div>
 <h3 id="dividends"><code>dividends</code><a class="headerlink" href="#dividends" title="Permanent link">&para;</a></h3>
 <p>Dividend payment history.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a>fq<span class="w"> </span>dividends<span class="w"> </span>AAPL<span class="w">              </span><span class="c1"># Dividend history</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>fq<span class="w"> </span>dividends<span class="w"> </span>AAPL<span class="w">              </span><span class="c1"># Dividend history</span>
 </code></pre></div>
 <h3 id="splits"><code>splits</code><a class="headerlink" href="#splits" title="Permanent link">&para;</a></h3>
 <p>Stock split history.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a>fq<span class="w"> </span>splits<span class="w"> </span>AAPL<span class="w">                 </span><span class="c1"># Stock splits</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>fq<span class="w"> </span>splits<span class="w"> </span>AAPL<span class="w">                 </span><span class="c1"># Stock splits</span>
 </code></pre></div>
 <h2 id="utility-commands">Utility Commands<a class="headerlink" href="#utility-commands" title="Permanent link">&para;</a></h2>
 <h3 id="lookup"><code>lookup</code><a class="headerlink" href="#lookup" title="Permanent link">&para;</a></h3>
 <p>Search for symbols by name or keyword.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a>fq<span class="w"> </span>lookup<span class="w"> </span>Apple<span class="w">                </span><span class="c1"># Search by name</span>
-<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>fq<span class="w"> </span>lookup<span class="w"> </span>--type<span class="w"> </span>etf<span class="w">           </span><span class="c1"># Search by type</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>fq<span class="w"> </span>lookup<span class="w"> </span>Apple<span class="w">                </span><span class="c1"># Search by name</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>fq<span class="w"> </span>lookup<span class="w"> </span>--type<span class="w"> </span>etf<span class="w">           </span><span class="c1"># Search by type</span>
 </code></pre></div>
 <h3 id="hours"><code>hours</code><a class="headerlink" href="#hours" title="Permanent link">&para;</a></h3>
 <p>Market hours and trading status.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a>fq<span class="w"> </span>hours<span class="w">                       </span><span class="c1"># Check if markets open</span>
-<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>fq<span class="w"> </span>hours<span class="w"> </span>NASDAQ<span class="w">                </span><span class="c1"># Specific exchange</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>fq<span class="w"> </span>hours<span class="w">                       </span><span class="c1"># Check if markets open</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>fq<span class="w"> </span>hours<span class="w"> </span>NASDAQ<span class="w">                </span><span class="c1"># Specific exchange</span>
 </code></pre></div>
 <h3 id="currencies"><code>currencies</code><a class="headerlink" href="#currencies" title="Permanent link">&para;</a></h3>
 <p>Currency list and exchange rates.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>fq<span class="w"> </span>currencies<span class="w">                  </span><span class="c1"># All currencies</span>
-<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>fq<span class="w"> </span>currencies<span class="w"> </span>EUR<span class="w">              </span><span class="c1"># Specific currency</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>fq<span class="w"> </span>currencies<span class="w">                  </span><span class="c1"># All currencies</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>fq<span class="w"> </span>currencies<span class="w"> </span>EUR<span class="w">              </span><span class="c1"># Specific currency</span>
 </code></pre></div>
 <h3 id="exchanges"><code>exchanges</code><a class="headerlink" href="#exchanges" title="Permanent link">&para;</a></h3>
 <p>Supported stock exchanges.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a>fq<span class="w"> </span>exchanges<span class="w">                   </span><span class="c1"># List all exchanges</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>fq<span class="w"> </span>exchanges<span class="w">                   </span><span class="c1"># List all exchanges</span>
 </code></pre></div>
 <h3 id="alerts"><code>alerts</code><a class="headerlink" href="#alerts" title="Permanent link">&para;</a></h3>
 <p>Price alerts with desktop notifications.</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="c1"># Open alerts TUI</span>
-<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>fq<span class="w"> </span>alerts
-<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
-<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="c1"># Add alerts</span>
-<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>AAPL<span class="w"> </span>price-above:200
-<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>TSLA<span class="w"> </span>price-below:150
-<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>AAPL<span class="w"> </span>change-above:5<span class="w">      </span><span class="c1"># 5%+ change</span>
-<a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>TSLA<span class="w"> </span>volume-spike:2.0<span class="w">    </span><span class="c1"># 2x volume</span>
-<a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a>
-<a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a><span class="c1"># List alerts</span>
-<a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>fq<span class="w"> </span>alerts<span class="w"> </span>list
-<a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a>
-<a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a><span class="c1"># Check alerts (one-time)</span>
-<a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a>fq<span class="w"> </span>alerts<span class="w"> </span>check
-<a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a>
-<a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a><span class="c1"># Watch continuously</span>
-<a id="__codelineno-27-17" name="__codelineno-27-17" href="#__codelineno-27-17"></a>fq<span class="w"> </span>alerts<span class="w"> </span>watch
-<a id="__codelineno-27-18" name="__codelineno-27-18" href="#__codelineno-27-18"></a>
-<a id="__codelineno-27-19" name="__codelineno-27-19" href="#__codelineno-27-19"></a><span class="c1"># Install as system service</span>
-<a id="__codelineno-27-20" name="__codelineno-27-20" href="#__codelineno-27-20"></a>fq<span class="w"> </span>alerts<span class="w"> </span>service<span class="w"> </span>install
-<a id="__codelineno-27-21" name="__codelineno-27-21" href="#__codelineno-27-21"></a>fq<span class="w"> </span>alerts<span class="w"> </span>service<span class="w"> </span>status
-<a id="__codelineno-27-22" name="__codelineno-27-22" href="#__codelineno-27-22"></a>
-<a id="__codelineno-27-23" name="__codelineno-27-23" href="#__codelineno-27-23"></a><span class="c1"># Manage alerts</span>
-<a id="__codelineno-27-24" name="__codelineno-27-24" href="#__codelineno-27-24"></a>fq<span class="w"> </span>alerts<span class="w"> </span>toggle<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># Enable/disable</span>
-<a id="__codelineno-27-25" name="__codelineno-27-25" href="#__codelineno-27-25"></a>fq<span class="w"> </span>alerts<span class="w"> </span>remove<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># Delete</span>
-<a id="__codelineno-27-26" name="__codelineno-27-26" href="#__codelineno-27-26"></a>fq<span class="w"> </span>alerts<span class="w"> </span>clear<span class="w">                </span><span class="c1"># Delete all</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Open alerts TUI</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a>fq<span class="w"> </span>alerts
+<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
+<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="c1"># Add alerts</span>
+<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>AAPL<span class="w"> </span>price-above:200
+<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>TSLA<span class="w"> </span>price-below:150
+<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>AAPL<span class="w"> </span>change-above:5<span class="w">      </span><span class="c1"># 5%+ change</span>
+<a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>TSLA<span class="w"> </span>volume-spike:2.0<span class="w">    </span><span class="c1"># 2x volume</span>
+<a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a>
+<a id="__codelineno-28-10" name="__codelineno-28-10" href="#__codelineno-28-10"></a><span class="c1"># List alerts</span>
+<a id="__codelineno-28-11" name="__codelineno-28-11" href="#__codelineno-28-11"></a>fq<span class="w"> </span>alerts<span class="w"> </span>list
+<a id="__codelineno-28-12" name="__codelineno-28-12" href="#__codelineno-28-12"></a>
+<a id="__codelineno-28-13" name="__codelineno-28-13" href="#__codelineno-28-13"></a><span class="c1"># Check alerts (one-time)</span>
+<a id="__codelineno-28-14" name="__codelineno-28-14" href="#__codelineno-28-14"></a>fq<span class="w"> </span>alerts<span class="w"> </span>check
+<a id="__codelineno-28-15" name="__codelineno-28-15" href="#__codelineno-28-15"></a>
+<a id="__codelineno-28-16" name="__codelineno-28-16" href="#__codelineno-28-16"></a><span class="c1"># Watch continuously</span>
+<a id="__codelineno-28-17" name="__codelineno-28-17" href="#__codelineno-28-17"></a>fq<span class="w"> </span>alerts<span class="w"> </span>watch
+<a id="__codelineno-28-18" name="__codelineno-28-18" href="#__codelineno-28-18"></a>
+<a id="__codelineno-28-19" name="__codelineno-28-19" href="#__codelineno-28-19"></a><span class="c1"># Install as system service</span>
+<a id="__codelineno-28-20" name="__codelineno-28-20" href="#__codelineno-28-20"></a>fq<span class="w"> </span>alerts<span class="w"> </span>service<span class="w"> </span>install
+<a id="__codelineno-28-21" name="__codelineno-28-21" href="#__codelineno-28-21"></a>fq<span class="w"> </span>alerts<span class="w"> </span>service<span class="w"> </span>status
+<a id="__codelineno-28-22" name="__codelineno-28-22" href="#__codelineno-28-22"></a>
+<a id="__codelineno-28-23" name="__codelineno-28-23" href="#__codelineno-28-23"></a><span class="c1"># Manage alerts</span>
+<a id="__codelineno-28-24" name="__codelineno-28-24" href="#__codelineno-28-24"></a>fq<span class="w"> </span>alerts<span class="w"> </span>toggle<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># Enable/disable</span>
+<a id="__codelineno-28-25" name="__codelineno-28-25" href="#__codelineno-28-25"></a>fq<span class="w"> </span>alerts<span class="w"> </span>remove<span class="w"> </span>&lt;id&gt;<span class="w">          </span><span class="c1"># Delete</span>
+<a id="__codelineno-28-26" name="__codelineno-28-26" href="#__codelineno-28-26"></a>fq<span class="w"> </span>alerts<span class="w"> </span>clear<span class="w">                </span><span class="c1"># Delete all</span>
 </code></pre></div>
 <h3 id="dashboard"><code>dashboard</code><a class="headerlink" href="#dashboard" title="Permanent link">&para;</a></h3>
 <p>Interactive market dashboard (TUI).</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a>fq<span class="w"> </span>dashboard<span class="w">  </span><span class="c1"># Launch dashboard</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>fq<span class="w"> </span>dashboard<span class="w">  </span><span class="c1"># Launch dashboard</span>
 </code></pre></div>
 <p>Keyboard shortcuts in dashboard:</p>
 <ul>
@@ -2281,23 +2416,23 @@ sma, ema, rsi, macd, bollinger, atr, stochastic, adx, obv, vwap, cci, williamsr,
 <li><code>+/-</code> - Add/remove from watchlist</li>
 </ul>
 <h2 id="global-options">Global Options<a class="headerlink" href="#global-options" title="Permanent link">&para;</a></h2>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>fq<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[</span>COMMAND<span class="o">]</span>
-<a id="__codelineno-29-2" name="__codelineno-29-2" href="#__codelineno-29-2"></a>
-<a id="__codelineno-29-3" name="__codelineno-29-3" href="#__codelineno-29-3"></a>Options:
-<a id="__codelineno-29-4" name="__codelineno-29-4" href="#__codelineno-29-4"></a><span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">         </span>Enable<span class="w"> </span>verbose<span class="w"> </span>logging
-<a id="__codelineno-29-5" name="__codelineno-29-5" href="#__codelineno-29-5"></a><span class="w">      </span>--no-color<span class="w">        </span>Disable<span class="w"> </span>colored<span class="w"> </span>output
-<a id="__codelineno-29-6" name="__codelineno-29-6" href="#__codelineno-29-6"></a><span class="w">  </span>-h,<span class="w"> </span>--help<span class="w">            </span>Print<span class="w"> </span><span class="nb">help</span>
-<a id="__codelineno-29-7" name="__codelineno-29-7" href="#__codelineno-29-7"></a><span class="w">  </span>-V,<span class="w"> </span>--version<span class="w">         </span>Print<span class="w"> </span>version
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>fq<span class="w"> </span><span class="o">[</span>OPTIONS<span class="o">]</span><span class="w"> </span><span class="o">[</span>COMMAND<span class="o">]</span>
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>Options:
+<a id="__codelineno-30-4" name="__codelineno-30-4" href="#__codelineno-30-4"></a><span class="w">  </span>-v,<span class="w"> </span>--verbose<span class="w">         </span>Enable<span class="w"> </span>verbose<span class="w"> </span>logging
+<a id="__codelineno-30-5" name="__codelineno-30-5" href="#__codelineno-30-5"></a><span class="w">      </span>--no-color<span class="w">        </span>Disable<span class="w"> </span>colored<span class="w"> </span>output
+<a id="__codelineno-30-6" name="__codelineno-30-6" href="#__codelineno-30-6"></a><span class="w">  </span>-h,<span class="w"> </span>--help<span class="w">            </span>Print<span class="w"> </span><span class="nb">help</span>
+<a id="__codelineno-30-7" name="__codelineno-30-7" href="#__codelineno-30-7"></a><span class="w">  </span>-V,<span class="w"> </span>--version<span class="w">         </span>Print<span class="w"> </span>version
 </code></pre></div>
 <h2 id="output-formats">Output Formats<a class="headerlink" href="#output-formats" title="Permanent link">&para;</a></h2>
 <p>All commands support multiple output formats:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>table<span class="w">         </span><span class="c1"># Pretty table (default)</span>
-<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w">          </span><span class="c1"># JSON</span>
-<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>csv<span class="w">           </span><span class="c1"># CSV (comma-separated)</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>table<span class="w">         </span><span class="c1"># Pretty table (default)</span>
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w">          </span><span class="c1"># JSON</span>
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>csv<span class="w">           </span><span class="c1"># CSV (comma-separated)</span>
 </code></pre></div>
 <p>Export to file:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>aapl_2024.csv
-<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>aapl.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>aapl_2024.csv
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>aapl.json
 </code></pre></div>
 
 

@@ -427,6 +427,8 @@
       
         
       
+        
+      
     
     
     
@@ -572,6 +574,34 @@
     
   
     Finance Module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edgar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDGAR
   
 
     
@@ -2027,27 +2057,30 @@
 <a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a><span class="c1">// US stock</span>
 <a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">apple</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">builder</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">)</span>
 <a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="w">    </span><span class="p">.</span><span class="n">region</span><span class="p">(</span><span class="n">Region</span><span class="p">::</span><span class="n">UnitedStates</span><span class="p">)</span>
-<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>
-<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a><span class="c1">// Taiwan stock</span>
-<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="kd">let</span><span class="w"> </span><span class="n">tsmc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">builder</span><span class="p">(</span><span class="s">&quot;2330.TW&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="w">    </span><span class="p">.</span><span class="n">region</span><span class="p">(</span><span class="n">Region</span><span class="p">::</span><span class="n">Taiwan</span><span class="p">)</span>
-<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a>
-<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="c1">// German stock</span>
-<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a><span class="kd">let</span><span class="w"> </span><span class="n">sap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">builder</span><span class="p">(</span><span class="s">&quot;SAP.DE&quot;</span><span class="p">)</span>
-<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="w">    </span><span class="p">.</span><span class="n">region</span><span class="p">(</span><span class="n">Region</span><span class="p">::</span><span class="n">Germany</span><span class="p">)</span>
-<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
-<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a>
-<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="c1">// Fetch quotes in parallel</span>
-<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="n">apple_quote</span><span class="p">,</span><span class="w"> </span><span class="n">tsmc_quote</span><span class="p">,</span><span class="w"> </span><span class="n">sap_quote</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tokio</span><span class="p">::</span><span class="n">join</span><span class="o">!</span><span class="p">(</span>
-<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a><span class="w">    </span><span class="n">apple</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span><span class="kc">true</span><span class="p">),</span>
-<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a><span class="w">    </span><span class="n">tsmc</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span><span class="kc">true</span><span class="p">),</span>
-<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="w">    </span><span class="n">sap</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span><span class="kc">true</span><span class="p">)</span>
-<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a><span class="p">);</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a><span class="w">    </span><span class="p">.</span><span class="n">logo</span><span class="p">()</span>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a><span class="c1">// Taiwan stock</span>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="kd">let</span><span class="w"> </span><span class="n">tsmc</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">builder</span><span class="p">(</span><span class="s">&quot;2330.TW&quot;</span><span class="p">)</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a><span class="w">    </span><span class="p">.</span><span class="n">region</span><span class="p">(</span><span class="n">Region</span><span class="p">::</span><span class="n">Taiwan</span><span class="p">)</span>
+<a id="__codelineno-12-13" name="__codelineno-12-13" href="#__codelineno-12-13"></a><span class="w">    </span><span class="p">.</span><span class="n">logo</span><span class="p">()</span>
+<a id="__codelineno-12-14" name="__codelineno-12-14" href="#__codelineno-12-14"></a><span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-12-15" name="__codelineno-12-15" href="#__codelineno-12-15"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-12-16" name="__codelineno-12-16" href="#__codelineno-12-16"></a>
+<a id="__codelineno-12-17" name="__codelineno-12-17" href="#__codelineno-12-17"></a><span class="c1">// German stock</span>
+<a id="__codelineno-12-18" name="__codelineno-12-18" href="#__codelineno-12-18"></a><span class="kd">let</span><span class="w"> </span><span class="n">sap</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">builder</span><span class="p">(</span><span class="s">&quot;SAP.DE&quot;</span><span class="p">)</span>
+<a id="__codelineno-12-19" name="__codelineno-12-19" href="#__codelineno-12-19"></a><span class="w">    </span><span class="p">.</span><span class="n">region</span><span class="p">(</span><span class="n">Region</span><span class="p">::</span><span class="n">Germany</span><span class="p">)</span>
+<a id="__codelineno-12-20" name="__codelineno-12-20" href="#__codelineno-12-20"></a><span class="w">    </span><span class="p">.</span><span class="n">logo</span><span class="p">()</span>
+<a id="__codelineno-12-21" name="__codelineno-12-21" href="#__codelineno-12-21"></a><span class="w">    </span><span class="p">.</span><span class="n">build</span><span class="p">()</span>
+<a id="__codelineno-12-22" name="__codelineno-12-22" href="#__codelineno-12-22"></a><span class="w">    </span><span class="p">.</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-12-23" name="__codelineno-12-23" href="#__codelineno-12-23"></a>
+<a id="__codelineno-12-24" name="__codelineno-12-24" href="#__codelineno-12-24"></a><span class="c1">// Fetch quotes in parallel</span>
+<a id="__codelineno-12-25" name="__codelineno-12-25" href="#__codelineno-12-25"></a><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="n">apple_quote</span><span class="p">,</span><span class="w"> </span><span class="n">tsmc_quote</span><span class="p">,</span><span class="w"> </span><span class="n">sap_quote</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">tokio</span><span class="p">::</span><span class="n">join</span><span class="o">!</span><span class="p">(</span>
+<a id="__codelineno-12-26" name="__codelineno-12-26" href="#__codelineno-12-26"></a><span class="w">    </span><span class="n">apple</span><span class="p">.</span><span class="n">quote</span><span class="p">(),</span>
+<a id="__codelineno-12-27" name="__codelineno-12-27" href="#__codelineno-12-27"></a><span class="w">    </span><span class="n">tsmc</span><span class="p">.</span><span class="n">quote</span><span class="p">(),</span>
+<a id="__codelineno-12-28" name="__codelineno-12-28" href="#__codelineno-12-28"></a><span class="w">    </span><span class="n">sap</span><span class="p">.</span><span class="n">quote</span><span class="p">()</span>
+<a id="__codelineno-12-29" name="__codelineno-12-29" href="#__codelineno-12-29"></a><span class="p">);</span>
 </code></pre></div>
 </div>
 <div class="admonition tip">

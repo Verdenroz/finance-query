@@ -425,6 +425,8 @@
       
         
       
+        
+      
     
     
     
@@ -569,6 +571,34 @@
     
   
     Finance Module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../library/edgar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDGAR
   
 
     
@@ -913,6 +943,67 @@
       Table of contents
     </label>
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#sec-edgar-research" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SEC EDGAR Research
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SEC EDGAR Research">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#browse-company-filings-interactively" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browse Company Filings Interactively
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search-for-specific-topics-in-filings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search for Specific Topics in Filings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analyze-xbrl-financial-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analyze XBRL Financial Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combined-edgar-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combined EDGAR Workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
       
         <li class="md-nav__item">
   <a href="#stock-research" class="md-nav__link">
@@ -1647,6 +1738,67 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
+  <a href="#sec-edgar-research" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        SEC EDGAR Research
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="SEC EDGAR Research">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#browse-company-filings-interactively" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Browse Company Filings Interactively
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#search-for-specific-topics-in-filings" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Search for Specific Topics in Filings
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#analyze-xbrl-financial-data" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Analyze XBRL Financial Data
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combined-edgar-workflow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combined EDGAR Workflow
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#stock-research" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -2146,189 +2298,267 @@
 
 <h1 id="usage-examples">Usage Examples<a class="headerlink" href="#usage-examples" title="Permanent link">&para;</a></h1>
 <p>Real-world examples for common use cases.</p>
+<h2 id="sec-edgar-research">SEC EDGAR Research<a class="headerlink" href="#sec-edgar-research" title="Permanent link">&para;</a></h2>
+<h3 id="browse-company-filings-interactively">Browse Company Filings Interactively<a class="headerlink" href="#browse-company-filings-interactively" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="c1"># Set your email (required by SEC)</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="nb">export</span><span class="w"> </span><span class="nv">EDGAR_EMAIL</span><span class="o">=</span><span class="s2">&quot;analyst@example.com&quot;</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="c1"># Option 1: Start with empty search prompt</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>fq<span class="w"> </span>edgar
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1"># Type your search query and press Enter</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a><span class="c1"># Option 2: Browse specific company</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>fq<span class="w"> </span>edgar<span class="w"> </span>AAPL
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="c1"># Navigate with arrow keys, press &#39;/&#39; to search, &#39;f&#39; to filter, Enter to open</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="c1"># Or persist it once</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a>fq<span class="w"> </span>edgar<span class="w"> </span>--email<span class="w"> </span>analyst@example.com
+</code></pre></div>
+<h3 id="search-for-specific-topics-in-filings">Search for Specific Topics in Filings<a class="headerlink" href="#search-for-specific-topics-in-filings" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">EDGAR_EMAIL</span><span class="o">=</span><span class="s2">&quot;analyst@example.com&quot;</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1"># Or persist it once</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a>fq<span class="w"> </span>edgar<span class="w"> </span>--email<span class="w"> </span>analyst@example.com
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="c1"># Find all filings mentioning &quot;artificial intelligence&quot;</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a>fq<span class="w"> </span>edgar<span class="w"> </span>--search<span class="w"> </span><span class="s2">&quot;artificial intelligence&quot;</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="c1"># Search only 10-K annual reports</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a>fq<span class="w"> </span>edgar<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;risk factors&quot;</span><span class="w"> </span>-f<span class="w"> </span><span class="m">10</span>-K
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="c1"># Search within date range</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a>fq<span class="w"> </span>edgar<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;climate change&quot;</span><span class="w"> </span>--start-date<span class="w"> </span><span class="m">2024</span>-01-01<span class="w"> </span>--end-date<span class="w"> </span><span class="m">2024</span>-12-31
+<a id="__codelineno-1-14" name="__codelineno-1-14" href="#__codelineno-1-14"></a>
+<a id="__codelineno-1-15" name="__codelineno-1-15" href="#__codelineno-1-15"></a><span class="c1"># Multiple form types</span>
+<a id="__codelineno-1-16" name="__codelineno-1-16" href="#__codelineno-1-16"></a>fq<span class="w"> </span>edgar<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;supply chain&quot;</span><span class="w"> </span>-f<span class="w"> </span><span class="m">10</span>-K<span class="w"> </span>-f<span class="w"> </span><span class="m">10</span>-Q
+<a id="__codelineno-1-17" name="__codelineno-1-17" href="#__codelineno-1-17"></a>
+<a id="__codelineno-1-18" name="__codelineno-1-18" href="#__codelineno-1-18"></a><span class="c1"># Interactive TUI for all searches - navigate with arrows, open with Enter</span>
+</code></pre></div>
+<h3 id="analyze-xbrl-financial-data">Analyze XBRL Financial Data<a class="headerlink" href="#analyze-xbrl-financial-data" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">EDGAR_EMAIL</span><span class="o">=</span><span class="s2">&quot;analyst@example.com&quot;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1"># Or persist it once</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a>fq<span class="w"> </span>facts<span class="w"> </span>--email<span class="w"> </span>analyst@example.com<span class="w"> </span>AAPL
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="c1"># Get all key financial facts</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="c1"># Get specific concept (Revenue)</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL<span class="w"> </span>--concept<span class="w"> </span>Revenue
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="c1"># Filter by fiscal year and unit</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL<span class="w"> </span>--concept<span class="w"> </span>Revenue<span class="w"> </span>--unit<span class="w"> </span>USD<span class="w"> </span>--limit<span class="w"> </span><span class="m">5</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a>
+<a id="__codelineno-2-15" name="__codelineno-2-15" href="#__codelineno-2-15"></a><span class="c1"># Multiple concepts for comparison</span>
+<a id="__codelineno-2-16" name="__codelineno-2-16" href="#__codelineno-2-16"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL<span class="w"> </span>--concept<span class="w"> </span>Assets<span class="w"> </span>-o<span class="w"> </span>json
+<a id="__codelineno-2-17" name="__codelineno-2-17" href="#__codelineno-2-17"></a>fq<span class="w"> </span>facts<span class="w"> </span>AAPL<span class="w"> </span>--concept<span class="w"> </span>Liabilities<span class="w"> </span>-o<span class="w"> </span>json
+<a id="__codelineno-2-18" name="__codelineno-2-18" href="#__codelineno-2-18"></a>
+<a id="__codelineno-2-19" name="__codelineno-2-19" href="#__codelineno-2-19"></a><span class="c1"># Export to CSV for analysis</span>
+<a id="__codelineno-2-20" name="__codelineno-2-20" href="#__codelineno-2-20"></a>fq<span class="w"> </span>facts<span class="w"> </span>MSFT<span class="w"> </span>--concept<span class="w"> </span>NetIncomeLoss<span class="w"> </span>--unit<span class="w"> </span>USD<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>msft_income.csv
+</code></pre></div>
+<h3 id="combined-edgar-workflow">Combined EDGAR Workflow<a class="headerlink" href="#combined-edgar-workflow" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="nb">export</span><span class="w"> </span><span class="nv">EDGAR_EMAIL</span><span class="o">=</span><span class="s2">&quot;analyst@example.com&quot;</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="c1"># Or persist it once</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a>fq<span class="w"> </span>edgar<span class="w"> </span>--email<span class="w"> </span>analyst@example.com
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1"># 1. Browse recent filings</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a>fq<span class="w"> </span>edgar<span class="w"> </span>TSLA
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="c1"># 2. Get financial facts</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a>fq<span class="w"> </span>facts<span class="w"> </span>TSLA<span class="w"> </span>--concept<span class="w"> </span>Revenue
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a>fq<span class="w"> </span>facts<span class="w"> </span>TSLA<span class="w"> </span>--concept<span class="w"> </span>Assets
+<a id="__codelineno-3-12" name="__codelineno-3-12" href="#__codelineno-3-12"></a>
+<a id="__codelineno-3-13" name="__codelineno-3-13" href="#__codelineno-3-13"></a><span class="c1"># 3. Search for specific disclosures</span>
+<a id="__codelineno-3-14" name="__codelineno-3-14" href="#__codelineno-3-14"></a>fq<span class="w"> </span>edgar<span class="w"> </span>-s<span class="w"> </span><span class="s2">&quot;risk factors&quot;</span><span class="w"> </span>--start-date<span class="w"> </span><span class="m">2024</span>-01-01
+<a id="__codelineno-3-15" name="__codelineno-3-15" href="#__codelineno-3-15"></a>
+<a id="__codelineno-3-16" name="__codelineno-3-16" href="#__codelineno-3-16"></a><span class="c1"># 4. Compare with competitors</span>
+<a id="__codelineno-3-17" name="__codelineno-3-17" href="#__codelineno-3-17"></a>fq<span class="w"> </span>facts<span class="w"> </span>F<span class="w"> </span>--concept<span class="w"> </span>Revenue<span class="w">     </span><span class="c1"># Ford</span>
+<a id="__codelineno-3-18" name="__codelineno-3-18" href="#__codelineno-3-18"></a>fq<span class="w"> </span>facts<span class="w"> </span>GM<span class="w"> </span>--concept<span class="w"> </span>Revenue<span class="w">    </span><span class="c1"># GM</span>
+</code></pre></div>
 <h2 id="stock-research">Stock Research<a class="headerlink" href="#stock-research" title="Permanent link">&para;</a></h2>
 <h3 id="get-a-company-overview">Get a company overview<a class="headerlink" href="#get-a-company-overview" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>fq<span class="w"> </span>info<span class="w"> </span>AAPL
-<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>fq<span class="w"> </span>profile<span class="w"> </span>AAPL
-<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>fq<span class="w"> </span>financials<span class="w"> </span>AAPL
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>fq<span class="w"> </span>info<span class="w"> </span>AAPL
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>fq<span class="w"> </span>profile<span class="w"> </span>AAPL
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a>fq<span class="w"> </span>financials<span class="w"> </span>AAPL
 </code></pre></div>
 <h3 id="check-analyst-recommendations">Check analyst recommendations<a class="headerlink" href="#check-analyst-recommendations" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a>fq<span class="w"> </span>recommendations<span class="w"> </span>AAPL
-<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>fq<span class="w"> </span>grades<span class="w"> </span>AAPL
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>fq<span class="w"> </span>recommendations<span class="w"> </span>AAPL
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>fq<span class="w"> </span>grades<span class="w"> </span>AAPL
 </code></pre></div>
 <h3 id="view-earnings">View earnings<a class="headerlink" href="#view-earnings" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a>fq<span class="w"> </span>earnings<span class="w"> </span>AAPL
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>fq<span class="w"> </span>transcript<span class="w"> </span>AAPL<span class="w"> </span>--quarter<span class="w"> </span><span class="m">2024</span>-Q1
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a>fq<span class="w"> </span>earnings<span class="w"> </span>AAPL
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>fq<span class="w"> </span>transcript<span class="w"> </span>AAPL<span class="w"> </span>--quarter<span class="w"> </span><span class="m">2024</span>-Q1
 </code></pre></div>
 <h3 id="check-insider-holdings">Check insider holdings<a class="headerlink" href="#check-insider-holdings" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a>fq<span class="w"> </span>holders<span class="w"> </span>AAPL
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a>fq<span class="w"> </span>holders<span class="w"> </span>AAPL
 </code></pre></div>
 <h2 id="price-monitoring">Price Monitoring<a class="headerlink" href="#price-monitoring" title="Permanent link">&para;</a></h2>
 <h3 id="track-multiple-stocks">Track multiple stocks<a class="headerlink" href="#track-multiple-stocks" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>MSFT<span class="w"> </span>GOOGL<span class="w"> </span>AMZN<span class="w"> </span>META
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>MSFT<span class="w"> </span>GOOGL<span class="w"> </span>AMZN<span class="w"> </span>META
 </code></pre></div>
 <h3 id="stream-live-prices">Stream live prices<a class="headerlink" href="#stream-live-prices" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a>fq<span class="w"> </span>stream<span class="w"> </span>AAPL<span class="w"> </span>TSLA<span class="w"> </span>NVDA<span class="w"> </span>PLTR
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>fq<span class="w"> </span>stream<span class="w"> </span>AAPL<span class="w"> </span>TSLA<span class="w"> </span>NVDA<span class="w"> </span>PLTR
 </code></pre></div>
 <h3 id="compare-stock-performance">Compare stock performance<a class="headerlink" href="#compare-stock-performance" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="c1"># Get 1-year charts for comparison</span>
-<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>aapl_1y.csv
-<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a>fq<span class="w"> </span>chart<span class="w"> </span>MSFT<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>msft_1y.csv
-<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a>
-<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="c1"># Then compare in your preferred tool</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1"># Get 1-year charts for comparison</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>aapl_1y.csv
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a>fq<span class="w"> </span>chart<span class="w"> </span>MSFT<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>msft_1y.csv
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="c1"># Then compare in your preferred tool</span>
 </code></pre></div>
 <h3 id="set-price-alerts">Set price alerts<a class="headerlink" href="#set-price-alerts" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="c1"># Open alerts TUI</span>
-<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a>fq<span class="w"> </span>alerts
-<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
-<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="c1"># Alert when Apple hits $200</span>
-<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>AAPL<span class="w"> </span>price-above:200
-<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
-<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1"># Alert when Tesla drops below $150</span>
-<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>TSLA<span class="w"> </span>price-below:150
-<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
-<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1"># Alert on 5%+ change</span>
-<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>AAPL<span class="w"> </span>change-above:5
-<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
-<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c1"># Check all alerts</span>
-<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a>fq<span class="w"> </span>alerts<span class="w"> </span>list
-<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a>
-<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="c1"># Monitor continuously in background</span>
-<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a>fq<span class="w"> </span>alerts<span class="w"> </span>watch
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Open alerts TUI</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>fq<span class="w"> </span>alerts
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Alert when Apple hits $200</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>AAPL<span class="w"> </span>price-above:200
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Alert when Tesla drops below $150</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>TSLA<span class="w"> </span>price-below:150
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># Alert on 5%+ change</span>
+<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>fq<span class="w"> </span>alerts<span class="w"> </span>add<span class="w"> </span>AAPL<span class="w"> </span>change-above:5
+<a id="__codelineno-11-12" name="__codelineno-11-12" href="#__codelineno-11-12"></a>
+<a id="__codelineno-11-13" name="__codelineno-11-13" href="#__codelineno-11-13"></a><span class="c1"># Check all alerts</span>
+<a id="__codelineno-11-14" name="__codelineno-11-14" href="#__codelineno-11-14"></a>fq<span class="w"> </span>alerts<span class="w"> </span>list
+<a id="__codelineno-11-15" name="__codelineno-11-15" href="#__codelineno-11-15"></a>
+<a id="__codelineno-11-16" name="__codelineno-11-16" href="#__codelineno-11-16"></a><span class="c1"># Monitor continuously in background</span>
+<a id="__codelineno-11-17" name="__codelineno-11-17" href="#__codelineno-11-17"></a>fq<span class="w"> </span>alerts<span class="w"> </span>watch
 </code></pre></div>
 <h2 id="technical-analysis">Technical Analysis<a class="headerlink" href="#technical-analysis" title="Permanent link">&para;</a></h2>
 <h3 id="calculate-indicators-for-a-stock">Calculate indicators for a stock<a class="headerlink" href="#calculate-indicators-for-a-stock" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="c1"># Interactive TUI (choose indicators)</span>
-<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL
-<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a>
-<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="c1"># Single indicator (non-interactive)</span>
-<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>--no-tui
-<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
-<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="c1"># Multiple indicators</span>
-<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w"> </span>-i<span class="w"> </span>1d<span class="w"> </span>-r<span class="w"> </span>6mo<span class="w"> </span>--no-tui
-<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>macd:12,26,9<span class="w"> </span>--no-tui
-<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
-<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="c1"># Bollinger Bands</span>
-<a id="__codelineno-8-12" name="__codelineno-8-12" href="#__codelineno-8-12"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>bollinger:20,2<span class="w"> </span>-i<span class="w"> </span>1d<span class="w"> </span>-r<span class="w"> </span>3mo<span class="w"> </span>--no-tui
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Interactive TUI (choose indicators)</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Single indicator (non-interactive)</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>--no-tui
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1"># Multiple indicators</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w"> </span>-i<span class="w"> </span>1d<span class="w"> </span>-r<span class="w"> </span>6mo<span class="w"> </span>--no-tui
+<a id="__codelineno-12-9" name="__codelineno-12-9" href="#__codelineno-12-9"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>macd:12,26,9<span class="w"> </span>--no-tui
+<a id="__codelineno-12-10" name="__codelineno-12-10" href="#__codelineno-12-10"></a>
+<a id="__codelineno-12-11" name="__codelineno-12-11" href="#__codelineno-12-11"></a><span class="c1"># Bollinger Bands</span>
+<a id="__codelineno-12-12" name="__codelineno-12-12" href="#__codelineno-12-12"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>bollinger:20,2<span class="w"> </span>-i<span class="w"> </span>1d<span class="w"> </span>-r<span class="w"> </span>3mo<span class="w"> </span>--no-tui
 </code></pre></div>
 <h3 id="export-indicator-data">Export indicator data<a class="headerlink" href="#export-indicator-data" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>-i<span class="w"> </span>1d<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>--no-tui<span class="w"> </span>&gt;<span class="w"> </span>aapl_indicators.csv
-<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>--no-tui<span class="w"> </span>&gt;<span class="w"> </span>sma_analysis.csv
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>-i<span class="w"> </span>1d<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>--no-tui<span class="w"> </span>&gt;<span class="w"> </span>aapl_indicators.csv
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>--no-tui<span class="w"> </span>&gt;<span class="w"> </span>sma_analysis.csv
 </code></pre></div>
 <h3 id="get-latest-indicator-values">Get latest indicator values<a class="headerlink" href="#get-latest-indicator-values" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>--latest<span class="w"> </span>--no-tui
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>--latest<span class="w"> </span>--no-tui
 </code></pre></div>
 <h2 id="backtesting">Backtesting<a class="headerlink" href="#backtesting" title="Permanent link">&para;</a></h2>
 <h3 id="test-a-simple-strategy">Test a simple strategy<a class="headerlink" href="#test-a-simple-strategy" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="c1"># Interactive backtest TUI</span>
-<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL
-<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a>
-<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="c1"># Use swing trading preset</span>
-<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>swing
-<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a>
-<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="c1"># Use trend following preset</span>
-<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>trend
-<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a>
-<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="c1"># Mean reversion strategy</span>
-<a id="__codelineno-11-11" name="__codelineno-11-11" href="#__codelineno-11-11"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>mean-reversion
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Interactive backtest TUI</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># Use swing trading preset</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>swing
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="c1"># Use trend following preset</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>trend
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>
+<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="c1"># Mean reversion strategy</span>
+<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>mean-reversion
 </code></pre></div>
 <h3 id="export-results">Export results<a class="headerlink" href="#export-results" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1"># Get backtest results as JSON</span>
-<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>swing<span class="w"> </span>--json<span class="w"> </span>&gt;<span class="w"> </span>backtest_results.json
-<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
-<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1"># Run without TUI</span>
-<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--no-tui<span class="w"> </span>--preset<span class="w"> </span>aggressive
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># Get backtest results as JSON</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>swing<span class="w"> </span>--json<span class="w"> </span>&gt;<span class="w"> </span>backtest_results.json
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Run without TUI</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--no-tui<span class="w"> </span>--preset<span class="w"> </span>aggressive
 </code></pre></div>
 <h2 id="market-analysis">Market Analysis<a class="headerlink" href="#market-analysis" title="Permanent link">&para;</a></h2>
 <h3 id="market-overview">Market overview<a class="headerlink" href="#market-overview" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="c1"># Check if markets are open</span>
-<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>fq<span class="w"> </span>hours
-<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a>
-<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="c1"># View market summary</span>
-<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a>fq<span class="w"> </span>market
-<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
-<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="c1"># Check technology sector performance</span>
-<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a>fq<span class="w"> </span>sector<span class="w"> </span>technology
-<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a>
-<a id="__codelineno-13-10" name="__codelineno-13-10" href="#__codelineno-13-10"></a><span class="c1"># Healthcare sector with companies</span>
-<a id="__codelineno-13-11" name="__codelineno-13-11" href="#__codelineno-13-11"></a>fq<span class="w"> </span>sector<span class="w"> </span>healthcare<span class="w"> </span>--companies
-<a id="__codelineno-13-12" name="__codelineno-13-12" href="#__codelineno-13-12"></a>
-<a id="__codelineno-13-13" name="__codelineno-13-13" href="#__codelineno-13-13"></a><span class="c1"># Top gainers/losers</span>
-<a id="__codelineno-13-14" name="__codelineno-13-14" href="#__codelineno-13-14"></a>fq<span class="w"> </span>screener<span class="w"> </span>day-gainers
-<a id="__codelineno-13-15" name="__codelineno-13-15" href="#__codelineno-13-15"></a>fq<span class="w"> </span>screener<span class="w"> </span>day-losers
-<a id="__codelineno-13-16" name="__codelineno-13-16" href="#__codelineno-13-16"></a>
-<a id="__codelineno-13-17" name="__codelineno-13-17" href="#__codelineno-13-17"></a><span class="c1"># Most active symbols</span>
-<a id="__codelineno-13-18" name="__codelineno-13-18" href="#__codelineno-13-18"></a>fq<span class="w"> </span>screener<span class="w"> </span>most-actives<span class="w"> </span>-l<span class="w"> </span><span class="m">50</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Check if markets are open</span>
+<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>fq<span class="w"> </span>hours
+<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
+<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># View market summary</span>
+<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>fq<span class="w"> </span>market
+<a id="__codelineno-17-6" name="__codelineno-17-6" href="#__codelineno-17-6"></a>
+<a id="__codelineno-17-7" name="__codelineno-17-7" href="#__codelineno-17-7"></a><span class="c1"># Check technology sector performance</span>
+<a id="__codelineno-17-8" name="__codelineno-17-8" href="#__codelineno-17-8"></a>fq<span class="w"> </span>sector<span class="w"> </span>technology
+<a id="__codelineno-17-9" name="__codelineno-17-9" href="#__codelineno-17-9"></a>
+<a id="__codelineno-17-10" name="__codelineno-17-10" href="#__codelineno-17-10"></a><span class="c1"># Healthcare sector with companies</span>
+<a id="__codelineno-17-11" name="__codelineno-17-11" href="#__codelineno-17-11"></a>fq<span class="w"> </span>sector<span class="w"> </span>healthcare<span class="w"> </span>--companies
+<a id="__codelineno-17-12" name="__codelineno-17-12" href="#__codelineno-17-12"></a>
+<a id="__codelineno-17-13" name="__codelineno-17-13" href="#__codelineno-17-13"></a><span class="c1"># Top gainers/losers</span>
+<a id="__codelineno-17-14" name="__codelineno-17-14" href="#__codelineno-17-14"></a>fq<span class="w"> </span>screener<span class="w"> </span>day-gainers
+<a id="__codelineno-17-15" name="__codelineno-17-15" href="#__codelineno-17-15"></a>fq<span class="w"> </span>screener<span class="w"> </span>day-losers
+<a id="__codelineno-17-16" name="__codelineno-17-16" href="#__codelineno-17-16"></a>
+<a id="__codelineno-17-17" name="__codelineno-17-17" href="#__codelineno-17-17"></a><span class="c1"># Most active symbols</span>
+<a id="__codelineno-17-18" name="__codelineno-17-18" href="#__codelineno-17-18"></a>fq<span class="w"> </span>screener<span class="w"> </span>most-actives<span class="w"> </span>-l<span class="w"> </span><span class="m">50</span>
 </code></pre></div>
 <h3 id="trending-analysis">Trending analysis<a class="headerlink" href="#trending-analysis" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="c1"># Trending stocks (US)</span>
-<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a>fq<span class="w"> </span>trending
-<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a>
-<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="c1"># By region</span>
-<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a>fq<span class="w"> </span>trending<span class="w"> </span>--region<span class="w"> </span>ca<span class="w">  </span><span class="c1"># Canada</span>
-<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a>fq<span class="w"> </span>trending<span class="w"> </span>--region<span class="w"> </span>gb<span class="w">  </span><span class="c1"># UK</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Trending stocks (US)</span>
+<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>fq<span class="w"> </span>trending
+<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
+<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># By region</span>
+<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>fq<span class="w"> </span>trending<span class="w"> </span>--region<span class="w"> </span>ca<span class="w">  </span><span class="c1"># Canada</span>
+<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>fq<span class="w"> </span>trending<span class="w"> </span>--region<span class="w"> </span>gb<span class="w">  </span><span class="c1"># UK</span>
 </code></pre></div>
 <h3 id="economic-indices">Economic indices<a class="headerlink" href="#economic-indices" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="c1"># Major indices</span>
-<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a>fq<span class="w"> </span>indices
-<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a>
-<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="c1"># S&amp;P 500</span>
-<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a>fq<span class="w"> </span>quote<span class="w"> </span>^GSPC
-<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a>
-<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="c1"># Dow Jones</span>
-<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a>fq<span class="w"> </span>quote<span class="w"> </span>^DJI
-<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a>
-<a id="__codelineno-15-10" name="__codelineno-15-10" href="#__codelineno-15-10"></a><span class="c1"># Nasdaq</span>
-<a id="__codelineno-15-11" name="__codelineno-15-11" href="#__codelineno-15-11"></a>fq<span class="w"> </span>quote<span class="w"> </span>^IXIC
+<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Major indices</span>
+<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>fq<span class="w"> </span>indices
+<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
+<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># S&amp;P 500</span>
+<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>fq<span class="w"> </span>quote<span class="w"> </span>^GSPC
+<a id="__codelineno-19-6" name="__codelineno-19-6" href="#__codelineno-19-6"></a>
+<a id="__codelineno-19-7" name="__codelineno-19-7" href="#__codelineno-19-7"></a><span class="c1"># Dow Jones</span>
+<a id="__codelineno-19-8" name="__codelineno-19-8" href="#__codelineno-19-8"></a>fq<span class="w"> </span>quote<span class="w"> </span>^DJI
+<a id="__codelineno-19-9" name="__codelineno-19-9" href="#__codelineno-19-9"></a>
+<a id="__codelineno-19-10" name="__codelineno-19-10" href="#__codelineno-19-10"></a><span class="c1"># Nasdaq</span>
+<a id="__codelineno-19-11" name="__codelineno-19-11" href="#__codelineno-19-11"></a>fq<span class="w"> </span>quote<span class="w"> </span>^IXIC
 </code></pre></div>
 <h2 id="options-trading">Options Trading<a class="headerlink" href="#options-trading" title="Permanent link">&para;</a></h2>
 <h3 id="explore-options">Explore options<a class="headerlink" href="#explore-options" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1"># View options chain (interactive TUI)</span>
-<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a>fq<span class="w"> </span>options<span class="w"> </span>AAPL
-<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
-<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="c1"># Specific expiration</span>
-<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a>fq<span class="w"> </span>options<span class="w"> </span>AAPL<span class="w"> </span>--expiration<span class="w"> </span><span class="m">2024</span>-12-20
+<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># View options chain (interactive TUI)</span>
+<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>fq<span class="w"> </span>options<span class="w"> </span>AAPL
+<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
+<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Specific expiration</span>
+<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>fq<span class="w"> </span>options<span class="w"> </span>AAPL<span class="w"> </span>--expiration<span class="w"> </span><span class="m">2024</span>-12-20
 </code></pre></div>
 <h3 id="dividend-tracking">Dividend tracking<a class="headerlink" href="#dividend-tracking" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-17-1" name="__codelineno-17-1" href="#__codelineno-17-1"></a><span class="c1"># Dividend history</span>
-<a id="__codelineno-17-2" name="__codelineno-17-2" href="#__codelineno-17-2"></a>fq<span class="w"> </span>dividends<span class="w"> </span>AAPL
-<a id="__codelineno-17-3" name="__codelineno-17-3" href="#__codelineno-17-3"></a>
-<a id="__codelineno-17-4" name="__codelineno-17-4" href="#__codelineno-17-4"></a><span class="c1"># Stock splits</span>
-<a id="__codelineno-17-5" name="__codelineno-17-5" href="#__codelineno-17-5"></a>fq<span class="w"> </span>splits<span class="w"> </span>AAPL
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Dividend history</span>
+<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>fq<span class="w"> </span>dividends<span class="w"> </span>AAPL
+<a id="__codelineno-21-3" name="__codelineno-21-3" href="#__codelineno-21-3"></a>
+<a id="__codelineno-21-4" name="__codelineno-21-4" href="#__codelineno-21-4"></a><span class="c1"># Stock splits</span>
+<a id="__codelineno-21-5" name="__codelineno-21-5" href="#__codelineno-21-5"></a>fq<span class="w"> </span>splits<span class="w"> </span>AAPL
 </code></pre></div>
 <h2 id="data-export">Data Export<a class="headerlink" href="#data-export" title="Permanent link">&para;</a></h2>
 <h3 id="export-to-csv">Export to CSV<a class="headerlink" href="#export-to-csv" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-18-1" name="__codelineno-18-1" href="#__codelineno-18-1"></a><span class="c1"># Historical price data</span>
-<a id="__codelineno-18-2" name="__codelineno-18-2" href="#__codelineno-18-2"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>aapl_historical.csv
-<a id="__codelineno-18-3" name="__codelineno-18-3" href="#__codelineno-18-3"></a>
-<a id="__codelineno-18-4" name="__codelineno-18-4" href="#__codelineno-18-4"></a><span class="c1"># Quote data</span>
-<a id="__codelineno-18-5" name="__codelineno-18-5" href="#__codelineno-18-5"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>MSFT<span class="w"> </span>GOOGL<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>quotes.csv
-<a id="__codelineno-18-6" name="__codelineno-18-6" href="#__codelineno-18-6"></a>
-<a id="__codelineno-18-7" name="__codelineno-18-7" href="#__codelineno-18-7"></a><span class="c1"># Indicator data</span>
-<a id="__codelineno-18-8" name="__codelineno-18-8" href="#__codelineno-18-8"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>--no-tui<span class="w"> </span>&gt;<span class="w"> </span>indicators.csv
-<a id="__codelineno-18-9" name="__codelineno-18-9" href="#__codelineno-18-9"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>--no-tui<span class="w"> </span>&gt;<span class="w"> </span>sma.csv
+<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Historical price data</span>
+<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>aapl_historical.csv
+<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
+<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1"># Quote data</span>
+<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>MSFT<span class="w"> </span>GOOGL<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>quotes.csv
+<a id="__codelineno-22-6" name="__codelineno-22-6" href="#__codelineno-22-6"></a>
+<a id="__codelineno-22-7" name="__codelineno-22-7" href="#__codelineno-22-7"></a><span class="c1"># Indicator data</span>
+<a id="__codelineno-22-8" name="__codelineno-22-8" href="#__codelineno-22-8"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>rsi:14<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>--no-tui<span class="w"> </span>&gt;<span class="w"> </span>indicators.csv
+<a id="__codelineno-22-9" name="__codelineno-22-9" href="#__codelineno-22-9"></a>fq<span class="w"> </span>indicator<span class="w"> </span>AAPL<span class="w"> </span>--indicator<span class="w"> </span>sma:20,50,200<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>--no-tui<span class="w"> </span>&gt;<span class="w"> </span>sma.csv
 </code></pre></div>
 <h3 id="export-to-json">Export to JSON<a class="headerlink" href="#export-to-json" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-19-1" name="__codelineno-19-1" href="#__codelineno-19-1"></a><span class="c1"># Backtest results</span>
-<a id="__codelineno-19-2" name="__codelineno-19-2" href="#__codelineno-19-2"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>swing<span class="w"> </span>--json<span class="w"> </span>&gt;<span class="w"> </span>backtest_results.json
-<a id="__codelineno-19-3" name="__codelineno-19-3" href="#__codelineno-19-3"></a>
-<a id="__codelineno-19-4" name="__codelineno-19-4" href="#__codelineno-19-4"></a><span class="c1"># Company info</span>
-<a id="__codelineno-19-5" name="__codelineno-19-5" href="#__codelineno-19-5"></a>fq<span class="w"> </span>info<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>aapl_info.json
+<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="c1"># Backtest results</span>
+<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a>fq<span class="w"> </span>backtest<span class="w"> </span>AAPL<span class="w"> </span>--preset<span class="w"> </span>swing<span class="w"> </span>--json<span class="w"> </span>&gt;<span class="w"> </span>backtest_results.json
+<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
+<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="c1"># Company info</span>
+<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>fq<span class="w"> </span>info<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>aapl_info.json
 </code></pre></div>
 <h3 id="pipe-to-other-tools">Pipe to other tools<a class="headerlink" href="#pipe-to-other-tools" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-20-1" name="__codelineno-20-1" href="#__codelineno-20-1"></a><span class="c1"># Use jq to parse JSON</span>
-<a id="__codelineno-20-2" name="__codelineno-20-2" href="#__codelineno-20-2"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.price&#39;</span>
-<a id="__codelineno-20-3" name="__codelineno-20-3" href="#__codelineno-20-3"></a>
-<a id="__codelineno-20-4" name="__codelineno-20-4" href="#__codelineno-20-4"></a><span class="c1"># Use grep to filter CSV</span>
-<a id="__codelineno-20-5" name="__codelineno-20-5" href="#__codelineno-20-5"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;2024&quot;</span>
-<a id="__codelineno-20-6" name="__codelineno-20-6" href="#__codelineno-20-6"></a>
-<a id="__codelineno-20-7" name="__codelineno-20-7" href="#__codelineno-20-7"></a><span class="c1"># Count lines in CSV</span>
-<a id="__codelineno-20-8" name="__codelineno-20-8" href="#__codelineno-20-8"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
+<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Use jq to parse JSON</span>
+<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span><span class="p">|</span><span class="w"> </span>jq<span class="w"> </span><span class="s1">&#39;.price&#39;</span>
+<a id="__codelineno-24-3" name="__codelineno-24-3" href="#__codelineno-24-3"></a>
+<a id="__codelineno-24-4" name="__codelineno-24-4" href="#__codelineno-24-4"></a><span class="c1"># Use grep to filter CSV</span>
+<a id="__codelineno-24-5" name="__codelineno-24-5" href="#__codelineno-24-5"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span><span class="p">|</span><span class="w"> </span>grep<span class="w"> </span><span class="s2">&quot;2024&quot;</span>
+<a id="__codelineno-24-6" name="__codelineno-24-6" href="#__codelineno-24-6"></a>
+<a id="__codelineno-24-7" name="__codelineno-24-7" href="#__codelineno-24-7"></a><span class="c1"># Count lines in CSV</span>
+<a id="__codelineno-24-8" name="__codelineno-24-8" href="#__codelineno-24-8"></a>fq<span class="w"> </span>chart<span class="w"> </span>AAPL<span class="w"> </span>-r<span class="w"> </span>1y<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span><span class="p">|</span><span class="w"> </span>wc<span class="w"> </span>-l
 </code></pre></div>
 <h2 id="dashboard-usage">Dashboard Usage<a class="headerlink" href="#dashboard-usage" title="Permanent link">&para;</a></h2>
 <h3 id="launch-and-navigate">Launch and navigate<a class="headerlink" href="#launch-and-navigate" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="c1"># Start dashboard</span>
-<a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a>fq<span class="w"> </span>dashboard
+<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a><span class="c1"># Start dashboard</span>
+<a id="__codelineno-25-2" name="__codelineno-25-2" href="#__codelineno-25-2"></a>fq<span class="w"> </span>dashboard
 </code></pre></div>
 <p><strong>In the dashboard:</strong></p>
 <ul>
@@ -2341,57 +2571,57 @@
 </ul>
 <h2 id="automation">Automation<a class="headerlink" href="#automation" title="Permanent link">&para;</a></h2>
 <h3 id="check-alerts-periodically">Check alerts periodically<a class="headerlink" href="#check-alerts-periodically" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-22-1" name="__codelineno-22-1" href="#__codelineno-22-1"></a><span class="c1"># Run alert check every 5 minutes</span>
-<a id="__codelineno-22-2" name="__codelineno-22-2" href="#__codelineno-22-2"></a>watch<span class="w"> </span>-n<span class="w"> </span><span class="m">300</span><span class="w"> </span><span class="s1">&#39;fq alerts check&#39;</span>
-<a id="__codelineno-22-3" name="__codelineno-22-3" href="#__codelineno-22-3"></a>
-<a id="__codelineno-22-4" name="__codelineno-22-4" href="#__codelineno-22-4"></a><span class="c1"># Or use system service</span>
-<a id="__codelineno-22-5" name="__codelineno-22-5" href="#__codelineno-22-5"></a>fq<span class="w"> </span>alerts<span class="w"> </span>service<span class="w"> </span>install
+<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="c1"># Run alert check every 5 minutes</span>
+<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a>watch<span class="w"> </span>-n<span class="w"> </span><span class="m">300</span><span class="w"> </span><span class="s1">&#39;fq alerts check&#39;</span>
+<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>
+<a id="__codelineno-26-4" name="__codelineno-26-4" href="#__codelineno-26-4"></a><span class="c1"># Or use system service</span>
+<a id="__codelineno-26-5" name="__codelineno-26-5" href="#__codelineno-26-5"></a>fq<span class="w"> </span>alerts<span class="w"> </span>service<span class="w"> </span>install
 </code></pre></div>
 <h3 id="generate-daily-reports">Generate daily reports<a class="headerlink" href="#generate-daily-reports" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-23-1" name="__codelineno-23-1" href="#__codelineno-23-1"></a><span class="ch">#!/bin/bash</span>
-<a id="__codelineno-23-2" name="__codelineno-23-2" href="#__codelineno-23-2"></a><span class="c1"># daily-report.sh</span>
-<a id="__codelineno-23-3" name="__codelineno-23-3" href="#__codelineno-23-3"></a>
-<a id="__codelineno-23-4" name="__codelineno-23-4" href="#__codelineno-23-4"></a><span class="nv">DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>
-<a id="__codelineno-23-5" name="__codelineno-23-5" href="#__codelineno-23-5"></a>
-<a id="__codelineno-23-6" name="__codelineno-23-6" href="#__codelineno-23-6"></a><span class="c1"># Quotes</span>
-<a id="__codelineno-23-7" name="__codelineno-23-7" href="#__codelineno-23-7"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>MSFT<span class="w"> </span>GOOGL<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>reports/quotes_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.csv
-<a id="__codelineno-23-8" name="__codelineno-23-8" href="#__codelineno-23-8"></a>
-<a id="__codelineno-23-9" name="__codelineno-23-9" href="#__codelineno-23-9"></a><span class="c1"># Market summary</span>
-<a id="__codelineno-23-10" name="__codelineno-23-10" href="#__codelineno-23-10"></a>fq<span class="w"> </span>market<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>reports/market_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.json
-<a id="__codelineno-23-11" name="__codelineno-23-11" href="#__codelineno-23-11"></a>
-<a id="__codelineno-23-12" name="__codelineno-23-12" href="#__codelineno-23-12"></a><span class="c1"># Top movers</span>
-<a id="__codelineno-23-13" name="__codelineno-23-13" href="#__codelineno-23-13"></a>fq<span class="w"> </span>screener<span class="w"> </span>day-gainers<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>reports/gainers_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.csv
-<a id="__codelineno-23-14" name="__codelineno-23-14" href="#__codelineno-23-14"></a>fq<span class="w"> </span>screener<span class="w"> </span>day-losers<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>reports/losers_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.csv
-<a id="__codelineno-23-15" name="__codelineno-23-15" href="#__codelineno-23-15"></a>
-<a id="__codelineno-23-16" name="__codelineno-23-16" href="#__codelineno-23-16"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Daily report generated: reports/&quot;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a><span class="ch">#!/bin/bash</span>
+<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a><span class="c1"># daily-report.sh</span>
+<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>
+<a id="__codelineno-27-4" name="__codelineno-27-4" href="#__codelineno-27-4"></a><span class="nv">DATE</span><span class="o">=</span><span class="k">$(</span>date<span class="w"> </span>+%Y-%m-%d<span class="k">)</span>
+<a id="__codelineno-27-5" name="__codelineno-27-5" href="#__codelineno-27-5"></a>
+<a id="__codelineno-27-6" name="__codelineno-27-6" href="#__codelineno-27-6"></a><span class="c1"># Quotes</span>
+<a id="__codelineno-27-7" name="__codelineno-27-7" href="#__codelineno-27-7"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>MSFT<span class="w"> </span>GOOGL<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>reports/quotes_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.csv
+<a id="__codelineno-27-8" name="__codelineno-27-8" href="#__codelineno-27-8"></a>
+<a id="__codelineno-27-9" name="__codelineno-27-9" href="#__codelineno-27-9"></a><span class="c1"># Market summary</span>
+<a id="__codelineno-27-10" name="__codelineno-27-10" href="#__codelineno-27-10"></a>fq<span class="w"> </span>market<span class="w"> </span>-o<span class="w"> </span>json<span class="w"> </span>&gt;<span class="w"> </span>reports/market_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.json
+<a id="__codelineno-27-11" name="__codelineno-27-11" href="#__codelineno-27-11"></a>
+<a id="__codelineno-27-12" name="__codelineno-27-12" href="#__codelineno-27-12"></a><span class="c1"># Top movers</span>
+<a id="__codelineno-27-13" name="__codelineno-27-13" href="#__codelineno-27-13"></a>fq<span class="w"> </span>screener<span class="w"> </span>day-gainers<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>reports/gainers_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.csv
+<a id="__codelineno-27-14" name="__codelineno-27-14" href="#__codelineno-27-14"></a>fq<span class="w"> </span>screener<span class="w"> </span>day-losers<span class="w"> </span>-o<span class="w"> </span>csv<span class="w"> </span>&gt;<span class="w"> </span>reports/losers_<span class="si">${</span><span class="nv">DATE</span><span class="si">}</span>.csv
+<a id="__codelineno-27-15" name="__codelineno-27-15" href="#__codelineno-27-15"></a>
+<a id="__codelineno-27-16" name="__codelineno-27-16" href="#__codelineno-27-16"></a><span class="nb">echo</span><span class="w"> </span><span class="s2">&quot;Daily report generated: reports/&quot;</span>
 </code></pre></div>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-24-1" name="__codelineno-24-1" href="#__codelineno-24-1"></a><span class="c1"># Schedule with cron (daily at 9am)</span>
-<a id="__codelineno-24-2" name="__codelineno-24-2" href="#__codelineno-24-2"></a><span class="m">0</span><span class="w"> </span><span class="m">9</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>/path/to/daily-report.sh
+<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># Schedule with cron (daily at 9am)</span>
+<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="m">0</span><span class="w"> </span><span class="m">9</span><span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>*<span class="w"> </span>/path/to/daily-report.sh
 </code></pre></div>
 <h2 id="troubleshooting">Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permanent link">&para;</a></h2>
 <h3 id="check-version">Check version<a class="headerlink" href="#check-version" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-25-1" name="__codelineno-25-1" href="#__codelineno-25-1"></a>fq<span class="w"> </span>--version
+<div class="highlight"><pre><span></span><code><a id="__codelineno-29-1" name="__codelineno-29-1" href="#__codelineno-29-1"></a>fq<span class="w"> </span>--version
 </code></pre></div>
 <h3 id="enable-debug-logging">Enable debug logging<a class="headerlink" href="#enable-debug-logging" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-26-1" name="__codelineno-26-1" href="#__codelineno-26-1"></a><span class="nv">RUST_LOG</span><span class="o">=</span>debug<span class="w"> </span>fq<span class="w"> </span>quote<span class="w"> </span>AAPL
-<a id="__codelineno-26-2" name="__codelineno-26-2" href="#__codelineno-26-2"></a><span class="c1"># or</span>
-<a id="__codelineno-26-3" name="__codelineno-26-3" href="#__codelineno-26-3"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>--verbose
+<div class="highlight"><pre><span></span><code><a id="__codelineno-30-1" name="__codelineno-30-1" href="#__codelineno-30-1"></a><span class="nv">RUST_LOG</span><span class="o">=</span>debug<span class="w"> </span>fq<span class="w"> </span>quote<span class="w"> </span>AAPL
+<a id="__codelineno-30-2" name="__codelineno-30-2" href="#__codelineno-30-2"></a><span class="c1"># or</span>
+<a id="__codelineno-30-3" name="__codelineno-30-3" href="#__codelineno-30-3"></a>fq<span class="w"> </span>quote<span class="w"> </span>AAPL<span class="w"> </span>--verbose
 </code></pre></div>
 <h3 id="verify-installation">Verify installation<a class="headerlink" href="#verify-installation" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-27-1" name="__codelineno-27-1" href="#__codelineno-27-1"></a>which<span class="w"> </span>fq
-<a id="__codelineno-27-2" name="__codelineno-27-2" href="#__codelineno-27-2"></a>fq<span class="w"> </span>--version
-<a id="__codelineno-27-3" name="__codelineno-27-3" href="#__codelineno-27-3"></a>fq<span class="w"> </span>quote<span class="w"> </span>--help
+<div class="highlight"><pre><span></span><code><a id="__codelineno-31-1" name="__codelineno-31-1" href="#__codelineno-31-1"></a>which<span class="w"> </span>fq
+<a id="__codelineno-31-2" name="__codelineno-31-2" href="#__codelineno-31-2"></a>fq<span class="w"> </span>--version
+<a id="__codelineno-31-3" name="__codelineno-31-3" href="#__codelineno-31-3"></a>fq<span class="w"> </span>quote<span class="w"> </span>--help
 </code></pre></div>
 <h3 id="common-errors">Common errors<a class="headerlink" href="#common-errors" title="Permanent link">&para;</a></h3>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-28-1" name="__codelineno-28-1" href="#__codelineno-28-1"></a><span class="c1"># &quot;Command not found&quot;</span>
-<a id="__codelineno-28-2" name="__codelineno-28-2" href="#__codelineno-28-2"></a><span class="c1"># Make sure ~/.cargo/bin is in your PATH</span>
-<a id="__codelineno-28-3" name="__codelineno-28-3" href="#__codelineno-28-3"></a>
-<a id="__codelineno-28-4" name="__codelineno-28-4" href="#__codelineno-28-4"></a><span class="c1"># &quot;Connection timeout&quot;</span>
-<a id="__codelineno-28-5" name="__codelineno-28-5" href="#__codelineno-28-5"></a><span class="c1"># Check your internet connection</span>
-<a id="__codelineno-28-6" name="__codelineno-28-6" href="#__codelineno-28-6"></a><span class="c1"># Yahoo Finance API might be temporarily unavailable</span>
-<a id="__codelineno-28-7" name="__codelineno-28-7" href="#__codelineno-28-7"></a>
-<a id="__codelineno-28-8" name="__codelineno-28-8" href="#__codelineno-28-8"></a><span class="c1"># &quot;Symbol not found&quot;</span>
-<a id="__codelineno-28-9" name="__codelineno-28-9" href="#__codelineno-28-9"></a><span class="c1"># Use &#39;fq lookup&#39; to find the correct symbol</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-32-1" name="__codelineno-32-1" href="#__codelineno-32-1"></a><span class="c1"># &quot;Command not found&quot;</span>
+<a id="__codelineno-32-2" name="__codelineno-32-2" href="#__codelineno-32-2"></a><span class="c1"># Make sure ~/.cargo/bin is in your PATH</span>
+<a id="__codelineno-32-3" name="__codelineno-32-3" href="#__codelineno-32-3"></a>
+<a id="__codelineno-32-4" name="__codelineno-32-4" href="#__codelineno-32-4"></a><span class="c1"># &quot;Connection timeout&quot;</span>
+<a id="__codelineno-32-5" name="__codelineno-32-5" href="#__codelineno-32-5"></a><span class="c1"># Check your internet connection</span>
+<a id="__codelineno-32-6" name="__codelineno-32-6" href="#__codelineno-32-6"></a><span class="c1"># Yahoo Finance API might be temporarily unavailable</span>
+<a id="__codelineno-32-7" name="__codelineno-32-7" href="#__codelineno-32-7"></a>
+<a id="__codelineno-32-8" name="__codelineno-32-8" href="#__codelineno-32-8"></a><span class="c1"># &quot;Symbol not found&quot;</span>
+<a id="__codelineno-32-9" name="__codelineno-32-9" href="#__codelineno-32-9"></a><span class="c1"># Use &#39;fq lookup&#39; to find the correct symbol</span>
 </code></pre></div>
 
 

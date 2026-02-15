@@ -2,66 +2,70 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://verdenroz.github.io/finance-query/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/cli/commands/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/cli/examples/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/cli/installation/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/development/contributing/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/backtesting/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/configuration/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/dataframe/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
+    </url>
+    <url>
+         <loc>https://verdenroz.github.io/finance-query/library/edgar/</loc>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/finance/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/getting-started/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/indicators/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/models/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/ticker/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/library/tickers/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/server/api-reference/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
     <url>
          <loc>https://verdenroz.github.io/finance-query/server/websocket-api-reference/</loc>
-         <lastmod>2026-01-12</lastmod>
+         <lastmod>2026-02-15</lastmod>
     </url>
 </urlset>

@@ -15,7 +15,7 @@
         <link rel="canonical" href="https://verdenroz.github.io/finance-query/library/dataframe/">
       
       
-        <link rel="prev" href="../finance/">
+        <link rel="prev" href="../edgar/">
       
       
         <link rel="next" href="../configuration/">
@@ -427,6 +427,8 @@
       
         
       
+        
+      
     
     
     
@@ -572,6 +574,34 @@
     
   
     Finance Module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edgar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDGAR
   
 
     
@@ -1951,7 +1981,7 @@
 <h3 id="quote-data">Quote Data<a class="headerlink" href="#quote-data" title="Permanent link">&para;</a></h3>
 <p>Single quote to DataFrame:</p>
 <div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;NVDA&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
-<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">quote</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span><span class="kc">false</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">quote</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">quote</span><span class="p">().</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 <a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a>
 <a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="c1">// Convert to single-row DataFrame</span>
 <a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="kd">let</span><span class="w"> </span><span class="n">df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">quote</span><span class="p">.</span><span class="n">to_dataframe</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
@@ -2263,7 +2293,7 @@ Refer to the <a href="https://docs.pola.rs/">Polars Documentation</a> for curren
 </code></pre></div>
 <h3 id="single-item-to-dataframe">Single Item to DataFrame<a class="headerlink" href="#single-item-to-dataframe" title="Permanent link">&para;</a></h3>
 <p>Individual structs create single-row DataFrames:</p>
-<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">quote</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">quote</span><span class="p">(</span><span class="kc">false</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-21-1" name="__codelineno-21-1" href="#__codelineno-21-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">quote</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">quote</span><span class="p">().</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
 <a id="__codelineno-21-2" name="__codelineno-21-2" href="#__codelineno-21-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">quote</span><span class="p">.</span><span class="n">to_dataframe</span><span class="p">()</span><span class="o">?</span><span class="p">;</span><span class="w">  </span><span class="c1">// 1 row, 30+ columns</span>
 </code></pre></div>
 <h2 id="error-handling">Error Handling<a class="headerlink" href="#error-handling" title="Permanent link">&para;</a></h2>
