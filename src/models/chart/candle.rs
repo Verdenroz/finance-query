@@ -8,6 +8,7 @@ use serde::{Deserialize, Serialize};
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct Candle {
     /// Timestamp (Unix)
