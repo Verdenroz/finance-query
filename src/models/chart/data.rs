@@ -219,4 +219,34 @@ impl Chart {
             period,
         )
     }
+
+    /// Detect candlestick patterns across all bars.
+    ///
+    /// Returns a `Vec<Option<CandlePattern>>` of the same length as `candles`.
+    /// `Some(pattern)` means a pattern was detected on that bar; `None` means
+    /// no pattern matched. Three-bar patterns take precedence over two-bar,
+    /// which take precedence over one-bar.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Interval, TimeRange};
+    /// use finance_query::indicators::{CandlePattern, PatternSentiment};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = Ticker::new("AAPL").await?;
+    /// let chart = ticker.chart(Interval::OneDay, TimeRange::SixMonths).await?;
+    ///
+    /// let signals = chart.patterns();
+    /// let bullish_count = signals
+    ///     .iter()
+    ///     .filter(|s| s.map(|p| p.sentiment() == PatternSentiment::Bullish).unwrap_or(false))
+    ///     .count();
+    /// println!("{bullish_count} bullish patterns in the last 6 months");
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn patterns(&self) -> Vec<Option<crate::indicators::CandlePattern>> {
+        crate::indicators::patterns(&self.candles)
+    }
 }
