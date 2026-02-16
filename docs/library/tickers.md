@@ -30,6 +30,51 @@ let tickers = Tickers::builder(vec!["AAPL", "MSFT"])
     .await?;
 ```
 
+### Builder Options
+
+| Method | Description |
+|--------|-------------|
+| `.region(Region)` | Set region (automatically sets lang + region code) |
+| `.lang(str)` | Set language code (e.g., `"en-US"`, `"ja-JP"`) |
+| `.region_code(str)` | Set region code directly (e.g., `"US"`, `"JP"`) |
+| `.timeout(Duration)` | Set HTTP request timeout |
+| `.proxy(str)` | Set proxy URL |
+| `.max_concurrency(n)` | Max concurrent requests for batch ops (default: 10) |
+| `.logo()` | Include company logo URLs in quote responses |
+| `.cache(Duration)` | Enable response caching with TTL (disabled by default) |
+| `.client(ClientHandle)` | Share an existing authenticated session |
+
+#### `max_concurrency`
+
+Controls parallelism for methods that fetch per-symbol (charts, financials, news, etc.). Lower values reduce the risk of rate limiting from Yahoo Finance; higher values increase throughput for large symbol lists.
+
+```rust
+use finance_query::Tickers;
+
+// Conservative: 3 concurrent requests (large lists or strict rate limits)
+let tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL", "TSLA"])
+    .max_concurrency(3)
+    .build()
+    .await?;
+```
+
+#### Sharing a Session
+
+Avoid redundant authentication when using `Tickers` alongside individual `Ticker` instances:
+
+```rust
+use finance_query::{Ticker, Tickers};
+
+let aapl = Ticker::new("AAPL").await?;
+let handle = aapl.client_handle();
+
+// Reuses AAPL's authenticated session — no extra auth round-trip
+let tickers = Tickers::builder(["MSFT", "GOOGL"])
+    .client(handle)
+    .build()
+    .await?;
+```
+
 ## Batch Quotes
 
 Fetch quotes for all symbols in a single API call. This is significantly more efficient than fetching quotes individually.
@@ -133,8 +178,8 @@ Each `Spark` contains:
 - `meta`: Chart metadata (currency, exchange, timezone)
 - `timestamps`: Vec of Unix timestamps
 - `closes`: Vec of close prices
-- `interval`: Time interval (e.g., "1d", "1h")
-- `range`: Time range (e.g., "5d", "1mo")
+- `interval`: Time interval (e.g., `"1d"`, `"1h"`)
+- `range`: Time range (e.g., `"5d"`, `"1mo"`)
 
 ### Available Methods
 
@@ -299,9 +344,8 @@ for (symbol, articles) in &response.news {
     println!("{}: {} news articles", symbol, articles.len());
     for article in articles.iter().take(3) {
         println!("  Title: {}", article.title);
-        if let Some(summary) = &article.summary {
-            println!("  Summary: {}", summary);
-        }
+        println!("  Source: {}", article.source);
+        println!("  Link: {}", article.link);
     }
 }
 ```
@@ -350,13 +394,11 @@ for (symbol, options) in &response.options {
     let exp_dates = options.expiration_dates();
     println!("{}: {} expirations", symbol, exp_dates.len());
 
-    // Show calls and puts for nearest expiration
-    if let Some(chain) = &options.calls {
-        println!("  Calls: {} contracts", chain.len());
-    }
-    if let Some(chain) = &options.puts {
-        println!("  Puts: {} contracts", chain.len());
-    }
+    // Show calls and puts count for nearest expiration
+    let calls = options.calls();
+    let puts = options.puts();
+    println!("  Calls: {} contracts", calls.len());
+    println!("  Puts: {} contracts", puts.len());
 }
 
 // Fetch for specific expiration date (Unix timestamp)
@@ -378,7 +420,7 @@ let response = tickers.options(Some(specific_date)).await?;
 
     ```toml
     [dependencies]
-    finance-query = { version = "2.1", features = ["indicators"] }
+    finance-query = { version = "2", features = ["indicators"] }
     ```
 
 Fetch technical indicators for all symbols concurrently.
@@ -399,12 +441,14 @@ Fetch technical indicators for all symbols concurrently.
             println!("  RSI(14): {:.2}", rsi);
         }
 
-        if let Some(sma_20) = indicators.sma_20.as_ref().and_then(|v| v.last()) {
-            println!("  SMA(20): {:.2}", sma_20);
+        if let Some(sma) = indicators.sma_20 {
+            println!("  SMA(20): {:.2}", sma);
         }
 
         if let Some(macd) = &indicators.macd {
-            println!("  MACD: {:.2}", macd.macd.last().unwrap_or(&0.0));
+            if let Some(line) = macd.macd {
+                println!("  MACD: {:.2}", line);
+            }
         }
     }
 }
@@ -416,6 +460,29 @@ Fetch technical indicators for all symbols concurrently.
 
 - `indicators`: `HashMap<String, IndicatorsSummary>` - Indicators grouped by symbol
 - `errors`: `HashMap<String, String>` - Error messages grouped by symbol
+
+## Batch Response Utility Methods
+
+All batch response types expose three convenience methods:
+
+```rust
+let response = tickers.quotes().await?;
+
+println!("Successful: {}", response.success_count());
+println!("Failed:     {}", response.error_count());
+
+if !response.all_successful() {
+    for (symbol, error) in &response.errors {
+        eprintln!("Failed to fetch {}: {}", symbol, error);
+    }
+}
+```
+
+| Method | Description |
+|--------|-------------|
+| `success_count()` | Number of successfully fetched items |
+| `error_count()` | Number of failed symbols |
+| `all_successful()` | `true` if no errors occurred |
 
 ## Dynamic Symbol Management
 
@@ -440,7 +507,7 @@ let response = tickers.quotes().await?;
 ```
 
 !!! warning "Cache Clearing"
-    When you remove symbols using `remove_symbols()`, all cached data for those symbols is also cleared. This ensures memory efficiency when managing large symbol lists.
+    When you remove symbols using `remove_symbols()`, all cached data for those symbols is also cleared.
 
 ## Individual Access
 
@@ -456,19 +523,38 @@ let msft_chart = tickers.chart("MSFT", Interval::OneDay, TimeRange::OneMonth).aw
 
 ## Caching
 
-`Tickers` maintains an internal cache to prevent redundant network requests.
+`Tickers` caching is **opt-in** — by default every call fetches fresh data. Enable it with `.cache(Duration)` in the builder.
 
 ```rust
-// First call: Network request
+use finance_query::Tickers;
+use std::time::Duration;
+
+// Enable a 30-second TTL on all responses
+let tickers = Tickers::builder(vec!["AAPL", "MSFT"])
+    .cache(Duration::from_secs(30))
+    .build()
+    .await?;
+
+// First call: Network request, result cached for 30s
 let response1 = tickers.quotes().await?;
 
-// Second call: Returns cached data (no network request)
+// Second call within TTL: Returns cached data (no network request)
 let response2 = tickers.quotes().await?;
 
-// Clear cache to force fresh data
+// Clear all caches to force fresh data
 tickers.clear_cache().await;
 let response3 = tickers.quotes().await?; // Network request
+
+// Or clear selectively:
+tickers.clear_quote_cache().await;   // Quotes only
+tickers.clear_chart_cache().await;   // Charts, sparks, and events
 ```
+
+| Method | Clears |
+|--------|--------|
+| `clear_cache()` | All cached data (quotes, charts, financials, news, etc.) |
+| `clear_quote_cache()` | Quote data only |
+| `clear_chart_cache()` | Charts, spark data, and events (dividends/splits/capital gains) |
 
 ## Best Practices
 
@@ -497,13 +583,6 @@ let response3 = tickers.quotes().await?; // Network request
 
     // Second operation - uses cached data (no network request)
     let charts_response = tickers.charts(Interval::OneDay, TimeRange::OneMonth).await?;
-
-    // Less efficient: Creating new instances each time
-    // (loses caching benefits, re-authenticates with Yahoo each time)
-    let tickers1 = Tickers::builder(vec!["AAPL", "GOOGL"]).logo().build().await?;
-    let quotes = tickers1.quotes().await?;
-    let tickers2 = Tickers::builder(vec!["AAPL", "GOOGL"]).logo().build().await?;
-    let charts = tickers2.charts(Interval::OneDay, TimeRange::OneMonth).await?;
     ```
 
 ## Next Steps

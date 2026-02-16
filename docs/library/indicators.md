@@ -1,20 +1,21 @@
 # Indicators
 
-Access 52+ technical indicators calculated from historical price data.
+Access 42 technical indicators and 20 candlestick patterns calculated from historical price data.
+
 ## Enable Feature
 
 Add the `indicators` feature to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-finance-query = { version = "2.0", features = ["indicators"] }
+finance-query = { version = "2", features = ["indicators"] }
 ```
 
 Or enable it alongside other features:
 
 ```toml
 [dependencies]
-finance-query = { version = "2.0", features = ["dataframe", "indicators"] }
+finance-query = { version = "2", features = ["dataframe", "indicators"] }
 ```
 
 ## Getting Started
@@ -47,7 +48,7 @@ Finance Query provides three approaches for calculating indicators, each suited 
 
 ### 1. Summary API
 
-Get all 52+ indicators pre-calculated with standard periods. Best for dashboards and analysis requiring many indicators.
+Get all indicators pre-calculated with standard periods. Best for dashboards and analysis requiring many indicators.
 
 ```rust
 use finance_query::{Ticker, Interval, TimeRange};
@@ -80,6 +81,9 @@ let macd = chart.macd(12, 26, 9)?;    // Custom MACD parameters
 if let Some(&last_sma) = sma_15.last().and_then(|v| v.as_ref()) {
     println!("Latest SMA(15): {:.2}", last_sma);
 }
+
+// Candlestick patterns (same chart, no extra request)
+let signals = chart.patterns();
 ```
 
 ### 3. Direct Indicator Functions
@@ -93,15 +97,15 @@ use finance_query::indicators::{sma, rsi, macd};
 let ticker = Ticker::new("AAPL").await?;
 let chart = ticker.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
 
-// Extract price data
-let closes: Vec<f64> = chart.candles.iter().map(|c| c.close).collect();
-let highs: Vec<f64> = chart.candles.iter().map(|c| c.high).collect();
-let lows: Vec<f64> = chart.candles.iter().map(|c| c.low).collect();
+// Extract price data (convenience methods on Chart)
+let closes: Vec<f64> = chart.close_prices();
+let highs: Vec<f64> = chart.high_prices();
+let lows: Vec<f64> = chart.low_prices();
 
 // Calculate indicators directly
 let sma_25 = sma(&closes, 25);                    // Returns Vec<Option<f64>>
 let rsi_10 = rsi(&closes, 10)?;                   // Returns Result<Vec<Option<f64>>>
-let macd_result = macd(&closes, 12, 26, 9)?;     // Returns Result<MacdResult>
+let macd_result = macd(&closes, 12, 26, 9)?;      // Returns Result<MacdResult>
 
 // Access results
 if let Some(&last_rsi) = rsi_10.last().and_then(|v| v.as_ref()) {
@@ -124,9 +128,9 @@ use finance_query::indicators::{bollinger_bands, stochastic, macd};
 let ticker = Ticker::new("AAPL").await?;
 let chart = ticker.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
 
-let closes: Vec<f64> = chart.candles.iter().map(|c| c.close).collect();
-let highs: Vec<f64> = chart.candles.iter().map(|c| c.high).collect();
-let lows: Vec<f64> = chart.candles.iter().map(|c| c.low).collect();
+let closes = chart.close_prices();
+let highs = chart.high_prices();
+let lows = chart.low_prices();
 
 // Bollinger Bands - returns BollingerBands struct
 let bb = bollinger_bands(&closes, 20, 2.0)?;
@@ -175,7 +179,7 @@ Direct indicator functions return these result types:
 
 ## Available Indicators
 
-All indicators return `Option<T>` - they're `None` if there's insufficient data to calculate.
+All indicators return `Option<T>` — `None` when there is insufficient data to calculate.
 
 ### Moving Averages
 
@@ -221,7 +225,7 @@ Identify trend direction and strength.
 - `macd` - MACD (line, signal, histogram)
 - `adx_14` - Average Directional Index
 - `aroon` - Aroon Up/Down
-- `supertrend` - Supertrend (uptrend, downtrend, trend direction)
+- `supertrend` - Supertrend (value, trend direction)
 - `ichimoku` - Ichimoku Cloud (multiple components)
 - `parabolic_sar` - Parabolic SAR
 - `bull_bear_power` - Bull and Bear Power
@@ -233,7 +237,7 @@ Measure price volatility and support/resistance levels.
 
 - `bollinger_bands` - Bollinger Bands (upper, middle, lower)
 - `keltner_channels` - Keltner Channels (upper, middle, lower)
-- `donchian_channels` - Donchian Channels (high, low)
+- `donchian_channels` - Donchian Channels (upper, lower)
 - `atr_14` - Average True Range
 - `true_range` - True Range (raw)
 - `choppiness_index_14` - Choppiness Index
@@ -249,6 +253,107 @@ Analyze volume patterns and accumulation/distribution.
 - `accumulation_distribution` - Accumulation/Distribution Line
 - `vwap` - Volume Weighted Average Price
 - `balance_of_power` - Balance of Power
+
+## Candlestick Patterns
+
+Detect 20 classic candlestick patterns across an entire chart in one call.
+
+```rust
+use finance_query::{Ticker, Interval, TimeRange};
+use finance_query::indicators::{patterns, CandlePattern, PatternSentiment};
+
+let ticker = Ticker::new("AAPL").await?;
+let chart = ticker.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
+
+// Via Chart extension method — same length as chart.candles
+let signals = chart.patterns();
+
+// Or call the function directly with a candle slice
+let signals = patterns(&chart.candles);
+
+// Each slot is Some(pattern) or None; iterate with candles for context
+for (candle, pattern) in chart.candles.iter().zip(signals.iter()) {
+    if let Some(p) = pattern {
+        println!(
+            "timestamp={}: {:?} ({:?})",
+            candle.timestamp, p, p.sentiment()
+        );
+    }
+}
+```
+
+**Pattern catalogue:**
+
+| Bars | Pattern | Signal |
+|------|---------|--------|
+| 3 | `MorningStar` | Bullish reversal |
+| 3 | `EveningStar` | Bearish reversal |
+| 3 | `ThreeWhiteSoldiers` | Bullish continuation |
+| 3 | `ThreeBlackCrows` | Bearish continuation |
+| 2 | `BullishEngulfing` | Bullish reversal |
+| 2 | `BearishEngulfing` | Bearish reversal |
+| 2 | `BullishHarami` | Bullish reversal |
+| 2 | `BearishHarami` | Bearish reversal |
+| 2 | `PiercingLine` | Bullish reversal |
+| 2 | `DarkCloudCover` | Bearish reversal |
+| 2 | `TweezerBottom` | Bullish reversal at support |
+| 2 | `TweezerTop` | Bearish reversal at resistance |
+| 1 | `Hammer` | Bullish reversal (requires prior downtrend) |
+| 1 | `InvertedHammer` | Bullish reversal (requires prior downtrend) |
+| 1 | `HangingMan` | Bearish reversal (requires prior uptrend) |
+| 1 | `ShootingStar` | Bearish reversal (requires prior uptrend) |
+| 1 | `BullishMarubozu` | Bullish momentum |
+| 1 | `BearishMarubozu` | Bearish momentum |
+| 1 | `Doji` | Indecision |
+| 1 | `SpinningTop` | Indecision |
+
+**Key design notes:**
+
+- **Priority chain:** three-bar wins over two-bar wins over one-bar. Each candle slot holds at most one pattern.
+- **Trend-aware:** `Hammer` / `HangingMan` and `InvertedHammer` / `ShootingStar` are the same physical shape — context (prior 3-bar trend) determines which label is assigned.
+- **Harami Cross:** A Doji inside a large body is classified as `BullishHarami` / `BearishHarami` — this is the stronger variant per Nison's definition; no separate variant needed.
+- **Alignment:** output is always `Vec<Option<CandlePattern>>` of the same length as the input candle slice.
+
+### Using PatternSentiment
+
+```rust
+let signals = chart.patterns();
+
+let bullish = signals.iter().filter(|s| {
+    s.map(|p| p.sentiment() == PatternSentiment::Bullish).unwrap_or(false)
+}).count();
+
+let bearish = signals.iter().filter(|s| {
+    s.map(|p| p.sentiment() == PatternSentiment::Bearish).unwrap_or(false)
+}).count();
+
+println!("Bull/Bear ratio: {}/{}", bullish, bearish);
+```
+
+### Combining Patterns with Indicators
+
+```rust
+let chart = ticker.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
+let rsi = chart.rsi(14)?;
+let signals = chart.patterns();
+
+// Find bars where RSI is oversold AND a bullish pattern just completed
+for (i, (pattern, rsi_val)) in signals.iter().zip(rsi.iter()).enumerate() {
+    let is_bullish_pattern = pattern
+        .map(|p| p.sentiment() == PatternSentiment::Bullish)
+        .unwrap_or(false);
+    let is_oversold = rsi_val.map(|r| r < 30.0).unwrap_or(false);
+
+    if is_bullish_pattern && is_oversold {
+        println!(
+            "Strong buy signal at bar {}: {:?} with RSI={:.1}",
+            i,
+            pattern.unwrap(),
+            rsi_val.unwrap()
+        );
+    }
+}
+```
 
 ## Working with Indicator Results
 
@@ -413,6 +518,7 @@ if let Some(macd) = indicators.macd {
         - MACD needs ~26+ candles (slow EMA period)
         - Ichimoku needs ~26+ candles
         - Short-period indicators (SMA/EMA 10) need at least 10 candles
+        - Candlestick patterns need 3+ candles for three-bar patterns
         - If insufficient data, the indicator returns `None`
 
     ```rust
@@ -433,13 +539,10 @@ if let Some(macd) = indicators.macd {
     }
 
     // Less efficient: Multiple calls recalculate all indicators
-    // (Chart data is cached, but indicators are recalculated)
     let rsi_result = ticker.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
-    if let Some(rsi) = rsi_result.rsi_14 {
-        // ...
-    }
+    if let Some(rsi) = rsi_result.rsi_14 { /* ... */ }
     let macd_result = ticker.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
-    // Still wastes CPU recalculating all 52+ indicators
+    // Still wastes CPU recalculating all indicators
     ```
 
 ## Next Steps
