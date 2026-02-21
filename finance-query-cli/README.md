@@ -21,12 +21,6 @@ curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Verdenroz/finance-query
 powershell -c "irm https://github.com/Verdenroz/finance-query/releases/latest/download/finance-query-cli-installer.ps1 | iex"
 ```
 
-**From crates.io:**
-
-```bash
-cargo install finance-query-cli
-```
-
 **From source:**
 
 ```bash

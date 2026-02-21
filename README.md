@@ -121,11 +121,15 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Install `fq` (the command-line tool):
 
 ```bash
-# Pre-built binary (Linux/macOS)
+# Linux/macOS
 curl --proto '=https' --tlsv1.2 -LsSf https://github.com/Verdenroz/finance-query/releases/latest/download/finance-query-cli-installer.sh | sh
 
-# Or from crates.io
-cargo install finance-query-cli
+# Windows
+powershell -c "irm https://github.com/Verdenroz/finance-query/releases/latest/download/finance-query-cli-installer.ps1 | iex"
+
+# From source
+git clone https://github.com/Verdenroz/finance-query
+cargo install --path finance-query/finance-query-cli
 ```
 
 Quick examples:
@@ -183,7 +187,6 @@ The v2 server provides REST endpoints at `/v2/*` and WebSocket streaming at `/v2
 
 - [Rust Docs](https://docs.rs/finance-query) - Library API on docs.rs
 - [Crates.io](https://crates.io/crates/finance-query) - Published library
-- [CLI on Crates.io](https://crates.io/crates/finance-query-cli) - Published CLI
 
 ## Legacy Python Version (v1)
 
