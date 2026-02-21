@@ -1,7 +1,7 @@
 asyncapi: 2.6.0
 info:
   title: Finance Query Streaming API
-  version: 2.2.0
+  version: 2.2.1
   description: |
     Real-time price streaming from Yahoo Finance via WebSocket.
 

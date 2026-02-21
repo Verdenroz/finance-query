@@ -185,7 +185,7 @@ impl TickersBuilder {
     /// Share an existing authenticated session instead of creating a new one.
     ///
     /// This avoids redundant authentication when you have multiple `Tickers`
-    /// instances or want to share a session with individual [`Ticker`] instances.
+    /// instances or want to share a session with individual [`crate::Ticker`] instances.
     ///
     /// Obtain a [`ClientHandle`](crate::ClientHandle) from any existing
     /// [`Ticker`](crate::Ticker) via [`Ticker::client_handle()`](crate::Ticker::client_handle).

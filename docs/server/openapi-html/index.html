@@ -23,7 +23,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Finance Query v2",
-    "version": "2.2.0",
+    "version": "2.2.1",
     "description": "REST API for fetching financial data from Yahoo Finance and SEC EDGAR.\nProvides real-time quotes, historical data, news, options, SEC filings, and more.\n\nEDGAR endpoints require EDGAR_EMAIL environment variable to be configured.\n",
     "contact": {
       "name": "Finance Query",
@@ -480,12 +480,21 @@
             "description": "Include dividends, splits, and capital gains in response"
           },
           {
+            "name": "patterns",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Detect candlestick patterns and include a per-bar signal array.\nThe `patterns` array has the same length as `candles`; each element\nis either a pattern name (e.g. `\"Hammer\"`, `\"BullishEngulfing\"`) or\n`null` when no pattern was detected on that bar.\n"
+          },
+          {
             "$ref": "#/components/parameters/Fields"
           }
         ],
         "responses": {
           "200": {
-            "description": "Chart data (with optional events)",
+            "description": "Chart data (with optional events and patterns)",
             "content": {
               "application/json": {
                 "schema": {
@@ -496,6 +505,36 @@
                     {
                       "type": "object",
                       "properties": {
+                        "patterns": {
+                          "type": "array",
+                          "description": "Per-candle pattern signals (when patterns=true).\nAligns 1:1 with the `candles` array.\n",
+                          "items": {
+                            "type": "string",
+                            "nullable": true,
+                            "enum": [
+                              "MorningStar",
+                              "EveningStar",
+                              "ThreeWhiteSoldiers",
+                              "ThreeBlackCrows",
+                              "BullishEngulfing",
+                              "BearishEngulfing",
+                              "BullishHarami",
+                              "BearishHarami",
+                              "PiercingLine",
+                              "DarkCloudCover",
+                              "TweezerTop",
+                              "TweezerBottom",
+                              "Doji",
+                              "SpinningTop",
+                              "BullishMarubozu",
+                              "BearishMarubozu",
+                              "Hammer",
+                              "InvertedHammer",
+                              "HangingMan",
+                              "ShootingStar"
+                            ]
+                          }
+                        },
                         "dividends": {
                           "type": "array",
                           "description": "Dividend events (when events=true)",
@@ -965,6 +1004,15 @@
               "default": "1mo"
             },
             "description": "Time range"
+          },
+          {
+            "name": "patterns",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            },
+            "description": "Detect candlestick patterns and include a per-bar signal array in\neach chart object. The `patterns` array aligns 1:1 with `candles`.\n"
           },
           {
             "$ref": "#/components/parameters/Fields"

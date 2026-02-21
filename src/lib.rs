@@ -190,6 +190,8 @@ pub use indicators::{
     BollingerBands,
     BollingerBandsData,
     BullBearPowerData,
+    // Candlestick pattern types
+    CandlePattern,
     DonchianChannelsData,
     ElderRayData,
     IchimokuData,
@@ -200,9 +202,11 @@ pub use indicators::{
     KeltnerChannelsData,
     MacdData,
     MacdResult,
+    PatternSentiment,
     StochasticData,
     SuperTrendData,
     atr,
+    patterns,
 };
 
 // ============================================================================

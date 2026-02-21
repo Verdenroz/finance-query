@@ -153,9 +153,6 @@ endif
 	@sed -i 's/^  version: [0-9.]*$$/  version: $(VERSION)/' server/openapi.yaml
 	@# Update server AsyncAPI version
 	@sed -i 's/^  version: [0-9.]*$$/  version: $(VERSION)/' server/asyncapi.yaml
-	@# Copy server specs to docs
-	@cp server/openapi.yaml docs/openapi.yml
-	@cp server/asyncapi.yaml docs/asyncapi.yaml
 	@echo "$(GREEN)Regenerating API docs HTML...$(NC)"
 	@$(MAKE) -s generate-api-html
 	@echo "$(GREEN)✓ Version bumped to $(VERSION)$(NC)"
@@ -165,8 +162,6 @@ endif
 	@echo "  - finance-query-derive/Cargo.toml"
 	@echo "  - server/openapi.yaml"
 	@echo "  - server/asyncapi.yaml"
-	@echo "  - docs/openapi.yml"
-	@echo "  - docs/asyncapi.yaml"
 	@echo "  - docs/server/openapi-html/index.html"
 	@echo "  - docs/server/asyncapi-html/index.html"
 

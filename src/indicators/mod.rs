@@ -68,6 +68,7 @@ mod mfi;
 mod momentum;
 mod obv;
 mod parabolic_sar;
+mod patterns;
 mod roc;
 mod rsi;
 mod sma;
@@ -84,7 +85,7 @@ mod wma;
 // Summary module for batch indicator calculations
 pub mod summary;
 
-// Re-export all indicators
+// Re-export all indicators and patterns
 pub use accumulation_distribution::accumulation_distribution;
 pub use adx::adx;
 pub use alma::alma;
@@ -113,6 +114,7 @@ pub use mfi::mfi;
 pub use momentum::momentum;
 pub use obv::obv;
 pub use parabolic_sar::parabolic_sar;
+pub use patterns::{CandlePattern, PatternSentiment, patterns};
 pub use roc::roc;
 pub use rsi::rsi;
 pub use sma::sma;

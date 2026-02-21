@@ -30,7 +30,14 @@ let ticker = Ticker::builder("2330.TW")
     .build()
     .await?;
 
-// Manual configuration
+// With logo fetching and in-memory cache (TTL: 5 minutes)
+let ticker = Ticker::builder("AAPL")
+    .logo()
+    .cache(Duration::from_secs(300))
+    .build()
+    .await?;
+
+// Manual language/region configuration
 let ticker = Ticker::builder("AAPL")
     .lang("en-US")
     .region_code("US")
@@ -47,6 +54,8 @@ let ticker = Ticker::builder("AAPL")
 - `.region_code(String)` - Set region code (e.g., "US", "JP")
 - `.timeout(Duration)` - Set HTTP request timeout
 - `.proxy(String)` - Set proxy URL
+- `.logo()` - Fetch company logo URLs alongside quote data
+- `.cache(Duration)` - Enable in-memory caching with the given TTL (time-to-live)
 
 See [Configuration](configuration.md) for details on available regions and settings.
 
@@ -57,7 +66,7 @@ See [Configuration](configuration.md) for details on available regions and setti
 Get a comprehensive quote with all key metrics:
 
 ```rust
-// Get quote with logo URL
+// Enable logo fetching via builder
 let ticker = Ticker::builder("AAPL").logo().build().await?;
 let quote = ticker.quote().await?;
 
@@ -70,6 +79,7 @@ let change_pct = quote.regular_market_change_percent.as_ref().and_then(|v| v.raw
 println!("Change: {:+.2} ({:+.2}%)", change, change_pct);
 let market_cap = quote.market_cap.as_ref().and_then(|v| v.raw).unwrap_or(0);
 println!("Market Cap: ${}", market_cap);
+// Logo URLs (only populated when .logo() is used on the builder)
 println!("Logo: {:?}", quote.logo_url);
 println!("Company Logo: {:?}", quote.company_logo_url);
 ```
@@ -97,7 +107,7 @@ if let Some(fd) = financial_data {
     println!("Profit Margin: {:.2}%", profit_margins * 100.0);
 }
 
-// Get EPS from DefaultKeyStatistics
+// Get EPS from DefaultKeyStatistics (not FinancialData)
 if let Some(stats) = ticker.key_stats().await? {
     let eps = stats.trailing_eps.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
     println!("EPS: ${:.2}", eps);
@@ -191,7 +201,7 @@ use finance_query::{Interval, TimeRange};
 // Daily candles for the past month
 let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 
-println!("Symbol: {}", chart.meta.symbol);
+println!("Symbol: {}", chart.symbol);
 println!("Currency: {}", chart.meta.currency.as_deref().unwrap_or("N/A"));
 println!("Exchange: {}", chart.meta.exchange_name.as_deref().unwrap_or("N/A"));
 println!("Timezone: {}", chart.meta.timezone.as_deref().unwrap_or("N/A"));
@@ -218,12 +228,15 @@ for candle in &chart.candles {
 **Chart Structure:**
 ```rust
 pub struct Chart {
-    pub meta: ChartMeta,        // Metadata (symbol, currency, timezone, etc.)
+    pub symbol: String,         // Stock symbol
+    pub meta: ChartMeta,        // Metadata (exchange, currency, timezone, etc.)
     pub candles: Vec<Candle>,   // OHLCV candles
+    pub interval: Option<Interval>,
+    pub range: Option<TimeRange>,
 }
 
 pub struct Candle {
-    pub timestamp: i64,         // Unix timestamp
+    pub timestamp: i64,         // Unix timestamp (seconds)
     pub open: f64,
     pub high: f64,
     pub low: f64,
@@ -238,27 +251,23 @@ pub struct Candle {
 #### Dividends
 
 ```rust
-use chrono::{DateTime, Utc};
-
 let dividends = ticker.dividends(TimeRange::TwoYears).await?;
 
 for div in &dividends {
-    let dt = DateTime::from_timestamp(div.timestamp, 0).unwrap();
-    println!("{}: ${:.2} dividend", dt.format("%Y-%m-%d"), div.amount);
+    // div.timestamp is a Unix timestamp (i64, seconds since epoch)
+    println!("timestamp={}, amount=${:.4}", div.timestamp, div.amount);
 }
 ```
 
 #### Stock Splits
 
 ```rust
-use chrono::{DateTime, Utc};
-
 let splits = ticker.splits(TimeRange::Max).await?;
 
 for split in &splits {
-    let dt = DateTime::from_timestamp(split.timestamp, 0).unwrap();
-    println!("{}: {} split (ratio: {})",
-        dt.format("%Y-%m-%d"), split.split_ratio, split.numerator / split.denominator
+    // ratio is a human-readable string like "4:1"
+    println!("timestamp={}, ratio={} ({}/{})",
+        split.timestamp, split.ratio, split.numerator, split.denominator
     );
 }
 ```
@@ -268,13 +277,10 @@ for split in &splits {
 Distributions of capital gains (common for ETFs and mutual funds):
 
 ```rust
-use chrono::{DateTime, Utc};
-
 let gains = ticker.capital_gains(TimeRange::FiveYears).await?;
 
 for gain in &gains {
-    let dt = DateTime::from_timestamp(gain.timestamp, 0).unwrap();
-    println!("{}: ${:.4} per share", dt.format("%Y-%m-%d"), gain.amount);
+    println!("timestamp={}, amount=${:.4} per share", gain.timestamp, gain.amount);
 }
 ```
 
@@ -284,7 +290,7 @@ Calculate technical indicators with three approaches:
 
 #### 1. Summary API
 
-Get all 52+ pre-calculated indicators at once:
+Get all pre-calculated indicators at once:
 
 ```rust
 use finance_query::{Interval, TimeRange};
@@ -304,19 +310,15 @@ if let Some(sma) = indicators.sma_200 {
 
 // Compound indicators (Option<Struct>)
 if let Some(macd) = &indicators.macd {
-    if let Some(line) = macd.macd {
-        if let Some(signal) = macd.signal {
-            println!("MACD: {:.4} | Signal: {:.4}", line, signal);
-            if line > signal { println!("  -> Bullish"); }
-        }
+    if let (Some(line), Some(signal)) = (macd.macd, macd.signal) {
+        println!("MACD: {:.4} | Signal: {:.4}", line, signal);
+        if line > signal { println!("  -> Bullish"); }
     }
 }
 
 if let Some(bb) = &indicators.bollinger_bands {
-    if let Some(upper) = bb.upper {
-        if let Some(lower) = bb.lower {
-            println!("Bollinger: Upper={:.2}, Lower={:.2}", upper, lower);
-        }
+    if let (Some(upper), Some(lower)) = (bb.upper, bb.lower) {
+        println!("Bollinger: Upper={:.2}, Lower={:.2}", upper, lower);
     }
 }
 ```
@@ -358,8 +360,67 @@ if let Some(&latest) = rsi_10.last().and_then(|v| v.as_ref()) {
 ```
 
 !!! tip "See Also"
-    For complete indicator documentation including all 52+ available indicators, see [Indicators](indicators.md).
+    For complete indicator documentation including all available indicators, see [Indicators](indicators.md).
 
+### Candlestick Patterns
+
+Detect candlestick patterns from chart data (requires `indicators` feature):
+
+```rust
+use finance_query::indicators::{CandlePattern, PatternSentiment};
+
+let chart = ticker.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
+
+// Returns Vec<Option<CandlePattern>>, 1:1 aligned with chart.candles
+let signals = chart.patterns();
+
+// Zip patterns with candles for context
+for (candle, pattern) in chart.candles.iter().zip(signals.iter()) {
+    if let Some(p) = pattern {
+        println!(
+            "timestamp={}: {:?} ({:?})",
+            candle.timestamp, p, p.sentiment()
+        );
+    }
+}
+
+// Count bullish signals in the period
+let bullish_count = signals
+    .iter()
+    .filter(|s| s.map(|p| p.sentiment() == PatternSentiment::Bullish).unwrap_or(false))
+    .count();
+println!("{bullish_count} bullish patterns detected");
+```
+
+**Available Patterns (20 total):**
+
+| Category | Pattern | Signal |
+|----------|---------|--------|
+| Three-bar | `MorningStar` | Bullish reversal |
+| Three-bar | `EveningStar` | Bearish reversal |
+| Three-bar | `ThreeWhiteSoldiers` | Bullish continuation |
+| Three-bar | `ThreeBlackCrows` | Bearish continuation |
+| Two-bar | `BullishEngulfing` | Bullish reversal |
+| Two-bar | `BearishEngulfing` | Bearish reversal |
+| Two-bar | `BullishHarami` | Bullish reversal |
+| Two-bar | `BearishHarami` | Bearish reversal |
+| Two-bar | `PiercingLine` | Bullish reversal |
+| Two-bar | `DarkCloudCover` | Bearish reversal |
+| Two-bar | `TweezerBottom` | Bullish reversal at support |
+| Two-bar | `TweezerTop` | Bearish reversal at resistance |
+| One-bar | `Hammer` | Bullish reversal (downtrend) |
+| One-bar | `InvertedHammer` | Bullish reversal (downtrend) |
+| One-bar | `HangingMan` | Bearish reversal (uptrend) |
+| One-bar | `ShootingStar` | Bearish reversal (uptrend) |
+| One-bar | `BullishMarubozu` | Bullish strength |
+| One-bar | `BearishMarubozu` | Bearish strength |
+| One-bar | `Doji` | Indecision |
+| One-bar | `SpinningTop` | Indecision |
+
+**Pattern priority:** Three-bar → two-bar → one-bar. Each candle slot holds at most one pattern. Output is always the same length as `chart.candles`.
+
+!!! tip "Combine with indicators"
+    Patterns are most useful as filters on top of indicators. For example, `RSI < 30` combined with a `Hammer` or `BullishEngulfing` gives a stronger entry signal than either alone.
 
 ## Recommendations
 
@@ -433,32 +494,38 @@ Get options chains:
 // Get all available expiration dates and options
 let options = ticker.options(None).await?;
 
+// expiration_dates() and strikes() are methods
 println!("Available expiration dates:");
-for exp in &options.expiration_dates {
-    let date = chrono::NaiveDateTime::from_timestamp_opt(*exp, 0).unwrap();
-    println!("  {}", date.format("%Y-%m-%d"));
+for exp in options.expiration_dates() {
+    println!("  {}", exp);  // Unix timestamp (i64)
 }
 
-// Calls and puts for the first expiration
-if let Some(chain) = options.options.first() {
-    println!("\nCalls:");
-    for call in &chain.calls {
-        println!("  Strike ${:.2}: ${:.2} (volume: {})",
-            call.strike, call.last_price, call.volume
-        );
-    }
+// calls() and puts() return a Contracts collection
+println!("\nCalls:");
+for call in &*options.calls() {
+    println!(
+        "  Strike ${:.2}: last=${:.2}, volume={}",
+        call.strike,
+        call.last_price.unwrap_or(0.0),
+        call.volume.unwrap_or(0),
+    );
+}
 
-    println!("\nPuts:");
-    for put in &chain.puts {
-        println!("  Strike ${:.2}: ${:.2} (volume: {})",
-            put.strike, put.last_price, put.volume
-        );
-    }
+println!("\nPuts:");
+for put in &*options.puts() {
+    println!(
+        "  Strike ${:.2}: last=${:.2}, IV={:.4}",
+        put.strike,
+        put.last_price.unwrap_or(0.0),
+        put.implied_volatility.unwrap_or(0.0),
+    );
 }
 
 // Get options for a specific expiration date
-let specific_exp = options.expiration_dates[1]; // Second expiration
-let options_dated = ticker.options(Some(specific_exp)).await?;
+let exp_dates = options.expiration_dates();
+if exp_dates.len() > 1 {
+    let options_dated = ticker.options(Some(exp_dates[1])).await?;
+}
 ```
 
 ## News
@@ -514,7 +581,22 @@ for meta in &all_transcripts {
 
 ## Caching Behavior
 
-Understanding how Ticker caches data is important for efficient usage:
+Understanding how Ticker caches data is important for efficient usage.
+
+### In-Memory Cache (Optional)
+
+Enable with `.cache(Duration)` on the builder. Disabled by default.
+
+```rust
+use std::time::Duration;
+
+let ticker = Ticker::builder("AAPL")
+    .cache(Duration::from_secs(300))  // 5-minute TTL
+    .build()
+    .await?;
+```
+
+When enabled, all fetched data is stored in an `Arc<RwLock<...>>` cache inside the `Ticker` and automatically invalidated after the TTL.
 
 ### Quote Summary Modules
 
@@ -524,11 +606,10 @@ let ticker = Ticker::new("AAPL").await?;
 // First access to ANY quote module -> 1 API call fetching ALL ~30 modules
 let price = ticker.price().await?;
 
-// All subsequent module accesses -> 0 API calls (cached)
-let financial_data = ticker.financial_data().await?;  // cached
-let profile = ticker.asset_profile().await?;          // cached
-let stats = ticker.key_stats().await?;                // cached
-// ... all other modules are cached
+// All subsequent module accesses -> 0 API calls (same Ticker instance)
+let financial_data = ticker.financial_data().await?;  // no network
+let profile = ticker.asset_profile().await?;          // no network
+let stats = ticker.key_stats().await?;                // no network
 ```
 
 ### Chart Data
@@ -543,8 +624,8 @@ let daily_1mo = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 let daily_1mo_again = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 
 // Different interval or range -> new API call
-let hourly_1mo = ticker.chart(Interval::OneHour, TimeRange::OneMonth).await?;  // 1 API call
-let daily_3mo = ticker.chart(Interval::OneDay, TimeRange::ThreeMonths).await?; // 1 API call
+let hourly_1mo = ticker.chart(Interval::OneHour, TimeRange::OneMonth).await?;
+let daily_3mo = ticker.chart(Interval::OneDay, TimeRange::ThreeMonths).await?;
 ```
 
 ### Financials and Options
@@ -557,12 +638,12 @@ use finance_query::{StatementType, Frequency};
 // First call -> 1 API call
 let income_annual = ticker.financials(StatementType::Income, Frequency::Annual).await?;
 
-// Same parameters -> cached (0 API calls)
+// Same parameters -> cached
 let income_annual_again = ticker.financials(StatementType::Income, Frequency::Annual).await?;
 
 // Different parameters -> new API call
-let income_quarterly = ticker.financials(StatementType::Income, Frequency::Quarterly).await?;  // 1 API call
-let balance_annual = ticker.financials(StatementType::Balance, Frequency::Annual).await?;     // 1 API call
+let income_quarterly = ticker.financials(StatementType::Income, Frequency::Quarterly).await?;
+let balance_annual = ticker.financials(StatementType::Balance, Frequency::Annual).await?;
 ```
 
 Options are cached per expiration date:
@@ -571,26 +652,22 @@ Options are cached per expiration date:
 // First call -> 1 API call
 let current_options = ticker.options(None).await?;
 
-// Same date -> cached (0 API calls)
+// Same date -> cached
 let current_again = ticker.options(None).await?;
 
 // Different date -> new API call
-let future_options = ticker.options(Some(1735689600)).await?;  // 1 API call
+let future_options = ticker.options(Some(1735689600)).await?;
 ```
 
 ### News and Recommendations
 
-These are fetched once and cached:
+These are fetched once per Ticker instance and cached:
 
 ```rust
-// First call -> 1 API call
 let news = ticker.news().await?;
+let news_again = ticker.news().await?;  // cached
 
-// Second call -> cached (0 API calls)
-let news_again = ticker.news().await?;
-
-// Same for recommendations
-let recs = ticker.recommendations(10).await?;  // 1 API call
+let recs = ticker.recommendations(10).await?;
 let recs_again = ticker.recommendations(10).await?;  // cached
 ```
 
@@ -618,7 +695,7 @@ let recs_again = ticker.recommendations(10).await?;  // cached
 
 ## Next Steps
 
-- [Technical Indicators](indicators.md) - Access 52+ technical indicators for analysis
+- [Technical Indicators](indicators.md) - Access 42 indicators + candlestick patterns for analysis
 - [Backtesting](backtesting.md) - Test trading strategies against historical data
 - [Batch Tickers](tickers.md) - Efficient operations for multiple symbols
 - [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis

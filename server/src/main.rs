@@ -277,6 +277,11 @@ struct ChartQuery {
     /// Include events (dividends, splits, capital gains) in response
     #[serde(default)]
     events: bool,
+    /// Detect candlestick patterns and include per-candle signals in response.
+    /// The `patterns` array aligns 1:1 with the `candles` array; `null` means
+    /// no pattern was detected on that bar.
+    #[serde(default)]
+    patterns: bool,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
 }
@@ -302,6 +307,9 @@ struct BatchChartsQuery {
     interval: String,
     #[serde(default = "default_range")]
     range: String,
+    /// Detect candlestick patterns and include per-candle signals in response.
+    #[serde(default)]
+    patterns: bool,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
 }
@@ -652,7 +660,7 @@ fn default_range() -> String {
 
 // ===== BATCH ENDPOINTS =====
 
-/// GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>
+/// GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>&patterns=<bool>
 async fn get_batch_charts(
     Extension(state): Extension<AppState>,
     Query(params): Query<BatchChartsQuery>,
@@ -662,16 +670,22 @@ async fn get_batch_charts(
     let interval = parse_interval(&params.interval);
     let range = parse_range(&params.range);
     let fields = parse_fields(params.fields.as_deref());
+    let patterns_str = if params.patterns { "1" } else { "0" };
+    let include_patterns = params.patterns;
 
     info!(
-        "Fetching batch charts for {} symbols (interval={}, range={})",
+        "Fetching batch charts for {} symbols (interval={}, range={}, patterns={})",
         symbols.len(),
         params.interval,
-        params.range
+        params.range,
+        params.patterns,
     );
 
     let symbols_key = symbols.join(",").to_uppercase();
-    let cache_key = Cache::key("charts", &[&symbols_key, &params.interval, &params.range]);
+    let cache_key = Cache::key(
+        "charts",
+        &[&symbols_key, &params.interval, &params.range, patterns_str],
+    );
 
     match state
         .cache
@@ -687,8 +701,29 @@ async fn get_batch_charts(
                     batch_response.success_count(),
                     batch_response.error_count()
                 );
-                let json = serde_json::to_value(&batch_response)
+
+                let mut json = serde_json::to_value(&batch_response)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+
+                // Inject per-candle pattern signals into each chart in the batch.
+                if include_patterns
+                    && let serde_json::Value::Object(ref mut top) = json
+                    && let Some(charts_val) = top.get_mut("charts")
+                    && let serde_json::Value::Object(charts_map) = charts_val
+                {
+                    for (symbol, chart) in &batch_response.charts {
+                        if let Some(chart_val) = charts_map.get_mut(symbol)
+                            && let serde_json::Value::Object(m) = chart_val
+                        {
+                            let signals = finance_query::patterns(&chart.candles);
+                            m.insert(
+                                "patterns".to_string(),
+                                serde_json::to_value(signals).unwrap_or_default(),
+                            );
+                        }
+                    }
+                }
+
                 Ok(json)
             },
         )
@@ -1194,9 +1229,9 @@ fn api_routes() -> Router {
         .route("/capital-gains/{symbol}", get(get_capital_gains))
         // GET /v2/capital-gains?symbols=<csv>&range=<str>
         .route("/capital-gains", get(get_batch_capital_gains))
-        // GET /v2/chart/{symbol}?interval=<str>&range=<str>&events=<bool>
+        // GET /v2/chart/{symbol}?interval=<str>&range=<str>&events=<bool>&patterns=<bool>
         .route("/chart/{symbol}", get(get_chart))
-        // GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>
+        // GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>&patterns=<bool>
         .route("/charts", get(get_batch_charts))
         // GET /v2/currencies
         .route("/currencies", get(get_currencies))
@@ -1664,9 +1699,10 @@ async fn get_chart(
     let range = parse_range(&params.range);
     let fields = parse_fields(params.fields.as_deref());
     let events_str = if params.events { "1" } else { "0" };
+    let patterns_str = if params.patterns { "1" } else { "0" };
     info!(
-        "Fetching chart data for {} (events={}, fields={:?})",
-        symbol, params.events, params.fields
+        "Fetching chart data for {} (events={}, patterns={}, fields={:?})",
+        symbol, params.events, params.patterns, params.fields
     );
 
     let cache_key = Cache::key(
@@ -1676,10 +1712,12 @@ async fn get_chart(
             &params.interval,
             &params.range,
             events_str,
+            patterns_str,
         ],
     );
     let symbol_clone = symbol.clone();
     let include_events = params.events;
+    let include_patterns = params.patterns;
 
     match state
         .cache
@@ -1692,6 +1730,16 @@ async fn get_chart(
                 let chart = ticker.chart(interval, range).await?;
                 let mut json = serde_json::to_value(&chart)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+
+                // Include candlestick pattern signals if requested.
+                // The `patterns` array aligns 1:1 with `candles`; null = no pattern.
+                if include_patterns && let serde_json::Value::Object(ref mut map) = json {
+                    let signals = finance_query::patterns(&chart.candles);
+                    map.insert(
+                        "patterns".to_string(),
+                        serde_json::to_value(signals).unwrap_or_default(),
+                    );
+                }
 
                 // Include events if requested
                 if include_events && let serde_json::Value::Object(ref mut map) = json {

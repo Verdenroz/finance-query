@@ -22,38 +22,91 @@ Copy `.env.template` to `.env`:
 PORT=8000
 RUST_LOG=info
 REDIS_URL=redis://localhost:6379  # Optional
+RATE_LIMIT_PER_MINUTE=60         # Optional, default 60
+EDGAR_EMAIL=you@example.com      # Required for EDGAR endpoints
 ```
 
 ## Endpoints
 
 All endpoints are prefixed with `/v2`.
 
-### Quotes & Market Data
-- `GET /v2/quote/:symbols` - Get quotes (comma-separated)
-- `GET /v2/simple-quote/:symbols` - Minimal quote data
-- `GET /v2/spark` - Sparkline data for multiple symbols
-- `GET /v2/chart/:symbol` - Historical OHLCV data
-- `GET /v2/market` - Market summary
-- `GET /v2/trending` - Trending symbols
-- `GET /v2/indices` - World indices
-- `GET /v2/sector` - Sector performance
+### Single Symbol
 
-### Company Data
-- `GET /v2/info/:symbol` - Full company info
-- `GET /v2/financials/:symbol` - Financial statements
-- `GET /v2/earnings/:symbol` - Earnings data
-- `GET /v2/options/:symbol` - Options chain
-- `GET /v2/news/:symbol` - Company news
-- `GET /v2/recommendations/:symbol` - Analyst recommendations
+| Route | Description |
+|-------|-------------|
+| `GET /v2/quote/{symbol}` | Current quote |
+| `GET /v2/quote-type/{symbol}` | Quote type metadata |
+| `GET /v2/chart/{symbol}` | Historical OHLCV data |
+| `GET /v2/options/{symbol}` | Options chain |
+| `GET /v2/recommendations/{symbol}` | Similar stocks + analyst ratings |
+| `GET /v2/news/{symbol}` | Company news |
+| `GET /v2/holders/{symbol}/{holder_type}` | Major/institutional/insider holders |
+| `GET /v2/analysis/{symbol}/{analysis_type}` | Recommendations, earnings, or upgrades |
+| `GET /v2/financials/{symbol}/{statement}` | Income/balance/cashflow statements |
+| `GET /v2/dividends/{symbol}` | Dividend history |
+| `GET /v2/splits/{symbol}` | Stock split history |
+| `GET /v2/capital-gains/{symbol}` | Capital gains history |
+| `GET /v2/indicators/{symbol}` | Technical indicators |
+| `GET /v2/transcripts/{symbol}` | Latest earnings call transcript |
+| `GET /v2/transcripts/{symbol}/all` | All earnings call transcripts |
+
+### Batch (Multiple Symbols)
+
+| Route | Description |
+|-------|-------------|
+| `GET /v2/quotes` | Quotes for multiple symbols |
+| `GET /v2/charts` | OHLCV data for multiple symbols |
+| `GET /v2/spark` | Sparkline data for multiple symbols |
+| `GET /v2/dividends` | Dividend history for multiple symbols |
+| `GET /v2/splits` | Stock split history for multiple symbols |
+| `GET /v2/capital-gains` | Capital gains for multiple symbols |
+| `GET /v2/financials` | Financial statements for multiple symbols |
+| `GET /v2/recommendations` | Recommendations for multiple symbols |
+| `GET /v2/options` | Options chains for multiple symbols |
+| `GET /v2/indicators` | Technical indicators for multiple symbols |
+
+### Market-Wide
+
+| Route | Description |
+|-------|-------------|
+| `GET /v2/search` | Search stocks, news, and research reports |
+| `GET /v2/lookup` | Type-filtered ticker discovery |
+| `GET /v2/screeners/{screener_type}` | Pre-built screeners (gainers, losers, etc.) |
+| `POST /v2/screeners/custom` | Custom screener query |
+| `GET /v2/trending` | Trending tickers |
+| `GET /v2/market-summary` | Market overview with sparklines |
+| `GET /v2/news` | General financial news |
+| `GET /v2/currencies` | Currency and commodity data |
+| `GET /v2/exchanges` | Supported exchanges |
+| `GET /v2/hours` | Market hours and status |
+| `GET /v2/indices` | World market indices |
+| `GET /v2/sectors/{sector_type}` | Sector data (11 GICS sectors) |
+| `GET /v2/industries/{industry_key}` | Industry data by slug |
+
+### EDGAR (SEC Filings)
+
+Requires `EDGAR_EMAIL` environment variable.
+
+| Route | Description |
+|-------|-------------|
+| `GET /v2/edgar/cik/{symbol}` | Resolve ticker to CIK number |
+| `GET /v2/edgar/submissions/{symbol}` | Filing history and company metadata |
+| `GET /v2/edgar/facts/{symbol}` | Structured XBRL financial data |
+| `GET /v2/edgar/search` | Full-text search of filings |
 
 ### WebSocket
-- `WS /v2/stream` - Real-time price streaming
 
-### Utilities
-- `GET /v2/lookup` - Symbol search
-- `GET /v2/hours/:exchange` - Market hours
-- `GET /v2/health` - Health check
-- `GET /v2/metrics` - Prometheus metrics (text format)
+| Route | Description |
+|-------|-------------|
+| `WS /v2/stream` | Real-time price streaming |
+
+### Infrastructure
+
+| Route | Description |
+|-------|-------------|
+| `GET /v2/health` | Health check |
+| `GET /v2/ping` | Ping |
+| `GET /v2/metrics` | Prometheus metrics (text format) |
 
 ## Features
 
