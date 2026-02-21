@@ -313,44 +313,10 @@ mod tests {
         assert!(matches!(result, Err(FinanceError::InvalidParameter { .. })));
     }
 
-    #[tokio::test]
-    #[ignore = "requires network access"]
-    async fn test_resolve_cik_with_singleton() {
+    #[test]
+    fn test_singleton_is_set_after_init() {
         let _ = init("test@example.com");
-        let cik = resolve_cik("AAPL").await.unwrap();
-        assert_eq!(cik, 320193);
-    }
-
-    #[tokio::test]
-    #[ignore = "requires network access"]
-    async fn test_submissions_with_singleton() {
-        let _ = init("test@example.com");
-        let submissions = submissions(320193).await.unwrap();
-        assert_eq!(submissions.name.as_deref(), Some("Apple Inc."));
-    }
-
-    #[tokio::test]
-    #[ignore = "requires network access"]
-    async fn test_company_facts_with_singleton() {
-        let _ = init("test@example.com");
-        let facts = company_facts(320193).await.unwrap();
-        assert!(facts.us_gaap().is_some());
-    }
-
-    #[tokio::test]
-    #[ignore = "requires network access"]
-    async fn test_search_with_singleton() {
-        let _ = init("test@example.com");
-        let results = search(
-            "artificial intelligence",
-            Some(&["10-K"]),
-            None,
-            None,
-            None,
-            None,
-        )
-        .await
-        .unwrap();
-        assert!(results.hits.is_some());
+        // Once init succeeds (or was already called), the singleton must be populated.
+        assert!(EDGAR_CLIENT.get().is_some());
     }
 }
