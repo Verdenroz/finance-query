@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Finance Query v2
-  version: 2.2.0
+  version: 2.2.1
   description: |
     REST API for fetching financial data from Yahoo Finance and SEC EDGAR.
     Provides real-time quotes, historical data, news, options, SEC filings, and more.
