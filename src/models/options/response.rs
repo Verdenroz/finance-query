@@ -165,8 +165,8 @@ impl Options {
         let call_types = Series::new("option_type".into(), vec!["call"; calls.len()]);
         let put_types = Series::new("option_type".into(), vec!["put"; puts.len()]);
 
-        calls_df.with_column(call_types)?;
-        puts_df.with_column(put_types)?;
+        calls_df.with_column(call_types.into())?;
+        puts_df.with_column(put_types.into())?;
 
         // Combine into single DataFrame
         calls_df.vstack(&puts_df)

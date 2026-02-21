@@ -174,7 +174,7 @@ impl FactConcept {
 
         // Add unit column at the beginning
         let unit_series = Series::new("unit".into(), units);
-        df.insert_column(0, unit_series)?;
+        df.insert_column(0, unit_series.into())?;
 
         Ok(df)
     }

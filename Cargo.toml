@@ -81,7 +81,7 @@ prost = "0.14.1"
 base64 = "0.22"
 
 # Optional: DataFrame support
-polars = { version = "0.52", optional = true, default-features = false, features = ["lazy"] }
+polars = { version = "0.53", optional = true, default-features = false, features = ["lazy"] }
 finance-query-derive = { version = "2.2.0", path = "finance-query-derive", optional = true }
 
 [features]
@@ -95,6 +95,7 @@ backtesting = ["indicators"]
 
 [package.metadata.docs.rs]
 all-features = true
+rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
 # Testing
