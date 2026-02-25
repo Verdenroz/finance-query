@@ -156,7 +156,7 @@ pub use models::{
 // Nested types - Commonly accessed fields within response types
 // ============================================================================
 pub use models::{
-    chart::{Candle, CapitalGain, ChartMeta, Dividend, Split},
+    chart::{Candle, CapitalGain, ChartMeta, Dividend, DividendAnalytics, Split},
     edgar::filing_index::{EdgarFilingIndex, EdgarFilingIndexItem},
     edgar::{
         CikEntry, EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSearchHit,

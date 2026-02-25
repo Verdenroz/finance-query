@@ -810,6 +810,44 @@ impl Ticker {
         Ok(filter_by_range(all, range))
     }
 
+    /// Compute dividend analytics for the requested time range.
+    ///
+    /// Calculates statistics on the dividend history: total paid, payment count,
+    /// average payment, and Compound Annual Growth Rate (CAGR).
+    ///
+    /// **CAGR note:** requires at least two payments spanning at least one calendar year.
+    ///
+    /// # Arguments
+    ///
+    /// * `range` - Time range to analyse
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::{Ticker, TimeRange};
+    ///
+    /// let ticker = Ticker::new("AAPL").await?;
+    /// let analytics = ticker.dividend_analytics(TimeRange::FiveYears).await?;
+    ///
+    /// println!("Total paid: ${:.2}", analytics.total_paid);
+    /// println!("Payments:   {}", analytics.payment_count);
+    /// if let Some(cagr) = analytics.cagr {
+    ///     println!("CAGR:       {:.1}%", cagr * 100.0);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn dividend_analytics(
+        &self,
+        range: TimeRange,
+    ) -> Result<crate::models::chart::DividendAnalytics> {
+        let dividends = self.dividends(range).await?;
+        Ok(crate::models::chart::DividendAnalytics::from_dividends(
+            &dividends,
+        ))
+    }
+
     /// Get stock split history
     ///
     /// Returns historical stock splits sorted by date.
