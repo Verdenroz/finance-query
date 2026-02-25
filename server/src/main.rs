@@ -16,8 +16,8 @@ use axum::{
 use cache::Cache;
 use finance_query::{
     FinanceError, Frequency, Interval, Region, ScreenerQuery, ScreenerType, SectorType,
-    StatementType, Ticker, Tickers, TimeRange, ValueFormat, finance, screener_query,
-    streaming::PriceStream,
+    StatementType, Ticker, Tickers, TimeRange, ValueFormat, feeds::FeedSource, finance,
+    screener_query, streaming::PriceStream,
 };
 use futures_util::{SinkExt, StreamExt};
 use rate_limit::{RateLimitConfig, RateLimiterState};
@@ -172,6 +172,7 @@ struct HealthResponse {
     status: String,
     version: String,
     timestamp: String,
+    notices: &'static [&'static str],
 }
 
 #[derive(Serialize)]
@@ -526,6 +527,218 @@ struct EdgarSearchQuery {
 
 #[derive(Deserialize)]
 struct EdgarFieldsQuery {
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+/// Query parameters for /v2/crypto/coins
+#[derive(Deserialize)]
+struct CryptoCoinsQuery {
+    /// Currency to compare against (default: "usd")
+    #[serde(default = "default_vs_currency")]
+    vs_currency: String,
+    /// Number of coins to return (default: 50)
+    #[serde(default = "default_crypto_count")]
+    count: usize,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+fn default_vs_currency() -> String {
+    "usd".to_string()
+}
+
+fn default_crypto_count() -> usize {
+    50
+}
+
+/// Query parameters for /v2/crypto/coins/{id}
+#[derive(Deserialize)]
+struct CryptoCoinQuery {
+    /// Currency to compare against (default: "usd")
+    #[serde(default = "default_vs_currency")]
+    vs_currency: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+/// Query parameters for /v2/feeds
+#[derive(Deserialize)]
+struct FeedsQuery {
+    /// Comma-separated source slugs (see `FeedSourceName` for valid values)
+    sources: Option<String>,
+    /// SEC form type for sec-filings source (e.g., "10-K", "8-K", default: "10-K")
+    form_type: Option<String>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+/// Canonical slug identifiers accepted by the `/v2/feeds` `sources` query parameter.
+///
+/// Multiple aliases are accepted (e.g. `"ft"`, `"financial-times"`, `"financialtimes"`), but the
+/// primary slug listed here is what appears in OpenAPI documentation.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum FeedSourceName {
+    FederalReserve,
+    Sec,
+    SecFilings,
+    MarketWatch,
+    Cnbc,
+    Bloomberg,
+    FinancialTimes,
+    Nyt,
+    Guardian,
+    Investing,
+    Bea,
+    Ecb,
+    Cfpb,
+    Wsj,
+    Fortune,
+    BusinessWire,
+    CoinDesk,
+    CoinTelegraph,
+    TechCrunch,
+    HackerNews,
+    OilPrice,
+    CalculatedRisk,
+    Scmp,
+    NikkeiAsia,
+    BankOfEngland,
+    VentureBeat,
+    YCombinator,
+    TheEconomist,
+    FinancialPost,
+    FtLex,
+    RitholtzBigPicture,
+}
+
+impl FeedSourceName {
+    fn parse(s: &str) -> Option<Self> {
+        match s.to_lowercase().as_str() {
+            "federal-reserve" | "federalreserve" => Some(Self::FederalReserve),
+            "sec" => Some(Self::Sec),
+            "sec-filings" | "secfilings" => Some(Self::SecFilings),
+            "marketwatch" => Some(Self::MarketWatch),
+            "cnbc" => Some(Self::Cnbc),
+            "bloomberg" => Some(Self::Bloomberg),
+            "ft" | "financial-times" | "financialtimes" => Some(Self::FinancialTimes),
+            "nyt" | "nyt-business" | "nytbusiness" => Some(Self::Nyt),
+            "guardian" | "guardian-business" | "guardianbusiness" => Some(Self::Guardian),
+            "investing" | "investing-com" | "investingcom" => Some(Self::Investing),
+            "bea" => Some(Self::Bea),
+            "ecb" => Some(Self::Ecb),
+            "cfpb" => Some(Self::Cfpb),
+            "wsj" | "wsj-markets" | "wsjmarkets" => Some(Self::Wsj),
+            "fortune" => Some(Self::Fortune),
+            "businesswire" | "business-wire" => Some(Self::BusinessWire),
+            "coindesk" | "coin-desk" => Some(Self::CoinDesk),
+            "cointelegraph" | "coin-telegraph" => Some(Self::CoinTelegraph),
+            "techcrunch" | "tech-crunch" => Some(Self::TechCrunch),
+            "hackernews" | "hacker-news" | "hn" => Some(Self::HackerNews),
+            "oilprice" | "oil-price" => Some(Self::OilPrice),
+            "calculated-risk" | "calculatedrisk" => Some(Self::CalculatedRisk),
+            "scmp" | "south-china-morning-post" => Some(Self::Scmp),
+            "nikkei" | "nikkei-asia" | "nikkeiasia" => Some(Self::NikkeiAsia),
+            "boe" | "bank-of-england" | "bankofengland" => Some(Self::BankOfEngland),
+            "venturebeat" | "venture-beat" => Some(Self::VentureBeat),
+            "yc" | "ycombinator" | "y-combinator" => Some(Self::YCombinator),
+            "economist" | "the-economist" => Some(Self::TheEconomist),
+            "financial-post" | "financialpost" => Some(Self::FinancialPost),
+            "ft-lex" | "ftlex" | "lex" => Some(Self::FtLex),
+            "ritholtz" | "big-picture" | "bigpicture" => Some(Self::RitholtzBigPicture),
+            _ => None,
+        }
+    }
+
+    fn into_feed_source(self, form_type: Option<&str>) -> FeedSource {
+        match self {
+            Self::FederalReserve => FeedSource::FederalReserve,
+            Self::Sec => FeedSource::SecPressReleases,
+            Self::SecFilings => FeedSource::SecFilings(form_type.unwrap_or("10-K").to_string()),
+            Self::MarketWatch => FeedSource::MarketWatch,
+            Self::Cnbc => FeedSource::Cnbc,
+            Self::Bloomberg => FeedSource::Bloomberg,
+            Self::FinancialTimes => FeedSource::FinancialTimes,
+            Self::Nyt => FeedSource::NytBusiness,
+            Self::Guardian => FeedSource::GuardianBusiness,
+            Self::Investing => FeedSource::Investing,
+            Self::Bea => FeedSource::Bea,
+            Self::Ecb => FeedSource::Ecb,
+            Self::Cfpb => FeedSource::Cfpb,
+            Self::Wsj => FeedSource::WsjMarkets,
+            Self::Fortune => FeedSource::Fortune,
+            Self::BusinessWire => FeedSource::BusinessWire,
+            Self::CoinDesk => FeedSource::CoinDesk,
+            Self::CoinTelegraph => FeedSource::CoinTelegraph,
+            Self::TechCrunch => FeedSource::TechCrunch,
+            Self::HackerNews => FeedSource::HackerNews,
+            Self::OilPrice => FeedSource::OilPrice,
+            Self::CalculatedRisk => FeedSource::CalculatedRisk,
+            Self::Scmp => FeedSource::Scmp,
+            Self::NikkeiAsia => FeedSource::NikkeiAsia,
+            Self::BankOfEngland => FeedSource::BankOfEngland,
+            Self::VentureBeat => FeedSource::VentureBeat,
+            Self::YCombinator => FeedSource::YCombinator,
+            Self::TheEconomist => FeedSource::TheEconomist,
+            Self::FinancialPost => FeedSource::FinancialPost,
+            Self::FtLex => FeedSource::FtLex,
+            Self::RitholtzBigPicture => FeedSource::RitholtzBigPicture,
+        }
+    }
+
+    const ALL_SLUGS: &'static [&'static str] = &[
+        "federal-reserve",
+        "sec",
+        "sec-filings",
+        "marketwatch",
+        "cnbc",
+        "bloomberg",
+        "ft",
+        "nyt",
+        "guardian",
+        "investing",
+        "bea",
+        "ecb",
+        "cfpb",
+        "wsj",
+        "fortune",
+        "businesswire",
+        "coindesk",
+        "cointelegraph",
+        "techcrunch",
+        "hackernews",
+        "oilprice",
+        "calculated-risk",
+        "scmp",
+        "nikkei",
+        "boe",
+        "venturebeat",
+        "yc",
+        "economist",
+        "financial-post",
+        "ft-lex",
+        "ritholtz",
+    ];
+}
+
+/// Query parameters for /v2/fred/treasury-yields
+#[derive(Deserialize)]
+struct TreasuryYieldsQuery {
+    /// Calendar year (default: current year)
+    year: Option<u32>,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+/// Query parameters for /v2/risk/{symbol}
+#[derive(Deserialize)]
+struct RiskQuery {
+    #[serde(default = "default_interval")]
+    interval: String,
+    #[serde(default = "default_range")]
+    range: String,
+    /// Optional benchmark symbol for beta calculation (e.g., "SPY")
+    benchmark: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
 }
@@ -1168,6 +1381,16 @@ async fn create_app() -> Router {
         info!("EDGAR client not configured (set EDGAR_EMAIL to enable)");
     }
 
+    // Initialize FRED client (optional - requires API key from stlouisfed.org)
+    if let Ok(key) = std::env::var("FRED_API_KEY") {
+        match finance_query::fred::init(key) {
+            Ok(_) => info!("FRED client initialized"),
+            Err(e) => warn!("Failed to initialize FRED client: {}", e),
+        }
+    } else {
+        info!("FRED client not configured (set FRED_API_KEY to enable)");
+    }
+
     // Configure rate limiting
     let rate_limit_config = RateLimitConfig::from_env();
     let rate_limiter = RateLimiterState::new(rate_limit_config.clone());
@@ -1233,6 +1456,10 @@ fn api_routes() -> Router {
         .route("/chart/{symbol}", get(get_chart))
         // GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>&patterns=<bool>
         .route("/charts", get(get_batch_charts))
+        // GET /v2/crypto/coins?vs_currency=<str>&count=<u32>
+        .route("/crypto/coins", get(get_crypto_coins))
+        // GET /v2/crypto/coins/{id}?vs_currency=<str>
+        .route("/crypto/coins/{id}", get(get_crypto_coin))
         // GET /v2/currencies
         .route("/currencies", get(get_currencies))
         // GET /v2/dividends/{symbol}?range=<str>
@@ -1249,10 +1476,18 @@ fn api_routes() -> Router {
         .route("/edgar/submissions/{symbol}", get(get_edgar_submissions))
         // GET /v2/exchanges
         .route("/exchanges", get(get_exchanges))
+        // GET /v2/fear-and-greed
+        .route("/fear-and-greed", get(get_fear_and_greed))
+        // GET /v2/feeds?sources=<csv>&form_type=<str>
+        .route("/feeds", get(get_feeds))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route("/financials/{symbol}/{statement}", get(get_financials))
         // GET /v2/financials?symbols=<csv>&statement=<str>&frequency=<str>
         .route("/financials", get(get_batch_financials))
+        // GET /v2/fred/series/{id}
+        .route("/fred/series/{id}", get(get_fred_series))
+        // GET /v2/fred/treasury-yields?year=<u32>
+        .route("/fred/treasury-yields", get(get_fred_treasury_yields))
         // GET /v2/health - version-prefixed health check
         .route("/health", get(health_check))
         // GET /v2/holders/{symbol}/{holder_type}
@@ -1291,6 +1526,8 @@ fn api_routes() -> Router {
         .route("/recommendations/{symbol}", get(get_recommendations))
         // GET /v2/recommendations?symbols=<csv>&limit=<u32>
         .route("/recommendations", get(get_batch_recommendations))
+        // GET /v2/risk/{symbol}?interval=<str>&range=<str>&benchmark=<str>
+        .route("/risk/{symbol}", get(get_risk))
         // GET /v2/screeners/{screener_type}?count=<u32>
         .route("/screeners/{screener_type}", get(get_screeners))
         // POST /v2/screeners/custom
@@ -1325,6 +1562,15 @@ async fn health_check() -> impl IntoResponse {
         status: "healthy".to_string(),
         version: env!("CARGO_PKG_VERSION").to_string(),
         timestamp: chrono::Utc::now().to_rfc3339(),
+        notices: &[
+            "Market data provided by Yahoo Finance. This product is not affiliated with or endorsed by Yahoo Finance or its parent company.",
+            "SEC filing data sourced from the U.S. Securities and Exchange Commission EDGAR system (https://www.sec.gov). This product is not affiliated with the SEC.",
+            "This product uses the FRED\u{ae} API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.",
+            "U.S. Treasury yield data sourced from the U.S. Department of the Treasury (https://home.treasury.gov).",
+            "Cryptocurrency data provided by CoinGecko (https://www.coingecko.com). This product is not affiliated with CoinGecko.",
+            "Fear & Greed Index data provided by alternative.me (https://alternative.me).",
+            "News feeds sourced from the Federal Reserve, SEC, MarketWatch, Bloomberg, Financial Times, The Guardian, NYT, Investing.com, BEA, ECB, and CFPB. Content remains the property of respective publishers.",
+        ],
     };
 
     Json(response)
@@ -1861,9 +2107,14 @@ async fn get_dividends(
             || async move {
                 let ticker = Ticker::new(&symbol_clone).await?;
                 let dividends = ticker.dividends(range).await?;
-                let json = serde_json::to_value(&dividends)
-                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
-                Ok(json)
+                // dividend_analytics re-uses the chart data already cached in the Ticker
+                let analytics = ticker.dividend_analytics(range).await?;
+                let json = serde_json::json!({
+                    "dividends": dividends,
+                    "analytics": analytics,
+                });
+                serde_json::to_value(json)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)
             },
         )
         .await
@@ -3440,6 +3691,356 @@ async fn get_edgar_search(
         }
         Err(e) => {
             error!("Failed to search EDGAR: {}", e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/fear-and-greed
+///
+/// Returns the CNN Fear & Greed index from alternative.me.
+async fn get_fear_and_greed(Extension(state): Extension<AppState>) -> impl IntoResponse {
+    let cache_key = Cache::key("fear_and_greed", &[]);
+    info!("Fetching Fear & Greed index");
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::GENERAL_NEWS,
+            cache::is_market_open(),
+            || async {
+                let fng = finance::fear_and_greed().await?;
+                let json = serde_json::to_value(&fng)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => (StatusCode::OK, Json(json)).into_response(),
+        Err(e) => {
+            error!("Failed to fetch Fear & Greed index: {}", e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/fred/series/{id}
+///
+/// Fetch observations for a FRED data series. Requires `FRED_API_KEY` to be set.
+async fn get_fred_series(
+    Extension(state): Extension<AppState>,
+    Path(series_id): Path<String>,
+    Query(params): Query<EdgarFieldsQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching FRED series: {}", series_id);
+
+    let cache_key = Cache::key("fred_series", &[&series_id.to_uppercase()]);
+    let id_clone = series_id.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            false, // FRED data doesn't depend on US market hours
+            || async move {
+                let series = finance_query::fred::series(&id_clone).await?;
+                let json = serde_json::to_value(&series)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch FRED series {}: {}", series_id, e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/fred/treasury-yields
+///
+/// Query: `year` (u32, default: current year)
+async fn get_fred_treasury_yields(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<TreasuryYieldsQuery>,
+) -> impl IntoResponse {
+    let year = params.year.unwrap_or_else(|| {
+        chrono::Utc::now()
+            .format("%Y")
+            .to_string()
+            .parse()
+            .unwrap_or(2025)
+    });
+    let fields = parse_fields(params.fields.as_deref());
+    info!("Fetching Treasury yields for year {}", year);
+
+    let cache_key = Cache::key("treasury_yields", &[&year.to_string()]);
+
+    match state
+        .cache
+        .get_or_fetch(&cache_key, cache::ttl::METADATA, false, || async move {
+            let yields = finance_query::fred::treasury_yields(year).await?;
+            let json = serde_json::to_value(&yields)
+                .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+            Ok(json)
+        })
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch Treasury yields for {}: {}", year, e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/crypto/coins
+///
+/// Query: `vs_currency` (str, default "usd"), `count` (u32, default 50)
+async fn get_crypto_coins(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<CryptoCoinsQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Fetching top {} crypto coins (vs {})",
+        params.count, params.vs_currency
+    );
+
+    let cache_key = Cache::key(
+        "crypto_coins",
+        &[&params.vs_currency, &params.count.to_string()],
+    );
+    let vs = params.vs_currency.clone();
+    let count = params.count;
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::QUOTES,
+            cache::is_market_open(),
+            || async move {
+                let coins = finance_query::crypto::coins(&vs, count).await?;
+                let json = serde_json::to_value(&coins)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch crypto coins: {}", e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/crypto/coins/{id}
+///
+/// Query: `vs_currency` (str, default "usd")
+async fn get_crypto_coin(
+    Extension(state): Extension<AppState>,
+    Path(coin_id): Path<String>,
+    Query(params): Query<CryptoCoinQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Fetching crypto coin: {} (vs {})",
+        coin_id, params.vs_currency
+    );
+
+    let cache_key = Cache::key("crypto_coin", &[&coin_id, &params.vs_currency]);
+    let id_clone = coin_id.clone();
+    let vs = params.vs_currency.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::QUOTES,
+            cache::is_market_open(),
+            || async move {
+                let coin = finance_query::crypto::coin(&id_clone, &vs).await?;
+                let json = serde_json::to_value(&coin)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch crypto coin {}: {}", coin_id, e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// GET /v2/feeds
+///
+/// Query: `sources` (csv, default: all built-in), `form_type` (str, for sec-filings source)
+async fn get_feeds(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<FeedsQuery>,
+) -> impl IntoResponse {
+    let fields = parse_fields(params.fields.as_deref());
+    let source_list = params.sources.as_deref().unwrap_or("all");
+    info!("Fetching feeds (sources={})", source_list);
+
+    let cache_key = Cache::key(
+        "feeds",
+        &[source_list, params.form_type.as_deref().unwrap_or("")],
+    );
+    let sources = match parse_feed_sources(params.sources.as_deref(), params.form_type.as_deref()) {
+        Ok(s) => s,
+        Err(msg) => {
+            let error = serde_json::json!({ "error": msg, "status": 400 });
+            return (StatusCode::BAD_REQUEST, Json(error)).into_response();
+        }
+    };
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::GENERAL_NEWS,
+            cache::is_market_open(),
+            || async move {
+                let entries = finance_query::feeds::fetch_all(&sources).await?;
+                let json = serde_json::to_value(&entries)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch feeds: {}", e);
+            into_error_response(e)
+        }
+    }
+}
+
+/// Parse comma-separated source slugs into a `Vec<FeedSource>`.
+///
+/// Returns `Err` with a descriptive message if any slug is unrecognized (caller should 400).
+/// Falls back to default sources when `sources` is `None`.
+fn parse_feed_sources(
+    sources: Option<&str>,
+    form_type: Option<&str>,
+) -> Result<Vec<FeedSource>, String> {
+    let default_sources = || {
+        vec![
+            FeedSource::FederalReserve,
+            FeedSource::SecPressReleases,
+            FeedSource::MarketWatch,
+            FeedSource::Bloomberg,
+        ]
+    };
+
+    let Some(sources_str) = sources else {
+        return Ok(default_sources());
+    };
+
+    let mut parsed = Vec::new();
+    for slug in sources_str
+        .split(',')
+        .map(str::trim)
+        .filter(|s| !s.is_empty())
+    {
+        match FeedSourceName::parse(slug) {
+            Some(name) => parsed.push(name.into_feed_source(form_type)),
+            None => {
+                return Err(format!(
+                    "Unknown feed source: '{}'. Valid sources: {}",
+                    slug,
+                    FeedSourceName::ALL_SLUGS.join(", ")
+                ));
+            }
+        }
+    }
+
+    if parsed.is_empty() {
+        Ok(default_sources())
+    } else {
+        Ok(parsed)
+    }
+}
+
+/// GET /v2/risk/{symbol}
+///
+/// Query: `interval` (str, default "1d"), `range` (str, default "1y"), `benchmark` (str, optional)
+async fn get_risk(
+    Extension(state): Extension<AppState>,
+    Path(symbol): Path<String>,
+    Query(params): Query<RiskQuery>,
+) -> impl IntoResponse {
+    let interval = parse_interval(&params.interval);
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+    info!(
+        "Fetching risk analytics for {} (interval={:?}, range={:?}, benchmark={:?})",
+        symbol, interval, range, params.benchmark
+    );
+
+    let cache_key = Cache::key(
+        "risk",
+        &[
+            &symbol.to_uppercase(),
+            &params.interval,
+            &params.range,
+            params.benchmark.as_deref().unwrap_or(""),
+        ],
+    );
+    let symbol_clone = symbol.clone();
+    let benchmark = params.benchmark.clone();
+
+    match state
+        .cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::HISTORICAL,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol_clone).await?;
+                let summary = ticker.risk(interval, range, benchmark.as_deref()).await?;
+                let json = serde_json::to_value(&summary)
+                    .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
+                Ok(json)
+            },
+        )
+        .await
+    {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Failed to fetch risk analytics for {}: {}", symbol, e);
             into_error_response(e)
         }
     }
