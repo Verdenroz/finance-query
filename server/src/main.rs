@@ -1500,8 +1500,8 @@ fn api_routes() -> Router {
         .route("/indicators", get(get_batch_indicators))
         // GET /v2/indices?format=<raw|pretty|both>
         .route("/indices", get(get_indices))
-        // GET /v2/industries/{industry_key}
-        .route("/industries/{industry_key}", get(get_industry))
+        // GET /v2/industries/{industry}
+        .route("/industries/{industry}", get(get_industry))
         // GET /v2/lookup?q=<string>&type=<string>&count=<u32>&logo=<bool>
         .route("/lookup", get(lookup))
         // GET /v2/market-summary
@@ -1528,14 +1528,14 @@ fn api_routes() -> Router {
         .route("/recommendations", get(get_batch_recommendations))
         // GET /v2/risk/{symbol}?interval=<str>&range=<str>&benchmark=<str>
         .route("/risk/{symbol}", get(get_risk))
-        // GET /v2/screeners/{screener_type}?count=<u32>
-        .route("/screeners/{screener_type}", get(get_screeners))
+        // GET /v2/screeners/{screener}?count=<u32>
+        .route("/screeners/{screener}", get(get_screeners))
         // POST /v2/screeners/custom
         .route("/screeners/custom", post(post_custom_screener))
         // GET /v2/search?q=<string>&hits=<u32>
         .route("/search", get(search))
-        // GET /v2/sectors/{sector_type}
-        .route("/sectors/{sector_type}", get(get_sector))
+        // GET /v2/sectors/{sector}
+        .route("/sectors/{sector}", get(get_sector))
         // GET /v2/spark?symbols=<csv>&interval=<str>&range=<str>
         .route("/spark", get(get_spark))
         // GET /v2/splits/{symbol}?range=<str>
@@ -2875,10 +2875,10 @@ async fn get_analysis(
     }
 }
 
-/// GET /v2/screeners/{screener_type}
+/// GET /v2/screeners/{screener}
 ///
 /// Path params:
-/// - `screener_type`: One of 15 predefined screener types (kebab-case)
+/// - `screener`: One of 15 predefined screener identifiers (kebab-case)
 ///   - Equity: aggressive-small-caps, day-gainers, day-losers, growth-technology-stocks,
 ///     most-actives, most-shorted-stocks, small-cap-gainers, undervalued-growth-stocks,
 ///     undervalued-large-caps
@@ -2888,29 +2888,29 @@ async fn get_analysis(
 /// Query: `count` (u32, default 25, max 250), `format` (raw|pretty|both), `fields` (comma-separated)
 async fn get_screeners(
     Extension(state): Extension<AppState>,
-    Path(screener_type): Path<String>,
+    Path(screener): Path<String>,
     Query(params): Query<ScreenersQuery>,
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
-    let st = match screener_type.parse::<Screener>() {
+    let st = match screener.parse::<Screener>() {
         Ok(t) => t,
         Err(_) => {
             let error = serde_json::json!({
-                "error": format!("Invalid screener type: '{}'. Valid types: {}", screener_type, Screener::valid_types()),
+                "error": format!("Invalid screener: '{}'. Valid types: {}", screener, Screener::valid_types()),
                 "status": 400
             });
             return (StatusCode::BAD_REQUEST, Json(error)).into_response();
         }
     };
 
-    let cache_key = Cache::key("screener", &[&screener_type, &params.count.to_string()]);
+    let cache_key = Cache::key("screener", &[&screener, &params.count.to_string()]);
     let count = params.count;
-    let screener_type_clone = screener_type.clone();
+    let screener_clone = screener.clone();
 
     info!(
         "Fetching {} screener (count={}, format={:?}, fields={:?})",
-        screener_type, count, params.format, params.fields
+        screener, count, params.format, params.fields
     );
 
     match state
@@ -2933,39 +2933,39 @@ async fn get_screeners(
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Failed to fetch {} screener: {}", screener_type_clone, e);
+            error!("Failed to fetch {} screener: {}", screener_clone, e);
             into_error_response(e)
         }
     }
 }
 
-/// GET /v2/sectors/{sector_type}
+/// GET /v2/sectors/{sector}
 ///
 /// Query: `format` (raw|pretty|both), `fields` (comma-separated)
 async fn get_sector(
     Extension(state): Extension<AppState>,
-    Path(sector_type): Path<String>,
+    Path(sector): Path<String>,
     Query(params): Query<SectorQuery>,
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
-    let st = match sector_type.parse::<Sector>() {
+    let st = match sector.parse::<Sector>() {
         Ok(t) => t,
         Err(_) => {
             let error = serde_json::json!({
-                "error": format!("Invalid sector type: '{}'. Valid types: {}", sector_type, Sector::valid_types()),
+                "error": format!("Invalid sector: '{}'. Valid types: {}", sector, Sector::valid_types()),
                 "status": 400
             });
             return (StatusCode::BAD_REQUEST, Json(error)).into_response();
         }
     };
 
-    let cache_key = Cache::key("sector", &[&sector_type]);
-    let sector_type_clone = sector_type.clone();
+    let cache_key = Cache::key("sector", &[&sector]);
+    let sector_clone = sector.clone();
 
     info!(
         "Fetching {} sector (format={:?}, fields={:?})",
-        sector_type, params.format, params.fields
+        sector, params.format, params.fields
     );
 
     match state
@@ -2988,29 +2988,29 @@ async fn get_sector(
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Failed to fetch {} sector: {}", sector_type_clone, e);
+            error!("Failed to fetch {} sector: {}", sector_clone, e);
             into_error_response(e)
         }
     }
 }
 
-/// GET /v2/industries/{industry_key}
+/// GET /v2/industries/{industry}
 ///
 /// Query: `format` (raw|pretty|both), `fields` (comma-separated)
 async fn get_industry(
     Extension(state): Extension<AppState>,
-    Path(industry_key): Path<String>,
+    Path(industry): Path<String>,
     Query(params): Query<SectorQuery>,
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
 
-    let cache_key = Cache::key("industry", &[&industry_key]);
-    let industry_key_clone = industry_key.clone();
+    let cache_key = Cache::key("industry", &[&industry]);
+    let industry_clone = industry.clone();
 
     info!(
         "Fetching {} industry (format={:?}, fields={:?})",
-        industry_key, params.format, params.fields
+        industry, params.format, params.fields
     );
 
     match state
@@ -3020,7 +3020,7 @@ async fn get_industry(
             cache::ttl::SECTORS,
             cache::is_market_open(),
             || async move {
-                let data = finance::industry(&industry_key_clone).await?;
+                let data = finance::industry(&industry_clone).await?;
                 let json = serde_json::to_value(data)
                     .map_err(|e| Box::new(e) as Box<dyn std::error::Error + Send + Sync>)?;
                 Ok(json)
@@ -3033,7 +3033,7 @@ async fn get_industry(
             (StatusCode::OK, Json(response)).into_response()
         }
         Err(e) => {
-            error!("Failed to fetch {} industry: {}", industry_key, e);
+            error!("Failed to fetch {} industry: {}", industry, e);
             into_error_response(e)
         }
     }

@@ -1182,7 +1182,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /v2/screeners/{screener_type}:
+  /v2/screeners/{screener}:
     get:
       tags: [Screeners]
       summary: Get screener results
@@ -1208,7 +1208,7 @@ paths:
         - `solid-midcap-growth-funds`: Mid-cap growth funds
         - `top-mutual-funds`: Top performing mutual funds
       parameters:
-        - name: screener_type
+        - name: screener
           in: path
           required: true
           schema:
@@ -1229,7 +1229,9 @@ paths:
               - solid-large-growth-funds
               - solid-midcap-growth-funds
               - top-mutual-funds
-          description: Predefined screener type
+          description: >
+            Predefined screener identifier. Accepts kebab-case or underscore variants
+            (e.g., `most-actives` or `most_actives`).
           example: most-actives
         - name: count
           in: query
@@ -1276,32 +1278,151 @@ paths:
         - `MUTUALFUND` - Mutual funds
 
         **Operators:**
-        - `eq` - Equal to (for string fields like region, sector)
+        - `eq` - Equal to (categorical string fields: region, sector, industry, exchange, peer_group)
         - `gt` - Greater than
         - `gte` - Greater than or equal
         - `lt` - Less than
         - `lte` - Less than or equal
-        - `btwn` - Between (requires array value: `[min, max]`)
+        - `btwn` - Between two values (requires array: `[min, max]`)
 
-        **Common Equity Fields:**
-        - `region` - Market region (e.g., "us", "gb")
-        - `sector` - Industry sector (e.g., "Technology", "Healthcare")
-        - `industry` - Specific industry
-        - `exchange` - Exchange code (e.g., "NMS", "NYQ")
-        - `intradaymarketcap` - Market capitalization
-        - `intradayprice` - Current price
-        - `percentchange` - Percent change
+        ---
+
+        **Equity Fields — Categorical (use `eq` operator with string value):**
+        - `region` - Geographic region (e.g., `"us"`, `"gb"`, `"jp"`, `"de"`)
+        - `sector` - GICS sector (e.g., `"Technology"`, `"Healthcare"`, `"Financial Services"`)
+        - `industry` - Industry slug (e.g., `"Semiconductors"`, `"Biotechnology"`)
+        - `exchange` - Exchange code (e.g., `"NMS"`, `"NYQ"`, `"NGM"`)
+        - `peer_group` - Yahoo Finance peer group (e.g., `"Semiconductors"`, `"Banks"`)
+
+        **Equity Fields — Price & Market Cap:**
+        - `intradayprice` - Current intraday price
+        - `eodprice` - End-of-day price
+        - `intradaypricechange` - Intraday price change (absolute)
+        - `percentchange` - Percent change today
+        - `intradaymarketcap` - Intraday market capitalization
+        - `lastclosemarketcap.lasttwelvemonths` - Last close market cap (TTM)
+        - `lastclose52weekhigh.lasttwelvemonths` - Last close 52-week high
+        - `lastclose52weeklow.lasttwelvemonths` - Last close 52-week low
+        - `fiftytwowkpercentchange` - 52-week percent change
+
+        **Equity Fields — Trading & Volume:**
         - `avgdailyvol3m` - 3-month average daily volume
-        - `peratio.lasttwelvemonths` - P/E ratio (TTM)
-        - `forward_dividend_yield` - Forward dividend yield
-        - `returnonequity.lasttwelvemonths` - Return on equity
-        - `short_percentage_of_float.value` - Short interest % of float
-        - `esg_score` - ESG score
+        - `dayvolume` - Today's volume
+        - `eodvolume` - End-of-day volume
+        - `beta` - Beta (market sensitivity)
+        - `pctheldinsider` - % held by insiders
+        - `pctheldinst` - % held by institutions
 
-        **Common Fund Fields:**
-        - `categoryname` - Fund category (e.g., "Large Growth")
-        - `performanceratingoverall` - Morningstar rating (1-5)
-        - `riskratingoverall` - Risk rating (1-5)
+        **Equity Fields — Short Interest:**
+        - `short_percentage_of_float.value` - Short % of float
+        - `short_percentage_of_shares_outstanding.value` - Short % of shares outstanding
+        - `short_interest.value` - Short interest (shares)
+        - `days_to_cover_short.value` - Days to cover short position
+        - `short_interest_percentage_change.value` - Short interest % change
+
+        **Equity Fields — Valuation:**
+        - `peratio.lasttwelvemonths` - Trailing P/E ratio (TTM)
+        - `pegratio_5y` - 5-year PEG ratio
+        - `pricebookratio.quarterly` - Price-to-book ratio (quarterly)
+        - `lastclosepriceearnings.lasttwelvemonths` - Price-to-earnings (last close)
+        - `lastclosepricetangiblebookvalue.lasttwelvemonths` - Price-to-tangible book
+        - `bookvalueshare.lasttwelvemonths` - Book value per share
+        - `lastclosemarketcaptotalrevenue.lasttwelvemonths` - Market cap / revenue
+        - `lastclosetevtotalrevenue.lasttwelvemonths` - TEV / revenue
+        - `lastclosetevebitda.lasttwelvemonths` - TEV / EBITDA
+        - `lastclosetevebit.lasttwelvemonths` - TEV / EBIT
+
+        **Equity Fields — Profitability & Dividends:**
+        - `returnonequity.lasttwelvemonths` - Return on equity
+        - `returnonassets.lasttwelvemonths` - Return on assets
+        - `returnontotalcapital.lasttwelvemonths` - Return on total capital
+        - `forward_dividend_yield` - Forward dividend yield
+        - `forward_dividend_per_share` - Forward dividend per share
+        - `consecutive_years_of_dividend_growth_count` - Consecutive years of dividend growth
+
+        **Equity Fields — Leverage:**
+        - `totaldebtequity.lasttwelvemonths` - Total debt / equity
+        - `ltdebtequity.lasttwelvemonths` - Long-term debt / equity
+        - `netdebtebitda.lasttwelvemonths` - Net debt / EBITDA
+        - `totaldebtebitda.lasttwelvemonths` - Total debt / EBITDA
+        - `ebitinterestexpense.lasttwelvemonths` - EBIT / interest expense
+        - `ebitdainterestexpense.lasttwelvemonths` - EBITDA / interest expense
+
+        **Equity Fields — Liquidity:**
+        - `currentratio.lasttwelvemonths` - Current ratio
+        - `quickratio.lasttwelvemonths` - Quick ratio
+        - `operatingcashflowtocurrentliabilities.lasttwelvemonths` - Operating cash flow / current liabilities
+        - `altmanzscoreusingtheaveragestockinformationforaperiod.lasttwelvemonths` - Altman Z-score
+
+        **Equity Fields — Income Statement:**
+        - `totalrevenues.lasttwelvemonths` - Total revenues (TTM)
+        - `totalrevenues1yrgrowth.lasttwelvemonths` - Revenue 1-year growth
+        - `quarterlyrevenuegrowth.quarterly` - Quarterly revenue growth
+        - `grossprofit.lasttwelvemonths` - Gross profit
+        - `grossprofitmargin.lasttwelvemonths` - Gross profit margin
+        - `ebitda.lasttwelvemonths` - EBITDA
+        - `ebitdamargin.lasttwelvemonths` - EBITDA margin
+        - `ebitda1yrgrowth.lasttwelvemonths` - EBITDA 1-year growth
+        - `ebit.lasttwelvemonths` - EBIT
+        - `operatingincome.lasttwelvemonths` - Operating income
+        - `netincomeis.lasttwelvemonths` - Net income
+        - `netincomemargin.lasttwelvemonths` - Net income margin
+        - `netincome1yrgrowth.lasttwelvemonths` - Net income 1-year growth
+        - `netepsdiluted.lasttwelvemonths` - Diluted EPS
+        - `netepsbasic.lasttwelvemonths` - Basic EPS
+        - `dilutedepscontinuingoperations.lasttwelvemonths` - Diluted EPS (continuing ops)
+        - `basicepscontinuingoperations.lasttwelvemonths` - Basic EPS (continuing ops)
+        - `epsgrowth.lasttwelvemonths` - EPS growth
+        - `dilutedeps1yrgrowth.lasttwelvemonths` - Diluted EPS 1-year growth
+
+        **Equity Fields — Balance Sheet:**
+        - `totalassets.lasttwelvemonths` - Total assets
+        - `totaldebt.lasttwelvemonths` - Total debt
+        - `totalequity.lasttwelvemonths` - Total equity
+        - `totalcommonequity.lasttwelvemonths` - Total common equity
+        - `totalcurrentassets.lasttwelvemonths` - Total current assets
+        - `totalcurrentliabilities.lasttwelvemonths` - Total current liabilities
+        - `totalcashandshortterminvestments.lasttwelvemonths` - Cash & short-term investments
+        - `totalcommonsharesoutstanding.lasttwelvemonths` - Common shares outstanding
+        - `totalsharesoutstanding` - Total shares outstanding
+
+        **Equity Fields — Cash Flow:**
+        - `cashfromoperations.lasttwelvemonths` - Cash from operations
+        - `cashfromoperations1yrgrowth.lasttwelvemonths` - Cash from ops 1-year growth
+        - `leveredfreecashflow.lasttwelvemonths` - Levered free cash flow
+        - `leveredfreecashflow1yrgrowth.lasttwelvemonths` - Levered FCF 1-year growth
+        - `unleveredfreecashflow.lasttwelvemonths` - Unlevered free cash flow
+        - `capitalexpenditure.lasttwelvemonths` - Capital expenditure
+
+        **Equity Fields — ESG:**
+        - `esg_score` - Overall ESG score
+        - `environmental_score` - Environmental score
+        - `social_score` - Social score
+        - `governance_score` - Governance score
+        - `highest_controversy` - Highest controversy level
+
+        **Equity Display Fields (use in `fields` param, not filterable):**
+        - `ticker` - Ticker symbol
+        - `companyshortname` - Short company name
+
+        ---
+
+        **Fund Fields — Categorical (use `eq` operator):**
+        - `categoryname` - Morningstar category (e.g., `"US Fund Large Growth"`)
+        - `exchange` - Exchange code
+
+        **Fund Fields — Numeric:**
+        - `performanceratingoverall` - Morningstar performance rating (1–5)
+        - `riskratingoverall` - Morningstar risk rating (1–5)
+        - `initialinvestment` - Minimum initial investment
+        - `annualreturnnavy1categoryrank` - 1-year annual return rank within category
+        - `intradayprice` - Intraday price
+        - `eodprice` - End-of-day price
+        - `intradaypricechange` - Intraday price change
+
+        **Fund Display Fields:**
+        - `ticker` - Ticker symbol
+        - `companyshortname` - Short company name
       requestBody:
         required: true
         content:
@@ -1381,7 +1502,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /v2/sectors/{sector_type}:
+  /v2/sectors/{sector}:
     get:
       tags: [Sectors]
       summary: Get sector data
@@ -1402,7 +1523,7 @@ paths:
         - `real-estate` - Real Estate (2.32%)
         - `utilities` - Utilities (2.46%)
       parameters:
-        - name: sector_type
+        - name: sector
           in: path
           required: true
           schema:
@@ -1419,7 +1540,7 @@ paths:
               - basic-materials
               - real-estate
               - utilities
-          description: Sector type
+          description: One of the 11 GICS sector slugs listed above (kebab-case).
           example: technology
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
@@ -1463,7 +1584,7 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
-  /v2/industries/{industry_key}:
+  /v2/industries/{industry}:
     get:
       tags: [Industries]
       summary: Get industry data
@@ -1483,12 +1604,161 @@ paths:
         - `oil-gas-integrated` (Energy)
         - `aerospace-defense` (Industrials)
       parameters:
-        - name: industry_key
+        - name: industry
           in: path
           required: true
           schema:
             type: string
-          description: Industry key/slug (discoverable from sectors endpoint)
+            enum:
+              - aerospace-defense
+              - agricultural-inputs
+              - aluminum
+              - apparel-manufacturing
+              - apparel-retail
+              - asset-management
+              - auto-manufacturers
+              - auto-parts
+              - auto-truck-dealerships
+              - banks-diversified
+              - banks-regional
+              - beverages-brewers
+              - beverages-non-alcoholic
+              - beverages-wineries-distilleries
+              - biotechnology
+              - broadcasting
+              - building-materials
+              - building-products-equipment
+              - business-equipment-supplies
+              - capital-markets
+              - chemical-manufacturing
+              - chemicals
+              - closed-end-fund-debt
+              - closed-end-fund-equity
+              - closed-end-fund-foreign
+              - coal
+              - communication-equipment
+              - computer-hardware
+              - confectioners
+              - conglomerates
+              - consulting-services
+              - consumer-electronics
+              - copper
+              - credit-services
+              - data-analytics
+              - department-stores
+              - diagnostics-research
+              - discount-stores
+              - drug-manufacturers-general
+              - drug-manufacturers-specialty-generic
+              - electrical-equipment-parts
+              - electronic-components
+              - electronic-gaming-multimedia
+              - electronics-computer-distribution
+              - engineering-construction
+              - entertainment
+              - exchange-traded-fund
+              - farm-heavy-construction-machinery
+              - farm-products
+              - financial-data-stock-exchanges
+              - food-distribution
+              - footwear-accessories
+              - forest-products
+              - furnishings-fixtures-appliances
+              - gambling
+              - gold
+              - grocery-stores
+              - hardware-software-distribution
+              - health-information-services
+              - healthcare-plans
+              - home-improvement-retail
+              - household-personal-products
+              - industrial-distribution
+              - information-technology-services
+              - infrastructure-operations
+              - insurance-brokers
+              - insurance-diversified
+              - insurance-life
+              - insurance-property-casualty
+              - insurance-reinsurance
+              - insurance-specialty
+              - integrated-freight-logistics
+              - internet-content-information
+              - internet-retail
+              - leisure
+              - lodging
+              - lumber-wood-production
+              - luxury-goods
+              - manufacturing-diversified
+              - marine-ports-services
+              - marine-shipping
+              - medical-care-facilities
+              - medical-devices
+              - medical-distribution
+              - medical-instruments-supplies
+              - metal-fabrication
+              - mortgage-finance
+              - oil-gas-drilling
+              - oil-gas-ep
+              - oil-gas-equipment-services
+              - oil-gas-integrated
+              - oil-gas-midstream
+              - oil-gas-refining-marketing
+              - other-industrial-metals-mining
+              - other-precious-metals-mining
+              - packaged-foods
+              - paper-paper-products
+              - personal-services
+              - pharmaceutical-retailers
+              - pollution-treatment-controls
+              - publishing
+              - railroads
+              - real-estate-development
+              - real-estate-diversified
+              - real-estate-services
+              - reit-diversified
+              - reit-healthcare-facilities
+              - reit-hotel-motel
+              - reit-industrial
+              - reit-mortgage
+              - reit-office
+              - reit-residential
+              - reit-retail
+              - reit-specialty
+              - rental-leasing-services
+              - residential-construction
+              - resorts-casinos
+              - restaurants
+              - scientific-technical-instruments
+              - security-protection-services
+              - semiconductor-equipment-materials
+              - semiconductors
+              - shell-companies
+              - silver
+              - software-application
+              - software-infrastructure
+              - solar
+              - specialty-business-services
+              - specialty-chemicals
+              - specialty-industrial-machinery
+              - specialty-retail
+              - staffing-employment-services
+              - steel
+              - telecom-services
+              - textile-manufacturing
+              - thermal-coal
+              - tobacco
+              - tools-accessories
+              - travel-services
+              - trucking
+              - uranium
+              - utilities-diversified
+              - utilities-independent-power-producers
+              - utilities-regulated-electric
+              - utilities-regulated-gas
+              - utilities-regulated-water
+              - utilities-renewable
+              - waste-management
+          description: Industry slug (kebab-case). Discoverable via `GET /v2/sectors/{sector}`.
           example: semiconductors
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
