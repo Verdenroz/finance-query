@@ -2,7 +2,7 @@
 //!
 //! Internal module for constructing Yahoo Finance API URLs.
 
-use crate::constants::screener_types::ScreenerType;
+use crate::constants::screeners::Screener;
 
 /// Yahoo Finance API base URLs
 pub mod base {
@@ -106,11 +106,11 @@ pub mod api {
 
 /// URL builders (functions that construct full URLs with query params)
 pub mod builders {
-    use super::ScreenerType;
+    use super::Screener;
     use super::base::*;
 
     /// Screener endpoint for predefined screeners
-    pub fn screener(screener_type: ScreenerType, count: u32) -> String {
+    pub fn screener(screener_type: Screener, count: u32) -> String {
         format!(
             "{}/v1/finance/screener/predefined/saved?count={}&formatted=true&scrIds={}",
             YAHOO_FINANCE_QUERY1,

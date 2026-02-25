@@ -600,17 +600,17 @@ impl YahooClient {
     /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// use finance_query::ScreenerType;
-    /// let gainers = client.get_screener(ScreenerType::DayGainers, 25).await?;
-    /// let losers = client.get_screener(ScreenerType::DayLosers, 25).await?;
-    /// let actives = client.get_screener(ScreenerType::MostActives, 25).await?;
-    /// let shorted = client.get_screener(ScreenerType::MostShortedStocks, 25).await?;
+    /// use finance_query::Screener;
+    /// let gainers = client.get_screener(Screener::DayGainers, 25).await?;
+    /// let losers = client.get_screener(Screener::DayLosers, 25).await?;
+    /// let actives = client.get_screener(Screener::MostActives, 25).await?;
+    /// let shorted = client.get_screener(Screener::MostShortedStocks, 25).await?;
     /// # Ok(())
     /// # }
     /// ```
     pub async fn get_screener(
         &self,
-        screener_type: crate::constants::screener_types::ScreenerType,
+        screener_type: crate::constants::screeners::Screener,
         count: u32,
     ) -> Result<crate::models::screeners::ScreenerResults> {
         crate::endpoints::screeners::fetch(self, screener_type, count).await
@@ -629,22 +629,22 @@ impl YahooClient {
     /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
+    /// use finance_query::{EquityField, EquityScreenerQuery, ScreenerFieldExt};
     ///
     /// // Find US stocks with high volume sorted by market cap
-    /// let query = ScreenerQuery::new()
+    /// let query = EquityScreenerQuery::new()
     ///     .size(25)
-    ///     .sort_by("intradaymarketcap", false)
-    ///     .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
-    ///     .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(200000));
+    ///     .sort_by(EquityField::IntradayMarketCap, false)
+    ///     .add_condition(EquityField::Region.eq_str("us"))
+    ///     .add_condition(EquityField::AvgDailyVol3M.gt(200_000.0));
     ///
     /// let result = client.custom_screener(query).await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn custom_screener(
+    pub async fn custom_screener<F: crate::models::screeners::ScreenerField>(
         &self,
-        query: crate::models::screeners::ScreenerQuery,
+        query: crate::models::screeners::ScreenerQuery<F>,
     ) -> Result<crate::models::screeners::ScreenerResults> {
         crate::endpoints::screeners::fetch_custom(self, query).await
     }
@@ -663,8 +663,8 @@ impl YahooClient {
     /// ```ignore
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// use finance_query::SectorType;
-    /// let sector = client.get_sector(SectorType::Technology).await?;
+    /// use finance_query::Sector;
+    /// let sector = client.get_sector(Sector::Technology).await?;
     /// println!("Sector: {} ({} companies)", sector.name,
     ///     sector.overview.as_ref().map(|o| o.companies_count.unwrap_or(0)).unwrap_or(0));
     /// for company in sector.top_companies.iter().take(5) {
@@ -675,8 +675,8 @@ impl YahooClient {
     /// ```
     pub async fn get_sector(
         &self,
-        sector_type: crate::constants::sector_types::SectorType,
-    ) -> Result<crate::models::sectors::Sector> {
+        sector_type: crate::constants::sectors::Sector,
+    ) -> Result<crate::models::sectors::SectorData> {
         crate::endpoints::sectors::fetch(self, sector_type).await
     }
 
@@ -706,7 +706,7 @@ impl YahooClient {
     pub async fn get_industry(
         &self,
         industry_key: &str,
-    ) -> Result<crate::models::industries::Industry> {
+    ) -> Result<crate::models::industries::IndustryData> {
         crate::endpoints::industries::fetch(self, industry_key).await
     }
 

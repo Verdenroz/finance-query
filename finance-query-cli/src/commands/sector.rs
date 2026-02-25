@@ -2,7 +2,7 @@ use crate::error::Result;
 use crate::output::{self, OutputFormat};
 use clap::Parser;
 use colored::Colorize;
-use finance_query::SectorType;
+use finance_query::Sector;
 use serde::Serialize;
 use tabled::Tabled;
 
@@ -44,20 +44,20 @@ enum SectorTypeArg {
     Utilities,
 }
 
-impl From<SectorTypeArg> for SectorType {
+impl From<SectorTypeArg> for Sector {
     fn from(arg: SectorTypeArg) -> Self {
         match arg {
-            SectorTypeArg::Technology => SectorType::Technology,
-            SectorTypeArg::FinancialServices => SectorType::FinancialServices,
-            SectorTypeArg::ConsumerCyclical => SectorType::ConsumerCyclical,
-            SectorTypeArg::CommunicationServices => SectorType::CommunicationServices,
-            SectorTypeArg::Healthcare => SectorType::Healthcare,
-            SectorTypeArg::Industrials => SectorType::Industrials,
-            SectorTypeArg::ConsumerDefensive => SectorType::ConsumerDefensive,
-            SectorTypeArg::Energy => SectorType::Energy,
-            SectorTypeArg::BasicMaterials => SectorType::BasicMaterials,
-            SectorTypeArg::RealEstate => SectorType::RealEstate,
-            SectorTypeArg::Utilities => SectorType::Utilities,
+            SectorTypeArg::Technology => Sector::Technology,
+            SectorTypeArg::FinancialServices => Sector::FinancialServices,
+            SectorTypeArg::ConsumerCyclical => Sector::ConsumerCyclical,
+            SectorTypeArg::CommunicationServices => Sector::CommunicationServices,
+            SectorTypeArg::Healthcare => Sector::Healthcare,
+            SectorTypeArg::Industrials => Sector::Industrials,
+            SectorTypeArg::ConsumerDefensive => Sector::ConsumerDefensive,
+            SectorTypeArg::Energy => Sector::Energy,
+            SectorTypeArg::BasicMaterials => Sector::BasicMaterials,
+            SectorTypeArg::RealEstate => Sector::RealEstate,
+            SectorTypeArg::Utilities => Sector::Utilities,
         }
     }
 }
@@ -94,7 +94,7 @@ struct IndustryDisplay {
 
 pub async fn execute(args: SectorArgs) -> Result<()> {
     let format = OutputFormat::from_str(&args.output)?;
-    let sector_type: SectorType = args.sector.into();
+    let sector_type: Sector = args.sector.into();
 
     // Fetch sector data
     let sector = finance_query::finance::sector(sector_type).await?;

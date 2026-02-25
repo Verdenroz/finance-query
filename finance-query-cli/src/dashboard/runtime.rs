@@ -60,7 +60,7 @@ async fn run_event_loop(
 ) -> Result<()> {
     // Optional handle for parallel sectors fetch task
     let mut sectors_task: Option<
-        tokio::task::JoinHandle<Vec<(finance_query::SectorType, finance_query::Sector)>>,
+        tokio::task::JoinHandle<Vec<(finance_query::Sector, finance_query::SectorData)>>,
     > = None;
 
     // Optional handle for detailed quote fetch task
@@ -101,10 +101,10 @@ async fn run_event_loop(
         if app.is_loading_sectors && sectors_task.is_none() && app.sectors_data.is_empty() {
             app.status_message = "Loading all sectors...".to_string();
             sectors_task = Some(tokio::spawn(async {
-                use finance_query::{SectorType, finance};
+                use finance_query::{Sector, finance};
                 use futures::future::join_all;
 
-                let futures = SectorType::all().iter().map(|&sector_type| async move {
+                let futures = Sector::all().iter().map(|&sector_type| async move {
                     match finance::sector(sector_type).await {
                         Ok(sector) => Some((sector_type, sector)),
                         Err(_) => None,

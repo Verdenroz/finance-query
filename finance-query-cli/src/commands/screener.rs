@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::output::{self, OutputFormat};
 use clap::Parser;
-use finance_query::ScreenerType;
+use finance_query::Screener;
 use serde::Serialize;
 use tabled::Tabled;
 
@@ -101,12 +101,12 @@ pub async fn execute(args: ScreenerArgs) -> Result<()> {
     Ok(())
 }
 
-fn parse_screener_type(s: &str) -> Result<ScreenerType> {
-    ScreenerType::parse(s).ok_or_else(|| {
+fn parse_screener_type(s: &str) -> Result<Screener> {
+    Screener::parse(s).ok_or_else(|| {
         crate::error::CliError::InvalidArgument(format!(
             "Invalid screener type '{}'. Valid types: {}",
             s,
-            ScreenerType::valid_types()
+            Screener::valid_types()
         ))
     })
 }

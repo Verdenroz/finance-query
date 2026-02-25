@@ -1,6 +1,6 @@
 use super::state::{App, SectorsViewMode, Tab};
 use anyhow::Result;
-use finance_query::{Interval, SectorType, Ticker, Tickers, TimeRange, finance};
+use finance_query::{Interval, Sector, SectorData, Ticker, Tickers, TimeRange, finance};
 
 impl App {
     pub async fn refresh_details(&mut self) -> Result<()> {
@@ -308,7 +308,7 @@ impl App {
         self.is_loading_sectors = true;
         self.status_message = "Loading sector data...".to_string();
 
-        let sectors = SectorType::all();
+        let sectors = Sector::all();
         let mut loaded_count = 0;
 
         for sector_type in sectors {
@@ -330,7 +330,7 @@ impl App {
         Ok(())
     }
 
-    pub fn get_sorted_sectors(&self) -> Vec<(SectorType, &finance_query::Sector)> {
+    pub fn get_sorted_sectors(&self) -> Vec<(Sector, &SectorData)> {
         let mut sectors: Vec<_> = self.sectors_data.iter().map(|(k, v)| (*k, v)).collect();
 
         // Sort by day change percent (descending - best performers first)
@@ -355,7 +355,7 @@ impl App {
         sectors
     }
 
-    pub fn selected_sector(&self) -> Option<(SectorType, &finance_query::Sector)> {
+    pub fn selected_sector(&self) -> Option<(Sector, &SectorData)> {
         let sectors = self.get_sorted_sectors();
         sectors.get(self.sectors_selected_idx).copied()
     }

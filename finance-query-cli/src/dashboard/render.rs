@@ -469,7 +469,7 @@ fn get_sector_bg_color(change: f64) -> Color {
     }
 }
 
-fn render_sector_overview(f: &mut Frame, sector: &finance_query::Sector, area: Rect) {
+fn render_sector_overview(f: &mut Frame, sector: &finance_query::SectorData, area: Rect) {
     let chunks = Layout::default()
         .direction(Direction::Vertical)
         .constraints([
@@ -659,7 +659,12 @@ fn render_sector_overview(f: &mut Frame, sector: &finance_query::Sector, area: R
     f.render_widget(industries_widget, chunks[2]);
 }
 
-fn render_industries_view(f: &mut Frame, app: &App, sector: &finance_query::Sector, area: Rect) {
+fn render_industries_view(
+    f: &mut Frame,
+    app: &App,
+    sector: &finance_query::SectorData,
+    area: Rect,
+) {
     let items: Vec<ListItem> = sector
         .industries
         .iter()

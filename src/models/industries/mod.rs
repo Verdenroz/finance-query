@@ -2,4 +2,4 @@
 
 mod response;
 
-pub use response::Industry;
+pub use response::IndustryData;

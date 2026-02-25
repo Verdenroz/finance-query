@@ -1,13 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-/// Predefined screener types for Yahoo Finance
-pub mod screener_types {
-    /// Enum of all predefined Yahoo Finance screeners
+/// Predefined screener selectors for Yahoo Finance
+pub mod screeners {
+    /// Predefined Yahoo Finance screener selector
     ///
-    /// These map to Yahoo Finance's predefined screener IDs and can be used
-    /// to fetch filtered stock/fund lists based on various criteria.
+    /// Passed to `finance::screener()` or `client.get_screener()` to select one of the
+    /// 15 built-in Yahoo Finance screeners (equity or fund).
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-    pub enum ScreenerType {
+    pub enum Screener {
         // Equity screeners
         /// Small caps with high EPS growth, sorted by volume
         AggressiveSmallCaps,
@@ -42,25 +42,25 @@ pub mod screener_types {
         TopMutualFunds,
     }
 
-    impl ScreenerType {
+    impl Screener {
         /// Convert to Yahoo Finance scrId parameter value (SCREAMING_SNAKE_CASE)
         pub fn as_scr_id(&self) -> &'static str {
             match self {
-                ScreenerType::AggressiveSmallCaps => "aggressive_small_caps",
-                ScreenerType::DayGainers => "day_gainers",
-                ScreenerType::DayLosers => "day_losers",
-                ScreenerType::GrowthTechnologyStocks => "growth_technology_stocks",
-                ScreenerType::MostActives => "most_actives",
-                ScreenerType::MostShortedStocks => "most_shorted_stocks",
-                ScreenerType::SmallCapGainers => "small_cap_gainers",
-                ScreenerType::UndervaluedGrowthStocks => "undervalued_growth_stocks",
-                ScreenerType::UndervaluedLargeCaps => "undervalued_large_caps",
-                ScreenerType::ConservativeForeignFunds => "conservative_foreign_funds",
-                ScreenerType::HighYieldBond => "high_yield_bond",
-                ScreenerType::PortfolioAnchors => "portfolio_anchors",
-                ScreenerType::SolidLargeGrowthFunds => "solid_large_growth_funds",
-                ScreenerType::SolidMidcapGrowthFunds => "solid_midcap_growth_funds",
-                ScreenerType::TopMutualFunds => "top_mutual_funds",
+                Screener::AggressiveSmallCaps => "aggressive_small_caps",
+                Screener::DayGainers => "day_gainers",
+                Screener::DayLosers => "day_losers",
+                Screener::GrowthTechnologyStocks => "growth_technology_stocks",
+                Screener::MostActives => "most_actives",
+                Screener::MostShortedStocks => "most_shorted_stocks",
+                Screener::SmallCapGainers => "small_cap_gainers",
+                Screener::UndervaluedGrowthStocks => "undervalued_growth_stocks",
+                Screener::UndervaluedLargeCaps => "undervalued_large_caps",
+                Screener::ConservativeForeignFunds => "conservative_foreign_funds",
+                Screener::HighYieldBond => "high_yield_bond",
+                Screener::PortfolioAnchors => "portfolio_anchors",
+                Screener::SolidLargeGrowthFunds => "solid_large_growth_funds",
+                Screener::SolidMidcapGrowthFunds => "solid_midcap_growth_funds",
+                Screener::TopMutualFunds => "top_mutual_funds",
             }
         }
 
@@ -68,10 +68,10 @@ pub mod screener_types {
         ///
         /// # Example
         /// ```
-        /// use finance_query::ScreenerType;
+        /// use finance_query::Screener;
         ///
-        /// assert_eq!(ScreenerType::parse("most-actives"), Some(ScreenerType::MostActives));
-        /// assert_eq!(ScreenerType::parse("day-gainers"), Some(ScreenerType::DayGainers));
+        /// assert_eq!(Screener::parse("most-actives"), Some(Screener::MostActives));
+        /// assert_eq!(Screener::parse("day-gainers"), Some(Screener::DayGainers));
         /// ```
         pub fn parse(s: &str) -> Option<Self> {
             s.parse().ok()
@@ -87,53 +87,51 @@ pub mod screener_types {
         }
 
         /// Get all screener types as an array
-        pub fn all() -> &'static [ScreenerType] {
+        pub fn all() -> &'static [Screener] {
             &[
-                ScreenerType::AggressiveSmallCaps,
-                ScreenerType::DayGainers,
-                ScreenerType::DayLosers,
-                ScreenerType::GrowthTechnologyStocks,
-                ScreenerType::MostActives,
-                ScreenerType::MostShortedStocks,
-                ScreenerType::SmallCapGainers,
-                ScreenerType::UndervaluedGrowthStocks,
-                ScreenerType::UndervaluedLargeCaps,
-                ScreenerType::ConservativeForeignFunds,
-                ScreenerType::HighYieldBond,
-                ScreenerType::PortfolioAnchors,
-                ScreenerType::SolidLargeGrowthFunds,
-                ScreenerType::SolidMidcapGrowthFunds,
-                ScreenerType::TopMutualFunds,
+                Screener::AggressiveSmallCaps,
+                Screener::DayGainers,
+                Screener::DayLosers,
+                Screener::GrowthTechnologyStocks,
+                Screener::MostActives,
+                Screener::MostShortedStocks,
+                Screener::SmallCapGainers,
+                Screener::UndervaluedGrowthStocks,
+                Screener::UndervaluedLargeCaps,
+                Screener::ConservativeForeignFunds,
+                Screener::HighYieldBond,
+                Screener::PortfolioAnchors,
+                Screener::SolidLargeGrowthFunds,
+                Screener::SolidMidcapGrowthFunds,
+                Screener::TopMutualFunds,
             ]
         }
     }
 
-    impl std::str::FromStr for ScreenerType {
+    impl std::str::FromStr for Screener {
         type Err = ();
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             match s.to_lowercase().replace('_', "-").as_str() {
-                "aggressive-small-caps" => Ok(ScreenerType::AggressiveSmallCaps),
-                "day-gainers" | "gainers" => Ok(ScreenerType::DayGainers),
-                "day-losers" | "losers" => Ok(ScreenerType::DayLosers),
-                "growth-technology-stocks" | "growth-tech" => {
-                    Ok(ScreenerType::GrowthTechnologyStocks)
-                }
-                "most-actives" | "actives" => Ok(ScreenerType::MostActives),
-                "most-shorted-stocks" | "most-shorted" => Ok(ScreenerType::MostShortedStocks),
-                "small-cap-gainers" => Ok(ScreenerType::SmallCapGainers),
+                "aggressive-small-caps" => Ok(Screener::AggressiveSmallCaps),
+                "day-gainers" | "gainers" => Ok(Screener::DayGainers),
+                "day-losers" | "losers" => Ok(Screener::DayLosers),
+                "growth-technology-stocks" | "growth-tech" => Ok(Screener::GrowthTechnologyStocks),
+                "most-actives" | "actives" => Ok(Screener::MostActives),
+                "most-shorted-stocks" | "most-shorted" => Ok(Screener::MostShortedStocks),
+                "small-cap-gainers" => Ok(Screener::SmallCapGainers),
                 "undervalued-growth-stocks" | "undervalued-growth" => {
-                    Ok(ScreenerType::UndervaluedGrowthStocks)
+                    Ok(Screener::UndervaluedGrowthStocks)
                 }
                 "undervalued-large-caps" | "undervalued-large" => {
-                    Ok(ScreenerType::UndervaluedLargeCaps)
+                    Ok(Screener::UndervaluedLargeCaps)
                 }
-                "conservative-foreign-funds" => Ok(ScreenerType::ConservativeForeignFunds),
-                "high-yield-bond" => Ok(ScreenerType::HighYieldBond),
-                "portfolio-anchors" => Ok(ScreenerType::PortfolioAnchors),
-                "solid-large-growth-funds" => Ok(ScreenerType::SolidLargeGrowthFunds),
-                "solid-midcap-growth-funds" => Ok(ScreenerType::SolidMidcapGrowthFunds),
-                "top-mutual-funds" => Ok(ScreenerType::TopMutualFunds),
+                "conservative-foreign-funds" => Ok(Screener::ConservativeForeignFunds),
+                "high-yield-bond" => Ok(Screener::HighYieldBond),
+                "portfolio-anchors" => Ok(Screener::PortfolioAnchors),
+                "solid-large-growth-funds" => Ok(Screener::SolidLargeGrowthFunds),
+                "solid-midcap-growth-funds" => Ok(Screener::SolidMidcapGrowthFunds),
+                "top-mutual-funds" => Ok(Screener::TopMutualFunds),
                 _ => Err(()),
             }
         }
@@ -143,13 +141,13 @@ pub mod screener_types {
 /// Yahoo Finance sector types
 ///
 /// These are the 11 GICS sectors available on Yahoo Finance.
-pub mod sector_types {
+pub mod sectors {
     use serde::{Deserialize, Serialize};
 
     /// Market sector types available on Yahoo Finance
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
     #[serde(rename_all = "kebab-case")]
-    pub enum SectorType {
+    pub enum Sector {
         /// Technology sector (software, semiconductors, hardware)
         Technology,
         /// Financial Services sector (banks, insurance, asset management)
@@ -174,38 +172,38 @@ pub mod sector_types {
         Utilities,
     }
 
-    impl SectorType {
+    impl Sector {
         /// Convert to Yahoo Finance API path segment (lowercase with hyphens)
         pub fn as_api_path(&self) -> &'static str {
             match self {
-                SectorType::Technology => "technology",
-                SectorType::FinancialServices => "financial-services",
-                SectorType::ConsumerCyclical => "consumer-cyclical",
-                SectorType::CommunicationServices => "communication-services",
-                SectorType::Healthcare => "healthcare",
-                SectorType::Industrials => "industrials",
-                SectorType::ConsumerDefensive => "consumer-defensive",
-                SectorType::Energy => "energy",
-                SectorType::BasicMaterials => "basic-materials",
-                SectorType::RealEstate => "real-estate",
-                SectorType::Utilities => "utilities",
+                Sector::Technology => "technology",
+                Sector::FinancialServices => "financial-services",
+                Sector::ConsumerCyclical => "consumer-cyclical",
+                Sector::CommunicationServices => "communication-services",
+                Sector::Healthcare => "healthcare",
+                Sector::Industrials => "industrials",
+                Sector::ConsumerDefensive => "consumer-defensive",
+                Sector::Energy => "energy",
+                Sector::BasicMaterials => "basic-materials",
+                Sector::RealEstate => "real-estate",
+                Sector::Utilities => "utilities",
             }
         }
 
         /// Get human-readable display name
         pub fn display_name(&self) -> &'static str {
             match self {
-                SectorType::Technology => "Technology",
-                SectorType::FinancialServices => "Financial Services",
-                SectorType::ConsumerCyclical => "Consumer Cyclical",
-                SectorType::CommunicationServices => "Communication Services",
-                SectorType::Healthcare => "Healthcare",
-                SectorType::Industrials => "Industrials",
-                SectorType::ConsumerDefensive => "Consumer Defensive",
-                SectorType::Energy => "Energy",
-                SectorType::BasicMaterials => "Basic Materials",
-                SectorType::RealEstate => "Real Estate",
-                SectorType::Utilities => "Utilities",
+                Sector::Technology => "Technology",
+                Sector::FinancialServices => "Financial Services",
+                Sector::ConsumerCyclical => "Consumer Cyclical",
+                Sector::CommunicationServices => "Communication Services",
+                Sector::Healthcare => "Healthcare",
+                Sector::Industrials => "Industrials",
+                Sector::ConsumerDefensive => "Consumer Defensive",
+                Sector::Energy => "Energy",
+                Sector::BasicMaterials => "Basic Materials",
+                Sector::RealEstate => "Real Estate",
+                Sector::Utilities => "Utilities",
             }
         }
 
@@ -217,443 +215,54 @@ pub mod sector_types {
         }
 
         /// Get all sector types as an array
-        pub fn all() -> &'static [SectorType] {
+        pub fn all() -> &'static [Sector] {
             &[
-                SectorType::Technology,
-                SectorType::FinancialServices,
-                SectorType::ConsumerCyclical,
-                SectorType::CommunicationServices,
-                SectorType::Healthcare,
-                SectorType::Industrials,
-                SectorType::ConsumerDefensive,
-                SectorType::Energy,
-                SectorType::BasicMaterials,
-                SectorType::RealEstate,
-                SectorType::Utilities,
+                Sector::Technology,
+                Sector::FinancialServices,
+                Sector::ConsumerCyclical,
+                Sector::CommunicationServices,
+                Sector::Healthcare,
+                Sector::Industrials,
+                Sector::ConsumerDefensive,
+                Sector::Energy,
+                Sector::BasicMaterials,
+                Sector::RealEstate,
+                Sector::Utilities,
             ]
         }
     }
 
-    impl std::str::FromStr for SectorType {
+    impl std::str::FromStr for Sector {
         type Err = ();
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             match s.to_lowercase().replace('_', "-").as_str() {
-                "technology" | "tech" => Ok(SectorType::Technology),
-                "financial-services" | "financials" | "financial" => {
-                    Ok(SectorType::FinancialServices)
-                }
-                "consumer-cyclical" => Ok(SectorType::ConsumerCyclical),
-                "communication-services" | "communication" => Ok(SectorType::CommunicationServices),
-                "healthcare" | "health" => Ok(SectorType::Healthcare),
-                "industrials" | "industrial" => Ok(SectorType::Industrials),
-                "consumer-defensive" => Ok(SectorType::ConsumerDefensive),
-                "energy" => Ok(SectorType::Energy),
-                "basic-materials" | "materials" => Ok(SectorType::BasicMaterials),
-                "real-estate" | "realestate" => Ok(SectorType::RealEstate),
-                "utilities" | "utility" => Ok(SectorType::Utilities),
+                "technology" | "tech" => Ok(Sector::Technology),
+                "financial-services" | "financials" | "financial" => Ok(Sector::FinancialServices),
+                "consumer-cyclical" => Ok(Sector::ConsumerCyclical),
+                "communication-services" | "communication" => Ok(Sector::CommunicationServices),
+                "healthcare" | "health" => Ok(Sector::Healthcare),
+                "industrials" | "industrial" => Ok(Sector::Industrials),
+                "consumer-defensive" => Ok(Sector::ConsumerDefensive),
+                "energy" => Ok(Sector::Energy),
+                "basic-materials" | "materials" => Ok(Sector::BasicMaterials),
+                "real-estate" | "realestate" => Ok(Sector::RealEstate),
+                "utilities" | "utility" => Ok(Sector::Utilities),
                 _ => Err(()),
             }
         }
     }
 
-    impl std::fmt::Display for SectorType {
+    impl std::fmt::Display for Sector {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "{}", self.display_name())
         }
     }
-}
 
-/// Custom screener query types and operators
-///
-/// Used to build custom screener queries with flexible filtering criteria.
-pub mod screener_query {
-    use serde::{Deserialize, Serialize};
-
-    /// Quote type for custom screeners
-    ///
-    /// Yahoo Finance only supports EQUITY and MUTUALFUND for custom screener queries.
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
-    #[serde(rename_all = "UPPERCASE")]
-    pub enum QuoteType {
-        /// Equity (stocks) - uses equity_fields for validation
-        #[default]
-        #[serde(rename = "EQUITY")]
-        Equity,
-        /// Mutual funds - uses fund_fields for validation
-        #[serde(rename = "MUTUALFUND")]
-        MutualFund,
-    }
-
-    impl QuoteType {
-        /// Get valid values for this quote type
-        pub fn valid_types() -> &'static str {
-            "equity, mutualfund"
-        }
-    }
-
-    impl std::str::FromStr for QuoteType {
-        type Err = ();
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.to_lowercase().replace(['-', '_'], "").as_str() {
-                "equity" | "stock" | "stocks" => Ok(QuoteType::Equity),
-                "mutualfund" | "fund" | "funds" => Ok(QuoteType::MutualFund),
-                _ => Err(()),
-            }
-        }
-    }
-
-    /// Sort direction for custom screener results
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
-    #[serde(rename_all = "UPPERCASE")]
-    pub enum SortType {
-        /// Sort ascending (smallest first)
-        #[serde(rename = "ASC")]
-        Asc,
-        /// Sort descending (largest first)
-        #[default]
-        #[serde(rename = "DESC")]
-        Desc,
-    }
-
-    impl std::str::FromStr for SortType {
-        type Err = ();
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.to_lowercase().as_str() {
-                "asc" | "ascending" => Ok(SortType::Asc),
-                "desc" | "descending" => Ok(SortType::Desc),
-                _ => Err(()),
-            }
-        }
-    }
-
-    /// Comparison operator for query conditions
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
-    #[serde(rename_all = "lowercase")]
-    pub enum Operator {
-        /// Equal to
-        #[serde(rename = "eq")]
-        Eq,
-        /// Greater than
-        #[serde(rename = "gt")]
-        Gt,
-        /// Greater than or equal to
-        #[serde(rename = "gte")]
-        Gte,
-        /// Less than
-        #[serde(rename = "lt")]
-        Lt,
-        /// Less than or equal to
-        #[serde(rename = "lte")]
-        Lte,
-        /// Between two values (inclusive)
-        #[serde(rename = "btwn")]
-        Between,
-    }
-
-    impl std::str::FromStr for Operator {
-        type Err = ();
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.to_lowercase().as_str() {
-                "eq" | "=" | "==" => Ok(Operator::Eq),
-                "gt" | ">" => Ok(Operator::Gt),
-                "gte" | ">=" => Ok(Operator::Gte),
-                "lt" | "<" => Ok(Operator::Lt),
-                "lte" | "<=" => Ok(Operator::Lte),
-                "btwn" | "between" => Ok(Operator::Between),
-                _ => Err(()),
-            }
-        }
-    }
-
-    /// Logical operator for combining conditions
-    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
-    #[serde(rename_all = "lowercase")]
-    pub enum LogicalOperator {
-        /// All conditions must match (AND)
-        #[default]
-        And,
-        /// Any condition can match (OR)
-        Or,
-    }
-
-    impl std::str::FromStr for LogicalOperator {
-        type Err = ();
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.to_lowercase().as_str() {
-                "and" | "&&" => Ok(LogicalOperator::And),
-                "or" | "||" => Ok(LogicalOperator::Or),
-                _ => Err(()),
-            }
-        }
-    }
-
-    /// Valid screener fields for equity queries
-    ///
-    /// Based on Yahoo Finance screener API. Fields grouped by category.
-    #[allow(missing_docs)]
-    pub mod equity_fields {
-        // Price fields
-        pub const EOD_PRICE: &str = "eodprice";
-        pub const INTRADAY_PRICE_CHANGE: &str = "intradaypricechange";
-        pub const INTRADAY_PRICE: &str = "intradayprice";
-        pub const PERCENT_CHANGE: &str = "percentchange";
-        pub const LASTCLOSE_52WK_HIGH: &str = "lastclose52weekhigh.lasttwelvemonths";
-        pub const FIFTY_TWO_WK_PCT_CHANGE: &str = "fiftytwowkpercentchange";
-        pub const LASTCLOSE_52WK_LOW: &str = "lastclose52weeklow.lasttwelvemonths";
-        pub const INTRADAY_MARKET_CAP: &str = "intradaymarketcap";
-        pub const LASTCLOSE_MARKET_CAP: &str = "lastclosemarketcap.lasttwelvemonths";
-
-        // Equality filter fields
-        pub const REGION: &str = "region";
-        pub const SECTOR: &str = "sector";
-        pub const PEER_GROUP: &str = "peer_group";
-        pub const INDUSTRY: &str = "industry";
-        pub const EXCHANGE: &str = "exchange";
-
-        // Trading fields
-        pub const BETA: &str = "beta";
-        pub const AVG_DAILY_VOL_3M: &str = "avgdailyvol3m";
-        pub const PCT_HELD_INSIDER: &str = "pctheldinsider";
-        pub const PCT_HELD_INST: &str = "pctheldinst";
-        pub const DAY_VOLUME: &str = "dayvolume";
-        pub const EOD_VOLUME: &str = "eodvolume";
-
-        // Short interest fields
-        pub const SHORT_PCT_SHARES_OUT: &str = "short_percentage_of_shares_outstanding.value";
-        pub const SHORT_INTEREST: &str = "short_interest.value";
-        pub const SHORT_PCT_FLOAT: &str = "short_percentage_of_float.value";
-        pub const DAYS_TO_COVER: &str = "days_to_cover_short.value";
-        pub const SHORT_INTEREST_PCT_CHANGE: &str = "short_interest_percentage_change.value";
-
-        // Valuation fields
-        pub const BOOK_VALUE_SHARE: &str = "bookvalueshare.lasttwelvemonths";
-        pub const MARKET_CAP_TO_REVENUE: &str = "lastclosemarketcaptotalrevenue.lasttwelvemonths";
-        pub const TEV_TO_REVENUE: &str = "lastclosetevtotalrevenue.lasttwelvemonths";
-        pub const PRICE_BOOK_RATIO: &str = "pricebookratio.quarterly";
-        pub const PE_RATIO: &str = "peratio.lasttwelvemonths";
-        pub const PRICE_TANGIBLE_BOOK: &str = "lastclosepricetangiblebookvalue.lasttwelvemonths";
-        pub const PRICE_EARNINGS: &str = "lastclosepriceearnings.lasttwelvemonths";
-        pub const PEG_RATIO_5Y: &str = "pegratio_5y";
-
-        // Profitability fields
-        pub const CONSECUTIVE_DIV_YEARS: &str = "consecutive_years_of_dividend_growth_count";
-        pub const ROA: &str = "returnonassets.lasttwelvemonths";
-        pub const ROE: &str = "returnonequity.lasttwelvemonths";
-        pub const FORWARD_DIV_PER_SHARE: &str = "forward_dividend_per_share";
-        pub const FORWARD_DIV_YIELD: &str = "forward_dividend_yield";
-        pub const RETURN_ON_CAPITAL: &str = "returnontotalcapital.lasttwelvemonths";
-
-        // Leverage fields
-        pub const TEV_EBIT: &str = "lastclosetevebit.lasttwelvemonths";
-        pub const NET_DEBT_EBITDA: &str = "netdebtebitda.lasttwelvemonths";
-        pub const TOTAL_DEBT_EQUITY: &str = "totaldebtequity.lasttwelvemonths";
-        pub const LT_DEBT_EQUITY: &str = "ltdebtequity.lasttwelvemonths";
-        pub const EBIT_INTEREST_EXP: &str = "ebitinterestexpense.lasttwelvemonths";
-        pub const EBITDA_INTEREST_EXP: &str = "ebitdainterestexpense.lasttwelvemonths";
-        pub const TEV_EBITDA: &str = "lastclosetevebitda.lasttwelvemonths";
-        pub const TOTAL_DEBT_EBITDA: &str = "totaldebtebitda.lasttwelvemonths";
-
-        // Liquidity fields
-        pub const QUICK_RATIO: &str = "quickratio.lasttwelvemonths";
-        pub const ALTMAN_Z_SCORE: &str =
-            "altmanzscoreusingtheaveragestockinformationforaperiod.lasttwelvemonths";
-        pub const CURRENT_RATIO: &str = "currentratio.lasttwelvemonths";
-        pub const OCF_TO_CURRENT_LIAB: &str =
-            "operatingcashflowtocurrentliabilities.lasttwelvemonths";
-
-        // Income statement fields
-        pub const TOTAL_REVENUES: &str = "totalrevenues.lasttwelvemonths";
-        pub const NET_INCOME_MARGIN: &str = "netincomemargin.lasttwelvemonths";
-        pub const GROSS_PROFIT: &str = "grossprofit.lasttwelvemonths";
-        pub const EBITDA_1YR_GROWTH: &str = "ebitda1yrgrowth.lasttwelvemonths";
-        pub const DILUTED_EPS_CONT_OPS: &str = "dilutedepscontinuingoperations.lasttwelvemonths";
-        pub const QUARTERLY_REV_GROWTH: &str = "quarterlyrevenuegrowth.quarterly";
-        pub const EPS_GROWTH: &str = "epsgrowth.lasttwelvemonths";
-        pub const NET_INCOME: &str = "netincomeis.lasttwelvemonths";
-        pub const EBITDA: &str = "ebitda.lasttwelvemonths";
-        pub const DILUTED_EPS_1YR_GROWTH: &str = "dilutedeps1yrgrowth.lasttwelvemonths";
-        pub const REVENUE_1YR_GROWTH: &str = "totalrevenues1yrgrowth.lasttwelvemonths";
-        pub const OPERATING_INCOME: &str = "operatingincome.lasttwelvemonths";
-        pub const NET_INCOME_1YR_GROWTH: &str = "netincome1yrgrowth.lasttwelvemonths";
-        pub const GROSS_PROFIT_MARGIN: &str = "grossprofitmargin.lasttwelvemonths";
-        pub const EBITDA_MARGIN: &str = "ebitdamargin.lasttwelvemonths";
-        pub const EBIT: &str = "ebit.lasttwelvemonths";
-        pub const BASIC_EPS_CONT_OPS: &str = "basicepscontinuingoperations.lasttwelvemonths";
-        pub const NET_EPS_BASIC: &str = "netepsbasic.lasttwelvemonths";
-        pub const NET_EPS_DILUTED: &str = "netepsdiluted.lasttwelvemonths";
-
-        // Balance sheet fields
-        pub const TOTAL_ASSETS: &str = "totalassets.lasttwelvemonths";
-        pub const COMMON_SHARES_OUT: &str = "totalcommonsharesoutstanding.lasttwelvemonths";
-        pub const TOTAL_DEBT: &str = "totaldebt.lasttwelvemonths";
-        pub const TOTAL_EQUITY: &str = "totalequity.lasttwelvemonths";
-        pub const TOTAL_CURRENT_ASSETS: &str = "totalcurrentassets.lasttwelvemonths";
-        pub const CASH_AND_ST_INVESTMENTS: &str =
-            "totalcashandshortterminvestments.lasttwelvemonths";
-        pub const TOTAL_COMMON_EQUITY: &str = "totalcommonequity.lasttwelvemonths";
-        pub const TOTAL_CURRENT_LIAB: &str = "totalcurrentliabilities.lasttwelvemonths";
-        pub const TOTAL_SHARES_OUT: &str = "totalsharesoutstanding";
-
-        // Cash flow fields
-        pub const LEVERED_FCF: &str = "leveredfreecashflow.lasttwelvemonths";
-        pub const CAPEX: &str = "capitalexpenditure.lasttwelvemonths";
-        pub const CASH_FROM_OPS: &str = "cashfromoperations.lasttwelvemonths";
-        pub const LEVERED_FCF_1YR_GROWTH: &str = "leveredfreecashflow1yrgrowth.lasttwelvemonths";
-        pub const UNLEVERED_FCF: &str = "unleveredfreecashflow.lasttwelvemonths";
-        pub const CASH_FROM_OPS_1YR_GROWTH: &str = "cashfromoperations1yrgrowth.lasttwelvemonths";
-
-        // ESG fields
-        pub const ESG_SCORE: &str = "esg_score";
-        pub const ENVIRONMENTAL_SCORE: &str = "environmental_score";
-        pub const GOVERNANCE_SCORE: &str = "governance_score";
-        pub const SOCIAL_SCORE: &str = "social_score";
-        pub const HIGHEST_CONTROVERSY: &str = "highest_controversy";
-    }
-
-    /// Valid screener fields for fund/mutual fund queries
-    #[allow(missing_docs)]
-    pub mod fund_fields {
-        // Common price fields (shared with equity)
-        pub const EOD_PRICE: &str = "eodprice";
-        pub const INTRADAY_PRICE_CHANGE: &str = "intradaypricechange";
-        pub const INTRADAY_PRICE: &str = "intradayprice";
-
-        // Fund-specific fields
-        pub const CATEGORY_NAME: &str = "categoryname";
-        pub const PERFORMANCE_RATING: &str = "performanceratingoverall";
-        pub const INITIAL_INVESTMENT: &str = "initialinvestment";
-        pub const ANNUAL_RETURN_RANK: &str = "annualreturnnavy1categoryrank";
-        pub const RISK_RATING: &str = "riskratingoverall";
-        pub const EXCHANGE: &str = "exchange";
-    }
-
-    /// All valid equity screener fields (for validation)
-    pub const VALID_EQUITY_FIELDS: &[&str] = &[
-        equity_fields::EOD_PRICE,
-        equity_fields::INTRADAY_PRICE_CHANGE,
-        equity_fields::INTRADAY_PRICE,
-        equity_fields::PERCENT_CHANGE,
-        equity_fields::LASTCLOSE_52WK_HIGH,
-        equity_fields::FIFTY_TWO_WK_PCT_CHANGE,
-        equity_fields::LASTCLOSE_52WK_LOW,
-        equity_fields::INTRADAY_MARKET_CAP,
-        equity_fields::LASTCLOSE_MARKET_CAP,
-        equity_fields::REGION,
-        equity_fields::SECTOR,
-        equity_fields::PEER_GROUP,
-        equity_fields::INDUSTRY,
-        equity_fields::EXCHANGE,
-        equity_fields::BETA,
-        equity_fields::AVG_DAILY_VOL_3M,
-        equity_fields::PCT_HELD_INSIDER,
-        equity_fields::PCT_HELD_INST,
-        equity_fields::DAY_VOLUME,
-        equity_fields::EOD_VOLUME,
-        equity_fields::SHORT_PCT_SHARES_OUT,
-        equity_fields::SHORT_INTEREST,
-        equity_fields::SHORT_PCT_FLOAT,
-        equity_fields::DAYS_TO_COVER,
-        equity_fields::SHORT_INTEREST_PCT_CHANGE,
-        equity_fields::BOOK_VALUE_SHARE,
-        equity_fields::MARKET_CAP_TO_REVENUE,
-        equity_fields::TEV_TO_REVENUE,
-        equity_fields::PRICE_BOOK_RATIO,
-        equity_fields::PE_RATIO,
-        equity_fields::PRICE_TANGIBLE_BOOK,
-        equity_fields::PRICE_EARNINGS,
-        equity_fields::PEG_RATIO_5Y,
-        equity_fields::CONSECUTIVE_DIV_YEARS,
-        equity_fields::ROA,
-        equity_fields::ROE,
-        equity_fields::FORWARD_DIV_PER_SHARE,
-        equity_fields::FORWARD_DIV_YIELD,
-        equity_fields::RETURN_ON_CAPITAL,
-        equity_fields::TEV_EBIT,
-        equity_fields::NET_DEBT_EBITDA,
-        equity_fields::TOTAL_DEBT_EQUITY,
-        equity_fields::LT_DEBT_EQUITY,
-        equity_fields::EBIT_INTEREST_EXP,
-        equity_fields::EBITDA_INTEREST_EXP,
-        equity_fields::TEV_EBITDA,
-        equity_fields::TOTAL_DEBT_EBITDA,
-        equity_fields::QUICK_RATIO,
-        equity_fields::ALTMAN_Z_SCORE,
-        equity_fields::CURRENT_RATIO,
-        equity_fields::OCF_TO_CURRENT_LIAB,
-        equity_fields::TOTAL_REVENUES,
-        equity_fields::NET_INCOME_MARGIN,
-        equity_fields::GROSS_PROFIT,
-        equity_fields::EBITDA_1YR_GROWTH,
-        equity_fields::DILUTED_EPS_CONT_OPS,
-        equity_fields::QUARTERLY_REV_GROWTH,
-        equity_fields::EPS_GROWTH,
-        equity_fields::NET_INCOME,
-        equity_fields::EBITDA,
-        equity_fields::DILUTED_EPS_1YR_GROWTH,
-        equity_fields::REVENUE_1YR_GROWTH,
-        equity_fields::OPERATING_INCOME,
-        equity_fields::NET_INCOME_1YR_GROWTH,
-        equity_fields::GROSS_PROFIT_MARGIN,
-        equity_fields::EBITDA_MARGIN,
-        equity_fields::EBIT,
-        equity_fields::BASIC_EPS_CONT_OPS,
-        equity_fields::NET_EPS_BASIC,
-        equity_fields::NET_EPS_DILUTED,
-        equity_fields::TOTAL_ASSETS,
-        equity_fields::COMMON_SHARES_OUT,
-        equity_fields::TOTAL_DEBT,
-        equity_fields::TOTAL_EQUITY,
-        equity_fields::TOTAL_CURRENT_ASSETS,
-        equity_fields::CASH_AND_ST_INVESTMENTS,
-        equity_fields::TOTAL_COMMON_EQUITY,
-        equity_fields::TOTAL_CURRENT_LIAB,
-        equity_fields::TOTAL_SHARES_OUT,
-        equity_fields::LEVERED_FCF,
-        equity_fields::CAPEX,
-        equity_fields::CASH_FROM_OPS,
-        equity_fields::LEVERED_FCF_1YR_GROWTH,
-        equity_fields::UNLEVERED_FCF,
-        equity_fields::CASH_FROM_OPS_1YR_GROWTH,
-        equity_fields::ESG_SCORE,
-        equity_fields::ENVIRONMENTAL_SCORE,
-        equity_fields::GOVERNANCE_SCORE,
-        equity_fields::SOCIAL_SCORE,
-        equity_fields::HIGHEST_CONTROVERSY,
-    ];
-
-    /// All valid fund screener fields (for validation)
-    pub const VALID_FUND_FIELDS: &[&str] = &[
-        fund_fields::EOD_PRICE,
-        fund_fields::INTRADAY_PRICE_CHANGE,
-        fund_fields::INTRADAY_PRICE,
-        fund_fields::CATEGORY_NAME,
-        fund_fields::PERFORMANCE_RATING,
-        fund_fields::INITIAL_INVESTMENT,
-        fund_fields::ANNUAL_RETURN_RANK,
-        fund_fields::RISK_RATING,
-        fund_fields::EXCHANGE,
-    ];
-
-    /// Check if a field is valid for equity screeners
-    pub fn is_valid_equity_field(field: &str) -> bool {
-        VALID_EQUITY_FIELDS.contains(&field)
-    }
-
-    /// Check if a field is valid for fund screeners
-    pub fn is_valid_fund_field(field: &str) -> bool {
-        VALID_FUND_FIELDS.contains(&field)
-    }
-
-    /// Check if a field is valid for the given quote type
-    pub fn is_valid_field(field: &str, quote_type: QuoteType) -> bool {
-        match quote_type {
-            QuoteType::Equity => is_valid_equity_field(field),
-            QuoteType::MutualFund => is_valid_fund_field(field),
+    impl From<Sector> for String {
+        /// Returns the display name used by Yahoo Finance screener (e.g. `"Technology"`).
+        fn from(v: Sector) -> Self {
+            v.display_name().to_string()
         }
     }
 }
@@ -1504,6 +1113,14 @@ impl std::str::FromStr for Region {
     }
 }
 
+impl From<Region> for String {
+    /// Returns the lowercase two-letter country code used by the Yahoo Finance screener
+    /// (e.g. `"us"`, `"gb"`).
+    fn from(v: Region) -> Self {
+        v.region().to_lowercase()
+    }
+}
+
 /// Value format for API responses
 ///
 /// Controls how `FormattedValue<T>` fields are serialized in responses.
@@ -1648,6 +1265,804 @@ impl ValueFormat {
                 // Keep as-is (shouldn't reach here, but handle anyway)
                 serde_json::Value::Object(map.clone())
             }
+        }
+    }
+}
+
+/// Typed industry identifiers shared between the industry endpoint and screener queries.
+///
+/// Use with [`finance::industry()`](crate::finance::industry) for the data endpoint, and with
+/// [`EquityField::Industry`](crate::EquityField::Industry) +
+/// [`ScreenerFieldExt::eq_str`](crate::ScreenerFieldExt::eq_str) for screener filtering.
+///
+/// - `as_slug()` → lowercase hyphenated key for `finance::industry()` (e.g. `"semiconductors"`)
+/// - `From<Industry> for String` → screener display name (e.g. `"Semiconductors"`)
+///
+/// # Example
+///
+/// ```no_run
+/// use finance_query::{finance, Industry, EquityField, EquityScreenerQuery, ScreenerFieldExt};
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// // Industry endpoint
+/// let data = finance::industry(Industry::Semiconductors).await?;
+///
+/// // Screener filter
+/// let query = EquityScreenerQuery::new()
+///     .add_condition(EquityField::Industry.eq_str(Industry::Semiconductors));
+/// # Ok(())
+/// # }
+/// ```
+pub mod industries {
+    /// Typed industry identifier for the industry endpoint and custom screener queries.
+    ///
+    /// See the module-level doc for usage.
+    #[non_exhaustive]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum Industry {
+        // ── Agriculture / Raw Materials ──────────────────────────────────────
+        /// Agricultural inputs, fertilizers, and crop chemicals
+        AgriculturalInputs,
+        /// Aluminum production and processing companies
+        Aluminum,
+        /// Coal mining and processing companies
+        Coal,
+        /// Copper mining and processing companies
+        Copper,
+        /// Farm products including grains, livestock, and produce
+        FarmProducts,
+        /// Forest products including timber and paper pulp
+        ForestProducts,
+        /// Gold mining and royalty companies
+        Gold,
+        /// Lumber and wood production companies
+        LumberAndWoodProduction,
+        /// Other industrial metals and mining (zinc, nickel, etc.)
+        OtherIndustrialMetalsAndMining,
+        /// Other precious metals and mining (platinum, palladium, etc.)
+        OtherPreciousMetalsAndMining,
+        /// Silver mining and streaming companies
+        Silver,
+        /// Steel production and processing companies
+        Steel,
+        /// Thermal coal mining for electricity generation
+        ThermalCoal,
+        /// Uranium mining companies
+        Uranium,
+        // ── Consumer ─────────────────────────────────────────────────────────
+        /// Clothing and apparel manufacturing companies
+        ApparelManufacturing,
+        /// Clothing and apparel retail chains
+        ApparelRetail,
+        /// Automotive and truck dealerships
+        AutoAndTruckDealerships,
+        /// Automobile manufacturers and assemblers
+        AutoManufacturers,
+        /// Automotive parts manufacturers and distributors
+        AutoParts,
+        /// Beer brewing and distribution companies
+        BeveragesBrewers,
+        /// Non-alcoholic beverages including soft drinks and juices
+        BeveragesNonAlcoholic,
+        /// Wineries, distilleries, and spirits producers
+        BeveragesWineriesAndDistilleries,
+        /// Candy, chocolate, and confectionery makers
+        Confectioners,
+        /// Traditional department store retailers
+        DepartmentStores,
+        /// Discount and value retail stores
+        DiscountStores,
+        /// Electronic gaming software and multimedia entertainment
+        ElectronicGamingAndMultimedia,
+        /// Wholesale food distribution companies
+        FoodDistribution,
+        /// Footwear, handbags, and fashion accessories
+        FootwearAndAccessories,
+        /// Furniture, fixtures, and household appliances
+        FurnishingsFixturesAndAppliances,
+        /// Casinos, online gambling, and gaming operators
+        Gambling,
+        /// Supermarkets and grocery retail chains
+        GroceryStores,
+        /// Home improvement retail stores
+        HomeImprovementRetail,
+        /// Household cleaning products and personal care items
+        HouseholdAndPersonalProducts,
+        /// Online retail and e-commerce marketplaces
+        InternetRetail,
+        /// Leisure, recreation, and entertainment companies
+        Leisure,
+        /// Hotels and lodging companies
+        Lodging,
+        /// Luxury goods, fashion, and premium consumer brands
+        LuxuryGoods,
+        /// Packaged and processed food manufacturers
+        PackagedFoods,
+        /// Personal care, laundry, and household services
+        PersonalServices,
+        /// Home builders and residential construction
+        ResidentialConstruction,
+        /// Resorts, integrated casinos, and hotel-casinos
+        ResortsAndCasinos,
+        /// Restaurant chains and food service operators
+        Restaurants,
+        /// Specialty retail stores (pets, books, electronics, etc.)
+        SpecialtyRetail,
+        /// Textile and fabric manufacturers
+        TextileManufacturing,
+        /// Tobacco product manufacturers
+        Tobacco,
+        /// Travel agencies, booking platforms, and tour operators
+        TravelServices,
+        // ── Energy ───────────────────────────────────────────────────────────
+        /// Oil and gas contract drilling services
+        OilAndGasDrilling,
+        /// Oil and gas exploration and production companies
+        OilAndGasEAndP,
+        /// Oil field equipment, services, and engineering
+        OilAndGasEquipmentAndServices,
+        /// Vertically integrated oil and gas majors
+        OilAndGasIntegrated,
+        /// Oil and gas pipelines, storage, and transportation
+        OilAndGasMidstream,
+        /// Oil refining, wholesale fuel, and marketing
+        OilAndGasRefiningAndMarketing,
+        /// Solar panel manufacturers and solar energy producers
+        Solar,
+        // ── Financial Services ───────────────────────────────────────────────
+        /// Asset managers, fund sponsors, and investment advisors
+        AssetManagement,
+        /// Large diversified national and international banks
+        BanksDiversified,
+        /// Regional and community banks
+        BanksRegional,
+        /// Investment banks, brokers, and financial exchanges
+        CapitalMarkets,
+        /// Credit card issuers and consumer credit services
+        CreditServices,
+        /// Financial data, analytics, and stock exchange operators
+        FinancialDataAndStockExchanges,
+        /// Insurance brokers and agencies
+        InsuranceBrokers,
+        /// Diversified multi-line insurance companies
+        InsuranceDiversified,
+        /// Life insurance and annuity providers
+        InsuranceLife,
+        /// Property and casualty insurance companies
+        InsurancePropertyAndCasualty,
+        /// Reinsurance companies
+        InsuranceReinsurance,
+        /// Specialty insurance lines (title, mortgage, etc.)
+        InsuranceSpecialty,
+        /// Mortgage banking and loan origination
+        MortgageFinance,
+        /// Blank-check and shell holding companies
+        ShellCompanies,
+        // ── Healthcare ───────────────────────────────────────────────────────
+        /// Biotechnology drug development companies
+        Biotechnology,
+        /// Medical diagnostics labs and clinical research
+        DiagnosticsAndResearch,
+        /// Large branded pharmaceutical manufacturers
+        DrugManufacturersGeneral,
+        /// Specialty drugs, generics, and biosimilars
+        DrugManufacturersSpecialtyAndGeneric,
+        /// Healthcare IT, EHR, and health data services
+        HealthInformationServices,
+        /// Managed care organizations and health insurers
+        HealthcarePlans,
+        /// Hospitals, clinics, and outpatient care facilities
+        MedicalCareFacilities,
+        /// Medical device manufacturers (implants, diagnostics equipment)
+        MedicalDevices,
+        /// Medical product wholesalers and distributors
+        MedicalDistribution,
+        /// Surgical instruments, disposables, and medical supplies
+        MedicalInstrumentsAndSupplies,
+        /// Retail pharmacies and drug store chains
+        PharmaceuticalRetailers,
+        // ── Industrials ──────────────────────────────────────────────────────
+        /// Defense contractors, aircraft, and space systems
+        AerospaceAndDefense,
+        /// Construction aggregates, cement, and building materials
+        BuildingMaterials,
+        /// HVAC, plumbing, windows, and building equipment
+        BuildingProductsAndEquipment,
+        /// Office supplies, commercial equipment, and printers
+        BusinessEquipmentAndSupplies,
+        /// Specialty chemical manufacturing for industrial use
+        ChemicalManufacturing,
+        /// Diversified commodity chemicals producers
+        Chemicals,
+        /// Diversified industrial holding companies
+        Conglomerates,
+        /// Management consulting and professional advisory services
+        ConsultingServices,
+        /// Electrical components, motors, and power equipment
+        ElectricalEquipmentAndParts,
+        /// Civil engineering, construction, and infrastructure projects
+        EngineeringAndConstruction,
+        /// Agricultural equipment and heavy construction machinery
+        FarmAndHeavyConstructionMachinery,
+        /// Industrial goods wholesalers and distributors
+        IndustrialDistribution,
+        /// Toll roads, airports, and infrastructure operators
+        InfrastructureOperations,
+        /// Third-party logistics and supply chain management
+        IntegratedFreightAndLogistics,
+        /// Diversified manufacturers across multiple industrial segments
+        ManufacturingDiversified,
+        /// Port operators and marine terminal services
+        MarinePortsAndServices,
+        /// Bulk cargo and tanker shipping companies
+        MarineShipping,
+        /// Custom metal fabrication and machined components
+        MetalFabrication,
+        /// Paper, packaging, and pulp product manufacturers
+        PaperAndPaperProducts,
+        /// Environmental controls, water treatment, and remediation
+        PollutionAndTreatmentControls,
+        /// Rail freight carriers and passenger rail operators
+        Railroads,
+        /// Equipment rental, leasing, and fleet management
+        RentalAndLeasingServices,
+        /// Security systems, guards, and monitoring services
+        SecurityAndProtectionServices,
+        /// Outsourced business services and BPO companies
+        SpecialtyBusinessServices,
+        /// High-value specialty chemicals and advanced materials
+        SpecialtyChemicals,
+        /// Specialized industrial machinery and equipment makers
+        SpecialtyIndustrialMachinery,
+        /// Staffing agencies and employment service providers
+        StaffingAndEmploymentServices,
+        /// Hand tools, power tools, and hardware accessories
+        ToolsAndAccessories,
+        /// Freight trucking and less-than-truckload carriers
+        Trucking,
+        /// Waste collection, recycling, and disposal services
+        WasteManagement,
+        // ── Real Estate ──────────────────────────────────────────────────────
+        /// Real estate developers and homebuilders
+        RealEstateDevelopment,
+        /// Diversified real estate companies with mixed portfolios
+        RealEstateDiversified,
+        /// Real estate brokers, agents, and property managers
+        RealEstateServices,
+        /// Diversified REITs across multiple property types
+        ReitDiversified,
+        /// Healthcare and senior living facility REITs
+        ReitHealthcareFacilities,
+        /// Hotel and motel property REITs
+        ReitHotelAndMotel,
+        /// Industrial, warehouse, and logistics property REITs
+        ReitIndustrial,
+        /// Mortgage REITs investing in real estate debt
+        ReitMortgage,
+        /// Office building and commercial property REITs
+        ReitOffice,
+        /// Apartment, multifamily, and residential property REITs
+        ReitResidential,
+        /// Shopping center and retail property REITs
+        ReitRetail,
+        /// Specialty REITs (data centers, cell towers, self-storage)
+        ReitSpecialty,
+        // ── Technology ───────────────────────────────────────────────────────
+        /// Networking hardware, routers, and communication equipment
+        CommunicationEquipment,
+        /// PCs, servers, and computer hardware manufacturers
+        ComputerHardware,
+        /// Smartphones, TVs, and consumer electronic devices
+        ConsumerElectronics,
+        /// Data analytics, business intelligence, and AI platforms
+        DataAnalytics,
+        /// Passive electronic components and circuit boards
+        ElectronicComponents,
+        /// Distributors of electronics and computer products
+        ElectronicsAndComputerDistribution,
+        /// Value-added resellers and software/hardware distributors
+        HardwareAndSoftwareDistribution,
+        /// IT services, outsourcing, and technology consulting
+        InformationTechnologyServices,
+        /// Online media, search engines, and digital content platforms
+        InternetContentAndInformation,
+        /// Precision instruments, sensors, and test equipment
+        ScientificAndTechnicalInstruments,
+        /// Semiconductor manufacturing equipment and materials
+        SemiconductorEquipmentAndMaterials,
+        /// Integrated circuit and chip designers and manufacturers
+        Semiconductors,
+        /// Business application software companies
+        SoftwareApplication,
+        /// Operating systems, middleware, and infrastructure software
+        SoftwareInfrastructure,
+        // ── Communication Services ───────────────────────────────────────────
+        /// Television, radio, and broadcast media companies
+        Broadcasting,
+        /// Film studios, streaming, and live entertainment
+        Entertainment,
+        /// Book, magazine, newspaper, and digital media publishers
+        Publishing,
+        /// Wireless carriers and wireline telephone companies
+        TelecomServices,
+        // ── Utilities ────────────────────────────────────────────────────────
+        /// Multi-utility companies serving electricity, gas, and water
+        UtilitiesDiversified,
+        /// Independent power producers and energy traders
+        UtilitiesIndependentPowerProducers,
+        /// Regulated electric utility companies
+        UtilitiesRegulatedElectric,
+        /// Regulated natural gas distribution utilities
+        UtilitiesRegulatedGas,
+        /// Regulated water and wastewater utilities
+        UtilitiesRegulatedWater,
+        /// Renewable energy generation companies (wind, solar, hydro)
+        UtilitiesRenewable,
+        // ── Special ──────────────────────────────────────────────────────────
+        /// Closed-end funds investing in debt instruments
+        ClosedEndFundDebt,
+        /// Closed-end funds investing in equities
+        ClosedEndFundEquity,
+        /// Closed-end funds investing in foreign securities
+        ClosedEndFundForeign,
+        /// Exchange-traded fund products
+        ExchangeTradedFund,
+    }
+
+    impl Industry {
+        /// Returns the lowercase hyphenated slug used by `finance::industry()`.
+        ///
+        /// # Example
+        ///
+        /// ```
+        /// use finance_query::Industry;
+        /// assert_eq!(Industry::Semiconductors.as_slug(), "semiconductors");
+        /// assert_eq!(Industry::SoftwareApplication.as_slug(), "software-application");
+        /// ```
+        pub fn as_slug(self) -> &'static str {
+            match self {
+                Industry::AgriculturalInputs => "agricultural-inputs",
+                Industry::Aluminum => "aluminum",
+                Industry::Coal => "coal",
+                Industry::Copper => "copper",
+                Industry::FarmProducts => "farm-products",
+                Industry::ForestProducts => "forest-products",
+                Industry::Gold => "gold",
+                Industry::LumberAndWoodProduction => "lumber-wood-production",
+                Industry::OtherIndustrialMetalsAndMining => "other-industrial-metals-mining",
+                Industry::OtherPreciousMetalsAndMining => "other-precious-metals-mining",
+                Industry::Silver => "silver",
+                Industry::Steel => "steel",
+                Industry::ThermalCoal => "thermal-coal",
+                Industry::Uranium => "uranium",
+                Industry::ApparelManufacturing => "apparel-manufacturing",
+                Industry::ApparelRetail => "apparel-retail",
+                Industry::AutoAndTruckDealerships => "auto-truck-dealerships",
+                Industry::AutoManufacturers => "auto-manufacturers",
+                Industry::AutoParts => "auto-parts",
+                Industry::BeveragesBrewers => "beverages-brewers",
+                Industry::BeveragesNonAlcoholic => "beverages-non-alcoholic",
+                Industry::BeveragesWineriesAndDistilleries => "beverages-wineries-distilleries",
+                Industry::Confectioners => "confectioners",
+                Industry::DepartmentStores => "department-stores",
+                Industry::DiscountStores => "discount-stores",
+                Industry::ElectronicGamingAndMultimedia => "electronic-gaming-multimedia",
+                Industry::FoodDistribution => "food-distribution",
+                Industry::FootwearAndAccessories => "footwear-accessories",
+                Industry::FurnishingsFixturesAndAppliances => "furnishings-fixtures-appliances",
+                Industry::Gambling => "gambling",
+                Industry::GroceryStores => "grocery-stores",
+                Industry::HomeImprovementRetail => "home-improvement-retail",
+                Industry::HouseholdAndPersonalProducts => "household-personal-products",
+                Industry::InternetRetail => "internet-retail",
+                Industry::Leisure => "leisure",
+                Industry::Lodging => "lodging",
+                Industry::LuxuryGoods => "luxury-goods",
+                Industry::PackagedFoods => "packaged-foods",
+                Industry::PersonalServices => "personal-services",
+                Industry::ResidentialConstruction => "residential-construction",
+                Industry::ResortsAndCasinos => "resorts-casinos",
+                Industry::Restaurants => "restaurants",
+                Industry::SpecialtyRetail => "specialty-retail",
+                Industry::TextileManufacturing => "textile-manufacturing",
+                Industry::Tobacco => "tobacco",
+                Industry::TravelServices => "travel-services",
+                Industry::OilAndGasDrilling => "oil-gas-drilling",
+                Industry::OilAndGasEAndP => "oil-gas-ep",
+                Industry::OilAndGasEquipmentAndServices => "oil-gas-equipment-services",
+                Industry::OilAndGasIntegrated => "oil-gas-integrated",
+                Industry::OilAndGasMidstream => "oil-gas-midstream",
+                Industry::OilAndGasRefiningAndMarketing => "oil-gas-refining-marketing",
+                Industry::Solar => "solar",
+                Industry::AssetManagement => "asset-management",
+                Industry::BanksDiversified => "banks-diversified",
+                Industry::BanksRegional => "banks-regional",
+                Industry::CapitalMarkets => "capital-markets",
+                Industry::CreditServices => "credit-services",
+                Industry::FinancialDataAndStockExchanges => "financial-data-stock-exchanges",
+                Industry::InsuranceBrokers => "insurance-brokers",
+                Industry::InsuranceDiversified => "insurance-diversified",
+                Industry::InsuranceLife => "insurance-life",
+                Industry::InsurancePropertyAndCasualty => "insurance-property-casualty",
+                Industry::InsuranceReinsurance => "insurance-reinsurance",
+                Industry::InsuranceSpecialty => "insurance-specialty",
+                Industry::MortgageFinance => "mortgage-finance",
+                Industry::ShellCompanies => "shell-companies",
+                Industry::Biotechnology => "biotechnology",
+                Industry::DiagnosticsAndResearch => "diagnostics-research",
+                Industry::DrugManufacturersGeneral => "drug-manufacturers-general",
+                Industry::DrugManufacturersSpecialtyAndGeneric => {
+                    "drug-manufacturers-specialty-generic"
+                }
+                Industry::HealthInformationServices => "health-information-services",
+                Industry::HealthcarePlans => "healthcare-plans",
+                Industry::MedicalCareFacilities => "medical-care-facilities",
+                Industry::MedicalDevices => "medical-devices",
+                Industry::MedicalDistribution => "medical-distribution",
+                Industry::MedicalInstrumentsAndSupplies => "medical-instruments-supplies",
+                Industry::PharmaceuticalRetailers => "pharmaceutical-retailers",
+                Industry::AerospaceAndDefense => "aerospace-defense",
+                Industry::BuildingMaterials => "building-materials",
+                Industry::BuildingProductsAndEquipment => "building-products-equipment",
+                Industry::BusinessEquipmentAndSupplies => "business-equipment-supplies",
+                Industry::ChemicalManufacturing => "chemical-manufacturing",
+                Industry::Chemicals => "chemicals",
+                Industry::Conglomerates => "conglomerates",
+                Industry::ConsultingServices => "consulting-services",
+                Industry::ElectricalEquipmentAndParts => "electrical-equipment-parts",
+                Industry::EngineeringAndConstruction => "engineering-construction",
+                Industry::FarmAndHeavyConstructionMachinery => "farm-heavy-construction-machinery",
+                Industry::IndustrialDistribution => "industrial-distribution",
+                Industry::InfrastructureOperations => "infrastructure-operations",
+                Industry::IntegratedFreightAndLogistics => "integrated-freight-logistics",
+                Industry::ManufacturingDiversified => "manufacturing-diversified",
+                Industry::MarinePortsAndServices => "marine-ports-services",
+                Industry::MarineShipping => "marine-shipping",
+                Industry::MetalFabrication => "metal-fabrication",
+                Industry::PaperAndPaperProducts => "paper-paper-products",
+                Industry::PollutionAndTreatmentControls => "pollution-treatment-controls",
+                Industry::Railroads => "railroads",
+                Industry::RentalAndLeasingServices => "rental-leasing-services",
+                Industry::SecurityAndProtectionServices => "security-protection-services",
+                Industry::SpecialtyBusinessServices => "specialty-business-services",
+                Industry::SpecialtyChemicals => "specialty-chemicals",
+                Industry::SpecialtyIndustrialMachinery => "specialty-industrial-machinery",
+                Industry::StaffingAndEmploymentServices => "staffing-employment-services",
+                Industry::ToolsAndAccessories => "tools-accessories",
+                Industry::Trucking => "trucking",
+                Industry::WasteManagement => "waste-management",
+                Industry::RealEstateDevelopment => "real-estate-development",
+                Industry::RealEstateDiversified => "real-estate-diversified",
+                Industry::RealEstateServices => "real-estate-services",
+                Industry::ReitDiversified => "reit-diversified",
+                Industry::ReitHealthcareFacilities => "reit-healthcare-facilities",
+                Industry::ReitHotelAndMotel => "reit-hotel-motel",
+                Industry::ReitIndustrial => "reit-industrial",
+                Industry::ReitMortgage => "reit-mortgage",
+                Industry::ReitOffice => "reit-office",
+                Industry::ReitResidential => "reit-residential",
+                Industry::ReitRetail => "reit-retail",
+                Industry::ReitSpecialty => "reit-specialty",
+                Industry::CommunicationEquipment => "communication-equipment",
+                Industry::ComputerHardware => "computer-hardware",
+                Industry::ConsumerElectronics => "consumer-electronics",
+                Industry::DataAnalytics => "data-analytics",
+                Industry::ElectronicComponents => "electronic-components",
+                Industry::ElectronicsAndComputerDistribution => "electronics-computer-distribution",
+                Industry::HardwareAndSoftwareDistribution => "hardware-software-distribution",
+                Industry::InformationTechnologyServices => "information-technology-services",
+                Industry::InternetContentAndInformation => "internet-content-information",
+                Industry::ScientificAndTechnicalInstruments => "scientific-technical-instruments",
+                Industry::SemiconductorEquipmentAndMaterials => "semiconductor-equipment-materials",
+                Industry::Semiconductors => "semiconductors",
+                Industry::SoftwareApplication => "software-application",
+                Industry::SoftwareInfrastructure => "software-infrastructure",
+                Industry::Broadcasting => "broadcasting",
+                Industry::Entertainment => "entertainment",
+                Industry::Publishing => "publishing",
+                Industry::TelecomServices => "telecom-services",
+                Industry::UtilitiesDiversified => "utilities-diversified",
+                Industry::UtilitiesIndependentPowerProducers => {
+                    "utilities-independent-power-producers"
+                }
+                Industry::UtilitiesRegulatedElectric => "utilities-regulated-electric",
+                Industry::UtilitiesRegulatedGas => "utilities-regulated-gas",
+                Industry::UtilitiesRegulatedWater => "utilities-regulated-water",
+                Industry::UtilitiesRenewable => "utilities-renewable",
+                Industry::ClosedEndFundDebt => "closed-end-fund-debt",
+                Industry::ClosedEndFundEquity => "closed-end-fund-equity",
+                Industry::ClosedEndFundForeign => "closed-end-fund-foreign",
+                Industry::ExchangeTradedFund => "exchange-traded-fund",
+            }
+        }
+
+        /// Returns the display name used by the Yahoo Finance screener.
+        ///
+        /// # Example
+        ///
+        /// ```
+        /// use finance_query::Industry;
+        /// assert_eq!(Industry::Semiconductors.screener_value(), "Semiconductors");
+        /// assert_eq!(Industry::OilAndGasDrilling.screener_value(), "Oil & Gas Drilling");
+        /// ```
+        pub fn screener_value(self) -> &'static str {
+            match self {
+                Industry::AgriculturalInputs => "Agricultural Inputs",
+                Industry::Aluminum => "Aluminum",
+                Industry::Coal => "Coal",
+                Industry::Copper => "Copper",
+                Industry::FarmProducts => "Farm Products",
+                Industry::ForestProducts => "Forest Products",
+                Industry::Gold => "Gold",
+                Industry::LumberAndWoodProduction => "Lumber & Wood Production",
+                Industry::OtherIndustrialMetalsAndMining => "Other Industrial Metals & Mining",
+                Industry::OtherPreciousMetalsAndMining => "Other Precious Metals & Mining",
+                Industry::Silver => "Silver",
+                Industry::Steel => "Steel",
+                Industry::ThermalCoal => "Thermal Coal",
+                Industry::Uranium => "Uranium",
+                Industry::ApparelManufacturing => "Apparel Manufacturing",
+                Industry::ApparelRetail => "Apparel Retail",
+                Industry::AutoAndTruckDealerships => "Auto & Truck Dealerships",
+                Industry::AutoManufacturers => "Auto Manufacturers",
+                Industry::AutoParts => "Auto Parts",
+                Industry::BeveragesBrewers => "Beverages - Brewers",
+                Industry::BeveragesNonAlcoholic => "Beverages - Non-Alcoholic",
+                Industry::BeveragesWineriesAndDistilleries => "Beverages - Wineries & Distilleries",
+                Industry::Confectioners => "Confectioners",
+                Industry::DepartmentStores => "Department Stores",
+                Industry::DiscountStores => "Discount Stores",
+                Industry::ElectronicGamingAndMultimedia => "Electronic Gaming & Multimedia",
+                Industry::FoodDistribution => "Food Distribution",
+                Industry::FootwearAndAccessories => "Footwear & Accessories",
+                Industry::FurnishingsFixturesAndAppliances => "Furnishings, Fixtures & Appliances",
+                Industry::Gambling => "Gambling",
+                Industry::GroceryStores => "Grocery Stores",
+                Industry::HomeImprovementRetail => "Home Improvement Retail",
+                Industry::HouseholdAndPersonalProducts => "Household & Personal Products",
+                Industry::InternetRetail => "Internet Retail",
+                Industry::Leisure => "Leisure",
+                Industry::Lodging => "Lodging",
+                Industry::LuxuryGoods => "Luxury Goods",
+                Industry::PackagedFoods => "Packaged Foods",
+                Industry::PersonalServices => "Personal Services",
+                Industry::ResidentialConstruction => "Residential Construction",
+                Industry::ResortsAndCasinos => "Resorts & Casinos",
+                Industry::Restaurants => "Restaurants",
+                Industry::SpecialtyRetail => "Specialty Retail",
+                Industry::TextileManufacturing => "Textile Manufacturing",
+                Industry::Tobacco => "Tobacco",
+                Industry::TravelServices => "Travel Services",
+                Industry::OilAndGasDrilling => "Oil & Gas Drilling",
+                Industry::OilAndGasEAndP => "Oil & Gas E&P",
+                Industry::OilAndGasEquipmentAndServices => "Oil & Gas Equipment & Services",
+                Industry::OilAndGasIntegrated => "Oil & Gas Integrated",
+                Industry::OilAndGasMidstream => "Oil & Gas Midstream",
+                Industry::OilAndGasRefiningAndMarketing => "Oil & Gas Refining & Marketing",
+                Industry::Solar => "Solar",
+                Industry::AssetManagement => "Asset Management",
+                Industry::BanksDiversified => "Banks - Diversified",
+                Industry::BanksRegional => "Banks - Regional",
+                Industry::CapitalMarkets => "Capital Markets",
+                Industry::CreditServices => "Credit Services",
+                Industry::FinancialDataAndStockExchanges => "Financial Data & Stock Exchanges",
+                Industry::InsuranceBrokers => "Insurance Brokers",
+                Industry::InsuranceDiversified => "Insurance - Diversified",
+                Industry::InsuranceLife => "Insurance - Life",
+                Industry::InsurancePropertyAndCasualty => "Insurance - Property & Casualty",
+                Industry::InsuranceReinsurance => "Insurance - Reinsurance",
+                Industry::InsuranceSpecialty => "Insurance - Specialty",
+                Industry::MortgageFinance => "Mortgage Finance",
+                Industry::ShellCompanies => "Shell Companies",
+                Industry::Biotechnology => "Biotechnology",
+                Industry::DiagnosticsAndResearch => "Diagnostics & Research",
+                Industry::DrugManufacturersGeneral => "Drug Manufacturers - General",
+                Industry::DrugManufacturersSpecialtyAndGeneric => {
+                    "Drug Manufacturers - Specialty & Generic"
+                }
+                Industry::HealthInformationServices => "Health Information Services",
+                Industry::HealthcarePlans => "Healthcare Plans",
+                Industry::MedicalCareFacilities => "Medical Care Facilities",
+                Industry::MedicalDevices => "Medical Devices",
+                Industry::MedicalDistribution => "Medical Distribution",
+                Industry::MedicalInstrumentsAndSupplies => "Medical Instruments & Supplies",
+                Industry::PharmaceuticalRetailers => "Pharmaceutical Retailers",
+                Industry::AerospaceAndDefense => "Aerospace & Defense",
+                Industry::BuildingMaterials => "Building Materials",
+                Industry::BuildingProductsAndEquipment => "Building Products & Equipment",
+                Industry::BusinessEquipmentAndSupplies => "Business Equipment & Supplies",
+                Industry::ChemicalManufacturing => "Chemical Manufacturing",
+                Industry::Chemicals => "Chemicals",
+                Industry::Conglomerates => "Conglomerates",
+                Industry::ConsultingServices => "Consulting Services",
+                Industry::ElectricalEquipmentAndParts => "Electrical Equipment & Parts",
+                Industry::EngineeringAndConstruction => "Engineering & Construction",
+                Industry::FarmAndHeavyConstructionMachinery => {
+                    "Farm & Heavy Construction Machinery"
+                }
+                Industry::IndustrialDistribution => "Industrial Distribution",
+                Industry::InfrastructureOperations => "Infrastructure Operations",
+                Industry::IntegratedFreightAndLogistics => "Integrated Freight & Logistics",
+                Industry::ManufacturingDiversified => "Manufacturing - Diversified",
+                Industry::MarinePortsAndServices => "Marine Ports & Services",
+                Industry::MarineShipping => "Marine Shipping",
+                Industry::MetalFabrication => "Metal Fabrication",
+                Industry::PaperAndPaperProducts => "Paper & Paper Products",
+                Industry::PollutionAndTreatmentControls => "Pollution & Treatment Controls",
+                Industry::Railroads => "Railroads",
+                Industry::RentalAndLeasingServices => "Rental & Leasing Services",
+                Industry::SecurityAndProtectionServices => "Security & Protection Services",
+                Industry::SpecialtyBusinessServices => "Specialty Business Services",
+                Industry::SpecialtyChemicals => "Specialty Chemicals",
+                Industry::SpecialtyIndustrialMachinery => "Specialty Industrial Machinery",
+                Industry::StaffingAndEmploymentServices => "Staffing & Employment Services",
+                Industry::ToolsAndAccessories => "Tools & Accessories",
+                Industry::Trucking => "Trucking",
+                Industry::WasteManagement => "Waste Management",
+                Industry::RealEstateDevelopment => "Real Estate - Development",
+                Industry::RealEstateDiversified => "Real Estate - Diversified",
+                Industry::RealEstateServices => "Real Estate Services",
+                Industry::ReitDiversified => "REIT - Diversified",
+                Industry::ReitHealthcareFacilities => "REIT - Healthcare Facilities",
+                Industry::ReitHotelAndMotel => "REIT - Hotel & Motel",
+                Industry::ReitIndustrial => "REIT - Industrial",
+                Industry::ReitMortgage => "REIT - Mortgage",
+                Industry::ReitOffice => "REIT - Office",
+                Industry::ReitResidential => "REIT - Residential",
+                Industry::ReitRetail => "REIT - Retail",
+                Industry::ReitSpecialty => "REIT - Specialty",
+                Industry::CommunicationEquipment => "Communication Equipment",
+                Industry::ComputerHardware => "Computer Hardware",
+                Industry::ConsumerElectronics => "Consumer Electronics",
+                Industry::DataAnalytics => "Data Analytics",
+                Industry::ElectronicComponents => "Electronic Components",
+                Industry::ElectronicsAndComputerDistribution => {
+                    "Electronics & Computer Distribution"
+                }
+                Industry::HardwareAndSoftwareDistribution => "Hardware & Software Distribution",
+                Industry::InformationTechnologyServices => "Information Technology Services",
+                Industry::InternetContentAndInformation => "Internet Content & Information",
+                Industry::ScientificAndTechnicalInstruments => "Scientific & Technical Instruments",
+                Industry::SemiconductorEquipmentAndMaterials => {
+                    "Semiconductor Equipment & Materials"
+                }
+                Industry::Semiconductors => "Semiconductors",
+                Industry::SoftwareApplication => "Software - Application",
+                Industry::SoftwareInfrastructure => "Software - Infrastructure",
+                Industry::Broadcasting => "Broadcasting",
+                Industry::Entertainment => "Entertainment",
+                Industry::Publishing => "Publishing",
+                Industry::TelecomServices => "Telecom Services",
+                Industry::UtilitiesDiversified => "Utilities - Diversified",
+                Industry::UtilitiesIndependentPowerProducers => {
+                    "Utilities - Independent Power Producers"
+                }
+                Industry::UtilitiesRegulatedElectric => "Utilities - Regulated Electric",
+                Industry::UtilitiesRegulatedGas => "Utilities - Regulated Gas",
+                Industry::UtilitiesRegulatedWater => "Utilities - Regulated Water",
+                Industry::UtilitiesRenewable => "Utilities - Renewable",
+                Industry::ClosedEndFundDebt => "Closed-End Fund - Debt",
+                Industry::ClosedEndFundEquity => "Closed-End Fund - Equity",
+                Industry::ClosedEndFundForeign => "Closed-End Fund - Foreign",
+                Industry::ExchangeTradedFund => "Exchange Traded Fund",
+            }
+        }
+    }
+
+    impl AsRef<str> for Industry {
+        /// Returns the slug, enabling `finance::industry(Industry::Semiconductors)`.
+        fn as_ref(&self) -> &str {
+            self.as_slug()
+        }
+    }
+
+    impl From<Industry> for String {
+        /// Returns the screener display name, enabling `EquityField::Industry.eq_str(Industry::Semiconductors)`.
+        fn from(v: Industry) -> Self {
+            v.screener_value().to_string()
+        }
+    }
+}
+
+/// Typed exchange codes for screener queries.
+///
+/// Use with [`EquityField::Exchange`](crate::EquityField::Exchange) or
+/// [`FundField::Exchange`](crate::FundField::Exchange) and
+/// [`ScreenerFieldExt::eq_str`](crate::ScreenerFieldExt::eq_str).
+///
+/// For mutual fund queries use [`ExchangeCode::Nas`].
+///
+/// # Example
+///
+/// ```
+/// use finance_query::{EquityField, EquityScreenerQuery, ScreenerFieldExt, ExchangeCode};
+///
+/// let query = EquityScreenerQuery::new()
+///     .add_condition(EquityField::Exchange.eq_str(ExchangeCode::Nms));
+/// ```
+pub mod exchange_codes {
+    /// Typed exchange code for screener queries.
+    ///
+    /// See [`crate::exchange_codes`] for usage.
+    #[non_exhaustive]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum ExchangeCode {
+        // ── US Equity ─────────────────────────────────────────────────────────
+        /// NYSE American / AMEX ("ASE")
+        Ase,
+        /// OTC Bulletin Board ("BTS")
+        Bts,
+        /// NASDAQ Capital Market ("NCM")
+        Ncm,
+        /// NASDAQ Global Market ("NGM")
+        Ngm,
+        /// NASDAQ Global Select Market ("NMS") — primary NASDAQ tier
+        Nms,
+        /// New York Stock Exchange ("NYQ")
+        Nyq,
+        /// NYSE Arca ("PCX")
+        Pcx,
+        /// OTC Pink Sheets / OTC Markets ("PNK")
+        Pnk,
+        // ── US Funds ──────────────────────────────────────────────────────────
+        /// NASDAQ — used for US mutual funds ("NAS")
+        Nas,
+        // ── International ─────────────────────────────────────────────────────
+        /// Australian Securities Exchange ("ASX")
+        Asx,
+        /// Bombay Stock Exchange ("BSE")
+        Bse,
+        /// Hong Kong Stock Exchange ("HKG")
+        Hkg,
+        /// Korea Exchange ("KRX")
+        Krx,
+        /// London Stock Exchange ("LSE")
+        Lse,
+        /// National Stock Exchange of India ("NSI")
+        Nsi,
+        /// Shanghai Stock Exchange ("SHH")
+        Shh,
+        /// Shenzhen Stock Exchange ("SHZ")
+        Shz,
+        /// Tokyo Stock Exchange ("TYO")
+        Tyo,
+        /// Toronto Stock Exchange ("TOR")
+        Tor,
+        /// XETRA / Deutsche Börse ("GER")
+        Ger,
+    }
+
+    impl ExchangeCode {
+        /// Returns the exchange code string used by Yahoo Finance.
+        pub fn as_str(self) -> &'static str {
+            match self {
+                ExchangeCode::Ase => "ASE",
+                ExchangeCode::Bts => "BTS",
+                ExchangeCode::Ncm => "NCM",
+                ExchangeCode::Ngm => "NGM",
+                ExchangeCode::Nms => "NMS",
+                ExchangeCode::Nyq => "NYQ",
+                ExchangeCode::Pcx => "PCX",
+                ExchangeCode::Pnk => "PNK",
+                ExchangeCode::Nas => "NAS",
+                ExchangeCode::Asx => "ASX",
+                ExchangeCode::Bse => "BSE",
+                ExchangeCode::Hkg => "HKG",
+                ExchangeCode::Krx => "KRX",
+                ExchangeCode::Lse => "LSE",
+                ExchangeCode::Nsi => "NSI",
+                ExchangeCode::Shh => "SHH",
+                ExchangeCode::Shz => "SHZ",
+                ExchangeCode::Tyo => "TYO",
+                ExchangeCode::Tor => "TOR",
+                ExchangeCode::Ger => "GER",
+            }
+        }
+    }
+
+    impl From<ExchangeCode> for String {
+        fn from(v: ExchangeCode) -> Self {
+            v.as_str().to_string()
         }
     }
 }

@@ -133,7 +133,7 @@ struct RawResearchReport {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct Sector {
+pub struct SectorData {
     /// Sector name (e.g., "Technology")
     pub name: String,
 
@@ -417,7 +417,7 @@ pub struct ResearchReport {
 // Conversion implementations
 // ============================================================================
 
-impl Sector {
+impl SectorData {
     /// Parse Yahoo Finance sector response JSON
     pub(crate) fn from_response(json: &serde_json::Value) -> Result<Self, String> {
         let raw: RawSectorResponse = serde_json::from_value(json.clone())
