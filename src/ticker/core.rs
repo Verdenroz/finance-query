@@ -1497,6 +1497,65 @@ impl Ticker {
     }
 
     // ========================================================================
+    // Risk Analytics
+    // ========================================================================
+
+    /// Compute a risk summary for this symbol.
+    ///
+    /// Requires the **`risk`** feature flag.
+    ///
+    /// Calculates Value at Risk, Sharpe/Sortino/Calmar ratios, and maximum drawdown
+    /// from close-to-close returns derived from the requested chart data.
+    ///
+    /// # Arguments
+    ///
+    /// * `interval` - Candle interval (use `Interval::OneDay` for daily risk metrics)
+    /// * `range` - Historical range to analyse
+    /// * `benchmark` - Optional symbol to use as the benchmark for beta calculation
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Ticker, Interval, TimeRange};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let ticker = Ticker::new("AAPL").await?;
+    ///
+    /// // Risk vs no benchmark
+    /// let summary = ticker.risk(Interval::OneDay, TimeRange::OneYear, None).await?;
+    /// println!("VaR 95%:      {:.2}%", summary.var_95 * 100.0);
+    /// println!("Max drawdown: {:.2}%", summary.max_drawdown * 100.0);
+    ///
+    /// // Risk with S&P 500 as benchmark
+    /// let summary = ticker.risk(Interval::OneDay, TimeRange::OneYear, Some("^GSPC")).await?;
+    /// println!("Beta: {:?}", summary.beta);
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "risk")]
+    pub async fn risk(
+        &self,
+        interval: Interval,
+        range: TimeRange,
+        benchmark: Option<&str>,
+    ) -> Result<crate::risk::RiskSummary> {
+        let chart = self.chart(interval, range).await?;
+
+        let benchmark_returns = if let Some(sym) = benchmark {
+            let bench_ticker = Ticker::new(sym).await?;
+            let bench_chart = bench_ticker.chart(interval, range).await?;
+            Some(crate::risk::candles_to_returns(&bench_chart.candles))
+        } else {
+            None
+        };
+
+        Ok(crate::risk::compute_risk_summary(
+            &chart.candles,
+            benchmark_returns.as_deref(),
+        ))
+    }
+
+    // ========================================================================
     // SEC EDGAR
     // ========================================================================
 

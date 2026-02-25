@@ -467,3 +467,22 @@ pub async fn trending(
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_trending(region).await
 }
+
+/// Fetch the current CNN Fear & Greed Index from Alternative.me.
+///
+/// Returns a 0–100 sentiment score and its classification. No API key required.
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let fg = finance::fear_and_greed().await?;
+/// println!("Fear & Greed: {} ({})", fg.value, fg.classification.as_str());
+/// # Ok(())
+/// # }
+/// ```
+pub async fn fear_and_greed() -> Result<crate::models::sentiment::FearAndGreed> {
+    crate::endpoints::fear_and_greed::fetch().await
+}

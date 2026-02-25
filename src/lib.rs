@@ -74,6 +74,25 @@ mod ticker;
 mod tickers;
 mod utils;
 
+// Feature-gated external data source modules
+#[cfg(feature = "fred")]
+pub mod fred;
+
+#[cfg(feature = "crypto")]
+pub mod crypto {
+    //! CoinGecko cryptocurrency data (requires `crypto` feature).
+    pub use crate::coingecko::{CoinQuote, coin, coins};
+}
+
+#[cfg(feature = "crypto")]
+mod coingecko;
+
+#[cfg(feature = "rss")]
+pub mod feeds;
+
+#[cfg(feature = "risk")]
+pub mod risk;
+
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
@@ -126,6 +145,7 @@ pub use models::{
     screeners::ScreenerResults,
     search::SearchResults,
     sectors::Sector,
+    sentiment::{FearAndGreed, FearGreedLabel},
     spark::Spark,
     transcript::Transcript,
     transcript::TranscriptWithMeta,
