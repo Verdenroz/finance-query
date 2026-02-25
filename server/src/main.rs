@@ -15,9 +15,9 @@ use axum::{
 };
 use cache::Cache;
 use finance_query::{
-    FinanceError, Frequency, Interval, Region, ScreenerQuery, ScreenerType, SectorType,
-    StatementType, Ticker, Tickers, TimeRange, ValueFormat, feeds::FeedSource, finance,
-    screener_query, streaming::PriceStream,
+    EquityField, EquityScreenerQuery, FinanceError, Frequency, FundField, FundScreenerQuery,
+    Interval, QuoteType, Region, Screener, Sector, StatementType, Ticker, Tickers, TimeRange,
+    ValueFormat, feeds::FeedSource, finance, streaming::PriceStream,
 };
 use futures_util::{SinkExt, StreamExt};
 use rate_limit::{RateLimitConfig, RateLimiterState};
@@ -2893,11 +2893,11 @@ async fn get_screeners(
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
-    let st = match screener_type.parse::<ScreenerType>() {
+    let st = match screener_type.parse::<Screener>() {
         Ok(t) => t,
         Err(_) => {
             let error = serde_json::json!({
-                "error": format!("Invalid screener type: '{}'. Valid types: {}", screener_type, ScreenerType::valid_types()),
+                "error": format!("Invalid screener type: '{}'. Valid types: {}", screener_type, Screener::valid_types()),
                 "status": 400
             });
             return (StatusCode::BAD_REQUEST, Json(error)).into_response();
@@ -2949,11 +2949,11 @@ async fn get_sector(
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
-    let st = match sector_type.parse::<SectorType>() {
+    let st = match sector_type.parse::<Sector>() {
         Ok(t) => t,
         Err(_) => {
             let error = serde_json::json!({
-                "error": format!("Invalid sector type: '{}'. Valid types: {}", sector_type, SectorType::valid_types()),
+                "error": format!("Invalid sector type: '{}'. Valid types: {}", sector_type, Sector::valid_types()),
                 "status": 400
             });
             return (StatusCode::BAD_REQUEST, Json(error)).into_response();
@@ -3101,101 +3101,238 @@ async fn post_custom_screener(Json(body): Json<CustomScreenerRequest>) -> impl I
     let format = parse_format(body.format.as_deref());
     let fields = parse_fields(body.fields.as_deref());
 
-    // Parse quote type
     let quote_type = body
         .quote_type
         .as_deref()
-        .and_then(|s| s.parse::<screener_query::QuoteType>().ok())
+        .and_then(|s| s.parse::<QuoteType>().ok())
         .unwrap_or_default();
 
-    // Parse sort type
     let sort_ascending = body
         .sort_type
         .as_deref()
         .map(|s| s.to_lowercase() == "asc")
         .unwrap_or(false);
 
-    // Build the query
-    let mut query = ScreenerQuery::new()
-        .size(body.size)
-        .offset(body.offset)
-        .quote_type(quote_type);
+    let filter_count = body.filters.len();
 
-    // Set sort field if provided
-    if let Some(sort_field) = body.sort_field {
-        query = query.sort_by(sort_field, sort_ascending);
+    match quote_type {
+        QuoteType::Equity => {
+            let result = build_and_run_equity_screener(body, sort_ascending, filter_count).await;
+            match result {
+                Ok(data) => {
+                    let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+                    let response = apply_transforms(json, format, fields.as_ref());
+                    (StatusCode::OK, Json(response)).into_response()
+                }
+                Err(ServerScreenerError::InvalidField(msg)) => (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({"error": msg, "status": 400})),
+                )
+                    .into_response(),
+                Err(ServerScreenerError::InvalidOperator(msg)) => (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({"error": msg, "status": 400})),
+                )
+                    .into_response(),
+                Err(ServerScreenerError::Finance(e)) => {
+                    error!("Failed to execute custom screener: {}", e);
+                    error_response(e).into_response()
+                }
+            }
+        }
+        QuoteType::MutualFund => {
+            let result = build_and_run_fund_screener(body, sort_ascending, filter_count).await;
+            match result {
+                Ok(data) => {
+                    let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
+                    let response = apply_transforms(json, format, fields.as_ref());
+                    (StatusCode::OK, Json(response)).into_response()
+                }
+                Err(ServerScreenerError::InvalidField(msg)) => (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({"error": msg, "status": 400})),
+                )
+                    .into_response(),
+                Err(ServerScreenerError::InvalidOperator(msg)) => (
+                    StatusCode::BAD_REQUEST,
+                    Json(serde_json::json!({"error": msg, "status": 400})),
+                )
+                    .into_response(),
+                Err(ServerScreenerError::Finance(e)) => {
+                    error!("Failed to execute custom screener: {}", e);
+                    error_response(e).into_response()
+                }
+            }
+        }
+    }
+}
+
+enum ServerScreenerError {
+    InvalidField(String),
+    InvalidOperator(String),
+    Finance(FinanceError),
+}
+
+impl From<FinanceError> for ServerScreenerError {
+    fn from(e: FinanceError) -> Self {
+        ServerScreenerError::Finance(e)
+    }
+}
+
+async fn build_and_run_equity_screener(
+    body: CustomScreenerRequest,
+    sort_ascending: bool,
+    filter_count: usize,
+) -> Result<finance_query::ScreenerResults, ServerScreenerError> {
+    let mut query = EquityScreenerQuery::new()
+        .size(body.size)
+        .offset(body.offset);
+
+    if let Some(sort_field_str) = body.sort_field {
+        match sort_field_str.parse::<EquityField>() {
+            Ok(field) => {
+                query = query.sort_by(field, sort_ascending);
+            }
+            Err(_) => {
+                return Err(ServerScreenerError::InvalidField(format!(
+                    "Unknown equity sort field: '{}'. Use EquityField enum values.",
+                    sort_field_str
+                )));
+            }
+        }
     }
 
-    // Add filter conditions
-    let filter_count = body.filters.len();
     for filter in body.filters {
-        let op = match filter.operator.to_lowercase().as_str() {
-            "eq" | "=" => screener_query::Operator::Eq,
-            "gt" | ">" => screener_query::Operator::Gt,
-            "gte" | ">=" => screener_query::Operator::Gte,
-            "lt" | "<" => screener_query::Operator::Lt,
-            "lte" | "<=" => screener_query::Operator::Lte,
-            "btwn" | "between" => screener_query::Operator::Between,
-            _ => {
-                let error = serde_json::json!({
-                    "error": format!("Invalid operator: '{}'. Valid: eq, gt, gte, lt, lte, btwn", filter.operator),
-                    "status": 400
-                });
-                return (StatusCode::BAD_REQUEST, Json(error)).into_response();
-            }
-        };
-
-        let mut condition = finance_query::QueryCondition::new(filter.field.clone(), op);
-
-        // Add value(s) to the condition
-        match &filter.value {
-            serde_json::Value::String(s) => {
-                condition = condition.value_str(s.clone());
-            }
-            serde_json::Value::Number(n) => {
-                if let Some(f) = n.as_f64() {
-                    condition = condition.value(f);
-                }
-            }
-            serde_json::Value::Array(arr) => {
-                // For BETWEEN operator or multiple values
-                for v in arr {
-                    match v {
-                        serde_json::Value::String(s) => {
-                            condition = condition.value_str(s.clone());
-                        }
-                        serde_json::Value::Number(n) => {
-                            if let Some(f) = n.as_f64() {
-                                condition = condition.value(f);
-                            }
-                        }
-                        _ => {}
-                    }
-                }
-            }
-            _ => {}
-        }
-
+        let condition = build_equity_condition(&filter)?;
         query = query.add_condition(condition);
     }
 
     info!(
-        "Executing custom screener (size={}, quote_type={:?}, filters={})",
-        body.size, quote_type, filter_count
+        "Executing custom equity screener (size={}, filters={})",
+        body.size, filter_count
     );
 
-    let result = finance::custom_screener(query).await;
+    Ok(finance::custom_screener(query).await?)
+}
 
-    match result {
-        Ok(data) => {
-            let json = serde_json::to_value(data).unwrap_or(serde_json::Value::Null);
-            let response = apply_transforms(json, format, fields.as_ref());
-            (StatusCode::OK, Json(response)).into_response()
+async fn build_and_run_fund_screener(
+    body: CustomScreenerRequest,
+    sort_ascending: bool,
+    filter_count: usize,
+) -> Result<finance_query::ScreenerResults, ServerScreenerError> {
+    let mut query = FundScreenerQuery::new().size(body.size).offset(body.offset);
+
+    if let Some(sort_field_str) = body.sort_field {
+        match sort_field_str.parse::<FundField>() {
+            Ok(field) => {
+                query = query.sort_by(field, sort_ascending);
+            }
+            Err(_) => {
+                return Err(ServerScreenerError::InvalidField(format!(
+                    "Unknown fund sort field: '{}'. Use FundField enum values.",
+                    sort_field_str
+                )));
+            }
         }
-        Err(e) => {
-            error!("Failed to execute custom screener: {}", e);
-            error_response(e).into_response()
+    }
+
+    for filter in body.filters {
+        let condition = build_fund_condition(&filter)?;
+        query = query.add_condition(condition);
+    }
+
+    info!(
+        "Executing custom fund screener (size={}, filters={})",
+        body.size, filter_count
+    );
+
+    Ok(finance::custom_screener(query).await?)
+}
+
+fn build_equity_condition(
+    filter: &FilterCondition,
+) -> Result<finance_query::QueryCondition<EquityField>, ServerScreenerError> {
+    let field = filter.field.parse::<EquityField>().map_err(|_| {
+        ServerScreenerError::InvalidField(format!(
+            "Unknown equity field: '{}'. See EquityField for valid values.",
+            filter.field
+        ))
+    })?;
+    build_condition_from_filter(field, filter)
+}
+
+fn build_fund_condition(
+    filter: &FilterCondition,
+) -> Result<finance_query::QueryCondition<FundField>, ServerScreenerError> {
+    let field = filter.field.parse::<FundField>().map_err(|_| {
+        ServerScreenerError::InvalidField(format!(
+            "Unknown fund field: '{}'. See FundField for valid values.",
+            filter.field
+        ))
+    })?;
+    build_condition_from_filter(field, filter)
+}
+
+fn build_condition_from_filter<
+    F: finance_query::ScreenerField + finance_query::ScreenerFieldExt,
+>(
+    field: F,
+    filter: &FilterCondition,
+) -> Result<finance_query::QueryCondition<F>, ServerScreenerError> {
+    let op = filter.operator.to_lowercase();
+    match op.as_str() {
+        "eq" | "=" | "==" => match &filter.value {
+            serde_json::Value::String(s) => Ok(field.eq_str(s.clone())),
+            serde_json::Value::Number(n) => Ok(field.eq_num(n.as_f64().unwrap_or(0.0))),
+            _ => Ok(field.eq_str(filter.value.to_string())),
+        },
+        "gt" | ">" => {
+            let v = numeric_value(&filter.value)?;
+            Ok(field.gt(v))
         }
+        "gte" | ">=" => {
+            let v = numeric_value(&filter.value)?;
+            Ok(field.gte(v))
+        }
+        "lt" | "<" => {
+            let v = numeric_value(&filter.value)?;
+            Ok(field.lt(v))
+        }
+        "lte" | "<=" => {
+            let v = numeric_value(&filter.value)?;
+            Ok(field.lte(v))
+        }
+        "btwn" | "between" => {
+            let (min, max) = between_values(&filter.value)?;
+            Ok(field.between(min, max))
+        }
+        _ => Err(ServerScreenerError::InvalidOperator(format!(
+            "Invalid operator: '{}'. Valid: eq, gt, gte, lt, lte, btwn",
+            filter.operator
+        ))),
+    }
+}
+
+fn numeric_value(v: &serde_json::Value) -> Result<f64, ServerScreenerError> {
+    v.as_f64().ok_or_else(|| {
+        ServerScreenerError::InvalidField(format!("Expected a numeric value, got: {}", v))
+    })
+}
+
+fn between_values(v: &serde_json::Value) -> Result<(f64, f64), ServerScreenerError> {
+    match v {
+        serde_json::Value::Array(arr) if arr.len() == 2 => {
+            let min = arr[0].as_f64().ok_or_else(|| {
+                ServerScreenerError::InvalidField("BTWN first value must be numeric".to_string())
+            })?;
+            let max = arr[1].as_f64().ok_or_else(|| {
+                ServerScreenerError::InvalidField("BTWN second value must be numeric".to_string())
+            })?;
+            Ok((min, max))
+        }
+        _ => Err(ServerScreenerError::InvalidField(
+            "BTWN operator requires an array of exactly 2 numeric values: [min, max]".to_string(),
+        )),
     }
 }
 

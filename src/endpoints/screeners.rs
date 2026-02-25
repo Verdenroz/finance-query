@@ -1,8 +1,8 @@
 use super::urls::builders;
 use crate::client::YahooClient;
-use crate::constants::screener_types::ScreenerType;
+use crate::constants::screeners::Screener;
 use crate::error::Result;
-use crate::models::screeners::{ScreenerQuery, ScreenerResults};
+use crate::models::screeners::{ScreenerField, ScreenerQuery, ScreenerResults};
 
 /// Fetch data from a predefined Yahoo Finance screener
 ///
@@ -20,8 +20,8 @@ use crate::models::screeners::{ScreenerQuery, ScreenerResults};
 /// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::ScreenerType;
-/// let result = client.get_screener(ScreenerType::MostActives, 25).await?;
+/// use finance_query::Screener;
+/// let result = client.get_screener(Screener::MostActives, 25).await?;
 /// println!("Screener type: {}", result.screener_type);
 /// for quote in &result.quotes {
 ///     println!("  {} - {}", quote.symbol, quote.short_name);
@@ -31,7 +31,7 @@ use crate::models::screeners::{ScreenerQuery, ScreenerResults};
 /// ```
 pub async fn fetch(
     client: &YahooClient,
-    screener_type: ScreenerType,
+    screener_type: Screener,
     count: u32,
 ) -> Result<ScreenerResults> {
     let url = builders::screener(screener_type, count);
@@ -57,7 +57,7 @@ pub async fn fetch(
 /// ```ignore
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::screener_query::{ScreenerQuery, QueryCondition, Operator};
+/// use finance_query::{ScreenerQuery, QueryCondition, Operator};
 ///
 /// let query = ScreenerQuery::new()
 ///     .size(25)
@@ -72,7 +72,10 @@ pub async fn fetch(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fetch_custom(client: &YahooClient, query: ScreenerQuery) -> Result<ScreenerResults> {
+pub async fn fetch_custom<F: ScreenerField>(
+    client: &YahooClient,
+    query: ScreenerQuery<F>,
+) -> Result<ScreenerResults> {
     let url = builders::custom_screener();
     let response = client.request_post_with_crumb(&url, &query).await?;
     let json: serde_json::Value = response.json().await?;
