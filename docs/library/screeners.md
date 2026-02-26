@@ -1,5 +1,8 @@
 # Screeners
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — finance::screener](https://docs.rs/finance-query/latest/finance_query/finance/fn.screener.html)
+
 The screener API lets you filter stocks and mutual funds by hundreds of financial criteria. FinanceQuery supports both Yahoo Finance's **predefined screeners** and a fully **typed custom screener query builder** that gives you IDE autocomplete and compile-time field safety.
 
 ## Predefined Screeners
@@ -36,8 +39,8 @@ for quote in &gainers.quotes {
 | `MostShortedStocks` | Most heavily shorted stocks |
 | `PortfolioAnchors` | Stable, large-cap anchor stocks |
 | `SmallCapGainers` | Top small-cap gainers |
-| `SolidLargeCap` | Established large-cap companies |
-| `SolidMidcap` | Stable mid-cap companies |
+| `SolidLargeGrowthFunds` | Large-cap growth mutual funds (4-5 star) |
+| `SolidMidcapGrowthFunds` | Mid-cap growth mutual funds (4-5 star) |
 | `TopMutualFunds` | Highest-rated mutual funds |
 | `UndervaluedGrowthStocks` | Undervalued growth opportunities |
 | `UndervaluedLargeCaps` | Undervalued large-cap companies |

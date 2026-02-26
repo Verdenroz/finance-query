@@ -1,5 +1,8 @@
 # FRED & Treasury Yields
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — fred](https://docs.rs/finance-query/latest/finance_query/fred/index.html)
+
 !!! info "Feature flag required"
     Add `fred = ["dep:csv"]` to your `Cargo.toml` features to enable this module.
     ```toml

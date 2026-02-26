@@ -1,11 +1,9 @@
 # Finance Module
 
-The `finance` module provides market-wide operations that don't require a specific stock symbol. Use these functions to search for symbols, get market data, fetch screeners, and more.
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — finance](https://docs.rs/finance-query/latest/finance_query/finance/index.html)
 
-!!! tip "Import the finance module"
-    ```rust
-    use finance_query::finance;
-    ```
+The `finance` module provides market-wide operations that don't require a specific stock symbol. Use these functions to search for symbols, get market data, fetch screeners, and more.
 
 ## Search & Discovery
 
@@ -271,7 +269,7 @@ println!("Industries: {}", tech.industries.len());
 - `ConsumerCyclical`
 - `ConsumerDefensive`
 - `Energy`
-- `Financial`
+- `FinancialServices`
 - `Healthcare`
 - `Industrials`
 - `RealEstate`

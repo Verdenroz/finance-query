@@ -1,5 +1,8 @@
 # Indicators
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — indicators](https://docs.rs/finance-query/latest/finance_query/indicators/index.html)
+
 Access 42 technical indicators and 20 candlestick patterns calculated from historical price data.
 
 ## Enable Feature

@@ -1,5 +1,8 @@
 # Crypto (CoinGecko)
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — crypto](https://docs.rs/finance-query/latest/finance_query/crypto/index.html)
+
 !!! info "Feature flag required"
     ```toml
     finance-query = { version = "...", features = ["crypto"] }

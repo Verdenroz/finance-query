@@ -1,5 +1,8 @@
 # DataFrame Support
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — ToDataFrame](https://docs.rs/finance-query/latest/finance_query/derive.ToDataFrame.html)
+
 Finance Query provides optional Polars DataFrame conversion for data analysis workflows.
 
 !!! warning "Feature Flag Required"

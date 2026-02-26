@@ -1,5 +1,8 @@
 # Risk Analytics
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — risk](https://docs.rs/finance-query/latest/finance_query/risk/index.html)
+
 !!! info "Feature flag required"
     The `risk` feature implies `indicators`.
     ```toml

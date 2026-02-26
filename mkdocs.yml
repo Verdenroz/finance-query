@@ -61,6 +61,7 @@ nav:
       - Getting Started: library/getting-started.md
       - Ticker: library/ticker.md
       - Batch Tickers: library/tickers.md
+      - Real-time Streaming: library/streaming.md
       - Finance Module: library/finance.md
       - Screeners: library/screeners.md
       - EDGAR: library/edgar.md
@@ -70,7 +71,6 @@ nav:
       - Feeds: library/feeds.md
       - DataFrame Support: library/dataframe.md
       - Configuration: library/configuration.md
-      - Models: library/models.md
       - Indicators: library/indicators.md
       - Backtesting: library/backtesting.md
   - CLI:

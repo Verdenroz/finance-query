@@ -1,5 +1,8 @@
 # EDGAR API Reference
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — edgar](https://docs.rs/finance-query/latest/finance_query/edgar/index.html)
+
 The EDGAR module provides access to SEC (Securities and Exchange Commission) EDGAR filings and XBRL financial data. All EDGAR APIs are free and public, requiring only a proper User-Agent header with a contact email.
 
 !!! info "Contact Email Required"

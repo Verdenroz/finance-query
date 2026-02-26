@@ -1,5 +1,8 @@
 # Configuration
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — TickerBuilder](https://docs.rs/finance-query/latest/finance_query/struct.TickerBuilder.html)
+
 This guide explains how to configure `Ticker` and `Tickers` for different regions, languages, network settings, and more.
 
 ## Regional Settings
@@ -117,54 +120,6 @@ Supports:
 - HTTPS proxies: `https://proxy.example.com:8080`
 - SOCKS5 proxies: `socks5://proxy.example.com:1080`
 
-## Advanced Configuration
-
-### Custom Client Config
-
-For complete control, create a `ClientConfig`:
-
-```rust
-use finance_query::{Ticker, ClientConfig};
-use std::time::Duration;
-
-let config = ClientConfig {
-    lang: "zh-TW".to_string(),
-    region: "TW".to_string(),
-    timeout: Duration::from_secs(45),
-    proxy: Some("http://proxy.example.com:8080".to_string()),
-};
-
-let ticker = Ticker::builder("2330.TW")
-    .config(config)
-    .build()
-    .await?;
-```
-
-!!! warning
-    Using `.config()` overrides any previously set individual fields (`.lang()`, `.timeout()`, etc.).
-
-### Reusing Configuration
-
-Share configuration across multiple tickers:
-
-```rust
-use finance_query::{ClientConfig, Region};
-use std::time::Duration;
-
-// Create shared config for France stocks
-let config = ClientConfig {
-    lang: Region::France.lang().to_string(),
-    region: Region::France.region().to_string(),
-    timeout: Duration::from_secs(30),
-    proxy: None,
-};
-
-// Use for multiple tickers
-let lvmh = Ticker::builder("MC.PA").config(config.clone()).build().await?;
-let loreal = Ticker::builder("OR.PA").config(config.clone()).build().await?;
-let total = Ticker::builder("TTE.PA").config(config).build().await?;
-```
-
 ## Batch Operations (`Tickers`)
 
 Configure `Tickers` for batch operations:
@@ -187,7 +142,6 @@ let tickers = Tickers::builder(vec!["2330.TW", "2317.TW", "2454.TW"])
 - `.region_code(String)`
 - `.timeout(Duration)`
 - `.proxy(String)`
-- `.config(ClientConfig)`
 
 ## Intervals and Time Ranges
 

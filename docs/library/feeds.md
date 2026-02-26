@@ -1,5 +1,8 @@
 # RSS / Atom Feeds
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — feeds](https://docs.rs/finance-query/latest/finance_query/feeds/index.html)
+
 !!! info "Feature flag required"
     ```toml
     finance-query = { version = "...", features = ["rss"] }

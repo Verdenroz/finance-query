@@ -1,5 +1,8 @@
 # Getting Started
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query](https://docs.rs/finance-query/latest/finance_query/)
+
 ## Installation
 
 Add `finance-query` to your `Cargo.toml`:
@@ -34,7 +37,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Get quote
     let quote = ticker.quote().await?;
-    println!("{}: ${:.2}", quote.symbol, quote.regular_market_price.unwrap_or(0.0));
+    println!("{}: ${:.2}", quote.symbol, quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0));
 
     // Get chart
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
@@ -72,7 +75,7 @@ let sparks = tickers.spark(Interval::OneDay, TimeRange::FiveDays).await?;
 ### 🔍 Market Discovery
 
 ```rust
-use finance_query::{finance, Screener};
+use finance_query::{finance, Screener, SearchOptions};
 
 // Search, screeners, trending stocks
 let results = finance::search("Tesla", &SearchOptions::default()).await?;
@@ -123,6 +126,63 @@ println!("Return: {:.2}%", result.metrics.total_return_pct);
 
 → [Backtesting](backtesting.md) for strategy building
 
+### 📡 Real-time Streaming
+
+```rust
+use finance_query::streaming::PriceStream;
+use futures::StreamExt;
+
+// Subscribe to real-time price updates via WebSocket
+let mut stream = PriceStream::subscribe(&["AAPL", "NVDA", "TSLA"]).await?;
+
+while let Some(price) = stream.next().await {
+    println!("{}: ${:.2} ({:+.2}%)",
+        price.id,
+        price.price,
+        price.change_percent
+    );
+}
+```
+
+→ [Real-time Streaming](streaming.md) for WebSocket details
+
+### 📁 SEC EDGAR Filings
+
+```rust
+use finance_query::edgar;
+
+// Init once per process (SEC requires contact email)
+edgar::init("user@example.com")?;
+
+// Resolve ticker to CIK number
+let cik = edgar::resolve_cik("AAPL").await?;  // 320193
+
+// Fetch all SEC filings metadata
+let submissions = edgar::submissions(cik).await?;
+if let Some(recent) = submissions.filings.as_ref().and_then(|f| f.recent.as_ref()) {
+    println!("Recent filings: {}", recent.form.len());
+}
+
+// Fetch structured XBRL financial data
+let facts = edgar::company_facts(cik).await?;
+```
+
+→ [EDGAR Module](edgar.md) for SEC filing data
+
+### ⚠️ Risk Analytics
+
+```rust
+// VaR, Sharpe/Sortino/Calmar ratio, Beta, max drawdown
+let summary = ticker.risk(Interval::OneDay, TimeRange::OneYear, Some("SPY")).await?;
+
+println!("VaR 95%:      {:.2}%", summary.var_95 * 100.0);
+println!("Sharpe:       {:.2}", summary.sharpe.unwrap_or(0.0));
+println!("Max Drawdown: {:.2}%", summary.max_drawdown * 100.0);
+println!("Beta vs SPY:  {:.2}", summary.beta.unwrap_or(0.0));
+```
+
+→ [Risk Analytics](risk.md) for portfolio risk metrics
+
 ## Next Steps
 
 **Start Here:**
@@ -138,3 +198,6 @@ println!("Return: {:.2}%", result.metrics.total_return_pct);
 - [DataFrame Support](dataframe.md) - Data analysis with Polars
 - [Configuration](configuration.md) - Regional settings and customization
 - [Models Reference](models.md) - Response type documentation
+- [Real-time Streaming](streaming.md) - WebSocket price feeds
+- [SEC EDGAR](edgar.md) - SEC filings and XBRL data
+- [Risk Analytics](risk.md) - Portfolio risk metrics

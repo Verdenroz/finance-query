@@ -1,5 +1,8 @@
 # Ticker API Reference
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — Ticker](https://docs.rs/finance-query/latest/finance_query/struct.Ticker.html)
+
 The `Ticker` struct is the primary interface for fetching symbol-specific data from Yahoo Finance. It provides lazy-loaded, cached access to quotes, charts, financials, and more.
 
 !!! tip "Multiple Symbols"
@@ -599,8 +602,8 @@ let news = ticker.news().await?;
 
 for article in &news {
     println!("{}", article.title);
-    println!("  Source: {}", article.publisher);
-    println!("  Published: {}", article.provider_publish_time);
+    println!("  Source: {}", article.source);
+    println!("  Published: {}", article.time);
     println!("  URL: {}", article.link);
     println!();
 }
@@ -617,27 +620,30 @@ use finance_query::finance;
 let transcript = finance::earnings_transcript(&ticker.symbol(), None, None).await?;
 
 println!("Transcript for {} - Q{} {}",
-    transcript.symbol,
-    transcript.quarter,
-    transcript.year
+    ticker.symbol(),
+    transcript.quarter(),
+    transcript.year()
 );
 
-for entry in &transcript.transcript {
-    println!("[{}] {}: {}",
-        entry.start_time,
-        entry.speaker,
-        entry.content
-    );
+// Access paragraphs with speaker names resolved
+for (paragraph, speaker) in transcript.paragraphs_with_speakers() {
+    if let Some(name) = speaker {
+        println!("[{:.1}s] {}: {}", paragraph.start, name, paragraph.text);
+    }
 }
 
-// Get specific quarter transcript
-let q1_2024 = finance::earnings_transcript(&ticker.symbol(), Some("Q1"), Some(2024)).await?;
+// Get a specific quarter transcript
+let _q1 = finance::earnings_transcript(&ticker.symbol(), Some("Q1"), Some(2024)).await?;
 
 // Get all available transcripts (metadata only)
 let all_transcripts = finance::earnings_transcripts(&ticker.symbol(), None).await?;
 
 for meta in &all_transcripts {
-    println!("{} Q{} - {}", meta.year, meta.quarter, meta.title);
+    println!("{} {} - {}",
+        meta.year.unwrap_or(0),
+        meta.quarter.as_deref().unwrap_or("?"),
+        meta.title
+    );
 }
 ```
 
