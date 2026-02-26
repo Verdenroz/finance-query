@@ -38,10 +38,10 @@ Add to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-finance-query = "2.0"
+finance-query = "2.3"
 
-# Or with DataFrame support (Polars integration)
-finance-query = { version = "2.0", features = ["dataframe"] }
+# Or with additional features
+finance-query = { version = "2.3", features = ["dataframe", "indicators", "fred", "crypto", "rss", "risk"] }
 ```
 
 **Single symbol:**
