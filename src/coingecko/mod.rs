@@ -26,7 +26,6 @@
 
 mod client;
 mod models;
-mod rate_limiter;
 
 use client::CoinGeckoClient;
 use std::sync::OnceLock;

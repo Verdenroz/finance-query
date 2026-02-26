@@ -34,18 +34,36 @@
 
 mod client;
 pub mod models;
-mod rate_limiter;
 mod treasury;
 
 use crate::error::{FinanceError, Result};
-use client::{FredClient, FredClientBuilder};
-use std::sync::OnceLock;
+use crate::rate_limiter::RateLimiter;
+use client::FredClientBuilder;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 pub use models::{MacroObservation, MacroSeries, TreasuryYield};
 
-/// Global FRED client singleton.
-static FRED_CLIENT: OnceLock<FredClient> = OnceLock::new();
+/// FRED free-tier rate limit: 120 requests/minute = 2 req/sec.
+const FRED_RATE_PER_SEC: f64 = 2.0;
+
+/// Stable configuration stored in the FRED process-global singleton.
+///
+/// Only the API key, timeout, and rate-limiter are stored — NOT the
+/// `reqwest::Client`. `reqwest::Client` internally spawns hyper connection-pool
+/// tasks on whichever tokio runtime first uses them; when that runtime is
+/// dropped (e.g. at the end of a `#[tokio::test]`), those tasks die and
+/// subsequent calls from a different runtime receive `DispatchGone`. A fresh
+/// `reqwest::Client` is built per `series()` call via
+/// [`FredClientBuilder::build_with_limiter`], reusing this shared limiter so
+/// the 2 req/sec FRED rate limit is respected across all calls.
+struct FredSingleton {
+    api_key: String,
+    timeout: Duration,
+    limiter: Arc<RateLimiter>,
+}
+
+static FRED_SINGLETON: OnceLock<FredSingleton> = OnceLock::new();
 
 /// Initialize the global FRED client with an API key.
 ///
@@ -59,9 +77,12 @@ static FRED_CLIENT: OnceLock<FredClient> = OnceLock::new();
 ///
 /// Returns [`FinanceError::InvalidParameter`] if already initialized.
 pub fn init(api_key: impl Into<String>) -> Result<()> {
-    let client = FredClientBuilder::new(api_key).build()?;
-    FRED_CLIENT
-        .set(client)
+    FRED_SINGLETON
+        .set(FredSingleton {
+            api_key: api_key.into(),
+            timeout: Duration::from_secs(30),
+            limiter: Arc::new(RateLimiter::new(FRED_RATE_PER_SEC)),
+        })
         .map_err(|_| FinanceError::InvalidParameter {
             param: "fred".to_string(),
             reason: "FRED client already initialized".to_string(),
@@ -70,21 +91,15 @@ pub fn init(api_key: impl Into<String>) -> Result<()> {
 
 /// Initialize the FRED client with a custom timeout.
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
-    let client = FredClientBuilder::new(api_key).timeout(timeout).build()?;
-    FRED_CLIENT
-        .set(client)
+    FRED_SINGLETON
+        .set(FredSingleton {
+            api_key: api_key.into(),
+            timeout,
+            limiter: Arc::new(RateLimiter::new(FRED_RATE_PER_SEC)),
+        })
         .map_err(|_| FinanceError::InvalidParameter {
             param: "fred".to_string(),
             reason: "FRED client already initialized".to_string(),
-        })
-}
-
-fn client() -> Result<&'static FredClient> {
-    FRED_CLIENT
-        .get()
-        .ok_or_else(|| FinanceError::InvalidParameter {
-            param: "fred".to_string(),
-            reason: "FRED not initialized. Call fred::init(api_key) first.".to_string(),
         })
 }
 
@@ -102,7 +117,16 @@ fn client() -> Result<&'static FredClient> {
 ///
 /// Returns [`FinanceError::InvalidParameter`] if FRED has not been initialized.
 pub async fn series(series_id: &str) -> Result<MacroSeries> {
-    client()?.series(series_id).await
+    let s = FRED_SINGLETON
+        .get()
+        .ok_or_else(|| FinanceError::InvalidParameter {
+            param: "fred".to_string(),
+            reason: "FRED not initialized. Call fred::init(api_key) first.".to_string(),
+        })?;
+    let c = FredClientBuilder::new(&s.api_key)
+        .timeout(s.timeout)
+        .build_with_limiter(Arc::clone(&s.limiter))?;
+    c.series(series_id).await
 }
 
 /// Fetch US Treasury yield curve data for the given year.
@@ -130,11 +154,11 @@ mod tests {
 
     #[test]
     fn test_series_without_init_fails_gracefully() {
-        // If somehow the singleton is not set, client() must return an error.
-        // (This test only exercises the error path if FRED_CLIENT isn't set yet,
+        // If somehow the singleton is not set, series() must return an error.
+        // (This test only exercises the error path if FRED_SINGLETON isn't set yet,
         //  which may not be the case if other tests run first.)
-        if FRED_CLIENT.get().is_none() {
-            // We can't reset OnceLock in tests, but we can verify the helper:
+        if FRED_SINGLETON.get().is_none() {
+            // We can't reset OnceLock in tests, but we can verify the error shape:
             // Synthesise the error manually.
             let err = FinanceError::InvalidParameter {
                 param: "fred".to_string(),

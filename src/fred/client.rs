@@ -6,13 +6,11 @@ use std::time::Duration;
 use reqwest::{Client, StatusCode};
 use tracing::debug;
 
-use super::rate_limiter::RateLimiter;
 use crate::error::{FinanceError, Result};
 use crate::fred::models::{MacroObservation, MacroSeries};
+use crate::rate_limiter::RateLimiter;
 
 const FRED_BASE: &str = "https://api.stlouisfed.org/fred";
-/// FRED free-tier limit: 120 requests/minute = 2/sec
-const FRED_RATE_PER_SEC: f64 = 2.0;
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 
 pub(crate) struct FredClientBuilder {
@@ -33,22 +31,31 @@ impl FredClientBuilder {
         self
     }
 
-    pub fn build(self) -> Result<FredClient> {
+    /// Build using a shared `Arc<RateLimiter>` instead of creating a new one.
+    ///
+    /// Used by the module singleton to share a single rate-limiter across fresh
+    /// HTTP clients: the `reqwest::Client` is runtime-bound and must be rebuilt
+    /// per request, but the `RateLimiter` state must persist across calls so the
+    /// 2 req/sec FRED limit is respected.
+    pub(super) fn build_with_limiter(self, limiter: Arc<RateLimiter>) -> Result<FredClient> {
         let http = Client::builder()
             .timeout(self.timeout)
-            .user_agent("finance-query/2 (https://github.com/Verdenroz/finance-query)")
+            .user_agent(format!(
+                "finance-query/{} (https://github.com/Verdenroz/finance-query)",
+                env!("CARGO_PKG_VERSION")
+            ))
             .build()
             .map_err(FinanceError::HttpError)?;
 
         Ok(FredClient {
             api_key: self.api_key,
             http,
-            limiter: Arc::new(RateLimiter::new(FRED_RATE_PER_SEC)),
+            limiter,
         })
     }
 }
 
-/// FRED API client. Obtained from [`super::FRED_CLIENT`] singleton.
+/// FRED API client. Constructed per-call via [`super::FRED_SINGLETON`].
 pub(crate) struct FredClient {
     api_key: String,
     http: Client,

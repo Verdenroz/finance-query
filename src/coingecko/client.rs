@@ -9,8 +9,8 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::CoinQuote;
-use super::rate_limiter::RateLimiter;
 use crate::error::{FinanceError, Result};
+use crate::rate_limiter::RateLimiter;
 
 const COINGECKO_BASE: &str = "https://api.coingecko.com/api/v3";
 /// 30 req/min = 0.5 req/sec
@@ -25,7 +25,10 @@ impl CoinGeckoClient {
     pub fn new() -> Result<Self> {
         let http = Client::builder()
             .timeout(Duration::from_secs(30))
-            .user_agent("finance-query/2 (https://github.com/Verdenroz/finance-query)")
+            .user_agent(format!(
+                "finance-query/{} (https://github.com/Verdenroz/finance-query)",
+                env!("CARGO_PKG_VERSION")
+            ))
             .build()
             .map_err(FinanceError::HttpError)?;
 

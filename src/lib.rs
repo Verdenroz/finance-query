@@ -69,6 +69,7 @@ mod client;
 mod constants;
 mod endpoints;
 mod models;
+pub(crate) mod rate_limiter;
 mod scrapers;
 mod ticker;
 mod tickers;

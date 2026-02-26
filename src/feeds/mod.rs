@@ -36,15 +36,23 @@ use std::sync::OnceLock;
 
 use crate::error::{FinanceError, Result};
 
-static FEED_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+/// Cached User-Agent string, computed once from the environment.
+///
+/// Only the configuration (UA string) is stored as a singleton — not the
+/// `reqwest::Client` itself. `reqwest::Client` internally spawns hyper
+/// connection-pool tasks on whichever tokio runtime first uses it; when that
+/// runtime is dropped (e.g. after a `#[tokio::test]`), those tasks die and
+/// subsequent calls from a different runtime receive `DispatchGone`. Caching
+/// only the UA avoids this while still computing the environment lookup once.
+static FEED_UA: OnceLock<String> = OnceLock::new();
 
-fn feed_client() -> &'static reqwest::Client {
-    FEED_CLIENT.get_or_init(|| {
+fn feed_user_agent() -> &'static str {
+    FEED_UA.get_or_init(|| {
         // SEC EDGAR requires "app/version (email)" — nothing else in the UA.
         // Other sites accept any reasonable UA. We use the email format when
         // EDGAR_EMAIL is set (same env var as the edgar module), falling back
         // to a github URL for environments without EDGAR configured.
-        let ua = match std::env::var("EDGAR_EMAIL") {
+        match std::env::var("EDGAR_EMAIL") {
             Ok(email) if !email.trim().is_empty() => {
                 format!(
                     "finance-query/{} ({})",
@@ -58,12 +66,15 @@ fn feed_client() -> &'static reqwest::Client {
                 " (+https://github.com/Verdenroz/finance-query)"
             )
             .to_string(),
-        };
-        reqwest::Client::builder()
-            .user_agent(ua)
-            .build()
-            .expect("failed to build feeds HTTP client")
+        }
     })
+}
+
+fn build_feed_client() -> reqwest::Client {
+    reqwest::Client::builder()
+        .user_agent(feed_user_agent())
+        .build()
+        .expect("failed to build feeds HTTP client")
 }
 
 /// A named or custom RSS/Atom feed source.
@@ -246,17 +257,23 @@ pub struct FeedEntry {
 ///
 /// Returns an empty `Vec` (not an error) when the feed is reachable but empty.
 pub async fn fetch(source: FeedSource) -> Result<Vec<FeedEntry>> {
-    fetch_url(&source.url(), &source.name()).await
+    let client = build_feed_client();
+    fetch_with_client(&client, &source.url(), &source.name()).await
 }
 
 /// Fetch multiple feed sources concurrently and merge the results.
 ///
 /// Results are deduplicated by URL and sorted newest-first when dates are available.
 /// Feeds that fail individually are skipped (not propagated as errors).
+///
+/// A single `reqwest::Client` is shared across all concurrent fetches within
+/// this call, reusing connection pools and TLS state.
 pub async fn fetch_all(sources: &[FeedSource]) -> Result<Vec<FeedEntry>> {
-    let futures: Vec<_> = sources
+    let client = build_feed_client();
+    let pairs: Vec<(String, String)> = sources.iter().map(|s| (s.url(), s.name())).collect();
+    let futures: Vec<_> = pairs
         .iter()
-        .map(|s| fetch_url_owned(s.url(), s.name()))
+        .map(|(url, name)| fetch_with_client(&client, url, name))
         .collect();
 
     let results = join_all(futures).await;
@@ -274,11 +291,14 @@ pub async fn fetch_all(sources: &[FeedSource]) -> Result<Vec<FeedEntry>> {
     Ok(entries)
 }
 
-async fn fetch_url(url: impl AsRef<str>, source_name: impl Into<String>) -> Result<Vec<FeedEntry>> {
-    let url = url.as_ref();
-    let source = source_name.into();
+async fn fetch_with_client(
+    client: &reqwest::Client,
+    url: &str,
+    source_name: &str,
+) -> Result<Vec<FeedEntry>> {
+    let source = source_name.to_string();
 
-    let text = feed_client()
+    let text = client
         .get(url)
         .send()
         .await
@@ -330,10 +350,6 @@ async fn fetch_url(url: impl AsRef<str>, source_name: impl Into<String>) -> Resu
         .collect();
 
     Ok(entries)
-}
-
-async fn fetch_url_owned(url: String, source_name: String) -> Result<Vec<FeedEntry>> {
-    fetch_url(url, source_name).await
 }
 
 #[cfg(test)]

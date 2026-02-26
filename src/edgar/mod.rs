@@ -4,8 +4,7 @@
 //! structured XBRL financial data, and full-text search.
 //!
 //! All requests are rate-limited to 10 per second as required by SEC.
-//! Rate limiting, HTTP connection pooling, and CIK caching are managed
-//! internally via a process-global singleton.
+//! Rate limiting and CIK caching are managed via a process-global singleton.
 //!
 //! # Quick Start
 //!
@@ -37,16 +36,38 @@
 //! ```
 
 mod client;
-mod rate_limiter;
 
 use crate::error::{FinanceError, Result};
 use crate::models::edgar::{CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions};
-use client::{EdgarClient, EdgarClientBuilder};
-use std::sync::OnceLock;
+use crate::rate_limiter::RateLimiter;
+use client::EdgarClientBuilder;
+use std::collections::HashMap;
+use std::sync::{Arc, OnceLock};
 use std::time::Duration;
+use tokio::sync::RwLock;
 
-/// Global EDGAR client singleton.
-static EDGAR_CLIENT: OnceLock<EdgarClient> = OnceLock::new();
+/// SEC EDGAR rate limit: 10 requests per second.
+const EDGAR_RATE_PER_SEC: f64 = 10.0;
+
+/// Stable configuration stored in the EDGAR process-global singleton.
+///
+/// Only configuration, the rate limiter, and the CIK cache are stored — NOT
+/// the `reqwest::Client`. `reqwest::Client` internally spawns hyper
+/// connection-pool tasks on whichever tokio runtime first uses them; when that
+/// runtime is dropped (e.g. at the end of a `#[tokio::test]`), those tasks die
+/// and subsequent calls from a different runtime receive `DispatchGone`. A fresh
+/// `reqwest::Client` is built per public function call via
+/// [`EdgarClientBuilder::build_with_shared_state`], reusing the shared rate
+/// limiter and CIK cache.
+struct EdgarSingleton {
+    email: String,
+    app_name: String,
+    timeout: Duration,
+    rate_limiter: Arc<RateLimiter>,
+    cik_cache: Arc<RwLock<Option<HashMap<String, u64>>>>,
+}
+
+static EDGAR_SINGLETON: OnceLock<EdgarSingleton> = OnceLock::new();
 
 /// Initialize the global EDGAR client with a contact email.
 ///
@@ -71,13 +92,16 @@ static EDGAR_CLIENT: OnceLock<EdgarClient> = OnceLock::new();
 ///
 /// # Errors
 ///
-/// Returns an error if:
-/// - EDGAR has already been initialized
-/// - The HTTP client cannot be constructed
+/// Returns an error if EDGAR has already been initialized.
 pub fn init(email: impl Into<String>) -> Result<()> {
-    let client = EdgarClientBuilder::new(email).build()?;
-    EDGAR_CLIENT
-        .set(client)
+    EDGAR_SINGLETON
+        .set(EdgarSingleton {
+            email: email.into(),
+            app_name: "finance-query".to_string(),
+            timeout: Duration::from_secs(30),
+            rate_limiter: Arc::new(RateLimiter::new(EDGAR_RATE_PER_SEC)),
+            cik_cache: Arc::new(RwLock::new(None)),
+        })
         .map_err(|_| FinanceError::InvalidParameter {
             param: "edgar".to_string(),
             reason: "EDGAR client already initialized".to_string(),
@@ -114,26 +138,33 @@ pub fn init_with_config(
     app_name: impl Into<String>,
     timeout: Duration,
 ) -> Result<()> {
-    let client = EdgarClientBuilder::new(email)
-        .app_name(app_name)
-        .timeout(timeout)
-        .build()?;
-    EDGAR_CLIENT
-        .set(client)
+    EDGAR_SINGLETON
+        .set(EdgarSingleton {
+            email: email.into(),
+            app_name: app_name.into(),
+            timeout,
+            rate_limiter: Arc::new(RateLimiter::new(EDGAR_RATE_PER_SEC)),
+            cik_cache: Arc::new(RwLock::new(None)),
+        })
         .map_err(|_| FinanceError::InvalidParameter {
             param: "edgar".to_string(),
             reason: "EDGAR client already initialized".to_string(),
         })
 }
 
-/// Get a reference to the global EDGAR client.
-fn client() -> Result<&'static EdgarClient> {
-    EDGAR_CLIENT
+/// Build a fresh [`EdgarClient`](client::EdgarClient) from the singleton's
+/// config, reusing the shared rate limiter and CIK cache.
+fn build_client() -> Result<client::EdgarClient> {
+    let s = EDGAR_SINGLETON
         .get()
         .ok_or_else(|| FinanceError::InvalidParameter {
             param: "edgar".to_string(),
             reason: "EDGAR not initialized. Call edgar::init(email) first.".to_string(),
-        })
+        })?;
+    EdgarClientBuilder::new(&s.email)
+        .app_name(&s.app_name)
+        .timeout(s.timeout)
+        .build_with_shared_state(Arc::clone(&s.rate_limiter), Arc::clone(&s.cik_cache))
 }
 
 fn accession_parts(accession_number: &str) -> Result<(String, String)> {
@@ -180,7 +211,7 @@ fn accession_parts(accession_number: &str) -> Result<(String, String)> {
 /// - Symbol not found in SEC database
 /// - Network request fails
 pub async fn resolve_cik(symbol: &str) -> Result<u64> {
-    client()?.resolve_cik(symbol).await
+    build_client()?.resolve_cik(symbol).await
 }
 
 /// Fetch filing history and company metadata for a CIK.
@@ -202,7 +233,7 @@ pub async fn resolve_cik(symbol: &str) -> Result<u64> {
 /// # }
 /// ```
 pub async fn submissions(cik: u64) -> Result<EdgarSubmissions> {
-    client()?.submissions(cik).await
+    build_client()?.submissions(cik).await
 }
 
 /// Fetch structured XBRL financial data for a CIK.
@@ -224,7 +255,7 @@ pub async fn submissions(cik: u64) -> Result<EdgarSubmissions> {
 /// # }
 /// ```
 pub async fn company_facts(cik: u64) -> Result<CompanyFacts> {
-    client()?.company_facts(cik).await
+    build_client()?.company_facts(cik).await
 }
 
 /// Fetch the filing index for a specific accession number.
@@ -245,7 +276,7 @@ pub async fn company_facts(cik: u64) -> Result<CompanyFacts> {
 /// # }
 /// ```
 pub async fn filing_index(accession_number: &str) -> Result<EdgarFilingIndex> {
-    client()?.filing_index(accession_number).await
+    build_client()?.filing_index(accession_number).await
 }
 
 /// Search SEC EDGAR filings by text content.
@@ -288,7 +319,7 @@ pub async fn search(
     from: Option<usize>,
     size: Option<usize>,
 ) -> Result<EdgarSearchResults> {
-    client()?
+    build_client()?
         .search(query, forms, start_date, end_date, from, size)
         .await
 }
@@ -299,8 +330,6 @@ mod tests {
 
     #[test]
     fn test_init_sets_singleton() {
-        // Note: This test cannot be run in parallel with other tests that use init()
-        // since OnceLock cannot be reset.
         let result = init("test@example.com");
         assert!(result.is_ok() || result.is_err()); // May already be initialized
     }
@@ -309,14 +338,12 @@ mod tests {
     fn test_double_init_fails() {
         let _ = init("first@example.com");
         let result = init("second@example.com");
-        // Second init should fail
         assert!(matches!(result, Err(FinanceError::InvalidParameter { .. })));
     }
 
     #[test]
     fn test_singleton_is_set_after_init() {
         let _ = init("test@example.com");
-        // Once init succeeds (or was already called), the singleton must be populated.
-        assert!(EDGAR_CLIENT.get().is_some());
+        assert!(EDGAR_SINGLETON.get().is_some());
     }
 }
