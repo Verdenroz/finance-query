@@ -1982,8 +1982,6 @@ pub mod industries {
 /// ```
 pub mod exchange_codes {
     /// Typed exchange code for screener queries.
-    ///
-    /// See [`crate::exchange_codes`] for usage.
     #[non_exhaustive]
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
     pub enum ExchangeCode {
