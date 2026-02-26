@@ -143,7 +143,9 @@ async fn test_indicators_to_dataframe() {
 
     // Access specific indicators
     println!("RSI(14): {:?}", df.column("rsi_14").unwrap());
-    println!("MACD: {:?}", df.column("macd").unwrap());
+    // Note: macd is Option<MacdData> (nested struct), skipped by ToDataFrame derive.
+    // Use scalar indicators instead:
+    println!("ADX(14): {:?}", df.column("adx_14").unwrap());
 }
 
 // ---------------------------------------------------------------------------
@@ -175,7 +177,7 @@ async fn test_polars_filtering() {
 // Network tests — Computing Statistics (dataframe.md "Computing Statistics" section)
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[ignore = "requires network access"]
 async fn test_polars_statistics() {
     use finance_query::Ticker;
@@ -235,7 +237,7 @@ async fn test_polars_statistics() {
 // Doc uses outdated Series arithmetic; expressed via equivalent lazy API.
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[ignore = "requires network access"]
 async fn test_polars_calculated_columns() {
     use finance_query::Ticker;
@@ -273,7 +275,7 @@ async fn test_polars_calculated_columns() {
 // Doc uses outdated Column::gt_eq(); expressed via lazy filter.
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[ignore = "requires network access"]
 async fn test_polars_time_based_operations() {
     use chrono::DateTime;
@@ -346,7 +348,7 @@ async fn test_polars_sorting_and_ranking() {
 // Doc's select-then-group_by pattern adapted to correct group_by-then-agg.
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[ignore = "requires network access"]
 async fn test_polars_aggregations() {
     use finance_query::Ticker;
@@ -383,7 +385,7 @@ async fn test_polars_aggregations() {
 // Doc passes DataFrame slice to concat(); adapted to lazy concat for Polars 0.53.
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[ignore = "requires network access"]
 async fn test_multiple_symbols_concat() {
     use finance_query::Ticker;
@@ -470,7 +472,7 @@ async fn test_polars_joining_dataframes() {
 // Network tests — Custom Analysis (dataframe.md "Custom Analysis" section)
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[ignore = "requires network access"]
 async fn test_polars_custom_analysis() {
     use finance_query::{Screener, Ticker, finance};
@@ -587,7 +589,7 @@ async fn test_error_handling_match() {
 // df.filter() older API expressed via lazy; df.tail() is stable.
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 #[ignore = "requires network access"]
 async fn test_best_practices_cache_and_tail() {
     use finance_query::Ticker;
