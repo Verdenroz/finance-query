@@ -62,7 +62,12 @@ nav:
       - Ticker: library/ticker.md
       - Batch Tickers: library/tickers.md
       - Finance Module: library/finance.md
+      - Screeners: library/screeners.md
       - EDGAR: library/edgar.md
+      - Risk Analytics: library/risk.md
+      - FRED & Treasury: library/fred.md
+      - Crypto: library/crypto.md
+      - Feeds: library/feeds.md
       - DataFrame Support: library/dataframe.md
       - Configuration: library/configuration.md
       - Models: library/models.md

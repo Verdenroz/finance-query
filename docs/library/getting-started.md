@@ -72,11 +72,11 @@ let sparks = tickers.spark(Interval::OneDay, TimeRange::FiveDays).await?;
 ### 🔍 Market Discovery
 
 ```rust
-use finance_query::{finance, ScreenerType};
+use finance_query::{finance, Screener};
 
 // Search, screeners, trending stocks
 let results = finance::search("Tesla", &SearchOptions::default()).await?;
-let actives = finance::screener(ScreenerType::MostActives, None).await?;
+let actives = finance::screener(Screener::MostActives, 25).await?;
 let trending = finance::trending(None).await?;
 ```
 

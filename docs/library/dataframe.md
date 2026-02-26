@@ -122,9 +122,9 @@ let gains_df = CapitalGain::vec_to_dataframe(&gains)?;
 Convert screener results to DataFrame for analysis:
 
 ```rust
-use finance_query::{finance, ScreenerType};
+use finance_query::{finance, Screener};
 
-let gainers = finance::screener(ScreenerType::DayGainers, 50).await?;
+let gainers = finance::screener(Screener::DayGainers, 50).await?;
 
 // Convert to DataFrame
 let df = gainers.to_dataframe()?;
@@ -240,7 +240,7 @@ let df_filtered = df.filter(
 ```rust
 use polars::prelude::*;
 
-let gainers = finance::screener(ScreenerType::DayGainers, 100).await?;
+let gainers = finance::screener(Screener::DayGainers, 100).await?;
 
 let mut df = gainers.to_dataframe()?;
 
