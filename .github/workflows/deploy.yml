@@ -57,6 +57,28 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  deploy-docs:
+    name: Deploy MkDocs to GitHub Pages
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+          cache: 'pip'
+
+      - name: Install docs dependencies
+        run: pip install .
+
+      - name: Deploy to GitHub Pages
+        run: mkdocs gh-deploy --force
+
   deploy:
     name: Deploy to VPS
     needs: build-and-push
