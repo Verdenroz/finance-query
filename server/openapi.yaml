@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: Finance Query v2
-  version: 2.2.1
+  version: 2.3.0
   description: |
     REST API for fetching financial data from Yahoo Finance, SEC EDGAR, FRED, CoinGecko, and more.
     Provides real-time quotes, historical data, news, options, SEC filings, macroeconomic series, cryptocurrency data, and more.
