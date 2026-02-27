@@ -1,0 +1,2724 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Rust library, CLI, and server for financial data">
+      
+      
+        <meta name="author" content="Harvey Tseng">
+      
+      
+        <link rel="canonical" href="https://verdenroz.github.io/finance-query/library/screeners/">
+      
+      
+        <link rel="prev" href="../finance/">
+      
+      
+        <link rel="next" href="../edgar/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Screeners - Finance Query</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#screeners" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Finance Query" class="md-header__button md-logo" aria-label="Finance Query" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Finance Query
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Screeners
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-orange" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Verdenroz/finance-query" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Verdenroz/finance-query
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../getting-started/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Library
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../cli/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  CLI
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../server/api-reference/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Server
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/contributing/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Finance Query" class="md-nav__button md-logo" aria-label="Finance Query" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    Finance Query
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Verdenroz/finance-query" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Verdenroz/finance-query
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Library
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Library
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ticker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ticker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tickers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Batch Tickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../streaming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-time Streaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../finance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Finance Module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screeners
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screeners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#predefined-screeners" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Predefined Screeners
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-screeners-typed-query-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Screeners — Typed Query Builder
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom Screeners — Typed Query Builder">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#condition-methods-screenerfieldext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condition Methods (ScreenerFieldExt)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#controlling-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controlling Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#or-logic-add_or_conditions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OR Logic — add_or_conditions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preset-constructors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preset Constructors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mutual-fund-screener" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mutual Fund Screener
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#equityfield-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EquityField Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EquityField Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#price-market-cap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Price &amp; Market Cap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#categorical-use-eq_str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categorical (use eq_str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trading-volume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trading &amp; Volume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#short-interest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Short Interest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#valuation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Valuation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#profitability-dividends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profitability &amp; Dividends
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#income-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Income Statement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#balance-sheet-leverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Balance Sheet &amp; Leverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#liquidity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Liquidity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cash-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cash Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#esg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ESG
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edgar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDGAR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../risk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk Analytics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fred/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FRED & Treasury
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crypto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Crypto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feeds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dataframe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DataFrame Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../indicators/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Indicators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backtesting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backtesting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation & Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Server
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/websocket-api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebSocket API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#predefined-screeners" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Predefined Screeners
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#custom-screeners-typed-query-builder" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Custom Screeners — Typed Query Builder
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Custom Screeners — Typed Query Builder">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#core-types" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Core Types
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#basic-example" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Basic Example
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#condition-methods-screenerfieldext" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Condition Methods (ScreenerFieldExt)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#controlling-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Controlling Results
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#or-logic-add_or_conditions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        OR Logic — add_or_conditions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#preset-constructors" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Preset Constructors
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#mutual-fund-screener" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Mutual Fund Screener
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#equityfield-reference" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        EquityField Reference
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="EquityField Reference">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#price-market-cap" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Price &amp; Market Cap
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#categorical-use-eq_str" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Categorical (use eq_str)
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trading-volume" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trading &amp; Volume
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#short-interest" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Short Interest
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#valuation" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Valuation
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#profitability-dividends" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Profitability &amp; Dividends
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#income-statement" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Income Statement
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#balance-sheet-leverage" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Balance Sheet &amp; Leverage
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#liquidity" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Liquidity
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#cash-flow" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Cash Flow
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#esg" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        ESG
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="screeners">Screeners<a class="headerlink" href="#screeners" title="Permanent link">&para;</a></h1>
+<div class="admonition abstract">
+<p class="admonition-title">Cargo Docs</p>
+<p><a href="https://docs.rs/finance-query/latest/finance_query/finance/fn.screener.html">docs.rs/finance-query — finance::screener</a></p>
+</div>
+<p>The screener API lets you filter stocks and mutual funds by hundreds of financial criteria. FinanceQuery supports both Yahoo Finance's <strong>predefined screeners</strong> and a fully <strong>typed custom screener query builder</strong> that gives you IDE autocomplete and compile-time field safety.</p>
+<h2 id="predefined-screeners">Predefined Screeners<a class="headerlink" href="#predefined-screeners" title="Permanent link">&para;</a></h2>
+<p>Yahoo Finance maintains a set of curated screeners. Pass a <code>Screener</code> variant and a result count to <code>finance::screener</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">finance</span><span class="p">,</span><span class="w"> </span><span class="n">Screener</span><span class="p">};</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a><span class="c1">// Top 25 day gainers</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">gainers</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">finance</span><span class="p">::</span><span class="n">screener</span><span class="p">(</span><span class="n">Screener</span><span class="p">::</span><span class="n">DayGainers</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a><span class="c1">// Most actively traded stocks</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a><span class="kd">let</span><span class="w"> </span><span class="n">actives</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">finance</span><span class="p">::</span><span class="n">screener</span><span class="p">(</span><span class="n">Screener</span><span class="p">::</span><span class="n">MostActives</span><span class="p">,</span><span class="w"> </span><span class="mi">50</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a><span class="c1">// Process results</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a><span class="k">for</span><span class="w"> </span><span class="n">quote</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="o">&amp;</span><span class="n">gainers</span><span class="p">.</span><span class="n">quotes</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-0-11" name="__codelineno-0-11" href="#__codelineno-0-11"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">change_pct</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">quote</span><span class="p">.</span><span class="n">regular_market_change_percent</span><span class="p">.</span><span class="n">raw</span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="mf">0.0</span><span class="p">);</span>
+<a id="__codelineno-0-12" name="__codelineno-0-12" href="#__codelineno-0-12"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;{}: {:+.2}%&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">quote</span><span class="p">.</span><span class="n">symbol</span><span class="p">,</span><span class="w"> </span><span class="n">change_pct</span><span class="p">);</span>
+<a id="__codelineno-0-13" name="__codelineno-0-13" href="#__codelineno-0-13"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Available <code>Screener</code> variants:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>DayGainers</code></td>
+<td>Top gaining stocks by % change</td>
+</tr>
+<tr>
+<td><code>DayLosers</code></td>
+<td>Top losing stocks by % change</td>
+</tr>
+<tr>
+<td><code>MostActives</code></td>
+<td>Highest trading volume stocks</td>
+</tr>
+<tr>
+<td><code>AggressiveSmallCaps</code></td>
+<td>High-risk small-cap stocks</td>
+</tr>
+<tr>
+<td><code>ConservativeForeignFunds</code></td>
+<td>Conservative international funds</td>
+</tr>
+<tr>
+<td><code>GrowthTechnologyStocks</code></td>
+<td>High-growth technology companies</td>
+</tr>
+<tr>
+<td><code>HighYieldBond</code></td>
+<td>High-yield bond funds</td>
+</tr>
+<tr>
+<td><code>MostShortedStocks</code></td>
+<td>Most heavily shorted stocks</td>
+</tr>
+<tr>
+<td><code>PortfolioAnchors</code></td>
+<td>Stable, large-cap anchor stocks</td>
+</tr>
+<tr>
+<td><code>SmallCapGainers</code></td>
+<td>Top small-cap gainers</td>
+</tr>
+<tr>
+<td><code>SolidLargeGrowthFunds</code></td>
+<td>Large-cap growth mutual funds (4-5 star)</td>
+</tr>
+<tr>
+<td><code>SolidMidcapGrowthFunds</code></td>
+<td>Mid-cap growth mutual funds (4-5 star)</td>
+</tr>
+<tr>
+<td><code>TopMutualFunds</code></td>
+<td>Highest-rated mutual funds</td>
+</tr>
+<tr>
+<td><code>UndervaluedGrowthStocks</code></td>
+<td>Undervalued growth opportunities</td>
+</tr>
+<tr>
+<td><code>UndervaluedLargeCaps</code></td>
+<td>Undervalued large-cap companies</td>
+</tr>
+</tbody>
+</table>
+<h2 id="custom-screeners-typed-query-builder">Custom Screeners — Typed Query Builder<a class="headerlink" href="#custom-screeners-typed-query-builder" title="Permanent link">&para;</a></h2>
+<p>The custom screener API uses typed field enums so your IDE can autocomplete field names and the compiler catches typos at build time.</p>
+<h3 id="core-types">Core Types<a class="headerlink" href="#core-types" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Type</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EquityScreenerQuery</code></td>
+<td>Query for stocks (uses <code>EquityField</code>)</td>
+</tr>
+<tr>
+<td><code>FundScreenerQuery</code></td>
+<td>Query for mutual funds (uses <code>FundField</code>)</td>
+</tr>
+<tr>
+<td><code>EquityField</code></td>
+<td>~80 typed field names for equity filters</td>
+</tr>
+<tr>
+<td><code>FundField</code></td>
+<td>Typed field names for fund filters</td>
+</tr>
+<tr>
+<td><code>ScreenerFieldExt</code></td>
+<td>Trait providing <code>.gt()</code>, <code>.lt()</code>, <code>.between()</code>, <code>.eq_str()</code> etc.</td>
+</tr>
+</tbody>
+</table>
+<h3 id="basic-example">Basic Example<a class="headerlink" href="#basic-example" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">finance</span><span class="p">,</span><span class="w"> </span><span class="n">EquityScreenerQuery</span><span class="p">,</span><span class="w"> </span><span class="n">EquityField</span><span class="p">,</span><span class="w"> </span><span class="n">ScreenerFieldExt</span><span class="p">};</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a>
+<a id="__codelineno-1-3" name="__codelineno-1-3" href="#__codelineno-1-3"></a><span class="c1">// Find US large-cap value stocks with healthy volume</span>
+<a id="__codelineno-1-4" name="__codelineno-1-4" href="#__codelineno-1-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">EquityScreenerQuery</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<a id="__codelineno-1-5" name="__codelineno-1-5" href="#__codelineno-1-5"></a><span class="w">    </span><span class="p">.</span><span class="n">size</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span>
+<a id="__codelineno-1-6" name="__codelineno-1-6" href="#__codelineno-1-6"></a><span class="w">    </span><span class="p">.</span><span class="n">sort_by</span><span class="p">(</span><span class="n">EquityField</span><span class="p">::</span><span class="n">IntradayMarketCap</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span><span class="w">   </span><span class="c1">// descending</span>
+<a id="__codelineno-1-7" name="__codelineno-1-7" href="#__codelineno-1-7"></a><span class="w">    </span><span class="p">.</span><span class="n">add_condition</span><span class="p">(</span><span class="n">EquityField</span><span class="p">::</span><span class="n">Region</span><span class="p">.</span><span class="n">eq_str</span><span class="p">(</span><span class="s">&quot;us&quot;</span><span class="p">))</span>
+<a id="__codelineno-1-8" name="__codelineno-1-8" href="#__codelineno-1-8"></a><span class="w">    </span><span class="p">.</span><span class="n">add_condition</span><span class="p">(</span><span class="n">EquityField</span><span class="p">::</span><span class="n">AvgDailyVol3M</span><span class="p">.</span><span class="n">gt</span><span class="p">(</span><span class="mf">500_000.0</span><span class="p">))</span>
+<a id="__codelineno-1-9" name="__codelineno-1-9" href="#__codelineno-1-9"></a><span class="w">    </span><span class="p">.</span><span class="n">add_condition</span><span class="p">(</span><span class="n">EquityField</span><span class="p">::</span><span class="n">IntradayMarketCap</span><span class="p">.</span><span class="n">gt</span><span class="p">(</span><span class="mf">10_000_000_000.0</span><span class="p">))</span>
+<a id="__codelineno-1-10" name="__codelineno-1-10" href="#__codelineno-1-10"></a><span class="w">    </span><span class="p">.</span><span class="n">add_condition</span><span class="p">(</span><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">.</span><span class="n">between</span><span class="p">(</span><span class="mf">10.0</span><span class="p">,</span><span class="w"> </span><span class="mf">25.0</span><span class="p">));</span>
+<a id="__codelineno-1-11" name="__codelineno-1-11" href="#__codelineno-1-11"></a>
+<a id="__codelineno-1-12" name="__codelineno-1-12" href="#__codelineno-1-12"></a><span class="kd">let</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">finance</span><span class="p">::</span><span class="n">custom_screener</span><span class="p">(</span><span class="n">query</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-1-13" name="__codelineno-1-13" href="#__codelineno-1-13"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Found {} stocks&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">results</span><span class="p">.</span><span class="n">quotes</span><span class="p">.</span><span class="n">len</span><span class="p">());</span>
+</code></pre></div>
+<h3 id="condition-methods-screenerfieldext">Condition Methods (<code>ScreenerFieldExt</code>)<a class="headerlink" href="#condition-methods-screenerfieldext" title="Permanent link">&para;</a></h3>
+<p>Import <code>ScreenerFieldExt</code> to access the fluent condition builders on any field variant:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">ScreenerFieldExt</span><span class="p">;</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="c1">// Numeric comparisons</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">.</span><span class="n">gt</span><span class="p">(</span><span class="mf">5.0</span><span class="p">)</span><span class="w">           </span><span class="c1">// P/E &gt; 5</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">.</span><span class="n">lt</span><span class="p">(</span><span class="mf">30.0</span><span class="p">)</span><span class="w">          </span><span class="c1">// P/E &lt; 30</span>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">.</span><span class="n">gte</span><span class="p">(</span><span class="mf">10.0</span><span class="p">)</span><span class="w">         </span><span class="c1">// P/E &gt;= 10</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">.</span><span class="n">lte</span><span class="p">(</span><span class="mf">25.0</span><span class="p">)</span><span class="w">         </span><span class="c1">// P/E &lt;= 25</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">.</span><span class="n">eq_num</span><span class="p">(</span><span class="mf">15.0</span><span class="p">)</span><span class="w">      </span><span class="c1">// P/E == 15 (exact)</span>
+<a id="__codelineno-2-9" name="__codelineno-2-9" href="#__codelineno-2-9"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">.</span><span class="n">between</span><span class="p">(</span><span class="mf">10.0</span><span class="p">,</span><span class="w"> </span><span class="mf">25.0</span><span class="p">)</span><span class="w">  </span><span class="c1">// 10 &lt;= P/E &lt;= 25</span>
+<a id="__codelineno-2-10" name="__codelineno-2-10" href="#__codelineno-2-10"></a>
+<a id="__codelineno-2-11" name="__codelineno-2-11" href="#__codelineno-2-11"></a><span class="c1">// String equality (for categorical fields)</span>
+<a id="__codelineno-2-12" name="__codelineno-2-12" href="#__codelineno-2-12"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">Region</span><span class="p">.</span><span class="n">eq_str</span><span class="p">(</span><span class="s">&quot;us&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-13" name="__codelineno-2-13" href="#__codelineno-2-13"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">Sector</span><span class="p">.</span><span class="n">eq_str</span><span class="p">(</span><span class="s">&quot;Technology&quot;</span><span class="p">)</span>
+<a id="__codelineno-2-14" name="__codelineno-2-14" href="#__codelineno-2-14"></a><span class="n">EquityField</span><span class="p">::</span><span class="n">Exchange</span><span class="p">.</span><span class="n">eq_str</span><span class="p">(</span><span class="s">&quot;NMS&quot;</span><span class="p">)</span>
+</code></pre></div>
+<h3 id="controlling-results">Controlling Results<a class="headerlink" href="#controlling-results" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">EquityScreenerQuery</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a><span class="w">    </span><span class="p">.</span><span class="n">size</span><span class="p">(</span><span class="mi">100</span><span class="p">)</span><span class="w">          </span><span class="c1">// number of results (max 250, default 25)</span>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="w">    </span><span class="p">.</span><span class="n">offset</span><span class="p">(</span><span class="mi">50</span><span class="p">)</span><span class="w">         </span><span class="c1">// pagination offset</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="w">    </span><span class="p">.</span><span class="n">sort_by</span><span class="p">(</span><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">,</span><span class="w"> </span><span class="kc">true</span><span class="p">)</span><span class="w">  </span><span class="c1">// sort field + ascending=true</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a><span class="w">    </span><span class="p">.</span><span class="n">include_fields</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span><span class="w">               </span><span class="c1">// columns to return</span>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="w">        </span><span class="n">EquityField</span><span class="p">::</span><span class="n">Ticker</span><span class="p">,</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="w">        </span><span class="n">EquityField</span><span class="p">::</span><span class="n">CompanyShortName</span><span class="p">,</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="w">        </span><span class="n">EquityField</span><span class="p">::</span><span class="n">IntradayPrice</span><span class="p">,</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="w">        </span><span class="n">EquityField</span><span class="p">::</span><span class="n">PeRatio</span><span class="p">,</span>
+<a id="__codelineno-3-10" name="__codelineno-3-10" href="#__codelineno-3-10"></a><span class="w">        </span><span class="n">EquityField</span><span class="p">::</span><span class="n">IntradayMarketCap</span><span class="p">,</span>
+<a id="__codelineno-3-11" name="__codelineno-3-11" href="#__codelineno-3-11"></a><span class="w">    </span><span class="p">]);</span>
+</code></pre></div>
+<h3 id="or-logic-add_or_conditions">OR Logic — <code>add_or_conditions</code><a class="headerlink" href="#or-logic-add_or_conditions" title="Permanent link">&para;</a></h3>
+<p>All <code>add_condition</code> calls are AND'd together by default. Use <code>add_or_conditions</code> when you want any of several values to match:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="c1">// US OR Canadian equities, large-cap</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">EquityScreenerQuery</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="w">    </span><span class="p">.</span><span class="n">add_or_conditions</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="w">        </span><span class="n">EquityField</span><span class="p">::</span><span class="n">Region</span><span class="p">.</span><span class="n">eq_str</span><span class="p">(</span><span class="s">&quot;us&quot;</span><span class="p">),</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a><span class="w">        </span><span class="n">EquityField</span><span class="p">::</span><span class="n">Region</span><span class="p">.</span><span class="n">eq_str</span><span class="p">(</span><span class="s">&quot;ca&quot;</span><span class="p">),</span>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="w">    </span><span class="p">])</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="w">    </span><span class="p">.</span><span class="n">add_condition</span><span class="p">(</span><span class="n">EquityField</span><span class="p">::</span><span class="n">IntradayMarketCap</span><span class="p">.</span><span class="n">gt</span><span class="p">(</span><span class="mf">5_000_000_000.0</span><span class="p">));</span>
+</code></pre></div>
+<h3 id="preset-constructors">Preset Constructors<a class="headerlink" href="#preset-constructors" title="Permanent link">&para;</a></h3>
+<p><code>EquityScreenerQuery</code> includes three built-in presets:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">EquityScreenerQuery</span><span class="p">,</span><span class="w"> </span><span class="n">finance</span><span class="p">};</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a><span class="c1">// Most shorted US stocks with average volume &gt; 200K</span>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">finance</span><span class="p">::</span><span class="n">custom_screener</span><span class="p">(</span><span class="n">EquityScreenerQuery</span><span class="p">::</span><span class="n">most_shorted</span><span class="p">()).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a><span class="c1">// High-dividend US stocks (forward yield &gt; 3%, volume &gt; 100K)</span>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="kd">let</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">finance</span><span class="p">::</span><span class="n">custom_screener</span><span class="p">(</span><span class="n">EquityScreenerQuery</span><span class="p">::</span><span class="n">high_dividend</span><span class="p">()).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="c1">// US large-cap growth stocks (market cap &gt; $10B, positive EPS growth)</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="kd">let</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">finance</span><span class="p">::</span><span class="n">custom_screener</span><span class="p">(</span><span class="n">EquityScreenerQuery</span><span class="p">::</span><span class="n">large_cap_growth</span><span class="p">()).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+</code></pre></div>
+<h3 id="mutual-fund-screener">Mutual Fund Screener<a class="headerlink" href="#mutual-fund-screener" title="Permanent link">&para;</a></h3>
+<p>Use <code>FundScreenerQuery</code> with <code>FundField</code> for mutual funds:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">finance</span><span class="p">,</span><span class="w"> </span><span class="n">FundScreenerQuery</span><span class="p">,</span><span class="w"> </span><span class="n">FundField</span><span class="p">,</span><span class="w"> </span><span class="n">ScreenerFieldExt</span><span class="p">};</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">FundScreenerQuery</span><span class="p">::</span><span class="n">new</span><span class="p">()</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="w">    </span><span class="p">.</span><span class="n">size</span><span class="p">(</span><span class="mi">25</span><span class="p">)</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a><span class="w">    </span><span class="p">.</span><span class="n">sort_by</span><span class="p">(</span><span class="n">FundField</span><span class="p">::</span><span class="n">PerformanceRating</span><span class="p">,</span><span class="w"> </span><span class="kc">false</span><span class="p">)</span>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="w">    </span><span class="p">.</span><span class="n">add_condition</span><span class="p">(</span><span class="n">FundField</span><span class="p">::</span><span class="n">RiskRating</span><span class="p">.</span><span class="n">lte</span><span class="p">(</span><span class="mf">3.0</span><span class="p">))</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="w">    </span><span class="p">.</span><span class="n">include_fields</span><span class="p">(</span><span class="fm">vec!</span><span class="p">[</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="w">        </span><span class="n">FundField</span><span class="p">::</span><span class="n">Ticker</span><span class="p">,</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a><span class="w">        </span><span class="n">FundField</span><span class="p">::</span><span class="n">CompanyShortName</span><span class="p">,</span>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="w">        </span><span class="n">FundField</span><span class="p">::</span><span class="n">IntradayPrice</span><span class="p">,</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="w">        </span><span class="n">FundField</span><span class="p">::</span><span class="n">CategoryName</span><span class="p">,</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="w">        </span><span class="n">FundField</span><span class="p">::</span><span class="n">PerformanceRating</span><span class="p">,</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">        </span><span class="n">FundField</span><span class="p">::</span><span class="n">RiskRating</span><span class="p">,</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">    </span><span class="p">]);</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="kd">let</span><span class="w"> </span><span class="n">results</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">finance</span><span class="p">::</span><span class="n">custom_screener</span><span class="p">(</span><span class="n">query</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+</code></pre></div>
+<p><strong>Available <code>FundField</code> variants:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Yahoo Field</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ticker</code></td>
+<td><code>"ticker"</code></td>
+<td>Ticker symbol (display only)</td>
+</tr>
+<tr>
+<td><code>CompanyShortName</code></td>
+<td><code>"companyshortname"</code></td>
+<td>Fund name (display only)</td>
+</tr>
+<tr>
+<td><code>EodPrice</code></td>
+<td><code>"eodprice"</code></td>
+<td>End-of-day price</td>
+</tr>
+<tr>
+<td><code>IntradayPrice</code></td>
+<td><code>"intradayprice"</code></td>
+<td>Intraday price</td>
+</tr>
+<tr>
+<td><code>IntradayPriceChange</code></td>
+<td><code>"intradaypricechange"</code></td>
+<td>Intraday price change</td>
+</tr>
+<tr>
+<td><code>CategoryName</code></td>
+<td><code>"categoryname"</code></td>
+<td>Morningstar category</td>
+</tr>
+<tr>
+<td><code>PerformanceRating</code></td>
+<td><code>"performanceratingoverall"</code></td>
+<td>Overall performance rating</td>
+</tr>
+<tr>
+<td><code>InitialInvestment</code></td>
+<td><code>"initialinvestment"</code></td>
+<td>Minimum initial investment</td>
+</tr>
+<tr>
+<td><code>AnnualReturnRank</code></td>
+<td><code>"annualreturnnavy1categoryrank"</code></td>
+<td>1-year return rank within category</td>
+</tr>
+<tr>
+<td><code>RiskRating</code></td>
+<td><code>"riskratingoverall"</code></td>
+<td>Overall risk rating</td>
+</tr>
+<tr>
+<td><code>Exchange</code></td>
+<td><code>"exchange"</code></td>
+<td>Exchange</td>
+</tr>
+</tbody>
+</table>
+<h2 id="equityfield-reference"><code>EquityField</code> Reference<a class="headerlink" href="#equityfield-reference" title="Permanent link">&para;</a></h2>
+<h3 id="price-market-cap">Price &amp; Market Cap<a class="headerlink" href="#price-market-cap" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Ticker</code></td>
+<td>Ticker symbol (display only)</td>
+</tr>
+<tr>
+<td><code>CompanyShortName</code></td>
+<td>Company name (display only)</td>
+</tr>
+<tr>
+<td><code>EodPrice</code></td>
+<td>End-of-day price</td>
+</tr>
+<tr>
+<td><code>IntradayPrice</code></td>
+<td>Current intraday price</td>
+</tr>
+<tr>
+<td><code>IntradayPriceChange</code></td>
+<td>Intraday price change</td>
+</tr>
+<tr>
+<td><code>PercentChange</code></td>
+<td>Percentage price change</td>
+</tr>
+<tr>
+<td><code>Lastclose52WkHigh</code></td>
+<td>52-week high at last close</td>
+</tr>
+<tr>
+<td><code>Lastclose52WkLow</code></td>
+<td>52-week low at last close</td>
+</tr>
+<tr>
+<td><code>FiftyTwoWkPctChange</code></td>
+<td>52-week percentage change</td>
+</tr>
+<tr>
+<td><code>IntradayMarketCap</code></td>
+<td>Current market capitalization</td>
+</tr>
+<tr>
+<td><code>LastcloseMarketCap</code></td>
+<td>Market cap at last close</td>
+</tr>
+</tbody>
+</table>
+<h3 id="categorical-use-eq_str">Categorical (use <code>eq_str</code>)<a class="headerlink" href="#categorical-use-eq_str" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Example values</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Region</code></td>
+<td><code>"us"</code>, <code>"gb"</code>, <code>"jp"</code>, <code>"ca"</code></td>
+</tr>
+<tr>
+<td><code>Sector</code></td>
+<td><code>"Technology"</code>, <code>"Healthcare"</code>, <code>"Financials"</code></td>
+</tr>
+<tr>
+<td><code>Industry</code></td>
+<td><code>"Semiconductors"</code>, <code>"Software"</code></td>
+</tr>
+<tr>
+<td><code>Exchange</code></td>
+<td><code>"NMS"</code>, <code>"NYQ"</code>, <code>"ASE"</code></td>
+</tr>
+<tr>
+<td><code>PeerGroup</code></td>
+<td>Peer group identifier</td>
+</tr>
+</tbody>
+</table>
+<h3 id="trading-volume">Trading &amp; Volume<a class="headerlink" href="#trading-volume" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Beta</code></td>
+<td>Stock beta vs market</td>
+</tr>
+<tr>
+<td><code>AvgDailyVol3M</code></td>
+<td>3-month average daily volume</td>
+</tr>
+<tr>
+<td><code>DayVolume</code></td>
+<td>Intraday volume</td>
+</tr>
+<tr>
+<td><code>EodVolume</code></td>
+<td>End-of-day volume</td>
+</tr>
+<tr>
+<td><code>PctHeldInsider</code></td>
+<td>% held by insiders</td>
+</tr>
+<tr>
+<td><code>PctHeldInst</code></td>
+<td>% held by institutions</td>
+</tr>
+</tbody>
+</table>
+<h3 id="short-interest">Short Interest<a class="headerlink" href="#short-interest" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>ShortPctFloat</code></td>
+<td>Short % of float</td>
+</tr>
+<tr>
+<td><code>ShortPctSharesOut</code></td>
+<td>Short % of shares outstanding</td>
+</tr>
+<tr>
+<td><code>ShortInterest</code></td>
+<td>Short interest value</td>
+</tr>
+<tr>
+<td><code>DaysToCover</code></td>
+<td>Days to cover short</td>
+</tr>
+<tr>
+<td><code>ShortInterestPctChange</code></td>
+<td>Short interest % change</td>
+</tr>
+</tbody>
+</table>
+<h3 id="valuation">Valuation<a class="headerlink" href="#valuation" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>PeRatio</code></td>
+<td>Trailing twelve-month P/E</td>
+</tr>
+<tr>
+<td><code>PegRatio5Y</code></td>
+<td>5-year PEG ratio</td>
+</tr>
+<tr>
+<td><code>PriceBookRatio</code></td>
+<td>Price-to-book ratio</td>
+</tr>
+<tr>
+<td><code>PriceTangibleBook</code></td>
+<td>Price to tangible book value</td>
+</tr>
+<tr>
+<td><code>PriceEarnings</code></td>
+<td>Price to earnings (last close)</td>
+</tr>
+<tr>
+<td><code>BookValueShare</code></td>
+<td>Book value per share</td>
+</tr>
+<tr>
+<td><code>MarketCapToRevenue</code></td>
+<td>Market cap / total revenue</td>
+</tr>
+<tr>
+<td><code>TevToRevenue</code></td>
+<td>TEV / total revenue</td>
+</tr>
+<tr>
+<td><code>TevEbit</code></td>
+<td>TEV / EBIT</td>
+</tr>
+<tr>
+<td><code>TevEbitda</code></td>
+<td>TEV / EBITDA</td>
+</tr>
+</tbody>
+</table>
+<h3 id="profitability-dividends">Profitability &amp; Dividends<a class="headerlink" href="#profitability-dividends" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>Roa</code></td>
+<td>Return on assets (TTM)</td>
+</tr>
+<tr>
+<td><code>Roe</code></td>
+<td>Return on equity (TTM)</td>
+</tr>
+<tr>
+<td><code>ReturnOnCapital</code></td>
+<td>Return on total capital (TTM)</td>
+</tr>
+<tr>
+<td><code>ForwardDivYield</code></td>
+<td>Forward dividend yield</td>
+</tr>
+<tr>
+<td><code>ForwardDivPerShare</code></td>
+<td>Forward dividend per share</td>
+</tr>
+<tr>
+<td><code>ConsecutiveDivYears</code></td>
+<td>Consecutive years of dividend growth</td>
+</tr>
+<tr>
+<td><code>NetIncomeMargin</code></td>
+<td>Net income margin (TTM)</td>
+</tr>
+<tr>
+<td><code>GrossProfitMargin</code></td>
+<td>Gross profit margin (TTM)</td>
+</tr>
+<tr>
+<td><code>EbitdaMargin</code></td>
+<td>EBITDA margin (TTM)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="income-statement">Income Statement<a class="headerlink" href="#income-statement" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TotalRevenues</code></td>
+<td>Total revenues (TTM)</td>
+</tr>
+<tr>
+<td><code>GrossProfit</code></td>
+<td>Gross profit (TTM)</td>
+</tr>
+<tr>
+<td><code>Ebitda</code></td>
+<td>EBITDA (TTM)</td>
+</tr>
+<tr>
+<td><code>Ebitda1YrGrowth</code></td>
+<td>EBITDA 1-year growth</td>
+</tr>
+<tr>
+<td><code>NetIncome</code></td>
+<td>Net income (TTM)</td>
+</tr>
+<tr>
+<td><code>NetIncome1YrGrowth</code></td>
+<td>Net income 1-year growth</td>
+</tr>
+<tr>
+<td><code>Revenue1YrGrowth</code></td>
+<td>Revenue 1-year growth</td>
+</tr>
+<tr>
+<td><code>QuarterlyRevGrowth</code></td>
+<td>Quarterly revenue growth</td>
+</tr>
+<tr>
+<td><code>EpsGrowth</code></td>
+<td>EPS growth (TTM)</td>
+</tr>
+<tr>
+<td><code>DilutedEps1YrGrowth</code></td>
+<td>Diluted EPS 1-year growth</td>
+</tr>
+<tr>
+<td><code>NetEpsBasic</code></td>
+<td>Basic EPS (TTM)</td>
+</tr>
+<tr>
+<td><code>NetEpsDiluted</code></td>
+<td>Diluted EPS (TTM)</td>
+</tr>
+<tr>
+<td><code>OperatingIncome</code></td>
+<td>Operating income (TTM)</td>
+</tr>
+<tr>
+<td><code>Ebit</code></td>
+<td>EBIT (TTM)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="balance-sheet-leverage">Balance Sheet &amp; Leverage<a class="headerlink" href="#balance-sheet-leverage" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>TotalAssets</code></td>
+<td>Total assets (TTM)</td>
+</tr>
+<tr>
+<td><code>TotalDebt</code></td>
+<td>Total debt (TTM)</td>
+</tr>
+<tr>
+<td><code>TotalEquity</code></td>
+<td>Total equity (TTM)</td>
+</tr>
+<tr>
+<td><code>TotalCommonEquity</code></td>
+<td>Total common equity (TTM)</td>
+</tr>
+<tr>
+<td><code>TotalCurrentAssets</code></td>
+<td>Total current assets</td>
+</tr>
+<tr>
+<td><code>TotalCurrentLiab</code></td>
+<td>Total current liabilities</td>
+</tr>
+<tr>
+<td><code>CashAndStInvestments</code></td>
+<td>Cash and short-term investments</td>
+</tr>
+<tr>
+<td><code>CommonSharesOut</code></td>
+<td>Common shares outstanding</td>
+</tr>
+<tr>
+<td><code>TotalSharesOut</code></td>
+<td>Total shares outstanding</td>
+</tr>
+<tr>
+<td><code>TotalDebtEquity</code></td>
+<td>Total debt / equity</td>
+</tr>
+<tr>
+<td><code>LtDebtEquity</code></td>
+<td>Long-term debt / equity</td>
+</tr>
+<tr>
+<td><code>TotalDebtEbitda</code></td>
+<td>Total debt / EBITDA</td>
+</tr>
+<tr>
+<td><code>NetDebtEbitda</code></td>
+<td>Net debt / EBITDA</td>
+</tr>
+<tr>
+<td><code>EbitInterestExp</code></td>
+<td>EBIT / interest expense</td>
+</tr>
+<tr>
+<td><code>EbitdaInterestExp</code></td>
+<td>EBITDA / interest expense</td>
+</tr>
+</tbody>
+</table>
+<h3 id="liquidity">Liquidity<a class="headerlink" href="#liquidity" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>QuickRatio</code></td>
+<td>Quick ratio (TTM)</td>
+</tr>
+<tr>
+<td><code>CurrentRatio</code></td>
+<td>Current ratio (TTM)</td>
+</tr>
+<tr>
+<td><code>AltmanZScore</code></td>
+<td>Altman Z-score</td>
+</tr>
+<tr>
+<td><code>OcfToCurrentLiab</code></td>
+<td>Operating cash flow / current liabilities</td>
+</tr>
+</tbody>
+</table>
+<h3 id="cash-flow">Cash Flow<a class="headerlink" href="#cash-flow" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>CashFromOps</code></td>
+<td>Cash from operations (TTM)</td>
+</tr>
+<tr>
+<td><code>CashFromOps1YrGrowth</code></td>
+<td>Cash from ops 1-year growth</td>
+</tr>
+<tr>
+<td><code>LeveredFcf</code></td>
+<td>Levered free cash flow (TTM)</td>
+</tr>
+<tr>
+<td><code>LeveredFcf1YrGrowth</code></td>
+<td>Levered FCF 1-year growth</td>
+</tr>
+<tr>
+<td><code>UnleveredFcf</code></td>
+<td>Unlevered free cash flow</td>
+</tr>
+<tr>
+<td><code>Capex</code></td>
+<td>Capital expenditure (TTM)</td>
+</tr>
+</tbody>
+</table>
+<h3 id="esg">ESG<a class="headerlink" href="#esg" title="Permanent link">&para;</a></h3>
+<table>
+<thead>
+<tr>
+<th>Variant</th>
+<th>Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>EsgScore</code></td>
+<td>Overall ESG score</td>
+</tr>
+<tr>
+<td><code>EnvironmentalScore</code></td>
+<td>Environmental score</td>
+</tr>
+<tr>
+<td><code>GovernanceScore</code></td>
+<td>Governance score</td>
+</tr>
+<tr>
+<td><code>SocialScore</code></td>
+<td>Social score</td>
+</tr>
+<tr>
+<td><code>HighestControversy</code></td>
+<td>Highest controversy level</td>
+</tr>
+</tbody>
+</table>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../finance/">Finance Module</a> - All market-wide functions including <code>screener()</code> and <code>custom_screener()</code></li>
+<li><a href="models.md">Models Reference</a> - <code>ScreenerResults</code> and <code>ScreenerQuote</code> response types</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Verdenroz/finance-query" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.expand", "navigation.indexes", "content.code.copy", "content.code.annotate", "navigation.tabs", "navigation.top"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>

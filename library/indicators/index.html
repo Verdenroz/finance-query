@@ -1,0 +1,2669 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+        <meta name="description" content="Rust library, CLI, and server for financial data">
+      
+      
+        <meta name="author" content="Harvey Tseng">
+      
+      
+        <link rel="canonical" href="https://verdenroz.github.io/finance-query/library/indicators/">
+      
+      
+        <link rel="prev" href="../configuration/">
+      
+      
+        <link rel="next" href="../backtesting/">
+      
+      
+        
+      
+      
+      <link rel="icon" href="../../assets/logo.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.3">
+    
+    
+      
+        <title>Indicators - Finance Query</title>
+      
+    
+    
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
+      
+        
+        <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+    <script>__md_scope=new URL("../..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="orange">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#indicators" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+<header class="md-header" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href="../.." title="Finance Query" class="md-header__button md-logo" aria-label="Finance Query" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            Finance Query
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              Indicators
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="deep-orange" data-md-color-accent="orange"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 6H7c-3.31 0-6 2.69-6 6s2.69 6 6 6h10c3.31 0 6-2.69 6-6s-2.69-6-6-6m0 10H7c-2.21 0-4-1.79-4-4s1.79-4 4-4h10c2.21 0 4 1.79 4 4s-1.79 4-4 4M7 9c-1.66 0-3 1.34-3 3s1.34 3 3 3 3-1.34 3-3-1.34-3-3-3"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="deep-orange" data-md-color-accent="orange"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M17 7H7a5 5 0 0 0-5 5 5 5 0 0 0 5 5h10a5 5 0 0 0 5-5 5 5 0 0 0-5-5m0 8a3 3 0 0 1-3-3 3 3 0 0 1 3-3 3 3 0 0 1 3 3 3 3 0 0 1-3 3"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/Verdenroz/finance-query" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Verdenroz/finance-query
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+          
+            
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    <li class="md-tabs__item">
+      <a href="../.." class="md-tabs__link">
+        
+  
+  
+    
+  
+  Home
+
+      </a>
+    </li>
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    
+    
+      <li class="md-tabs__item md-tabs__item--active">
+        <a href="../getting-started/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Library
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../cli/installation/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  CLI
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../server/api-reference/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Server
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../../development/contributing/" class="md-tabs__link">
+          
+  
+  
+    
+  
+  Development
+
+        </a>
+      </li>
+    
+  
+
+      
+    </ul>
+  </div>
+</nav>
+          
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href="../.." title="Finance Query" class="md-nav__button md-logo" aria-label="Finance Query" data-md-component="logo">
+      
+  <img src="../../assets/logo.png" alt="logo">
+
+    </a>
+    Finance Query
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/Verdenroz/finance-query" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M439.6 236.1 244 40.5c-5.4-5.5-12.8-8.5-20.4-8.5s-15 3-20.4 8.4L162.5 81l51.5 51.5c27.1-9.1 52.7 16.8 43.4 43.7l49.7 49.7c34.2-11.8 61.2 31 35.5 56.7-26.5 26.5-70.2-2.9-56-37.3L240.3 199v121.9c25.3 12.5 22.3 41.8 9.1 55-6.4 6.4-15.2 10.1-24.3 10.1s-17.8-3.6-24.3-10.1c-17.6-17.6-11.1-46.9 11.2-56v-123c-20.8-8.5-24.6-30.7-18.6-45L142.6 101 8.5 235.1C3 240.6 0 247.9 0 255.5s3 15 8.5 20.4l195.6 195.7c5.4 5.4 12.7 8.4 20.4 8.4s15-3 20.4-8.4l194.7-194.7c5.4-5.4 8.4-12.8 8.4-20.4s-3-15-8.4-20.4"/></svg>
+  </div>
+  <div class="md-source__repository">
+    Verdenroz/finance-query
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../.." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Home
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+        
+        
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--active md-nav__item--section md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" checked>
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Library
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="true">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Library
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../getting-started/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Getting Started
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../ticker/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Ticker
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../tickers/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Batch Tickers
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../streaming/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Real-time Streaming
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../finance/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Finance Module
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../screeners/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Screeners
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../edgar/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    EDGAR
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../risk/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Risk Analytics
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../fred/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    FRED & Treasury
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../crypto/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Crypto
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../feeds/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Feeds
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../dataframe/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    DataFrame Support
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../configuration/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Configuration
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Indicators
+  
+
+    
+  </span>
+  
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Indicators
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#enable-feature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Feature
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#three-ways-to-calculate-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three Ways to Calculate Indicators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Three Ways to Calculate Indicators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-summary-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Summary API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-chart-extension-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Chart Extension Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-direct-indicator-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Direct Indicator Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-with-compound-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with Compound Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-result-structs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Result Structs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Indicators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Available Indicators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#moving-averages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moving Averages
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#momentum-oscillators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Momentum Oscillators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trend-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trend Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#volatility-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volatility Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#volume-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volume Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#candlestick-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Candlestick Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Candlestick Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-patternsentiment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using PatternSentiment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combining-patterns-with-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining Patterns with Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-with-indicator-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with Indicator Results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#converting-to-dataframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Converting to DataFrame
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caching-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caching Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#trend-confirmation-with-multiple-mas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trend Confirmation with Multiple MAs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rsi-extremes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RSI Extremes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#macd-crossover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MACD Crossover
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../backtesting/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Backtesting
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    CLI
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    CLI
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Installation & Quick Start
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/commands/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Commands
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../cli/examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Examples
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_4" >
+        
+          
+          <label class="md-nav__link" for="__nav_4" id="__nav_4_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Server
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_4_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_4">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Server
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    REST API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../server/websocket-api-reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    WebSocket API Reference
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+      
+        
+      
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+          
+        
+        <input class="md-nav__toggle md-toggle md-toggle--indeterminate" type="checkbox" id="__nav_5" >
+        
+          
+          <label class="md-nav__link" for="__nav_5" id="__nav_5_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Development
+  
+
+    
+  </span>
+  
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_5_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_5">
+            <span class="md-nav__icon md-icon"></span>
+            
+  
+    Development
+  
+
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../../development/contributing/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    
+  
+    Contributing
+  
+
+    
+  </span>
+  
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#enable-feature" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Enable Feature
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#getting-started" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Getting Started
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#three-ways-to-calculate-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Three Ways to Calculate Indicators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Three Ways to Calculate Indicators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#1-summary-api" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        1. Summary API
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#2-chart-extension-methods" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        2. Chart Extension Methods
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#3-direct-indicator-functions" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        3. Direct Indicator Functions
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#working-with-compound-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with Compound Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#available-result-structs" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Result Structs
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#available-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Available Indicators
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Available Indicators">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#moving-averages" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Moving Averages
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#momentum-oscillators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Momentum Oscillators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#trend-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trend Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#volatility-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volatility Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#volume-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Volume Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#candlestick-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Candlestick Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Candlestick Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#using-patternsentiment" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Using PatternSentiment
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#combining-patterns-with-indicators" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Combining Patterns with Indicators
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#working-with-indicator-results" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Working with Indicator Results
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#converting-to-dataframe" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Converting to DataFrame
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#caching-behavior" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Caching Behavior
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#common-patterns" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Common Patterns
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Common Patterns">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#trend-confirmation-with-multiple-mas" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Trend Confirmation with Multiple MAs
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#rsi-extremes" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        RSI Extremes
+      
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#macd-crossover" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        MACD Crossover
+      
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#best-practices" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Best Practices
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#next-steps" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Next Steps
+      
+    </span>
+  </a>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              
+              <article class="md-content__inner md-typeset">
+                
+                  
+
+
+  
+  
+
+
+<h1 id="indicators">Indicators<a class="headerlink" href="#indicators" title="Permanent link">&para;</a></h1>
+<div class="admonition abstract">
+<p class="admonition-title">Cargo Docs</p>
+<p><a href="https://docs.rs/finance-query/latest/finance_query/indicators/index.html">docs.rs/finance-query — indicators</a></p>
+</div>
+<p>Access 42 technical indicators and 20 candlestick patterns calculated from historical price data.</p>
+<h2 id="enable-feature">Enable Feature<a class="headerlink" href="#enable-feature" title="Permanent link">&para;</a></h2>
+<p>Add the <code>indicators</code> feature to your <code>Cargo.toml</code>:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="k">[dependencies]</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a><span class="n">finance-query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;2&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">features</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;indicators&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<p>Or enable it alongside other features:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-1-1" name="__codelineno-1-1" href="#__codelineno-1-1"></a><span class="k">[dependencies]</span>
+<a id="__codelineno-1-2" name="__codelineno-1-2" href="#__codelineno-1-2"></a><span class="n">finance-query</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">version</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="s2">&quot;2&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">features</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;dataframe&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;indicators&quot;</span><span class="p">]</span><span class="w"> </span><span class="p">}</span>
+</code></pre></div>
+<h2 id="getting-started">Getting Started<a class="headerlink" href="#getting-started" title="Permanent link">&para;</a></h2>
+<p>Fetch indicators for a symbol:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-2-1" name="__codelineno-2-1" href="#__codelineno-2-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">Ticker</span><span class="p">,</span><span class="w"> </span><span class="n">Interval</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">};</span>
+<a id="__codelineno-2-2" name="__codelineno-2-2" href="#__codelineno-2-2"></a>
+<a id="__codelineno-2-3" name="__codelineno-2-3" href="#__codelineno-2-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-2-4" name="__codelineno-2-4" href="#__codelineno-2-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">indicators</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-2-5" name="__codelineno-2-5" href="#__codelineno-2-5"></a>
+<a id="__codelineno-2-6" name="__codelineno-2-6" href="#__codelineno-2-6"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;RSI(14): {:?}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">rsi_14</span><span class="p">);</span>
+<a id="__codelineno-2-7" name="__codelineno-2-7" href="#__codelineno-2-7"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;SMA(200): {:?}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">sma_200</span><span class="p">);</span>
+<a id="__codelineno-2-8" name="__codelineno-2-8" href="#__codelineno-2-8"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;MACD: {:?}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">macd</span><span class="p">);</span>
+</code></pre></div>
+<h2 id="three-ways-to-calculate-indicators">Three Ways to Calculate Indicators<a class="headerlink" href="#three-ways-to-calculate-indicators" title="Permanent link">&para;</a></h2>
+<p>Finance Query provides three approaches for calculating indicators, each suited for different use cases:</p>
+<div class="admonition tip">
+<p class="admonition-title">Decision Matrix</p>
+<table>
+<thead>
+<tr>
+<th>Approach</th>
+<th>Use Case</th>
+<th>Custom Periods</th>
+<th>Data Source</th>
+<th>Caching</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>Summary API</strong></td>
+<td>Multiple indicators, dashboards</td>
+<td>✗ Fixed only</td>
+<td>Automatic</td>
+<td>✓ Yes</td>
+</tr>
+<tr>
+<td><strong>Chart Methods</strong></td>
+<td>Few indicators, custom periods</td>
+<td>✓ Yes</td>
+<td>Chart data</td>
+<td>✗ No</td>
+</tr>
+<tr>
+<td><strong>Direct Functions</strong></td>
+<td>Advanced, backtesting, custom data</td>
+<td>✓ Yes</td>
+<td>Any Vec<f64></td>
+<td>✗ No</td>
+</tr>
+</tbody>
+</table>
+</div>
+<h3 id="1-summary-api">1. Summary API<a class="headerlink" href="#1-summary-api" title="Permanent link">&para;</a></h3>
+<p>Get all indicators pre-calculated with standard periods. Best for dashboards and analysis requiring many indicators.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-3-1" name="__codelineno-3-1" href="#__codelineno-3-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">Ticker</span><span class="p">,</span><span class="w"> </span><span class="n">Interval</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">};</span>
+<a id="__codelineno-3-2" name="__codelineno-3-2" href="#__codelineno-3-2"></a>
+<a id="__codelineno-3-3" name="__codelineno-3-3" href="#__codelineno-3-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-3-4" name="__codelineno-3-4" href="#__codelineno-3-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">indicators</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-3-5" name="__codelineno-3-5" href="#__codelineno-3-5"></a>
+<a id="__codelineno-3-6" name="__codelineno-3-6" href="#__codelineno-3-6"></a><span class="c1">// All indicators calculated at once with standard periods</span>
+<a id="__codelineno-3-7" name="__codelineno-3-7" href="#__codelineno-3-7"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;RSI(14): {:?}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">rsi_14</span><span class="p">);</span>
+<a id="__codelineno-3-8" name="__codelineno-3-8" href="#__codelineno-3-8"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;SMA(200): {:?}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">sma_200</span><span class="p">);</span>
+<a id="__codelineno-3-9" name="__codelineno-3-9" href="#__codelineno-3-9"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;MACD: {:?}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">macd</span><span class="p">);</span>
+</code></pre></div>
+<h3 id="2-chart-extension-methods">2. Chart Extension Methods<a class="headerlink" href="#2-chart-extension-methods" title="Permanent link">&para;</a></h3>
+<p>Call indicators directly on chart data with custom periods. Best when you need specific periods or a few indicators.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-4-1" name="__codelineno-4-1" href="#__codelineno-4-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">Ticker</span><span class="p">,</span><span class="w"> </span><span class="n">Interval</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">};</span>
+<a id="__codelineno-4-2" name="__codelineno-4-2" href="#__codelineno-4-2"></a>
+<a id="__codelineno-4-3" name="__codelineno-4-3" href="#__codelineno-4-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-4-4" name="__codelineno-4-4" href="#__codelineno-4-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">chart</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-4-5" name="__codelineno-4-5" href="#__codelineno-4-5"></a>
+<a id="__codelineno-4-6" name="__codelineno-4-6" href="#__codelineno-4-6"></a><span class="c1">// Calculate indicators with custom periods</span>
+<a id="__codelineno-4-7" name="__codelineno-4-7" href="#__codelineno-4-7"></a><span class="kd">let</span><span class="w"> </span><span class="n">sma_15</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">sma</span><span class="p">(</span><span class="mi">15</span><span class="p">);</span><span class="w">           </span><span class="c1">// Custom period: 15</span>
+<a id="__codelineno-4-8" name="__codelineno-4-8" href="#__codelineno-4-8"></a><span class="kd">let</span><span class="w"> </span><span class="n">rsi_21</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">rsi</span><span class="p">(</span><span class="mi">21</span><span class="p">)</span><span class="o">?</span><span class="p">;</span><span class="w">          </span><span class="c1">// Custom period: 21</span>
+<a id="__codelineno-4-9" name="__codelineno-4-9" href="#__codelineno-4-9"></a><span class="kd">let</span><span class="w"> </span><span class="n">macd</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">macd</span><span class="p">(</span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">)</span><span class="o">?</span><span class="p">;</span><span class="w">    </span><span class="c1">// Custom MACD parameters</span>
+<a id="__codelineno-4-10" name="__codelineno-4-10" href="#__codelineno-4-10"></a>
+<a id="__codelineno-4-11" name="__codelineno-4-11" href="#__codelineno-4-11"></a><span class="c1">// Access the last value</span>
+<a id="__codelineno-4-12" name="__codelineno-4-12" href="#__codelineno-4-12"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">last_sma</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sma_15</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-4-13" name="__codelineno-4-13" href="#__codelineno-4-13"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Latest SMA(15): {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">last_sma</span><span class="p">);</span>
+<a id="__codelineno-4-14" name="__codelineno-4-14" href="#__codelineno-4-14"></a><span class="p">}</span>
+<a id="__codelineno-4-15" name="__codelineno-4-15" href="#__codelineno-4-15"></a>
+<a id="__codelineno-4-16" name="__codelineno-4-16" href="#__codelineno-4-16"></a><span class="c1">// Candlestick patterns (same chart, no extra request)</span>
+<a id="__codelineno-4-17" name="__codelineno-4-17" href="#__codelineno-4-17"></a><span class="kd">let</span><span class="w"> </span><span class="n">signals</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">patterns</span><span class="p">();</span>
+</code></pre></div>
+<h3 id="3-direct-indicator-functions">3. Direct Indicator Functions<a class="headerlink" href="#3-direct-indicator-functions" title="Permanent link">&para;</a></h3>
+<p>Call raw indicator functions on price arrays. Best for custom data sources, backtesting, or advanced use cases.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-5-1" name="__codelineno-5-1" href="#__codelineno-5-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">Ticker</span><span class="p">,</span><span class="w"> </span><span class="n">Interval</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">};</span>
+<a id="__codelineno-5-2" name="__codelineno-5-2" href="#__codelineno-5-2"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">indicators</span><span class="p">::{</span><span class="n">sma</span><span class="p">,</span><span class="w"> </span><span class="n">rsi</span><span class="p">,</span><span class="w"> </span><span class="n">macd</span><span class="p">};</span>
+<a id="__codelineno-5-3" name="__codelineno-5-3" href="#__codelineno-5-3"></a>
+<a id="__codelineno-5-4" name="__codelineno-5-4" href="#__codelineno-5-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-5-5" name="__codelineno-5-5" href="#__codelineno-5-5"></a><span class="kd">let</span><span class="w"> </span><span class="n">chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">chart</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-5-6" name="__codelineno-5-6" href="#__codelineno-5-6"></a>
+<a id="__codelineno-5-7" name="__codelineno-5-7" href="#__codelineno-5-7"></a><span class="c1">// Extract price data (convenience methods on Chart)</span>
+<a id="__codelineno-5-8" name="__codelineno-5-8" href="#__codelineno-5-8"></a><span class="kd">let</span><span class="w"> </span><span class="n">closes</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="kt">f64</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">close_prices</span><span class="p">();</span>
+<a id="__codelineno-5-9" name="__codelineno-5-9" href="#__codelineno-5-9"></a><span class="kd">let</span><span class="w"> </span><span class="n">highs</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="kt">f64</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">high_prices</span><span class="p">();</span>
+<a id="__codelineno-5-10" name="__codelineno-5-10" href="#__codelineno-5-10"></a><span class="kd">let</span><span class="w"> </span><span class="n">lows</span><span class="p">:</span><span class="w"> </span><span class="nb">Vec</span><span class="o">&lt;</span><span class="kt">f64</span><span class="o">&gt;</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">low_prices</span><span class="p">();</span>
+<a id="__codelineno-5-11" name="__codelineno-5-11" href="#__codelineno-5-11"></a>
+<a id="__codelineno-5-12" name="__codelineno-5-12" href="#__codelineno-5-12"></a><span class="c1">// Calculate indicators directly</span>
+<a id="__codelineno-5-13" name="__codelineno-5-13" href="#__codelineno-5-13"></a><span class="kd">let</span><span class="w"> </span><span class="n">sma_25</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">sma</span><span class="p">(</span><span class="o">&amp;</span><span class="n">closes</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">);</span><span class="w">                    </span><span class="c1">// Returns Vec&lt;Option&lt;f64&gt;&gt;</span>
+<a id="__codelineno-5-14" name="__codelineno-5-14" href="#__codelineno-5-14"></a><span class="kd">let</span><span class="w"> </span><span class="n">rsi_10</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rsi</span><span class="p">(</span><span class="o">&amp;</span><span class="n">closes</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">)</span><span class="o">?</span><span class="p">;</span><span class="w">                   </span><span class="c1">// Returns Result&lt;Vec&lt;Option&lt;f64&gt;&gt;&gt;</span>
+<a id="__codelineno-5-15" name="__codelineno-5-15" href="#__codelineno-5-15"></a><span class="kd">let</span><span class="w"> </span><span class="n">macd_result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">closes</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">)</span><span class="o">?</span><span class="p">;</span><span class="w">      </span><span class="c1">// Returns Result&lt;MacdResult&gt;</span>
+<a id="__codelineno-5-16" name="__codelineno-5-16" href="#__codelineno-5-16"></a>
+<a id="__codelineno-5-17" name="__codelineno-5-17" href="#__codelineno-5-17"></a><span class="c1">// Access results</span>
+<a id="__codelineno-5-18" name="__codelineno-5-18" href="#__codelineno-5-18"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">last_rsi</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rsi_10</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-19" name="__codelineno-5-19" href="#__codelineno-5-19"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;RSI(10): {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">last_rsi</span><span class="p">);</span>
+<a id="__codelineno-5-20" name="__codelineno-5-20" href="#__codelineno-5-20"></a><span class="p">}</span>
+<a id="__codelineno-5-21" name="__codelineno-5-21" href="#__codelineno-5-21"></a>
+<a id="__codelineno-5-22" name="__codelineno-5-22" href="#__codelineno-5-22"></a><span class="c1">// MACD returns a struct with three series</span>
+<a id="__codelineno-5-23" name="__codelineno-5-23" href="#__codelineno-5-23"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">last_macd</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd_result</span><span class="p">.</span><span class="n">macd_line</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-5-24" name="__codelineno-5-24" href="#__codelineno-5-24"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;MACD Line: {:.4}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">last_macd</span><span class="p">);</span>
+<a id="__codelineno-5-25" name="__codelineno-5-25" href="#__codelineno-5-25"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="working-with-compound-indicators">Working with Compound Indicators<a class="headerlink" href="#working-with-compound-indicators" title="Permanent link">&para;</a></h3>
+<p>Some indicators return multiple series in a result struct. Here's how to use them with direct functions:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-6-1" name="__codelineno-6-1" href="#__codelineno-6-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">indicators</span><span class="p">::{</span><span class="n">bollinger_bands</span><span class="p">,</span><span class="w"> </span><span class="n">stochastic</span><span class="p">,</span><span class="w"> </span><span class="n">macd</span><span class="p">};</span>
+<a id="__codelineno-6-2" name="__codelineno-6-2" href="#__codelineno-6-2"></a>
+<a id="__codelineno-6-3" name="__codelineno-6-3" href="#__codelineno-6-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-6-4" name="__codelineno-6-4" href="#__codelineno-6-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">chart</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-6-5" name="__codelineno-6-5" href="#__codelineno-6-5"></a>
+<a id="__codelineno-6-6" name="__codelineno-6-6" href="#__codelineno-6-6"></a><span class="kd">let</span><span class="w"> </span><span class="n">closes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">close_prices</span><span class="p">();</span>
+<a id="__codelineno-6-7" name="__codelineno-6-7" href="#__codelineno-6-7"></a><span class="kd">let</span><span class="w"> </span><span class="n">highs</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">high_prices</span><span class="p">();</span>
+<a id="__codelineno-6-8" name="__codelineno-6-8" href="#__codelineno-6-8"></a><span class="kd">let</span><span class="w"> </span><span class="n">lows</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">low_prices</span><span class="p">();</span>
+<a id="__codelineno-6-9" name="__codelineno-6-9" href="#__codelineno-6-9"></a>
+<a id="__codelineno-6-10" name="__codelineno-6-10" href="#__codelineno-6-10"></a><span class="c1">// Bollinger Bands - returns BollingerBands struct</span>
+<a id="__codelineno-6-11" name="__codelineno-6-11" href="#__codelineno-6-11"></a><span class="kd">let</span><span class="w"> </span><span class="n">bb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bollinger_bands</span><span class="p">(</span><span class="o">&amp;</span><span class="n">closes</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mf">2.0</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-6-12" name="__codelineno-6-12" href="#__codelineno-6-12"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">upper</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bb</span><span class="p">.</span><span class="n">upper</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-13" name="__codelineno-6-13" href="#__codelineno-6-13"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">middle</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bb</span><span class="p">.</span><span class="n">middle</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-14" name="__codelineno-6-14" href="#__codelineno-6-14"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">lower</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bb</span><span class="p">.</span><span class="n">lower</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-15" name="__codelineno-6-15" href="#__codelineno-6-15"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;BB: Upper={:.2}, Middle={:.2}, Lower={:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">upper</span><span class="p">,</span><span class="w"> </span><span class="n">middle</span><span class="p">,</span><span class="w"> </span><span class="n">lower</span><span class="p">);</span>
+<a id="__codelineno-6-16" name="__codelineno-6-16" href="#__codelineno-6-16"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-6-17" name="__codelineno-6-17" href="#__codelineno-6-17"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-18" name="__codelineno-6-18" href="#__codelineno-6-18"></a><span class="p">}</span>
+<a id="__codelineno-6-19" name="__codelineno-6-19" href="#__codelineno-6-19"></a>
+<a id="__codelineno-6-20" name="__codelineno-6-20" href="#__codelineno-6-20"></a><span class="c1">// Stochastic Oscillator - returns StochasticResult struct</span>
+<a id="__codelineno-6-21" name="__codelineno-6-21" href="#__codelineno-6-21"></a><span class="kd">let</span><span class="w"> </span><span class="n">stoch</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stochastic</span><span class="p">(</span><span class="o">&amp;</span><span class="n">highs</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">lows</span><span class="p">,</span><span class="w"> </span><span class="o">&amp;</span><span class="n">closes</span><span class="p">,</span><span class="w"> </span><span class="mi">14</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-6-22" name="__codelineno-6-22" href="#__codelineno-6-22"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stoch</span><span class="p">.</span><span class="n">k</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-23" name="__codelineno-6-23" href="#__codelineno-6-23"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">d</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stoch</span><span class="p">.</span><span class="n">d</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-24" name="__codelineno-6-24" href="#__codelineno-6-24"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Stochastic: %K={:.2}, %D={:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">,</span><span class="w"> </span><span class="n">d</span><span class="p">);</span>
+<a id="__codelineno-6-25" name="__codelineno-6-25" href="#__codelineno-6-25"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-26" name="__codelineno-6-26" href="#__codelineno-6-26"></a><span class="p">}</span>
+<a id="__codelineno-6-27" name="__codelineno-6-27" href="#__codelineno-6-27"></a>
+<a id="__codelineno-6-28" name="__codelineno-6-28" href="#__codelineno-6-28"></a><span class="c1">// MACD - returns MacdResult struct</span>
+<a id="__codelineno-6-29" name="__codelineno-6-29" href="#__codelineno-6-29"></a><span class="kd">let</span><span class="w"> </span><span class="n">macd_data</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd</span><span class="p">(</span><span class="o">&amp;</span><span class="n">closes</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">,</span><span class="w"> </span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-6-30" name="__codelineno-6-30" href="#__codelineno-6-30"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">line</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd_data</span><span class="p">.</span><span class="n">macd_line</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-31" name="__codelineno-6-31" href="#__codelineno-6-31"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">signal</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd_data</span><span class="p">.</span><span class="n">signal_line</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-32" name="__codelineno-6-32" href="#__codelineno-6-32"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="o">&amp;</span><span class="n">hist</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd_data</span><span class="p">.</span><span class="n">histogram</span><span class="p">.</span><span class="n">last</span><span class="p">().</span><span class="n">and_then</span><span class="p">(</span><span class="o">|</span><span class="n">v</span><span class="o">|</span><span class="w"> </span><span class="n">v</span><span class="p">.</span><span class="n">as_ref</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-6-33" name="__codelineno-6-33" href="#__codelineno-6-33"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;MACD: Line={:.4}, Signal={:.4}, Histogram={:.4}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">line</span><span class="p">,</span><span class="w"> </span><span class="n">signal</span><span class="p">,</span><span class="w"> </span><span class="n">hist</span><span class="p">);</span>
+<a id="__codelineno-6-34" name="__codelineno-6-34" href="#__codelineno-6-34"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-6-35" name="__codelineno-6-35" href="#__codelineno-6-35"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-6-36" name="__codelineno-6-36" href="#__codelineno-6-36"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="available-result-structs">Available Result Structs<a class="headerlink" href="#available-result-structs" title="Permanent link">&para;</a></h3>
+<p>Direct indicator functions return these result types:</p>
+<ul>
+<li><strong>Simple indicators</strong> (SMA, EMA, RSI, ATR): <code>Vec&lt;Option&lt;f64&gt;&gt;</code></li>
+<li><strong>MACD</strong>: <code>MacdResult { macd_line, signal_line, histogram }</code></li>
+<li><strong>Bollinger Bands</strong>: <code>BollingerBands { upper, middle, lower }</code></li>
+<li><strong>Stochastic</strong>: <code>StochasticResult { k, d }</code></li>
+<li><strong>Aroon</strong>: <code>AroonResult { aroon_up, aroon_down }</code></li>
+<li><strong>SuperTrend</strong>: <code>SuperTrendResult { value, is_uptrend }</code></li>
+<li><strong>Ichimoku</strong>: <code>IchimokuResult { conversion_line, base_line, leading_span_a, leading_span_b, lagging_span }</code></li>
+<li><strong>Keltner Channels</strong>: <code>KeltnerChannelsResult { upper, middle, lower }</code></li>
+<li><strong>Donchian Channels</strong>: <code>DonchianChannelsResult { upper, middle, lower }</code></li>
+<li><strong>Bull/Bear Power</strong>: <code>BullBearPowerResult { bull_power, bear_power }</code></li>
+<li><strong>Elder Ray</strong>: <code>ElderRayResult { bull_power, bear_power }</code></li>
+</ul>
+<h2 id="available-indicators">Available Indicators<a class="headerlink" href="#available-indicators" title="Permanent link">&para;</a></h2>
+<p>All indicators return <code>Option&lt;T&gt;</code> — <code>None</code> when there is insufficient data to calculate.</p>
+<h3 id="moving-averages">Moving Averages<a class="headerlink" href="#moving-averages" title="Permanent link">&para;</a></h3>
+<p>Simple, exponential, and specialized moving averages for trend identification.</p>
+<p><strong>Simple Moving Averages (SMA):</strong>
+<code>sma_10</code>, <code>sma_20</code>, <code>sma_50</code>, <code>sma_100</code>, <code>sma_200</code></p>
+<p><strong>Exponential Moving Averages (EMA):</strong>
+<code>ema_10</code>, <code>ema_20</code>, <code>ema_50</code>, <code>ema_100</code>, <code>ema_200</code></p>
+<p><strong>Weighted Moving Averages (WMA):</strong>
+<code>wma_10</code>, <code>wma_20</code>, <code>wma_50</code>, <code>wma_100</code>, <code>wma_200</code></p>
+<p><strong>Advanced Moving Averages:</strong></p>
+<ul>
+<li><code>dema_20</code> - Double Exponential Moving Average</li>
+<li><code>tema_20</code> - Triple Exponential Moving Average</li>
+<li><code>hma_20</code> - Hull Moving Average</li>
+<li><code>vwma_20</code> - Volume Weighted Moving Average</li>
+<li><code>alma_9</code> - Arnaud Legoux Moving Average</li>
+<li><code>mcginley_dynamic_20</code> - McGinley Dynamic</li>
+</ul>
+<h3 id="momentum-oscillators">Momentum Oscillators<a class="headerlink" href="#momentum-oscillators" title="Permanent link">&para;</a></h3>
+<p>Measure rate of change and momentum for entry/exit signals.</p>
+<ul>
+<li><code>rsi_14</code> - Relative Strength Index</li>
+<li><code>stochastic</code> - Stochastic Oscillator (K and D lines)</li>
+<li><code>stochastic_rsi</code> - Stochastic RSI</li>
+<li><code>cci_20</code> - Commodity Channel Index</li>
+<li><code>williams_r_14</code> - Williams %R</li>
+<li><code>roc_12</code> - Rate of Change</li>
+<li><code>momentum_10</code> - Momentum</li>
+<li><code>cmo_14</code> - Chande Momentum Oscillator</li>
+<li><code>awesome_oscillator</code> - Bill Williams Awesome Oscillator</li>
+<li><code>coppock_curve</code> - Coppock Curve</li>
+</ul>
+<h3 id="trend-indicators">Trend Indicators<a class="headerlink" href="#trend-indicators" title="Permanent link">&para;</a></h3>
+<p>Identify trend direction and strength.</p>
+<ul>
+<li><code>macd</code> - MACD (line, signal, histogram)</li>
+<li><code>adx_14</code> - Average Directional Index</li>
+<li><code>aroon</code> - Aroon Up/Down</li>
+<li><code>supertrend</code> - Supertrend (value, trend direction)</li>
+<li><code>ichimoku</code> - Ichimoku Cloud (multiple components)</li>
+<li><code>parabolic_sar</code> - Parabolic SAR</li>
+<li><code>bull_bear_power</code> - Bull and Bear Power</li>
+<li><code>elder_ray_index</code> - Elder Ray Index (bull power, bear power)</li>
+</ul>
+<h3 id="volatility-indicators">Volatility Indicators<a class="headerlink" href="#volatility-indicators" title="Permanent link">&para;</a></h3>
+<p>Measure price volatility and support/resistance levels.</p>
+<ul>
+<li><code>bollinger_bands</code> - Bollinger Bands (upper, middle, lower)</li>
+<li><code>keltner_channels</code> - Keltner Channels (upper, middle, lower)</li>
+<li><code>donchian_channels</code> - Donchian Channels (upper, lower)</li>
+<li><code>atr_14</code> - Average True Range</li>
+<li><code>true_range</code> - True Range (raw)</li>
+<li><code>choppiness_index_14</code> - Choppiness Index</li>
+</ul>
+<h3 id="volume-indicators">Volume Indicators<a class="headerlink" href="#volume-indicators" title="Permanent link">&para;</a></h3>
+<p>Analyze volume patterns and accumulation/distribution.</p>
+<ul>
+<li><code>obv</code> - On-Balance Volume</li>
+<li><code>mfi_14</code> - Money Flow Index</li>
+<li><code>cmf_20</code> - Chaikin Money Flow</li>
+<li><code>chaikin_oscillator</code> - Chaikin Oscillator</li>
+<li><code>accumulation_distribution</code> - Accumulation/Distribution Line</li>
+<li><code>vwap</code> - Volume Weighted Average Price</li>
+<li><code>balance_of_power</code> - Balance of Power</li>
+</ul>
+<h2 id="candlestick-patterns">Candlestick Patterns<a class="headerlink" href="#candlestick-patterns" title="Permanent link">&para;</a></h2>
+<p>Detect 20 classic candlestick patterns across an entire chart in one call.</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-7-1" name="__codelineno-7-1" href="#__codelineno-7-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">Ticker</span><span class="p">,</span><span class="w"> </span><span class="n">Interval</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">};</span>
+<a id="__codelineno-7-2" name="__codelineno-7-2" href="#__codelineno-7-2"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::</span><span class="n">indicators</span><span class="p">::{</span><span class="n">patterns</span><span class="p">,</span><span class="w"> </span><span class="n">CandlePattern</span><span class="p">,</span><span class="w"> </span><span class="n">PatternSentiment</span><span class="p">};</span>
+<a id="__codelineno-7-3" name="__codelineno-7-3" href="#__codelineno-7-3"></a>
+<a id="__codelineno-7-4" name="__codelineno-7-4" href="#__codelineno-7-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-7-5" name="__codelineno-7-5" href="#__codelineno-7-5"></a><span class="kd">let</span><span class="w"> </span><span class="n">chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">chart</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-7-6" name="__codelineno-7-6" href="#__codelineno-7-6"></a>
+<a id="__codelineno-7-7" name="__codelineno-7-7" href="#__codelineno-7-7"></a><span class="c1">// Via Chart extension method — same length as chart.candles</span>
+<a id="__codelineno-7-8" name="__codelineno-7-8" href="#__codelineno-7-8"></a><span class="kd">let</span><span class="w"> </span><span class="n">signals</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">patterns</span><span class="p">();</span>
+<a id="__codelineno-7-9" name="__codelineno-7-9" href="#__codelineno-7-9"></a>
+<a id="__codelineno-7-10" name="__codelineno-7-10" href="#__codelineno-7-10"></a><span class="c1">// Or call the function directly with a candle slice</span>
+<a id="__codelineno-7-11" name="__codelineno-7-11" href="#__codelineno-7-11"></a><span class="kd">let</span><span class="w"> </span><span class="n">signals</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">patterns</span><span class="p">(</span><span class="o">&amp;</span><span class="n">chart</span><span class="p">.</span><span class="n">candles</span><span class="p">);</span>
+<a id="__codelineno-7-12" name="__codelineno-7-12" href="#__codelineno-7-12"></a>
+<a id="__codelineno-7-13" name="__codelineno-7-13" href="#__codelineno-7-13"></a><span class="c1">// Each slot is Some(pattern) or None; iterate with candles for context</span>
+<a id="__codelineno-7-14" name="__codelineno-7-14" href="#__codelineno-7-14"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">candle</span><span class="p">,</span><span class="w"> </span><span class="n">pattern</span><span class="p">)</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">candles</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">zip</span><span class="p">(</span><span class="n">signals</span><span class="p">.</span><span class="n">iter</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-15" name="__codelineno-7-15" href="#__codelineno-7-15"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">p</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pattern</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-7-16" name="__codelineno-7-16" href="#__codelineno-7-16"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span>
+<a id="__codelineno-7-17" name="__codelineno-7-17" href="#__codelineno-7-17"></a><span class="w">            </span><span class="s">&quot;timestamp={}: {:?} ({:?})&quot;</span><span class="p">,</span>
+<a id="__codelineno-7-18" name="__codelineno-7-18" href="#__codelineno-7-18"></a><span class="w">            </span><span class="n">candle</span><span class="p">.</span><span class="n">timestamp</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">,</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">sentiment</span><span class="p">()</span>
+<a id="__codelineno-7-19" name="__codelineno-7-19" href="#__codelineno-7-19"></a><span class="w">        </span><span class="p">);</span>
+<a id="__codelineno-7-20" name="__codelineno-7-20" href="#__codelineno-7-20"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-7-21" name="__codelineno-7-21" href="#__codelineno-7-21"></a><span class="p">}</span>
+</code></pre></div>
+<p><strong>Pattern catalogue:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Bars</th>
+<th>Pattern</th>
+<th>Signal</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>3</td>
+<td><code>MorningStar</code></td>
+<td>Bullish reversal</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>EveningStar</code></td>
+<td>Bearish reversal</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>ThreeWhiteSoldiers</code></td>
+<td>Bullish continuation</td>
+</tr>
+<tr>
+<td>3</td>
+<td><code>ThreeBlackCrows</code></td>
+<td>Bearish continuation</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>BullishEngulfing</code></td>
+<td>Bullish reversal</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>BearishEngulfing</code></td>
+<td>Bearish reversal</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>BullishHarami</code></td>
+<td>Bullish reversal</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>BearishHarami</code></td>
+<td>Bearish reversal</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>PiercingLine</code></td>
+<td>Bullish reversal</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>DarkCloudCover</code></td>
+<td>Bearish reversal</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>TweezerBottom</code></td>
+<td>Bullish reversal at support</td>
+</tr>
+<tr>
+<td>2</td>
+<td><code>TweezerTop</code></td>
+<td>Bearish reversal at resistance</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>Hammer</code></td>
+<td>Bullish reversal (requires prior downtrend)</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>InvertedHammer</code></td>
+<td>Bullish reversal (requires prior downtrend)</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>HangingMan</code></td>
+<td>Bearish reversal (requires prior uptrend)</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>ShootingStar</code></td>
+<td>Bearish reversal (requires prior uptrend)</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>BullishMarubozu</code></td>
+<td>Bullish momentum</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>BearishMarubozu</code></td>
+<td>Bearish momentum</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>Doji</code></td>
+<td>Indecision</td>
+</tr>
+<tr>
+<td>1</td>
+<td><code>SpinningTop</code></td>
+<td>Indecision</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Key design notes:</strong></p>
+<ul>
+<li><strong>Priority chain:</strong> three-bar wins over two-bar wins over one-bar. Each candle slot holds at most one pattern.</li>
+<li><strong>Trend-aware:</strong> <code>Hammer</code> / <code>HangingMan</code> and <code>InvertedHammer</code> / <code>ShootingStar</code> are the same physical shape — context (prior 3-bar trend) determines which label is assigned.</li>
+<li><strong>Harami Cross:</strong> A Doji inside a large body is classified as <code>BullishHarami</code> / <code>BearishHarami</code> — this is the stronger variant per Nison's definition; no separate variant needed.</li>
+<li><strong>Alignment:</strong> output is always <code>Vec&lt;Option&lt;CandlePattern&gt;&gt;</code> of the same length as the input candle slice.</li>
+</ul>
+<h3 id="using-patternsentiment">Using PatternSentiment<a class="headerlink" href="#using-patternsentiment" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-8-1" name="__codelineno-8-1" href="#__codelineno-8-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">signals</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">patterns</span><span class="p">();</span>
+<a id="__codelineno-8-2" name="__codelineno-8-2" href="#__codelineno-8-2"></a>
+<a id="__codelineno-8-3" name="__codelineno-8-3" href="#__codelineno-8-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">bullish</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">signals</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">filter</span><span class="p">(</span><span class="o">|</span><span class="n">s</span><span class="o">|</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-4" name="__codelineno-8-4" href="#__codelineno-8-4"></a><span class="w">    </span><span class="n">s</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="o">|</span><span class="n">p</span><span class="o">|</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">sentiment</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">PatternSentiment</span><span class="p">::</span><span class="n">Bullish</span><span class="p">).</span><span class="n">unwrap_or</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+<a id="__codelineno-8-5" name="__codelineno-8-5" href="#__codelineno-8-5"></a><span class="p">}).</span><span class="n">count</span><span class="p">();</span>
+<a id="__codelineno-8-6" name="__codelineno-8-6" href="#__codelineno-8-6"></a>
+<a id="__codelineno-8-7" name="__codelineno-8-7" href="#__codelineno-8-7"></a><span class="kd">let</span><span class="w"> </span><span class="n">bearish</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">signals</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">filter</span><span class="p">(</span><span class="o">|</span><span class="n">s</span><span class="o">|</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-8-8" name="__codelineno-8-8" href="#__codelineno-8-8"></a><span class="w">    </span><span class="n">s</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="o">|</span><span class="n">p</span><span class="o">|</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">sentiment</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">PatternSentiment</span><span class="p">::</span><span class="n">Bearish</span><span class="p">).</span><span class="n">unwrap_or</span><span class="p">(</span><span class="kc">false</span><span class="p">)</span>
+<a id="__codelineno-8-9" name="__codelineno-8-9" href="#__codelineno-8-9"></a><span class="p">}).</span><span class="n">count</span><span class="p">();</span>
+<a id="__codelineno-8-10" name="__codelineno-8-10" href="#__codelineno-8-10"></a>
+<a id="__codelineno-8-11" name="__codelineno-8-11" href="#__codelineno-8-11"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Bull/Bear ratio: {}/{}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">bullish</span><span class="p">,</span><span class="w"> </span><span class="n">bearish</span><span class="p">);</span>
+</code></pre></div>
+<h3 id="combining-patterns-with-indicators">Combining Patterns with Indicators<a class="headerlink" href="#combining-patterns-with-indicators" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-9-1" name="__codelineno-9-1" href="#__codelineno-9-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">chart</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">chart</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-9-2" name="__codelineno-9-2" href="#__codelineno-9-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">rsi</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">rsi</span><span class="p">(</span><span class="mi">14</span><span class="p">)</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-9-3" name="__codelineno-9-3" href="#__codelineno-9-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">signals</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">chart</span><span class="p">.</span><span class="n">patterns</span><span class="p">();</span>
+<a id="__codelineno-9-4" name="__codelineno-9-4" href="#__codelineno-9-4"></a>
+<a id="__codelineno-9-5" name="__codelineno-9-5" href="#__codelineno-9-5"></a><span class="c1">// Find bars where RSI is oversold AND a bullish pattern just completed</span>
+<a id="__codelineno-9-6" name="__codelineno-9-6" href="#__codelineno-9-6"></a><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="n">i</span><span class="p">,</span><span class="w"> </span><span class="p">(</span><span class="n">pattern</span><span class="p">,</span><span class="w"> </span><span class="n">rsi_val</span><span class="p">))</span><span class="w"> </span><span class="k">in</span><span class="w"> </span><span class="n">signals</span><span class="p">.</span><span class="n">iter</span><span class="p">().</span><span class="n">zip</span><span class="p">(</span><span class="n">rsi</span><span class="p">.</span><span class="n">iter</span><span class="p">()).</span><span class="n">enumerate</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-7" name="__codelineno-9-7" href="#__codelineno-9-7"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">is_bullish_pattern</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">pattern</span>
+<a id="__codelineno-9-8" name="__codelineno-9-8" href="#__codelineno-9-8"></a><span class="w">        </span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="o">|</span><span class="n">p</span><span class="o">|</span><span class="w"> </span><span class="n">p</span><span class="p">.</span><span class="n">sentiment</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">PatternSentiment</span><span class="p">::</span><span class="n">Bullish</span><span class="p">)</span>
+<a id="__codelineno-9-9" name="__codelineno-9-9" href="#__codelineno-9-9"></a><span class="w">        </span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span>
+<a id="__codelineno-9-10" name="__codelineno-9-10" href="#__codelineno-9-10"></a><span class="w">    </span><span class="kd">let</span><span class="w"> </span><span class="n">is_oversold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rsi_val</span><span class="p">.</span><span class="n">map</span><span class="p">(</span><span class="o">|</span><span class="n">r</span><span class="o">|</span><span class="w"> </span><span class="n">r</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">30.0</span><span class="p">).</span><span class="n">unwrap_or</span><span class="p">(</span><span class="kc">false</span><span class="p">);</span>
+<a id="__codelineno-9-11" name="__codelineno-9-11" href="#__codelineno-9-11"></a>
+<a id="__codelineno-9-12" name="__codelineno-9-12" href="#__codelineno-9-12"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">is_bullish_pattern</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">is_oversold</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-9-13" name="__codelineno-9-13" href="#__codelineno-9-13"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span>
+<a id="__codelineno-9-14" name="__codelineno-9-14" href="#__codelineno-9-14"></a><span class="w">            </span><span class="s">&quot;Strong buy signal at bar {}: {:?} with RSI={:.1}&quot;</span><span class="p">,</span>
+<a id="__codelineno-9-15" name="__codelineno-9-15" href="#__codelineno-9-15"></a><span class="w">            </span><span class="n">i</span><span class="p">,</span>
+<a id="__codelineno-9-16" name="__codelineno-9-16" href="#__codelineno-9-16"></a><span class="w">            </span><span class="n">pattern</span><span class="p">.</span><span class="n">unwrap</span><span class="p">(),</span>
+<a id="__codelineno-9-17" name="__codelineno-9-17" href="#__codelineno-9-17"></a><span class="w">            </span><span class="n">rsi_val</span><span class="p">.</span><span class="n">unwrap</span><span class="p">()</span>
+<a id="__codelineno-9-18" name="__codelineno-9-18" href="#__codelineno-9-18"></a><span class="w">        </span><span class="p">);</span>
+<a id="__codelineno-9-19" name="__codelineno-9-19" href="#__codelineno-9-19"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-9-20" name="__codelineno-9-20" href="#__codelineno-9-20"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="working-with-indicator-results">Working with Indicator Results<a class="headerlink" href="#working-with-indicator-results" title="Permanent link">&para;</a></h2>
+<p>Different indicators return different types. Simple indicators return <code>Option&lt;f64&gt;</code>, while compound indicators return special struct types:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-10-1" name="__codelineno-10-1" href="#__codelineno-10-1"></a><span class="c1">// Simple indicators (Option&lt;f64&gt;)</span>
+<a id="__codelineno-10-2" name="__codelineno-10-2" href="#__codelineno-10-2"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">rsi</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">rsi_14</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-3" name="__codelineno-10-3" href="#__codelineno-10-3"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;RSI(14): {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">rsi</span><span class="p">);</span>
+<a id="__codelineno-10-4" name="__codelineno-10-4" href="#__codelineno-10-4"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">rsi</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">30.0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-5" name="__codelineno-10-5" href="#__codelineno-10-5"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;  Oversold&quot;</span><span class="p">);</span>
+<a id="__codelineno-10-6" name="__codelineno-10-6" href="#__codelineno-10-6"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">rsi</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">70.0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-7" name="__codelineno-10-7" href="#__codelineno-10-7"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;  Overbought&quot;</span><span class="p">);</span>
+<a id="__codelineno-10-8" name="__codelineno-10-8" href="#__codelineno-10-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-9" name="__codelineno-10-9" href="#__codelineno-10-9"></a><span class="p">}</span>
+<a id="__codelineno-10-10" name="__codelineno-10-10" href="#__codelineno-10-10"></a>
+<a id="__codelineno-10-11" name="__codelineno-10-11" href="#__codelineno-10-11"></a><span class="c1">// Moving averages</span>
+<a id="__codelineno-10-12" name="__codelineno-10-12" href="#__codelineno-10-12"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">sma200</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">sma_200</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-13" name="__codelineno-10-13" href="#__codelineno-10-13"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;SMA(200): {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">sma200</span><span class="p">);</span>
+<a id="__codelineno-10-14" name="__codelineno-10-14" href="#__codelineno-10-14"></a><span class="p">}</span>
+<a id="__codelineno-10-15" name="__codelineno-10-15" href="#__codelineno-10-15"></a>
+<a id="__codelineno-10-16" name="__codelineno-10-16" href="#__codelineno-10-16"></a><span class="c1">// MACD (compound - MacdData struct)</span>
+<a id="__codelineno-10-17" name="__codelineno-10-17" href="#__codelineno-10-17"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">macd</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">macd</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-18" name="__codelineno-10-18" href="#__codelineno-10-18"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">line</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd</span><span class="p">.</span><span class="n">macd</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-19" name="__codelineno-10-19" href="#__codelineno-10-19"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;MACD Line: {:.4}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">line</span><span class="p">);</span>
+<a id="__codelineno-10-20" name="__codelineno-10-20" href="#__codelineno-10-20"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-21" name="__codelineno-10-21" href="#__codelineno-10-21"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">signal</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd</span><span class="p">.</span><span class="n">signal</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-22" name="__codelineno-10-22" href="#__codelineno-10-22"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Signal: {:.4}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">signal</span><span class="p">);</span>
+<a id="__codelineno-10-23" name="__codelineno-10-23" href="#__codelineno-10-23"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-24" name="__codelineno-10-24" href="#__codelineno-10-24"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">histogram</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">macd</span><span class="p">.</span><span class="n">histogram</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-25" name="__codelineno-10-25" href="#__codelineno-10-25"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Histogram: {:.4}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">histogram</span><span class="p">);</span>
+<a id="__codelineno-10-26" name="__codelineno-10-26" href="#__codelineno-10-26"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-27" name="__codelineno-10-27" href="#__codelineno-10-27"></a><span class="p">}</span>
+<a id="__codelineno-10-28" name="__codelineno-10-28" href="#__codelineno-10-28"></a>
+<a id="__codelineno-10-29" name="__codelineno-10-29" href="#__codelineno-10-29"></a><span class="c1">// Stochastic (StochasticData struct)</span>
+<a id="__codelineno-10-30" name="__codelineno-10-30" href="#__codelineno-10-30"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">stoch</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">stochastic</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-31" name="__codelineno-10-31" href="#__codelineno-10-31"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">k</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stoch</span><span class="p">.</span><span class="n">k</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-32" name="__codelineno-10-32" href="#__codelineno-10-32"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;%K: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">k</span><span class="p">);</span>
+<a id="__codelineno-10-33" name="__codelineno-10-33" href="#__codelineno-10-33"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-34" name="__codelineno-10-34" href="#__codelineno-10-34"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">d</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">stoch</span><span class="p">.</span><span class="n">d</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-35" name="__codelineno-10-35" href="#__codelineno-10-35"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;%D: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">d</span><span class="p">);</span>
+<a id="__codelineno-10-36" name="__codelineno-10-36" href="#__codelineno-10-36"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-37" name="__codelineno-10-37" href="#__codelineno-10-37"></a><span class="p">}</span>
+<a id="__codelineno-10-38" name="__codelineno-10-38" href="#__codelineno-10-38"></a>
+<a id="__codelineno-10-39" name="__codelineno-10-39" href="#__codelineno-10-39"></a><span class="c1">// Bollinger Bands (BollingerBandsData struct)</span>
+<a id="__codelineno-10-40" name="__codelineno-10-40" href="#__codelineno-10-40"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">bb</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">bollinger_bands</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-41" name="__codelineno-10-41" href="#__codelineno-10-41"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">upper</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bb</span><span class="p">.</span><span class="n">upper</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-42" name="__codelineno-10-42" href="#__codelineno-10-42"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Upper: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">upper</span><span class="p">);</span>
+<a id="__codelineno-10-43" name="__codelineno-10-43" href="#__codelineno-10-43"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-44" name="__codelineno-10-44" href="#__codelineno-10-44"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">middle</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bb</span><span class="p">.</span><span class="n">middle</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-45" name="__codelineno-10-45" href="#__codelineno-10-45"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Middle: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">middle</span><span class="p">);</span>
+<a id="__codelineno-10-46" name="__codelineno-10-46" href="#__codelineno-10-46"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-47" name="__codelineno-10-47" href="#__codelineno-10-47"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">lower</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">bb</span><span class="p">.</span><span class="n">lower</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-48" name="__codelineno-10-48" href="#__codelineno-10-48"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Lower: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">lower</span><span class="p">);</span>
+<a id="__codelineno-10-49" name="__codelineno-10-49" href="#__codelineno-10-49"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-50" name="__codelineno-10-50" href="#__codelineno-10-50"></a><span class="p">}</span>
+<a id="__codelineno-10-51" name="__codelineno-10-51" href="#__codelineno-10-51"></a>
+<a id="__codelineno-10-52" name="__codelineno-10-52" href="#__codelineno-10-52"></a><span class="c1">// Aroon (AroonData struct)</span>
+<a id="__codelineno-10-53" name="__codelineno-10-53" href="#__codelineno-10-53"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">aroon</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">aroon</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-54" name="__codelineno-10-54" href="#__codelineno-10-54"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">up</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">aroon</span><span class="p">.</span><span class="n">aroon_up</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-55" name="__codelineno-10-55" href="#__codelineno-10-55"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Aroon Up: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">up</span><span class="p">);</span>
+<a id="__codelineno-10-56" name="__codelineno-10-56" href="#__codelineno-10-56"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-57" name="__codelineno-10-57" href="#__codelineno-10-57"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">down</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">aroon</span><span class="p">.</span><span class="n">aroon_down</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-58" name="__codelineno-10-58" href="#__codelineno-10-58"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Aroon Down: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">down</span><span class="p">);</span>
+<a id="__codelineno-10-59" name="__codelineno-10-59" href="#__codelineno-10-59"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-60" name="__codelineno-10-60" href="#__codelineno-10-60"></a><span class="p">}</span>
+<a id="__codelineno-10-61" name="__codelineno-10-61" href="#__codelineno-10-61"></a>
+<a id="__codelineno-10-62" name="__codelineno-10-62" href="#__codelineno-10-62"></a><span class="c1">// Ichimoku (IchimokuData struct)</span>
+<a id="__codelineno-10-63" name="__codelineno-10-63" href="#__codelineno-10-63"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">ichimoku</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">ichimoku</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-64" name="__codelineno-10-64" href="#__codelineno-10-64"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">conversion</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ichimoku</span><span class="p">.</span><span class="n">conversion_line</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-65" name="__codelineno-10-65" href="#__codelineno-10-65"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Conversion Line: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">conversion</span><span class="p">);</span>
+<a id="__codelineno-10-66" name="__codelineno-10-66" href="#__codelineno-10-66"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-67" name="__codelineno-10-67" href="#__codelineno-10-67"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">base</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ichimoku</span><span class="p">.</span><span class="n">base_line</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-10-68" name="__codelineno-10-68" href="#__codelineno-10-68"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Base Line: {:.2}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">base</span><span class="p">);</span>
+<a id="__codelineno-10-69" name="__codelineno-10-69" href="#__codelineno-10-69"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-10-70" name="__codelineno-10-70" href="#__codelineno-10-70"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="converting-to-dataframe">Converting to DataFrame<a class="headerlink" href="#converting-to-dataframe" title="Permanent link">&para;</a></h2>
+<p>Convert all indicators to a Polars DataFrame for analysis:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-11-1" name="__codelineno-11-1" href="#__codelineno-11-1"></a><span class="k">use</span><span class="w"> </span><span class="n">finance_query</span><span class="p">::{</span><span class="n">Ticker</span><span class="p">,</span><span class="w"> </span><span class="n">Interval</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">};</span>
+<a id="__codelineno-11-2" name="__codelineno-11-2" href="#__codelineno-11-2"></a>
+<a id="__codelineno-11-3" name="__codelineno-11-3" href="#__codelineno-11-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">ticker</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Ticker</span><span class="p">::</span><span class="n">new</span><span class="p">(</span><span class="s">&quot;AAPL&quot;</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-11-4" name="__codelineno-11-4" href="#__codelineno-11-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">indicators</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span>
+<a id="__codelineno-11-5" name="__codelineno-11-5" href="#__codelineno-11-5"></a><span class="w">    </span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span>
+<a id="__codelineno-11-6" name="__codelineno-11-6" href="#__codelineno-11-6"></a><span class="w">    </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span>
+<a id="__codelineno-11-7" name="__codelineno-11-7" href="#__codelineno-11-7"></a><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-11-8" name="__codelineno-11-8" href="#__codelineno-11-8"></a>
+<a id="__codelineno-11-9" name="__codelineno-11-9" href="#__codelineno-11-9"></a><span class="kd">let</span><span class="w"> </span><span class="n">df</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">to_dataframe</span><span class="p">()</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-11-10" name="__codelineno-11-10" href="#__codelineno-11-10"></a><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;{}&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">df</span><span class="p">);</span>
+</code></pre></div>
+<h2 id="caching-behavior">Caching Behavior<a class="headerlink" href="#caching-behavior" title="Permanent link">&para;</a></h2>
+<p>Indicators are cached by (interval, range) combination:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-12-1" name="__codelineno-12-1" href="#__codelineno-12-1"></a><span class="c1">// First call fetches and caches</span>
+<a id="__codelineno-12-2" name="__codelineno-12-2" href="#__codelineno-12-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">ind1</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">OneMonth</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-12-3" name="__codelineno-12-3" href="#__codelineno-12-3"></a>
+<a id="__codelineno-12-4" name="__codelineno-12-4" href="#__codelineno-12-4"></a><span class="c1">// Second call returns cached result</span>
+<a id="__codelineno-12-5" name="__codelineno-12-5" href="#__codelineno-12-5"></a><span class="kd">let</span><span class="w"> </span><span class="n">ind2</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">OneMonth</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-12-6" name="__codelineno-12-6" href="#__codelineno-12-6"></a>
+<a id="__codelineno-12-7" name="__codelineno-12-7" href="#__codelineno-12-7"></a><span class="c1">// Different range: fetches new data</span>
+<a id="__codelineno-12-8" name="__codelineno-12-8" href="#__codelineno-12-8"></a><span class="kd">let</span><span class="w"> </span><span class="n">ind3</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+</code></pre></div>
+<h2 id="common-patterns">Common Patterns<a class="headerlink" href="#common-patterns" title="Permanent link">&para;</a></h2>
+<h3 id="trend-confirmation-with-multiple-mas">Trend Confirmation with Multiple MAs<a class="headerlink" href="#trend-confirmation-with-multiple-mas" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-13-1" name="__codelineno-13-1" href="#__codelineno-13-1"></a><span class="kd">let</span><span class="w"> </span><span class="n">indicators</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">OneYear</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-13-2" name="__codelineno-13-2" href="#__codelineno-13-2"></a>
+<a id="__codelineno-13-3" name="__codelineno-13-3" href="#__codelineno-13-3"></a><span class="kd">let</span><span class="w"> </span><span class="n">sma_200</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">sma_200</span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="mf">0.0</span><span class="p">);</span>
+<a id="__codelineno-13-4" name="__codelineno-13-4" href="#__codelineno-13-4"></a><span class="kd">let</span><span class="w"> </span><span class="n">ema_50</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">ema_50</span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="mf">0.0</span><span class="p">);</span>
+<a id="__codelineno-13-5" name="__codelineno-13-5" href="#__codelineno-13-5"></a><span class="kd">let</span><span class="w"> </span><span class="n">ema_20</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">ema_20</span><span class="p">.</span><span class="n">unwrap_or</span><span class="p">(</span><span class="mf">0.0</span><span class="p">);</span>
+<a id="__codelineno-13-6" name="__codelineno-13-6" href="#__codelineno-13-6"></a>
+<a id="__codelineno-13-7" name="__codelineno-13-7" href="#__codelineno-13-7"></a><span class="k">if</span><span class="w"> </span><span class="n">ema_20</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">ema_50</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="n">ema_50</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">sma_200</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-13-8" name="__codelineno-13-8" href="#__codelineno-13-8"></a><span class="w">    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Uptrend confirmed&quot;</span><span class="p">);</span>
+<a id="__codelineno-13-9" name="__codelineno-13-9" href="#__codelineno-13-9"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="rsi-extremes">RSI Extremes<a class="headerlink" href="#rsi-extremes" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-14-1" name="__codelineno-14-1" href="#__codelineno-14-1"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">rsi</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">rsi_14</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-2" name="__codelineno-14-2" href="#__codelineno-14-2"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">rsi</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">30.0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-3" name="__codelineno-14-3" href="#__codelineno-14-3"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Oversold&quot;</span><span class="p">);</span>
+<a id="__codelineno-14-4" name="__codelineno-14-4" href="#__codelineno-14-4"></a><span class="w">    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="k">if</span><span class="w"> </span><span class="n">rsi</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="mf">70.0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-14-5" name="__codelineno-14-5" href="#__codelineno-14-5"></a><span class="w">        </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Overbought&quot;</span><span class="p">);</span>
+<a id="__codelineno-14-6" name="__codelineno-14-6" href="#__codelineno-14-6"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-14-7" name="__codelineno-14-7" href="#__codelineno-14-7"></a><span class="p">}</span>
+</code></pre></div>
+<h3 id="macd-crossover">MACD Crossover<a class="headerlink" href="#macd-crossover" title="Permanent link">&para;</a></h3>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-15-1" name="__codelineno-15-1" href="#__codelineno-15-1"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">macd</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">macd</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-2" name="__codelineno-15-2" href="#__codelineno-15-2"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="n">line</span><span class="p">),</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">signal</span><span class="p">))</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">macd</span><span class="p">.</span><span class="n">macd</span><span class="p">,</span><span class="w"> </span><span class="n">macd</span><span class="p">.</span><span class="n">signal</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-3" name="__codelineno-15-3" href="#__codelineno-15-3"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="n">line</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">signal</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-4" name="__codelineno-15-4" href="#__codelineno-15-4"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Bullish MACD crossover&quot;</span><span class="p">);</span>
+<a id="__codelineno-15-5" name="__codelineno-15-5" href="#__codelineno-15-5"></a><span class="w">        </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-15-6" name="__codelineno-15-6" href="#__codelineno-15-6"></a><span class="w">            </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Bearish MACD crossover&quot;</span><span class="p">);</span>
+<a id="__codelineno-15-7" name="__codelineno-15-7" href="#__codelineno-15-7"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-15-8" name="__codelineno-15-8" href="#__codelineno-15-8"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-15-9" name="__codelineno-15-9" href="#__codelineno-15-9"></a><span class="p">}</span>
+</code></pre></div>
+<h2 id="best-practices">Best Practices<a class="headerlink" href="#best-practices" title="Permanent link">&para;</a></h2>
+<div class="admonition tip">
+<p class="admonition-title">Optimize Performance and Data Usage</p>
+<ul>
+<li><strong>Store indicator results</strong> - Indicators are calculated fresh each time, so store the result if accessing multiple values</li>
+<li><strong>Underlying chart data is cached</strong> - Same <code>(interval, range)</code> avoids network requests but still recalculates indicators</li>
+<li><strong>Fetch appropriate ranges</strong> - Use the minimum time range needed for your indicators to calculate</li>
+<li><strong>Check for None</strong> - Always pattern match on <code>Option&lt;T&gt;</code> before using indicator values</li>
+<li><strong>Ensure sufficient data</strong> - Indicators require minimum data points to calculate:<ul>
+<li>Most 14-period indicators need 14+ candles</li>
+<li>MACD needs ~26+ candles (slow EMA period)</li>
+<li>Ichimoku needs ~26+ candles</li>
+<li>Short-period indicators (SMA/EMA 10) need at least 10 candles</li>
+<li>Candlestick patterns need 3+ candles for three-bar patterns</li>
+<li>If insufficient data, the indicator returns <code>None</code></li>
+</ul>
+</li>
+</ul>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-16-1" name="__codelineno-16-1" href="#__codelineno-16-1"></a><span class="c1">// Good: Store result once, access multiple indicators</span>
+<a id="__codelineno-16-2" name="__codelineno-16-2" href="#__codelineno-16-2"></a><span class="kd">let</span><span class="w"> </span><span class="n">indicators</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-16-3" name="__codelineno-16-3" href="#__codelineno-16-3"></a>
+<a id="__codelineno-16-4" name="__codelineno-16-4" href="#__codelineno-16-4"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">rsi</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">indicators</span><span class="p">.</span><span class="n">rsi_14</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-5" name="__codelineno-16-5" href="#__codelineno-16-5"></a><span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="n">rsi</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mf">30.0</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-6" name="__codelineno-16-6" href="#__codelineno-16-6"></a><span class="w">        </span><span class="c1">// Oversold - check other indicators from same result</span>
+<a id="__codelineno-16-7" name="__codelineno-16-7" href="#__codelineno-16-7"></a><span class="w">        </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">macd</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="o">&amp;</span><span class="n">indicators</span><span class="p">.</span><span class="n">macd</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-8" name="__codelineno-16-8" href="#__codelineno-16-8"></a><span class="w">            </span><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="p">(</span><span class="nb">Some</span><span class="p">(</span><span class="n">line</span><span class="p">),</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">signal</span><span class="p">))</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">(</span><span class="n">macd</span><span class="p">.</span><span class="n">macd</span><span class="p">,</span><span class="w"> </span><span class="n">macd</span><span class="p">.</span><span class="n">signal</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-9" name="__codelineno-16-9" href="#__codelineno-16-9"></a><span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="n">line</span><span class="w"> </span><span class="o">&gt;</span><span class="w"> </span><span class="n">signal</span><span class="w"> </span><span class="p">{</span>
+<a id="__codelineno-16-10" name="__codelineno-16-10" href="#__codelineno-16-10"></a><span class="w">                    </span><span class="fm">println!</span><span class="p">(</span><span class="s">&quot;Potential buy: RSI oversold + MACD bullish&quot;</span><span class="p">);</span>
+<a id="__codelineno-16-11" name="__codelineno-16-11" href="#__codelineno-16-11"></a><span class="w">                </span><span class="p">}</span>
+<a id="__codelineno-16-12" name="__codelineno-16-12" href="#__codelineno-16-12"></a><span class="w">            </span><span class="p">}</span>
+<a id="__codelineno-16-13" name="__codelineno-16-13" href="#__codelineno-16-13"></a><span class="w">        </span><span class="p">}</span>
+<a id="__codelineno-16-14" name="__codelineno-16-14" href="#__codelineno-16-14"></a><span class="w">    </span><span class="p">}</span>
+<a id="__codelineno-16-15" name="__codelineno-16-15" href="#__codelineno-16-15"></a><span class="p">}</span>
+<a id="__codelineno-16-16" name="__codelineno-16-16" href="#__codelineno-16-16"></a>
+<a id="__codelineno-16-17" name="__codelineno-16-17" href="#__codelineno-16-17"></a><span class="c1">// Less efficient: Multiple calls recalculate all indicators</span>
+<a id="__codelineno-16-18" name="__codelineno-16-18" href="#__codelineno-16-18"></a><span class="kd">let</span><span class="w"> </span><span class="n">rsi_result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-16-19" name="__codelineno-16-19" href="#__codelineno-16-19"></a><span class="k">if</span><span class="w"> </span><span class="kd">let</span><span class="w"> </span><span class="nb">Some</span><span class="p">(</span><span class="n">rsi</span><span class="p">)</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">rsi_result</span><span class="p">.</span><span class="n">rsi_14</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="cm">/* ... */</span><span class="w"> </span><span class="p">}</span>
+<a id="__codelineno-16-20" name="__codelineno-16-20" href="#__codelineno-16-20"></a><span class="kd">let</span><span class="w"> </span><span class="n">macd_result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ticker</span><span class="p">.</span><span class="n">indicators</span><span class="p">(</span><span class="n">Interval</span><span class="p">::</span><span class="n">OneDay</span><span class="p">,</span><span class="w"> </span><span class="n">TimeRange</span><span class="p">::</span><span class="n">ThreeMonths</span><span class="p">).</span><span class="k">await</span><span class="o">?</span><span class="p">;</span>
+<a id="__codelineno-16-21" name="__codelineno-16-21" href="#__codelineno-16-21"></a><span class="c1">// Still wastes CPU recalculating all indicators</span>
+</code></pre></div>
+</div>
+<h2 id="next-steps">Next Steps<a class="headerlink" href="#next-steps" title="Permanent link">&para;</a></h2>
+<ul>
+<li><a href="../backtesting/">Backtesting</a> - Use indicators in custom trading strategies</li>
+<li><a href="../ticker/">Ticker API</a> - Complete reference for fetching indicators and other data</li>
+<li><a href="../dataframe/">DataFrame Support</a> - Convert indicator results to Polars DataFrames for analysis</li>
+<li><a href="models.md">Models Reference</a> - Understanding indicator data structures</li>
+</ul>
+
+
+
+
+
+
+
+
+
+
+
+
+                
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+          <button type="button" class="md-top md-icon" data-md-component="top" hidden>
+  
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8z"/></svg>
+  Back to top
+</button>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+    Made with
+    <a href="https://squidfunk.github.io/mkdocs-material/" target="_blank" rel="noopener">
+      Material for MkDocs
+    </a>
+  
+</div>
+      
+        
+<div class="md-social">
+  
+    
+    
+    
+    
+      
+      
+    
+    <a href="https://github.com/Verdenroz/finance-query" target="_blank" rel="noopener" title="github.com" class="md-social__link">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M173.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6m-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3m44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9M252.8 8C114.1 8 8 113.3 8 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C436.2 457.8 504 362.9 504 252 504 113.3 391.5 8 252.8 8M105.2 352.9c-1.3 1-1 3.3.7 5.2 1.6 1.6 3.9 2.3 5.2 1 1.3-1 1-3.3-.7-5.2-1.6-1.6-3.9-2.3-5.2-1m-10.8-8.1c-.7 1.3.3 2.9 2.3 3.9 1.6 1 3.6.7 4.3-.7.7-1.3-.3-2.9-2.3-3.9-2-.6-3.6-.3-4.3.7m32.4 35.6c-1.6 1.3-1 4.3 1.3 6.2 2.3 2.3 5.2 2.6 6.5 1 1.3-1.3.7-4.3-1.3-6.2-2.2-2.3-5.2-2.6-6.5-1m-11.4-14.7c-1.6 1-1.6 3.6 0 5.9s4.3 3.3 5.6 2.3c1.6-1.3 1.6-3.9 0-6.2-1.4-2.3-4-3.3-5.6-2"/></svg>
+    </a>
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tracking", "navigation.expand", "navigation.indexes", "content.code.copy", "content.code.annotate", "navigation.tabs", "navigation.top"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
+      
+    
+  </body>
+</html>
