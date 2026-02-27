@@ -16,33 +16,6 @@
 use std::time::Duration;
 
 // ---------------------------------------------------------------------------
-// Test helpers
-// ---------------------------------------------------------------------------
-
-/// Returns true for any connection-level error that can occur when tests run
-/// concurrently: each `#[tokio::test]` gets its own runtime, so connections
-/// pooled in an earlier runtime become stale (hyper `DispatchGone`) once that
-/// runtime drops, or the remote host may simply be unreachable.
-fn is_stale_connection(e: &reqwest::Error) -> bool {
-    e.is_connect() || e.is_timeout() || format!("{e:?}").contains("DispatchGone")
-}
-
-/// Unwrap a `Result`, returning early (skipping the test) on stale-connection
-/// errors. Panics on any other error so real failures still surface.
-macro_rules! unwrap_or_skip {
-    ($expr:expr) => {
-        match $expr {
-            Ok(v) => v,
-            Err(finance_query::FinanceError::HttpError(ref e)) if is_stale_connection(e) => {
-                eprintln!("test skipped: stale connection ({})", e);
-                return;
-            }
-            Err(e) => panic!("unexpected error: {:?}", e),
-        }
-    };
-}
-
-// ---------------------------------------------------------------------------
 // Compile-time — initialization API (edgar.md "Initialization" section)
 // ---------------------------------------------------------------------------
 
@@ -81,9 +54,9 @@ async fn test_resolve_cik_rate_limiting() {
 
     // From edgar.md "Rate Limiting" section
     // These requests are automatically rate-limited
-    let cik1 = unwrap_or_skip!(edgar::resolve_cik("AAPL").await);
-    let cik2 = unwrap_or_skip!(edgar::resolve_cik("MSFT").await);
-    let cik3 = unwrap_or_skip!(edgar::resolve_cik("GOOGL").await);
+    let cik1 = edgar::resolve_cik("AAPL").await.unwrap();
+    let cik2 = edgar::resolve_cik("MSFT").await.unwrap();
+    let cik3 = edgar::resolve_cik("GOOGL").await.unwrap();
     // Executed at max 10 req/sec automatically
 
     assert!(cik1 > 0);
@@ -105,16 +78,16 @@ async fn test_resolve_cik() {
     // From edgar.md "Ticker to CIK Resolution" section
 
     // Resolve ticker to CIK (cached after first fetch)
-    let cik = unwrap_or_skip!(edgar::resolve_cik("AAPL").await);
+    let cik = edgar::resolve_cik("AAPL").await.unwrap();
     println!("Apple CIK: {}", cik); // Output: Apple CIK: 320193
     assert_eq!(cik, 320193);
 
     // Subsequent lookups use the cache (no network request)
-    let cik2 = unwrap_or_skip!(edgar::resolve_cik("AAPL").await); // Instant
+    let cik2 = edgar::resolve_cik("AAPL").await.unwrap(); // Instant
     assert_eq!(cik, cik2);
 
     // Case-insensitive lookup
-    let cik3 = unwrap_or_skip!(edgar::resolve_cik("aapl").await); // Also works
+    let cik3 = edgar::resolve_cik("aapl").await.unwrap(); // Also works
     assert_eq!(cik, cik3);
 }
 
@@ -132,10 +105,10 @@ async fn test_submissions_filing_history() {
     // From edgar.md "Filing History (Submissions)" section
 
     // Get CIK first
-    let cik = unwrap_or_skip!(edgar::resolve_cik("AAPL").await);
+    let cik = edgar::resolve_cik("AAPL").await.unwrap();
 
     // Fetch filing history
-    let submissions = unwrap_or_skip!(edgar::submissions(cik).await);
+    let submissions = edgar::submissions(cik).await.unwrap();
 
     // Company information
     if let Some(name) = &submissions.name {
@@ -182,10 +155,10 @@ async fn test_company_facts_xbrl() {
     // From edgar.md "Company Facts (XBRL Data)" section
 
     // Get CIK
-    let cik = unwrap_or_skip!(edgar::resolve_cik("AAPL").await);
+    let cik = edgar::resolve_cik("AAPL").await.unwrap();
 
     // Fetch company facts
-    let facts = unwrap_or_skip!(edgar::company_facts(cik).await);
+    let facts = edgar::company_facts(cik).await.unwrap();
 
     // Access financial data by taxonomy and concept
     if let Some(us_gaap) = facts.facts.get("us-gaap") {
@@ -238,17 +211,16 @@ async fn test_search_basic() {
     //
     // Note: edgar::search takes 6 params (query, forms, start_date, end_date, from, size).
     // Doc shows 4 params — `from` and `size` are missing from the docs.
-    let results = unwrap_or_skip!(
-        edgar::search(
-            "artificial intelligence",
-            None, // No form filter
-            None, // No start date
-            None, // No end date
-            None, // from (offset)
-            None, // size (limit)
-        )
-        .await
-    );
+    let results = edgar::search(
+        "artificial intelligence",
+        None, // No form filter
+        None, // No start date
+        None, // No end date
+        None, // from (offset)
+        None, // size (limit)
+    )
+    .await
+    .unwrap();
 
     // Display results
     if let Some(hits) = &results.hits {
@@ -290,17 +262,16 @@ async fn test_search_filtered() {
 
     // From edgar.md "Filtered Search" section
     // Search for 10-K filings only
-    let results = unwrap_or_skip!(
-        edgar::search(
-            "machine learning",
-            Some(&["10-K"]),    // Only 10-K forms
-            Some("2024-01-01"), // From Jan 1, 2024
-            Some("2024-12-31"), // To Dec 31, 2024
-            None,
-            None,
-        )
-        .await
-    );
+    let results = edgar::search(
+        "machine learning",
+        Some(&["10-K"]),    // Only 10-K forms
+        Some("2024-01-01"), // From Jan 1, 2024
+        Some("2024-12-31"), // To Dec 31, 2024
+        None,
+        None,
+    )
+    .await
+    .unwrap();
 
     assert!(results.hits.is_some());
 }
@@ -319,26 +290,31 @@ async fn test_search_common_form_filters() {
     // From edgar.md "Common Form Filters" section
 
     // Annual reports
-    unwrap_or_skip!(edgar::search("query", Some(&["10-K"]), None, None, None, None).await);
+    edgar::search("query", Some(&["10-K"]), None, None, None, None)
+        .await
+        .unwrap();
 
     // Quarterly reports
-    unwrap_or_skip!(edgar::search("query", Some(&["10-Q"]), None, None, None, None).await);
+    edgar::search("query", Some(&["10-Q"]), None, None, None, None)
+        .await
+        .unwrap();
 
     // Current events
-    unwrap_or_skip!(edgar::search("query", Some(&["8-K"]), None, None, None, None).await);
+    edgar::search("query", Some(&["8-K"]), None, None, None, None)
+        .await
+        .unwrap();
 
     // Multiple form types
-    unwrap_or_skip!(
-        edgar::search(
-            "query",
-            Some(&["10-K", "10-Q", "8-K"]),
-            None,
-            None,
-            None,
-            None
-        )
-        .await
-    );
+    edgar::search(
+        "query",
+        Some(&["10-K", "10-Q", "8-K"]),
+        None,
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
 }
 
 // ---------------------------------------------------------------------------
@@ -358,12 +334,12 @@ async fn test_complete_example() {
 
     // Step 1: Resolve ticker to CIK
     println!("Resolving {} to CIK...", ticker);
-    let cik = unwrap_or_skip!(edgar::resolve_cik(ticker).await);
+    let cik = edgar::resolve_cik(ticker).await.unwrap();
     println!("CIK: {}\n", cik);
 
     // Step 2: Get filing history
     println!("Fetching filing history...");
-    let submissions = unwrap_or_skip!(edgar::submissions(cik).await);
+    let submissions = edgar::submissions(cik).await.unwrap();
     if let Some(name) = &submissions.name {
         println!("Company: {}", name);
     }
@@ -387,7 +363,7 @@ async fn test_complete_example() {
 
     // Step 3: Get company facts (XBRL data)
     println!("\nFetching XBRL financial data...");
-    let facts = unwrap_or_skip!(edgar::company_facts(cik).await);
+    let facts = edgar::company_facts(cik).await.unwrap();
 
     if let Some(us_gaap) = facts.facts.get("us-gaap") {
         // Show revenue trend (FactsByTaxonomy is a tuple struct, access with .0)
@@ -417,17 +393,16 @@ async fn test_complete_example() {
 
     // Step 4: Search for AI mentions in recent filings
     println!("\nSearching for 'artificial intelligence' mentions...");
-    let search_results = unwrap_or_skip!(
-        edgar::search(
-            "artificial intelligence",
-            Some(&["10-K", "10-Q"]),
-            Some("2024-01-01"),
-            None,
-            None,
-            None,
-        )
-        .await
-    );
+    let search_results = edgar::search(
+        "artificial intelligence",
+        Some(&["10-K", "10-Q"]),
+        Some("2024-01-01"),
+        None,
+        None,
+        None,
+    )
+    .await
+    .unwrap();
     // Note: doc shows `hits.total.value` directly, but total is Option<EdgarSearchTotal>
     // and value is Option<u64>. Corrected to use Option chaining:
     if let Some(hits) = &search_results.hits {
