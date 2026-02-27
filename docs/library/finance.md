@@ -1,11 +1,9 @@
 # Finance Module
 
-The `finance` module provides market-wide operations that don't require a specific stock symbol. Use these functions to search for symbols, get market data, fetch screeners, and more.
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — finance](https://docs.rs/finance-query/latest/finance_query/finance/index.html)
 
-!!! tip "Import the finance module"
-    ```rust
-    use finance_query::finance;
-    ```
+The `finance` module provides market-wide operations that don't require a specific stock symbol. Use these functions to search for symbols, get market data, fetch screeners, and more.
 
 ## Search & Discovery
 
@@ -185,16 +183,16 @@ let asia = finance::indices(Some(IndicesRegion::AsiaPacific)).await?;
 Use Yahoo Finance's predefined screeners:
 
 ```rust
-use finance_query::{finance, ScreenerType};
+use finance_query::{finance, Screener};
 
 // Top gainers
-let gainers = finance::screener(ScreenerType::DayGainers, 25).await?;
+let gainers = finance::screener(Screener::DayGainers, 25).await?;
 
 // Most actives
-let actives = finance::screener(ScreenerType::MostActives, 25).await?;
+let actives = finance::screener(Screener::MostActives, 25).await?;
 
 // Day losers
-let losers = finance::screener(ScreenerType::DayLosers, 25).await?;
+let losers = finance::screener(Screener::DayLosers, 25).await?;
 
 // Process results
 for quote in &gainers.quotes {
@@ -203,68 +201,30 @@ for quote in &gainers.quotes {
 }
 ```
 
-**Available ScreenerTypes:**
-
-**Market Movers:**
-
-- `DayGainers` - Top gaining stocks
-- `DayLosers` - Top losing stocks
-- `MostActives` - Highest volume stocks
-
-**Trading Activity:**
-
-- `AggressiveSmallCaps` - High-risk small caps
-- `ConservativeForeignFunds` - Conservative international funds
-- `GrowthTechnologyStocks` - Growth tech companies
-- `HighYieldBond` - High-yield bond funds
-- `MostShortedStocks` - Heavily shorted stocks
-- `PortfolioAnchors` - Stable, large-cap stocks
-- `SmallCapGainers` - Top small-cap gainers
-- `SolidLargeCap` - Established large caps
-- `SolidMidcap` - Stable mid-cap stocks
-- `TopMutualFunds` - Highest-rated mutual funds
-- `UndervaluedGrowthStocks` - Undervalued growth opportunities
-- `UndervaluedLargeCaps` - Undervalued large companies
+See [Screeners](screeners.md) for all 15 `Screener` variants and the complete list.
 
 ### Custom Screeners
 
-Build custom screening queries:
+Build type-safe screening queries using `EquityScreenerQuery` or `FundScreenerQuery`:
 
 ```rust
-use finance_query::{finance, ScreenerQuery, QueryCondition, screener_query::Operator};
+use finance_query::{finance, EquityScreenerQuery, EquityField, ScreenerFieldExt};
 
-// Find US tech stocks with high volume and market cap > $10B
-let query = ScreenerQuery::new()
+// Find US large-cap tech stocks
+let query = EquityScreenerQuery::new()
     .size(50)
-    .sort_by("intradaymarketcap", false)  // Sort by market cap descending
-    .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
-    .add_condition(QueryCondition::new("sector", Operator::Eq).value_str("technology"))
-    .add_condition(QueryCondition::new("intradaymarketcap", Operator::Gt).value(10_000_000_000))
-    .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(1_000_000));
+    .sort_by(EquityField::IntradayMarketCap, false)
+    .add_condition(EquityField::Region.eq_str("us"))
+    .add_condition(EquityField::Sector.eq_str("Technology"))
+    .add_condition(EquityField::IntradayMarketCap.gt(10_000_000_000.0))
+    .add_condition(EquityField::AvgDailyVol3M.gt(1_000_000.0));
 
 let results = finance::custom_screener(query).await?;
 println!("Found {} stocks", results.quotes.len());
 ```
 
-**Common Conditions:**
-
-- `region` - Geographic region (e.g., "us", "jp", "gb")
-- `sector` - Sector name (e.g., "technology", "healthcare")
-- `intradaymarketcap` - Market capitalization
-- `avgdailyvol3m` - Average daily volume (3 months)
-- `peratio` - Price-to-earnings ratio
-- `pegratio` - PEG ratio
-- `earningsdate` - Upcoming earnings date
-- `dividendyield` - Dividend yield
-
-**Operators:**
-
-- `Eq` - Equals
-- `Gt` - Greater than
-- `Gte` - Greater than or equal
-- `Lt` - Less than
-- `Lte` - Less than or equal
-- `Btwn` - Between (use `.range(min, max)`)
+!!! tip "Full Screener Reference"
+    See [Screeners](screeners.md) for the complete typed query API, all `EquityField` variants (80+), fund screener support, OR logic, preset constructors, and more.
 
 ## Sector & Industry Data
 
@@ -273,9 +233,9 @@ println!("Found {} stocks", results.quotes.len());
 Get comprehensive sector data:
 
 ```rust
-use finance_query::{finance, SectorType};
+use finance_query::{finance, Sector};
 
-let tech = finance::sector(SectorType::Technology).await?;
+let tech = finance::sector(Sector::Technology).await?;
 
 println!("Sector: {}", tech.name);
 if let Some(overview) = &tech.overview {
@@ -302,14 +262,14 @@ println!("Sector ETFs: {}", tech.top_etfs.len());
 println!("Industries: {}", tech.industries.len());
 ```
 
-**Available SectorTypes:**
+**Available `Sector` variants:**
 
 - `BasicMaterials`
 - `CommunicationServices`
 - `ConsumerCyclical`
 - `ConsumerDefensive`
 - `Energy`
-- `Financial`
+- `FinancialServices`
 - `Healthcare`
 - `Industrials`
 - `RealEstate`
@@ -388,6 +348,26 @@ for t in &recent {
 }
 ```
 
+## Market Sentiment
+
+### Fear & Greed Index
+
+Get the current CNN Fear & Greed Index reading from Alternative.me (no API key required):
+
+```rust
+let fg = finance::fear_and_greed().await?;
+
+println!("Fear & Greed: {} / 100", fg.value);
+println!("Classification: {}", fg.classification.as_str());
+// e.g., "Extreme Fear", "Fear", "Neutral", "Greed", "Extreme Greed"
+```
+
+**`FearAndGreed` fields:**
+
+- `value: u8` — Index value from 0 (Extreme Fear) to 100 (Extreme Greed)
+- `classification: FearGreedLabel` — One of `ExtremeFear`, `Fear`, `Neutral`, `Greed`, `ExtremeGreed`
+- `timestamp: i64` — Unix timestamp when the reading was recorded
+
 ## Reference Data
 
 ### Exchanges
@@ -431,8 +411,12 @@ for currency in &currencies {
 
 ## Next Steps
 
+- [Screeners](screeners.md) - Full typed screener query builder with all 80+ `EquityField` variants
 - [Ticker API](ticker.md) - Symbol-specific operations
 - [Batch Tickers](tickers.md) - Efficient multi-symbol operations
+- [FRED & Treasury](fred.md) - Macro-economic data (requires `fred` feature)
+- [Crypto](crypto.md) - CoinGecko cryptocurrency data (requires `crypto` feature)
+- [Feeds](feeds.md) - RSS/Atom news aggregation (requires `rss` feature)
 - [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis
 - [Models](models.md) - Understanding response types
 - [Configuration](configuration.md) - Regional settings and network options

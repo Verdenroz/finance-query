@@ -88,6 +88,33 @@ pub enum FinanceError {
     #[cfg(feature = "indicators")]
     #[error("Indicator calculation error: {0}")]
     IndicatorError(#[from] crate::indicators::IndicatorError),
+
+    /// Error from an external (non-Yahoo) data API
+    #[error("External API error from '{api}': HTTP {status}")]
+    ExternalApiError {
+        /// Name of the external API (e.g., "alternative.me", "coingecko")
+        api: String,
+        /// HTTP status code returned
+        status: u16,
+    },
+
+    /// Error fetching or parsing macro-economic data (FRED, Treasury, BLS)
+    #[error("Macro data error from '{provider}': {context}")]
+    MacroDataError {
+        /// Provider name (e.g., "FRED", "US Treasury")
+        provider: String,
+        /// Error context
+        context: String,
+    },
+
+    /// Error parsing an RSS/Atom feed
+    #[error("Feed parse error for '{url}': {context}")]
+    FeedParseError {
+        /// Feed URL that failed
+        url: String,
+        /// Error context
+        context: String,
+    },
 }
 
 /// Error category for logging and metrics

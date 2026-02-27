@@ -69,10 +69,30 @@ mod client;
 mod constants;
 mod endpoints;
 mod models;
+pub(crate) mod rate_limiter;
 mod scrapers;
 mod ticker;
 mod tickers;
 mod utils;
+
+// Feature-gated external data source modules
+#[cfg(feature = "fred")]
+pub mod fred;
+
+#[cfg(feature = "crypto")]
+pub mod crypto {
+    //! CoinGecko cryptocurrency data (requires `crypto` feature).
+    pub use crate::coingecko::{CoinQuote, coin, coins};
+}
+
+#[cfg(feature = "crypto")]
+mod coingecko;
+
+#[cfg(feature = "rss")]
+pub mod feeds;
+
+#[cfg(feature = "risk")]
+pub mod risk;
 
 // ============================================================================
 // High-level API - Primary interface for most use cases
@@ -101,9 +121,8 @@ pub use finance::{LookupOptions, LookupType, SearchOptions};
 // Parameter enums - Used with Ticker and finance methods
 // ============================================================================
 pub use constants::indices::Region as IndicesRegion;
-pub use constants::screener_query;
-pub use constants::screener_types::ScreenerType;
-pub use constants::sector_types::SectorType;
+pub use constants::screeners::Screener;
+pub use constants::sectors::Sector;
 pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, ValueFormat};
 
 // ============================================================================
@@ -116,7 +135,7 @@ pub use models::{
     exchanges::Exchange,
     financials::FinancialStatement,
     hours::MarketHours,
-    industries::Industry,
+    industries::IndustryData,
     lookup::LookupResults,
     market_summary::MarketSummaryQuote,
     news::News,
@@ -125,7 +144,8 @@ pub use models::{
     recommendation::Recommendation,
     screeners::ScreenerResults,
     search::SearchResults,
-    sectors::Sector,
+    sectors::SectorData,
+    sentiment::{FearAndGreed, FearGreedLabel},
     spark::Spark,
     transcript::Transcript,
     transcript::TranscriptWithMeta,
@@ -136,7 +156,7 @@ pub use models::{
 // Nested types - Commonly accessed fields within response types
 // ============================================================================
 pub use models::{
-    chart::{Candle, CapitalGain, ChartMeta, Dividend, Split},
+    chart::{Candle, CapitalGain, ChartMeta, Dividend, DividendAnalytics, Split},
     edgar::filing_index::{EdgarFilingIndex, EdgarFilingIndexItem},
     edgar::{
         CikEntry, EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSearchHit,
@@ -158,7 +178,13 @@ pub use models::{
 // ============================================================================
 // Query builders - Types for constructing custom screener queries
 // ============================================================================
-pub use models::screeners::{QueryCondition, QueryGroup, QueryOperand, QueryValue, ScreenerQuery};
+pub use constants::exchange_codes::ExchangeCode;
+pub use constants::industries::Industry;
+pub use models::screeners::{
+    ConditionValue, EquityField, EquityScreenerQuery, FundField, FundScreenerQuery,
+    LogicalOperator, Operator, QueryCondition, QueryGroup, QueryOperand, QuoteType, ScreenerField,
+    ScreenerFieldExt, ScreenerFundCategory, ScreenerPeerGroup, ScreenerQuery, SortType,
+};
 
 // ============================================================================
 // Real-time streaming

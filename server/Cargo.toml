@@ -1,6 +1,6 @@
 [package]
 name = "finance-query-server"
-version = "2.2.1"
+version = "2.3.0"
 edition = "2024"
 authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
 description = "High-performance financial data API server built on finance-query library"
@@ -17,7 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Finance library (our own)
-finance-query = { path = "..", features = ["indicators"] }
+finance-query = { path = "..", features = ["indicators", "fred", "crypto", "rss", "risk"] }
 
 # Web framework
 axum = { version = "0.8.7", features = ["ws", "macros"] }

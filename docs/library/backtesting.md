@@ -1,5 +1,8 @@
 # Backtesting
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — backtesting](https://docs.rs/finance-query/latest/finance_query/backtesting/index.html)
+
 Test trading strategies against historical data. The backtesting engine provides pre-built strategies, a strategy builder for custom logic, and comprehensive performance metrics.
 
 ## Enable Feature
@@ -50,7 +53,7 @@ let result = ticker.backtest(
 
 // Or with custom thresholds:
 let result = ticker.backtest(
-    RsiReversal::new(14).with_thresholds(30, 70),
+    RsiReversal::new(14).with_thresholds(30.0, 70.0),
     Interval::OneDay,
     TimeRange::OneYear,
     None,
@@ -370,9 +373,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         )
         .build();
 
-    // Test on multiple periods
-    let test1 = ticker.backtest(strategy.clone(), Interval::OneDay, TimeRange::OneYear, Some(config.clone())).await?;
-    let test2 = ticker.backtest(strategy.clone(), Interval::OneDay, TimeRange::TwoYears, Some(config.clone())).await?;
+    // Run backtest
+    let result = ticker.backtest(strategy, Interval::OneDay, TimeRange::OneYear, Some(config)).await?;
 
     // Less robust: Unrealistic assumptions, single indicator
     let bad_config = BacktestConfig::builder()

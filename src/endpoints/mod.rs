@@ -9,6 +9,7 @@ pub mod chart;
 pub mod common;
 pub mod currencies;
 pub mod edgar;
+pub mod fear_and_greed;
 pub mod financials;
 pub mod hours;
 pub mod industries;

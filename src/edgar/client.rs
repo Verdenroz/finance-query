@@ -3,10 +3,10 @@
 //! Provides access to EDGAR APIs: submissions, company facts, and full-text search.
 //! Handles the SEC-required User-Agent header and 10 req/sec rate limit internally.
 
-use super::rate_limiter::RateLimiter;
 use crate::endpoints::edgar as urls;
 use crate::error::{FinanceError, Result};
 use crate::models::edgar::{CompanyFacts, EdgarFilingIndex, EdgarSearchResults, EdgarSubmissions};
+use crate::rate_limiter::RateLimiter;
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -47,10 +47,28 @@ impl EdgarClientBuilder {
         self
     }
 
-    /// Build the [`EdgarClient`].
+    /// Build a standalone [`EdgarClient`] with its own rate limiter and CIK cache.
     ///
-    /// Returns an error if the HTTP client cannot be constructed.
+    /// Used by unit tests that construct clients directly. For the process-global
+    /// singleton, use [`build_with_shared_state`](Self::build_with_shared_state).
+    #[cfg(test)]
     pub fn build(self) -> Result<EdgarClient> {
+        self.build_with_shared_state(
+            Arc::new(RateLimiter::new(10.0)),
+            Arc::new(RwLock::new(None)),
+        )
+    }
+
+    /// Build using shared `Arc<RateLimiter>` and CIK cache from the singleton.
+    ///
+    /// The `reqwest::Client` is runtime-bound and must be rebuilt per request
+    /// to avoid hyper `DispatchGone` errors across `#[tokio::test]` runtimes.
+    /// The rate limiter and CIK cache persist across calls.
+    pub(super) fn build_with_shared_state(
+        self,
+        rate_limiter: Arc<RateLimiter>,
+        cik_cache: Arc<RwLock<Option<HashMap<String, u64>>>>,
+    ) -> Result<EdgarClient> {
         let version = env!("CARGO_PKG_VERSION");
         let user_agent = format!("{}/{} ({})", self.app_name, version, self.email);
 
@@ -60,12 +78,10 @@ impl EdgarClientBuilder {
             .build()
             .map_err(FinanceError::HttpError)?;
 
-        info!("EDGAR client initialized with User-Agent: {}", user_agent);
-
         Ok(EdgarClient {
             http,
-            rate_limiter: Arc::new(RateLimiter::new(10.0)),
-            cik_cache: Arc::new(RwLock::new(None)),
+            rate_limiter,
+            cik_cache,
         })
     }
 }
@@ -73,7 +89,8 @@ impl EdgarClientBuilder {
 /// SEC EDGAR API client.
 ///
 /// Handles rate limiting (10 req/sec) and CIK caching internally.
-/// Must be constructed via [`EdgarClientBuilder`] which requires a contact email.
+/// Constructed per-call via the singleton in [`super`], or standalone via
+/// [`EdgarClientBuilder::build`] for tests.
 pub(super) struct EdgarClient {
     http: reqwest::Client,
     rate_limiter: Arc<RateLimiter>,

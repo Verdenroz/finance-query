@@ -120,7 +120,7 @@ struct RawResearchReport {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
-pub struct Industry {
+pub struct IndustryData {
     /// Industry name
     pub name: String,
     /// Industry key (URL slug)
@@ -343,7 +343,7 @@ pub struct ResearchReport {
 // Conversion implementations
 // ============================================================================
 
-impl Industry {
+impl IndustryData {
     /// Parse from Yahoo Finance JSON response
     pub(crate) fn from_response(json: &serde_json::Value) -> Result<Self, String> {
         let raw: RawIndustryResponse =
@@ -351,7 +351,7 @@ impl Industry {
 
         let data = raw.data;
 
-        Ok(Industry {
+        Ok(IndustryData {
             name: data.name,
             key: data.key,
             symbol: data.symbol,

@@ -2,7 +2,7 @@ use crate::alerts::{Alert, AlertStore};
 use crate::dashboard::storage::{DashboardStorage, Watchlist};
 use crate::portfolio::{Portfolio, PortfolioStorage};
 use finance_query::{
-    Quote, ScreenerQuote, ScreenerType, Sector, SectorType, Spark, streaming::PriceUpdate,
+    Quote, Screener, ScreenerQuote, Sector, SectorData, Spark, streaming::PriceUpdate,
 };
 use std::collections::HashMap;
 use tokio::time::{Duration, Interval as TokioInterval, interval};
@@ -134,17 +134,17 @@ impl ScreenerCategory {
         }
     }
 
-    pub fn screener_type(&self) -> ScreenerType {
+    pub fn screener_type(&self) -> Screener {
         match self {
-            ScreenerCategory::Gainers => ScreenerType::DayGainers,
-            ScreenerCategory::Losers => ScreenerType::DayLosers,
-            ScreenerCategory::MostActive => ScreenerType::MostActives,
-            ScreenerCategory::MostShorted => ScreenerType::MostShortedStocks,
-            ScreenerCategory::SmallCapGainers => ScreenerType::SmallCapGainers,
-            ScreenerCategory::GrowthTech => ScreenerType::GrowthTechnologyStocks,
-            ScreenerCategory::UndervaluedGrowth => ScreenerType::UndervaluedGrowthStocks,
-            ScreenerCategory::UndervaluedLargeCap => ScreenerType::UndervaluedLargeCaps,
-            ScreenerCategory::AggressiveSmallCaps => ScreenerType::AggressiveSmallCaps,
+            ScreenerCategory::Gainers => Screener::DayGainers,
+            ScreenerCategory::Losers => Screener::DayLosers,
+            ScreenerCategory::MostActive => Screener::MostActives,
+            ScreenerCategory::MostShorted => Screener::MostShortedStocks,
+            ScreenerCategory::SmallCapGainers => Screener::SmallCapGainers,
+            ScreenerCategory::GrowthTech => Screener::GrowthTechnologyStocks,
+            ScreenerCategory::UndervaluedGrowth => Screener::UndervaluedGrowthStocks,
+            ScreenerCategory::UndervaluedLargeCap => Screener::UndervaluedLargeCaps,
+            ScreenerCategory::AggressiveSmallCaps => Screener::AggressiveSmallCaps,
         }
     }
 }
@@ -199,7 +199,7 @@ pub struct App {
     pub alert_form_threshold: String,
     pub alert_form_field: usize, // 0=symbol, 1=type, 2=threshold
     // Sectors tab fields
-    pub sectors_data: HashMap<SectorType, Sector>,
+    pub sectors_data: HashMap<Sector, SectorData>,
     pub sectors_selected_idx: usize,
     pub sectors_selected_industry: usize,
     pub sectors_view_mode: SectorsViewMode,

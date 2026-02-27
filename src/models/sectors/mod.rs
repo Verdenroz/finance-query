@@ -2,4 +2,4 @@
 
 mod response;
 
-pub use response::Sector;
+pub use response::SectorData;

@@ -1,5 +1,8 @@
 # Ticker API Reference
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — Ticker](https://docs.rs/finance-query/latest/finance_query/struct.Ticker.html)
+
 The `Ticker` struct is the primary interface for fetching symbol-specific data from Yahoo Finance. It provides lazy-loaded, cached access to quotes, charts, financials, and more.
 
 !!! tip "Multiple Symbols"
@@ -284,6 +287,36 @@ for gain in &gains {
 }
 ```
 
+#### Dividend Analytics
+
+Compute analytics from the dividend history (pure calculation, no extra network request):
+
+```rust
+let analytics = ticker.dividend_analytics(TimeRange::FiveYears).await?;
+
+println!("Total paid:      ${:.2}", analytics.total_paid);
+println!("Payments:        {}", analytics.payment_count);
+println!("Average payment: ${:.4}", analytics.average_payment);
+
+if let Some(cagr) = analytics.cagr {
+    println!("CAGR:            {:.1}%", cagr * 100.0);
+}
+if let Some(last) = &analytics.last_payment {
+    println!("Most recent:     ${:.4} at timestamp {}", last.amount, last.timestamp);
+}
+```
+
+**`DividendAnalytics` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `total_paid` | `f64` | Total dividends paid in the requested range |
+| `payment_count` | `usize` | Number of dividend payments |
+| `average_payment` | `f64` | Average dividend per payment |
+| `cagr` | `Option<f64>` | Compound Annual Growth Rate of the dividend; `None` if fewer than 2 payments spanning a full year |
+| `last_payment` | `Option<Dividend>` | Most recent dividend |
+| `first_payment` | `Option<Dividend>` | Earliest dividend in the range |
+
 ### Technical Indicators
 
 Calculate technical indicators with three approaches:
@@ -422,6 +455,38 @@ println!("{bullish_count} bullish patterns detected");
 !!! tip "Combine with indicators"
     Patterns are most useful as filters on top of indicators. For example, `RSI < 30` combined with a `Hammer` or `BullishEngulfing` gives a stronger entry signal than either alone.
 
+## Risk Analytics
+
+!!! info "Feature flag required"
+    ```toml
+    finance-query = { version = "...", features = ["risk"] }
+    ```
+
+Compute a comprehensive risk summary from historical price data:
+
+```rust
+use finance_query::{Ticker, Interval, TimeRange};
+
+let ticker = Ticker::new("AAPL").await?;
+
+// With S&P 500 as benchmark (enables beta calculation)
+let risk = ticker.risk(Interval::OneDay, TimeRange::OneYear, Some("^GSPC")).await?;
+
+// Without a benchmark
+let risk = ticker.risk(Interval::OneDay, TimeRange::OneYear, None).await?;
+
+println!("VaR 95%:      {:.2}%", risk.var_95 * 100.0);
+println!("Max Drawdown: {:.2}%", risk.max_drawdown * 100.0);
+if let Some(sharpe) = risk.sharpe {
+    println!("Sharpe:       {:.2}", sharpe);
+}
+if let Some(beta) = risk.beta {
+    println!("Beta:         {:.2}", beta);
+}
+```
+
+See [Risk Analytics](risk.md) for the full `RiskSummary` field reference and standalone metric functions.
+
 ## Recommendations
 
 Get similar stocks and analyst recommendations:
@@ -537,8 +602,8 @@ let news = ticker.news().await?;
 
 for article in &news {
     println!("{}", article.title);
-    println!("  Source: {}", article.publisher);
-    println!("  Published: {}", article.provider_publish_time);
+    println!("  Source: {}", article.source);
+    println!("  Published: {}", article.time);
     println!("  URL: {}", article.link);
     println!();
 }
@@ -555,27 +620,30 @@ use finance_query::finance;
 let transcript = finance::earnings_transcript(&ticker.symbol(), None, None).await?;
 
 println!("Transcript for {} - Q{} {}",
-    transcript.symbol,
-    transcript.quarter,
-    transcript.year
+    ticker.symbol(),
+    transcript.quarter(),
+    transcript.year()
 );
 
-for entry in &transcript.transcript {
-    println!("[{}] {}: {}",
-        entry.start_time,
-        entry.speaker,
-        entry.content
-    );
+// Access paragraphs with speaker names resolved
+for (paragraph, speaker) in transcript.paragraphs_with_speakers() {
+    if let Some(name) = speaker {
+        println!("[{:.1}s] {}: {}", paragraph.start, name, paragraph.text);
+    }
 }
 
-// Get specific quarter transcript
-let q1_2024 = finance::earnings_transcript(&ticker.symbol(), Some("Q1"), Some(2024)).await?;
+// Get a specific quarter transcript
+let _q1 = finance::earnings_transcript(&ticker.symbol(), Some("Q1"), Some(2024)).await?;
 
 // Get all available transcripts (metadata only)
 let all_transcripts = finance::earnings_transcripts(&ticker.symbol(), None).await?;
 
 for meta in &all_transcripts {
-    println!("{} Q{} - {}", meta.year, meta.quarter, meta.title);
+    println!("{} {} - {}",
+        meta.year.unwrap_or(0),
+        meta.quarter.as_deref().unwrap_or("?"),
+        meta.title
+    );
 }
 ```
 
@@ -697,6 +765,7 @@ let recs_again = ticker.recommendations(10).await?;  // cached
 
 - [Technical Indicators](indicators.md) - Access 42 indicators + candlestick patterns for analysis
 - [Backtesting](backtesting.md) - Test trading strategies against historical data
+- [Risk Analytics](risk.md) - VaR, Sharpe/Sortino/Calmar, beta, and drawdown (requires `risk` feature)
 - [Batch Tickers](tickers.md) - Efficient operations for multiple symbols
 - [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis
 - [Configuration](configuration.md) - Customize language, region, and network settings

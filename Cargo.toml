@@ -4,7 +4,7 @@ resolver = "2"
 
 [package]
 name = "finance-query"
-version = "2.2.1"
+version = "2.3.0"
 edition = "2024"
 authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
 description = "A Rust library for querying financial data"
@@ -82,7 +82,13 @@ base64 = "0.22"
 
 # Optional: DataFrame support
 polars = { version = "0.53", optional = true, default-features = false, features = ["lazy"] }
-finance-query-derive = { version = "2.2.1", path = "finance-query-derive", optional = true }
+finance-query-derive = { version = "2.3.0", path = "finance-query-derive", optional = true }
+
+# Optional: CSV parsing for macro-economic data (Treasury yields)
+csv = { version = "1", optional = true }
+
+# Optional: RSS/Atom feed parsing
+feed-rs = { version = "2", optional = true }
 
 [features]
 default = []
@@ -92,6 +98,14 @@ dataframe = ["dep:polars", "dep:finance-query-derive"]
 indicators = []
 # Enable backtesting engine for strategy simulation (requires indicators)
 backtesting = ["indicators"]
+# Enable FRED API and US Treasury yield curve
+fred = ["dep:csv"]
+# Enable CoinGecko cryptocurrency data
+crypto = []
+# Enable RSS/Atom news feed aggregation
+rss = ["dep:feed-rs"]
+# Enable standalone risk analytics: VaR, Sharpe/Sortino/Calmar ratios, beta, drawdown
+risk = ["indicators"]
 
 [package.metadata.docs.rs]
 all-features = true

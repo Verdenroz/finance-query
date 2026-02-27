@@ -1,5 +1,8 @@
 # Tickers API Reference
 
+!!! abstract "Cargo Docs"
+    [docs.rs/finance-query — Tickers](https://docs.rs/finance-query/latest/finance_query/struct.Tickers.html)
+
 The `Tickers` struct provides efficient batch operations for multiple symbols. It optimizes network usage by grouping requests where possible and executing concurrent fetches where necessary.
 
 !!! info "Single Symbol"

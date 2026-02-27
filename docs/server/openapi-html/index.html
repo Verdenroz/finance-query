@@ -23,8 +23,8 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Finance Query v2",
-    "version": "2.2.1",
-    "description": "REST API for fetching financial data from Yahoo Finance and SEC EDGAR.\nProvides real-time quotes, historical data, news, options, SEC filings, and more.\n\nEDGAR endpoints require EDGAR_EMAIL environment variable to be configured.\n",
+    "version": "2.3.0",
+    "description": "REST API for fetching financial data from Yahoo Finance, SEC EDGAR, FRED, CoinGecko, and more.\nProvides real-time quotes, historical data, news, options, SEC filings, macroeconomic series, cryptocurrency data, and more.\n\n**Configuration**\n- EDGAR endpoints require `EDGAR_EMAIL` environment variable.\n- FRED endpoints require `FRED_API_KEY` environment variable.\n\n**Data Sources & Attributions**\n- Market data provided by Yahoo Finance. Not affiliated with or endorsed by Yahoo Finance.\n- SEC filing data sourced from the U.S. SEC EDGAR system (https://www.sec.gov). Not affiliated with the SEC.\n- This product uses the FRED\u00ae API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.\n- U.S. Treasury yield data sourced from the U.S. Department of the Treasury (https://home.treasury.gov).\n- Cryptocurrency data provided by CoinGecko (https://www.coingecko.com). Not affiliated with CoinGecko.\n- Fear & Greed Index data provided by alternative.me (https://alternative.me).\n- News feeds sourced from the Federal Reserve, SEC, MarketWatch, Bloomberg, Financial Times, The Guardian, NYT, Investing.com, BEA, ECB, CFPB, WSJ, Fortune, Business Wire, CoinDesk, CoinTelegraph, TechCrunch, and Hacker News. Content remains the property of respective publishers.\n",
     "contact": {
       "name": "Finance Query",
       "url": "https://github.com/verdenroz/finance-query"
@@ -100,6 +100,26 @@
     {
       "name": "EDGAR",
       "description": "SEC EDGAR filings and XBRL data"
+    },
+    {
+      "name": "Macroeconomic",
+      "description": "FRED time series and US Treasury yield curve"
+    },
+    {
+      "name": "Cryptocurrency",
+      "description": "CoinGecko cryptocurrency market data"
+    },
+    {
+      "name": "Sentiment",
+      "description": "Market sentiment indicators"
+    },
+    {
+      "name": "Risk",
+      "description": "Portfolio risk analytics (VaR, Sharpe, drawdown, beta)"
+    },
+    {
+      "name": "Feeds",
+      "description": "RSS/Atom news feeds from financial publishers"
     }
   ],
   "paths": {
@@ -571,8 +591,8 @@
         "tags": [
           "Charts"
         ],
-        "summary": "Get dividend history",
-        "description": "Fetch historical dividend payments for a symbol",
+        "summary": "Get dividend history and analytics",
+        "description": "Fetch historical dividend payments and computed analytics (CAGR, average payment, totals) for a symbol",
         "parameters": [
           {
             "name": "symbol",
@@ -611,25 +631,50 @@
         ],
         "responses": {
           "200": {
-            "description": "Dividend history",
+            "description": "Dividend history and analytics",
             "content": {
               "application/json": {
                 "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Dividend"
+                  "type": "object",
+                  "properties": {
+                    "dividends": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/Dividend"
+                      }
+                    },
+                    "analytics": {
+                      "type": "object",
+                      "properties": {
+                        "total_paid": {
+                          "type": "number",
+                          "format": "double"
+                        },
+                        "payment_count": {
+                          "type": "integer"
+                        },
+                        "average_payment": {
+                          "type": "number",
+                          "format": "double"
+                        },
+                        "cagr": {
+                          "type": "number",
+                          "format": "double",
+                          "nullable": true,
+                          "description": "Compound annual growth rate of dividend amount. Null if fewer than 2 payments spanning 1+ year."
+                        },
+                        "first_payment": {
+                          "$ref": "#/components/schemas/Dividend",
+                          "nullable": true
+                        },
+                        "last_payment": {
+                          "$ref": "#/components/schemas/Dividend",
+                          "nullable": true
+                        }
+                      }
+                    }
                   }
-                },
-                "example": [
-                  {
-                    "timestamp": 1739197800,
-                    "amount": 0.25
-                  },
-                  {
-                    "timestamp": 1747056600,
-                    "amount": 0.26
-                  }
-                ]
+                }
               }
             }
           },
@@ -1957,7 +2002,7 @@
         }
       }
     },
-    "/v2/screeners/{screener_type}": {
+    "/v2/screeners/{screener}": {
       "get": {
         "tags": [
           "Screeners"
@@ -1966,7 +2011,7 @@
         "description": "Fetch stocks or funds matching predefined screener criteria.\n\n**Equity Screeners (9):**\n- `aggressive-small-caps`: Small caps with high EPS growth\n- `day-gainers`: Top gaining stocks (>3% change, >$2B market cap)\n- `day-losers`: Top losing stocks (<-2.5% change, >$2B market cap)\n- `growth-technology-stocks`: Tech stocks with 25%+ revenue/EPS growth\n- `most-actives`: Most actively traded by volume\n- `most-shorted-stocks`: Highest short interest percentage\n- `small-cap-gainers`: Small cap gainers (<$2B market cap)\n- `undervalued-growth-stocks`: Low P/E with high EPS growth\n- `undervalued-large-caps`: Large caps with low P/E and PEG\n\n**Fund Screeners (6):**\n- `conservative-foreign-funds`: Low-risk foreign large cap funds\n- `high-yield-bond`: High yield bond funds\n- `portfolio-anchors`: Large blend core funds\n- `solid-large-growth-funds`: Large growth funds\n- `solid-midcap-growth-funds`: Mid-cap growth funds\n- `top-mutual-funds`: Top performing mutual funds\n",
         "parameters": [
           {
-            "name": "screener_type",
+            "name": "screener",
             "in": "path",
             "required": true,
             "schema": {
@@ -1989,7 +2034,7 @@
                 "top-mutual-funds"
               ]
             },
-            "description": "Predefined screener type",
+            "description": "Predefined screener identifier. Accepts kebab-case or underscore variants (e.g., `most-actives` or `most_actives`).\n",
             "example": "most-actives"
           },
           {
@@ -2052,7 +2097,7 @@
           "Screeners"
         ],
         "summary": "Custom screener query",
-        "description": "Build custom screener queries with flexible filtering criteria.\n\n**Quote Types:**\n- `EQUITY` - Stocks (default)\n- `MUTUALFUND` - Mutual funds\n\n**Operators:**\n- `eq` - Equal to (for string fields like region, sector)\n- `gt` - Greater than\n- `gte` - Greater than or equal\n- `lt` - Less than\n- `lte` - Less than or equal\n- `btwn` - Between (requires array value: `[min, max]`)\n\n**Common Equity Fields:**\n- `region` - Market region (e.g., \"us\", \"gb\")\n- `sector` - Industry sector (e.g., \"Technology\", \"Healthcare\")\n- `industry` - Specific industry\n- `exchange` - Exchange code (e.g., \"NMS\", \"NYQ\")\n- `intradaymarketcap` - Market capitalization\n- `intradayprice` - Current price\n- `percentchange` - Percent change\n- `avgdailyvol3m` - 3-month average daily volume\n- `peratio.lasttwelvemonths` - P/E ratio (TTM)\n- `forward_dividend_yield` - Forward dividend yield\n- `returnonequity.lasttwelvemonths` - Return on equity\n- `short_percentage_of_float.value` - Short interest % of float\n- `esg_score` - ESG score\n\n**Common Fund Fields:**\n- `categoryname` - Fund category (e.g., \"Large Growth\")\n- `performanceratingoverall` - Morningstar rating (1-5)\n- `riskratingoverall` - Risk rating (1-5)\n",
+        "description": "Build custom screener queries with flexible filtering criteria.\n\n**Quote Types:**\n- `EQUITY` - Stocks (default)\n- `MUTUALFUND` - Mutual funds\n\n**Operators:**\n- `eq` - Equal to (categorical string fields: region, sector, industry, exchange, peer_group)\n- `gt` - Greater than\n- `gte` - Greater than or equal\n- `lt` - Less than\n- `lte` - Less than or equal\n- `btwn` - Between two values (requires array: `[min, max]`)\n\n---\n\n**Equity Fields \u2014 Categorical (use `eq` operator with string value):**\n- `region` - Geographic region (e.g., `\"us\"`, `\"gb\"`, `\"jp\"`, `\"de\"`)\n- `sector` - GICS sector (e.g., `\"Technology\"`, `\"Healthcare\"`, `\"Financial Services\"`)\n- `industry` - Industry slug (e.g., `\"Semiconductors\"`, `\"Biotechnology\"`)\n- `exchange` - Exchange code (e.g., `\"NMS\"`, `\"NYQ\"`, `\"NGM\"`)\n- `peer_group` - Yahoo Finance peer group (e.g., `\"Semiconductors\"`, `\"Banks\"`)\n\n**Equity Fields \u2014 Price & Market Cap:**\n- `intradayprice` - Current intraday price\n- `eodprice` - End-of-day price\n- `intradaypricechange` - Intraday price change (absolute)\n- `percentchange` - Percent change today\n- `intradaymarketcap` - Intraday market capitalization\n- `lastclosemarketcap.lasttwelvemonths` - Last close market cap (TTM)\n- `lastclose52weekhigh.lasttwelvemonths` - Last close 52-week high\n- `lastclose52weeklow.lasttwelvemonths` - Last close 52-week low\n- `fiftytwowkpercentchange` - 52-week percent change\n\n**Equity Fields \u2014 Trading & Volume:**\n- `avgdailyvol3m` - 3-month average daily volume\n- `dayvolume` - Today's volume\n- `eodvolume` - End-of-day volume\n- `beta` - Beta (market sensitivity)\n- `pctheldinsider` - % held by insiders\n- `pctheldinst` - % held by institutions\n\n**Equity Fields \u2014 Short Interest:**\n- `short_percentage_of_float.value` - Short % of float\n- `short_percentage_of_shares_outstanding.value` - Short % of shares outstanding\n- `short_interest.value` - Short interest (shares)\n- `days_to_cover_short.value` - Days to cover short position\n- `short_interest_percentage_change.value` - Short interest % change\n\n**Equity Fields \u2014 Valuation:**\n- `peratio.lasttwelvemonths` - Trailing P/E ratio (TTM)\n- `pegratio_5y` - 5-year PEG ratio\n- `pricebookratio.quarterly` - Price-to-book ratio (quarterly)\n- `lastclosepriceearnings.lasttwelvemonths` - Price-to-earnings (last close)\n- `lastclosepricetangiblebookvalue.lasttwelvemonths` - Price-to-tangible book\n- `bookvalueshare.lasttwelvemonths` - Book value per share\n- `lastclosemarketcaptotalrevenue.lasttwelvemonths` - Market cap / revenue\n- `lastclosetevtotalrevenue.lasttwelvemonths` - TEV / revenue\n- `lastclosetevebitda.lasttwelvemonths` - TEV / EBITDA\n- `lastclosetevebit.lasttwelvemonths` - TEV / EBIT\n\n**Equity Fields \u2014 Profitability & Dividends:**\n- `returnonequity.lasttwelvemonths` - Return on equity\n- `returnonassets.lasttwelvemonths` - Return on assets\n- `returnontotalcapital.lasttwelvemonths` - Return on total capital\n- `forward_dividend_yield` - Forward dividend yield\n- `forward_dividend_per_share` - Forward dividend per share\n- `consecutive_years_of_dividend_growth_count` - Consecutive years of dividend growth\n\n**Equity Fields \u2014 Leverage:**\n- `totaldebtequity.lasttwelvemonths` - Total debt / equity\n- `ltdebtequity.lasttwelvemonths` - Long-term debt / equity\n- `netdebtebitda.lasttwelvemonths` - Net debt / EBITDA\n- `totaldebtebitda.lasttwelvemonths` - Total debt / EBITDA\n- `ebitinterestexpense.lasttwelvemonths` - EBIT / interest expense\n- `ebitdainterestexpense.lasttwelvemonths` - EBITDA / interest expense\n\n**Equity Fields \u2014 Liquidity:**\n- `currentratio.lasttwelvemonths` - Current ratio\n- `quickratio.lasttwelvemonths` - Quick ratio\n- `operatingcashflowtocurrentliabilities.lasttwelvemonths` - Operating cash flow / current liabilities\n- `altmanzscoreusingtheaveragestockinformationforaperiod.lasttwelvemonths` - Altman Z-score\n\n**Equity Fields \u2014 Income Statement:**\n- `totalrevenues.lasttwelvemonths` - Total revenues (TTM)\n- `totalrevenues1yrgrowth.lasttwelvemonths` - Revenue 1-year growth\n- `quarterlyrevenuegrowth.quarterly` - Quarterly revenue growth\n- `grossprofit.lasttwelvemonths` - Gross profit\n- `grossprofitmargin.lasttwelvemonths` - Gross profit margin\n- `ebitda.lasttwelvemonths` - EBITDA\n- `ebitdamargin.lasttwelvemonths` - EBITDA margin\n- `ebitda1yrgrowth.lasttwelvemonths` - EBITDA 1-year growth\n- `ebit.lasttwelvemonths` - EBIT\n- `operatingincome.lasttwelvemonths` - Operating income\n- `netincomeis.lasttwelvemonths` - Net income\n- `netincomemargin.lasttwelvemonths` - Net income margin\n- `netincome1yrgrowth.lasttwelvemonths` - Net income 1-year growth\n- `netepsdiluted.lasttwelvemonths` - Diluted EPS\n- `netepsbasic.lasttwelvemonths` - Basic EPS\n- `dilutedepscontinuingoperations.lasttwelvemonths` - Diluted EPS (continuing ops)\n- `basicepscontinuingoperations.lasttwelvemonths` - Basic EPS (continuing ops)\n- `epsgrowth.lasttwelvemonths` - EPS growth\n- `dilutedeps1yrgrowth.lasttwelvemonths` - Diluted EPS 1-year growth\n\n**Equity Fields \u2014 Balance Sheet:**\n- `totalassets.lasttwelvemonths` - Total assets\n- `totaldebt.lasttwelvemonths` - Total debt\n- `totalequity.lasttwelvemonths` - Total equity\n- `totalcommonequity.lasttwelvemonths` - Total common equity\n- `totalcurrentassets.lasttwelvemonths` - Total current assets\n- `totalcurrentliabilities.lasttwelvemonths` - Total current liabilities\n- `totalcashandshortterminvestments.lasttwelvemonths` - Cash & short-term investments\n- `totalcommonsharesoutstanding.lasttwelvemonths` - Common shares outstanding\n- `totalsharesoutstanding` - Total shares outstanding\n\n**Equity Fields \u2014 Cash Flow:**\n- `cashfromoperations.lasttwelvemonths` - Cash from operations\n- `cashfromoperations1yrgrowth.lasttwelvemonths` - Cash from ops 1-year growth\n- `leveredfreecashflow.lasttwelvemonths` - Levered free cash flow\n- `leveredfreecashflow1yrgrowth.lasttwelvemonths` - Levered FCF 1-year growth\n- `unleveredfreecashflow.lasttwelvemonths` - Unlevered free cash flow\n- `capitalexpenditure.lasttwelvemonths` - Capital expenditure\n\n**Equity Fields \u2014 ESG:**\n- `esg_score` - Overall ESG score\n- `environmental_score` - Environmental score\n- `social_score` - Social score\n- `governance_score` - Governance score\n- `highest_controversy` - Highest controversy level\n\n**Equity Display Fields (use in `fields` param, not filterable):**\n- `ticker` - Ticker symbol\n- `companyshortname` - Short company name\n\n---\n\n**Fund Fields \u2014 Categorical (use `eq` operator):**\n- `categoryname` - Morningstar category (e.g., `\"US Fund Large Growth\"`)\n- `exchange` - Exchange code\n\n**Fund Fields \u2014 Numeric:**\n- `performanceratingoverall` - Morningstar performance rating (1\u20135)\n- `riskratingoverall` - Morningstar risk rating (1\u20135)\n- `initialinvestment` - Minimum initial investment\n- `annualreturnnavy1categoryrank` - 1-year annual return rank within category\n- `intradayprice` - Intraday price\n- `eodprice` - End-of-day price\n- `intradaypricechange` - Intraday price change\n\n**Fund Display Fields:**\n- `ticker` - Ticker symbol\n- `companyshortname` - Short company name\n",
         "requestBody": {
           "required": true,
           "content": {
@@ -2179,7 +2224,7 @@
         }
       }
     },
-    "/v2/sectors/{sector_type}": {
+    "/v2/sectors/{sector}": {
       "get": {
         "tags": [
           "Sectors"
@@ -2188,7 +2233,7 @@
         "description": "Fetch comprehensive data for a market sector including overview, performance,\ntop companies, ETFs, mutual funds, industries, and research reports.\n\n**Available Sectors (11 GICS Sectors):**\n- `technology` - Technology (30.38% market weight)\n- `financial-services` - Financial Services (13.74%)\n- `consumer-cyclical` - Consumer Cyclical (10.15%)\n- `communication-services` - Communication Services (9.55%)\n- `healthcare` - Healthcare (10.52%)\n- `industrials` - Industrials (8.27%)\n- `consumer-defensive` - Consumer Defensive (5.72%)\n- `energy` - Energy (3.24%)\n- `basic-materials` - Basic Materials (1.86%)\n- `real-estate` - Real Estate (2.32%)\n- `utilities` - Utilities (2.46%)\n",
         "parameters": [
           {
-            "name": "sector_type",
+            "name": "sector",
             "in": "path",
             "required": true,
             "schema": {
@@ -2207,7 +2252,7 @@
                 "utilities"
               ]
             },
-            "description": "Sector type",
+            "description": "One of the 11 GICS sector slugs listed above (kebab-case).",
             "example": "technology"
           },
           {
@@ -2274,7 +2319,7 @@
         }
       }
     },
-    "/v2/industries/{industry_key}": {
+    "/v2/industries/{industry}": {
       "get": {
         "tags": [
           "Industries"
@@ -2283,13 +2328,163 @@
         "description": "Fetch comprehensive data for a market industry including overview, performance,\ntop companies, top performing companies, top growth companies, and research reports.\n\nIndustry keys can be discovered from the `/v2/sectors/{sector}` endpoint, which returns\nthe industries within each sector.\n\n**Example industry keys:**\n- `semiconductors` (Technology)\n- `software-infrastructure` (Technology)\n- `banks-diversified` (Financial Services)\n- `biotechnology` (Healthcare)\n- `internet-retail` (Consumer Cyclical)\n- `oil-gas-integrated` (Energy)\n- `aerospace-defense` (Industrials)\n",
         "parameters": [
           {
-            "name": "industry_key",
+            "name": "industry",
             "in": "path",
             "required": true,
             "schema": {
-              "type": "string"
+              "type": "string",
+              "enum": [
+                "aerospace-defense",
+                "agricultural-inputs",
+                "aluminum",
+                "apparel-manufacturing",
+                "apparel-retail",
+                "asset-management",
+                "auto-manufacturers",
+                "auto-parts",
+                "auto-truck-dealerships",
+                "banks-diversified",
+                "banks-regional",
+                "beverages-brewers",
+                "beverages-non-alcoholic",
+                "beverages-wineries-distilleries",
+                "biotechnology",
+                "broadcasting",
+                "building-materials",
+                "building-products-equipment",
+                "business-equipment-supplies",
+                "capital-markets",
+                "chemical-manufacturing",
+                "chemicals",
+                "closed-end-fund-debt",
+                "closed-end-fund-equity",
+                "closed-end-fund-foreign",
+                "coal",
+                "communication-equipment",
+                "computer-hardware",
+                "confectioners",
+                "conglomerates",
+                "consulting-services",
+                "consumer-electronics",
+                "copper",
+                "credit-services",
+                "data-analytics",
+                "department-stores",
+                "diagnostics-research",
+                "discount-stores",
+                "drug-manufacturers-general",
+                "drug-manufacturers-specialty-generic",
+                "electrical-equipment-parts",
+                "electronic-components",
+                "electronic-gaming-multimedia",
+                "electronics-computer-distribution",
+                "engineering-construction",
+                "entertainment",
+                "exchange-traded-fund",
+                "farm-heavy-construction-machinery",
+                "farm-products",
+                "financial-data-stock-exchanges",
+                "food-distribution",
+                "footwear-accessories",
+                "forest-products",
+                "furnishings-fixtures-appliances",
+                "gambling",
+                "gold",
+                "grocery-stores",
+                "hardware-software-distribution",
+                "health-information-services",
+                "healthcare-plans",
+                "home-improvement-retail",
+                "household-personal-products",
+                "industrial-distribution",
+                "information-technology-services",
+                "infrastructure-operations",
+                "insurance-brokers",
+                "insurance-diversified",
+                "insurance-life",
+                "insurance-property-casualty",
+                "insurance-reinsurance",
+                "insurance-specialty",
+                "integrated-freight-logistics",
+                "internet-content-information",
+                "internet-retail",
+                "leisure",
+                "lodging",
+                "lumber-wood-production",
+                "luxury-goods",
+                "manufacturing-diversified",
+                "marine-ports-services",
+                "marine-shipping",
+                "medical-care-facilities",
+                "medical-devices",
+                "medical-distribution",
+                "medical-instruments-supplies",
+                "metal-fabrication",
+                "mortgage-finance",
+                "oil-gas-drilling",
+                "oil-gas-ep",
+                "oil-gas-equipment-services",
+                "oil-gas-integrated",
+                "oil-gas-midstream",
+                "oil-gas-refining-marketing",
+                "other-industrial-metals-mining",
+                "other-precious-metals-mining",
+                "packaged-foods",
+                "paper-paper-products",
+                "personal-services",
+                "pharmaceutical-retailers",
+                "pollution-treatment-controls",
+                "publishing",
+                "railroads",
+                "real-estate-development",
+                "real-estate-diversified",
+                "real-estate-services",
+                "reit-diversified",
+                "reit-healthcare-facilities",
+                "reit-hotel-motel",
+                "reit-industrial",
+                "reit-mortgage",
+                "reit-office",
+                "reit-residential",
+                "reit-retail",
+                "reit-specialty",
+                "rental-leasing-services",
+                "residential-construction",
+                "resorts-casinos",
+                "restaurants",
+                "scientific-technical-instruments",
+                "security-protection-services",
+                "semiconductor-equipment-materials",
+                "semiconductors",
+                "shell-companies",
+                "silver",
+                "software-application",
+                "software-infrastructure",
+                "solar",
+                "specialty-business-services",
+                "specialty-chemicals",
+                "specialty-industrial-machinery",
+                "specialty-retail",
+                "staffing-employment-services",
+                "steel",
+                "telecom-services",
+                "textile-manufacturing",
+                "thermal-coal",
+                "tobacco",
+                "tools-accessories",
+                "travel-services",
+                "trucking",
+                "uranium",
+                "utilities-diversified",
+                "utilities-independent-power-producers",
+                "utilities-regulated-electric",
+                "utilities-regulated-gas",
+                "utilities-regulated-water",
+                "utilities-renewable",
+                "waste-management"
+              ]
             },
-            "description": "Industry key/slug (discoverable from sectors endpoint)",
+            "description": "Industry slug (kebab-case). Discoverable via `GET /v2/sectors/{sector}`.",
             "example": "semiconductors"
           },
           {
@@ -3215,6 +3410,577 @@
           }
         }
       }
+    },
+    "/v2/fear-and-greed": {
+      "get": {
+        "tags": [
+          "Sentiment"
+        ],
+        "summary": "Fear & Greed Index",
+        "description": "Current CNN Fear & Greed Index value from alternative.me",
+        "responses": {
+          "200": {
+            "description": "Current Fear & Greed reading",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "value": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 100,
+                      "example": 35
+                    },
+                    "classification": {
+                      "type": "string",
+                      "enum": [
+                        "ExtremeFear",
+                        "Fear",
+                        "Neutral",
+                        "Greed",
+                        "ExtremeGreed"
+                      ],
+                      "example": "Fear"
+                    },
+                    "timestamp": {
+                      "type": "integer",
+                      "format": "int64",
+                      "description": "Unix timestamp of the reading"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v2/fred/series/{id}": {
+      "get": {
+        "tags": [
+          "Macroeconomic"
+        ],
+        "summary": "FRED time series",
+        "description": "Fetch all observations for a FRED data series by ID.\nRequires `FRED_API_KEY` environment variable.\n",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "FRED series ID (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE)",
+            "example": "FEDFUNDS"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time series observations",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "example": "FEDFUNDS"
+                    },
+                    "observations": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "properties": {
+                          "date": {
+                            "type": "string",
+                            "example": "2024-01-01"
+                          },
+                          "value": {
+                            "type": "number",
+                            "format": "double",
+                            "nullable": true
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "FRED API key not configured"
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v2/fred/treasury-yields": {
+      "get": {
+        "tags": [
+          "Macroeconomic"
+        ],
+        "summary": "US Treasury yield curve",
+        "description": "Daily US Treasury yield curve data from treasury.gov",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer"
+            },
+            "description": "Calendar year (defaults to current year)",
+            "example": 2026
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Treasury yield curve records sorted newest-first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "date": {
+                        "type": "string",
+                        "example": "02/20/2026"
+                      },
+                      "y1m": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y2m": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y3m": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y4m": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y6m": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y1": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y2": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y3": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y5": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y7": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y10": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y20": {
+                        "type": "number",
+                        "nullable": true
+                      },
+                      "y30": {
+                        "type": "number",
+                        "nullable": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v2/crypto/coins": {
+      "get": {
+        "tags": [
+          "Cryptocurrency"
+        ],
+        "summary": "Top coins by market cap",
+        "description": "Fetch top N cryptocurrencies by market cap from CoinGecko",
+        "parameters": [
+          {
+            "name": "vs_currency",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "usd"
+            },
+            "description": "Quote currency (e.g., usd, eur, btc)"
+          },
+          {
+            "name": "count",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "default": 50,
+              "maximum": 250
+            },
+            "description": "Number of coins to return"
+          },
+          {
+            "$ref": "#/components/parameters/Fields"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "List of coins sorted by market cap descending",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CoinQuote"
+                  }
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "CoinGecko rate limit exceeded (30 req/min on free tier)"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v2/crypto/coins/{id}": {
+      "get": {
+        "tags": [
+          "Cryptocurrency"
+        ],
+        "summary": "Single coin by CoinGecko ID",
+        "description": "Fetch a single cryptocurrency by its CoinGecko ID (e.g., bitcoin, ethereum)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "CoinGecko coin ID",
+            "example": "bitcoin"
+          },
+          {
+            "name": "vs_currency",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "default": "usd"
+            },
+            "description": "Quote currency"
+          },
+          {
+            "$ref": "#/components/parameters/Fields"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Coin market data",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CoinQuote"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Coin not found"
+          },
+          "429": {
+            "description": "CoinGecko rate limit exceeded"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v2/risk/{symbol}": {
+      "get": {
+        "tags": [
+          "Risk"
+        ],
+        "summary": "Risk analytics",
+        "description": "Compute portfolio risk metrics for a symbol including VaR, Sharpe/Sortino/Calmar ratios, beta, and max drawdown",
+        "parameters": [
+          {
+            "name": "symbol",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "example": "AAPL"
+          },
+          {
+            "name": "interval",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1m",
+                "5m",
+                "15m",
+                "30m",
+                "1h",
+                "1d",
+                "1wk",
+                "1mo",
+                "3mo"
+              ],
+              "default": "1d"
+            },
+            "description": "Price interval for return calculation"
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "5d",
+                "1mo",
+                "3mo",
+                "6mo",
+                "1y",
+                "2y",
+                "5y",
+                "10y",
+                "ytd",
+                "max"
+              ],
+              "default": "1mo"
+            },
+            "description": "Lookback period"
+          },
+          {
+            "name": "benchmark",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Benchmark symbol for beta calculation (e.g., SPY)",
+            "example": "SPY"
+          },
+          {
+            "$ref": "#/components/parameters/Fields"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Risk analytics summary",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "var_95": {
+                      "type": "number",
+                      "format": "double",
+                      "description": "Historical 95% Value at Risk (1-period)"
+                    },
+                    "var_99": {
+                      "type": "number",
+                      "format": "double",
+                      "description": "Historical 99% Value at Risk (1-period)"
+                    },
+                    "parametric_var_95": {
+                      "type": "number",
+                      "format": "double",
+                      "description": "Parametric 95% VaR assuming normal distribution"
+                    },
+                    "sharpe": {
+                      "type": "number",
+                      "format": "double",
+                      "nullable": true
+                    },
+                    "sortino": {
+                      "type": "number",
+                      "format": "double",
+                      "nullable": true
+                    },
+                    "calmar": {
+                      "type": "number",
+                      "format": "double",
+                      "nullable": true
+                    },
+                    "beta": {
+                      "type": "number",
+                      "format": "double",
+                      "nullable": true,
+                      "description": "Beta relative to benchmark. Null if no benchmark provided."
+                    },
+                    "max_drawdown": {
+                      "type": "number",
+                      "format": "double",
+                      "description": "Maximum peak-to-trough drawdown as a decimal"
+                    },
+                    "max_drawdown_recovery_periods": {
+                      "type": "integer",
+                      "nullable": true,
+                      "description": "Number of periods to recover from max drawdown"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Symbol not found"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
+    "/v2/feeds": {
+      "get": {
+        "tags": [
+          "Feeds"
+        ],
+        "summary": "RSS/Atom news feeds",
+        "description": "Fetch news feed entries from one or more named sources.\nResults are deduplicated by URL and sorted newest-first.\nDefaults to `federal-reserve,sec,marketwatch,bloomberg` when `sources` is omitted.\nAn unrecognized source slug returns HTTP 400 with a list of valid values.\n",
+        "parameters": [
+          {
+            "name": "sources",
+            "in": "query",
+            "required": false,
+            "style": "form",
+            "explode": false,
+            "schema": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "enum": [
+                  "federal-reserve",
+                  "sec",
+                  "sec-filings",
+                  "marketwatch",
+                  "cnbc",
+                  "bloomberg",
+                  "ft",
+                  "nyt",
+                  "guardian",
+                  "investing",
+                  "bea",
+                  "ecb",
+                  "cfpb",
+                  "wsj",
+                  "fortune",
+                  "businesswire",
+                  "coindesk",
+                  "cointelegraph",
+                  "techcrunch",
+                  "hackernews",
+                  "oilprice",
+                  "calculated-risk",
+                  "scmp",
+                  "nikkei",
+                  "boe",
+                  "venturebeat",
+                  "yc",
+                  "economist",
+                  "financial-post",
+                  "ft-lex",
+                  "ritholtz"
+                ]
+              }
+            },
+            "description": "Comma-separated source slugs. Unknown values return 400. Default: `federal-reserve,sec,marketwatch,bloomberg`.",
+            "example": "bloomberg,wsj,coindesk"
+          },
+          {
+            "name": "form_type",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "10-K"
+            },
+            "description": "SEC filing form type filter, used when sec_filings is in sources",
+            "example": "8-K"
+          },
+          {
+            "$ref": "#/components/parameters/Fields"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Feed entries sorted newest-first",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "url": {
+                        "type": "string",
+                        "format": "uri"
+                      },
+                      "published": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                      },
+                      "source": {
+                        "type": "string"
+                      },
+                      "summary": {
+                        "type": "string",
+                        "nullable": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -3561,6 +4327,98 @@
             "format": "double",
             "description": "Dividend amount per share",
             "example": 0.25
+          }
+        }
+      },
+      "CoinQuote": {
+        "type": "object",
+        "description": "Cryptocurrency market data from CoinGecko",
+        "properties": {
+          "id": {
+            "type": "string",
+            "description": "CoinGecko coin ID",
+            "example": "bitcoin"
+          },
+          "symbol": {
+            "type": "string",
+            "example": "btc"
+          },
+          "name": {
+            "type": "string",
+            "example": "Bitcoin"
+          },
+          "current_price": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "market_cap": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "market_cap_rank": {
+            "type": "integer",
+            "nullable": true
+          },
+          "fully_diluted_valuation": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "total_volume": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "high_24h": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "low_24h": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "price_change_24h": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "price_change_percentage_24h": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "circulating_supply": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "total_supply": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "max_supply": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "ath": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "ath_change_percentage": {
+            "type": "number",
+            "format": "double",
+            "nullable": true
+          },
+          "last_updated": {
+            "type": "string",
+            "nullable": true
           }
         }
       },

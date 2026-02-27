@@ -5,13 +5,13 @@
 
 use crate::client::{ClientConfig, YahooClient};
 use crate::constants::Region;
-use crate::constants::screener_types::ScreenerType;
-use crate::constants::sector_types::SectorType;
+use crate::constants::screeners::Screener;
+use crate::constants::sectors::Sector;
 use crate::error::Result;
-use crate::models::industries::Industry;
+use crate::models::industries::IndustryData;
 use crate::models::screeners::ScreenerResults;
 use crate::models::search::SearchResults;
-use crate::models::sectors::Sector;
+use crate::models::sectors::SectorData;
 use crate::models::transcript::{Transcript, TranscriptWithMeta};
 
 // Re-export options for convenience
@@ -103,22 +103,22 @@ pub async fn lookup(
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::{finance, ScreenerType};
+/// use finance_query::{finance, Screener};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Get top gainers
-/// let gainers = finance::screener(ScreenerType::DayGainers, 25).await?;
+/// let gainers = finance::screener(Screener::DayGainers, 25).await?;
 /// println!("Top gainers: {:#?}", gainers);
 ///
 /// // Get most shorted stocks
-/// let shorted = finance::screener(ScreenerType::MostShortedStocks, 25).await?;
+/// let shorted = finance::screener(Screener::MostShortedStocks, 25).await?;
 ///
 /// // Get growth technology stocks
-/// let tech = finance::screener(ScreenerType::GrowthTechnologyStocks, 25).await?;
+/// let tech = finance::screener(Screener::GrowthTechnologyStocks, 25).await?;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<ScreenerResults> {
+pub async fn screener(screener_type: Screener, count: u32) -> Result<ScreenerResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_screener(screener_type, count).await
 }
@@ -126,6 +126,8 @@ pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<Screene
 /// Execute a custom screener query
 ///
 /// Allows flexible filtering of stocks/funds/ETFs based on various criteria.
+/// Use [`EquityScreenerQuery`][crate::EquityScreenerQuery] for stock screeners
+/// or [`FundScreenerQuery`][crate::FundScreenerQuery] for mutual fund screeners.
 ///
 /// # Arguments
 ///
@@ -134,23 +136,24 @@ pub async fn screener(screener_type: ScreenerType, count: u32) -> Result<Screene
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::{finance, ScreenerQuery, QueryCondition, screener_query::Operator};
+/// use finance_query::{finance, EquityField, EquityScreenerQuery, ScreenerFieldExt};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// // Find US stocks with high volume sorted by market cap
-/// let query = ScreenerQuery::new()
+/// // Find US large-cap stocks with high volume
+/// let query = EquityScreenerQuery::new()
 ///     .size(25)
-///     .sort_by("intradaymarketcap", false)
-///     .add_condition(QueryCondition::new("region", Operator::Eq).value_str("us"))
-///     .add_condition(QueryCondition::new("avgdailyvol3m", Operator::Gt).value(200000));
+///     .sort_by(EquityField::IntradayMarketCap, false)
+///     .add_condition(EquityField::Region.eq_str("us"))
+///     .add_condition(EquityField::AvgDailyVol3M.gt(200_000.0))
+///     .add_condition(EquityField::IntradayMarketCap.gt(10_000_000_000.0));
 ///
 /// let result = finance::custom_screener(query).await?;
 /// println!("Found {} stocks", result.quotes.len());
 /// # Ok(())
 /// # }
 /// ```
-pub async fn custom_screener(
-    query: crate::models::screeners::ScreenerQuery,
+pub async fn custom_screener<F: crate::models::screeners::ScreenerField>(
+    query: crate::models::screeners::ScreenerQuery<F>,
 ) -> Result<ScreenerResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.custom_screener(query).await
@@ -323,10 +326,10 @@ pub async fn indices(
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::{finance, SectorType};
+/// use finance_query::{finance, Sector};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let sector = finance::sector(SectorType::Technology).await?;
+/// let sector = finance::sector(Sector::Technology).await?;
 /// println!("Sector: {} ({} companies)", sector.name,
 ///     sector.overview.as_ref().map(|o| o.companies_count.unwrap_or(0)).unwrap_or(0));
 ///
@@ -336,7 +339,7 @@ pub async fn indices(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn sector(sector_type: SectorType) -> Result<Sector> {
+pub async fn sector(sector_type: Sector) -> Result<SectorData> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_sector(sector_type).await
 }
@@ -366,9 +369,9 @@ pub async fn sector(sector_type: SectorType) -> Result<Sector> {
 /// # Ok(())
 /// # }
 /// ```
-pub async fn industry(industry_key: &str) -> Result<Industry> {
+pub async fn industry(industry_key: impl AsRef<str>) -> Result<IndustryData> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    client.get_industry(industry_key).await
+    client.get_industry(industry_key.as_ref()).await
 }
 
 /// Get list of available currencies
@@ -466,4 +469,23 @@ pub async fn trending(
 ) -> Result<Vec<crate::models::trending::TrendingQuote>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_trending(region).await
+}
+
+/// Fetch the current CNN Fear & Greed Index from Alternative.me.
+///
+/// Returns a 0–100 sentiment score and its classification. No API key required.
+///
+/// # Examples
+///
+/// ```no_run
+/// use finance_query::finance;
+///
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// let fg = finance::fear_and_greed().await?;
+/// println!("Fear & Greed: {} ({})", fg.value, fg.classification.as_str());
+/// # Ok(())
+/// # }
+/// ```
+pub async fn fear_and_greed() -> Result<crate::models::sentiment::FearAndGreed> {
+    crate::endpoints::fear_and_greed::fetch().await
 }
