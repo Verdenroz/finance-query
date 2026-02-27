@@ -16,7 +16,7 @@ fi
 VERSION=${VERSION#v}
 
 # Extract the section for this version
-# This finds the line starting with ## [VERSION] and prints until the next ## [
-awk "/## \[$VERSION\]/,/## \[/" "$CHANGELOG_FILE" | sed '$d' | tail -n +2
+# Skip the header line, then print until the next ## [
+awk "/## \[$VERSION\]/{found=1; next} found && /## \[/{exit} found" "$CHANGELOG_FILE"
 
 exit 0
