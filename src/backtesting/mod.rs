@@ -101,18 +101,22 @@ pub mod condition;
 mod config;
 mod engine;
 mod error;
+pub mod monte_carlo;
+pub mod optimizer;
+pub mod portfolio;
 mod position;
 pub mod refs;
 mod result;
 mod signal;
 pub mod strategy;
+pub mod walk_forward;
 
 // Re-export main types
 pub use config::{BacktestConfig, BacktestConfigBuilder};
 pub use engine::BacktestEngine;
 pub use error::{BacktestError, Result};
 pub use position::{Position, PositionSide, Trade};
-pub use result::{BacktestResult, EquityPoint, PerformanceMetrics, SignalRecord};
+pub use result::{BacktestResult, BenchmarkMetrics, EquityPoint, PerformanceMetrics, SignalRecord};
 pub use signal::{Signal, SignalDirection, SignalMetadata, SignalStrength};
 
 // Re-export strategy types
@@ -126,3 +130,14 @@ pub use strategy::{
     BollingerMeanReversion, DonchianBreakout, MacdSignal, RsiReversal, SmaCrossover,
     SuperTrendFollow,
 };
+
+// Re-export optimiser types for convenience
+pub use optimizer::{
+    GridSearch, OptimizationReport, OptimizationResult, OptimizeMetric, ParamRange, ParamValue,
+};
+
+// Re-export walk-forward types
+pub use walk_forward::{WalkForwardConfig, WalkForwardReport, WindowResult};
+
+// Re-export Monte Carlo types
+pub use monte_carlo::{MonteCarloConfig, MonteCarloResult, PercentileStats};

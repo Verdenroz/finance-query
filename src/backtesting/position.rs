@@ -44,6 +44,12 @@ pub struct Position {
 
     /// Signal that triggered entry
     pub entry_signal: Signal,
+
+    /// Accumulated dividend income received while this position was open.
+    ///
+    /// Added to trade P&L on close. Zero when dividends are not supplied to
+    /// the engine or when the position receives no dividends.
+    pub dividend_income: f64,
 }
 
 impl Position {
@@ -63,6 +69,7 @@ impl Position {
             quantity,
             entry_commission,
             entry_signal,
+            dividend_income: 0.0,
         }
     }
 
@@ -105,7 +112,22 @@ impl Position {
         matches!(self.side, PositionSide::Short)
     }
 
-    /// Close this position and create a Trade
+    /// Credit dividend income to this position.
+    ///
+    /// Records `income` (dividend_per_share × quantity) and, when `reinvest`
+    /// is `true` and `close_price > 0.0`, notionally purchases additional
+    /// shares at `close_price` with that income.
+    pub fn credit_dividend(&mut self, income: f64, close_price: f64, reinvest: bool) {
+        if reinvest && close_price > 0.0 {
+            self.quantity += income / close_price;
+        }
+        self.dividend_income += income;
+    }
+
+    /// Close this position and create a Trade.
+    ///
+    /// `dividend_income` accumulated during the hold is added to P&L and
+    /// preserved on the returned `Trade` for reporting purposes.
     pub fn close(
         self,
         exit_timestamp: i64,
@@ -119,7 +141,8 @@ impl Position {
             PositionSide::Long => (exit_price - self.entry_price) * self.quantity,
             PositionSide::Short => (self.entry_price - exit_price) * self.quantity,
         };
-        let pnl = gross_pnl - total_commission;
+        // Dividend income improves net P&L
+        let pnl = gross_pnl - total_commission + self.dividend_income;
 
         let entry_value = self.entry_price * self.quantity;
         let return_pct = if entry_value > 0.0 {
@@ -138,6 +161,7 @@ impl Position {
             commission: total_commission,
             pnl,
             return_pct,
+            dividend_income: self.dividend_income,
             entry_signal: self.entry_signal,
             exit_signal,
         }
@@ -169,11 +193,14 @@ pub struct Trade {
     /// Total commission (entry + exit)
     pub commission: f64,
 
-    /// Realized P&L (after commission)
+    /// Realized P&L (after commission, including any dividend income)
     pub pnl: f64,
 
     /// Return as percentage
     pub return_pct: f64,
+
+    /// Dividend income received while this position was open (included in `pnl`)
+    pub dividend_income: f64,
 
     /// Signal that triggered entry
     pub entry_signal: Signal,
@@ -307,6 +334,54 @@ mod tests {
         assert!(trade.is_profitable());
         assert!(trade.is_long());
         assert_eq!(trade.duration_secs(), 1000);
+    }
+
+    #[test]
+    fn test_credit_dividend_no_reinvest() {
+        let mut pos = Position::new(
+            PositionSide::Long,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            make_entry_signal(),
+        );
+        pos.credit_dividend(5.0, 110.0, false);
+        assert!((pos.dividend_income - 5.0).abs() < 1e-10);
+        assert!((pos.quantity - 10.0).abs() < 1e-10); // unchanged
+    }
+
+    #[test]
+    fn test_credit_dividend_reinvest() {
+        let mut pos = Position::new(
+            PositionSide::Long,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            make_entry_signal(),
+        );
+        // $1/share × 10 shares = $10 income; reinvested at $110 → 10/110 ≈ 0.0909 new shares
+        pos.credit_dividend(10.0, 110.0, true);
+        assert!((pos.dividend_income - 10.0).abs() < 1e-10);
+        let expected_qty = 10.0 + 10.0 / 110.0;
+        assert!((pos.quantity - expected_qty).abs() < 1e-10);
+    }
+
+    #[test]
+    fn test_credit_dividend_zero_price_no_reinvest() {
+        let mut pos = Position::new(
+            PositionSide::Long,
+            1000,
+            100.0,
+            10.0,
+            0.0,
+            make_entry_signal(),
+        );
+        // reinvest=true but price=0.0 → should not divide by zero
+        pos.credit_dividend(5.0, 0.0, true);
+        assert!((pos.dividend_income - 5.0).abs() < 1e-10);
+        assert!((pos.quantity - 10.0).abs() < 1e-10); // quantity unchanged
     }
 
     #[test]

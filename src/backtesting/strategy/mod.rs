@@ -154,6 +154,21 @@ impl<'a> StrategyContext<'a> {
         self.current_candle().timestamp
     }
 
+    /// Create a Long signal from the current candle's timestamp and close price.
+    pub fn signal_long(&self) -> Signal {
+        Signal::long(self.timestamp(), self.close())
+    }
+
+    /// Create a Short signal from the current candle's timestamp and close price.
+    pub fn signal_short(&self) -> Signal {
+        Signal::short(self.timestamp(), self.close())
+    }
+
+    /// Create an Exit signal from the current candle's timestamp and close price.
+    pub fn signal_exit(&self) -> Signal {
+        Signal::exit(self.timestamp(), self.close())
+    }
+
     /// Check if crossover occurred (fast crosses above slow)
     pub fn crossed_above(&self, fast_name: &str, slow_name: &str) -> bool {
         let fast_now = self.indicator(fast_name);
@@ -180,7 +195,15 @@ impl<'a> StrategyContext<'a> {
         }
     }
 
-    /// Check if indicator crossed above a threshold
+    /// Check if indicator crossed above a threshold.
+    ///
+    /// Returns `true` when `prev <= threshold` **and** `current > threshold`.
+    /// The inclusive lower bound (`<=`) means a signal fires even when the
+    /// previous bar sat exactly on the threshold, which is the conventional
+    /// "crosses above" definition.  This is intentionally asymmetric with the
+    /// strict crossover check in [`crossed_above`](Self::crossed_above) where
+    /// both sides use strict inequalities — threshold crossings and
+    /// indicator-vs-indicator crossings have different semantics.
     pub fn indicator_crossed_above(&self, name: &str, threshold: f64) -> bool {
         let now = self.indicator(name);
         let prev = self.indicator_prev(name);
@@ -191,7 +214,11 @@ impl<'a> StrategyContext<'a> {
         }
     }
 
-    /// Check if indicator crossed below a threshold
+    /// Check if indicator crossed below a threshold.
+    ///
+    /// Returns `true` when `prev >= threshold` **and** `current < threshold`.
+    /// See [`indicator_crossed_above`](Self::indicator_crossed_above) for the
+    /// rationale behind the inclusive/exclusive choice on each side.
     pub fn indicator_crossed_below(&self, name: &str, threshold: f64) -> bool {
         let now = self.indicator(name);
         let prev = self.indicator_prev(name);
@@ -262,6 +289,21 @@ pub trait Strategy: Send + Sync {
     /// Default is 1 (strategy can run from first candle).
     fn warmup_period(&self) -> usize {
         1
+    }
+}
+
+impl Strategy for Box<dyn Strategy> {
+    fn name(&self) -> &str {
+        (**self).name()
+    }
+    fn required_indicators(&self) -> Vec<(String, Indicator)> {
+        (**self).required_indicators()
+    }
+    fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+        (**self).on_candle(ctx)
+    }
+    fn warmup_period(&self) -> usize {
+        (**self).warmup_period()
     }
 }
 

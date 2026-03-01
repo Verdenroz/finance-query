@@ -71,6 +71,7 @@ pub struct StrategyBuilder<E = (), X = ()> {
     exit_condition: X,
     short_entry_condition: Option<BoxedCondition>,
     short_exit_condition: Option<BoxedCondition>,
+    warmup_override: Option<usize>,
 }
 
 impl StrategyBuilder<(), ()> {
@@ -88,6 +89,7 @@ impl StrategyBuilder<(), ()> {
             exit_condition: (),
             short_entry_condition: None,
             short_exit_condition: None,
+            warmup_override: None,
         }
     }
 }
@@ -108,6 +110,7 @@ impl<X> StrategyBuilder<(), X> {
             exit_condition: self.exit_condition,
             short_entry_condition: self.short_entry_condition,
             short_exit_condition: self.short_exit_condition,
+            warmup_override: self.warmup_override,
         }
     }
 }
@@ -129,6 +132,7 @@ impl<E> StrategyBuilder<E, ()> {
             exit_condition: condition,
             short_entry_condition: self.short_entry_condition,
             short_exit_condition: self.short_exit_condition,
+            warmup_override: self.warmup_override,
         }
     }
 }
@@ -154,6 +158,26 @@ impl<E: Condition, X: Condition> StrategyBuilder<E, X> {
         self
     }
 
+    /// Override the automatic warmup period with an explicit bar count.
+    ///
+    /// By default the warmup period is inferred from each indicator's
+    /// [`Indicator::warmup_bars()`] method. Use this override when the
+    /// automatic value doesn't match your specific needs.
+    ///
+    /// # Example
+    ///
+    /// ```ignore
+    /// let strategy = StrategyBuilder::new("MACD + RSI")
+    ///     .entry(macd(12, 26, 9).crosses_above_zero())
+    ///     .exit(rsi(14).crosses_above(70.0))
+    ///     .warmup(36) // explicit override
+    ///     .build();
+    /// ```
+    pub fn warmup(mut self, bars: usize) -> Self {
+        self.warmup_override = Some(bars);
+        self
+    }
+
     /// Build the strategy.
     ///
     /// # Example
@@ -171,6 +195,7 @@ impl<E: Condition, X: Condition> StrategyBuilder<E, X> {
             exit_condition: self.exit_condition,
             short_entry_condition: self.short_entry_condition,
             short_exit_condition: self.short_exit_condition,
+            warmup_override: self.warmup_override,
         }
     }
 }
@@ -185,6 +210,10 @@ pub struct CustomStrategy<E: Condition, X: Condition> {
     exit_condition: X,
     short_entry_condition: Option<BoxedCondition>,
     short_exit_condition: Option<BoxedCondition>,
+    /// Explicit warmup period set via [`StrategyBuilder::warmup`].
+    ///
+    /// Overrides the heuristic in [`warmup_period`] when set.
+    warmup_override: Option<usize>,
 }
 
 impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
@@ -211,19 +240,22 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
     }
 
     fn warmup_period(&self) -> usize {
-        // Estimate warmup period from indicator names
-        // Look for the largest period in indicator keys
-        let max_period = self
+        // Explicit override wins — use it directly.
+        if let Some(n) = self.warmup_override {
+            return n;
+        }
+
+        // Use each indicator's own warmup calculation instead of parsing
+        // key suffixes (which fails for compound indicators like MACD and
+        // Bollinger).  `.warmup(n)` on the builder still overrides this.
+        let max_warmup = self
             .required_indicators()
             .iter()
-            .filter_map(|(key, _)| {
-                // Extract period from key like "sma_20", "rsi_14", etc.
-                key.rsplit('_').next().and_then(|s| s.parse::<usize>().ok())
-            })
+            .map(|(_, indicator)| indicator.warmup_bars())
             .max()
             .unwrap_or(1);
 
-        max_period + 1
+        max_warmup + 1
     }
 
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {

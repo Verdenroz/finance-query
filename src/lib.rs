@@ -239,7 +239,8 @@ pub use indicators::{
 // Backtesting Engine (requires "backtesting" feature)
 // ============================================================================
 // Strategy backtesting with pre-built and custom strategies, position tracking,
-// stop-loss/take-profit, and comprehensive performance metrics.
+// stop-loss/take-profit, comprehensive performance metrics, parameter optimization,
+// walk-forward validation, Monte Carlo simulation, and multi-symbol portfolio.
 #[cfg(feature = "backtesting")]
 pub mod backtesting;
 

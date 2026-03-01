@@ -52,16 +52,32 @@ pub struct PerformanceMetrics {
     /// Sortino ratio (downside deviation)
     pub sortino_ratio: f64,
 
-    /// Maximum drawdown percentage (0.0-1.0)
+    /// Maximum drawdown as a fraction (0.0–1.0, **not** a percentage).
+    ///
+    /// A value of `0.2` means the equity fell 20% from its peak at most.
+    /// Multiply by 100 to get a conventional percentage. See also
+    /// [`max_drawdown_percentage`](Self::max_drawdown_percentage) for a
+    /// pre-scaled convenience accessor.
     pub max_drawdown_pct: f64,
 
-    /// Maximum drawdown duration in bars
+    /// Maximum drawdown duration measured in **bars** (not calendar time).
+    ///
+    /// Counts the number of consecutive bars from a peak until full recovery.
     pub max_drawdown_duration: i64,
 
-    /// Win rate (profitable trades / total trades)
+    /// Win rate: `winning_trades / total_trades`.
+    ///
+    /// The denominator is `total_trades`, which includes break-even trades
+    /// (`pnl == 0.0`).  Break-even trades are neither wins nor losses, so they
+    /// reduce the win rate without appearing in `winning_trades` or
+    /// `losing_trades`.
     pub win_rate: f64,
 
-    /// Profit factor (gross profit / gross loss)
+    /// Profit factor: `gross_profit / gross_loss`.
+    ///
+    /// Returns `f64::MAX` when there are no losing trades (zero denominator)
+    /// and at least one profitable trade.  This avoids `f64::INFINITY`, which
+    /// is not representable in JSON.
     pub profit_factor: f64,
 
     /// Average trade return percentage
@@ -79,10 +95,16 @@ pub struct PerformanceMetrics {
     /// Total number of trades
     pub total_trades: usize,
 
-    /// Number of winning trades
+    /// Number of winning trades (`pnl > 0.0`).
+    ///
+    /// Break-even trades (`pnl == 0.0`) are counted in neither `winning_trades`
+    /// nor `losing_trades`, so `winning_trades + losing_trades <= total_trades`.
     pub winning_trades: usize,
 
-    /// Number of losing trades
+    /// Number of losing trades (`pnl < 0.0`).
+    ///
+    /// Break-even trades (`pnl == 0.0`) are counted in neither `winning_trades`
+    /// nor `losing_trades`. See [`winning_trades`](Self::winning_trades).
     pub losing_trades: usize,
 
     /// Largest winning trade P&L
@@ -97,7 +119,10 @@ pub struct PerformanceMetrics {
     /// Maximum consecutive losses
     pub max_consecutive_losses: usize,
 
-    /// Calmar ratio (annualized return / max drawdown)
+    /// Calmar ratio: `annualized_return_pct / max_drawdown_pct_scaled`.
+    ///
+    /// Returns `f64::MAX` when max drawdown is zero and the strategy is
+    /// profitable (avoids `f64::INFINITY` which cannot be serialized to JSON).
     pub calmar_ratio: f64,
 
     /// Total commission paid
@@ -114,119 +139,138 @@ pub struct PerformanceMetrics {
 
     /// Signals that were executed
     pub executed_signals: usize,
+
+    /// Average duration of winning trades in seconds
+    pub avg_win_duration: f64,
+
+    /// Average duration of losing trades in seconds
+    pub avg_loss_duration: f64,
+
+    /// Fraction of backtest time spent with an open position (0.0 - 1.0)
+    pub time_in_market_pct: f64,
+
+    /// Longest idle period between trades in seconds (0 if fewer than 2 trades)
+    pub max_idle_period: i64,
+
+    /// Total dividend income received across all trades
+    pub total_dividend_income: f64,
 }
 
 impl PerformanceMetrics {
-    /// Calculate performance metrics from trades and equity curve
+    /// Maximum drawdown as a conventional percentage (0–100).
+    ///
+    /// Equivalent to `self.max_drawdown_pct * 100.0`. Provided because
+    /// `max_drawdown_pct` is stored as a fraction (0.0–1.0) while most other
+    /// return fields use true percentages.
+    pub fn max_drawdown_percentage(&self) -> f64 {
+        self.max_drawdown_pct * 100.0
+    }
+
+    /// Construct a zero-trades result: all metrics are zero except `total_return_pct`
+    /// which is derived from the equity curve.
+    fn empty(
+        initial_capital: f64,
+        equity_curve: &[EquityPoint],
+        total_signals: usize,
+        executed_signals: usize,
+    ) -> Self {
+        let final_equity = equity_curve
+            .last()
+            .map(|e| e.equity)
+            .unwrap_or(initial_capital);
+        let total_return_pct = ((final_equity / initial_capital) - 1.0) * 100.0;
+        Self {
+            total_return_pct,
+            annualized_return_pct: 0.0,
+            sharpe_ratio: 0.0,
+            sortino_ratio: 0.0,
+            max_drawdown_pct: 0.0,
+            max_drawdown_duration: 0,
+            win_rate: 0.0,
+            profit_factor: 0.0,
+            avg_trade_return_pct: 0.0,
+            avg_win_pct: 0.0,
+            avg_loss_pct: 0.0,
+            avg_trade_duration: 0.0,
+            total_trades: 0,
+            winning_trades: 0,
+            losing_trades: 0,
+            largest_win: 0.0,
+            largest_loss: 0.0,
+            max_consecutive_wins: 0,
+            max_consecutive_losses: 0,
+            calmar_ratio: 0.0,
+            total_commission: 0.0,
+            long_trades: 0,
+            short_trades: 0,
+            total_signals,
+            executed_signals,
+            avg_win_duration: 0.0,
+            avg_loss_duration: 0.0,
+            time_in_market_pct: 0.0,
+            max_idle_period: 0,
+            total_dividend_income: 0.0,
+        }
+    }
+
+    /// Calculate performance metrics from trades and equity curve.
+    ///
+    /// `risk_free_rate` is the **annual** rate (e.g. `0.05` for 5%). It is
+    /// converted to a per-bar rate internally before computing Sharpe/Sortino.
+    ///
+    /// `bars_per_year` controls annualisation (e.g. `252.0` for daily US equity
+    /// bars, `52.0` for weekly, `1638.0` for hourly). Affects annualised return,
+    /// Sharpe, Sortino, and Calmar calculations.
     pub fn calculate(
         trades: &[Trade],
         equity_curve: &[EquityPoint],
         initial_capital: f64,
         total_signals: usize,
         executed_signals: usize,
+        risk_free_rate: f64,
+        bars_per_year: f64,
     ) -> Self {
-        let total_trades = trades.len();
-
-        if total_trades == 0 {
-            let final_equity = equity_curve
-                .last()
-                .map(|e| e.equity)
-                .unwrap_or(initial_capital);
-            let total_return_pct = ((final_equity / initial_capital) - 1.0) * 100.0;
-
-            return Self {
-                total_return_pct,
-                annualized_return_pct: 0.0,
-                sharpe_ratio: 0.0,
-                sortino_ratio: 0.0,
-                max_drawdown_pct: 0.0,
-                max_drawdown_duration: 0,
-                win_rate: 0.0,
-                profit_factor: 0.0,
-                avg_trade_return_pct: 0.0,
-                avg_win_pct: 0.0,
-                avg_loss_pct: 0.0,
-                avg_trade_duration: 0.0,
-                total_trades: 0,
-                winning_trades: 0,
-                losing_trades: 0,
-                largest_win: 0.0,
-                largest_loss: 0.0,
-                max_consecutive_wins: 0,
-                max_consecutive_losses: 0,
-                calmar_ratio: 0.0,
-                total_commission: 0.0,
-                long_trades: 0,
-                short_trades: 0,
+        if trades.is_empty() {
+            return Self::empty(
+                initial_capital,
+                equity_curve,
                 total_signals,
                 executed_signals,
-            };
+            );
         }
 
-        // Basic trade stats
-        let winning_trades = trades.iter().filter(|t| t.is_profitable()).count();
-        let losing_trades = trades.iter().filter(|t| t.is_loss()).count();
-        let long_trades = trades.iter().filter(|t| t.is_long()).count();
-        let short_trades = trades.iter().filter(|t| t.is_short()).count();
+        let total_trades = trades.len();
+        let stats = analyze_trades(trades);
 
-        let win_rate = winning_trades as f64 / total_trades as f64;
+        let win_rate = stats.winning_trades as f64 / total_trades as f64;
 
-        // P&L calculations
-        let gross_profit: f64 = trades.iter().filter(|t| t.pnl > 0.0).map(|t| t.pnl).sum();
-        let gross_loss: f64 = trades
-            .iter()
-            .filter(|t| t.pnl < 0.0)
-            .map(|t| t.pnl.abs())
-            .sum();
-
-        let profit_factor = if gross_loss > 0.0 {
-            gross_profit / gross_loss
-        } else if gross_profit > 0.0 {
-            f64::INFINITY
+        // Use f64::MAX instead of INFINITY so the value survives JSON round-trips.
+        let profit_factor = if stats.gross_loss > 0.0 {
+            stats.gross_profit / stats.gross_loss
+        } else if stats.gross_profit > 0.0 {
+            f64::MAX
         } else {
             0.0
         };
 
-        // Average returns
-        let avg_trade_return_pct =
-            trades.iter().map(|t| t.return_pct).sum::<f64>() / total_trades as f64;
+        let avg_trade_return_pct = stats.total_return_sum / total_trades as f64;
 
-        let winning_returns: Vec<f64> = trades
-            .iter()
-            .filter(|t| t.is_profitable())
-            .map(|t| t.return_pct)
-            .collect();
-        let losing_returns: Vec<f64> = trades
-            .iter()
-            .filter(|t| t.is_loss())
-            .map(|t| t.return_pct)
-            .collect();
-
-        let avg_win_pct = if !winning_returns.is_empty() {
-            winning_returns.iter().sum::<f64>() / winning_returns.len() as f64
+        let avg_win_pct = if !stats.winning_returns.is_empty() {
+            stats.winning_returns.iter().sum::<f64>() / stats.winning_returns.len() as f64
         } else {
             0.0
         };
 
-        let avg_loss_pct = if !losing_returns.is_empty() {
-            losing_returns.iter().sum::<f64>() / losing_returns.len() as f64
+        let avg_loss_pct = if !stats.losing_returns.is_empty() {
+            stats.losing_returns.iter().sum::<f64>() / stats.losing_returns.len() as f64
         } else {
             0.0
         };
 
-        // Trade durations
-        let total_duration: i64 = trades.iter().map(|t| t.duration_secs()).sum();
-        let avg_trade_duration = total_duration as f64 / total_trades as f64;
-
-        // Largest trades
-        let largest_win = trades.iter().map(|t| t.pnl).fold(0.0, f64::max);
-        let largest_loss = trades.iter().map(|t| t.pnl).fold(0.0, f64::min);
+        let avg_trade_duration = stats.total_duration as f64 / total_trades as f64;
 
         // Consecutive wins/losses
         let (max_consecutive_wins, max_consecutive_losses) = calculate_consecutive(trades);
-
-        // Total commission
-        let total_commission: f64 = trades.iter().map(|t| t.commission).sum();
 
         // Drawdown metrics
         let max_drawdown_pct = equity_curve
@@ -243,9 +287,9 @@ impl PerformanceMetrics {
             .unwrap_or(initial_capital);
         let total_return_pct = ((final_equity / initial_capital) - 1.0) * 100.0;
 
-        // Annualized return (assuming daily bars and 252 trading days)
+        // Annualized return using configured bars_per_year
         let num_bars = equity_curve.len();
-        let years = num_bars as f64 / 252.0;
+        let years = num_bars as f64 / bars_per_year;
         let annualized_return_pct = if years > 0.0 {
             ((final_equity / initial_capital).powf(1.0 / years) - 1.0) * 100.0
         } else {
@@ -254,17 +298,24 @@ impl PerformanceMetrics {
 
         // Sharpe and Sortino ratios
         let returns: Vec<f64> = calculate_periodic_returns(equity_curve);
-        let sharpe_ratio = calculate_sharpe_ratio(&returns);
-        let sortino_ratio = calculate_sortino_ratio(&returns);
+        let sharpe_ratio = calculate_sharpe_ratio(&returns, risk_free_rate, bars_per_year);
+        let sortino_ratio = calculate_sortino_ratio(&returns, risk_free_rate, bars_per_year);
 
-        // Calmar ratio
+        // Calmar ratio = annualised return (%) / max drawdown (%).
+        // Use f64::MAX instead of INFINITY when drawdown is zero to keep the
+        // value JSON-serializable.
         let calmar_ratio = if max_drawdown_pct > 0.0 {
             annualized_return_pct / (max_drawdown_pct * 100.0)
         } else if annualized_return_pct > 0.0 {
-            f64::INFINITY
+            f64::MAX
         } else {
             0.0
         };
+
+        // Trade duration analysis
+        let (avg_win_duration, avg_loss_duration) = calculate_win_loss_durations(trades);
+        let time_in_market_pct = calculate_time_in_market(trades, equity_curve);
+        let max_idle_period = calculate_max_idle_period(trades);
 
         Self {
             total_return_pct,
@@ -280,20 +331,88 @@ impl PerformanceMetrics {
             avg_loss_pct,
             avg_trade_duration,
             total_trades,
-            winning_trades,
-            losing_trades,
-            largest_win,
-            largest_loss,
+            winning_trades: stats.winning_trades,
+            losing_trades: stats.losing_trades,
+            largest_win: stats.largest_win,
+            largest_loss: stats.largest_loss,
             max_consecutive_wins,
             max_consecutive_losses,
             calmar_ratio,
-            total_commission,
-            long_trades,
-            short_trades,
+            total_commission: stats.total_commission,
+            long_trades: stats.long_trades,
+            short_trades: stats.short_trades,
             total_signals,
             executed_signals,
+            avg_win_duration,
+            avg_loss_duration,
+            time_in_market_pct,
+            max_idle_period,
+            total_dividend_income: stats.total_dividend_income,
         }
     }
+}
+
+/// Aggregated trade statistics collected in a single pass over the trade log.
+struct TradeStats {
+    winning_trades: usize,
+    losing_trades: usize,
+    long_trades: usize,
+    short_trades: usize,
+    gross_profit: f64,
+    gross_loss: f64,
+    total_return_sum: f64,
+    total_duration: i64,
+    largest_win: f64,
+    largest_loss: f64,
+    total_commission: f64,
+    total_dividend_income: f64,
+    winning_returns: Vec<f64>,
+    losing_returns: Vec<f64>,
+}
+
+/// Single-pass accumulation of all per-trade statistics.
+fn analyze_trades(trades: &[Trade]) -> TradeStats {
+    let mut stats = TradeStats {
+        winning_trades: 0,
+        losing_trades: 0,
+        long_trades: 0,
+        short_trades: 0,
+        gross_profit: 0.0,
+        gross_loss: 0.0,
+        total_return_sum: 0.0,
+        total_duration: 0,
+        largest_win: 0.0,
+        largest_loss: 0.0,
+        total_commission: 0.0,
+        total_dividend_income: 0.0,
+        winning_returns: Vec::new(),
+        losing_returns: Vec::new(),
+    };
+
+    for t in trades {
+        if t.is_profitable() {
+            stats.winning_trades += 1;
+            stats.gross_profit += t.pnl;
+            stats.winning_returns.push(t.return_pct);
+            stats.largest_win = stats.largest_win.max(t.pnl);
+        } else if t.is_loss() {
+            stats.losing_trades += 1;
+            stats.gross_loss += t.pnl.abs();
+            stats.losing_returns.push(t.return_pct);
+            stats.largest_loss = stats.largest_loss.min(t.pnl);
+        }
+        if t.is_long() {
+            stats.long_trades += 1;
+        } else {
+            stats.short_trades += 1;
+        }
+        stats.total_return_sum += t.return_pct;
+        stats.total_duration += t.duration_secs();
+        stats.total_commission += t.commission;
+        stats.total_dividend_income += t.dividend_income;
+    }
+
+    stats
 }
 
 /// Calculate maximum consecutive wins and losses
@@ -365,52 +484,158 @@ fn calculate_periodic_returns(equity_curve: &[EquityPoint]) -> Vec<f64> {
         .collect()
 }
 
-/// Calculate Sharpe ratio (assuming risk-free rate = 0)
-fn calculate_sharpe_ratio(returns: &[f64]) -> f64 {
-    if returns.is_empty() {
+/// Convert an annual risk-free rate to a per-bar rate.
+///
+/// `bars_per_year` controls the compounding frequency (e.g. 252 for daily US
+/// equity bars, 52 for weekly, 1638 for hourly). The resulting per-bar rate is
+/// subtracted from each return before computing Sharpe/Sortino.
+fn annual_to_periodic_rf(annual_rate: f64, bars_per_year: f64) -> f64 {
+    (1.0 + annual_rate).powf(1.0 / bars_per_year) - 1.0
+}
+
+/// Calculate Sharpe ratio with a configurable annual risk-free rate.
+///
+/// Uses sample standard deviation (divides by n-1) to match the `risk` module
+/// and standard financial convention. Annualised by `sqrt(bars_per_year)`.
+fn calculate_sharpe_ratio(returns: &[f64], annual_risk_free_rate: f64, bars_per_year: f64) -> f64 {
+    if returns.len() < 2 {
         return 0.0;
     }
 
-    let mean = returns.iter().sum::<f64>() / returns.len() as f64;
-    let variance = returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / returns.len() as f64;
+    let periodic_rf = annual_to_periodic_rf(annual_risk_free_rate, bars_per_year);
+    let excess: Vec<f64> = returns.iter().map(|r| r - periodic_rf).collect();
+    let n = excess.len() as f64;
+    let mean = excess.iter().sum::<f64>() / n;
+    // Sample variance (n-1) for unbiased estimation
+    let variance = excess.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (n - 1.0);
     let std_dev = variance.sqrt();
 
     if std_dev > 0.0 {
-        // Annualize: assume daily returns, 252 trading days
-        (mean / std_dev) * (252.0_f64).sqrt()
+        (mean / std_dev) * bars_per_year.sqrt()
     } else if mean > 0.0 {
-        f64::INFINITY
+        // Use f64::MAX instead of INFINITY so the value survives JSON round-trips.
+        f64::MAX
     } else {
         0.0
     }
 }
 
-/// Calculate Sortino ratio (downside deviation only)
-fn calculate_sortino_ratio(returns: &[f64]) -> f64 {
-    if returns.is_empty() {
+/// Calculate Sortino ratio with a configurable annual risk-free rate.
+///
+/// Uses downside deviation: only negative excess returns contribute to the
+/// deviation, but the denominator is the total observation count minus 1
+/// (sample convention, matching Sortino's original definition and the `risk`
+/// module). Annualised by `sqrt(bars_per_year)`.
+fn calculate_sortino_ratio(returns: &[f64], annual_risk_free_rate: f64, bars_per_year: f64) -> f64 {
+    if returns.len() < 2 {
         return 0.0;
     }
 
-    let mean = returns.iter().sum::<f64>() / returns.len() as f64;
+    let periodic_rf = annual_to_periodic_rf(annual_risk_free_rate, bars_per_year);
+    let excess: Vec<f64> = returns.iter().map(|r| r - periodic_rf).collect();
+    let n = excess.len() as f64;
+    let mean = excess.iter().sum::<f64>() / n;
 
-    // Only consider negative returns for downside deviation
-    let downside_returns: Vec<f64> = returns.iter().filter(|&&r| r < 0.0).copied().collect();
-
-    if downside_returns.is_empty() {
-        return if mean > 0.0 { f64::INFINITY } else { 0.0 };
-    }
-
-    let downside_variance =
-        downside_returns.iter().map(|r| r.powi(2)).sum::<f64>() / returns.len() as f64;
-    let downside_dev = downside_variance.sqrt();
+    // Downside deviation: sum of squared negative excess returns, divided by n-1
+    // (total observations, not just negative ones — per Sortino's original definition)
+    let downside_sq_sum: f64 = excess.iter().filter(|&&r| r < 0.0).map(|r| r.powi(2)).sum();
+    let downside_dev = (downside_sq_sum / (n - 1.0)).sqrt();
 
     if downside_dev > 0.0 {
-        (mean / downside_dev) * (252.0_f64).sqrt()
+        (mean / downside_dev) * bars_per_year.sqrt()
     } else if mean > 0.0 {
-        f64::INFINITY
+        // Use f64::MAX instead of INFINITY so the value survives JSON round-trips.
+        f64::MAX
     } else {
         0.0
     }
+}
+
+/// Calculate average duration (in seconds) for winning and losing trades separately.
+fn calculate_win_loss_durations(trades: &[Trade]) -> (f64, f64) {
+    let win_durations: Vec<i64> = trades
+        .iter()
+        .filter(|t| t.is_profitable())
+        .map(|t| t.duration_secs())
+        .collect();
+    let loss_durations: Vec<i64> = trades
+        .iter()
+        .filter(|t| t.is_loss())
+        .map(|t| t.duration_secs())
+        .collect();
+
+    let avg_win = if win_durations.is_empty() {
+        0.0
+    } else {
+        win_durations.iter().sum::<i64>() as f64 / win_durations.len() as f64
+    };
+
+    let avg_loss = if loss_durations.is_empty() {
+        0.0
+    } else {
+        loss_durations.iter().sum::<i64>() as f64 / loss_durations.len() as f64
+    };
+
+    (avg_win, avg_loss)
+}
+
+/// Calculate fraction of backtest time spent in a position.
+///
+/// Uses the ratio of total trade duration to the total backtest duration
+/// derived from the equity curve timestamps.
+fn calculate_time_in_market(trades: &[Trade], equity_curve: &[EquityPoint]) -> f64 {
+    let total_duration_secs: i64 = trades.iter().map(|t| t.duration_secs()).sum();
+
+    let backtest_secs = match (equity_curve.first(), equity_curve.last()) {
+        (Some(first), Some(last)) if last.timestamp > first.timestamp => {
+            last.timestamp - first.timestamp
+        }
+        _ => return 0.0,
+    };
+
+    (total_duration_secs as f64 / backtest_secs as f64).min(1.0)
+}
+
+/// Calculate the longest idle period (seconds) between consecutive trades.
+///
+/// Returns 0 if there are fewer than 2 trades.
+fn calculate_max_idle_period(trades: &[Trade]) -> i64 {
+    if trades.len() < 2 {
+        return 0;
+    }
+
+    // Trades are appended in chronological order; compute gaps between
+    // exit of trade N and entry of trade N+1.
+    trades
+        .windows(2)
+        .map(|w| (w[1].entry_timestamp - w[0].exit_timestamp).max(0))
+        .max()
+        .unwrap_or(0)
+}
+
+/// Comparison of strategy performance against a benchmark.
+///
+/// Populated when a benchmark symbol is supplied to `backtest_with_benchmark`.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BenchmarkMetrics {
+    /// Benchmark symbol (e.g. `"SPY"`)
+    pub symbol: String,
+
+    /// Buy-and-hold return of the benchmark over the same period (percentage)
+    pub benchmark_return_pct: f64,
+
+    /// Buy-and-hold return of the backtested symbol over the same period (percentage)
+    pub buy_and_hold_return_pct: f64,
+
+    /// Alpha: annualised strategy excess return over the benchmark (CAPM)
+    pub alpha: f64,
+
+    /// Beta: sensitivity of strategy returns to benchmark movements
+    pub beta: f64,
+
+    /// Information ratio: excess return per unit of tracking error (annualised)
+    pub information_ratio: f64,
 }
 
 /// Complete backtest result
@@ -452,6 +677,16 @@ pub struct BacktestResult {
 
     /// Current open position (if any at end)
     pub open_position: Option<Position>,
+
+    /// Benchmark comparison metrics (set when a benchmark is provided)
+    pub benchmark: Option<BenchmarkMetrics>,
+
+    /// Diagnostic messages (e.g. why zero trades were produced).
+    ///
+    /// Empty when the backtest ran without issues. Populated with actionable
+    /// hints when the engine detects likely misconfiguration.
+    #[serde(default)]
+    pub diagnostics: Vec<String>,
 }
 
 impl BacktestResult {
@@ -514,6 +749,7 @@ mod tests {
             commission: 0.0,
             pnl,
             return_pct,
+            dividend_income: 0.0,
             entry_signal: Signal::long(0, 100.0),
             exit_signal: Signal::exit(100, 110.0),
         }
@@ -534,7 +770,7 @@ mod tests {
             },
         ];
 
-        let metrics = PerformanceMetrics::calculate(&[], &equity, 10000.0, 0, 0);
+        let metrics = PerformanceMetrics::calculate(&[], &equity, 10000.0, 0, 0, 0.0, 252.0);
 
         assert_eq!(metrics.total_trades, 0);
         assert!((metrics.total_return_pct - 1.0).abs() < 0.01);
@@ -577,7 +813,7 @@ mod tests {
             },
         ];
 
-        let metrics = PerformanceMetrics::calculate(&trades, &equity, 10000.0, 10, 4);
+        let metrics = PerformanceMetrics::calculate(&trades, &equity, 10000.0, 10, 4, 0.0, 252.0);
 
         assert_eq!(metrics.total_trades, 4);
         assert_eq!(metrics.winning_trades, 3);
@@ -640,5 +876,59 @@ mod tests {
 
         let duration = calculate_max_drawdown_duration(&equity);
         assert_eq!(duration, 3); // 3 bars in drawdown (indices 1, 2, 3) before recovery at index 4
+    }
+
+    #[test]
+    fn test_sharpe_uses_sample_variance() {
+        // Verify Sharpe uses n-1 (sample) not n (population) variance.
+        // With returns = [0.01, -0.01, 0.02, -0.02] and rf=0:
+        //   mean = 0.0
+        //   sample variance = (0.01^2 + 0.01^2 + 0.02^2 + 0.02^2) / 3 = 0.001 / 3
+        //   std_dev = sqrt(0.001/3) ≈ 0.018257
+        //   Sharpe = (0.0 / 0.018257) * sqrt(252) = 0.0
+        let returns = vec![0.01, -0.01, 0.02, -0.02];
+        let sharpe = calculate_sharpe_ratio(&returns, 0.0, 252.0);
+        // Mean is exactly 0 so Sharpe must be 0 regardless of std_dev
+        assert!(
+            (sharpe).abs() < 1e-10,
+            "Sharpe of zero-mean returns should be 0, got {}",
+            sharpe
+        );
+    }
+
+    #[test]
+    fn test_max_drawdown_percentage_method() {
+        // Verify the convenience method returns max_drawdown_pct * 100.
+        // Use a trade so the no-trades early-return path is not taken, then
+        // supply an equity curve with a known 10% drawdown point.
+        let trade = make_trade(100.0, 10.0, true);
+        let equity = vec![
+            EquityPoint {
+                timestamp: 0,
+                equity: 10000.0,
+                drawdown_pct: 0.0,
+            },
+            EquityPoint {
+                timestamp: 1,
+                equity: 9000.0,
+                drawdown_pct: 0.1,
+            },
+            EquityPoint {
+                timestamp: 2,
+                equity: 10000.0,
+                drawdown_pct: 0.0,
+            },
+        ];
+        let metrics = PerformanceMetrics::calculate(&[trade], &equity, 10000.0, 1, 1, 0.0, 252.0);
+        assert!(
+            (metrics.max_drawdown_pct - 0.1).abs() < 1e-9,
+            "max_drawdown_pct should be 0.1 (fraction), got {}",
+            metrics.max_drawdown_pct
+        );
+        assert!(
+            (metrics.max_drawdown_percentage() - 10.0).abs() < 1e-9,
+            "max_drawdown_percentage() should be 10.0, got {}",
+            metrics.max_drawdown_percentage()
+        );
     }
 }

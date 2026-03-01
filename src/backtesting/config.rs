@@ -58,6 +58,40 @@ pub struct BacktestConfig {
 
     /// Close any open position at end of backtest
     pub close_at_end: bool,
+
+    /// Annual risk-free rate for Sharpe/Sortino/Calmar ratio calculations (0.0 - 1.0).
+    ///
+    /// Defaults to `0.0`. Use the current T-bill rate for accurate ratios
+    /// (e.g. `0.05` for 5% annual). Converted to a per-period rate internally.
+    pub risk_free_rate: f64,
+
+    /// Trailing stop percentage (0.0 - 1.0).
+    ///
+    /// For **long** positions: tracks the peak (highest) price since entry and
+    /// triggers an exit when the price drops this fraction below the peak.
+    ///
+    /// For **short** positions: tracks the trough (lowest) price since entry and
+    /// triggers an exit when the price rises this fraction above the trough.
+    ///
+    /// Checked before strategy signals each bar, same as `stop_loss_pct` and
+    /// `take_profit_pct`. Exit slippage is applied.
+    pub trailing_stop_pct: Option<f64>,
+
+    /// When `true`, dividend income received during a holding period is
+    /// notionally reinvested: the income is included in the trade's P&L as
+    /// if additional shares were purchased at the dividend ex-date close price.
+    ///
+    /// When `false` (default), dividend income is simply added to P&L at close.
+    /// In both cases the dividend amount is recorded on the `Trade` for reporting.
+    pub reinvest_dividends: bool,
+
+    /// Number of bars per calendar year, used for annualising returns and ratios.
+    ///
+    /// Defaults to `252.0` (US equity daily bars). Set to `52.0` for weekly
+    /// bars, `12.0` for monthly, or `252.0 * 6.5` (≈ 1638) for hourly bars.
+    /// This affects annualised return, Sharpe, Sortino, Calmar, and all
+    /// benchmark metrics.
+    pub bars_per_year: f64,
 }
 
 impl Default for BacktestConfig {
@@ -74,11 +108,28 @@ impl Default for BacktestConfig {
             stop_loss_pct: None,
             take_profit_pct: None,
             close_at_end: true,
+            risk_free_rate: 0.0,
+            trailing_stop_pct: None,
+            reinvest_dividends: false,
+            bars_per_year: 252.0,
         }
     }
 }
 
 impl BacktestConfig {
+    /// Create a zero-cost configuration with no commission or slippage.
+    ///
+    /// Useful for unit tests and frictionless benchmark comparisons.
+    /// All other fields use the same defaults as [`BacktestConfig::default()`].
+    pub fn zero_cost() -> Self {
+        Self {
+            commission: 0.0,
+            commission_pct: 0.0,
+            slippage_pct: 0.0,
+            ..Default::default()
+        }
+    }
+
     /// Create a new builder
     pub fn builder() -> BacktestConfigBuilder {
         BacktestConfigBuilder::default()
@@ -114,10 +165,10 @@ impl BacktestConfig {
             ));
         }
 
-        if !(0.0..=1.0).contains(&self.position_size_pct) {
+        if self.position_size_pct <= 0.0 || self.position_size_pct > 1.0 {
             return Err(BacktestError::invalid_param(
                 "position_size_pct",
-                "must be between 0.0 and 1.0",
+                "must be between 0.0 (exclusive) and 1.0 (inclusive)",
             ));
         }
 
@@ -143,6 +194,29 @@ impl BacktestConfig {
             return Err(BacktestError::invalid_param(
                 "take_profit_pct",
                 "must be between 0.0 and 1.0",
+            ));
+        }
+
+        if !(0.0..=1.0).contains(&self.risk_free_rate) {
+            return Err(BacktestError::invalid_param(
+                "risk_free_rate",
+                "must be between 0.0 and 1.0",
+            ));
+        }
+
+        if let Some(trail) = self.trailing_stop_pct
+            && !(0.0..=1.0).contains(&trail)
+        {
+            return Err(BacktestError::invalid_param(
+                "trailing_stop_pct",
+                "must be between 0.0 and 1.0",
+            ));
+        }
+
+        if self.bars_per_year <= 0.0 {
+            return Err(BacktestError::invalid_param(
+                "bars_per_year",
+                "must be positive (e.g. 252 for daily, 52 for weekly)",
             ));
         }
 
@@ -176,18 +250,26 @@ impl BacktestConfig {
         }
     }
 
-    /// Calculate position size based on available capital
+    /// Calculate position size based on available capital.
+    ///
+    /// `price` **must** be the slippage-adjusted entry price (i.e. the value
+    /// returned by [`apply_entry_slippage`] for the current direction). Passing
+    /// the raw close price when slippage is non-zero would over-allocate capital
+    /// and cause the subsequent `entry_value + commission > cash` guard to reject
+    /// the entry.
+    ///
+    /// [`apply_entry_slippage`]: Self::apply_entry_slippage
     pub fn calculate_position_size(&self, available_capital: f64, price: f64) -> f64 {
         let capital_to_use = available_capital * self.position_size_pct;
 
-        // Account for commission to ensure we don't exceed available capital
-        // Commission is commission_pct of the total entry value
-        // If we use capital C, commission is commission_pct * C
-        // Total needed: C + (commission_pct * C) = C * (1 + commission_pct)
-        // So we should use: capital_to_use / (1 + commission_pct)
-        let adjusted_capital = capital_to_use / (1.0 + self.commission_pct);
+        // Account for both entry and exit commission so we don't exceed available capital.
+        // For percentage commission: Total cost = C * (1 + 2 * commission_pct)
+        // For flat commission: reserve 2 * flat_commission (entry + exit)
+        // Combined: adjusted = capital_to_use / (1 + 2 * commission_pct) - 2 * commission
+        let adjusted_capital =
+            capital_to_use / (1.0 + 2.0 * self.commission_pct) - 2.0 * self.commission;
 
-        adjusted_capital / price
+        (adjusted_capital / price).max(0.0)
     }
 }
 
@@ -267,6 +349,43 @@ impl BacktestConfigBuilder {
     /// Set whether to close open positions at end of backtest
     pub fn close_at_end(mut self, close: bool) -> Self {
         self.config.close_at_end = close;
+        self
+    }
+
+    /// Set annual risk-free rate for Sharpe/Sortino/Calmar calculations (0.0 - 1.0)
+    ///
+    /// Use the current T-bill rate for accurate ratios (e.g. `0.05` for 5%).
+    pub fn risk_free_rate(mut self, rate: f64) -> Self {
+        self.config.risk_free_rate = rate;
+        self
+    }
+
+    /// Set trailing stop percentage (0.0 - 1.0).
+    ///
+    /// For longs: exits when price drops this fraction below its peak since entry.
+    /// For shorts: exits when price rises this fraction above its trough since entry.
+    pub fn trailing_stop_pct(mut self, pct: f64) -> Self {
+        self.config.trailing_stop_pct = Some(pct);
+        self
+    }
+
+    /// Enable or disable dividend reinvestment
+    ///
+    /// When `true`, dividend income is reinvested (added to P&L as additional hypothetical shares).
+    pub fn reinvest_dividends(mut self, reinvest: bool) -> Self {
+        self.config.reinvest_dividends = reinvest;
+        self
+    }
+
+    /// Set the number of bars per calendar year for annualisation.
+    ///
+    /// Defaults to `252.0` (US equity daily bars). Common values:
+    /// - `252.0` — daily US equity
+    /// - `52.0` — weekly
+    /// - `12.0` — monthly
+    /// - `252.0 * 6.5` (≈ 1638) — hourly (6.5-hour trading day)
+    pub fn bars_per_year(mut self, n: f64) -> Self {
+        self.config.bars_per_year = n;
         self
     }
 
@@ -381,6 +500,40 @@ mod tests {
     }
 
     #[test]
+    fn test_risk_free_rate() {
+        let config = BacktestConfig::builder()
+            .risk_free_rate(0.05)
+            .build()
+            .unwrap();
+        assert!((config.risk_free_rate - 0.05).abs() < f64::EPSILON);
+
+        // Out-of-range should fail
+        assert!(
+            BacktestConfig::builder()
+                .risk_free_rate(1.5)
+                .build()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_trailing_stop() {
+        let config = BacktestConfig::builder()
+            .trailing_stop_pct(0.05)
+            .build()
+            .unwrap();
+        assert_eq!(config.trailing_stop_pct, Some(0.05));
+
+        // Out-of-range should fail
+        assert!(
+            BacktestConfig::builder()
+                .trailing_stop_pct(1.5)
+                .build()
+                .is_err()
+        );
+    }
+
+    #[test]
     fn test_position_sizing_with_commission() {
         let config = BacktestConfig::builder()
             .position_size_pct(0.5) // Use 50% of capital
@@ -389,10 +542,102 @@ mod tests {
             .unwrap();
 
         // With $10,000 and price $100, use $5,000
-        // But adjusted for commission: 5000 / 1.001 = 4995.004995
-        // So shares = 4995.004995 / 100 = 49.95
+        // But adjusted for entry + exit commission: 5000 / 1.002 = 4990.019960...
+        // So shares = 4990.019960 / 100 = 49.90...
         let size = config.calculate_position_size(10_000.0, 100.0);
-        let expected = 5000.0 / 1.001 / 100.0;
+        let expected = 5000.0 / 1.002 / 100.0;
         assert!((size - expected).abs() < 0.01);
+    }
+
+    #[test]
+    fn test_position_size_zero_rejected() {
+        assert!(
+            BacktestConfig::builder()
+                .position_size_pct(0.0)
+                .build()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_bars_per_year_validation() {
+        // Default is 252
+        let config = BacktestConfig::default();
+        assert!((config.bars_per_year - 252.0).abs() < f64::EPSILON);
+        assert!(config.validate().is_ok());
+
+        // Valid custom value
+        let config = BacktestConfig::builder()
+            .bars_per_year(52.0)
+            .build()
+            .unwrap();
+        assert!((config.bars_per_year - 52.0).abs() < f64::EPSILON);
+
+        // Zero must be rejected
+        assert!(
+            BacktestConfig::builder()
+                .bars_per_year(0.0)
+                .build()
+                .is_err()
+        );
+
+        // Negative must be rejected
+        assert!(
+            BacktestConfig::builder()
+                .bars_per_year(-1.0)
+                .build()
+                .is_err()
+        );
+    }
+
+    #[test]
+    fn test_position_sizing_accounts_for_exit_commission() {
+        // Verify the denominator is 1 + 2*comm (entry + exit)
+        let comm = 0.01; // 1%
+        let config = BacktestConfig::builder()
+            .commission_pct(comm)
+            .position_size_pct(1.0)
+            .build()
+            .unwrap();
+        let size = config.calculate_position_size(10_000.0, 100.0);
+        let expected = 10_000.0 / (1.0 + 2.0 * comm) / 100.0;
+        assert!((size - expected).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_position_sizing_flat_commission_reduces_size() {
+        // With $10 flat commission per side, $20 total must be reserved
+        let config = BacktestConfig::builder()
+            .commission(10.0)
+            .commission_pct(0.0)
+            .position_size_pct(1.0)
+            .build()
+            .unwrap();
+        let size_with_flat = config.calculate_position_size(10_000.0, 100.0);
+
+        let config_no_flat = BacktestConfig::builder()
+            .commission_pct(0.0)
+            .position_size_pct(1.0)
+            .build()
+            .unwrap();
+        let size_no_flat = config_no_flat.calculate_position_size(10_000.0, 100.0);
+
+        // Flat commission should reduce position size
+        assert!(size_with_flat < size_no_flat);
+        // Expected: (10_000 - 20) / 100 = 99.8
+        let expected = (10_000.0 - 20.0) / 100.0;
+        assert!((size_with_flat - expected).abs() < 0.001);
+    }
+
+    #[test]
+    fn test_position_sizing_flat_commission_exceeds_capital_returns_zero() {
+        // If flat commission alone exceeds available capital, quantity should be 0
+        let config = BacktestConfig::builder()
+            .commission(6_000.0) // $6k/side → $12k total > $10k capital
+            .position_size_pct(1.0)
+            .build()
+            .unwrap();
+        let size = config.calculate_position_size(10_000.0, 100.0);
+        assert_eq!(size, 0.0);
     }
 }

@@ -3,6 +3,9 @@
 //! Ready-to-use strategy implementations that can be used directly with the backtest engine.
 //! Each strategy implements the [`Strategy`] trait and can be customized via builder methods.
 //!
+//! Short signals are always emitted when the condition is met. Whether they are
+//! *executed* is controlled solely by [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig).
+//!
 //! # Available Strategies
 //!
 //! | Strategy | Description |
@@ -19,8 +22,8 @@
 //! ```ignore
 //! use finance_query::backtesting::{SmaCrossover, BacktestConfig};
 //!
-//! // Use a pre-built strategy directly
-//! let strategy = SmaCrossover::new(10, 20).with_short(true);
+//! let strategy = SmaCrossover::new(10, 20);
+//! let config = BacktestConfig::builder().allow_short(true).build().unwrap();
 //! ```
 
 use crate::indicators::Indicator;
@@ -32,15 +35,14 @@ use crate::backtesting::signal::SignalStrength;
 ///
 /// Goes long when fast SMA crosses above slow SMA.
 /// Exits when fast SMA crosses below slow SMA.
-/// Optionally goes short on bearish crossovers.
+/// Emits short signals on bearish crossovers (execution gated by
+/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct SmaCrossover {
     /// Fast SMA period
     pub fast_period: usize,
     /// Slow SMA period
     pub slow_period: usize,
-    /// Allow short positions
-    pub allow_short: bool,
 }
 
 impl SmaCrossover {
@@ -49,14 +51,7 @@ impl SmaCrossover {
         Self {
             fast_period,
             slow_period,
-            allow_short: false,
         }
-    }
-
-    /// Enable short positions on bearish crossovers
-    pub fn with_short(mut self, allow: bool) -> Self {
-        self.allow_short = allow;
-        self
     }
 
     fn fast_key(&self) -> String {
@@ -111,7 +106,7 @@ impl Strategy for SmaCrossover {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("SMA bearish crossover - close long");
             }
-            if !ctx.has_position() && self.allow_short {
+            if !ctx.has_position() {
                 return Signal::short(candle.timestamp, candle.close)
                     .with_reason("SMA bearish crossover");
             }
@@ -125,7 +120,8 @@ impl Strategy for SmaCrossover {
 ///
 /// Goes long when RSI crosses above oversold level.
 /// Exits when RSI reaches overbought level.
-/// Optionally goes short when RSI crosses below overbought level.
+/// Emits short signals when RSI crosses below overbought (execution gated by
+/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct RsiReversal {
     /// RSI period
@@ -134,8 +130,6 @@ pub struct RsiReversal {
     pub oversold: f64,
     /// Overbought threshold (default 70)
     pub overbought: f64,
-    /// Allow short positions
-    pub allow_short: bool,
 }
 
 impl RsiReversal {
@@ -145,7 +139,6 @@ impl RsiReversal {
             period,
             oversold: 30.0,
             overbought: 70.0,
-            allow_short: false,
         }
     }
 
@@ -153,12 +146,6 @@ impl RsiReversal {
     pub fn with_thresholds(mut self, oversold: f64, overbought: f64) -> Self {
         self.oversold = oversold;
         self.overbought = overbought;
-        self
-    }
-
-    /// Enable short positions
-    pub fn with_short(mut self, allow: bool) -> Self {
-        self.allow_short = allow;
         self
     }
 
@@ -230,7 +217,7 @@ impl Strategy for RsiReversal {
                         self.overbought
                     ));
             }
-            if !ctx.has_position() && self.allow_short {
+            if !ctx.has_position() {
                 return Signal::short(candle.timestamp, candle.close)
                     .with_strength(strength)
                     .with_reason(format!("RSI crossed below {:.0}", self.overbought));
@@ -245,7 +232,8 @@ impl Strategy for RsiReversal {
 ///
 /// Goes long when MACD line crosses above signal line.
 /// Exits when MACD line crosses below signal line.
-/// Optionally goes short on bearish crossovers.
+/// Emits short signals on bearish crossovers (execution gated by
+/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct MacdSignal {
     /// Fast EMA period
@@ -254,25 +242,12 @@ pub struct MacdSignal {
     pub slow: usize,
     /// Signal line period
     pub signal: usize,
-    /// Allow short positions
-    pub allow_short: bool,
 }
 
 impl MacdSignal {
     /// Create a new MACD signal strategy
     pub fn new(fast: usize, slow: usize, signal: usize) -> Self {
-        Self {
-            fast,
-            slow,
-            signal,
-            allow_short: false,
-        }
-    }
-
-    /// Enable short positions
-    pub fn with_short(mut self, allow: bool) -> Self {
-        self.allow_short = allow;
-        self
+        Self { fast, slow, signal }
     }
 }
 
@@ -305,9 +280,12 @@ impl Strategy for MacdSignal {
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
 
+        let line_key = format!("macd_line_{}_{}_{}", self.fast, self.slow, self.signal);
+        let sig_key = format!("macd_signal_{}_{}_{}", self.fast, self.slow, self.signal);
+
         // MACD line and signal line are stored separately by the engine
         // Bullish crossover
-        if ctx.crossed_above("macd_line", "macd_signal") {
+        if ctx.crossed_above(&line_key, &sig_key) {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("MACD bullish crossover - close short");
@@ -319,12 +297,12 @@ impl Strategy for MacdSignal {
         }
 
         // Bearish crossover
-        if ctx.crossed_below("macd_line", "macd_signal") {
+        if ctx.crossed_below(&line_key, &sig_key) {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("MACD bearish crossover - close long");
             }
-            if !ctx.has_position() && self.allow_short {
+            if !ctx.has_position() {
                 return Signal::short(candle.timestamp, candle.close)
                     .with_reason("MACD bearish crossover");
             }
@@ -338,15 +316,14 @@ impl Strategy for MacdSignal {
 ///
 /// Goes long when price touches lower band (oversold).
 /// Exits when price reaches middle or upper band.
-/// Optionally goes short when price touches upper band.
+/// Emits short signals when price touches upper band (execution gated by
+/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct BollingerMeanReversion {
     /// SMA period for middle band
     pub period: usize,
     /// Standard deviation multiplier
     pub std_dev: f64,
-    /// Allow short positions
-    pub allow_short: bool,
     /// Exit at middle band (true) or upper/lower band (false)
     pub exit_at_middle: bool,
 }
@@ -357,15 +334,8 @@ impl BollingerMeanReversion {
         Self {
             period,
             std_dev,
-            allow_short: false,
             exit_at_middle: true,
         }
-    }
-
-    /// Enable short positions
-    pub fn with_short(mut self, allow: bool) -> Self {
-        self.allow_short = allow;
-        self
     }
 
     /// Set exit target (middle band or opposite band)
@@ -404,9 +374,12 @@ impl Strategy for BollingerMeanReversion {
         let candle = ctx.current_candle();
         let close = candle.close;
 
-        let lower = ctx.indicator("bollinger_lower");
-        let middle = ctx.indicator("bollinger_middle");
-        let upper = ctx.indicator("bollinger_upper");
+        let lower = ctx.indicator(&format!("bollinger_lower_{}_{}", self.period, self.std_dev));
+        let middle = ctx.indicator(&format!(
+            "bollinger_middle_{}_{}",
+            self.period, self.std_dev
+        ));
+        let upper = ctx.indicator(&format!("bollinger_upper_{}_{}", self.period, self.std_dev));
 
         let (Some(lower_val), Some(middle_val), Some(upper_val)) = (lower, middle, upper) else {
             return Signal::hold();
@@ -438,7 +411,7 @@ impl Strategy for BollingerMeanReversion {
         }
 
         // Short entry: price at or above upper band
-        if close >= upper_val && !ctx.has_position() && self.allow_short {
+        if close >= upper_val && !ctx.has_position() {
             return Signal::short(candle.timestamp, close)
                 .with_reason("Price at upper Bollinger Band");
         }
@@ -469,31 +442,20 @@ impl Strategy for BollingerMeanReversion {
 /// SuperTrend Following Strategy
 ///
 /// Goes long when SuperTrend turns bullish (uptrend).
-/// Goes short when SuperTrend turns bearish (downtrend).
+/// Emits short signals when SuperTrend turns bearish (execution gated by
+/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct SuperTrendFollow {
     /// ATR period
     pub period: usize,
     /// ATR multiplier
     pub multiplier: f64,
-    /// Allow short positions
-    pub allow_short: bool,
 }
 
 impl SuperTrendFollow {
     /// Create a new SuperTrend following strategy
     pub fn new(period: usize, multiplier: f64) -> Self {
-        Self {
-            period,
-            multiplier,
-            allow_short: false,
-        }
-    }
-
-    /// Enable short positions
-    pub fn with_short(mut self, allow: bool) -> Self {
-        self.allow_short = allow;
-        self
+        Self { period, multiplier }
     }
 }
 
@@ -526,8 +488,9 @@ impl Strategy for SuperTrendFollow {
         let candle = ctx.current_candle();
 
         // SuperTrend uptrend stored as 1.0, downtrend as 0.0
-        let trend_now = ctx.indicator("supertrend_uptrend");
-        let trend_prev = ctx.indicator_prev("supertrend_uptrend");
+        let uptrend_key = format!("supertrend_uptrend_{}_{}", self.period, self.multiplier);
+        let trend_now = ctx.indicator(&uptrend_key);
+        let trend_prev = ctx.indicator_prev(&uptrend_key);
 
         let (Some(now), Some(prev)) = (trend_now, trend_prev) else {
             return Signal::hold();
@@ -554,7 +517,7 @@ impl Strategy for SuperTrendFollow {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("SuperTrend turned bearish - close long");
             }
-            if !ctx.has_position() && self.allow_short {
+            if !ctx.has_position() {
                 return Signal::short(candle.timestamp, candle.close)
                     .with_reason("SuperTrend turned bearish");
             }
@@ -568,13 +531,12 @@ impl Strategy for SuperTrendFollow {
 ///
 /// Goes long when price breaks above upper channel (new high).
 /// Exits when price breaks below lower channel (new low).
-/// Optionally goes short on downward breakouts.
+/// Emits short signals on downward breakouts (execution gated by
+/// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
 #[derive(Debug, Clone)]
 pub struct DonchianBreakout {
     /// Channel period
     pub period: usize,
-    /// Allow short positions
-    pub allow_short: bool,
     /// Use middle channel for exit (true) or opposite channel (false)
     pub exit_at_middle: bool,
 }
@@ -584,15 +546,8 @@ impl DonchianBreakout {
     pub fn new(period: usize) -> Self {
         Self {
             period,
-            allow_short: false,
             exit_at_middle: true,
         }
-    }
-
-    /// Enable short positions
-    pub fn with_short(mut self, allow: bool) -> Self {
-        self.allow_short = allow;
-        self
     }
 
     /// Set exit at middle channel
@@ -628,17 +583,26 @@ impl Strategy for DonchianBreakout {
         let candle = ctx.current_candle();
         let close = candle.close;
 
-        let upper = ctx.indicator("donchian_upper");
-        let middle = ctx.indicator("donchian_middle");
-        let lower = ctx.indicator("donchian_lower");
-        let prev_upper = ctx.indicator_prev("donchian_upper");
-        let prev_lower = ctx.indicator_prev("donchian_lower");
+        let upper_key = format!("donchian_upper_{}", self.period);
+        let middle_key = format!("donchian_middle_{}", self.period);
+        let lower_key = format!("donchian_lower_{}", self.period);
+        let upper = ctx.indicator(&upper_key);
+        let middle = ctx.indicator(&middle_key);
+        let lower = ctx.indicator(&lower_key);
+        let prev_upper = ctx.indicator_prev(&upper_key);
+        let prev_lower = ctx.indicator_prev(&lower_key);
 
         let (Some(_upper_val), Some(middle_val), Some(_lower_val)) = (upper, middle, lower) else {
             return Signal::hold();
         };
 
-        // Breakout above previous upper channel -> go long
+        // Breakout above the *previous* bar's upper channel level → go long.
+        // Using the lagged level rather than the current bar's channel prevents
+        // look-ahead bias: the current bar's Donchian high is computed using the
+        // close of that same bar, so comparing `close > current_upper` would
+        // trivially never trigger (the close can equal but not exceed the max
+        // of the window it belongs to).  The lagged level is the natural
+        // reference point for a confirmed breakout signal.
         if let Some(prev_up) = prev_upper
             && close > prev_up
             && !ctx.has_position()
@@ -647,7 +611,8 @@ impl Strategy for DonchianBreakout {
                 .with_reason("Donchian upper channel breakout");
         }
 
-        // Breakout below previous lower channel
+        // Breakdown below the *previous* bar's lower channel level (same
+        // lagged-reference rationale as the upper channel breakout above).
         if let Some(prev_low) = prev_lower
             && close < prev_low
         {
@@ -655,7 +620,7 @@ impl Strategy for DonchianBreakout {
                 return Signal::exit(candle.timestamp, close)
                     .with_reason("Donchian lower channel breakdown - close long");
             }
-            if !ctx.has_position() && self.allow_short {
+            if !ctx.has_position() {
                 return Signal::short(candle.timestamp, close)
                     .with_reason("Donchian lower channel breakdown");
             }
@@ -686,15 +651,13 @@ mod tests {
         let s = SmaCrossover::default();
         assert_eq!(s.fast_period, 10);
         assert_eq!(s.slow_period, 20);
-        assert!(!s.allow_short);
     }
 
     #[test]
-    fn test_sma_crossover_with_short() {
-        let s = SmaCrossover::new(5, 15).with_short(true);
+    fn test_sma_crossover_custom() {
+        let s = SmaCrossover::new(5, 15);
         assert_eq!(s.fast_period, 5);
         assert_eq!(s.slow_period, 15);
-        assert!(s.allow_short);
     }
 
     #[test]
