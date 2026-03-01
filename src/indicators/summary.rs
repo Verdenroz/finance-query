@@ -85,7 +85,7 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
         // === MOMENTUM OSCILLATORS ===
         rsi_14: last_from_result(rsi(&closes, 14)),
         stochastic: {
-            stochastic(&highs, &lows, &closes, 14, 3)
+            stochastic(&highs, &lows, &closes, 14, 1, 3)
                 .ok()
                 .map(|result| StochasticData {
                     k: last_value(&result.k),
@@ -93,20 +93,20 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
                 })
         },
         stochastic_rsi: {
-            stochastic_rsi(&closes, 14, 14).ok().and_then(|result| {
-                last_value(&result).map(|k| StochasticData {
-                    k: Some(k),
-                    d: None,
+            stochastic_rsi(&closes, 14, 14, 3, 3)
+                .ok()
+                .map(|result| StochasticData {
+                    k: last_value(&result.k),
+                    d: last_value(&result.d),
                 })
-            })
         },
         cci_20: last_from_result(cci(&highs, &lows, &closes, 20)),
         williams_r_14: last_from_result(williams_r(&highs, &lows, &closes, 14)),
         roc_12: last_from_result(roc(&closes, 12)),
         momentum_10: last_from_result(momentum(&closes, 10)),
         cmo_14: last_from_result(cmo(&closes, 14)),
-        awesome_oscillator: last_from_result(awesome_oscillator(&highs, &lows)),
-        coppock_curve: last_from_result(coppock_curve(&closes)),
+        awesome_oscillator: last_from_result(awesome_oscillator(&highs, &lows, 5, 34)),
+        coppock_curve: last_from_result(coppock_curve(&closes, 14, 11, 10)),
 
         // === TREND INDICATORS ===
         macd: {
@@ -138,7 +138,7 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
                 })
         },
         ichimoku: {
-            ichimoku(&highs, &lows, &closes)
+            ichimoku(&highs, &lows, &closes, 9, 26, 26, 26)
                 .ok()
                 .map(|result| IchimokuData {
                     conversion_line: last_value(&result.conversion_line),
@@ -150,7 +150,7 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
         },
         parabolic_sar: last_from_result(parabolic_sar(&highs, &lows, &closes, 0.02, 0.2)),
         bull_bear_power: {
-            bull_bear_power(&highs, &lows, &closes)
+            bull_bear_power(&highs, &lows, &closes, 13)
                 .ok()
                 .map(|result| BullBearPowerData {
                     bull_power: last_value(&result.bull_power),
@@ -158,7 +158,7 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
                 })
         },
         elder_ray_index: {
-            elder_ray(&highs, &lows, &closes)
+            elder_ray(&highs, &lows, &closes, 13)
                 .ok()
                 .map(|result| ElderRayData {
                     bull_power: last_value(&result.bull_power),

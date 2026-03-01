@@ -1598,6 +1598,91 @@ impl Tickers {
         self.symbols.extend(to_add);
     }
 
+    // ========================================================================
+    // Portfolio Backtesting
+    // ========================================================================
+
+    /// Run a multi-symbol portfolio backtest across all tracked symbols.
+    ///
+    /// Fetches charts and dividends for each symbol concurrently, then runs
+    /// the portfolio engine with the given strategy factory. Capital is shared
+    /// across all symbols according to the [`PortfolioConfig`] allocation rules.
+    ///
+    /// `factory` is called once per symbol to produce an independent strategy
+    /// instance:
+    ///
+    /// ```no_run
+    /// use finance_query::{Tickers, Interval, TimeRange};
+    /// use finance_query::backtesting::{SmaCrossover, BacktestConfig};
+    /// use finance_query::backtesting::portfolio::{PortfolioConfig, RebalanceMode};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tickers = Tickers::new(["AAPL", "MSFT", "NVDA"]).await?;
+    ///
+    /// let config = PortfolioConfig::new(BacktestConfig::default())
+    ///     .max_total_positions(2)
+    ///     .rebalance(RebalanceMode::EqualWeight);
+    ///
+    /// let result = tickers.backtest(
+    ///     Interval::OneDay,
+    ///     TimeRange::TwoYears,
+    ///     Some(config),
+    ///     |_sym| SmaCrossover::new(10, 50),
+    /// ).await?;
+    ///
+    /// println!("Portfolio return: {:.2}%", result.portfolio_metrics.total_return_pct);
+    /// # Ok(())
+    /// # }
+    /// ```
+    ///
+    /// [`PortfolioConfig`]: crate::backtesting::portfolio::PortfolioConfig
+    #[cfg(feature = "backtesting")]
+    pub async fn backtest<S, F>(
+        &self,
+        interval: Interval,
+        range: TimeRange,
+        config: Option<crate::backtesting::portfolio::PortfolioConfig>,
+        factory: F,
+    ) -> crate::backtesting::Result<crate::backtesting::portfolio::PortfolioResult>
+    where
+        S: crate::backtesting::Strategy,
+        F: Fn(&str) -> S,
+    {
+        use crate::backtesting::portfolio::{PortfolioEngine, SymbolData};
+
+        let config = config.unwrap_or_default();
+        config.validate(self.symbols.len())?;
+
+        // Fetch charts for all symbols (uses the batch chart cache)
+        let charts = self
+            .charts(interval, range)
+            .await
+            .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
+
+        // Fetch dividends for all symbols (events cache is already warm after charts())
+        // Treat errors as "no dividends" — dividend processing is best-effort
+        let dividends_map = self
+            .dividends(range)
+            .await
+            .map(|b| b.dividends)
+            .unwrap_or_default();
+
+        // Assemble SymbolData slices — skip symbols with no chart data
+        let symbol_data: Vec<SymbolData> = self
+            .symbols
+            .iter()
+            .filter_map(|sym| {
+                charts.charts.get(sym.as_ref()).map(|chart| {
+                    let divs = dividends_map.get(sym.as_ref()).cloned().unwrap_or_default();
+                    SymbolData::new(sym.as_ref(), chart.candles.clone()).with_dividends(divs)
+                })
+            })
+            .collect();
+
+        let engine = PortfolioEngine::new(config);
+        engine.run(&symbol_data, factory)
+    }
+
     /// Remove symbols from the watch list
     ///
     /// Removes symbols and clears their cached data to free memory.

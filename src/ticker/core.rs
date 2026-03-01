@@ -1103,29 +1103,29 @@ impl Ticker {
             }
             Indicator::Stochastic {
                 k_period,
-                k_slow: _k_slow,
+                k_slow,
                 d_period,
             } => {
-                // TODO: k_slow parameter not yet used (no smoothing applied)
                 let highs = chart.high_prices();
                 let lows = chart.low_prices();
                 let closes = chart.close_prices();
                 IndicatorResult::Stochastic(crate::indicators::stochastic(
-                    &highs, &lows, &closes, k_period, d_period,
+                    &highs, &lows, &closes, k_period, k_slow, d_period,
                 )?)
             }
             Indicator::StochasticRsi {
                 rsi_period,
                 stoch_period,
-                k_period: _k_period,
-                d_period: _d_period,
+                k_period,
+                d_period,
             } => {
-                // TODO: k_period/d_period smoothing not yet implemented
                 let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::stochastic_rsi(
+                IndicatorResult::Stochastic(crate::indicators::stochastic_rsi(
                     &closes,
                     rsi_period,
                     stoch_period,
+                    k_period,
+                    d_period,
                 )?)
             }
             Indicator::Cci(period) => {
@@ -1154,23 +1154,22 @@ impl Ticker {
                 let closes = chart.close_prices();
                 IndicatorResult::Series(crate::indicators::cmo(&closes, period)?)
             }
-            Indicator::AwesomeOscillator {
-                fast: _fast,
-                slow: _slow,
-            } => {
-                // TODO: custom fast/slow periods not yet supported; uses defaults (5, 34)
+            Indicator::AwesomeOscillator { fast, slow } => {
                 let highs = chart.high_prices();
                 let lows = chart.low_prices();
-                IndicatorResult::Series(crate::indicators::awesome_oscillator(&highs, &lows)?)
+                IndicatorResult::Series(crate::indicators::awesome_oscillator(
+                    &highs, &lows, fast, slow,
+                )?)
             }
             Indicator::CoppockCurve {
-                wma_period: _wma_period,
-                long_roc: _long_roc,
-                short_roc: _short_roc,
+                wma_period,
+                long_roc,
+                short_roc,
             } => {
-                // TODO: custom wma_period/long_roc/short_roc not yet supported; uses defaults (10, 14, 11)
                 let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::coppock_curve(&closes)?)
+                IndicatorResult::Series(crate::indicators::coppock_curve(
+                    &closes, long_roc, short_roc, wma_period,
+                )?)
             }
             Indicator::Adx(period) => {
                 let highs = chart.high_prices();
@@ -1192,16 +1191,23 @@ impl Ticker {
                 )?)
             }
             Indicator::Ichimoku {
-                conversion: _conversion,
-                base: _base,
-                lagging: _lagging,
-                displacement: _displacement,
+                conversion,
+                base,
+                lagging,
+                displacement,
             } => {
-                // TODO: custom periods not yet supported; uses traditional values (9, 26, 52, 26)
                 let highs = chart.high_prices();
                 let lows = chart.low_prices();
                 let closes = chart.close_prices();
-                IndicatorResult::Ichimoku(crate::indicators::ichimoku(&highs, &lows, &closes)?)
+                IndicatorResult::Ichimoku(crate::indicators::ichimoku(
+                    &highs,
+                    &lows,
+                    &closes,
+                    conversion,
+                    base,
+                    lagging,
+                    displacement,
+                )?)
             }
             Indicator::ParabolicSar { step, max } => {
                 let highs = chart.high_prices();
@@ -1211,21 +1217,21 @@ impl Ticker {
                     &highs, &lows, &closes, step, max,
                 )?)
             }
-            Indicator::BullBearPower(_period) => {
-                // TODO: period parameter not yet used; currently uses EMA(13) internally
+            Indicator::BullBearPower(period) => {
                 let highs = chart.high_prices();
                 let lows = chart.low_prices();
                 let closes = chart.close_prices();
                 IndicatorResult::BullBearPower(crate::indicators::bull_bear_power(
-                    &highs, &lows, &closes,
+                    &highs, &lows, &closes, period,
                 )?)
             }
-            Indicator::ElderRay(_period) => {
-                // TODO: period parameter not yet used; currently uses EMA(13) internally
+            Indicator::ElderRay(period) => {
                 let highs = chart.high_prices();
                 let lows = chart.low_prices();
                 let closes = chart.close_prices();
-                IndicatorResult::ElderRay(crate::indicators::elder_ray(&highs, &lows, &closes)?)
+                IndicatorResult::ElderRay(crate::indicators::elder_ray(
+                    &highs, &lows, &closes, period,
+                )?)
             }
             Indicator::KeltnerChannels {
                 period,
@@ -1502,7 +1508,7 @@ impl Ticker {
     ///     .build()?;
     ///
     /// let result = ticker.backtest(
-    ///     SmaCrossover::new(5, 20).with_short(true),
+    ///     SmaCrossover::new(5, 20),
     ///     Interval::OneDay,
     ///     TimeRange::TwoYears,
     ///     Some(config),
@@ -1523,15 +1529,72 @@ impl Ticker {
         let config = config.unwrap_or_default();
         config.validate()?;
 
-        // Fetch chart data
+        // Fetch chart data — also populates the events cache used by dividends()
         let chart = self
             .chart(interval, range)
             .await
             .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
 
-        // Run backtest engine
+        // Fetch dividends from the events cache (no extra network request after chart())
+        let dividends = self.dividends(range).await.unwrap_or_default();
+
+        // Run backtest engine with dividend data
         let engine = BacktestEngine::new(config);
-        engine.run(&self.symbol, &chart.candles, strategy)
+        engine.run_with_dividends(&self.symbol, &chart.candles, strategy, &dividends)
+    }
+
+    /// Run a backtest and compare performance against a benchmark symbol.
+    ///
+    /// Fetches both the symbol chart and the benchmark chart concurrently, then
+    /// runs the backtest and populates [`BacktestResult::benchmark`] with
+    /// comparison metrics (alpha, beta, information ratio, buy-and-hold return).
+    ///
+    /// Requires the **`backtesting`** feature flag.
+    ///
+    /// # Arguments
+    ///
+    /// * `strategy` - The strategy to backtest
+    /// * `interval` - Candle interval
+    /// * `range` - Historical range
+    /// * `config` - Optional backtest configuration (uses defaults if `None`)
+    /// * `benchmark` - Symbol to use as benchmark (e.g. `"SPY"`)
+    #[cfg(feature = "backtesting")]
+    pub async fn backtest_with_benchmark<S: crate::backtesting::Strategy>(
+        &self,
+        strategy: S,
+        interval: Interval,
+        range: TimeRange,
+        config: Option<crate::backtesting::BacktestConfig>,
+        benchmark: &str,
+    ) -> crate::backtesting::Result<crate::backtesting::BacktestResult> {
+        use crate::backtesting::BacktestEngine;
+
+        let config = config.unwrap_or_default();
+        config.validate()?;
+
+        // Fetch the symbol chart and benchmark chart concurrently
+        let benchmark_ticker = crate::Ticker::new(benchmark)
+            .await
+            .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
+
+        let (chart, bench_chart) = tokio::try_join!(
+            self.chart(interval, range),
+            benchmark_ticker.chart(interval, range),
+        )
+        .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
+
+        // Fetch dividends from events cache (no extra network request after chart())
+        let dividends = self.dividends(range).await.unwrap_or_default();
+
+        let engine = BacktestEngine::new(config);
+        engine.run_with_benchmark(
+            &self.symbol,
+            &chart.candles,
+            strategy,
+            &dividends,
+            benchmark,
+            &bench_chart.candles,
+        )
     }
 
     // ========================================================================
