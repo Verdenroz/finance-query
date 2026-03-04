@@ -154,6 +154,91 @@ pub struct PerformanceMetrics {
 
     /// Total dividend income received across all trades
     pub total_dividend_income: f64,
+
+    /// Kelly Criterion: optimal fraction of capital to risk per trade.
+    ///
+    /// Computed as `W - (1 - W) / R` where `W` is win rate and `R` is
+    /// `avg_win_pct / abs(avg_loss_pct)`. A positive value suggests the
+    /// strategy has an edge; a negative value suggests it does not. Values
+    /// above 1 indicate extreme edge (rare in practice). Returns `0.0` when
+    /// there are no losing trades to compute a ratio.
+    pub kelly_criterion: f64,
+
+    /// Van Tharp's System Quality Number.
+    ///
+    /// `SQN = (mean_R / std_R) * sqrt(n_trades)` where `R` is the
+    /// distribution of per-trade return percentages. Interpretation:
+    /// `>1.6` = below average, `>2.0` = average, `>2.5` = good,
+    /// `>3.0` = excellent, `>5.0` = superb, `>7.0` = holy grail.
+    /// Returns `0.0` when fewer than 2 trades are available.
+    ///
+    /// **Note:** Van Tharp's original definition uses *R-multiples*
+    /// (profit/loss normalised by initial risk per trade, i.e. entry-to-stop
+    /// distance). Since the engine does not track per-trade initial risk,
+    /// this implementation uses `return_pct` as a proxy. Values will
+    /// therefore not match Van Tharp's published benchmarks exactly.
+    /// At least 30 trades are recommended for statistical reliability.
+    pub sqn: f64,
+
+    /// Expectancy: expected profit per trade in dollar terms.
+    ///
+    /// `P(win) × avg_win_dollar + P(loss) × avg_loss_dollar` where each
+    /// probability is computed independently (`winning_trades / total` and
+    /// `losing_trades / total`). Unlike `avg_trade_return_pct` (which is a
+    /// percentage), this gives the expected monetary gain or loss per trade
+    /// in the same currency as `initial_capital`. A positive value means the
+    /// strategy has a statistical edge; e.g. `+$25` means you expect to make
+    /// $25 on average per trade taken.
+    pub expectancy: f64,
+
+    /// Omega Ratio: probability-weighted ratio of gains to losses.
+    ///
+    /// `Σ max(r, 0) / Σ max(-r, 0)` computed over **bar-by-bar periodic
+    /// returns** from the equity curve (consistent with Sharpe/Sortino),
+    /// using a threshold of `0.0`. More general than Sharpe — considers the
+    /// full return distribution rather than only mean and standard deviation.
+    /// Returns `f64::MAX` when there are no negative-return bars.
+    pub omega_ratio: f64,
+
+    /// Tail Ratio: ratio of right tail to left tail of trade returns.
+    ///
+    /// `abs(p95) / abs(p5)` of the trade return distribution using the
+    /// floor nearest-rank method (`floor(p × n)` as the 0-based index).
+    /// A value `>1` means large wins are more extreme than large losses
+    /// (favourable asymmetry). Returns `f64::MAX` when the 5th-percentile
+    /// return is zero. Returns `0.0` when fewer than 2 trades exist.
+    ///
+    /// **Note:** Reliable interpretation requires at least ~20 trades;
+    /// with fewer trades the percentile estimates are dominated by
+    /// individual outliers.
+    pub tail_ratio: f64,
+
+    /// Recovery Factor: net profit relative to maximum drawdown.
+    ///
+    /// `total_return_pct / (max_drawdown_pct * 100)`. Measures how
+    /// efficiently the strategy recovers from its worst drawdown. Returns
+    /// `f64::MAX` when there is no drawdown, `0.0` when unprofitable.
+    pub recovery_factor: f64,
+
+    /// Ulcer Index: root-mean-square of drawdown depth across all bars,
+    /// expressed as a **percentage** (0–100), consistent with backtesting.py
+    /// and Peter Martin's original 1987 definition.
+    ///
+    /// `sqrt(mean((drawdown_pct × 100)²))` computed from the equity curve.
+    /// Unlike max drawdown, it penalises both depth and duration — a long
+    /// shallow drawdown scores higher than a brief deep one. A lower value
+    /// indicates a smoother equity curve.
+    pub ulcer_index: f64,
+
+    /// Serenity Ratio (Martin Ratio / Ulcer Performance Index): excess
+    /// annualised return per unit of Ulcer Index risk.
+    ///
+    /// `(annualized_return_pct - risk_free_rate_pct) / ulcer_index` where
+    /// both numerator and denominator are in percentage units. Analogous to
+    /// the Sharpe Ratio but uses the Ulcer Index as the risk measure,
+    /// penalising prolonged drawdowns more heavily than short-term volatility.
+    /// Returns `f64::MAX` when Ulcer Index is zero and excess return is positive.
+    pub serenity_ratio: f64,
 }
 
 impl PerformanceMetrics {
@@ -210,6 +295,14 @@ impl PerformanceMetrics {
             time_in_market_pct: 0.0,
             max_idle_period: 0,
             total_dividend_income: 0.0,
+            kelly_criterion: 0.0,
+            sqn: 0.0,
+            expectancy: 0.0,
+            omega_ratio: 0.0,
+            tail_ratio: 0.0,
+            recovery_factor: 0.0,
+            ulcer_index: 0.0,
+            serenity_ratio: 0.0,
         }
     }
 
@@ -323,6 +416,49 @@ impl PerformanceMetrics {
         let time_in_market_pct = calculate_time_in_market(trades, equity_curve);
         let max_idle_period = calculate_max_idle_period(trades);
 
+        // Phase 1 — extended metrics
+        let kelly_criterion = calculate_kelly(win_rate, avg_win_pct, avg_loss_pct);
+        let sqn = calculate_sqn(&stats.all_returns);
+        // Dollar expectancy: expected profit per trade in the same currency as
+        // initial_capital. This is distinct from avg_trade_return_pct (which
+        // is a percentage). Break-even trades reduce both probabilities without
+        // contributing to either avg, so each outcome is weighted independently.
+        let loss_rate = stats.losing_trades as f64 / total_trades as f64;
+        let avg_win_dollar = if stats.winning_trades > 0 {
+            stats.gross_profit / stats.winning_trades as f64
+        } else {
+            0.0
+        };
+        let avg_loss_dollar = if stats.losing_trades > 0 {
+            -(stats.gross_loss / stats.losing_trades as f64)
+        } else {
+            0.0
+        };
+        let expectancy = win_rate * avg_win_dollar + loss_rate * avg_loss_dollar;
+        // Omega Ratio is defined on the continuous return distribution —
+        // use the same bar-by-bar periodic returns as Sharpe/Sortino, not
+        // per-trade returns (which vary by holding period and are incomparable
+        // across strategies with different average trade durations).
+        let omega_ratio = calculate_omega_ratio(&returns);
+        let tail_ratio = calculate_tail_ratio(&stats.all_returns);
+        let recovery_factor = if max_drawdown_pct > 0.0 {
+            total_return_pct / (max_drawdown_pct * 100.0)
+        } else if total_return_pct > 0.0 {
+            f64::MAX
+        } else {
+            0.0
+        };
+        // ulcer_index is already in percentage units (see calculate_ulcer_index).
+        let ulcer_index = calculate_ulcer_index(equity_curve);
+        let rf_pct = risk_free_rate * 100.0;
+        let serenity_ratio = if ulcer_index > 0.0 {
+            (annualized_return_pct - rf_pct) / ulcer_index
+        } else if annualized_return_pct > rf_pct {
+            f64::MAX
+        } else {
+            0.0
+        };
+
         Self {
             total_return_pct,
             annualized_return_pct,
@@ -354,6 +490,14 @@ impl PerformanceMetrics {
             time_in_market_pct,
             max_idle_period,
             total_dividend_income: stats.total_dividend_income,
+            kelly_criterion,
+            sqn,
+            expectancy,
+            omega_ratio,
+            tail_ratio,
+            recovery_factor,
+            ulcer_index,
+            serenity_ratio,
         }
     }
 }
@@ -374,6 +518,8 @@ struct TradeStats {
     total_dividend_income: f64,
     winning_returns: Vec<f64>,
     losing_returns: Vec<f64>,
+    /// All trade return percentages (wins + losses + break-even).
+    all_returns: Vec<f64>,
 }
 
 /// Single-pass accumulation of all per-trade statistics.
@@ -393,6 +539,7 @@ fn analyze_trades(trades: &[Trade]) -> TradeStats {
         total_dividend_income: 0.0,
         winning_returns: Vec::new(),
         losing_returns: Vec::new(),
+        all_returns: Vec::new(),
     };
 
     for t in trades {
@@ -416,9 +563,100 @@ fn analyze_trades(trades: &[Trade]) -> TradeStats {
         stats.total_duration += t.duration_secs();
         stats.total_commission += t.commission;
         stats.total_dividend_income += t.dividend_income;
+        stats.all_returns.push(t.return_pct);
     }
 
     stats
+}
+
+/// Kelly Criterion: `W - (1 - W) / R` where R = avg_win / abs(avg_loss).
+///
+/// Returns `f64::MAX` when there are no losing trades and wins are positive
+/// (unbounded edge). Returns `0.0` when inputs are degenerate.
+fn calculate_kelly(win_rate: f64, avg_win_pct: f64, avg_loss_pct: f64) -> f64 {
+    let abs_loss = avg_loss_pct.abs();
+    if abs_loss == 0.0 {
+        // No losing trades: edge is unbounded. Use f64::MAX to match the
+        // sentinel convention used by profit_factor and calmar_ratio.
+        return if avg_win_pct > 0.0 { f64::MAX } else { 0.0 };
+    }
+    if avg_win_pct == 0.0 {
+        return 0.0;
+    }
+    let r = avg_win_pct / abs_loss;
+    win_rate - (1.0 - win_rate) / r
+}
+
+/// Van Tharp's System Quality Number.
+///
+/// `(mean_R / std_R) * sqrt(n)` over per-trade return percentages.
+/// Uses sample standard deviation (n-1). Returns `0.0` for fewer than 2 trades.
+fn calculate_sqn(returns: &[f64]) -> f64 {
+    let n = returns.len();
+    if n < 2 {
+        return 0.0;
+    }
+    let mean = returns.iter().sum::<f64>() / n as f64;
+    let variance = returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (n - 1) as f64;
+    let std_dev = variance.sqrt();
+    if std_dev == 0.0 {
+        return 0.0;
+    }
+    (mean / std_dev) * (n as f64).sqrt()
+}
+
+/// Omega Ratio using a threshold of 0.0.
+///
+/// `Σ max(r, 0) / Σ max(-r, 0)`. Returns `f64::MAX` when the denominator
+/// is zero (no negative returns), `0.0` when the numerator is also zero.
+fn calculate_omega_ratio(returns: &[f64]) -> f64 {
+    let gains: f64 = returns.iter().map(|&r| r.max(0.0)).sum();
+    let losses: f64 = returns.iter().map(|&r| (-r).max(0.0)).sum();
+    if losses == 0.0 {
+        if gains > 0.0 { f64::MAX } else { 0.0 }
+    } else {
+        gains / losses
+    }
+}
+
+/// Tail Ratio: `abs(p95) / abs(p5)` of trade returns.
+///
+/// Returns `0.0` for fewer than 2 trades, `f64::MAX` when `p5 == 0`.
+fn calculate_tail_ratio(returns: &[f64]) -> f64 {
+    let n = returns.len();
+    if n < 2 {
+        return 0.0;
+    }
+    let mut sorted = returns.to_vec();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    let p5_idx = ((0.05 * n as f64).floor() as usize).min(n - 1);
+    let p95_idx = ((0.95 * n as f64).floor() as usize).min(n - 1);
+
+    let p5 = sorted[p5_idx].abs();
+    let p95 = sorted[p95_idx].abs();
+
+    if p5 == 0.0 {
+        if p95 > 0.0 { f64::MAX } else { 0.0 }
+    } else {
+        p95 / p5
+    }
+}
+
+/// Ulcer Index: `sqrt(mean(drawdown_pct²))` across all equity curve points,
+/// returned in **percentage** units (0–100) to match standard tool output.
+fn calculate_ulcer_index(equity_curve: &[EquityPoint]) -> f64 {
+    if equity_curve.is_empty() {
+        return 0.0;
+    }
+    // drawdown_pct is a fraction (0–1); multiply by 100 before squaring so
+    // the result is in percentage units consistent with backtesting.py and
+    // Peter Martin's original definition.
+    let sum_sq: f64 = equity_curve
+        .iter()
+        .map(|p| (p.drawdown_pct * 100.0).powi(2))
+        .sum();
+    (sum_sq / equity_curve.len() as f64).sqrt()
 }
 
 /// Calculate maximum consecutive wins and losses
@@ -942,6 +1180,191 @@ mod tests {
             "max_drawdown_percentage() should be 10.0, got {}",
             metrics.max_drawdown_percentage()
         );
+    }
+
+    #[test]
+    fn test_kelly_criterion() {
+        // W=0.6, avg_win=10%, avg_loss=5% => R=2.0 => Kelly=0.6 - 0.4/2 = 0.4
+        let kelly = calculate_kelly(0.6, 10.0, -5.0);
+        assert!(
+            (kelly - 0.4).abs() < 1e-9,
+            "Kelly should be 0.4, got {kelly}"
+        );
+
+        // No losses with positive wins => f64::MAX (unbounded edge)
+        assert_eq!(calculate_kelly(1.0, 10.0, 0.0), f64::MAX);
+        // No losses, no wins => 0.0
+        assert_eq!(calculate_kelly(0.0, 0.0, 0.0), 0.0);
+
+        // Negative edge: W=0.3, R=1.0 => Kelly=0.3-0.7=-0.4
+        let kelly_neg = calculate_kelly(0.3, 5.0, -5.0);
+        assert!(
+            (kelly_neg - (-0.4)).abs() < 1e-9,
+            "Kelly should be -0.4, got {kelly_neg}"
+        );
+    }
+
+    #[test]
+    fn test_sqn() {
+        // 10 trades all returning 1.0% -> std_dev=0 -> SQN=0
+        let returns = vec![1.0; 10];
+        assert_eq!(calculate_sqn(&returns), 0.0);
+
+        // Fewer than 2 trades -> 0
+        assert_eq!(calculate_sqn(&[1.0]), 0.0);
+        assert_eq!(calculate_sqn(&[]), 0.0);
+
+        // Known values: returns = [2, -1, 3, -1, 2], n=5
+        // mean = 1.0, sample_std = sqrt(((1+4+4+4+1)/4)) = sqrt(14/4) = sqrt(3.5) ≈ 1.8708
+        // SQN = (1.0 / 1.8708) * sqrt(5) ≈ 0.5345 * 2.2361 ≈ 1.1952
+        let returns2 = vec![2.0, -1.0, 3.0, -1.0, 2.0];
+        let sqn = calculate_sqn(&returns2);
+        assert!(
+            (sqn - 1.1952).abs() < 0.001,
+            "SQN should be ~1.195, got {sqn}"
+        );
+    }
+
+    #[test]
+    fn test_omega_ratio() {
+        // All positive: gains=6, losses=0 -> f64::MAX
+        assert_eq!(calculate_omega_ratio(&[1.0, 2.0, 3.0]), f64::MAX);
+
+        // All negative: gains=0, losses=6 -> 0.0
+        assert_eq!(calculate_omega_ratio(&[-1.0, -2.0, -3.0]), 0.0);
+
+        // Mixed: [2, -1, 3, -2] -> gains=5, losses=3 -> omega=5/3
+        let omega = calculate_omega_ratio(&[2.0, -1.0, 3.0, -2.0]);
+        assert!(
+            (omega - 5.0 / 3.0).abs() < 1e-9,
+            "Omega should be 5/3, got {omega}"
+        );
+    }
+
+    #[test]
+    fn test_tail_ratio() {
+        // Fewer than 2 -> 0
+        assert_eq!(calculate_tail_ratio(&[1.0]), 0.0);
+
+        // 20 values: p5 at idx 1, p95 at idx 19
+        // sorted: -10, -5, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 5, 10
+        let mut vals = vec![1.0f64; 16];
+        vals.extend([-10.0, -5.0, 5.0, 10.0]);
+        vals.sort_by(|a, b| a.partial_cmp(b).unwrap());
+        // n=20, p5_idx=floor(0.05*20)=1 -> sorted[1]=-5 -> abs=5
+        //        p95_idx=floor(0.95*20)=19 -> sorted[19]=10 -> abs=10
+        // tail_ratio = 10/5 = 2.0
+        let tr = calculate_tail_ratio(&vals);
+        assert!(
+            (tr - 2.0).abs() < 1e-9,
+            "Tail ratio should be 2.0, got {tr}"
+        );
+
+        // p5 = 0 -> f64::MAX when p95 > 0
+        let zeros_with_win = vec![
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+            0.0, 0.0, 5.0,
+        ];
+        assert_eq!(calculate_tail_ratio(&zeros_with_win), f64::MAX);
+    }
+
+    #[test]
+    fn test_ulcer_index() {
+        // No drawdowns -> 0
+        let flat = vec![
+            EquityPoint {
+                timestamp: 0,
+                equity: 100.0,
+                drawdown_pct: 0.0,
+            },
+            EquityPoint {
+                timestamp: 1,
+                equity: 110.0,
+                drawdown_pct: 0.0,
+            },
+        ];
+        assert_eq!(calculate_ulcer_index(&flat), 0.0);
+
+        // drawdown_pct fractions 0.1 and 0.2 → 10% and 20%
+        // sqrt((10² + 20²) / 2) = sqrt(250) ≈ 15.811 (percentage units)
+        let dd = vec![
+            EquityPoint {
+                timestamp: 0,
+                equity: 100.0,
+                drawdown_pct: 0.1,
+            },
+            EquityPoint {
+                timestamp: 1,
+                equity: 90.0,
+                drawdown_pct: 0.2,
+            },
+        ];
+        let ui = calculate_ulcer_index(&dd);
+        let expected = ((100.0f64 + 400.0) / 2.0).sqrt(); // sqrt(250) ≈ 15.811
+        assert!(
+            (ui - expected).abs() < 1e-9,
+            "Ulcer index should be {expected}, got {ui}"
+        );
+    }
+
+    #[test]
+    fn test_new_metrics_in_calculate() {
+        // Mixed trades: 2 wins (+10%, +20%), 1 loss (-5%) with known equity curve
+        let trades = vec![
+            make_trade(100.0, 10.0, true),
+            make_trade(200.0, 20.0, true),
+            make_trade(-50.0, -5.0, true),
+        ];
+        let equity = vec![
+            EquityPoint {
+                timestamp: 0,
+                equity: 10000.0,
+                drawdown_pct: 0.0,
+            },
+            EquityPoint {
+                timestamp: 1,
+                equity: 10100.0,
+                drawdown_pct: 0.0,
+            },
+            EquityPoint {
+                timestamp: 2,
+                equity: 10300.0,
+                drawdown_pct: 0.0,
+            },
+            EquityPoint {
+                timestamp: 3,
+                equity: 10250.0,
+                drawdown_pct: 0.005,
+            },
+        ];
+        let m = PerformanceMetrics::calculate(&trades, &equity, 10000.0, 3, 3, 0.0, 252.0);
+
+        // win_rate=2/3, avg_win=(10+20)/2=15, avg_loss=-5
+        // Kelly = 2/3 - (1/3)/(15/5) = 0.6667 - 0.3333/3 = 0.6667 - 0.1111 ≈ 0.5556
+        assert!(
+            m.kelly_criterion > 0.0,
+            "Kelly should be positive for profitable strategy"
+        );
+
+        // SQN with 3 trades
+        assert!(m.sqn.is_finite(), "SQN should be finite");
+
+        // Dollar expectancy: win_rate=2/3, avg_win=$100+$200)/2=$150, avg_loss=-$50
+        // = (2/3)*150 + (1/3)*(-50) = 100 - 16.67 ≈ 83.33
+        assert!(
+            m.expectancy > 0.0,
+            "Expectancy should be positive in dollar terms"
+        );
+
+        // Omega ratio is computed on periodic equity curve returns, not
+        // trade returns — just verify it is positive and finite.
+        assert!(m.omega_ratio > 0.0 && m.omega_ratio.is_finite() || m.omega_ratio == f64::MAX);
+
+        // Ulcer index from equity curve (max_drawdown=0.5%)
+        assert!(m.ulcer_index >= 0.0);
+
+        // Recovery factor: profitable with non-zero drawdown -> positive
+        assert!(m.recovery_factor > 0.0);
     }
 
     #[test]
