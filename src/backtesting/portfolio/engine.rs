@@ -168,15 +168,22 @@ impl PortfolioEngine {
                 let candle_idx = state.ts_index[&timestamp];
                 let candle = &state.candles[candle_idx];
 
-                // Update HWM for trailing stop
+                // Update HWM for trailing stop using the intrabar extreme so the
+                // trailing stop correctly reflects the best price reached during the bar.
                 if let Some(ref pos) = state.position {
                     state.hwm = Some(match state.hwm {
-                        None => candle.close,
+                        None => {
+                            if pos.is_long() {
+                                candle.high
+                            } else {
+                                candle.low
+                            }
+                        }
                         Some(prev) => {
                             if pos.is_long() {
-                                prev.max(candle.close)
+                                prev.max(candle.high)
                             } else {
-                                prev.min(candle.close)
+                                prev.min(candle.low)
                             }
                         }
                     });
@@ -189,11 +196,17 @@ impl PortfolioEngine {
                     && state.dividends[state.div_idx].timestamp <= timestamp
                 {
                     if let Some(ref mut pos) = state.position {
-                        let income = state.dividends[state.div_idx].amount * pos.quantity;
-                        if self.config.base.reinvest_dividends && candle.close > 0.0 {
-                            pos.quantity += income / candle.close;
-                        }
-                        pos.dividend_income += income;
+                        let per_share = state.dividends[state.div_idx].amount;
+                        let income = if pos.is_long() {
+                            per_share * pos.quantity
+                        } else {
+                            -(per_share * pos.quantity)
+                        };
+                        pos.credit_dividend(
+                            income,
+                            candle.close,
+                            self.config.base.reinvest_dividends,
+                        );
                     }
                     state.div_idx += 1;
                 }
@@ -207,12 +220,12 @@ impl PortfolioEngine {
                 }
             }
 
-            // Process auto-exits (SL/TP/trailing) — these bypass strategy signals
+            // Process auto-exits (SL/TP/trailing) — execute on the current bar at the
+            // fill price embedded in the signal (stop/TP level with gap guard).
             let mut exited_this_bar: Vec<String> = Vec::new();
             for (sym, exit_signal) in auto_exits {
                 let state = states.get_mut(&sym).unwrap();
-                let candle_idx = state.ts_index[&timestamp];
-                let candle = &state.candles[candle_idx];
+                let fill_price = exit_signal.price;
 
                 let Some(pos) = state.position.take() else {
                     continue;
@@ -220,19 +233,23 @@ impl PortfolioEngine {
                 let exit_price = self
                     .config
                     .base
-                    .apply_exit_slippage(candle.close, pos.is_long());
+                    .apply_exit_slippage(fill_price, pos.is_long());
                 let exit_comm = self
                     .config
                     .base
                     .calculate_commission(exit_price * pos.quantity);
                 let trade = pos.close(timestamp, exit_price, exit_comm, exit_signal);
-                cash += trade.entry_value() + trade.pnl;
+                if trade.is_long() {
+                    cash += trade.exit_value() - exit_comm + trade.unreinvested_dividends;
+                } else {
+                    cash -= trade.exit_value() + exit_comm - trade.unreinvested_dividends;
+                }
                 state.realized_pnl += trade.pnl;
                 state.trades.push(trade);
                 state.hwm = None;
                 state.signals.push(SignalRecord {
                     timestamp,
-                    price: candle.close,
+                    price: fill_price,
                     direction: SignalDirection::Exit,
                     strength: 1.0,
                     reason: Some("SL/TP/Trailing stop".to_string()),
@@ -266,7 +283,6 @@ impl PortfolioEngine {
 
                 // Re-acquire the mutable borrow for strategy evaluation and signal dispatch
                 let state = states.get_mut(sym).unwrap();
-                let candle = &state.candles[candle_idx];
 
                 let ctx = StrategyContext {
                     candles: &state.candles[..=candle_idx],
@@ -295,29 +311,53 @@ impl PortfolioEngine {
 
                 match signal.direction {
                     SignalDirection::Exit => {
-                        // Immediate exit: close open position
+                        // Execute on next bar open to avoid same-bar close-fill bias.
                         if let Some(pos) = state.position.take() {
-                            let exit_price = self
-                                .config
-                                .base
-                                .apply_exit_slippage(candle.close, pos.is_long());
-                            let exit_comm = self
-                                .config
-                                .base
-                                .calculate_commission(exit_price * pos.quantity);
-                            let trade = pos.close(timestamp, exit_price, exit_comm, signal.clone());
-                            cash += trade.entry_value() + trade.pnl;
-                            state.realized_pnl += trade.pnl;
-                            state.trades.push(trade);
-                            state.hwm = None;
-                            state.signals.push(SignalRecord {
-                                timestamp: signal.timestamp,
-                                price: signal.price,
-                                direction: signal.direction,
-                                strength: signal.strength.value(),
-                                reason: signal.reason,
-                                executed: true,
-                            });
+                            if let Some(fill_candle) = state.candles.get(candle_idx + 1) {
+                                let exit_price = self
+                                    .config
+                                    .base
+                                    .apply_exit_slippage(fill_candle.open, pos.is_long());
+                                let exit_comm = self
+                                    .config
+                                    .base
+                                    .calculate_commission(exit_price * pos.quantity);
+                                let trade = pos.close(
+                                    fill_candle.timestamp,
+                                    exit_price,
+                                    exit_comm,
+                                    signal.clone(),
+                                );
+                                if trade.is_long() {
+                                    cash += trade.exit_value() - exit_comm
+                                        + trade.unreinvested_dividends;
+                                } else {
+                                    cash -= trade.exit_value() + exit_comm
+                                        - trade.unreinvested_dividends;
+                                }
+                                state.realized_pnl += trade.pnl;
+                                state.trades.push(trade);
+                                state.hwm = None;
+                                state.signals.push(SignalRecord {
+                                    timestamp: signal.timestamp,
+                                    price: signal.price,
+                                    direction: signal.direction,
+                                    strength: signal.strength.value(),
+                                    reason: signal.reason,
+                                    executed: true,
+                                });
+                            } else {
+                                // No next bar — put position back, record as unexecuted.
+                                state.position = Some(pos);
+                                state.signals.push(SignalRecord {
+                                    timestamp: signal.timestamp,
+                                    price: signal.price,
+                                    direction: signal.direction,
+                                    strength: signal.strength.value(),
+                                    reason: signal.reason,
+                                    executed: false,
+                                });
+                            }
                         }
                     }
                     SignalDirection::Long | SignalDirection::Short => {
@@ -347,15 +387,38 @@ impl PortfolioEngine {
                 // ── Read phase ──────────────────────────────────────────────────
                 // Scope the immutable borrow so it ends before the mutable write
                 // phase. All values needed downstream are moved into owned bindings.
-                let (has_position, close) = {
+                //
+                // Capture next bar's open to fill at next-bar open, avoiding
+                // same-bar close-fill bias (mirrors single-symbol engine).
+                let (has_position, signal_price, fill_open, fill_ts) = {
                     let state = states.get(&sym).unwrap();
                     let idx = state.ts_index[&timestamp];
-                    (state.position.is_some(), state.candles[idx].close)
+                    let signal_price = state.candles[idx].close;
+                    let next = state.candles.get(idx + 1).map(|c| (c.open, c.timestamp));
+                    (
+                        state.position.is_some(),
+                        signal_price,
+                        next.map(|(o, _)| o),
+                        next.map(|(_, t)| t),
+                    )
                 }; // immutable borrow on `states` ends here
 
                 if has_position {
                     continue;
                 }
+
+                // No next bar — signal unexecuted (last candle in series).
+                let (Some(fill_open), Some(fill_ts)) = (fill_open, fill_ts) else {
+                    states.get_mut(&sym).unwrap().signals.push(SignalRecord {
+                        timestamp: signal.timestamp,
+                        price: signal.price,
+                        direction: signal.direction,
+                        strength: signal.strength.value(),
+                        reason: signal.reason,
+                        executed: false,
+                    });
+                    continue;
+                };
 
                 // Capacity check — safe to mutate now that the immutable borrow is gone
                 if let Some(max) = self.config.max_total_positions
@@ -385,11 +448,20 @@ impl PortfolioEngine {
                     continue;
                 }
 
-                let entry_price = self.config.base.apply_entry_slippage(close, is_long);
+                let entry_price = self.config.base.apply_entry_slippage(fill_open, is_long);
                 // Reserve the flat fee before computing quantity so that
                 // entry_cost == target_capital when both flat and pct fees are
                 // set. Without this, entry_cost > target_capital and the entry
                 // is silently rejected whenever a flat commission is configured.
+                //
+                // NOTE: Unlike the single-ticker `calculate_position_size()`,
+                // this formula only accounts for the **entry** commission.
+                // Exit commission is paid from proceeds at close time, so it
+                // need not reduce the entry allocation.  The two engines
+                // therefore produce slightly different position sizes when
+                // commission_pct > 0: the portfolio engine is marginally more
+                // aggressive (2× commission_pct ≈ 0.2% larger positions at
+                // default 0.1% each way), which is intentional.
                 let effective_target = (target_capital - self.config.base.commission).max(0.0);
                 let quantity =
                     effective_target / (entry_price * (1.0 + self.config.base.commission_pct));
@@ -399,12 +471,20 @@ impl PortfolioEngine {
                     .calculate_commission(entry_price * quantity);
                 let entry_cost = entry_price * quantity + entry_comm;
 
-                if entry_cost > cash {
+                if is_long {
+                    if entry_cost > cash {
+                        continue;
+                    }
+                } else if entry_comm > cash {
                     continue;
                 }
 
                 // ── Write phase: all immutable borrows of `states` are gone ────
-                cash -= entry_cost;
+                if is_long {
+                    cash -= entry_cost;
+                } else {
+                    cash += entry_price * quantity - entry_comm;
+                }
                 let side = if is_long {
                     PositionSide::Long
                 } else {
@@ -414,16 +494,16 @@ impl PortfolioEngine {
                 let state = states.get_mut(&sym).unwrap();
                 state.position = Some(Position::new(
                     side,
-                    timestamp,
+                    fill_ts,
                     entry_price,
                     quantity,
                     entry_comm,
                     signal.clone(),
                 ));
-                state.hwm = Some(close);
+                state.hwm = Some(entry_price);
                 state.signals.push(SignalRecord {
                     timestamp: signal.timestamp,
-                    price: signal.price,
+                    price: signal_price,
                     direction: signal.direction,
                     strength: signal.strength.value(),
                     reason: signal.reason,
@@ -481,9 +561,12 @@ impl PortfolioEngine {
                 .iter()
                 .filter_map(|(sym, s)| {
                     s.position.as_ref().and_then(|pos| {
-                        s.ts_index
-                            .get(&timestamp)
-                            .map(|&idx| (sym.clone(), pos.current_value(s.candles[idx].close)))
+                        close_at_or_before(s, timestamp).map(|close| {
+                            (
+                                sym.clone(),
+                                pos.current_value(close) + pos.unreinvested_dividends,
+                            )
+                        })
                     })
                 })
                 .collect();
@@ -512,10 +595,21 @@ impl PortfolioEngine {
                         .with_reason("End of backtest");
                     let trade =
                         pos.close(last_candle.timestamp, exit_price, exit_comm, exit_signal);
-                    cash += trade.entry_value() + trade.pnl;
+                    if trade.is_long() {
+                        cash += trade.exit_value() - exit_comm + trade.unreinvested_dividends;
+                    } else {
+                        cash -= trade.exit_value() + exit_comm - trade.unreinvested_dividends;
+                    }
                     state.realized_pnl += trade.pnl;
                     state.trades.push(trade);
                     state.hwm = None;
+
+                    let sym_equity = state.sym_initial_capital + state.realized_pnl;
+                    sync_terminal_equity_point(
+                        &mut state.equity_curve,
+                        last_candle.timestamp,
+                        sym_equity,
+                    );
                 }
             }
         }
@@ -528,10 +622,14 @@ impl PortfolioEngine {
                     s.position
                         .as_ref()
                         .zip(s.candles.last())
-                        .map(|(pos, c)| pos.current_value(c.close))
+                        .map(|(pos, c)| pos.current_value(c.close) + pos.unreinvested_dividends)
                         .unwrap_or(0.0)
                 })
                 .sum::<f64>();
+
+        if let Some(last_ts) = master_timeline.last().copied() {
+            sync_terminal_equity_point(&mut portfolio_equity_curve, last_ts, final_equity);
+        }
 
         // ── Build per-symbol BacktestResult ────────────────────────────────────
         let symbol_results: HashMap<String, BacktestResult> = states
@@ -604,6 +702,10 @@ impl PortfolioEngine {
             self.config.base.bars_per_year,
         );
 
+        let mut portfolio_metrics = portfolio_metrics;
+        portfolio_metrics.time_in_market_pct =
+            compute_portfolio_time_in_market(&allocation_history);
+
         Ok(PortfolioResult {
             symbols: symbol_results,
             portfolio_equity_curve,
@@ -656,67 +758,191 @@ fn compute_portfolio_equity<S: Strategy>(
         .values()
         .filter_map(|s| {
             s.position.as_ref().and_then(|pos| {
-                s.ts_index
-                    .get(&timestamp)
-                    .map(|&idx| pos.current_value(s.candles[idx].close))
+                close_at_or_before(s, timestamp)
+                    .map(|close| pos.current_value(close) + pos.unreinvested_dividends)
             })
         })
         .sum::<f64>()
 }
 
+fn close_at_or_before<S: Strategy>(state: &SymbolState<S>, timestamp: i64) -> Option<f64> {
+    if let Some(&idx) = state.ts_index.get(&timestamp) {
+        return Some(state.candles[idx].close);
+    }
+
+    match state
+        .candles
+        .binary_search_by_key(&timestamp, |c| c.timestamp)
+    {
+        Ok(idx) => Some(state.candles[idx].close),
+        Err(0) => None,
+        Err(idx) => Some(state.candles[idx - 1].close),
+    }
+}
+
+/// Fraction of portfolio backtest time with at least one open position.
+///
+/// Uses allocation snapshots and timestamp deltas so overlapping symbol
+/// positions count once (union exposure), not once per symbol/trade.
+fn compute_portfolio_time_in_market(allocation_history: &[AllocationSnapshot]) -> f64 {
+    if allocation_history.len() < 2 {
+        return 0.0;
+    }
+
+    let total_span = allocation_history.last().map(|s| s.timestamp).unwrap_or(0)
+        - allocation_history.first().map(|s| s.timestamp).unwrap_or(0);
+
+    if total_span <= 0 {
+        return 0.0;
+    }
+
+    let mut exposed_secs: i64 = 0;
+    for window in allocation_history.windows(2) {
+        let current = &window[0];
+        let next = &window[1];
+        if !current.positions.is_empty() {
+            exposed_secs += (next.timestamp - current.timestamp).max(0);
+        }
+    }
+
+    (exposed_secs as f64 / total_span as f64).clamp(0.0, 1.0)
+}
+
 /// Check stop-loss, take-profit, and trailing stop for an open position.
 ///
-/// Returns an exit signal if any trigger fires; `None` otherwise.
+/// Uses `candle.low` / `candle.high` to detect intrabar breaches.  Returns an
+/// exit [`Signal`] whose `price` is the computed fill price (stop/TP level with a
+/// gap-guard so the fill is never better than what the market provided).
+///
+/// # Exit Priority
+///
+/// When multiple conditions breach on the same bar the evaluation order is
+/// **stop-loss → take-profit → trailing stop**.  The intrabar sequence is
+/// unknowable from OHLCV bars alone, so stop-loss is given priority for
+/// conservative simulation.  Strategies with SL and TP both active should
+/// keep those levels well separated relative to typical bar ranges.
 fn check_sl_tp(
     pos: &Position,
     candle: &Candle,
     hwm: Option<f64>,
     config: &BacktestConfig,
 ) -> Option<Signal> {
-    let entry = pos.entry_price;
-    let price = candle.close;
-
     // Stop-loss
-    if let Some(sl) = config.stop_loss_pct {
-        let triggered = if pos.is_long() {
-            price <= entry * (1.0 - sl)
+    if let Some(sl_pct) = config.stop_loss_pct {
+        let stop_price = if pos.is_long() {
+            pos.entry_price * (1.0 - sl_pct)
         } else {
-            price >= entry * (1.0 + sl)
+            pos.entry_price * (1.0 + sl_pct)
+        };
+        let triggered = if pos.is_long() {
+            candle.low <= stop_price
+        } else {
+            candle.high >= stop_price
         };
         if triggered {
-            return Some(Signal::exit(candle.timestamp, price).with_reason("Stop-loss triggered"));
-        }
-    }
-
-    // Take-profit
-    if let Some(tp) = config.take_profit_pct {
-        let triggered = if pos.is_long() {
-            price >= entry * (1.0 + tp)
-        } else {
-            price <= entry * (1.0 - tp)
-        };
-        if triggered {
+            let fill_price = if pos.is_long() {
+                candle.open.min(stop_price)
+            } else {
+                candle.open.max(stop_price)
+            };
+            let return_pct = pos.unrealized_return_pct(fill_price);
             return Some(
-                Signal::exit(candle.timestamp, price).with_reason("Take-profit triggered"),
+                Signal::exit(candle.timestamp, fill_price)
+                    .with_reason(format!("Stop-loss triggered ({:.1}%)", return_pct)),
             );
         }
     }
 
-    // Trailing stop
-    if let (Some(trail), Some(peak)) = (config.trailing_stop_pct, hwm) {
-        let triggered = if pos.is_long() {
-            price <= peak * (1.0 - trail)
+    // Take-profit
+    if let Some(tp_pct) = config.take_profit_pct {
+        let tp_price = if pos.is_long() {
+            pos.entry_price * (1.0 + tp_pct)
         } else {
-            price >= peak * (1.0 + trail)
+            pos.entry_price * (1.0 - tp_pct)
+        };
+        let triggered = if pos.is_long() {
+            candle.high >= tp_price
+        } else {
+            candle.low <= tp_price
         };
         if triggered {
+            let fill_price = if pos.is_long() {
+                candle.open.max(tp_price)
+            } else {
+                candle.open.min(tp_price)
+            };
+            let return_pct = pos.unrealized_return_pct(fill_price);
             return Some(
-                Signal::exit(candle.timestamp, price).with_reason("Trailing stop triggered"),
+                Signal::exit(candle.timestamp, fill_price)
+                    .with_reason(format!("Take-profit triggered ({:.1}%)", return_pct)),
+            );
+        }
+    }
+
+    // Trailing stop — `hwm` is already updated to the intrabar extreme before this call.
+    if let Some(trail_pct) = config.trailing_stop_pct
+        && let Some(extreme) = hwm
+        && extreme > 0.0
+    {
+        let trail_stop_price = if pos.is_long() {
+            extreme * (1.0 - trail_pct)
+        } else {
+            extreme * (1.0 + trail_pct)
+        };
+        let triggered = if pos.is_long() {
+            candle.low <= trail_stop_price
+        } else {
+            candle.high >= trail_stop_price
+        };
+        if triggered {
+            let fill_price = if pos.is_long() {
+                candle.open.min(trail_stop_price)
+            } else {
+                candle.open.max(trail_stop_price)
+            };
+            let adverse_move_pct = if pos.is_long() {
+                (extreme - fill_price) / extreme
+            } else {
+                (fill_price - extreme) / extreme
+            };
+            return Some(
+                Signal::exit(candle.timestamp, fill_price).with_reason(format!(
+                    "Trailing stop triggered ({:.1}% adverse move)",
+                    adverse_move_pct * 100.0
+                )),
             );
         }
     }
 
     None
+}
+
+fn sync_terminal_equity_point(equity_curve: &mut Vec<EquityPoint>, timestamp: i64, equity: f64) {
+    if let Some(last) = equity_curve.last_mut()
+        && last.timestamp == timestamp
+    {
+        last.equity = equity;
+    } else {
+        equity_curve.push(EquityPoint {
+            timestamp,
+            equity,
+            drawdown_pct: 0.0,
+        });
+    }
+
+    let peak = equity_curve
+        .iter()
+        .map(|point| point.equity)
+        .fold(f64::NEG_INFINITY, f64::max);
+    let drawdown = if peak.is_finite() && peak > 0.0 {
+        (peak - equity) / peak
+    } else {
+        0.0
+    };
+
+    if let Some(last) = equity_curve.last_mut() {
+        last.drawdown_pct = drawdown;
+    }
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -725,7 +951,56 @@ fn check_sl_tp(
 mod tests {
     use super::*;
     use crate::backtesting::portfolio::config::{PortfolioConfig, RebalanceMode};
+    use crate::backtesting::strategy::{Strategy, StrategyContext};
     use crate::backtesting::{BacktestConfig, SmaCrossover};
+    use crate::indicators::Indicator;
+
+    #[derive(Clone)]
+    struct EnterShortHold;
+
+    impl Strategy for EnterShortHold {
+        fn name(&self) -> &str {
+            "Enter Short Hold"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::short(ctx.timestamp(), ctx.close())
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    #[derive(Clone)]
+    struct TimedLongStrategy {
+        entry_idx: usize,
+        exit_idx: usize,
+    }
+
+    impl Strategy for TimedLongStrategy {
+        fn name(&self) -> &str {
+            "Timed Long"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == self.entry_idx && !ctx.has_position() {
+                Signal::long(ctx.timestamp(), ctx.close())
+            } else if ctx.index == self.exit_idx && ctx.has_position() {
+                Signal::exit(ctx.timestamp(), ctx.close())
+            } else {
+                Signal::hold()
+            }
+        }
+    }
 
     fn make_candles(prices: &[f64]) -> Vec<Candle> {
         prices
@@ -741,6 +1016,45 @@ mod tests {
                 adj_close: Some(p),
             })
             .collect()
+    }
+
+    fn make_candles_with_timestamps(prices: &[f64], timestamps: &[i64]) -> Vec<Candle> {
+        prices
+            .iter()
+            .zip(timestamps.iter())
+            .map(|(&p, &ts)| Candle {
+                timestamp: ts,
+                open: p,
+                high: p * 1.005,
+                low: p * 0.995,
+                close: p,
+                volume: 1_000,
+                adj_close: Some(p),
+            })
+            .collect()
+    }
+
+    #[derive(Clone)]
+    struct FirstBarLongElseHold {
+        enabled: bool,
+    }
+
+    impl Strategy for FirstBarLongElseHold {
+        fn name(&self) -> &str {
+            "First Bar Long"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if self.enabled && ctx.index == 0 && !ctx.has_position() {
+                Signal::long(ctx.timestamp(), ctx.close())
+            } else {
+                Signal::hold()
+            }
+        }
     }
 
     fn trending_prices(n: usize, start: f64, rate: f64) -> Vec<f64> {
@@ -878,6 +1192,130 @@ mod tests {
             engine
                 .run::<SmaCrossover, _>(&[], |_| SmaCrossover::new(5, 20))
                 .is_err()
+        );
+    }
+
+    #[test]
+    fn test_short_dividend_is_liability() {
+        let prices = vec![100.0, 100.0, 100.0];
+        let candles = make_candles(&prices);
+        let dividends = vec![Dividend {
+            timestamp: candles[1].timestamp,
+            amount: 1.0,
+        }];
+        let symbol_data = vec![SymbolData::new("DIVS", candles).with_dividends(dividends)];
+
+        let config = PortfolioConfig::new(
+            BacktestConfig::builder()
+                .initial_capital(10_000.0)
+                .allow_short(true)
+                .commission_pct(0.0)
+                .slippage_pct(0.0)
+                .build()
+                .unwrap(),
+        );
+
+        let engine = PortfolioEngine::new(config);
+        let result = engine.run(&symbol_data, |_| EnterShortHold).unwrap();
+
+        let trades = &result.symbols["DIVS"].trades;
+        assert_eq!(trades.len(), 1);
+        assert!(trades[0].dividend_income < 0.0);
+        assert!(result.final_equity < 10_000.0);
+    }
+
+    #[test]
+    fn test_portfolio_time_in_market_uses_union_exposure() {
+        let prices = vec![100.0, 101.0, 102.0, 103.0, 104.0];
+
+        let symbol_data = vec![
+            SymbolData::new("A", make_candles(&prices)),
+            SymbolData::new("B", make_candles(&prices)),
+        ];
+
+        let config = PortfolioConfig::new(
+            BacktestConfig::builder()
+                .initial_capital(10_000.0)
+                .position_size_pct(0.5)
+                .commission_pct(0.0)
+                .slippage_pct(0.0)
+                .close_at_end(false)
+                .build()
+                .unwrap(),
+        )
+        .max_total_positions(2);
+
+        let engine = PortfolioEngine::new(config);
+        let result = engine
+            .run(&symbol_data, |sym| {
+                if sym == "A" {
+                    TimedLongStrategy {
+                        entry_idx: 0,
+                        exit_idx: 2,
+                    }
+                } else {
+                    TimedLongStrategy {
+                        entry_idx: 1,
+                        exit_idx: 3,
+                    }
+                }
+            })
+            .unwrap();
+
+        // Union exposure spans [t0, t3] over total [t0, t4] => 3/4 = 0.75.
+        // A per-trade sum approach would overstate this to 1.0 (clipped).
+        let actual = result.portfolio_metrics.time_in_market_pct;
+        assert!(
+            (actual - 0.75).abs() < 1e-9,
+            "expected 0.75 union exposure, got {actual}"
+        );
+    }
+
+    #[test]
+    fn test_portfolio_marks_open_positions_on_sparse_timestamps() {
+        let symbol_data = vec![
+            SymbolData::new("A", make_candles_with_timestamps(&[100.0, 110.0], &[0, 2])),
+            SymbolData::new(
+                "B",
+                make_candles_with_timestamps(&[50.0, 50.0, 50.0], &[0, 1, 2]),
+            ),
+        ];
+
+        let config = PortfolioConfig::new(
+            BacktestConfig::builder()
+                .initial_capital(10_000.0)
+                .position_size_pct(1.0)
+                .commission_pct(0.0)
+                .slippage_pct(0.0)
+                .close_at_end(false)
+                .build()
+                .unwrap(),
+        )
+        .max_total_positions(2);
+
+        let engine = PortfolioEngine::new(config);
+        let result = engine
+            .run(&symbol_data, |sym| FirstBarLongElseHold {
+                enabled: sym == "A",
+            })
+            .unwrap();
+
+        let snapshot_t1 = result
+            .allocation_history
+            .iter()
+            .find(|s| s.timestamp == 1)
+            .expect("snapshot at timestamp 1");
+        assert!(
+            snapshot_t1.positions.contains_key("A"),
+            "open A position should be valued at t=1"
+        );
+        // Entry fills at next-bar open (110), valued at close_at_or_before(t=1)=100.
+        // Equity ≈ 9091 (not ~10000): the key property is the position is included,
+        // not that there's no slippage from fill-bar price differences.
+        assert!(
+            snapshot_t1.total_equity() > 8_000.0,
+            "equity should include carried-forward A valuation, got {}",
+            snapshot_t1.total_equity()
         );
     }
 }

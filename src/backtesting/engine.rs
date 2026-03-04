@@ -121,36 +121,35 @@ impl BacktestEngine {
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
 
-            // Check stop-loss / take-profit / trailing-stop on existing position
+            // Check stop-loss / take-profit / trailing-stop on existing position.
+            // The signal carries the intrabar fill price (stop/TP level with gap guard),
+            // so we execute on the current bar at that price — no next-bar deferral needed.
             if let Some(ref pos) = position
                 && let Some(exit_signal) = self.check_sl_tp(pos, candle, hwm)
             {
-                let exit_price = self.config.apply_exit_slippage(candle.close, pos.is_long());
-                let exit_commission = self.config.calculate_commission(exit_price * pos.quantity);
+                let fill_price = exit_signal.price;
+                let executed = self.close_position_at(
+                    &mut position,
+                    &mut cash,
+                    &mut trades,
+                    candle,
+                    fill_price,
+                    &exit_signal,
+                );
 
                 signals.push(SignalRecord {
                     timestamp: candle.timestamp,
-                    price: candle.close,
+                    price: fill_price,
                     direction: SignalDirection::Exit,
                     strength: 1.0,
                     reason: exit_signal.reason.clone(),
-                    executed: true,
+                    executed,
                 });
 
-                let trade = position.take().unwrap().close(
-                    candle.timestamp,
-                    exit_price,
-                    exit_commission,
-                    exit_signal,
-                );
-
-                // Add actual exit proceeds: sale value minus exit commission plus any
-                // dividend income. Entry commission was already deducted from cash on
-                // open, so including it again via trade.pnl would double-count it.
-                cash += trade.exit_value() - exit_commission + trade.dividend_income;
-                trades.push(trade);
-                hwm = None; // Reset HWM when position is closed
-                continue; // Skip strategy signal this bar
+                if executed {
+                    hwm = None; // Reset HWM when position is closed
+                    continue; // Skip strategy signal this bar
+                }
             }
 
             // Skip strategy signals during warmup period
@@ -188,9 +187,22 @@ impl BacktestEngine {
                 continue;
             }
 
-            // Record the signal
-            let executed =
-                self.execute_signal(&signal, candle, &mut position, &mut cash, &mut trades);
+            // Execute on next bar to avoid same-bar close-fill bias.
+            let executed = if let Some(fill_candle) = candles.get(i + 1) {
+                self.execute_signal(&signal, fill_candle, &mut position, &mut cash, &mut trades)
+            } else {
+                false
+            };
+
+            if executed
+                && position.is_some()
+                && matches!(
+                    signal.direction,
+                    SignalDirection::Long | SignalDirection::Short
+                )
+            {
+                hwm = position.as_ref().map(|p| p.entry_price);
+            }
 
             // Reset the trailing-stop HWM whenever a position is closed
             if executed && position.is_none() {
@@ -198,12 +210,7 @@ impl BacktestEngine {
 
                 // Re-evaluate strategy on the same bar after an exit so that
                 // a crossover that simultaneously closes one side and triggers
-                // the opposite entry is not lost.  Without this, the crossover
-                // condition is true on bar T, the strategy returns Exit (correct
-                // because a position is still open when on_candle is called), but
-                // by bar T+1 crossed_above/crossed_below returns false — the entry
-                // is permanently missed.  Re-evaluating with position=None lets
-                // the strategy emit Long/Short on the same bar.
+                // the opposite entry is not lost.
                 let ctx2 = StrategyContext {
                     candles: &candles[..=i],
                     index: i,
@@ -213,10 +220,19 @@ impl BacktestEngine {
                 };
                 let follow = strategy.on_candle(&ctx2);
                 if !follow.is_hold() && follow.strength.value() >= self.config.min_signal_strength {
-                    let follow_executed =
-                        self.execute_signal(&follow, candle, &mut position, &mut cash, &mut trades);
+                    let follow_executed = if let Some(fill_candle) = candles.get(i + 1) {
+                        self.execute_signal(
+                            &follow,
+                            fill_candle,
+                            &mut position,
+                            &mut cash,
+                            &mut trades,
+                        )
+                    } else {
+                        false
+                    };
                     if follow_executed && position.is_some() {
-                        hwm = Some(candle.close);
+                        hwm = position.as_ref().map(|p| p.entry_price);
                     }
                     signals.push(SignalRecord {
                         timestamp: follow.timestamp,
@@ -243,7 +259,9 @@ impl BacktestEngine {
         if self.config.close_at_end
             && let Some(pos) = position.take()
         {
-            let last_candle = candles.last().unwrap();
+            let last_candle = candles
+                .last()
+                .expect("candles non-empty: position open implies loop ran");
             let exit_price = self
                 .config
                 .apply_exit_slippage(last_candle.close, pos.is_long());
@@ -258,16 +276,35 @@ impl BacktestEngine {
                 exit_commission,
                 exit_signal,
             );
-            cash += trade.exit_value() - exit_commission + trade.dividend_income;
+            if trade.is_long() {
+                cash += trade.exit_value() - exit_commission + trade.unreinvested_dividends;
+            } else {
+                cash -= trade.exit_value() + exit_commission - trade.unreinvested_dividends;
+            }
             trades.push(trade);
+
+            Self::sync_terminal_equity_point(&mut equity_curve, last_candle.timestamp, cash);
         }
 
         // Final equity
         let final_equity = if let Some(ref pos) = position {
-            cash + pos.current_value(candles.last().unwrap().close)
+            cash + pos.current_value(
+                candles
+                    .last()
+                    .expect("candles non-empty: position open implies loop ran")
+                    .close,
+            ) + pos.unreinvested_dividends
         } else {
             cash
         };
+
+        if let Some(last_candle) = candles.last() {
+            Self::sync_terminal_equity_point(
+                &mut equity_curve,
+                last_candle.timestamp,
+                final_equity,
+            );
+        }
 
         // Calculate metrics
         let executed_signals = signals.iter().filter(|s| s.executed).count();
@@ -678,7 +715,7 @@ impl BacktestEngine {
         equity_curve: &mut Vec<EquityPoint>,
     ) -> f64 {
         let equity = match position {
-            Some(pos) => cash + pos.current_value(candle.close),
+            Some(pos) => cash + pos.current_value(candle.close) + pos.unreinvested_dividends,
             None => cash,
         };
         if equity > *peak_equity {
@@ -699,16 +736,26 @@ impl BacktestEngine {
 
     /// Update the trailing-stop high-water mark (peak for longs, trough for shorts).
     ///
+    /// Uses the candle's intrabar extreme (`high` for longs, `low` for shorts) so
+    /// that the trailing stop correctly reflects the best price reached during the bar,
+    /// not just the close.
+    ///
     /// Cleared to `None` when no position is open so it resets on next entry.
     fn update_trailing_hwm(position: Option<&Position>, hwm: &mut Option<f64>, candle: &Candle) {
         if let Some(pos) = position {
             *hwm = Some(match *hwm {
-                None => candle.close,
+                None => {
+                    if pos.is_long() {
+                        candle.high
+                    } else {
+                        candle.low
+                    }
+                }
                 Some(prev) => {
                     if pos.is_long() {
-                        prev.max(candle.close)
+                        prev.max(candle.high)
                     } else {
-                        prev.min(candle.close) // trough for shorts
+                        prev.min(candle.low) // trough for shorts
                     }
                 }
             });
@@ -729,63 +776,130 @@ impl BacktestEngine {
     ) {
         while *div_idx < dividends.len() && dividends[*div_idx].timestamp <= candle.timestamp {
             if let Some(pos) = position.as_mut() {
-                let income = dividends[*div_idx].amount * pos.quantity;
+                let per_share = dividends[*div_idx].amount;
+                let income = if pos.is_long() {
+                    per_share * pos.quantity
+                } else {
+                    -(per_share * pos.quantity)
+                };
                 pos.credit_dividend(income, candle.close, self.config.reinvest_dividends);
             }
             *div_idx += 1;
         }
     }
 
-    /// Check if stop-loss, take-profit, or trailing stop should trigger.
+    /// Check if stop-loss, take-profit, or trailing stop should trigger intrabar.
     ///
-    /// `hwm` is the high-water mark for longs (peak price) or the low-water mark
-    /// for shorts (trough price), tracked since the position was opened.
+    /// Uses `candle.low` / `candle.high` to detect breaches that occur during the
+    /// bar, not just at the close.  Returns an exit [`Signal`] whose `price` field
+    /// is the computed fill price (stop/TP level with a gap-guard: if the bar opens
+    /// through the level the open price is used instead so the fill is never better
+    /// than the market).
+    ///
+    /// `hwm` is the intrabar high-water mark for longs (`candle.high` is
+    /// incorporated each bar) or the low-water mark for shorts.
+    ///
+    /// # Exit Priority
+    ///
+    /// When multiple exit conditions are satisfied on the same bar, the first
+    /// one checked wins: **stop-loss → take-profit → trailing stop**.
+    ///
+    /// In reality, the intrabar order of events is unknowable from OHLCV data
+    /// alone — a bar could open through the take-profit level before touching
+    /// the stop-loss, or vice versa.  The fixed priority errs on the side of
+    /// pessimism (stop-loss before take-profit) for conservative simulation.
+    /// Strategies with both SL and TP set should be aware of this ordering
+    /// when both levels are close together relative to typical bar ranges.
     fn check_sl_tp(
         &self,
         position: &Position,
         candle: &Candle,
         hwm: Option<f64>,
     ) -> Option<Signal> {
-        let return_pct = position.unrealized_return_pct(candle.close) / 100.0;
-
-        // 1. Stop-loss
-        if let Some(sl_pct) = self.config.stop_loss_pct
-            && return_pct <= -sl_pct
-        {
-            return Some(
-                Signal::exit(candle.timestamp, candle.close)
-                    .with_reason(format!("Stop-loss triggered ({:.1}%)", return_pct * 100.0)),
-            );
+        // Stop-loss — intrabar breach via low (long) or high (short)
+        if let Some(sl_pct) = self.config.stop_loss_pct {
+            let stop_price = if position.is_long() {
+                position.entry_price * (1.0 - sl_pct)
+            } else {
+                position.entry_price * (1.0 + sl_pct)
+            };
+            let triggered = if position.is_long() {
+                candle.low <= stop_price
+            } else {
+                candle.high >= stop_price
+            };
+            if triggered {
+                // if the bar already opened through the stop level, fill
+                // at the open (slippage/gap) rather than the stop price.
+                let fill_price = if position.is_long() {
+                    candle.open.min(stop_price)
+                } else {
+                    candle.open.max(stop_price)
+                };
+                let return_pct = position.unrealized_return_pct(fill_price);
+                return Some(
+                    Signal::exit(candle.timestamp, fill_price)
+                        .with_reason(format!("Stop-loss triggered ({:.1}%)", return_pct)),
+                );
+            }
         }
 
-        // 2. Take-profit
-        if let Some(tp_pct) = self.config.take_profit_pct
-            && return_pct >= tp_pct
-        {
-            return Some(
-                Signal::exit(candle.timestamp, candle.close).with_reason(format!(
-                    "Take-profit triggered ({:.1}%)",
-                    return_pct * 100.0
-                )),
-            );
+        // Take-profit — intrabar breach via high (long) or low (short)
+        if let Some(tp_pct) = self.config.take_profit_pct {
+            let tp_price = if position.is_long() {
+                position.entry_price * (1.0 + tp_pct)
+            } else {
+                position.entry_price * (1.0 - tp_pct)
+            };
+            let triggered = if position.is_long() {
+                candle.high >= tp_price
+            } else {
+                candle.low <= tp_price
+            };
+            if triggered {
+                // Gap guard: a gap-up open past TP gives a better fill at the open.
+                let fill_price = if position.is_long() {
+                    candle.open.max(tp_price)
+                } else {
+                    candle.open.min(tp_price)
+                };
+                let return_pct = position.unrealized_return_pct(fill_price);
+                return Some(
+                    Signal::exit(candle.timestamp, fill_price)
+                        .with_reason(format!("Take-profit triggered ({:.1}%)", return_pct)),
+                );
+            }
         }
 
-        // 3. Trailing stop — checked after SL/TP so explicit levels take priority
+        // Trailing stop — checked after SL/TP so explicit levels take priority.
+        //    `hwm` is already updated to the intrabar extreme before this call.
         if let Some(trail_pct) = self.config.trailing_stop_pct
             && let Some(extreme) = hwm
             && extreme > 0.0
         {
-            // For longs: `extreme` is the peak price; adverse move = drawdown from peak.
-            // For shorts: `extreme` is the trough price; adverse move = rise from trough.
-            let adverse_move_pct = if position.is_long() {
-                (extreme - candle.close) / extreme
+            let trail_stop_price = if position.is_long() {
+                extreme * (1.0 - trail_pct)
             } else {
-                (candle.close - extreme) / extreme
+                extreme * (1.0 + trail_pct)
             };
-
-            if adverse_move_pct >= trail_pct {
+            let triggered = if position.is_long() {
+                candle.low <= trail_stop_price
+            } else {
+                candle.high >= trail_stop_price
+            };
+            if triggered {
+                let fill_price = if position.is_long() {
+                    candle.open.min(trail_stop_price)
+                } else {
+                    candle.open.max(trail_stop_price)
+                };
+                let adverse_move_pct = if position.is_long() {
+                    (extreme - fill_price) / extreme
+                } else {
+                    (fill_price - extreme) / extreme
+                };
                 return Some(
-                    Signal::exit(candle.timestamp, candle.close).with_reason(format!(
+                    Signal::exit(candle.timestamp, fill_price).with_reason(format!(
                         "Trailing stop triggered ({:.1}% adverse move)",
                         adverse_move_pct * 100.0
                     )),
@@ -840,7 +954,7 @@ impl BacktestEngine {
         signal: &Signal,
         is_long: bool,
     ) -> bool {
-        let entry_price = self.config.apply_entry_slippage(candle.close, is_long);
+        let entry_price = self.config.apply_entry_slippage(candle.open, is_long);
         let quantity = self.config.calculate_position_size(*cash, entry_price);
 
         if quantity <= 0.0 {
@@ -850,8 +964,12 @@ impl BacktestEngine {
         let entry_value = entry_price * quantity;
         let commission = self.config.calculate_commission(entry_value);
 
-        if entry_value + commission > *cash {
-            return false; // Not enough capital including commission
+        if is_long {
+            if entry_value + commission > *cash {
+                return false; // Not enough capital including commission
+            }
+        } else if commission > *cash {
+            return false; // Not enough cash to pay entry commission
         }
 
         let side = if is_long {
@@ -860,7 +978,11 @@ impl BacktestEngine {
             PositionSide::Short
         };
 
-        *cash -= entry_value + commission;
+        if is_long {
+            *cash -= entry_value + commission;
+        } else {
+            *cash += entry_value - commission;
+        }
         *position = Some(Position::new(
             side,
             candle.timestamp,
@@ -873,7 +995,7 @@ impl BacktestEngine {
         true
     }
 
-    /// Close an existing position
+    /// Close an existing position at the next bar's open (used for strategy-signal exits).
     fn close_position(
         &self,
         position: &mut Option<Position>,
@@ -882,12 +1004,28 @@ impl BacktestEngine {
         candle: &Candle,
         signal: &Signal,
     ) -> bool {
+        self.close_position_at(position, cash, trades, candle, candle.open, signal)
+    }
+
+    /// Close an existing position at an explicit `fill_price`.
+    ///
+    /// Used for intrabar SL/TP/trailing-stop exits where the fill price is the
+    /// computed stop/TP level (with gap guard) rather than the next bar's open.
+    fn close_position_at(
+        &self,
+        position: &mut Option<Position>,
+        cash: &mut f64,
+        trades: &mut Vec<Trade>,
+        candle: &Candle,
+        fill_price: f64,
+        signal: &Signal,
+    ) -> bool {
         let pos = match position.take() {
             Some(p) => p,
             None => return false,
         };
 
-        let exit_price = self.config.apply_exit_slippage(candle.close, pos.is_long());
+        let exit_price = self.config.apply_exit_slippage(fill_price, pos.is_long());
         let exit_commission = self.config.calculate_commission(exit_price * pos.quantity);
 
         let trade = pos.close(
@@ -897,10 +1035,48 @@ impl BacktestEngine {
             signal.clone(),
         );
 
-        *cash += trade.exit_value() - exit_commission + trade.dividend_income;
+        if trade.is_long() {
+            *cash += trade.exit_value() - exit_commission + trade.unreinvested_dividends;
+        } else {
+            *cash -= trade.exit_value() + exit_commission - trade.unreinvested_dividends;
+        }
         trades.push(trade);
 
         true
+    }
+}
+
+impl BacktestEngine {
+    fn sync_terminal_equity_point(
+        equity_curve: &mut Vec<EquityPoint>,
+        timestamp: i64,
+        equity: f64,
+    ) {
+        if let Some(last) = equity_curve.last_mut()
+            && last.timestamp == timestamp
+        {
+            last.equity = equity;
+        } else {
+            equity_curve.push(EquityPoint {
+                timestamp,
+                equity,
+                drawdown_pct: 0.0,
+            });
+        }
+
+        let peak = equity_curve
+            .iter()
+            .map(|point| point.equity)
+            .fold(f64::NEG_INFINITY, f64::max);
+        let drawdown = if peak.is_finite() && peak > 0.0 {
+            (peak - equity) / peak
+        } else {
+            0.0
+        };
+
+        if let Some(last) = equity_curve.last_mut() {
+            last.drawdown_pct = drawdown;
+        }
     }
 }
 
@@ -932,50 +1108,46 @@ fn compute_benchmark_metrics(
         };
     }
 
-    // Periodic returns for strategy and benchmark
-    let strategy_returns: Vec<f64> = equity_curve
+    let strategy_returns_by_ts: Vec<(i64, f64)> = equity_curve
         .windows(2)
         .map(|w| {
             let prev = w[0].equity;
-            if prev > 0.0 {
+            let ret = if prev > 0.0 {
                 (w[1].equity - prev) / prev
             } else {
                 0.0
-            }
+            };
+            (w[1].timestamp, ret)
         })
         .collect();
 
-    let bench_returns: Vec<f64> = benchmark_candles
+    let bench_returns_by_ts: HashMap<i64, f64> = benchmark_candles
         .windows(2)
         .map(|w| {
             let prev = w[0].close;
-            if prev > 0.0 {
+            let ret = if prev > 0.0 {
                 (w[1].close - prev) / prev
             } else {
                 0.0
-            }
+            };
+            (w[1].timestamp, ret)
         })
         .collect();
 
-    // Align to the shorter series length
-    let n = strategy_returns.len().min(bench_returns.len());
-    let s = &strategy_returns[..n];
-    let b = &bench_returns[..n];
+    let mut aligned_strategy = Vec::new();
+    let mut aligned_benchmark = Vec::new();
+    for (ts, s_ret) in strategy_returns_by_ts {
+        if let Some(b_ret) = bench_returns_by_ts.get(&ts) {
+            aligned_strategy.push(s_ret);
+            aligned_benchmark.push(*b_ret);
+        }
+    }
 
-    let beta = compute_beta(s, b);
+    let beta = compute_beta(&aligned_strategy, &aligned_benchmark);
 
-    // CAPM alpha: strategy annualised return - beta * benchmark annualised return
-    let num_bars = equity_curve.len();
-    let years = num_bars as f64 / bars_per_year;
-    let strategy_ann = if years > 0.0 {
-        let first = equity_curve.first().map(|e| e.equity).unwrap_or(1.0);
-        let last = equity_curve.last().map(|e| e.equity).unwrap_or(1.0);
-        ((last / first).powf(1.0 / years) - 1.0) * 100.0
-    } else {
-        0.0
-    };
-    let bench_ann =
-        benchmark_annualised_return(benchmark_candles, benchmark_return_pct, bars_per_year);
+    // CAPM alpha on the same aligned sample used for beta/IR.
+    let strategy_ann = annualized_return_from_periodic(&aligned_strategy, bars_per_year);
+    let bench_ann = annualized_return_from_periodic(&aligned_benchmark, bars_per_year);
     // Jensen's Alpha: excess strategy return over what CAPM predicts given beta.
     // Both strategy_ann and bench_ann are in percentage form (×100), so rf_ann is scaled
     // to match before applying the CAPM formula: α = R_s - R_f - β(R_b - R_f).
@@ -984,11 +1156,10 @@ fn compute_benchmark_metrics(
 
     // Information ratio: (excess returns mean / tracking error) * sqrt(bars_per_year)
     // Uses sample standard deviation (n-1) for consistency with Sharpe/Sortino.
-    let periodic_rf = (1.0 + risk_free_rate).powf(1.0 / bars_per_year) - 1.0;
-    let excess: Vec<f64> = s
+    let excess: Vec<f64> = aligned_strategy
         .iter()
-        .zip(b.iter())
-        .map(|(si, bi)| si - bi - periodic_rf)
+        .zip(aligned_benchmark.iter())
+        .map(|(si, bi)| si - bi)
         .collect();
     let ir = if excess.len() >= 2 {
         let n = excess.len() as f64;
@@ -1025,15 +1196,18 @@ fn buy_and_hold_return(candles: &[Candle]) -> f64 {
     }
 }
 
-/// Annualised return for benchmark candles given total return percentage.
-fn benchmark_annualised_return(
-    benchmark_candles: &[Candle],
-    total_return_pct: f64,
-    bars_per_year: f64,
-) -> f64 {
-    let years = benchmark_candles.len() as f64 / bars_per_year;
+/// Annualised return from periodic returns (fractional, e.g. 0.01 for 1%).
+fn annualized_return_from_periodic(periodic_returns: &[f64], bars_per_year: f64) -> f64 {
+    let years = periodic_returns.len() as f64 / bars_per_year;
     if years > 0.0 {
-        ((1.0 + total_return_pct / 100.0).powf(1.0 / years) - 1.0) * 100.0
+        let growth = periodic_returns
+            .iter()
+            .fold(1.0_f64, |acc, r| acc * (1.0 + *r));
+        if growth <= 0.0 {
+            -100.0
+        } else {
+            (growth.powf(1.0 / years) - 1.0) * 100.0
+        }
     } else {
         0.0
     }
@@ -1075,6 +1249,50 @@ fn compute_beta(strategy_returns: &[f64], benchmark_returns: &[f64]) -> f64 {
 mod tests {
     use super::*;
     use crate::backtesting::strategy::SmaCrossover;
+    use crate::backtesting::strategy::Strategy;
+    use crate::indicators::Indicator;
+
+    #[derive(Clone)]
+    struct EnterLongHold;
+
+    impl Strategy for EnterLongHold {
+        fn name(&self) -> &str {
+            "Enter Long Hold"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::long(ctx.timestamp(), ctx.close())
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    #[derive(Clone)]
+    struct EnterShortHold;
+
+    impl Strategy for EnterShortHold {
+        fn name(&self) -> &str {
+            "Enter Short Hold"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::short(ctx.timestamp(), ctx.close())
+            } else {
+                Signal::hold()
+            }
+        }
+    }
 
     fn make_candles(prices: &[f64]) -> Vec<Candle> {
         prices
@@ -1082,6 +1300,22 @@ mod tests {
             .enumerate()
             .map(|(i, &p)| Candle {
                 timestamp: i as i64,
+                open: p,
+                high: p * 1.01,
+                low: p * 0.99,
+                close: p,
+                volume: 1000,
+                adj_close: Some(p),
+            })
+            .collect()
+    }
+
+    fn make_candles_with_timestamps(prices: &[f64], timestamps: &[i64]) -> Vec<Candle> {
+        prices
+            .iter()
+            .zip(timestamps.iter())
+            .map(|(&p, &ts)| Candle {
+                timestamp: ts,
                 open: p,
                 high: p * 1.01,
                 low: p * 0.99,
@@ -1395,6 +1629,261 @@ mod tests {
         assert!(
             msg.contains("sorted"),
             "error should mention sorting: {msg}"
+        );
+    }
+
+    #[test]
+    fn test_short_dividend_is_liability() {
+        use crate::models::chart::Dividend;
+
+        let candles = make_candles(&[100.0, 100.0, 100.0]);
+        let dividends = vec![Dividend {
+            timestamp: candles[1].timestamp,
+            amount: 1.0,
+        }];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .allow_short(true)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run_with_dividends("TEST", &candles, EnterShortHold, &dividends)
+            .unwrap();
+
+        assert_eq!(result.trades.len(), 1);
+        assert!(result.trades[0].dividend_income < 0.0);
+        assert!(result.final_equity < 10_000.0);
+    }
+
+    #[test]
+    fn test_open_position_final_equity_includes_accrued_dividends() {
+        use crate::models::chart::Dividend;
+
+        let candles = make_candles(&[100.0, 100.0, 100.0]);
+        let dividends = vec![Dividend {
+            timestamp: candles[1].timestamp,
+            amount: 1.0,
+        }];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .close_at_end(false)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run_with_dividends("TEST", &candles, EnterLongHold, &dividends)
+            .unwrap();
+
+        assert!(result.open_position.is_some());
+        assert!((result.final_equity - 10_100.0).abs() < 1e-6);
+        let last_equity = result.equity_curve.last().map(|p| p.equity).unwrap_or(0.0);
+        assert!((last_equity - 10_100.0).abs() < 1e-6);
+    }
+
+    #[test]
+    fn test_benchmark_beta_and_ir_require_timestamp_overlap() {
+        let symbol_candles = make_candles_with_timestamps(&[100.0, 110.0, 120.0], &[100, 200, 300]);
+        let benchmark_candles =
+            make_candles_with_timestamps(&[50.0, 55.0, 60.0, 65.0], &[1000, 1100, 1200, 1300]);
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run_with_benchmark(
+                "TEST",
+                &symbol_candles,
+                EnterLongHold,
+                &[],
+                "BENCH",
+                &benchmark_candles,
+            )
+            .unwrap();
+
+        let benchmark = result.benchmark.unwrap();
+        assert!((benchmark.beta - 0.0).abs() < 1e-12);
+        assert!((benchmark.information_ratio - 0.0).abs() < 1e-12);
+    }
+
+    /// Build a candle with explicit OHLC values (not derived from a single price).
+    fn make_candle_ohlc(ts: i64, open: f64, high: f64, low: f64, close: f64) -> Candle {
+        Candle {
+            timestamp: ts,
+            open,
+            high,
+            low,
+            close,
+            volume: 1000,
+            adj_close: Some(close),
+        }
+    }
+
+    // ── Intrabar stop / take-profit tests ────────────────────────────────────
+
+    /// A strategy that opens a long on the first bar and holds forever.
+    struct EnterLongBar0;
+    impl Strategy for EnterLongBar0 {
+        fn name(&self) -> &str {
+            "Enter Long Bar 0"
+        }
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::long(ctx.timestamp(), ctx.close())
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    #[test]
+    fn test_intrabar_stop_loss_fills_at_stop_price_not_next_open() {
+        // Bar 0: open=100, high=101, low=99, close=100 — entry signal fires, filled on bar 1.
+        // Bar 1: open=100, high=100, low=100, close=100 — entry fills at 100.
+        // Bar 2: open=99, high=99, low=90, close=94 — low(90) < stop(95); fill at min(open=99, stop=95) = 95.
+        // With close-only detection, stop would not trigger here (close=94 > stop=95*... wait)
+        // Actually close=94 < 95 so close-only WOULD trigger, but on the NEXT bar's open (bar 3).
+        // With intrabar detection, it triggers on bar 2 itself and fills at stop_price=95.
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 101.0, 99.0, 100.0), // bar 0: entry signal
+            make_candle_ohlc(1, 100.0, 102.0, 99.0, 100.0), // bar 1: entry fill at 100
+            make_candle_ohlc(2, 99.0, 99.0, 90.0, 94.0),    // bar 2: low=90 < stop=95 → fill at 95
+            make_candle_ohlc(3, 94.0, 95.0, 93.0, 94.0), // bar 3: would be next-bar fill in old code
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .stop_loss_pct(0.05) // 5% → stop at 100 * 0.95 = 95
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine.run("TEST", &candles, EnterLongBar0).unwrap();
+
+        let sl_trade = result.trades.iter().find(|t| {
+            t.exit_signal
+                .reason
+                .as_ref()
+                .map(|r| r.contains("Stop-loss"))
+                .unwrap_or(false)
+        });
+        assert!(sl_trade.is_some(), "expected a stop-loss trade");
+        let trade = sl_trade.unwrap();
+
+        // Fill must be at the stop price (95.0), not at bar 3's open (94.0).
+        assert!(
+            (trade.exit_price - 95.0).abs() < 1e-9,
+            "expected exit at stop price 95.0, got {:.6}",
+            trade.exit_price
+        );
+        // Exit must be recorded on bar 2's timestamp, not bar 3.
+        assert_eq!(
+            trade.exit_timestamp, 2,
+            "exit should be on bar 2 (intrabar)"
+        );
+    }
+
+    #[test]
+    fn test_intrabar_stop_loss_gap_down_fills_at_open() {
+        // Bar 1: entry at open=100.
+        // Bar 2: open=92 (already below stop=95) → gap guard → fill at open=92.
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 101.0, 99.0, 100.0), // bar 0: entry signal
+            make_candle_ohlc(1, 100.0, 100.0, 100.0, 100.0), // bar 1: entry fill at 100
+            make_candle_ohlc(2, 92.0, 92.0, 90.0, 90.0),    // bar 2: gap below stop → fill at 92
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .stop_loss_pct(0.05) // stop at 95
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine.run("TEST", &candles, EnterLongBar0).unwrap();
+
+        let sl_trade = result
+            .trades
+            .iter()
+            .find(|t| {
+                t.exit_signal
+                    .reason
+                    .as_ref()
+                    .map(|r| r.contains("Stop-loss"))
+                    .unwrap_or(false)
+            })
+            .expect("expected a stop-loss trade");
+
+        // Gap-down: open (92) < stop (95) → fill at open.
+        assert!(
+            (sl_trade.exit_price - 92.0).abs() < 1e-9,
+            "expected gap-down fill at 92.0, got {:.6}",
+            sl_trade.exit_price
+        );
+    }
+
+    #[test]
+    fn test_intrabar_take_profit_fills_at_tp_price() {
+        // Bar 1: entry at 100.
+        // Bar 2: high=112 > tp=110 → fill at 110 (not next bar's open).
+        let candles = vec![
+            make_candle_ohlc(0, 100.0, 101.0, 99.0, 100.0),
+            make_candle_ohlc(1, 100.0, 100.0, 100.0, 100.0), // entry fill
+            make_candle_ohlc(2, 105.0, 112.0, 104.0, 111.0), // high > tp → fill at 110
+            make_candle_ohlc(3, 112.0, 113.0, 111.0, 112.0), // would be next-bar fill in old code
+        ];
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .take_profit_pct(0.10) // TP at 100 * 1.10 = 110
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine.run("TEST", &candles, EnterLongBar0).unwrap();
+
+        let tp_trade = result
+            .trades
+            .iter()
+            .find(|t| {
+                t.exit_signal
+                    .reason
+                    .as_ref()
+                    .map(|r| r.contains("Take-profit"))
+                    .unwrap_or(false)
+            })
+            .expect("expected a take-profit trade");
+
+        assert!(
+            (tp_trade.exit_price - 110.0).abs() < 1e-9,
+            "expected TP fill at 110.0, got {:.6}",
+            tp_trade.exit_price
+        );
+        assert_eq!(
+            tp_trade.exit_timestamp, 2,
+            "exit should be on bar 2 (intrabar)"
         );
     }
 }

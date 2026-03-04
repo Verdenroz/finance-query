@@ -162,8 +162,9 @@ impl WalkForwardConfig {
         factory: F,
     ) -> Result<WalkForwardReport>
     where
-        S: Strategy + Clone,
+        S: Strategy + Clone + Send,
         F: Fn(&HashMap<String, ParamValue>) -> S,
+        F: Send + Sync,
     {
         self.validate(candles.len())?;
 
@@ -282,11 +283,8 @@ fn calculate_consistency_ratio(windows: &[WindowResult]) -> f64 {
 
 /// Compute aggregate `PerformanceMetrics` over all OOS trade lists and equity curves.
 ///
-/// Concatenates trades and equity curves from all windows in sequence.
-/// This gives a realistic view of compounded OOS performance as if the
-/// windows were executed back-to-back (capital does NOT carry over; each window
-/// resets to the configured initial capital, so metrics represent per-window
-/// averages weighted by trade count).
+/// Concatenates trades and stitches OOS equity curves so each window starts
+/// from the previous window's ending equity.
 fn aggregate_oos_metrics(
     windows: &[WindowResult],
     risk_free_rate: f64,
@@ -299,30 +297,50 @@ fn aggregate_oos_metrics(
         .flat_map(|w| w.out_of_sample.trades.iter().cloned())
         .collect();
 
-    // Concatenate equity curves using sequential bar indices as timestamps.
-    // The original Unix timestamps from each window are discarded here because:
-    //   1. Different windows cover different calendar periods — reusing real
-    //      timestamps would produce non-monotonic sequences when windows reset.
-    //   2. PerformanceMetrics operates on relative bar counts for drawdown
-    //      duration and time-in-market, so absolute calendar values are not
-    //      needed for the aggregate result.
+    // Stitch per-window equity into one continuous compounded series.
+    // Each OOS window internally resets to its own initial capital; to avoid
+    // synthetic drawdowns between windows, scale each window by the running
+    // equity level from the previous window.
     let mut combined_equity: Vec<EquityPoint> = Vec::new();
-    for window in windows {
-        for point in &window.out_of_sample.equity_curve {
+    // `windows` is guaranteed non-empty by the validation above; index directly.
+    let mut running_equity = windows[0].out_of_sample.initial_capital;
+
+    for (window_idx, window) in windows.iter().enumerate() {
+        let window_initial = window.out_of_sample.initial_capital;
+        if window_initial <= 0.0 {
+            continue;
+        }
+
+        for (point_idx, point) in window.out_of_sample.equity_curve.iter().enumerate() {
+            if window_idx > 0 && point_idx == 0 {
+                continue;
+            }
+
+            let scaled_equity = running_equity * (point.equity / window_initial);
             combined_equity.push(EquityPoint {
-                timestamp: combined_equity.len() as i64,
-                equity: point.equity,
-                drawdown_pct: point.drawdown_pct,
+                timestamp: point.timestamp,
+                equity: scaled_equity,
+                drawdown_pct: 0.0,
             });
+        }
+
+        if let Some(last) = combined_equity.last() {
+            running_equity = last.equity;
         }
     }
 
-    // Aggregate metrics assume non-compounding windows: all OOS periods are
-    // evaluated against the same initial capital as the first window. This is
-    // correct when each window resets to the same starting capital. If capital
-    // compounds across windows, the total_return_pct in aggregate_metrics will
-    // be understated for later windows. Use per-window BacktestResult for
-    // accurate per-window returns.
+    // Recompute drawdowns on the stitched curve.
+    let mut peak = f64::NEG_INFINITY;
+    for point in &mut combined_equity {
+        peak = peak.max(point.equity);
+        point.drawdown_pct = if peak > 0.0 {
+            (peak - point.equity) / peak
+        } else {
+            0.0
+        };
+    }
+
+    // Aggregate metrics use the initial capital of the first OOS window.
     let initial_capital = windows
         .first()
         .map(|w| w.out_of_sample.initial_capital)
@@ -567,8 +585,12 @@ mod tests {
 
     #[test]
     fn test_aggregate_oos_equity_timestamps_are_gapless_across_windows() {
-        // The aggregated equity curve produced by aggregate_oos_metrics must have
-        // strictly increasing timestamps with no gaps between OOS windows.
+        // The aggregated equity curve produced by aggregate_oos_metrics must carry
+        // the real OOS candle timestamps so that time-in-market calculations
+        // (which divide trade duration_secs by backtest_secs) use a consistent
+        // unit. Previously timestamps were replaced with auto-incrementing integers
+        // (0,1,2,...) which caused the denominator to be "N bars" instead of
+        // "N seconds", inflating time_in_market to 1.0 on any real-world data.
         let prices: Vec<f64> = (0..600).map(|i| 100.0 + (i as f64) * 0.5).collect();
         let candles = make_candles(&prices);
         let config = BacktestConfig::builder()
@@ -598,22 +620,22 @@ mod tests {
             "Need at least 2 OOS windows for this test"
         );
 
-        // Reconstruct the combined equity curve the same way aggregate_oos_metrics does
-        let mut combined_ts: Vec<i64> = Vec::new();
-        let mut next_ts: i64 = 0;
-        for window in &report.windows {
-            let curve = &window.out_of_sample.equity_curve;
-            let base_ts = curve.first().map(|p| p.timestamp).unwrap_or(0);
-            let offset = next_ts - base_ts;
-            for point in curve {
-                combined_ts.push(point.timestamp + offset);
-            }
-            if let Some(&last) = combined_ts.last() {
-                next_ts = last + 1;
-            }
-        }
+        // Collect the combined timestamps as produced by aggregate_oos_metrics.
+        // They must be strictly increasing (real candle timestamps, not bar indices).
+        let combined_ts: Vec<i64> = report
+            .windows
+            .iter()
+            .enumerate()
+            .flat_map(|(wi, w)| {
+                w.out_of_sample
+                    .equity_curve
+                    .iter()
+                    .enumerate()
+                    .filter(move |&(pi, _)| !(wi > 0 && pi == 0))
+                    .map(|(_, ep)| ep.timestamp)
+            })
+            .collect();
 
-        // Every consecutive pair must be strictly increasing (no gaps, no resets)
         for pair in combined_ts.windows(2) {
             assert!(
                 pair[0] < pair[1],
@@ -623,9 +645,18 @@ mod tests {
             );
         }
 
-        // First timestamp must be 0 (no initial offset)
-        if let Some(&first) = combined_ts.first() {
-            assert_eq!(first, 0, "First combined timestamp should be 0");
-        }
+        // Timestamps must reflect real candle timestamps — the first combined
+        // timestamp should match the first OOS window's first equity point.
+        let expected_first = report
+            .windows
+            .first()
+            .and_then(|w| w.out_of_sample.equity_curve.first())
+            .map(|ep| ep.timestamp)
+            .unwrap_or(0);
+        assert_eq!(
+            combined_ts.first().copied().unwrap_or(-1),
+            expected_first,
+            "First combined timestamp should equal the first OOS equity point timestamp"
+        );
     }
 }

@@ -72,6 +72,23 @@ impl MonteCarloConfig {
     ///
     /// If the result has fewer than 2 trades, every percentile is derived from
     /// the single observed result.
+    ///
+    /// # Statistical Assumptions
+    ///
+    /// This simulation uses **random shuffle (IID resampling)**: each trade
+    /// return is treated as an independent, identically distributed draw, and
+    /// the order is randomised across simulations.  This assumption is
+    /// convenient but not always valid:
+    ///
+    /// - Real trade returns can exhibit **autocorrelation** (winning or losing
+    ///   streaks, regime dependence).  The shuffle destroys this structure,
+    ///   potentially underestimating the probability of sustained drawdowns.
+    /// - For strategies with strong trend-following or mean-reversion behaviour,
+    ///   **block bootstrap** (resampling contiguous sub-sequences) would give
+    ///   more conservative tail estimates.
+    ///
+    /// Use the percentile outputs as a *relative* stress-test tool rather than
+    /// a precise probability statement about future performance.
     pub fn run(&self, result: &BacktestResult) -> MonteCarloResult {
         let initial_capital = result.initial_capital;
         let trade_returns: Vec<f64> = result.trades.iter().map(|t| t.return_pct / 100.0).collect();
@@ -102,6 +119,19 @@ impl MonteCarloConfig {
         let seed = self.seed.unwrap_or(12345);
         let mut rng = Xorshift64::new(seed);
 
+        let position_size = result.config.position_size_pct;
+        let num_bars = result.equity_curve.len().saturating_sub(1) as f64;
+        let years = if result.config.bars_per_year > 0.0 {
+            num_bars / result.config.bars_per_year
+        } else {
+            0.0
+        };
+        let periods_per_year = if years > 0.0 {
+            trade_returns.len() as f64 / years
+        } else {
+            trade_returns.len().max(1) as f64
+        };
+
         let mut sim_returns: Vec<f64> = Vec::with_capacity(self.num_simulations);
         let mut sim_drawdowns: Vec<f64> = Vec::with_capacity(self.num_simulations);
         let mut sim_sharpes: Vec<f64> = Vec::with_capacity(self.num_simulations);
@@ -112,11 +142,12 @@ impl MonteCarloConfig {
             fisher_yates_shuffle(&mut shuffled, &mut rng);
 
             // Build synthetic equity curve from shuffled trade returns
-            let (equity_curve, final_equity) = build_equity_curve(&shuffled, initial_capital);
+            let (equity_curve, final_equity) =
+                build_equity_curve(&shuffled, initial_capital, position_size);
 
             let total_return = ((final_equity / initial_capital) - 1.0) * 100.0;
             let max_dd = compute_max_drawdown(&equity_curve);
-            let sharpe = compute_sharpe(&equity_curve, result.config.bars_per_year);
+            let sharpe = compute_sharpe(&equity_curve, periods_per_year);
             let pf = compute_profit_factor(&shuffled);
 
             sim_returns.push(total_return);
@@ -269,12 +300,17 @@ fn fisher_yates_shuffle(slice: &mut [f64], rng: &mut Xorshift64) {
 ///
 /// Returns `(equity_points, final_equity)`. Each point represents the
 /// portfolio value after applying one trade's return to the previous equity.
-fn build_equity_curve(trade_returns: &[f64], initial_capital: f64) -> (Vec<f64>, f64) {
+fn build_equity_curve(
+    trade_returns: &[f64],
+    initial_capital: f64,
+    position_size_pct: f64,
+) -> (Vec<f64>, f64) {
     let mut curve = Vec::with_capacity(trade_returns.len() + 1);
     curve.push(initial_capital);
     let mut equity = initial_capital;
+    let exposure = position_size_pct.max(0.0);
     for &ret in trade_returns {
-        equity *= 1.0 + ret;
+        equity *= 1.0 + ret * exposure;
         curve.push(equity);
     }
     (curve, equity)
@@ -312,7 +348,7 @@ fn compute_max_drawdown(equity_curve: &[f64]) -> f64 {
 /// the original `BacktestResult`.
 ///
 /// [`PerformanceMetrics`]: super::result::PerformanceMetrics
-fn compute_sharpe(equity_curve: &[f64], bars_per_year: f64) -> f64 {
+fn compute_sharpe(equity_curve: &[f64], periods_per_year: f64) -> f64 {
     if equity_curve.len() < 2 {
         return 0.0;
     }
@@ -338,7 +374,7 @@ fn compute_sharpe(equity_curve: &[f64], bars_per_year: f64) -> f64 {
     if std_dev == 0.0 {
         return 0.0;
     }
-    (mean / std_dev) * bars_per_year.sqrt()
+    (mean / std_dev) * periods_per_year.sqrt()
 }
 
 /// Compute profit factor from a sequence of trade return fractions.
@@ -352,7 +388,7 @@ fn compute_profit_factor(trade_returns: &[f64]) -> f64 {
     if gross_loss > 0.0 {
         gross_profit / gross_loss
     } else if gross_profit > 0.0 {
-        f64::MAX // avoid INFINITY which cannot be serialized to JSON
+        f64::MAX
     } else {
         0.0
     }
@@ -379,10 +415,12 @@ mod tests {
             entry_price: entry,
             exit_price: exit,
             quantity: qty,
+            entry_quantity: qty,
             commission: 0.0,
             pnl: (exit - entry) * qty,
             return_pct: ((exit / entry) - 1.0) * 100.0,
             dividend_income: 0.0,
+            unreinvested_dividends: 0.0,
             entry_signal: make_signal(),
             exit_signal: Signal::exit(86400, exit),
         }
@@ -504,5 +542,11 @@ mod tests {
         for _ in 0..1000 {
             assert_ne!(rng.next(), 0);
         }
+    }
+
+    #[test]
+    fn test_profit_factor_all_wins_is_f64_max() {
+        let pf = compute_profit_factor(&[0.01, 0.02, 0.03]);
+        assert_eq!(pf, f64::MAX);
     }
 }
