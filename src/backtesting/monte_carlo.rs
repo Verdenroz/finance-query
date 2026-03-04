@@ -424,6 +424,7 @@ mod tests {
             return_pct: ((exit / entry) - 1.0) * 100.0,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
+            tags: Vec::new(),
             entry_signal: make_signal(),
             exit_signal: Signal::exit(86400, exit),
         }

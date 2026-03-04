@@ -220,6 +220,7 @@ impl PortfolioEngine {
                     .base
                     .calculate_commission(exit_price * pos.quantity);
                 let exit_reason = exit_signal.reason.clone();
+                let exit_tags = exit_signal.tags.clone();
                 let trade = pos.close(timestamp, exit_price, exit_comm, exit_signal);
                 if trade.is_long() {
                     cash += trade.exit_value() - exit_comm + trade.unreinvested_dividends;
@@ -236,6 +237,7 @@ impl PortfolioEngine {
                     strength: 1.0,
                     reason: exit_reason,
                     executed: true,
+                    tags: exit_tags,
                 });
                 exited_this_bar.insert(sym);
             }
@@ -287,6 +289,7 @@ impl PortfolioEngine {
                         strength: signal.strength.value(),
                         reason: signal.reason.clone(),
                         executed: false,
+                        tags: signal.tags.clone(),
                     });
                     continue;
                 }
@@ -327,6 +330,7 @@ impl PortfolioEngine {
                                     strength: signal.strength.value(),
                                     reason: signal.reason,
                                     executed: true,
+                                    tags: signal.tags,
                                 });
                             } else {
                                 // No next bar — put position back, record as unexecuted.
@@ -338,6 +342,7 @@ impl PortfolioEngine {
                                     strength: signal.strength.value(),
                                     reason: signal.reason,
                                     executed: false,
+                                    tags: signal.tags,
                                 });
                             }
                         }
@@ -398,6 +403,7 @@ impl PortfolioEngine {
                         strength: signal.strength.value(),
                         reason: signal.reason,
                         executed: false,
+                        tags: signal.tags,
                     });
                     continue;
                 };
@@ -413,6 +419,7 @@ impl PortfolioEngine {
                         strength: signal.strength.value(),
                         reason: signal.reason,
                         executed: false,
+                        tags: signal.tags,
                     });
                     continue;
                 }
@@ -490,6 +497,7 @@ impl PortfolioEngine {
                     strength: signal.strength.value(),
                     reason: signal.reason,
                     executed: true,
+                    tags: signal.tags,
                 });
                 positions_open += 1;
             }

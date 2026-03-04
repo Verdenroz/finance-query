@@ -144,6 +144,7 @@ impl BacktestEngine {
                     strength: 1.0,
                     reason: exit_signal.reason.clone(),
                     executed,
+                    tags: exit_signal.tags.clone(),
                 });
 
                 if executed {
@@ -183,6 +184,7 @@ impl BacktestEngine {
                     strength: signal.strength.value(),
                     reason: signal.reason.clone(),
                     executed: false,
+                    tags: signal.tags.clone(),
                 });
                 continue;
             }
@@ -241,6 +243,7 @@ impl BacktestEngine {
                         strength: follow.strength.value(),
                         reason: follow.reason,
                         executed: follow_executed,
+                        tags: follow.tags,
                     });
                 }
             }
@@ -252,6 +255,7 @@ impl BacktestEngine {
                 strength: signal.strength.value(),
                 reason: signal.reason,
                 executed,
+                tags: signal.tags,
             });
         }
 

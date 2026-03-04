@@ -213,6 +213,7 @@ impl Position {
             return_pct,
             dividend_income: self.dividend_income,
             unreinvested_dividends: self.unreinvested_dividends,
+            tags: self.entry_signal.tags.clone(),
             entry_signal: self.entry_signal,
             exit_signal,
         }
@@ -267,6 +268,16 @@ pub struct Trade {
 
     /// Signal that triggered exit
     pub exit_signal: Signal,
+
+    /// Tags inherited from the entry signal for subgroup analysis.
+    ///
+    /// Populated automatically from [`Signal::tags`] when the position closes.
+    /// Query via `BacktestResult::trades_by_tag` and `metrics_by_tag`.
+    ///
+    /// Placed last so that JSON field order is consistent with [`Signal::tags`]
+    /// (both appear after all other fields).
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 impl Trade {

@@ -129,6 +129,14 @@ pub struct Signal {
 
     /// Strategy-specific metadata (indicator values, etc.)
     pub metadata: Option<SignalMetadata>,
+
+    /// User-defined tags for post-hoc trade subgroup analysis.
+    ///
+    /// Tags are propagated to [`Trade::tags`] when a position closes,
+    /// enabling `BacktestResult::trades_by_tag` and `metrics_by_tag` queries.
+    /// Use the `.tag()` builder to attach tags at signal creation time.
+    #[serde(default)]
+    pub tags: Vec<String>,
 }
 
 impl Signal {
@@ -141,6 +149,7 @@ impl Signal {
             price,
             reason: None,
             metadata: None,
+            tags: Vec::new(),
         }
     }
 
@@ -153,6 +162,7 @@ impl Signal {
             price,
             reason: None,
             metadata: None,
+            tags: Vec::new(),
         }
     }
 
@@ -165,6 +175,7 @@ impl Signal {
             price,
             reason: None,
             metadata: None,
+            tags: Vec::new(),
         }
     }
 
@@ -177,6 +188,7 @@ impl Signal {
             price: 0.0,
             reason: None,
             metadata: None,
+            tags: Vec::new(),
         }
     }
 
@@ -213,6 +225,16 @@ impl Signal {
     /// Set metadata
     pub fn with_metadata(mut self, metadata: SignalMetadata) -> Self {
         self.metadata = Some(metadata);
+        self
+    }
+
+    /// Attach a tag to this signal for post-hoc trade subgroup analysis.
+    ///
+    /// Tags are propagated to [`Trade::tags`] when the position closes,
+    /// enabling `BacktestResult::trades_by_tag` and `metrics_by_tag` queries.
+    /// Multiple tags can be chained: `.tag("breakout").tag("high_volume")`.
+    pub fn tag(mut self, name: impl Into<String>) -> Self {
+        self.tags.push(name.into());
         self
     }
 }
