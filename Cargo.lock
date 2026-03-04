@@ -1413,6 +1413,7 @@ dependencies = [
  "once_cell",
  "polars",
  "prost",
+ "rayon",
  "regex",
  "reqwest",
  "scraper",

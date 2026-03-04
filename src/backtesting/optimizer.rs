@@ -34,7 +34,9 @@
 //! ```
 
 use std::collections::HashMap;
+use std::sync::atomic::{AtomicUsize, Ordering};
 
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::models::chart::Candle;
@@ -213,6 +215,20 @@ pub struct OptimizationResult {
 }
 
 /// Full grid-search report returned by [`GridSearch::run`].
+///
+/// # Overfitting Warning
+///
+/// All metrics in this report are **in-sample** — the same candle data used
+/// to optimise the parameters is used to score them.  In-sample results
+/// almost always overstate real-world performance because the grid search
+/// can inadvertently fit to noise.
+///
+/// **Always validate the best parameters on unseen data before drawing
+/// conclusions.**  Use [`WalkForwardConfig`] to obtain an unbiased
+/// out-of-sample estimate, or at minimum reserve a held-out test period that
+/// is never passed to `GridSearch::run`.
+///
+/// [`WalkForwardConfig`]: super::walk_forward::WalkForwardConfig
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OptimizationReport {
@@ -224,8 +240,13 @@ pub struct OptimizationReport {
     ///
     /// Combinations that fail to run (e.g. insufficient data) are silently
     /// skipped and not included here.
+    ///
+    /// **These are in-sample results.** See the struct-level docs for the
+    /// overfitting warning.
     pub results: Vec<OptimizationResult>,
-    /// The single best result (same as `results[0]`)
+    /// The single best result (same as `results[0]`).
+    ///
+    /// **In-sample only** — see struct-level docs.
     pub best: OptimizationResult,
     /// Number of combinations skipped due to unexpected errors (not just
     /// insufficient data). A non-zero value indicates a configuration problem.
@@ -279,6 +300,15 @@ impl GridSearch {
     /// skipped.
     ///
     /// Returns an error only when the grid is empty (no parameters defined).
+    ///
+    /// # Overfitting Warning
+    ///
+    /// The returned [`OptimizationReport`] contains **in-sample** results only.
+    /// Optimising and evaluating on the same data series will overfit: the
+    /// chosen parameters may exploit noise that won't persist out-of-sample.
+    /// Always follow up with [`WalkForwardConfig`] or a held-out test window.
+    ///
+    /// [`WalkForwardConfig`]: super::walk_forward::WalkForwardConfig
     pub fn run<S, F>(
         &self,
         symbol: &str,
@@ -287,8 +317,9 @@ impl GridSearch {
         factory: F,
     ) -> Result<OptimizationReport>
     where
-        S: Strategy,
+        S: Strategy + Send,
         F: Fn(&HashMap<String, ParamValue>) -> S,
+        F: Send + Sync,
     {
         if self.params.is_empty() {
             return Err(BacktestError::invalid_param(
@@ -298,7 +329,6 @@ impl GridSearch {
         }
 
         let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
-        let engine = BacktestEngine::new(config.clone());
 
         // Expand each parameter range into a list of values
         let expanded: Vec<(&str, Vec<ParamValue>)> = self
@@ -318,13 +348,20 @@ impl GridSearch {
             ));
         }
 
-        // Run the engine for each combination, skip insufficient-data errors
-        let mut skipped_errors: usize = 0;
+        if total_combinations > 10_000 {
+            tracing::warn!(
+                total_combinations,
+                "grid search: large combination count — consider wider steps or narrower ranges"
+            );
+        }
+
+        // Run the engine for each combination in parallel, skip insufficient-data errors
+        let skipped_errors = AtomicUsize::new(0);
         let mut results: Vec<OptimizationResult> = combinations
-            .into_iter()
+            .into_par_iter()
             .filter_map(|params| {
                 let strategy = factory(&params);
-                match engine.run(symbol, candles, strategy) {
+                match BacktestEngine::new(config.clone()).run(symbol, candles, strategy) {
                     Ok(result) => Some(OptimizationResult { params, result }),
                     Err(BacktestError::InsufficientData { .. }) => None,
                     Err(e) => {
@@ -333,12 +370,13 @@ impl GridSearch {
                             error = %e,
                             "grid search: skipping combination due to unexpected error"
                         );
-                        skipped_errors += 1;
+                        skipped_errors.fetch_add(1, Ordering::Relaxed);
                         None
                     }
                 }
             })
             .collect();
+        let skipped_errors = skipped_errors.into_inner();
 
         if results.is_empty() {
             return Err(BacktestError::invalid_param(
