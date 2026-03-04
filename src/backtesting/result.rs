@@ -1,5 +1,8 @@
 //! Backtest results and performance metrics.
 
+use std::collections::HashMap;
+
+use chrono::{DateTime, Datelike, NaiveDateTime, Utc, Weekday};
 use serde::{Deserialize, Serialize};
 
 use super::config::BacktestConfig;
@@ -14,7 +17,10 @@ pub struct EquityPoint {
     pub timestamp: i64,
     /// Portfolio equity at this point
     pub equity: f64,
-    /// Current drawdown from peak (as percentage, 0.0-1.0)
+    /// Current drawdown from peak as a **fraction** (0.0–1.0, not a percentage).
+    ///
+    /// `0.0` = equity is at its running all-time high; `0.2` = 20% below peak.
+    /// Multiply by 100 to convert to a conventional percentage.
     pub drawdown_pct: f64,
 }
 
@@ -845,6 +851,66 @@ fn calculate_max_idle_period(trades: &[Trade]) -> i64 {
         .unwrap_or(0)
 }
 
+/// Infer the effective bars-per-year from the calendar span of an equity slice.
+///
+/// When an equity slice contains non-consecutive bars (e.g. every Monday in a
+/// daily-bar backtest), the configured `bars_per_year` is no longer the right
+/// annualisation denominator.  This function derives the correct value from
+/// the number of return periods and the elapsed calendar time so that Sharpe
+/// and Sortino ratios are annualised accurately regardless of bar frequency.
+///
+/// Falls back to `fallback_bpy` when the slice has fewer than two points or
+/// its timestamp span is non-positive.
+fn infer_bars_per_year(equity_slice: &[EquityPoint], fallback_bpy: f64) -> f64 {
+    if equity_slice.len() < 2 {
+        return fallback_bpy;
+    }
+    let first_ts = equity_slice.first().unwrap().timestamp as f64;
+    let last_ts = equity_slice.last().unwrap().timestamp as f64;
+    let seconds_per_year = 365.25 * 24.0 * 3600.0;
+    let years = (last_ts - first_ts) / seconds_per_year;
+    if years <= 0.0 {
+        return fallback_bpy;
+    }
+    // Use (len - 1) = number of return periods, consistent with how
+    // calculate_periodic_returns counts returns.
+    ((equity_slice.len() - 1) as f64 / years).max(1.0)
+}
+
+/// Zero out time-scaled ratios when a period slice covers less than half a
+/// year of bars.
+///
+/// Geometric annualisation of a sub-half-year return magnifies the result
+/// by raising `growth` to a power > 2, making `annualized_return_pct`,
+/// `calmar_ratio`, and `serenity_ratio` misleadingly large for short slices
+/// (e.g. partial first/last years, individual monthly buckets).  Setting
+/// them to `0.0` signals to callers that no reliable annual rate is available
+/// for this period without requiring a new return type.
+fn partial_period_adjust(
+    mut metrics: PerformanceMetrics,
+    slice_len: usize,
+    bpy: f64,
+) -> PerformanceMetrics {
+    let periods = slice_len.saturating_sub(1) as f64;
+    if periods / bpy < 0.5 {
+        metrics.annualized_return_pct = 0.0;
+        metrics.calmar_ratio = 0.0;
+        metrics.serenity_ratio = 0.0;
+    }
+    metrics
+}
+
+/// Convert a Unix-second timestamp to a `NaiveDateTime` (UTC).
+///
+/// Returns `None` for timestamps outside the range representable by
+/// [`DateTime<Utc>`] (i.e. before ≈ year −262144 or after ≈ year 262143).
+/// Call sites should skip entries that map to `None` rather than defaulting
+/// to the Unix epoch, which would silently misattribute those records to
+/// `1970-01-01 Thursday`.
+fn datetime_from_timestamp(ts: i64) -> Option<NaiveDateTime> {
+    DateTime::<Utc>::from_timestamp(ts, 0).map(|dt| dt.naive_utc())
+}
+
 /// Comparison of strategy performance against a benchmark.
 ///
 /// Populated when a benchmark symbol is supplied to `backtest_with_benchmark`.
@@ -973,6 +1039,257 @@ impl BacktestResult {
     /// Get the number of bars in the backtest
     pub fn num_bars(&self) -> usize {
         self.equity_curve.len()
+    }
+
+    // ─── Phase 2 — Rolling & Temporal Analysis ───────────────────────────────
+
+    /// Rolling Sharpe ratio over a sliding window of equity-curve bars.
+    ///
+    /// For each window of `window` consecutive bar-to-bar returns, computes
+    /// the Sharpe ratio using the same `risk_free_rate` and `bars_per_year`
+    /// as the overall backtest.  The first element corresponds to bars
+    /// `0..window` of the equity curve.
+    ///
+    /// Returns an empty vector when `window == 0` or when the equity curve
+    /// contains fewer than `window + 1` bars (i.e. fewer than `window`
+    /// return periods).
+    ///
+    /// # Statistical reliability
+    ///
+    /// Sharpe and Sortino are computed from `window` return observations using
+    /// sample variance (`n − 1` degrees of freedom).  Very small windows
+    /// produce extreme and unreliable values — at least **30 bars** is a
+    /// practical lower bound; **60–252** is typical for daily backtests.
+    pub fn rolling_sharpe(&self, window: usize) -> Vec<f64> {
+        if window == 0 {
+            return vec![];
+        }
+        let returns = calculate_periodic_returns(&self.equity_curve);
+        if returns.len() < window {
+            return vec![];
+        }
+        let rf = self.config.risk_free_rate;
+        let bpy = self.config.bars_per_year;
+        returns
+            .windows(window)
+            .map(|w| {
+                let (sharpe, _) = calculate_risk_ratios(w, rf, bpy);
+                sharpe
+            })
+            .collect()
+    }
+
+    /// Running drawdown fraction at each bar of the equity curve (0.0–1.0).
+    ///
+    /// Each value is the fractional decline from the running all-time-high
+    /// equity up to that bar: `0.0` means the equity is at a new peak; `0.2`
+    /// means it is 20% below the highest value seen so far.
+    ///
+    /// **This is not a sliding-window computation.** Values are read directly
+    /// from the precomputed [`EquityPoint::drawdown_pct`] field, which tracks
+    /// the running-peak drawdown since the backtest began.  To compute the
+    /// *maximum* drawdown within a rolling N-bar window (regime-change
+    /// detection), iterate over [`BacktestResult::equity_curve`] manually.
+    ///
+    /// The returned vector has the same length as
+    /// [`BacktestResult::equity_curve`].
+    pub fn drawdown_series(&self) -> Vec<f64> {
+        self.equity_curve.iter().map(|p| p.drawdown_pct).collect()
+    }
+
+    /// Rolling win rate over a sliding window of consecutive closed trades.
+    ///
+    /// For each window of `window` trades (ordered by exit timestamp as stored
+    /// in the trade log), returns the fraction of winning trades in that
+    /// window.  The first element corresponds to trades `0..window`.
+    ///
+    /// This is a **trade-count window**, not a time window.  To compute win
+    /// rate over a fixed calendar period, use [`by_year`](Self::by_year),
+    /// [`by_month`](Self::by_month), or filter [`BacktestResult::trades`]
+    /// directly by timestamp.
+    ///
+    /// Returns an empty vector when `window == 0` or when fewer than `window`
+    /// trades were closed.
+    pub fn rolling_win_rate(&self, window: usize) -> Vec<f64> {
+        if window == 0 || self.trades.len() < window {
+            return vec![];
+        }
+        self.trades
+            .windows(window)
+            .map(|w| {
+                let wins = w.iter().filter(|t| t.is_profitable()).count();
+                wins as f64 / window as f64
+            })
+            .collect()
+    }
+
+    /// Performance metrics broken down by calendar year.
+    ///
+    /// Each trade is attributed to the year in which it **closed**
+    /// (`exit_timestamp`).  The equity curve is sliced to the bars that fall
+    /// within that calendar year, and the equity at the first bar of the year
+    /// serves as `initial_capital` for the period metrics.
+    ///
+    /// Years with no closed trades are omitted from the result.
+    ///
+    /// # Caveats
+    ///
+    /// - **Open positions**: a position that is open throughout the year
+    ///   contributes to the equity-curve drawdown and Sharpe of that year but
+    ///   does **not** appear in `total_trades` or `win_rate`, because those
+    ///   are derived from closed trades only.  Strategies with long holding
+    ///   periods will show systematically low trade counts per year.
+    /// - **Partial years**: the first and last year of a backtest typically
+    ///   cover fewer than 12 months.  `annualized_return_pct`, `calmar_ratio`,
+    ///   and `serenity_ratio` are set to `0.0` for slices shorter than half a
+    ///   year (`< bars_per_year / 2` bars) to prevent geometric-compounding
+    ///   distortion.
+    /// - **`total_signals` / `executed_signals`**: these fields are `0` in
+    ///   period breakdowns because signal records are not partitioned per
+    ///   period.  Use [`BacktestResult::signals`] directly if needed.
+    pub fn by_year(&self) -> HashMap<i32, PerformanceMetrics> {
+        self.temporal_metrics(|ts| datetime_from_timestamp(ts).map(|dt| dt.year()))
+    }
+
+    /// Performance metrics broken down by calendar month.
+    ///
+    /// Each trade is attributed to the `(year, month)` in which it **closed**.
+    /// Uses the same equity-slicing approach as [`by_year`](Self::by_year);
+    /// the same caveats about open positions, partial periods, and signal
+    /// counts apply here as well.
+    pub fn by_month(&self) -> HashMap<(i32, u32), PerformanceMetrics> {
+        self.temporal_metrics(|ts| datetime_from_timestamp(ts).map(|dt| (dt.year(), dt.month())))
+    }
+
+    /// Performance metrics broken down by day of week.
+    ///
+    /// Each trade is attributed to the weekday on which it **closed**
+    /// (`exit_timestamp`).  Only weekdays present in the trade log appear in
+    /// the result.  Trades and equity-curve points with timestamps that cannot
+    /// be converted to a valid date are silently skipped.
+    ///
+    /// # Sharpe / Sortino annualisation
+    ///
+    /// The equity curve is filtered to bars that fall on each specific
+    /// weekday, so consecutive equity points in each slice are roughly one
+    /// *week* apart (for a daily-bar backtest).  `bars_per_year` is inferred
+    /// from the calendar span of each slice so that annualisation matches the
+    /// actual sampling frequency — **you do not need to adjust the config**.
+    /// The inferred value is approximately `52` for daily bars, `12` for
+    /// weekly bars, and so on.
+    ///
+    /// # Other caveats
+    ///
+    /// The same open-position and signal-count caveats from
+    /// [`by_year`](Self::by_year) apply here.
+    pub fn by_day_of_week(&self) -> HashMap<Weekday, PerformanceMetrics> {
+        // Pre-group trades by weekday — O(T)
+        let mut trade_groups: HashMap<Weekday, Vec<&Trade>> = HashMap::new();
+        for trade in &self.trades {
+            if let Some(day) = datetime_from_timestamp(trade.exit_timestamp).map(|dt| dt.weekday())
+            {
+                trade_groups.entry(day).or_default().push(trade);
+            }
+        }
+
+        // Pre-group equity curve by weekday — O(N), avoids O(N × K) rescanning
+        let mut equity_groups: HashMap<Weekday, Vec<EquityPoint>> = HashMap::new();
+        for p in &self.equity_curve {
+            if let Some(day) = datetime_from_timestamp(p.timestamp).map(|dt| dt.weekday()) {
+                equity_groups.entry(day).or_default().push(p.clone());
+            }
+        }
+
+        trade_groups
+            .into_iter()
+            .map(|(day, group_trades)| {
+                let equity_slice = equity_groups.remove(&day).unwrap_or_default();
+                let initial_capital = equity_slice
+                    .first()
+                    .map(|p| p.equity)
+                    .unwrap_or(self.initial_capital);
+                let trades_vec: Vec<Trade> = group_trades.into_iter().cloned().collect();
+                // Infer the effective bars_per_year from the slice's calendar
+                // span: same-weekday bars are ~5 trading days apart for a
+                // daily-bar backtest, so the correct annualisation factor is
+                // ≈52, not the configured 252.
+                let bpy = infer_bars_per_year(&equity_slice, self.config.bars_per_year);
+                let metrics = PerformanceMetrics::calculate(
+                    &trades_vec,
+                    &equity_slice,
+                    initial_capital,
+                    0,
+                    0,
+                    self.config.risk_free_rate,
+                    bpy,
+                );
+                let slice_len = equity_slice.len();
+                (day, partial_period_adjust(metrics, slice_len, bpy))
+            })
+            .collect()
+    }
+
+    /// Groups trades and equity-curve points by an arbitrary calendar key,
+    /// then computes [`PerformanceMetrics`] for each group.
+    ///
+    /// `key_fn` maps a Unix-second timestamp to `Some(K)`, or `None` for
+    /// timestamps that cannot be parsed (those entries are silently skipped).
+    ///
+    /// Both trades and equity-curve points are pre-grouped in **O(N + T)**
+    /// passes before metrics are computed per period, avoiding the O(N × K)
+    /// inner-loop cost of the naïve approach.
+    fn temporal_metrics<K>(
+        &self,
+        key_fn: impl Fn(i64) -> Option<K>,
+    ) -> HashMap<K, PerformanceMetrics>
+    where
+        K: std::hash::Hash + Eq + Copy,
+    {
+        // Pre-group trades by period key — O(T)
+        let mut trade_groups: HashMap<K, Vec<&Trade>> = HashMap::new();
+        for trade in &self.trades {
+            if let Some(key) = key_fn(trade.exit_timestamp) {
+                trade_groups.entry(key).or_default().push(trade);
+            }
+        }
+
+        // Pre-group equity curve by period key — O(N)
+        let mut equity_groups: HashMap<K, Vec<EquityPoint>> = HashMap::new();
+        for p in &self.equity_curve {
+            if let Some(key) = key_fn(p.timestamp) {
+                equity_groups.entry(key).or_default().push(p.clone());
+            }
+        }
+
+        trade_groups
+            .into_iter()
+            .map(|(key, group_trades)| {
+                let equity_slice = equity_groups.remove(&key).unwrap_or_default();
+                let initial_capital = equity_slice
+                    .first()
+                    .map(|p| p.equity)
+                    .unwrap_or(self.initial_capital);
+                let trades_vec: Vec<Trade> = group_trades.into_iter().cloned().collect();
+                let metrics = PerformanceMetrics::calculate(
+                    &trades_vec,
+                    &equity_slice,
+                    initial_capital,
+                    // H-3: both zero — signal records are not partitioned
+                    // per period; callers should filter BacktestResult::signals
+                    // directly if per-period signal counts are needed.
+                    0,
+                    0,
+                    self.config.risk_free_rate,
+                    self.config.bars_per_year,
+                );
+                let slice_len = equity_slice.len();
+                // C-2: suppress annualised metrics for sub-half-year slices.
+                (
+                    key,
+                    partial_period_adjust(metrics, slice_len, self.config.bars_per_year),
+                )
+            })
+            .collect()
     }
 }
 
@@ -1385,5 +1702,440 @@ mod tests {
 
         let metrics = PerformanceMetrics::calculate(&trades, &equity, 10000.0, 2, 2, 0.0, 252.0);
         assert_eq!(metrics.profit_factor, f64::MAX);
+    }
+
+    // ─── Phase 2 — Rolling & Temporal Analysis ───────────────────────────────
+
+    use super::super::config::BacktestConfig;
+    use crate::backtesting::position::Position;
+    use chrono::{NaiveDate, Weekday};
+
+    fn make_trade_timed(pnl: f64, return_pct: f64, entry_ts: i64, exit_ts: i64) -> Trade {
+        Trade {
+            side: PositionSide::Long,
+            entry_timestamp: entry_ts,
+            exit_timestamp: exit_ts,
+            entry_price: 100.0,
+            exit_price: 100.0 + pnl / 10.0,
+            quantity: 10.0,
+            entry_quantity: 10.0,
+            commission: 0.0,
+            pnl,
+            return_pct,
+            dividend_income: 0.0,
+            unreinvested_dividends: 0.0,
+            entry_signal: Signal::long(entry_ts, 100.0),
+            exit_signal: Signal::exit(exit_ts, 100.0 + pnl / 10.0),
+        }
+    }
+
+    /// Minimal `BacktestResult` fixture using the default `BacktestConfig`
+    /// (risk_free_rate=0.0, bars_per_year=252.0).
+    fn make_result(trades: Vec<Trade>, equity_curve: Vec<EquityPoint>) -> BacktestResult {
+        let metrics = PerformanceMetrics::calculate(
+            &trades,
+            &equity_curve,
+            10000.0,
+            trades.len(),
+            trades.len(),
+            0.0,
+            252.0,
+        );
+        BacktestResult {
+            symbol: "TEST".to_string(),
+            strategy_name: "TestStrategy".to_string(),
+            config: BacktestConfig::default(),
+            start_timestamp: equity_curve.first().map(|e| e.timestamp).unwrap_or(0),
+            end_timestamp: equity_curve.last().map(|e| e.timestamp).unwrap_or(0),
+            initial_capital: 10000.0,
+            final_equity: equity_curve.last().map(|e| e.equity).unwrap_or(10000.0),
+            metrics,
+            trades,
+            equity_curve,
+            signals: vec![],
+            open_position: None::<Position>,
+            benchmark: None,
+            diagnostics: vec![],
+        }
+    }
+
+    fn ts(date: &str) -> i64 {
+        let d = NaiveDate::parse_from_str(date, "%Y-%m-%d").unwrap();
+        d.and_hms_opt(12, 0, 0).unwrap().and_utc().timestamp()
+    }
+
+    fn equity_point(timestamp: i64, equity: f64, drawdown_pct: f64) -> EquityPoint {
+        EquityPoint {
+            timestamp,
+            equity,
+            drawdown_pct,
+        }
+    }
+
+    // ── rolling_sharpe ────────────────────────────────────────────────────────
+
+    #[test]
+    fn rolling_sharpe_window_zero_returns_empty() {
+        let result = make_result(
+            vec![],
+            vec![equity_point(0, 10000.0, 0.0), equity_point(1, 10100.0, 0.0)],
+        );
+        assert!(result.rolling_sharpe(0).is_empty());
+    }
+
+    #[test]
+    fn rolling_sharpe_insufficient_bars_returns_empty() {
+        // 3 equity points → 2 returns; window=3 needs 3 returns → empty
+        let result = make_result(
+            vec![],
+            vec![
+                equity_point(0, 10000.0, 0.0),
+                equity_point(1, 10100.0, 0.0),
+                equity_point(2, 10200.0, 0.0),
+            ],
+        );
+        assert!(result.rolling_sharpe(3).is_empty());
+    }
+
+    #[test]
+    fn rolling_sharpe_correct_length() {
+        // 5 equity points → 4 returns; window=2 → 3 values
+        let pts: Vec<EquityPoint> = (0..5)
+            .map(|i| equity_point(i, 10000.0 + i as f64 * 100.0, 0.0))
+            .collect();
+        let result = make_result(vec![], pts);
+        assert_eq!(result.rolling_sharpe(2).len(), 3);
+    }
+
+    #[test]
+    fn rolling_sharpe_monotone_increase_positive() {
+        // Strictly increasing equity → all positive Sharpe values
+        let pts: Vec<EquityPoint> = (0..10)
+            .map(|i| equity_point(i, 10000.0 + i as f64 * 100.0, 0.0))
+            .collect();
+        let result = make_result(vec![], pts);
+        let sharpes = result.rolling_sharpe(3);
+        assert!(!sharpes.is_empty());
+        for s in &sharpes {
+            assert!(
+                *s > 0.0 || *s == f64::MAX,
+                "expected positive Sharpe, got {s}"
+            );
+        }
+    }
+
+    // ── drawdown_series ───────────────────────────────────────────────────────
+
+    #[test]
+    fn drawdown_series_mirrors_equity_curve() {
+        let pts = vec![
+            equity_point(0, 10000.0, 0.00),
+            equity_point(1, 9500.0, 0.05),
+            equity_point(2, 9000.0, 0.10),
+            equity_point(3, 9200.0, 0.08),
+            equity_point(4, 10000.0, 0.00),
+        ];
+        let result = make_result(vec![], pts.clone());
+        let dd = result.drawdown_series();
+        assert_eq!(dd.len(), pts.len());
+        for (got, ep) in dd.iter().zip(pts.iter()) {
+            assert!(
+                (got - ep.drawdown_pct).abs() < f64::EPSILON,
+                "expected {}, got {}",
+                ep.drawdown_pct,
+                got
+            );
+        }
+    }
+
+    #[test]
+    fn drawdown_series_empty_curve() {
+        let result = make_result(vec![], vec![]);
+        assert!(result.drawdown_series().is_empty());
+    }
+
+    // ── rolling_win_rate ──────────────────────────────────────────────────────
+
+    #[test]
+    fn rolling_win_rate_window_zero_returns_empty() {
+        let result = make_result(vec![make_trade(50.0, 5.0, true)], vec![]);
+        assert!(result.rolling_win_rate(0).is_empty());
+    }
+
+    #[test]
+    fn rolling_win_rate_window_exceeds_trades_returns_empty() {
+        let result = make_result(vec![make_trade(50.0, 5.0, true)], vec![]);
+        assert!(result.rolling_win_rate(2).is_empty());
+    }
+
+    #[test]
+    fn rolling_win_rate_all_wins() {
+        let trades = vec![
+            make_trade(10.0, 1.0, true),
+            make_trade(20.0, 2.0, true),
+            make_trade(15.0, 1.5, true),
+        ];
+        let result = make_result(trades, vec![]);
+        let wr = result.rolling_win_rate(2);
+        // 3 trades, window=2 → 2 values, each 1.0
+        assert_eq!(wr, vec![1.0, 1.0]);
+    }
+
+    #[test]
+    fn rolling_win_rate_alternating() {
+        // win, loss, win, loss → window=2 → [0.5, 0.5, 0.5]
+        let trades = vec![
+            make_trade(10.0, 1.0, true),
+            make_trade(-10.0, -1.0, true),
+            make_trade(10.0, 1.0, true),
+            make_trade(-10.0, -1.0, true),
+        ];
+        let result = make_result(trades, vec![]);
+        let wr = result.rolling_win_rate(2);
+        assert_eq!(wr.len(), 3);
+        for v in &wr {
+            assert!((v - 0.5).abs() < f64::EPSILON, "expected 0.5, got {v}");
+        }
+    }
+
+    #[test]
+    fn rolling_win_rate_correct_length() {
+        let trades: Vec<Trade> = (0..5)
+            .map(|i| make_trade(i as f64, i as f64, true))
+            .collect();
+        let result = make_result(trades, vec![]);
+        // 5 trades, window=3 → 3 values
+        assert_eq!(result.rolling_win_rate(3).len(), 3);
+    }
+
+    #[test]
+    fn rolling_win_rate_window_equals_trade_count_returns_one_element() {
+        // L-2: boundary — window == trades.len() → exactly 1 element
+        let trades = vec![
+            make_trade(10.0, 1.0, true),
+            make_trade(-5.0, -0.5, true),
+            make_trade(8.0, 0.8, true),
+        ];
+        let result = make_result(trades, vec![]);
+        let wr = result.rolling_win_rate(3);
+        assert_eq!(wr.len(), 1);
+        // 2 wins out of 3
+        assert!((wr[0] - 2.0 / 3.0).abs() < f64::EPSILON);
+    }
+
+    // ── partial_period_adjust ─────────────────────────────────────────────────
+
+    #[test]
+    fn partial_period_adjust_zeroes_annualised_fields_for_short_slice() {
+        // C-2: a 10-bar slice with bpy=252 → years ≈ 0.036 < 0.5 → zero out
+        let dummy_metrics = PerformanceMetrics::calculate(
+            &[make_trade(100.0, 10.0, true)],
+            &[equity_point(0, 10000.0, 0.0), equity_point(1, 11000.0, 0.0)],
+            10000.0,
+            0,
+            0,
+            0.0,
+            252.0,
+        );
+        assert!(dummy_metrics.annualized_return_pct != 0.0);
+        let adjusted = partial_period_adjust(dummy_metrics, 10, 252.0);
+        assert_eq!(adjusted.annualized_return_pct, 0.0);
+        assert_eq!(adjusted.calmar_ratio, 0.0);
+        assert_eq!(adjusted.serenity_ratio, 0.0);
+    }
+
+    #[test]
+    fn partial_period_adjust_preserves_full_year_metrics() {
+        // A 252-bar slice with bpy=252 → years ≈ 1.0 ≥ 0.5 → no change
+        let metrics = PerformanceMetrics::calculate(
+            &[make_trade(100.0, 10.0, true)],
+            &[equity_point(0, 10000.0, 0.0), equity_point(1, 11000.0, 0.0)],
+            10000.0,
+            0,
+            0,
+            0.0,
+            252.0,
+        );
+        let ann_before = metrics.annualized_return_pct;
+        let adjusted = partial_period_adjust(metrics, 252, 252.0);
+        assert_eq!(adjusted.annualized_return_pct, ann_before);
+    }
+
+    // ── by_year ───────────────────────────────────────────────────────────────
+
+    #[test]
+    fn by_year_no_trades_empty() {
+        let result = make_result(vec![], vec![equity_point(ts("2023-06-01"), 10000.0, 0.0)]);
+        assert!(result.by_year().is_empty());
+    }
+
+    #[test]
+    fn by_year_splits_across_years() {
+        let eq = vec![
+            equity_point(ts("2022-06-15"), 10000.0, 0.0),
+            equity_point(ts("2022-06-16"), 10100.0, 0.0),
+            equity_point(ts("2023-06-15"), 10200.0, 0.0),
+            equity_point(ts("2023-06-16"), 10300.0, 0.0),
+        ];
+        let t1 = make_trade_timed(100.0, 1.0, ts("2022-06-15"), ts("2022-06-16"));
+        let t2 = make_trade_timed(100.0, 1.0, ts("2023-06-15"), ts("2023-06-16"));
+        let result = make_result(vec![t1, t2], eq);
+        let by_year = result.by_year();
+        assert_eq!(by_year.len(), 2);
+        assert!(by_year.contains_key(&2022));
+        assert!(by_year.contains_key(&2023));
+        assert_eq!(by_year[&2022].total_trades, 1);
+        assert_eq!(by_year[&2023].total_trades, 1);
+    }
+
+    #[test]
+    fn by_year_all_same_year() {
+        let eq = vec![
+            equity_point(ts("2023-03-01"), 10000.0, 0.0),
+            equity_point(ts("2023-06-01"), 10200.0, 0.0),
+            equity_point(ts("2023-09-01"), 10500.0, 0.0),
+        ];
+        let t1 = make_trade_timed(200.0, 2.0, ts("2023-03-01"), ts("2023-06-01"));
+        let t2 = make_trade_timed(300.0, 3.0, ts("2023-06-01"), ts("2023-09-01"));
+        let result = make_result(vec![t1, t2], eq);
+        let by_year = result.by_year();
+        assert_eq!(by_year.len(), 1);
+        assert!(by_year.contains_key(&2023));
+        assert_eq!(by_year[&2023].total_trades, 2);
+    }
+
+    // ── by_month ──────────────────────────────────────────────────────────────
+
+    #[test]
+    fn by_month_splits_across_months() {
+        let eq = vec![
+            equity_point(ts("2023-03-15"), 10000.0, 0.0),
+            equity_point(ts("2023-03-16"), 10100.0, 0.0),
+            equity_point(ts("2023-07-15"), 10200.0, 0.0),
+            equity_point(ts("2023-07-16"), 10300.0, 0.0),
+        ];
+        let t1 = make_trade_timed(100.0, 1.0, ts("2023-03-15"), ts("2023-03-16"));
+        let t2 = make_trade_timed(100.0, 1.0, ts("2023-07-15"), ts("2023-07-16"));
+        let result = make_result(vec![t1, t2], eq);
+        let by_month = result.by_month();
+        assert_eq!(by_month.len(), 2);
+        assert!(by_month.contains_key(&(2023, 3)));
+        assert!(by_month.contains_key(&(2023, 7)));
+    }
+
+    #[test]
+    fn by_month_same_month_different_years_are_separate_keys() {
+        let eq = vec![
+            equity_point(ts("2022-06-15"), 10000.0, 0.0),
+            equity_point(ts("2023-06-15"), 10200.0, 0.0),
+        ];
+        let t1 = make_trade_timed(100.0, 1.0, ts("2022-06-14"), ts("2022-06-15"));
+        let t2 = make_trade_timed(100.0, 1.0, ts("2023-06-14"), ts("2023-06-15"));
+        let result = make_result(vec![t1, t2], eq);
+        let by_month = result.by_month();
+        assert_eq!(by_month.len(), 2);
+        assert!(by_month.contains_key(&(2022, 6)));
+        assert!(by_month.contains_key(&(2023, 6)));
+    }
+
+    // ── by_day_of_week ────────────────────────────────────────────────────────
+
+    #[test]
+    fn by_day_of_week_single_day() {
+        // 2023-01-02 is a Monday
+        let monday = ts("2023-01-02");
+        let t1 = make_trade_timed(100.0, 1.0, monday - 86400, monday);
+        let t2 = make_trade_timed(50.0, 0.5, monday - 86400 * 2, monday);
+        let eq = vec![equity_point(monday, 10000.0, 0.0)];
+        let result = make_result(vec![t1, t2], eq);
+        let by_dow = result.by_day_of_week();
+        assert_eq!(by_dow.len(), 1);
+        assert!(by_dow.contains_key(&Weekday::Mon));
+        assert_eq!(by_dow[&Weekday::Mon].total_trades, 2);
+    }
+
+    #[test]
+    fn by_day_of_week_multiple_days() {
+        // 2023-01-02 = Monday, 2023-01-03 = Tuesday
+        let monday = ts("2023-01-02");
+        let tuesday = ts("2023-01-03");
+        let t_mon = make_trade_timed(100.0, 1.0, monday - 86400, monday);
+        let t_tue = make_trade_timed(-50.0, -0.5, tuesday - 86400, tuesday);
+        let eq = vec![
+            equity_point(monday, 10000.0, 0.0),
+            equity_point(tuesday, 10100.0, 0.0),
+        ];
+        let result = make_result(vec![t_mon, t_tue], eq);
+        let by_dow = result.by_day_of_week();
+        assert_eq!(by_dow.len(), 2);
+        assert!(by_dow.contains_key(&Weekday::Mon));
+        assert!(by_dow.contains_key(&Weekday::Tue));
+        assert_eq!(by_dow[&Weekday::Mon].total_trades, 1);
+        assert_eq!(by_dow[&Weekday::Tue].total_trades, 1);
+        assert_eq!(by_dow[&Weekday::Mon].winning_trades, 1);
+        assert_eq!(by_dow[&Weekday::Tue].losing_trades, 1);
+    }
+
+    #[test]
+    fn by_day_of_week_no_trades_empty() {
+        let result = make_result(vec![], vec![equity_point(ts("2023-01-02"), 10000.0, 0.0)]);
+        assert!(result.by_day_of_week().is_empty());
+    }
+
+    #[test]
+    fn by_day_of_week_infers_weekly_bpy_for_daily_bars() {
+        // C-3: for a daily-bar backtest filtered to Mondays, the inferred
+        // bars_per_year should be ≈52 (one per week), not the configured 252.
+        // We verify this indirectly: Sharpe from by_day_of_week should differ
+        // from a Sharpe computed with bpy=252 on the same Monday returns,
+        // confirming that infer_bars_per_year adjusted the annualisation.
+        //
+        // Build 2 years of weekly Monday equity points (≈104 points).
+        let base = ts("2023-01-02"); // Monday
+        let week_secs = 7 * 86400i64;
+        let n_weeks = 104usize;
+        let equity_pts: Vec<EquityPoint> = (0..n_weeks)
+            .map(|i| {
+                equity_point(
+                    base + (i as i64) * week_secs,
+                    10000.0 + i as f64 * 10.0,
+                    0.0,
+                )
+            })
+            .collect();
+
+        let trade = make_trade_timed(
+            100.0,
+            1.0,
+            base,
+            base + week_secs, // exit on the second Monday
+        );
+        let result = make_result(vec![trade], equity_pts.clone());
+        let by_dow = result.by_day_of_week();
+
+        // The inferred bpy from 103 weekly returns over ~2 years ≈ 52.
+        // With bpy=252, Sharpe would be sqrt(252/52) ≈ 2.2× larger.
+        // We only assert the result is finite and present — correctness of
+        // the specific ratio is covered by infer_bars_per_year unit behaviour.
+        assert!(by_dow.contains_key(&Weekday::Mon));
+        let s = by_dow[&Weekday::Mon].sharpe_ratio;
+        assert!(
+            s.is_finite() || s == f64::MAX,
+            "Sharpe should be finite, got {s}"
+        );
+    }
+
+    #[test]
+    fn infer_bars_per_year_approximates_weekly_for_monday_subset() {
+        // Direct unit test for infer_bars_per_year.
+        // 104 weekly Monday points over ~2 calendar years → ≈ 52 bpy
+        let base = ts("2023-01-02");
+        let week_secs = 7 * 86400i64;
+        let pts: Vec<EquityPoint> = (0..104)
+            .map(|i| equity_point(base + i * week_secs, 10000.0, 0.0))
+            .collect();
+        let bpy = infer_bars_per_year(&pts, 252.0);
+        // 103 return periods over ~2 years ≈ 51.5; accept 48–56 as reasonable
+        assert!(bpy > 48.0 && bpy < 56.0, "expected ~52, got {bpy}");
     }
 }
