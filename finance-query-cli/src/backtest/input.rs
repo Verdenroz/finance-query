@@ -1,7 +1,18 @@
 use super::indicators::IndicatorCategory;
-use super::state::{App, ConditionPanel, ConditionTarget, ConfigField, Screen};
+use super::state::{
+    App, ConditionPanel, ConditionTarget, ConfigField, OPTIMIZER_FIELD_END,
+    OPTIMIZER_FIELD_IN_SAMPLE, OPTIMIZER_FIELD_MAX, OPTIMIZER_FIELD_OOS, OPTIMIZER_FIELD_START,
+    OPTIMIZER_FIELD_STEP, Screen,
+};
 use super::types::ComparisonType;
+use super::types::{OptimizeConfig, OptimizerParamDef, all_optimize_metrics};
+use super::user_presets;
 use crossterm::event::{KeyCode, KeyModifiers};
+
+/// Increment/decrement step for arrow-key adjustment of condition target values.
+const TARGET_VALUE_STEP: f64 = 0.1;
+/// Minimum allowed value for an optimizer parameter step (prevents zero/negative steps).
+const MIN_OPTIMIZER_STEP: f64 = 0.1;
 
 /// Main input handler that dispatches to screen-specific handlers
 pub fn handle_input(app: &mut App, key: KeyCode, modifiers: KeyModifiers) {
@@ -11,16 +22,21 @@ pub fn handle_input(app: &mut App, key: KeyCode, modifiers: KeyModifiers) {
         return;
     }
 
-    // Editing mode
+    // Editing mode — route to the screen's own handler so each screen
+    // can parse its edit buffer correctly (e.g. optimizer fields vs config fields).
     if app.editing {
-        match key {
-            KeyCode::Enter => app.finish_editing(),
-            KeyCode::Esc => app.cancel_editing(),
-            KeyCode::Char(c) => app.edit_buffer.push(c),
-            KeyCode::Backspace => {
-                app.edit_buffer.pop();
+        if app.screen == Screen::OptimizerSetup {
+            handle_optimizer_input(app, key);
+        } else {
+            match key {
+                KeyCode::Enter => app.finish_editing(),
+                KeyCode::Esc => app.cancel_editing(),
+                KeyCode::Char(c) => app.edit_buffer.push(c),
+                KeyCode::Backspace => {
+                    app.edit_buffer.pop();
+                }
+                _ => {}
             }
-            _ => {}
         }
         return;
     }
@@ -35,6 +51,8 @@ pub fn handle_input(app: &mut App, key: KeyCode, modifiers: KeyModifiers) {
         Screen::ComparisonConfig => handle_comparison_input(app, key),
         Screen::TargetConfig => handle_target_input(app, key),
         Screen::Confirmation => handle_confirmation_input(app, key),
+        Screen::OptimizerSetup => handle_optimizer_input(app, key),
+        Screen::SavePreset => handle_save_preset_input(app, key),
     }
 }
 
@@ -55,7 +73,13 @@ fn handle_welcome_input(app: &mut App, key: KeyCode) {
 }
 
 fn handle_preset_input(app: &mut App, key: KeyCode) {
-    let len = app.presets.len();
+    let len = app.total_preset_count();
+    if len == 0 {
+        if matches!(key, KeyCode::Char('q') | KeyCode::Esc) {
+            app.pop_screen();
+        }
+        return;
+    }
     match key {
         KeyCode::Char('q') | KeyCode::Esc => app.pop_screen(),
         KeyCode::Down | KeyCode::Char('j') => {
@@ -68,6 +92,21 @@ fn handle_preset_input(app: &mut App, key: KeyCode) {
             app.load_preset(app.preset_idx);
             app.screen = Screen::ConfigEditor;
             app.prev_screens.clear();
+        }
+        KeyCode::Char('d') if app.is_user_preset(app.preset_idx) => {
+            let user_idx = app.preset_idx - app.presets.len();
+            if let Some(preset) = app.user_presets.get(user_idx) {
+                let name = preset.name.clone();
+                if let Err(e) = user_presets::delete_user_preset(&name) {
+                    tracing::warn!("Failed to delete preset '{name}': {e}");
+                }
+                app.reload_user_presets();
+                // Keep cursor in bounds after deletion
+                let new_len = app.total_preset_count();
+                if new_len > 0 && app.preset_idx >= new_len {
+                    app.preset_idx = new_len - 1;
+                }
+            }
         }
         _ => {}
     }
@@ -417,16 +456,16 @@ fn handle_target_input(app: &mut App, key: KeyCode) {
         }
         KeyCode::Down | KeyCode::Char('j') => {
             if app.editing_target_value {
-                app.target_value -= 0.1;
+                app.target_value -= TARGET_VALUE_STEP;
             } else {
-                app.target_value2 -= 0.1;
+                app.target_value2 -= TARGET_VALUE_STEP;
             }
         }
         KeyCode::Up | KeyCode::Char('k') => {
             if app.editing_target_value {
-                app.target_value += 0.1;
+                app.target_value += TARGET_VALUE_STEP;
             } else {
-                app.target_value2 += 0.1;
+                app.target_value2 += TARGET_VALUE_STEP;
             }
         }
         // Start typing a number
@@ -438,10 +477,6 @@ fn handle_target_input(app: &mut App, key: KeyCode) {
         KeyCode::Enter | KeyCode::Char('n') => {
             app.finish_condition();
         }
-        KeyCode::Char('i') => {
-            // Toggle between value and indicator target
-            app.target_is_indicator = !app.target_is_indicator;
-        }
         _ => {}
     }
 }
@@ -449,12 +484,202 @@ fn handle_target_input(app: &mut App, key: KeyCode) {
 fn handle_confirmation_input(app: &mut App, key: KeyCode) {
     match key {
         KeyCode::Char('y') | KeyCode::Enter => {
+            app.run_with_optimizer = false;
             app.confirmed = true;
+        }
+        KeyCode::Char('s') => {
+            app.save_preset_buffer = app.config.strategy.name.clone();
+            app.save_preset_error = None;
+            app.push_screen(Screen::SavePreset);
+        }
+        KeyCode::Char('o') => {
+            // Launch optimizer setup — auto-extract params from current strategy
+            app.optimizer_params = OptimizerParamDef::from_strategy(&app.config.strategy);
+            app.optimizer_param_idx = 0;
+            app.optimizer_field_idx = 0;
+            app.push_screen(Screen::OptimizerSetup);
         }
         KeyCode::Char('n') | KeyCode::Esc => {
             app.pop_screen();
         }
         KeyCode::Char('q') => app.should_quit = true,
+        _ => {}
+    }
+}
+
+fn handle_save_preset_input(app: &mut App, key: KeyCode) {
+    match key {
+        KeyCode::Enter => {
+            let name = app.save_preset_buffer.trim().to_string();
+            if name.is_empty() {
+                app.save_preset_error = Some("Preset name cannot be empty".into());
+                return;
+            }
+            let description = format!("Saved from {}", app.config.strategy.name);
+            match user_presets::save_user_preset(name, description, &app.config) {
+                Ok(()) => {
+                    app.reload_user_presets();
+                    app.save_preset_buffer.clear();
+                    app.save_preset_error = None;
+                    app.pop_screen();
+                }
+                Err(e) => {
+                    app.save_preset_error = Some(e.to_string());
+                }
+            }
+        }
+        KeyCode::Esc => {
+            app.save_preset_buffer.clear();
+            app.save_preset_error = None;
+            app.pop_screen();
+        }
+        KeyCode::Char(c) => {
+            app.save_preset_buffer.push(c);
+        }
+        KeyCode::Backspace => {
+            app.save_preset_buffer.pop();
+        }
+        _ => {}
+    }
+}
+
+fn handle_optimizer_input(app: &mut App, key: KeyCode) {
+    let n_params = app.optimizer_params.len();
+    let n_metrics = all_optimize_metrics().len();
+
+    // Editing mode: routed here from handle_input when screen == OptimizerSetup
+    if app.editing {
+        match key {
+            KeyCode::Enter => {
+                let val: Option<f64> = app.edit_buffer.trim().parse().ok();
+                if let Some(v) = val {
+                    let param = app.optimizer_params.get_mut(app.optimizer_param_idx);
+                    match app.optimizer_field_idx {
+                        OPTIMIZER_FIELD_START => {
+                            if let Some(p) = param {
+                                if v >= p.end {
+                                    app.edit_error = Some(format!(
+                                        "Start ({v}) must be less than end ({})",
+                                        p.end
+                                    ));
+                                } else {
+                                    p.start = v;
+                                    app.edit_error = None;
+                                }
+                            }
+                        }
+                        OPTIMIZER_FIELD_END => {
+                            if let Some(p) = param {
+                                if v <= p.start {
+                                    app.edit_error = Some(format!(
+                                        "End ({v}) must be greater than start ({})",
+                                        p.start
+                                    ));
+                                } else {
+                                    p.end = v;
+                                    app.edit_error = None;
+                                }
+                            }
+                        }
+                        OPTIMIZER_FIELD_STEP => {
+                            if let Some(p) = param {
+                                p.step = v.max(MIN_OPTIMIZER_STEP);
+                            }
+                        }
+                        OPTIMIZER_FIELD_IN_SAMPLE => app.optimizer_in_sample = v as usize,
+                        OPTIMIZER_FIELD_OOS => app.optimizer_oos = v as usize,
+                        _ => {}
+                    }
+                }
+                app.editing = false;
+                app.edit_buffer.clear();
+                app.edit_error = None;
+            }
+            KeyCode::Esc => {
+                app.editing = false;
+                app.edit_buffer.clear();
+                app.edit_error = None;
+            }
+            KeyCode::Char(c) => app.edit_buffer.push(c),
+            KeyCode::Backspace => {
+                app.edit_buffer.pop();
+            }
+            _ => {}
+        }
+        return;
+    }
+
+    match key {
+        // Navigate params
+        KeyCode::Up | KeyCode::Char('k') => {
+            if n_params > 0 {
+                app.optimizer_param_idx = app.optimizer_param_idx.saturating_sub(1);
+            }
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if n_params > 0 {
+                app.optimizer_param_idx =
+                    (app.optimizer_param_idx + 1).min(n_params.saturating_sub(1));
+            }
+        }
+        // Switch which field is being edited (start/end/step/in_sample/oos)
+        KeyCode::Left | KeyCode::Char('h') => {
+            app.optimizer_field_idx = app.optimizer_field_idx.saturating_sub(1);
+        }
+        KeyCode::Right | KeyCode::Char('l') => {
+            app.optimizer_field_idx = (app.optimizer_field_idx + 1).min(OPTIMIZER_FIELD_MAX);
+        }
+        // Edit current field
+        KeyCode::Enter => {
+            let param = app.optimizer_params.get(app.optimizer_param_idx);
+            let buf = match app.optimizer_field_idx {
+                OPTIMIZER_FIELD_START => param.map(|p| p.start.to_string()),
+                OPTIMIZER_FIELD_END => param.map(|p| p.end.to_string()),
+                OPTIMIZER_FIELD_STEP => param.map(|p| p.step.to_string()),
+                OPTIMIZER_FIELD_IN_SAMPLE => Some(app.optimizer_in_sample.to_string()),
+                OPTIMIZER_FIELD_OOS => Some(app.optimizer_oos.to_string()),
+                _ => None,
+            };
+            if let Some(val) = buf {
+                app.edit_buffer = val;
+                app.editing = true;
+                app.edit_error = None;
+            }
+        }
+        // Toggle enabled
+        KeyCode::Char(' ') => {
+            if let Some(param) = app.optimizer_params.get_mut(app.optimizer_param_idx) {
+                param.enabled = !param.enabled;
+            }
+        }
+        // Cycle optimize metric
+        KeyCode::Char('m') => {
+            app.optimizer_metric_idx = (app.optimizer_metric_idx + 1) % n_metrics;
+        }
+        // Toggle walk-forward
+        KeyCode::Char('w') => {
+            app.optimizer_walk_forward = !app.optimizer_walk_forward;
+        }
+        // Run with optimizer
+        KeyCode::Char('r') => {
+            let metrics = all_optimize_metrics();
+            let idx = app
+                .optimizer_metric_idx
+                .min(metrics.len().saturating_sub(1));
+            let metric = metrics[idx];
+            app.config.optimizer = Some(OptimizeConfig {
+                params: app.optimizer_params.clone(),
+                metric,
+                walk_forward: app.optimizer_walk_forward,
+                in_sample_bars: app.optimizer_in_sample,
+                out_of_sample_bars: app.optimizer_oos,
+            });
+            app.run_with_optimizer = true;
+            app.confirmed = true;
+        }
+        KeyCode::Char('q') | KeyCode::Esc => {
+            app.pop_screen();
+        }
         _ => {}
     }
 }

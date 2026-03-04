@@ -1,3 +1,5 @@
+use std::sync::LazyLock;
+
 use ratatui::style::Color;
 
 /// Categories of available indicators
@@ -73,8 +75,25 @@ pub struct ParamDef {
     pub step: f64,
 }
 
+static ALL_INDICATORS: LazyLock<Vec<IndicatorDef>> = LazyLock::new(IndicatorDef::build_all);
+
 impl IndicatorDef {
-    pub fn all() -> Vec<Self> {
+    pub fn all() -> &'static [Self] {
+        &ALL_INDICATORS
+    }
+
+    /// Look up an indicator by `code`. Panics only if `code` is not in the
+    /// catalog — this can only happen due to a programming error (e.g. a
+    /// preset referencing a code that was renamed or removed).
+    pub fn find(code: &str) -> Self {
+        Self::all()
+            .iter()
+            .find(|i| i.code == code)
+            .cloned()
+            .unwrap_or_else(|| panic!("BUG: indicator '{code}' not found in catalog"))
+    }
+
+    fn build_all() -> Vec<Self> {
         vec![
             // Price Action - derived from OHLCV data without complex calculations
             Self {
@@ -164,21 +183,6 @@ impl IndicatorDef {
                 category: IndicatorCategory::PriceAction,
                 params: vec![],
                 typical_range: Some((0.0, 1.0)),
-            },
-            Self {
-                name: "Relative Volume",
-                code: "relative_volume",
-                description: "Current volume divided by N-period average volume",
-                category: IndicatorCategory::PriceAction,
-                params: vec![ParamDef {
-                    name: "Period",
-                    description: "Average volume lookback period",
-                    default: 20.0,
-                    min: 5.0,
-                    max: 100.0,
-                    step: 1.0,
-                }],
-                typical_range: Some((0.0, 5.0)),
             },
             Self {
                 name: "Typical Price",
@@ -315,6 +319,39 @@ impl IndicatorDef {
                     max: 500.0,
                     step: 1.0,
                 }],
+                typical_range: None,
+            },
+            Self {
+                name: "ALMA",
+                code: "alma",
+                description: "Arnaud Legoux Moving Average — low-lag, low-noise",
+                category: IndicatorCategory::MovingAverages,
+                params: vec![
+                    ParamDef {
+                        name: "Period",
+                        description: "Window period",
+                        default: 9.0,
+                        min: 2.0,
+                        max: 200.0,
+                        step: 1.0,
+                    },
+                    ParamDef {
+                        name: "Offset",
+                        description: "Phase offset (0–1); 0.85 emphasises recent bars",
+                        default: 0.85,
+                        min: 0.0,
+                        max: 1.0,
+                        step: 0.05,
+                    },
+                    ParamDef {
+                        name: "Sigma",
+                        description: "Gaussian width; higher = smoother",
+                        default: 6.0,
+                        min: 1.0,
+                        max: 20.0,
+                        step: 0.5,
+                    },
+                ],
                 typical_range: None,
             },
             // Oscillators
@@ -614,11 +651,19 @@ impl IndicatorDef {
                         step: 1.0,
                     },
                     ParamDef {
-                        name: "Senkou",
-                        description: "Leading span B period",
-                        default: 52.0,
-                        min: 10.0,
+                        name: "Lagging",
+                        description: "Lagging span (Chikou) period",
+                        default: 26.0,
+                        min: 1.0,
                         max: 200.0,
+                        step: 1.0,
+                    },
+                    ParamDef {
+                        name: "Displacement",
+                        description: "Cloud forward displacement",
+                        default: 26.0,
+                        min: 1.0,
+                        max: 100.0,
                         step: 1.0,
                     },
                 ],
@@ -663,6 +708,14 @@ impl IndicatorDef {
                     max: 100.0,
                     step: 1.0,
                 }],
+                typical_range: None,
+            },
+            Self {
+                name: "True Range",
+                code: "true_range",
+                description: "Single-bar true range (max of H-L, |H-Prev C|, |L-Prev C|)",
+                category: IndicatorCategory::Volatility,
+                params: vec![],
                 typical_range: None,
             },
             Self {
@@ -892,14 +945,36 @@ impl IndicatorDef {
                 }],
                 typical_range: None,
             },
+            Self {
+                name: "Elder Bull Power",
+                code: "elder_bull",
+                description: "Elder Ray bull power via ElderRay computation (high - EMA)",
+                category: IndicatorCategory::Momentum,
+                params: vec![ParamDef {
+                    name: "Period",
+                    description: "EMA period",
+                    default: 13.0,
+                    min: 2.0,
+                    max: 50.0,
+                    step: 1.0,
+                }],
+                typical_range: None,
+            },
+            Self {
+                name: "Elder Bear Power",
+                code: "elder_bear",
+                description: "Elder Ray bear power via ElderRay computation (low - EMA)",
+                category: IndicatorCategory::Momentum,
+                params: vec![ParamDef {
+                    name: "Period",
+                    description: "EMA period",
+                    default: 13.0,
+                    min: 2.0,
+                    max: 50.0,
+                    step: 1.0,
+                }],
+                typical_range: None,
+            },
         ]
-    }
-
-    /// Get all indicators in a specific category
-    pub fn by_category(category: IndicatorCategory) -> Vec<Self> {
-        Self::all()
-            .into_iter()
-            .filter(|i| i.category == category)
-            .collect()
     }
 }

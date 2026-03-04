@@ -1,11 +1,21 @@
 use super::indicators::{IndicatorCategory, IndicatorDef};
 use super::presets::StrategyPreset;
 use super::types::{
-    BacktestConfiguration, BuiltIndicator, CompareTarget, ComparisonType, ConditionGroup, LogicalOp,
+    BacktestConfiguration, BuiltIndicator, CompareTarget, ComparisonType, ConditionGroup,
+    LogicalOp, OptimizerParamDef, WALK_FORWARD_IN_SAMPLE_BARS, WALK_FORWARD_OOS_BARS,
 };
+use super::user_presets::{self, UserStrategyPreset};
 use crate::error::Result;
 use finance_query::{Interval, TimeRange};
 use ratatui::style::Color;
+
+/// Optimizer field column indices (used in optimizer_field_idx)
+pub const OPTIMIZER_FIELD_START: usize = 0;
+pub const OPTIMIZER_FIELD_END: usize = 1;
+pub const OPTIMIZER_FIELD_STEP: usize = 2;
+pub const OPTIMIZER_FIELD_IN_SAMPLE: usize = 3;
+pub const OPTIMIZER_FIELD_OOS: usize = 4;
+pub const OPTIMIZER_FIELD_MAX: usize = 4;
 
 /// Main TUI screens
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -28,6 +38,10 @@ pub enum Screen {
     TargetConfig,
     /// Review and confirm
     Confirmation,
+    /// Optimizer parameter configuration
+    OptimizerSetup,
+    /// Save current strategy as a named user preset
+    SavePreset,
 }
 
 /// What we're currently building a condition for
@@ -67,11 +81,16 @@ pub enum ConfigField {
     Range,
     Capital,
     Commission,
+    CommissionFlat,
     Slippage,
     AllowShort,
     StopLoss,
     TakeProfit,
+    TrailingStop,
     PositionSize,
+    RiskFreeRate,
+    ReinvestDividends,
+    Benchmark,
 }
 
 impl ConfigField {
@@ -82,11 +101,16 @@ impl ConfigField {
             Self::Range,
             Self::Capital,
             Self::Commission,
+            Self::CommissionFlat,
             Self::Slippage,
             Self::AllowShort,
             Self::StopLoss,
             Self::TakeProfit,
+            Self::TrailingStop,
             Self::PositionSize,
+            Self::RiskFreeRate,
+            Self::ReinvestDividends,
+            Self::Benchmark,
         ]
     }
 
@@ -96,12 +120,17 @@ impl ConfigField {
             Self::Interval => "Interval",
             Self::Range => "Time Range",
             Self::Capital => "Capital",
-            Self::Commission => "Commission",
+            Self::Commission => "Commission %",
+            Self::CommissionFlat => "Flat Commission",
             Self::Slippage => "Slippage",
             Self::AllowShort => "Allow Short",
             Self::StopLoss => "Stop Loss",
             Self::TakeProfit => "Take Profit",
+            Self::TrailingStop => "Trailing Stop",
             Self::PositionSize => "Position Size",
+            Self::RiskFreeRate => "Risk-Free Rate",
+            Self::ReinvestDividends => "Reinvest Divs",
+            Self::Benchmark => "Benchmark",
         }
     }
 
@@ -111,12 +140,21 @@ impl ConfigField {
             Self::Interval => "Candle interval: 1m, 5m, 15m, 1h, 1d, 1wk, 1mo",
             Self::Range => "Historical range: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, max",
             Self::Capital => "Starting capital in dollars",
-            Self::Commission => "Commission per trade (e.g., 0.1 for 0.1%)",
+            Self::Commission => "% commission per trade (stacks with flat fee; e.g., 0.1 for 0.1%)",
+            Self::CommissionFlat => "Flat $ fee per trade (stacks with % commission; e.g., 5.00)",
             Self::Slippage => "Slippage per trade (e.g., 0.1 for 0.1%)",
             Self::AllowShort => "Enable short selling (true/false)",
-            Self::StopLoss => "Stop loss percentage (empty for none)",
-            Self::TakeProfit => "Take profit percentage (empty for none)",
+            Self::StopLoss => "Stop loss percentage (empty for none, e.g., 5 for 5%)",
+            Self::TakeProfit => "Take profit percentage (empty for none, e.g., 10 for 10%)",
+            Self::TrailingStop => "Trailing stop percentage (empty for none, e.g., 3 for 3%)",
             Self::PositionSize => "Position size as % of capital (e.g., 100)",
+            Self::RiskFreeRate => {
+                "Annual risk-free rate for Sharpe/Sortino/Calmar (e.g., 4 for 4%). Default 0% inflates Sharpe — set to current T-bill rate for accurate results."
+            }
+            Self::ReinvestDividends => "Reinvest dividend income into position (true/false)",
+            Self::Benchmark => {
+                "Benchmark symbol for alpha/beta/info-ratio (e.g., SPY, QQQ; leave empty for none)"
+            }
         }
     }
 }
@@ -155,7 +193,6 @@ pub struct App {
     pub building_indicator: Option<BuiltIndicator>,
     pub building_comparison: Option<ComparisonType>,
     pub param_values: Vec<f64>,
-    pub target_is_indicator: bool,
     pub target_value: f64,
     pub target_value2: f64,         // For Between comparison
     pub editing_target_value: bool, // true = editing primary, false = editing secondary (for Between)
@@ -169,11 +206,28 @@ pub struct App {
 
     // Available data
     pub presets: Vec<StrategyPreset>,
-    pub indicators: Vec<IndicatorDef>,
+    pub user_presets: Vec<UserStrategyPreset>,
+    pub indicators: &'static [IndicatorDef],
 
     // Control
     pub should_quit: bool,
     pub confirmed: bool,
+
+    // Save preset dialog
+    pub save_preset_buffer: String,
+    pub save_preset_error: Option<String>,
+
+    // Optimizer setup state
+    pub optimizer_params: Vec<OptimizerParamDef>,
+    pub optimizer_param_idx: usize,
+    /// Which sub-field is selected (see OPTIMIZER_FIELD_* constants)
+    pub optimizer_field_idx: usize,
+    pub optimizer_metric_idx: usize,
+    pub optimizer_walk_forward: bool,
+    pub optimizer_in_sample: usize,
+    pub optimizer_oos: usize,
+    /// true = run with optimizer, false = run normal backtest
+    pub run_with_optimizer: bool,
 }
 
 impl App {
@@ -200,7 +254,6 @@ impl App {
             building_indicator: None,
             building_comparison: None,
             param_values: Vec::new(),
-            target_is_indicator: false,
             target_value: 0.0,
             target_value2: 0.0,
             editing_target_value: true,
@@ -210,9 +263,20 @@ impl App {
             entry_condition_idx: 0,
             exit_condition_idx: 0,
             presets: StrategyPreset::all(),
+            user_presets: user_presets::load_user_presets(),
             indicators: IndicatorDef::all(),
             should_quit: false,
             confirmed: false,
+            save_preset_buffer: String::new(),
+            save_preset_error: None,
+            optimizer_params: Vec::new(),
+            optimizer_param_idx: 0,
+            optimizer_field_idx: 0,
+            optimizer_metric_idx: 0,
+            optimizer_walk_forward: false,
+            optimizer_in_sample: WALK_FORWARD_IN_SAMPLE_BARS,
+            optimizer_oos: WALK_FORWARD_OOS_BARS,
+            run_with_optimizer: false,
         }
     }
 
@@ -242,7 +306,10 @@ impl App {
 
     /// Count indicators per category
     pub fn indicator_count_by_category(&self, category: IndicatorCategory) -> usize {
-        IndicatorDef::by_category(category).len()
+        self.indicators
+            .iter()
+            .filter(|i| i.category == category)
+            .count()
     }
 
     pub fn current_indicator(&self) -> Option<&IndicatorDef> {
@@ -268,6 +335,7 @@ impl App {
             ConfigField::Range => range_to_string(self.config.range),
             ConfigField::Capital => format!("${:.2}", self.config.capital),
             ConfigField::Commission => format!("{:.2}%", self.config.commission * 100.0),
+            ConfigField::CommissionFlat => format!("${:.2}", self.config.commission_flat),
             ConfigField::Slippage => format!("{:.2}%", self.config.slippage * 100.0),
             ConfigField::AllowShort => format!("{}", self.config.allow_short),
             ConfigField::StopLoss => self
@@ -280,7 +348,19 @@ impl App {
                 .take_profit
                 .map(|v| format!("{:.1}%", v * 100.0))
                 .unwrap_or_else(|| "None".to_string()),
+            ConfigField::TrailingStop => self
+                .config
+                .trailing_stop
+                .map(|v| format!("{:.1}%", v * 100.0))
+                .unwrap_or_else(|| "None".to_string()),
             ConfigField::PositionSize => format!("{:.0}%", self.config.position_size * 100.0),
+            ConfigField::RiskFreeRate => format!("{:.1}%", self.config.risk_free_rate * 100.0),
+            ConfigField::ReinvestDividends => format!("{}", self.config.reinvest_dividends),
+            ConfigField::Benchmark => self
+                .config
+                .benchmark
+                .clone()
+                .unwrap_or_else(|| "None".to_string()),
         }
     }
 
@@ -294,6 +374,7 @@ impl App {
             ConfigField::Range => range_to_string(self.config.range),
             ConfigField::Capital => format!("{}", self.config.capital),
             ConfigField::Commission => format!("{}", self.config.commission * 100.0),
+            ConfigField::CommissionFlat => format!("{}", self.config.commission_flat),
             ConfigField::Slippage => format!("{}", self.config.slippage * 100.0),
             ConfigField::AllowShort => format!("{}", self.config.allow_short),
             ConfigField::StopLoss => self
@@ -306,7 +387,15 @@ impl App {
                 .take_profit
                 .map(|v| format!("{}", v * 100.0))
                 .unwrap_or_default(),
+            ConfigField::TrailingStop => self
+                .config
+                .trailing_stop
+                .map(|v| format!("{}", v * 100.0))
+                .unwrap_or_default(),
             ConfigField::PositionSize => format!("{}", self.config.position_size * 100.0),
+            ConfigField::RiskFreeRate => format!("{}", self.config.risk_free_rate * 100.0),
+            ConfigField::ReinvestDividends => format!("{}", self.config.reinvest_dividends),
+            ConfigField::Benchmark => self.config.benchmark.clone().unwrap_or_default(),
         };
     }
 
@@ -340,12 +429,33 @@ impl App {
                     let v: f64 = value.parse().map_err(|_| {
                         crate::error::CliError::InvalidArgument("Invalid number".into())
                     })?;
+                    if v < 0.0 {
+                        return Err(crate::error::CliError::InvalidArgument(
+                            "Commission cannot be negative".into(),
+                        ));
+                    }
                     self.config.commission = v / 100.0;
+                }
+                ConfigField::CommissionFlat => {
+                    let v: f64 = value.parse().map_err(|_| {
+                        crate::error::CliError::InvalidArgument("Invalid number".into())
+                    })?;
+                    if v < 0.0 {
+                        return Err(crate::error::CliError::InvalidArgument(
+                            "Flat commission cannot be negative".into(),
+                        ));
+                    }
+                    self.config.commission_flat = v;
                 }
                 ConfigField::Slippage => {
                     let v: f64 = value.parse().map_err(|_| {
                         crate::error::CliError::InvalidArgument("Invalid number".into())
                     })?;
+                    if v < 0.0 {
+                        return Err(crate::error::CliError::InvalidArgument(
+                            "Slippage cannot be negative".into(),
+                        ));
+                    }
                     self.config.slippage = v / 100.0;
                 }
                 ConfigField::AllowShort => {
@@ -358,6 +468,24 @@ impl App {
                         let v: f64 = value.parse().map_err(|_| {
                             crate::error::CliError::InvalidArgument("Invalid number".into())
                         })?;
+                        if v <= 0.0 || v > 100.0 {
+                            return Err(crate::error::CliError::InvalidArgument(
+                                "Stop loss must be between 0 and 100%".into(),
+                            ));
+                        }
+                        // Warn if stop-loss is smaller than round-trip costs.
+                        // A stop at or below break-even means every stopped-out trade
+                        // is guaranteed to lose money on fees alone.
+                        let round_trip_pct =
+                            (self.config.commission * 2.0 + self.config.slippage * 2.0) * 100.0;
+                        if v <= round_trip_pct {
+                            return Err(crate::error::CliError::InvalidArgument(format!(
+                                "Stop loss {v:.2}% ≤ round-trip cost {round_trip_pct:.2}% \
+                                 (2× commission + 2× slippage). A stopped-out trade loses \
+                                 {v:.2}% plus {round_trip_pct:.2}% in fees — no trade can \
+                                 profit after costs at this stop level."
+                            )));
+                        }
                         self.config.stop_loss = Some(v / 100.0);
                     }
                 }
@@ -368,7 +496,27 @@ impl App {
                         let v: f64 = value.parse().map_err(|_| {
                             crate::error::CliError::InvalidArgument("Invalid number".into())
                         })?;
+                        if v <= 0.0 || v > 1000.0 {
+                            return Err(crate::error::CliError::InvalidArgument(
+                                "Take profit must be between 0 and 1000%".into(),
+                            ));
+                        }
                         self.config.take_profit = Some(v / 100.0);
+                    }
+                }
+                ConfigField::TrailingStop => {
+                    if value.is_empty() {
+                        self.config.trailing_stop = None;
+                    } else {
+                        let v: f64 = value.parse().map_err(|_| {
+                            crate::error::CliError::InvalidArgument("Invalid number".into())
+                        })?;
+                        if v <= 0.0 || v > 100.0 {
+                            return Err(crate::error::CliError::InvalidArgument(
+                                "Trailing stop must be 0-100%".into(),
+                            ));
+                        }
+                        self.config.trailing_stop = Some(v / 100.0);
                     }
                 }
                 ConfigField::PositionSize => {
@@ -381,6 +529,24 @@ impl App {
                         ));
                     }
                     self.config.position_size = v / 100.0;
+                }
+                ConfigField::RiskFreeRate => {
+                    let v: f64 = value.parse().map_err(|_| {
+                        crate::error::CliError::InvalidArgument("Invalid number".into())
+                    })?;
+                    if !(0.0..=100.0).contains(&v) {
+                        return Err(crate::error::CliError::InvalidArgument(
+                            "Risk-free rate must be 0-100%".into(),
+                        ));
+                    }
+                    self.config.risk_free_rate = v / 100.0;
+                }
+                ConfigField::ReinvestDividends => {
+                    self.config.reinvest_dividends = parse_bool(value)?;
+                }
+                ConfigField::Benchmark => {
+                    let sym = value.trim().to_uppercase();
+                    self.config.benchmark = if sym.is_empty() { None } else { Some(sym) };
                 }
             }
             Ok(())
@@ -404,15 +570,39 @@ impl App {
         self.edit_error = None;
     }
 
+    pub fn total_preset_count(&self) -> usize {
+        self.presets.len() + self.user_presets.len()
+    }
+
+    pub fn is_user_preset(&self, idx: usize) -> bool {
+        idx >= self.presets.len()
+    }
+
     pub fn load_preset(&mut self, idx: usize) {
-        if let Some(preset) = self.presets.get(idx) {
-            let mut preset_config = (preset.config)();
-            // Keep the symbol if already set
-            if !self.config.symbol.is_empty() {
-                preset_config.symbol = self.config.symbol.clone();
+        let symbol = if self.config.symbol.is_empty() {
+            None
+        } else {
+            Some(self.config.symbol.clone())
+        };
+
+        let mut preset_config = if idx < self.presets.len() {
+            (self.presets[idx].config)()
+        } else {
+            let user_idx = idx - self.presets.len();
+            match self.user_presets.get(user_idx) {
+                Some(p) => p.config.clone(),
+                None => return,
             }
-            self.config = preset_config;
+        };
+
+        if let Some(sym) = symbol {
+            preset_config.symbol = sym;
         }
+        self.config = preset_config;
+    }
+
+    pub fn reload_user_presets(&mut self) {
+        self.user_presets = user_presets::load_user_presets();
     }
 
     pub fn select_indicator(&mut self) {
@@ -454,7 +644,6 @@ impl App {
             }
         }
 
-        self.target_is_indicator = false;
         self.push_screen(Screen::TargetConfig);
     }
 
@@ -465,11 +654,7 @@ impl App {
             self.building_indicator.take(),
             self.building_comparison.take(),
         ) {
-            let target = if self.target_is_indicator {
-                // For simplicity, compare against same indicator with different params
-                // In a full implementation, you'd allow selecting any indicator
-                CompareTarget::Indicator(ind.clone())
-            } else if comp.needs_range() {
+            let target = if comp.needs_range() {
                 CompareTarget::Range(self.target_value, self.target_value2)
             } else {
                 CompareTarget::Value(self.target_value)
@@ -581,8 +766,9 @@ pub fn parse_interval(s: &str) -> Result<Interval> {
         "1d" => Ok(Interval::OneDay),
         "1wk" => Ok(Interval::OneWeek),
         "1mo" => Ok(Interval::OneMonth),
+        "3mo" => Ok(Interval::ThreeMonths),
         _ => Err(crate::error::CliError::InvalidArgument(format!(
-            "Invalid interval: {}",
+            "Invalid interval: {}. Valid: 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo",
             s
         ))),
     }

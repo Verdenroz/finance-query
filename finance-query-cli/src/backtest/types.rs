@@ -1,4 +1,5 @@
 use super::indicators::IndicatorDef;
+use finance_query::backtesting::OptimizeMetric;
 use finance_query::{Interval, TimeRange};
 
 /// Types of comparisons available for conditions
@@ -112,29 +113,6 @@ impl BuiltIndicator {
             format!("{}({})", self.indicator.name, params_str)
         }
     }
-
-    pub fn code_string(&self) -> String {
-        let params_str = self
-            .param_values
-            .iter()
-            .map(|v| {
-                if v.fract() == 0.0 {
-                    format!("{:.0}", v)
-                } else {
-                    format!("{:.2}", v)
-                }
-            })
-            .collect::<Vec<_>>()
-            .join(",");
-
-        if let Some(ref output) = self.output {
-            format!("{}({}).{}", self.indicator.code, params_str, output)
-        } else if params_str.is_empty() {
-            self.indicator.code.to_string()
-        } else {
-            format!("{}({})", self.indicator.code, params_str)
-        }
-    }
 }
 
 /// A single condition in a strategy
@@ -193,16 +171,14 @@ impl LogicalOp {
 }
 
 /// A group of conditions - each condition stores its own operator for combining with the next
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ConditionGroup {
     pub conditions: Vec<BuiltCondition>,
 }
 
 impl ConditionGroup {
     pub fn new() -> Self {
-        Self {
-            conditions: Vec::new(),
-        }
+        Self::default()
     }
 
     pub fn display(&self) -> String {
@@ -236,12 +212,6 @@ impl ConditionGroup {
     }
 }
 
-impl Default for ConditionGroup {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
 /// Full strategy configuration built by the TUI
 #[derive(Debug, Clone)]
 pub struct StrategyConfig {
@@ -254,19 +224,19 @@ pub struct StrategyConfig {
 
 impl StrategyConfig {
     pub fn new() -> Self {
-        Self {
-            name: "Custom Strategy".to_string(),
-            entry_conditions: ConditionGroup::new(),
-            exit_conditions: ConditionGroup::new(),
-            short_entry_conditions: None,
-            short_exit_conditions: None,
-        }
+        Self::default()
     }
 }
 
 impl Default for StrategyConfig {
     fn default() -> Self {
-        Self::new()
+        Self {
+            name: "Custom Strategy".to_string(),
+            entry_conditions: ConditionGroup::default(),
+            exit_conditions: ConditionGroup::default(),
+            short_entry_conditions: None,
+            short_exit_conditions: None,
+        }
     }
 }
 
@@ -278,13 +248,46 @@ pub struct BacktestConfiguration {
     pub range: TimeRange,
     pub capital: f64,
     pub commission: f64,
+    pub commission_flat: f64,
     pub slippage: f64,
     pub allow_short: bool,
     pub stop_loss: Option<f64>,
     pub take_profit: Option<f64>,
+    pub trailing_stop: Option<f64>,
     pub position_size: f64,
+    pub risk_free_rate: f64,
+    pub reinvest_dividends: bool,
+    pub benchmark: Option<String>,
     pub strategy: StrategyConfig,
+    pub optimizer: Option<OptimizeConfig>,
 }
+
+/// Number of trading days in a calendar year (standard for annualised metrics).
+pub const TRADING_DAYS_PER_YEAR: f64 = 252.0;
+
+/// Returns the number of bars per calendar year for a given interval.
+/// Used to annualise performance metrics (Sharpe, Sortino, etc.).
+pub fn bars_per_year_for_interval(interval: Interval) -> f64 {
+    match interval {
+        Interval::OneMinute => TRADING_DAYS_PER_YEAR * 390.0,
+        Interval::FiveMinutes => TRADING_DAYS_PER_YEAR * 78.0,
+        Interval::FifteenMinutes => TRADING_DAYS_PER_YEAR * 26.0,
+        Interval::ThirtyMinutes => TRADING_DAYS_PER_YEAR * 13.0,
+        Interval::OneHour => TRADING_DAYS_PER_YEAR * 6.5,
+        Interval::OneDay => TRADING_DAYS_PER_YEAR,
+        Interval::OneWeek => 52.0,
+        Interval::OneMonth => 12.0,
+        Interval::ThreeMonths => 4.0,
+    }
+}
+/// Default walk-forward in-sample window (one trading year).
+pub const WALK_FORWARD_IN_SAMPLE_BARS: usize = TRADING_DAYS_PER_YEAR as usize;
+/// Default walk-forward out-of-sample window (one trading quarter).
+pub const WALK_FORWARD_OOS_BARS: usize = 63;
+/// Default per-trade commission as a fraction of trade value.
+pub const DEFAULT_COMMISSION_PCT: f64 = 0.001;
+/// Default per-trade slippage as a fraction of trade value.
+pub const DEFAULT_SLIPPAGE_PCT: f64 = 0.001;
 
 impl Default for BacktestConfiguration {
     fn default() -> Self {
@@ -293,13 +296,147 @@ impl Default for BacktestConfiguration {
             interval: Interval::OneDay,
             range: TimeRange::OneYear,
             capital: 10_000.0,
-            commission: 0.001,
-            slippage: 0.001,
+            commission: DEFAULT_COMMISSION_PCT,
+            commission_flat: 0.0,
+            slippage: DEFAULT_SLIPPAGE_PCT,
             allow_short: false,
             stop_loss: Some(0.05),
             take_profit: Some(0.10),
+            trailing_stop: None,
             position_size: 1.0,
+            risk_free_rate: 0.0,
+            reinvest_dividends: false,
+            benchmark: None,
             strategy: StrategyConfig::new(),
+            optimizer: None,
         }
+    }
+}
+
+// ── Optimizer config ─────────────────────────────────────────────────────────
+
+/// A single named parameter range for the grid-search optimizer.
+#[derive(Debug, Clone)]
+pub struct OptimizerParamDef {
+    /// Display name (e.g. "SMA fast period")
+    pub name: String,
+    /// Condition group: 0 = entry, 1 = exit, 2 = short_entry, 3 = short_exit
+    pub group: usize,
+    /// Index of the condition within the group
+    pub condition_idx: usize,
+    /// Index within `BuiltIndicator::param_values`
+    pub param_idx: usize,
+    /// Range start value
+    pub start: f64,
+    /// Range end value (inclusive)
+    pub end: f64,
+    /// Step between values
+    pub step: f64,
+    /// Whether this param is currently enabled for optimization
+    pub enabled: bool,
+}
+
+impl OptimizerParamDef {
+    /// Extract all optimizable params from a strategy's conditions.
+    ///
+    /// Uses `ParamDef::min`, `max`, `step` from the indicator definition as
+    /// default ranges, so the user has sensible starting values.
+    pub fn from_strategy(strategy: &StrategyConfig) -> Vec<Self> {
+        let mut params = Vec::new();
+
+        let short_entry_ref = strategy.short_entry_conditions.as_ref();
+        let short_exit_ref = strategy.short_exit_conditions.as_ref();
+
+        let groups: [Option<(&ConditionGroup, usize)>; 4] = [
+            Some((&strategy.entry_conditions, 0)),
+            Some((&strategy.exit_conditions, 1)),
+            short_entry_ref.map(|g| (g, 2)),
+            short_exit_ref.map(|g| (g, 3)),
+        ];
+
+        for entry in groups.into_iter().flatten() {
+            let (group, group_idx) = entry;
+            for (cond_idx, cond) in group.conditions.iter().enumerate() {
+                let ind = &cond.indicator;
+                for (param_idx, param_def) in ind.indicator.params.iter().enumerate() {
+                    let group_label = match group_idx {
+                        0 => "entry",
+                        1 => "exit",
+                        2 => "short_entry",
+                        _ => "short_exit",
+                    };
+                    let name = format!(
+                        "{} {} c{} {}",
+                        group_label,
+                        ind.indicator.name,
+                        cond_idx + 1,
+                        param_def.name,
+                    );
+                    params.push(OptimizerParamDef {
+                        name,
+                        group: group_idx,
+                        condition_idx: cond_idx,
+                        param_idx,
+                        start: param_def.min,
+                        end: param_def.max,
+                        step: if param_def.step > 0.0 {
+                            param_def.step
+                        } else {
+                            0.1
+                        },
+                        enabled: true,
+                    });
+                }
+            }
+        }
+
+        params
+    }
+}
+
+/// Configuration for the parameter optimizer.
+#[derive(Debug, Clone)]
+pub struct OptimizeConfig {
+    pub params: Vec<OptimizerParamDef>,
+    pub metric: OptimizeMetric,
+    pub walk_forward: bool,
+    pub in_sample_bars: usize,
+    pub out_of_sample_bars: usize,
+}
+
+impl Default for OptimizeConfig {
+    fn default() -> Self {
+        Self {
+            params: Vec::new(),
+            metric: OptimizeMetric::SharpeRatio,
+            walk_forward: false,
+            in_sample_bars: 252,
+            out_of_sample_bars: 63,
+        }
+    }
+}
+
+pub fn all_optimize_metrics() -> Vec<OptimizeMetric> {
+    vec![
+        OptimizeMetric::SharpeRatio,
+        OptimizeMetric::TotalReturn,
+        OptimizeMetric::SortinoRatio,
+        OptimizeMetric::CalmarRatio,
+        OptimizeMetric::ProfitFactor,
+        OptimizeMetric::WinRate,
+        OptimizeMetric::MinDrawdown,
+    ]
+}
+
+pub fn optimize_metric_label(m: OptimizeMetric) -> &'static str {
+    match m {
+        OptimizeMetric::SharpeRatio => "Sharpe Ratio",
+        OptimizeMetric::TotalReturn => "Total Return",
+        OptimizeMetric::SortinoRatio => "Sortino Ratio",
+        OptimizeMetric::CalmarRatio => "Calmar Ratio",
+        OptimizeMetric::ProfitFactor => "Profit Factor",
+        OptimizeMetric::WinRate => "Win Rate",
+        OptimizeMetric::MinDrawdown => "Min Drawdown",
+        _ => "Unknown",
     }
 }

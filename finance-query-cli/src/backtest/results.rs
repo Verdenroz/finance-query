@@ -1,38 +1,93 @@
-use finance_query::backtesting::BacktestResult;
+use finance_query::backtesting::{
+    BacktestResult, MonteCarloConfig, MonteCarloResult, OptimizationReport, OptimizeMetric,
+    WalkForwardReport,
+};
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
     style::{Color, Modifier, Style},
+    symbols,
     text::{Line, Span},
-    widgets::{Block, Borders, List, ListItem, Paragraph, Tabs, Wrap},
+    widgets::{
+        Axis, BarChart, Block, Borders, Chart, Dataset, GraphType, List, ListItem, Paragraph, Tabs,
+        Wrap,
+    },
 };
+use std::path::PathBuf;
+
+/// The full result of a run (backtest + optional optimizer/walk-forward outputs).
+pub struct RunResult {
+    pub backtest: BacktestResult,
+    pub optimization: Option<OptimizationReport>,
+    pub walk_forward: Option<WalkForwardReport>,
+    pub opt_metric: Option<OptimizeMetric>,
+    /// Benchmark candles for plotting the actual buy-and-hold equity curve.
+    /// When present, the Charts tab uses the real curve instead of a linear
+    /// interpolation of the benchmark's total return.
+    pub bench_candles: Option<Vec<finance_query::Candle>>,
+}
+
+impl RunResult {
+    pub fn simple(result: BacktestResult) -> Self {
+        Self {
+            backtest: result,
+            optimization: None,
+            walk_forward: None,
+            opt_metric: None,
+            bench_candles: None,
+        }
+    }
+}
 
 /// Results viewer tabs
 #[derive(Clone, Copy, PartialEq, Eq, Default)]
 pub enum ResultsTab {
     #[default]
     Overview,
+    Charts,
+    Distribution,
     Trades,
     Signals,
+    MonteCarlo,
+    Optimizer,
+    WalkForward,
 }
 
 impl ResultsTab {
-    pub fn all() -> &'static [Self] {
-        &[Self::Overview, Self::Trades, Self::Signals]
+    pub fn all_for(has_optimizer: bool, has_walk_forward: bool) -> Vec<Self> {
+        let mut tabs = vec![
+            Self::Overview,
+            Self::Charts,
+            Self::Distribution,
+            Self::Trades,
+            Self::Signals,
+            Self::MonteCarlo,
+        ];
+        if has_optimizer {
+            tabs.push(Self::Optimizer);
+        }
+        if has_walk_forward {
+            tabs.push(Self::WalkForward);
+        }
+        tabs
     }
 
     pub fn name(&self) -> &'static str {
         match self {
             Self::Overview => "Overview",
+            Self::Charts => "Charts",
+            Self::Distribution => "Distribution",
             Self::Trades => "Trades",
             Self::Signals => "Signals",
+            Self::MonteCarlo => "Monte Carlo",
+            Self::Optimizer => "Optimizer",
+            Self::WalkForward => "Walk-Forward",
         }
     }
 }
 
 /// Actions from the results TUI
 pub enum ResultsAction {
-    Continue,
     Quit,
     Retry,
     NewStrategy,
@@ -40,29 +95,47 @@ pub enum ResultsAction {
 
 /// Results TUI state
 pub struct ResultsApp {
-    pub result: BacktestResult,
+    pub result: RunResult,
+    pub monte_carlo: MonteCarloResult,
     pub tab: ResultsTab,
     pub scroll: usize,
+    /// Status message shown after export (Some = path exported to, None = idle)
+    pub export_status: Option<Result<PathBuf, String>>,
 }
 
 impl ResultsApp {
-    pub fn new(result: BacktestResult) -> Self {
+    pub fn new(result: RunResult) -> Self {
+        let monte_carlo = MonteCarloConfig::default().run(&result.backtest);
         Self {
             result,
+            monte_carlo,
             tab: ResultsTab::default(),
             scroll: 0,
+            export_status: None,
         }
     }
 
+    pub fn export_csv(&mut self) {
+        let path = export_trades_csv(&self.result.backtest);
+        self.export_status = Some(path);
+    }
+
+    fn tabs(&self) -> Vec<ResultsTab> {
+        ResultsTab::all_for(
+            self.result.optimization.is_some(),
+            self.result.walk_forward.is_some(),
+        )
+    }
+
     pub fn next_tab(&mut self) {
-        let tabs = ResultsTab::all();
+        let tabs = self.tabs();
         let idx = tabs.iter().position(|t| *t == self.tab).unwrap_or(0);
         self.tab = tabs[(idx + 1) % tabs.len()];
         self.scroll = 0;
     }
 
     pub fn prev_tab(&mut self) {
-        let tabs = ResultsTab::all();
+        let tabs = self.tabs();
         let idx = tabs.iter().position(|t| *t == self.tab).unwrap_or(0);
         self.tab = tabs[(idx + tabs.len() - 1) % tabs.len()];
         self.scroll = 0;
@@ -78,7 +151,7 @@ impl ResultsApp {
 }
 
 /// Run the results TUI
-pub fn run_results_tui(result: BacktestResult) -> crate::error::Result<ResultsAction> {
+pub fn run_results_tui(result: RunResult) -> crate::error::Result<ResultsAction> {
     use crossterm::{
         ExecutableCommand,
         event::{self, Event, KeyCode, KeyEventKind},
@@ -104,11 +177,13 @@ pub fn run_results_tui(result: BacktestResult) -> crate::error::Result<ResultsAc
                 KeyCode::Char('q') => break ResultsAction::Quit,
                 KeyCode::Char('r') => break ResultsAction::Retry,
                 KeyCode::Char('n') => break ResultsAction::NewStrategy,
+                KeyCode::Char('e') => app.export_csv(),
                 KeyCode::Tab | KeyCode::Right | KeyCode::Char('l') => app.next_tab(),
                 KeyCode::BackTab | KeyCode::Left | KeyCode::Char('h') => app.prev_tab(),
                 KeyCode::Down | KeyCode::Char('j') => app.scroll_down(),
                 KeyCode::Up | KeyCode::Char('k') => app.scroll_up(),
-                KeyCode::Enter | KeyCode::Esc => break ResultsAction::Continue,
+                KeyCode::Enter => break ResultsAction::NewStrategy,
+                KeyCode::Esc => break ResultsAction::Quit,
                 _ => {}
             }
         }
@@ -139,15 +214,20 @@ pub fn results_ui(f: &mut Frame, app: &ResultsApp) {
 
     match app.tab {
         ResultsTab::Overview => render_results_overview(f, app, chunks[2]),
+        ResultsTab::Charts => render_charts(f, app, chunks[2]),
+        ResultsTab::Distribution => render_distribution(f, app, chunks[2]),
         ResultsTab::Trades => render_results_trades(f, app, chunks[2]),
         ResultsTab::Signals => render_results_signals(f, app, chunks[2]),
+        ResultsTab::MonteCarlo => render_monte_carlo(f, app, chunks[2]),
+        ResultsTab::Optimizer => render_optimizer_results(f, app, chunks[2]),
+        ResultsTab::WalkForward => render_walk_forward_results(f, app, chunks[2]),
     }
 
-    render_results_footer(f, chunks[3]);
+    render_results_footer(f, app, chunks[3]);
 }
 
 fn render_results_header(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
-    let r = &app.result;
+    let r = &app.result.backtest;
     let pnl = r.total_pnl();
     let pnl_color = return_color(pnl);
 
@@ -176,15 +256,9 @@ fn render_results_header(f: &mut Frame, app: &ResultsApp, area: ratatui::layout:
 }
 
 fn render_results_tabs(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
-    let tab_titles: Vec<Line> = ResultsTab::all()
-        .iter()
-        .map(|t| Line::from(t.name()))
-        .collect();
-
-    let idx = ResultsTab::all()
-        .iter()
-        .position(|t| *t == app.tab)
-        .unwrap_or(0);
+    let tabs_list = app.tabs();
+    let tab_titles: Vec<Line> = tabs_list.iter().map(|t| Line::from(t.name())).collect();
+    let idx = tabs_list.iter().position(|t| *t == app.tab).unwrap_or(0);
 
     let tabs = Tabs::new(tab_titles)
         .block(Block::default().borders(Borders::BOTTOM))
@@ -199,20 +273,37 @@ fn render_results_tabs(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::R
 }
 
 fn render_results_overview(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
-    let r = &app.result;
+    let r = &app.result.backtest;
     let m = &r.metrics;
     let pnl = r.total_pnl();
 
-    let main_chunks = Layout::default()
-        .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
-        .split(area);
+    // Split vertically if benchmark data is present
+    let has_benchmark = r.benchmark.is_some();
+    let (metrics_area, bench_area) = if has_benchmark {
+        let vert = Layout::default()
+            .direction(Direction::Vertical)
+            .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
+            .split(area);
+        (vert[0], Some(vert[1]))
+    } else {
+        (area, None)
+    };
 
-    // Left column - Performance metrics
+    // 3-column metrics layout
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(33),
+            Constraint::Percentage(34),
+            Constraint::Percentage(33),
+        ])
+        .split(metrics_area);
+
+    // Column 1 — Performance
     let perf_lines = vec![
         Line::from(""),
-        metric_line("Starting Capital", &format!("${:.2}", r.initial_capital)),
-        metric_line("Ending Capital", &format!("${:.2}", r.final_equity)),
+        metric_line("Start Capital", &format!("${:.2}", r.initial_capital)),
+        metric_line("End Capital", &format!("${:.2}", r.final_equity)),
         metric_line(
             "Total P&L",
             &format!("{}{:.2}", if pnl >= 0.0 { "+" } else { "" }, pnl),
@@ -225,10 +316,22 @@ fn render_results_overview(f: &mut Frame, app: &ResultsApp, area: ratatui::layou
                 m.total_return_pct
             ),
         ),
+        metric_line(
+            "Ann. Return",
+            &format!(
+                "{}{:.2}%",
+                if m.annualized_return_pct >= 0.0 {
+                    "+"
+                } else {
+                    ""
+                },
+                m.annualized_return_pct
+            ),
+        ),
         Line::from(""),
         metric_line("Total Trades", &m.total_trades.to_string()),
-        metric_line("Winning Trades", &m.winning_trades.to_string()),
-        metric_line("Losing Trades", &m.losing_trades.to_string()),
+        metric_line("Long Trades", &m.long_trades.to_string()),
+        metric_line("Short Trades", &m.short_trades.to_string()),
         metric_line("Win Rate", &format!("{:.1}%", m.win_rate * 100.0)),
     ];
 
@@ -240,16 +343,10 @@ fn render_results_overview(f: &mut Frame, app: &ResultsApp, area: ratatui::layou
                 .title(" Performance "),
         )
         .wrap(Wrap { trim: true });
-    f.render_widget(perf, main_chunks[0]);
+    f.render_widget(perf, cols[0]);
 
-    // Right column - Risk metrics
-    // Calculate max drawdown in dollars from percentage
-    let max_dd_dollars = r.initial_capital * m.max_drawdown_pct;
-
-    // Calculate avg win/loss in dollars (using percentage and approximate trade size)
-    let avg_trade_value = r.initial_capital * r.config.position_size_pct;
-    let _avg_win = avg_trade_value * (m.avg_win_pct / 100.0);
-    let _avg_loss = avg_trade_value * (m.avg_loss_pct.abs() / 100.0);
+    // Column 2 — Risk
+    let max_dd_dollars = max_drawdown_dollars(r.equity_curve.iter().map(|p| p.equity));
 
     let risk_lines = vec![
         Line::from(""),
@@ -259,13 +356,22 @@ fn render_results_overview(f: &mut Frame, app: &ResultsApp, area: ratatui::layou
             "Max Drawdown %",
             &format!("{:.2}%", m.max_drawdown_pct * 100.0),
         ),
+        metric_line("DD Duration", &format!("{} bars", m.max_drawdown_duration)),
+        Line::from(""),
+        metric_line(
+            &format!("Sharpe (RF {:.1}%)", r.config.risk_free_rate * 100.0),
+            &format_ratio(m.sharpe_ratio),
+        ),
+        metric_line(
+            &format!("Sortino (RF {:.1}%)", r.config.risk_free_rate * 100.0),
+            &format_ratio(m.sortino_ratio),
+        ),
+        metric_line("Calmar Ratio", &format_ratio(m.calmar_ratio)),
         Line::from(""),
         metric_line("Avg Win %", &format!("{:.2}%", m.avg_win_pct)),
         metric_line("Avg Loss %", &format!("{:.2}%", m.avg_loss_pct)),
-        metric_line("Sharpe Ratio", &format!("{:.2}", m.sharpe_ratio)),
-        Line::from(""),
-        metric_line("Largest Win", &format!("${:.2}", m.largest_win)),
-        metric_line("Largest Loss", &format!("${:.2}", m.largest_loss)),
+        metric_line("Avg Win Dur", &format_duration_secs(m.avg_win_duration)),
+        metric_line("Avg Loss Dur", &format_duration_secs(m.avg_loss_duration)),
     ];
 
     let risk = Paragraph::new(risk_lines)
@@ -276,11 +382,107 @@ fn render_results_overview(f: &mut Frame, app: &ResultsApp, area: ratatui::layou
                 .title(" Risk Metrics "),
         )
         .wrap(Wrap { trim: true });
-    f.render_widget(risk, main_chunks[1]);
+    f.render_widget(risk, cols[1]);
+
+    // Column 3 — Activity
+    let mut activity_lines = vec![
+        Line::from(""),
+        metric_line("Winning Trades", &m.winning_trades.to_string()),
+        metric_line("Losing Trades", &m.losing_trades.to_string()),
+        metric_line("Max Consec Wins", &m.max_consecutive_wins.to_string()),
+        metric_line("Max Consec Loss", &m.max_consecutive_losses.to_string()),
+        Line::from(""),
+        metric_line(
+            "Time in Market",
+            &format!("{:.1}%", m.time_in_market_pct * 100.0),
+        ),
+        metric_line(
+            "Avg Trade Dur",
+            &format!("{:.1} bars", m.avg_trade_duration),
+        ),
+        metric_line(
+            "Max Idle Period",
+            &format_duration_secs(m.max_idle_period as f64),
+        ),
+        Line::from(""),
+        metric_line("Commission Paid", &format!("${:.2}", m.total_commission)),
+    ];
+
+    if m.total_dividend_income > 0.0 {
+        activity_lines.push(metric_line(
+            "Dividend Income",
+            &format!("${:.2}", m.total_dividend_income),
+        ));
+    }
+
+    activity_lines.extend([
+        Line::from(""),
+        metric_line("Largest Win", &format!("${:.2}", m.largest_win)),
+        metric_line("Largest Loss", &format!("${:.2}", m.largest_loss)),
+    ]);
+
+    let activity = Paragraph::new(activity_lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Magenta))
+                .title(" Activity "),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(activity, cols[2]);
+
+    // Optional benchmark section
+    if let (Some(bench), Some(ba)) = (&r.benchmark, bench_area) {
+        let bench_cols = Layout::default()
+            .direction(Direction::Horizontal)
+            .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+            .split(ba);
+
+        let left_lines = vec![
+            Line::from(""),
+            metric_line("Benchmark", &bench.symbol),
+            metric_line(
+                "Benchmark Return",
+                &format!("{:.2}%", bench.benchmark_return_pct),
+            ),
+            metric_line(
+                "Buy & Hold Ret",
+                &format!("{:.2}%", bench.buy_and_hold_return_pct),
+            ),
+        ];
+
+        let right_lines = vec![
+            Line::from(""),
+            metric_line("Alpha", &format!("{:.2}%", bench.alpha)),
+            metric_line("Beta", &format!("{:.3}", bench.beta)),
+            metric_line("Info Ratio", &format_ratio(bench.information_ratio)),
+        ];
+
+        let bench_left = Paragraph::new(left_lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Blue))
+                    .title(" Benchmark "),
+            )
+            .wrap(Wrap { trim: true });
+        f.render_widget(bench_left, bench_cols[0]);
+
+        let bench_right = Paragraph::new(right_lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Blue))
+                    .title(" Alpha / Beta "),
+            )
+            .wrap(Wrap { trim: true });
+        f.render_widget(bench_right, bench_cols[1]);
+    }
 }
 
 fn render_results_trades(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
-    let r = &app.result;
+    let r = &app.result.backtest;
+    let intraday = is_intraday(&r.equity_curve);
 
     let visible_trades: Vec<ListItem> = r
         .trades
@@ -311,7 +513,7 @@ fn render_results_trades(f: &mut Frame, app: &ResultsApp, area: ratatui::layout:
                     ),
                     Span::styled(" @ ", Style::default().fg(Color::DarkGray)),
                     Span::styled(
-                        format_timestamp(trade.entry_timestamp),
+                        format_timestamp_with_precision(trade.entry_timestamp, intraday),
                         Style::default().fg(Color::DarkGray),
                     ),
                 ]),
@@ -324,7 +526,7 @@ fn render_results_trades(f: &mut Frame, app: &ResultsApp, area: ratatui::layout:
                     ),
                     Span::styled(" @ ", Style::default().fg(Color::DarkGray)),
                     Span::styled(
-                        format_timestamp(trade.exit_timestamp),
+                        format_timestamp_with_precision(trade.exit_timestamp, intraday),
                         Style::default().fg(Color::DarkGray),
                     ),
                     Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
@@ -356,7 +558,8 @@ fn render_results_trades(f: &mut Frame, app: &ResultsApp, area: ratatui::layout:
 }
 
 fn render_results_signals(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
-    let r = &app.result;
+    let r = &app.result.backtest;
+    let intraday = is_intraday(&r.equity_curve);
 
     let visible_signals: Vec<ListItem> = r
         .signals
@@ -399,7 +602,7 @@ fn render_results_signals(f: &mut Frame, app: &ResultsApp, area: ratatui::layout
                 ),
                 Span::styled(" │ ", Style::default().fg(Color::DarkGray)),
                 Span::styled(
-                    format_timestamp(signal.timestamp),
+                    format_timestamp_with_precision(signal.timestamp, intraday),
                     Style::default().fg(Color::DarkGray),
                 ),
             ]))
@@ -419,23 +622,722 @@ fn render_results_signals(f: &mut Frame, app: &ResultsApp, area: ratatui::layout
     f.render_widget(list, area);
 }
 
-fn render_results_footer(f: &mut Frame, area: ratatui::layout::Rect) {
-    let footer = Paragraph::new(Line::from(vec![
-        Span::styled(" ←/→", Style::default().fg(Color::White)),
-        Span::styled(":tab  ", Style::default().fg(Color::DarkGray)),
-        Span::styled("↑/↓", Style::default().fg(Color::White)),
-        Span::styled(":scroll  ", Style::default().fg(Color::DarkGray)),
-        Span::styled("r", Style::default().fg(Color::Yellow)),
-        Span::styled(":retry  ", Style::default().fg(Color::DarkGray)),
-        Span::styled("n", Style::default().fg(Color::Cyan)),
-        Span::styled(":new strategy  ", Style::default().fg(Color::DarkGray)),
-        Span::styled("q", Style::default().fg(Color::White)),
-        Span::styled(":quit", Style::default().fg(Color::DarkGray)),
-    ]));
-    f.render_widget(footer, area);
+fn render_results_footer(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let status_line = match &app.export_status {
+        Some(Ok(path)) => Line::from(vec![
+            Span::styled(" Exported: ", Style::default().fg(Color::Green)),
+            Span::styled(
+                path.display().to_string(),
+                Style::default().fg(Color::White),
+            ),
+        ]),
+        Some(Err(e)) => Line::from(vec![Span::styled(
+            format!(" Export failed: {}", e),
+            Style::default().fg(Color::Red),
+        )]),
+        None => Line::from(vec![
+            Span::styled(" ←/→", Style::default().fg(Color::White)),
+            Span::styled(":tab  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("↑/↓", Style::default().fg(Color::White)),
+            Span::styled(":scroll  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("e", Style::default().fg(Color::Green)),
+            Span::styled(":export csv  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("r", Style::default().fg(Color::Yellow)),
+            Span::styled(":retry  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("n", Style::default().fg(Color::Cyan)),
+            Span::styled(":new strategy  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("q", Style::default().fg(Color::White)),
+            Span::styled(":quit", Style::default().fg(Color::DarkGray)),
+        ]),
+    };
+    f.render_widget(Paragraph::new(status_line), area);
+}
+
+fn render_monte_carlo(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let mc = &app.monte_carlo;
+
+    let cols = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+            Constraint::Percentage(25),
+        ])
+        .split(area);
+
+    let render_stat = |f: &mut Frame,
+                       title: &str,
+                       p5: f64,
+                       p50: f64,
+                       p95: f64,
+                       is_pct: bool,
+                       col: ratatui::layout::Rect| {
+        let fmt = |v: f64| -> String {
+            if is_pct {
+                format_signed_pct(v * 100.0)
+            } else {
+                format_ratio(v)
+            }
+        };
+        let p5_color = if p5 >= 0.0 { Color::Green } else { Color::Red };
+        let p50_color = if p50 >= 0.0 { Color::Green } else { Color::Red };
+        let p95_color = if p95 >= 0.0 { Color::Green } else { Color::Red };
+
+        let lines = vec![
+            Line::from(""),
+            Line::from(vec![
+                Span::styled("  p5  ", Style::default().fg(Color::DarkGray)),
+                Span::styled(fmt(p5), Style::default().fg(p5_color)),
+            ]),
+            Line::from(vec![
+                Span::styled("  p50 ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    fmt(p50),
+                    Style::default().fg(p50_color).add_modifier(Modifier::BOLD),
+                ),
+            ]),
+            Line::from(vec![
+                Span::styled("  p95 ", Style::default().fg(Color::DarkGray)),
+                Span::styled(fmt(p95), Style::default().fg(p95_color)),
+            ]),
+        ];
+
+        let para = Paragraph::new(lines)
+            .block(
+                Block::default()
+                    .borders(Borders::ALL)
+                    .border_style(Style::default().fg(Color::Cyan))
+                    .title(format!(" {} ", title)),
+            )
+            .wrap(Wrap { trim: true });
+        f.render_widget(para, col);
+    };
+
+    render_stat(
+        f,
+        "Total Return",
+        mc.total_return.p5,
+        mc.total_return.p50,
+        mc.total_return.p95,
+        true,
+        cols[0],
+    );
+    render_stat(
+        f,
+        "Max Drawdown",
+        -mc.max_drawdown.p95,
+        -mc.max_drawdown.p50,
+        -mc.max_drawdown.p5,
+        true,
+        cols[1],
+    );
+    render_stat(
+        f,
+        "Sharpe Ratio",
+        mc.sharpe_ratio.p5,
+        mc.sharpe_ratio.p50,
+        mc.sharpe_ratio.p95,
+        false,
+        cols[2],
+    );
+    render_stat(
+        f,
+        "Profit Factor",
+        mc.profit_factor.p5,
+        mc.profit_factor.p50,
+        mc.profit_factor.p95,
+        false,
+        cols[3],
+    );
+}
+
+// Charts tab: equity curve (top) + drawdown (bottom)
+
+fn render_charts(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let curve = &app.result.backtest.equity_curve;
+    if curve.is_empty() {
+        let msg = Paragraph::new("No equity curve data.")
+            .block(Block::default().borders(Borders::ALL).title(" Charts "));
+        f.render_widget(msg, area);
+        return;
+    }
+
+    let split = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Percentage(65), Constraint::Percentage(35)])
+        .split(area);
+
+    render_equity_chart(f, app, split[0]);
+    render_drawdown_chart(f, app, split[1]);
+}
+
+fn render_equity_chart(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let r = &app.result.backtest;
+    let curve = &r.equity_curve;
+
+    let strategy_data: Vec<(f64, f64)> = curve
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (i as f64, p.equity))
+        .collect();
+
+    let n = curve.len() as f64;
+    let min_equity = curve.iter().map(|p| p.equity).fold(f64::MAX, f64::min);
+    let max_equity = curve.iter().map(|p| p.equity).fold(f64::MIN, f64::max);
+    let y_margin = ((max_equity - min_equity) * 0.05).max(1.0);
+    let y_min = (min_equity - y_margin).max(0.0);
+    let y_max = max_equity + y_margin;
+
+    let mut datasets = vec![
+        Dataset::default()
+            .name(format!("{} ({})", r.strategy_name, r.symbol))
+            .marker(symbols::Marker::Braille)
+            .graph_type(GraphType::Line)
+            .style(Style::default().fg(Color::Cyan))
+            .data(&strategy_data),
+    ];
+
+    // Benchmark overlay: actual buy-and-hold equity curve from candle closes,
+    // falling back to a linear approximation when candles aren't available.
+    let bench_data: Vec<(f64, f64)>;
+    if let Some(ref bench) = r.benchmark {
+        bench_data = if let Some(ref candles) = app.result.bench_candles {
+            let first_close = candles.first().map(|c| c.close).unwrap_or(1.0);
+            candles
+                .iter()
+                .enumerate()
+                .map(|(i, c)| (i as f64, r.initial_capital * (c.close / first_close)))
+                .collect()
+        } else {
+            // Fallback: linear interpolation of total return (no intra-period detail)
+            let end_equity = r.initial_capital * (1.0 + bench.benchmark_return_pct / 100.0);
+            (0..curve.len())
+                .map(|i| {
+                    let frac = if n > 1.0 { i as f64 / (n - 1.0) } else { 1.0 };
+                    (
+                        i as f64,
+                        r.initial_capital + (end_equity - r.initial_capital) * frac,
+                    )
+                })
+                .collect()
+        };
+        let label = if app.result.bench_candles.is_some() {
+            format!("{} B&H", bench.symbol)
+        } else {
+            format!("{} B&H (approx)", bench.symbol)
+        };
+        datasets.push(
+            Dataset::default()
+                .name(label)
+                .marker(symbols::Marker::Braille)
+                .graph_type(GraphType::Line)
+                .style(Style::default().fg(Color::Yellow))
+                .data(&bench_data),
+        );
+    }
+
+    let x_axis = Axis::default()
+        .style(Style::default().fg(Color::DarkGray))
+        .bounds([0.0, (curve.len().saturating_sub(1)) as f64]);
+
+    let y_axis = Axis::default()
+        .style(Style::default().fg(Color::DarkGray))
+        .labels(vec![
+            Span::raw(format!("${:.0}", y_min)),
+            Span::raw(format!("${:.0}", (y_min + y_max) / 2.0)),
+            Span::raw(format!("${:.0}", y_max)),
+        ])
+        .bounds([y_min, y_max]);
+
+    let chart = Chart::new(datasets)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title(" Equity Curve "),
+        )
+        .x_axis(x_axis)
+        .y_axis(y_axis);
+
+    f.render_widget(chart, area);
+}
+
+fn render_drawdown_chart(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let curve = &app.result.backtest.equity_curve;
+
+    // drawdown_pct stored as fraction (0-1); display as negative percentage
+    let dd_data: Vec<(f64, f64)> = curve
+        .iter()
+        .enumerate()
+        .map(|(i, p)| (i as f64, -(p.drawdown_pct * 100.0)))
+        .collect();
+
+    let max_dd = curve
+        .iter()
+        .map(|p| p.drawdown_pct * 100.0)
+        .fold(0.0_f64, f64::max);
+
+    let y_min = -(max_dd * 1.1).max(1.0);
+
+    let x_axis = Axis::default()
+        .style(Style::default().fg(Color::DarkGray))
+        .bounds([0.0, (curve.len().saturating_sub(1)) as f64]);
+
+    let y_axis = Axis::default()
+        .style(Style::default().fg(Color::DarkGray))
+        .labels(vec![
+            Span::raw(format!("{:.1}%", y_min)),
+            Span::raw(format!("{:.1}%", y_min / 2.0)),
+            Span::raw("0.0%"),
+        ])
+        .bounds([y_min, 0.0]);
+
+    let dataset = Dataset::default()
+        .name("Drawdown")
+        .marker(symbols::Marker::Braille)
+        .graph_type(GraphType::Line)
+        .style(Style::default().fg(Color::Red))
+        .data(&dd_data);
+
+    let chart = Chart::new(vec![dataset])
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Red))
+                .title(" Drawdown % "),
+        )
+        .x_axis(x_axis)
+        .y_axis(y_axis);
+
+    f.render_widget(chart, area);
+}
+
+// Distribution tab: trade P&L histogram
+
+fn render_distribution(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let trades = &app.result.backtest.trades;
+
+    if trades.is_empty() {
+        let msg = Paragraph::new("No trades to display.").block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" P&L Distribution "),
+        );
+        f.render_widget(msg, area);
+        return;
+    }
+
+    let split = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(70), Constraint::Percentage(30)])
+        .split(area);
+
+    render_pnl_histogram(f, app, split[0]);
+    render_distribution_stats(f, app, split[1]);
+}
+
+fn render_pnl_histogram(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let trades = &app.result.backtest.trades;
+    let pnls: Vec<f64> = trades.iter().map(|t| t.pnl).collect();
+
+    let min_pnl = pnls.iter().cloned().fold(f64::MAX, f64::min);
+    let max_pnl = pnls.iter().cloned().fold(f64::MIN, f64::max);
+
+    const BINS: usize = 10;
+    let range = (max_pnl - min_pnl).max(1e-9);
+    let bin_width = range / BINS as f64;
+
+    let mut counts = [0u64; BINS];
+    for &p in &pnls {
+        let idx = ((p - min_pnl) / bin_width).floor() as usize;
+        let idx = idx.min(BINS - 1);
+        counts[idx] += 1;
+    }
+
+    let bar_data: Vec<(String, u64)> = counts
+        .iter()
+        .enumerate()
+        .map(|(i, &c)| {
+            let center = min_pnl + bin_width * (i as f64 + 0.5);
+            let label = if center >= 0.0 {
+                format!("+{:.0}", center)
+            } else {
+                format!("{:.0}", center)
+            };
+            (label, c)
+        })
+        .collect();
+
+    let bar_refs: Vec<(&str, u64)> = bar_data
+        .iter()
+        .map(|(label, count)| (label.as_str(), *count))
+        .collect();
+
+    let max_count = counts.iter().cloned().max().unwrap_or(1).max(1);
+
+    let chart = BarChart::default()
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title(" P&L Distribution (trade count per bucket) "),
+        )
+        .data(&bar_refs)
+        .bar_width(((area.width.saturating_sub(4)) / BINS as u16).max(3))
+        .bar_gap(1)
+        .max(max_count)
+        .bar_style(Style::default().fg(Color::Cyan))
+        .value_style(
+            Style::default()
+                .fg(Color::White)
+                .add_modifier(Modifier::BOLD),
+        )
+        .label_style(Style::default().fg(Color::DarkGray));
+
+    f.render_widget(chart, area);
+}
+
+fn render_distribution_stats(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let trades = &app.result.backtest.trades;
+    let pnls: Vec<f64> = trades.iter().map(|t| t.pnl).collect();
+
+    let mut sorted = pnls.clone();
+    sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+    let n = sorted.len();
+    let median = if n.is_multiple_of(2) {
+        (sorted[n / 2 - 1] + sorted[n / 2]) / 2.0
+    } else {
+        sorted[n / 2]
+    };
+
+    let mean = pnls.iter().sum::<f64>() / n as f64;
+    let variance = if n > 1 {
+        pnls.iter().map(|p| (p - mean).powi(2)).sum::<f64>() / (n - 1) as f64
+    } else {
+        0.0
+    };
+    let std_dev = variance.sqrt();
+
+    let p25 = percentile(&sorted, 0.25);
+    let p75 = percentile(&sorted, 0.75);
+
+    let m = &app.result.backtest.metrics;
+    let lines = vec![
+        Line::from(""),
+        metric_line("Trades", &n.to_string()),
+        metric_line("Mean P&L", &format!("${:.2}", mean)),
+        metric_line("Median P&L", &format!("${:.2}", median)),
+        metric_line("Std Dev", &format!("${:.2}", std_dev)),
+        Line::from(""),
+        metric_line("p25", &format!("${:.2}", p25)),
+        metric_line("p75", &format!("${:.2}", p75)),
+        Line::from(""),
+        metric_line(
+            "Wins",
+            &format!("{} ({:.0}%)", m.winning_trades, m.win_rate * 100.0),
+        ),
+        metric_line("Losses", &format!("{}", m.losing_trades)),
+    ];
+
+    let stats = Paragraph::new(lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Magenta))
+                .title(" Stats "),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(stats, area);
+}
+
+// Optimizer tab: best params + ranked results list
+
+fn render_optimizer_results(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let Some(ref opt) = app.result.optimization else {
+        let msg = Paragraph::new("No optimization data.")
+            .block(Block::default().borders(Borders::ALL).title(" Optimizer "));
+        f.render_widget(msg, area);
+        return;
+    };
+
+    let split = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(7), Constraint::Min(0)])
+        .split(area);
+
+    // Summary
+    let best = &opt.best;
+    let mut params_parts: Vec<String> = best
+        .params
+        .iter()
+        .map(|(k, v)| format!("{}={}", k, v))
+        .collect();
+    params_parts.sort();
+    let params_str = params_parts.join("  ");
+
+    let opt_metric = app.result.opt_metric.unwrap_or(OptimizeMetric::SharpeRatio);
+    let (best_metric_label, best_metric_value) = metric_score_display(opt_metric, &best.result);
+
+    let summary_lines = vec![
+        Line::from(""),
+        metric_line("Strategy", &opt.strategy_name),
+        metric_line("Total Combos", &opt.total_combinations.to_string()),
+        metric_line("Best Params", &params_str),
+        metric_line(&format!("Best {}", best_metric_label), &best_metric_value),
+        metric_line(
+            "Best Return",
+            &format!("{:+.2}%", best.result.metrics.total_return_pct),
+        ),
+    ];
+
+    let summary = Paragraph::new(summary_lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title(" Optimizer Summary "),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(summary, split[0]);
+
+    // Ranked results list
+    let visible: Vec<ListItem> = opt
+        .results
+        .iter()
+        .skip(app.scroll)
+        .take(split[1].height.saturating_sub(2) as usize)
+        .enumerate()
+        .map(|(i, res)| {
+            let rank = app.scroll + i + 1;
+            let mut parts: Vec<String> = res
+                .params
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, v))
+                .collect();
+            parts.sort();
+            let p_str = parts.join(" ");
+            let ret_color = return_color(res.result.metrics.total_return_pct);
+
+            let (col_label, col_value) = metric_score_display(opt_metric, &res.result);
+            ListItem::new(Line::from(vec![
+                Span::styled(
+                    format!(" #{:<3}", rank),
+                    Style::default().fg(Color::DarkGray),
+                ),
+                Span::styled(format!("{:<40}", p_str), Style::default().fg(Color::White)),
+                Span::styled(
+                    format!(" {}: ", col_label),
+                    Style::default().fg(Color::DarkGray),
+                ),
+                Span::styled(col_value, Style::default().fg(Color::Cyan)),
+                Span::styled(" Ret: ", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!("{:+.2}%", res.result.metrics.total_return_pct),
+                    Style::default().fg(ret_color),
+                ),
+            ]))
+        })
+        .collect();
+
+    let list = List::new(visible).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Yellow))
+            .title(format!(
+                " Ranked Results ({}) - ↑/↓ scroll ",
+                opt.results.len()
+            )),
+    );
+    f.render_widget(list, split[1]);
+}
+
+// Walk-forward tab: aggregate metrics + per-window IS/OOS results
+
+fn render_walk_forward_results(f: &mut Frame, app: &ResultsApp, area: ratatui::layout::Rect) {
+    let Some(ref wf) = app.result.walk_forward else {
+        let msg = Paragraph::new("No walk-forward data.").block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title(" Walk-Forward "),
+        );
+        f.render_widget(msg, area);
+        return;
+    };
+
+    let split = Layout::default()
+        .direction(Direction::Vertical)
+        .constraints([Constraint::Length(7), Constraint::Min(0)])
+        .split(area);
+
+    // Aggregate summary
+    let m = &wf.aggregate_metrics;
+    let summary_lines = vec![
+        Line::from(""),
+        metric_line("Windows", &wf.windows.len().to_string()),
+        metric_line(
+            "OOS Consistency",
+            &format!("{:.1}%", wf.consistency_ratio * 100.0),
+        ),
+        metric_line("Agg Return", &format!("{:+.2}%", m.total_return_pct)),
+        metric_line("Agg Sharpe", &format_ratio(m.sharpe_ratio)),
+        metric_line("Agg Max DD", &format!("{:.2}%", m.max_drawdown_pct * 100.0)),
+    ];
+
+    let summary = Paragraph::new(summary_lines)
+        .block(
+            Block::default()
+                .borders(Borders::ALL)
+                .border_style(Style::default().fg(Color::Cyan))
+                .title(" Walk-Forward Summary "),
+        )
+        .wrap(Wrap { trim: true });
+    f.render_widget(summary, split[0]);
+
+    // Per-window list
+    let visible: Vec<ListItem> = wf
+        .windows
+        .iter()
+        .skip(app.scroll)
+        .take(split[1].height.saturating_sub(2) as usize)
+        .map(|w| {
+            let is_ret = w.in_sample.metrics.total_return_pct;
+            let oos_ret = w.out_of_sample.metrics.total_return_pct;
+            let mut parts: Vec<String> = w
+                .optimized_params
+                .iter()
+                .map(|(k, v)| format!("{}={}", k, v))
+                .collect();
+            parts.sort();
+            let params_str = parts.join(" ");
+
+            let oos_sharpe = w.out_of_sample.metrics.sharpe_ratio;
+            let oos_dd = w.out_of_sample.metrics.max_drawdown_pct * 100.0;
+            ListItem::new(Line::from(vec![
+                Span::styled(
+                    format!(" W{:<2} ", w.window + 1),
+                    Style::default().fg(Color::DarkGray),
+                ),
+                Span::styled("IS:", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!(" {:+.2}%", is_ret),
+                    Style::default().fg(return_color(is_ret)),
+                ),
+                Span::styled("  OOS:", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!(" {:+.2}%", oos_ret),
+                    Style::default().fg(return_color(oos_ret)),
+                ),
+                Span::styled("  Sh:", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!(" {}", format_ratio(oos_sharpe)),
+                    Style::default().fg(if oos_sharpe >= 1.0 {
+                        Color::Green
+                    } else if oos_sharpe >= 0.0 {
+                        Color::Yellow
+                    } else {
+                        Color::Red
+                    }),
+                ),
+                Span::styled("  DD:", Style::default().fg(Color::DarkGray)),
+                Span::styled(
+                    format!(" {:.1}%", oos_dd),
+                    Style::default().fg(if oos_dd <= 10.0 {
+                        Color::Green
+                    } else if oos_dd <= 20.0 {
+                        Color::Yellow
+                    } else {
+                        Color::Red
+                    }),
+                ),
+                Span::styled(
+                    format!("  {}", params_str),
+                    Style::default().fg(Color::DarkGray),
+                ),
+            ]))
+        })
+        .collect();
+
+    let list = List::new(visible).block(
+        Block::default()
+            .borders(Borders::ALL)
+            .border_style(Style::default().fg(Color::Yellow))
+            .title(format!(" Windows ({}) - ↑/↓ scroll ", wf.windows.len())),
+    );
+    f.render_widget(list, split[1]);
+}
+
+// CSV export
+
+fn export_trades_csv(result: &BacktestResult) -> Result<PathBuf, String> {
+    use std::io::Write;
+
+    let filename = format!(
+        "backtest_{}_{}.csv",
+        result.symbol.to_lowercase(),
+        chrono::Utc::now().format("%Y%m%d_%H%M%S")
+    );
+    let export_dir = dirs::data_local_dir()
+        .unwrap_or_else(|| PathBuf::from("."))
+        .join("fq")
+        .join("exports");
+    std::fs::create_dir_all(&export_dir).map_err(|e| e.to_string())?;
+    let path = export_dir.join(&filename);
+
+    let mut file = std::fs::File::create(&path).map_err(|e| e.to_string())?;
+
+    writeln!(file, "side,entry_date,exit_date,entry_price,exit_price,quantity,pnl,return_pct,commission,dividend_income")
+        .map_err(|e| e.to_string())?;
+
+    for trade in &result.trades {
+        let side = if trade.is_long() { "LONG" } else { "SHORT" };
+        writeln!(
+            file,
+            "{},{},{},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4},{:.4}",
+            side,
+            format_timestamp(trade.entry_timestamp),
+            format_timestamp(trade.exit_timestamp),
+            trade.entry_price,
+            trade.exit_price,
+            trade.quantity,
+            trade.pnl,
+            trade.return_pct,
+            trade.commission,
+            trade.dividend_income,
+        )
+        .map_err(|e| e.to_string())?;
+    }
+
+    Ok(path)
 }
 
 // Helper functions
+
+/// Linear interpolation percentile on a pre-sorted slice.
+/// `p` is in [0.0, 1.0]. Uses the "inclusive" (C=1) method.
+fn percentile(sorted: &[f64], p: f64) -> f64 {
+    debug_assert!(
+        (0.0..=1.0).contains(&p),
+        "percentile p must be in [0, 1], got {p}"
+    );
+    let n = sorted.len();
+    if n == 0 {
+        return 0.0;
+    }
+    if n == 1 {
+        return sorted[0];
+    }
+    let rank = p * (n - 1) as f64;
+    let lo = rank.floor() as usize;
+    let hi = lo + 1;
+    let frac = rank - lo as f64;
+    if hi >= n {
+        sorted[n - 1]
+    } else {
+        sorted[lo] + frac * (sorted[hi] - sorted[lo])
+    }
+}
 
 fn metric_line(label: &str, value: &str) -> Line<'static> {
     Line::from(vec![
@@ -447,8 +1349,16 @@ fn metric_line(label: &str, value: &str) -> Line<'static> {
     ])
 }
 
+/// Returns `true` when consecutive equity curve bars are less than one trading day apart,
+/// which indicates an intraday backtest (1m, 5m, 15m, 30m, 1h intervals).
+fn is_intraday(equity_curve: &[finance_query::backtesting::EquityPoint]) -> bool {
+    const ONE_DAY_SECS: i64 = 86_400;
+    equity_curve
+        .windows(2)
+        .any(|w| (w[1].timestamp - w[0].timestamp).abs() < ONE_DAY_SECS)
+}
+
 fn format_timestamp(ts: i64) -> String {
-    // Convert Unix timestamp to readable date
     use chrono::DateTime;
     if let Some(dt) = DateTime::from_timestamp(ts, 0) {
         dt.format("%Y-%m-%d").to_string()
@@ -457,13 +1367,65 @@ fn format_timestamp(ts: i64) -> String {
     }
 }
 
+fn format_timestamp_with_precision(ts: i64, intraday: bool) -> String {
+    use chrono::DateTime;
+    if let Some(dt) = DateTime::from_timestamp(ts, 0) {
+        if intraday {
+            dt.format("%Y-%m-%d %H:%M").to_string()
+        } else {
+            dt.format("%Y-%m-%d").to_string()
+        }
+    } else {
+        ts.to_string()
+    }
+}
+
+fn format_duration_secs(secs: f64) -> String {
+    if secs <= 0.0 {
+        return "0s".to_string();
+    }
+    let days = secs / 86400.0;
+    if days >= 1.0 {
+        format!("{:.1}d", days)
+    } else {
+        let hours = secs / 3600.0;
+        if hours >= 1.0 {
+            format!("{:.1}h", hours)
+        } else {
+            format!("{:.0}m", secs / 60.0)
+        }
+    }
+}
+
 fn format_ratio(ratio: f64) -> String {
-    if ratio.is_infinite() {
-        "∞".to_string()
-    } else if ratio.is_nan() {
+    if ratio.is_nan() {
         "-".to_string()
+    } else if ratio == f64::MAX {
+        "∞".to_string()
+    } else if ratio.is_infinite() {
+        if ratio.is_sign_negative() {
+            "-∞".to_string()
+        } else {
+            "∞".to_string()
+        }
     } else {
         format!("{:.2}", ratio)
+    }
+}
+
+fn format_signed_pct(value: f64) -> String {
+    if value.is_nan() {
+        "-".to_string()
+    } else if value == f64::MAX {
+        "+∞%".to_string()
+    } else if value.is_infinite() {
+        if value.is_sign_negative() {
+            "-∞%".to_string()
+        } else {
+            "+∞%".to_string()
+        }
+    } else {
+        format!("{:+.2}%", value)
     }
 }
 
@@ -474,5 +1436,75 @@ fn return_color(value: f64) -> Color {
         Color::Red
     } else {
         Color::DarkGray
+    }
+}
+
+/// Returns the short label and formatted value for the selected optimize metric.
+fn metric_score_display(metric: OptimizeMetric, result: &BacktestResult) -> (String, String) {
+    match metric {
+        OptimizeMetric::SharpeRatio => (
+            "Sharpe".to_string(),
+            format_ratio(result.metrics.sharpe_ratio),
+        ),
+        OptimizeMetric::TotalReturn => (
+            "Return".to_string(),
+            format!("{:+.2}%", result.metrics.total_return_pct),
+        ),
+        OptimizeMetric::SortinoRatio => (
+            "Sortino".to_string(),
+            format_ratio(result.metrics.sortino_ratio),
+        ),
+        OptimizeMetric::CalmarRatio => (
+            "Calmar".to_string(),
+            format_ratio(result.metrics.calmar_ratio),
+        ),
+        OptimizeMetric::ProfitFactor => (
+            "Prof.Factor".to_string(),
+            format_ratio(result.metrics.profit_factor),
+        ),
+        OptimizeMetric::WinRate => (
+            "Win Rate".to_string(),
+            format!("{:.1}%", result.metrics.win_rate * 100.0),
+        ),
+        OptimizeMetric::MinDrawdown => (
+            "Drawdown".to_string(),
+            format!("{:.2}%", result.metrics.max_drawdown_pct * 100.0),
+        ),
+        _ => ("Score".to_string(), "N/A".to_string()),
+    }
+}
+
+fn max_drawdown_dollars(equities: impl IntoIterator<Item = f64>) -> f64 {
+    let mut peak = f64::NEG_INFINITY;
+    let mut max_dd: f64 = 0.0;
+    let mut has_any = false;
+
+    for equity in equities {
+        has_any = true;
+        peak = peak.max(equity);
+        max_dd = max_dd.max((peak - equity).max(0.0));
+    }
+
+    if has_any { max_dd } else { 0.0 }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn format_ratio_handles_max_sentinel() {
+        assert_eq!(format_ratio(f64::MAX), "∞");
+    }
+
+    #[test]
+    fn format_signed_pct_handles_max_sentinel() {
+        assert_eq!(format_signed_pct(f64::MAX), "+∞%");
+    }
+
+    #[test]
+    fn max_drawdown_dollars_uses_peak_to_trough() {
+        let equities = vec![10_000.0, 12_000.0, 9_000.0, 11_000.0];
+        assert!((max_drawdown_dollars(equities.into_iter()) - 3_000.0).abs() < 1e-9);
     }
 }
