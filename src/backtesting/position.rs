@@ -46,6 +46,10 @@ pub struct Position {
     /// Entry commission paid
     pub entry_commission: f64,
 
+    /// Transaction tax paid on entry (long entries and short covers only).
+    #[serde(default)]
+    pub entry_transaction_tax: f64,
+
     /// Signal that triggered entry
     pub entry_signal: Signal,
 
@@ -62,13 +66,34 @@ pub struct Position {
 }
 
 impl Position {
-    /// Create a new position
+    /// Create a new position.
     pub fn new(
         side: PositionSide,
         entry_timestamp: i64,
         entry_price: f64,
         quantity: f64,
         entry_commission: f64,
+        entry_signal: Signal,
+    ) -> Self {
+        Self::new_with_tax(
+            side,
+            entry_timestamp,
+            entry_price,
+            quantity,
+            entry_commission,
+            0.0,
+            entry_signal,
+        )
+    }
+
+    /// Create a new position including an entry transaction tax.
+    pub(crate) fn new_with_tax(
+        side: PositionSide,
+        entry_timestamp: i64,
+        entry_price: f64,
+        quantity: f64,
+        entry_commission: f64,
+        entry_transaction_tax: f64,
         entry_signal: Signal,
     ) -> Self {
         Self {
@@ -78,6 +103,7 @@ impl Position {
             quantity,
             entry_quantity: quantity,
             entry_commission,
+            entry_transaction_tax,
             entry_signal,
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
@@ -119,7 +145,7 @@ impl Position {
                 (self.entry_price * self.entry_quantity) - (current_price * self.quantity)
             }
         };
-        gross_pnl - self.entry_commission + self.unreinvested_dividends
+        gross_pnl - self.entry_commission - self.entry_transaction_tax + self.unreinvested_dividends
     }
 
     /// Calculate unrealized return percentage
@@ -181,7 +207,26 @@ impl Position {
         exit_commission: f64,
         exit_signal: Signal,
     ) -> Trade {
+        self.close_with_tax(
+            exit_timestamp,
+            exit_price,
+            exit_commission,
+            0.0,
+            exit_signal,
+        )
+    }
+
+    /// Close the position, including an exit transaction tax (e.g. on short covers).
+    pub(crate) fn close_with_tax(
+        self,
+        exit_timestamp: i64,
+        exit_price: f64,
+        exit_commission: f64,
+        exit_transaction_tax: f64,
+        exit_signal: Signal,
+    ) -> Trade {
         let total_commission = self.entry_commission + exit_commission;
+        let total_transaction_tax = self.entry_transaction_tax + exit_transaction_tax;
 
         let initial_value = self.entry_price * self.entry_quantity;
         let exit_value = exit_price * self.quantity;
@@ -190,8 +235,8 @@ impl Position {
             PositionSide::Long => exit_value - initial_value,
             PositionSide::Short => initial_value - exit_value,
         };
-        // Unreinvested dividends improve net P&L (or reduce it if negative for shorts)
-        let pnl = gross_pnl - total_commission + self.unreinvested_dividends;
+        let pnl =
+            gross_pnl - total_commission - total_transaction_tax + self.unreinvested_dividends;
 
         let entry_value = self.entry_price * self.entry_quantity;
         let return_pct = if entry_value > 0.0 {
@@ -209,6 +254,7 @@ impl Position {
             quantity: self.quantity,
             entry_quantity: self.entry_quantity,
             commission: total_commission,
+            transaction_tax: total_transaction_tax,
             pnl,
             return_pct,
             dividend_income: self.dividend_income,
@@ -246,10 +292,19 @@ pub struct Trade {
     #[serde(default)]
     pub entry_quantity: f64,
 
-    /// Total commission (entry + exit)
+    /// Total commission paid (entry + exit).
     pub commission: f64,
 
-    /// Realized P&L (after commission, including any unreinvested dividend income)
+    /// Total transaction tax paid (entry + exit).
+    ///
+    /// Non-zero only when [`BacktestConfig::transaction_tax_pct`] is set.
+    /// Deducted from P&L along with commission.
+    ///
+    /// [`BacktestConfig::transaction_tax_pct`]: crate::backtesting::BacktestConfig::transaction_tax_pct
+    #[serde(default)]
+    pub transaction_tax: f64,
+
+    /// Realized P&L (after commission and transaction tax, including any unreinvested dividend income)
     pub pnl: f64,
 
     /// Return as percentage

@@ -420,6 +420,7 @@ mod tests {
             quantity: qty,
             entry_quantity: qty,
             commission: 0.0,
+            transaction_tax: 0.0,
             pnl: (exit - entry) * qty,
             return_pct: ((exit / entry) - 1.0) * 100.0,
             dividend_income: 0.0,

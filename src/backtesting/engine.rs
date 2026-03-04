@@ -266,24 +266,33 @@ impl BacktestEngine {
             let last_candle = candles
                 .last()
                 .expect("candles non-empty: position open implies loop ran");
-            let exit_price = self
+            let exit_price_slipped = self
                 .config
                 .apply_exit_slippage(last_candle.close, pos.is_long());
-            let exit_commission = self.config.calculate_commission(exit_price * pos.quantity);
+            let exit_price = self
+                .config
+                .apply_exit_spread(exit_price_slipped, pos.is_long());
+            let exit_commission = self.config.calculate_commission(pos.quantity, exit_price);
+            // Tax on buy orders only: short covers are buys
+            let exit_tax = self
+                .config
+                .calculate_transaction_tax(exit_price * pos.quantity, !pos.is_long());
 
             let exit_signal = Signal::exit(last_candle.timestamp, last_candle.close)
                 .with_reason("End of backtest");
 
-            let trade = pos.close(
+            let trade = pos.close_with_tax(
                 last_candle.timestamp,
                 exit_price,
                 exit_commission,
+                exit_tax,
                 exit_signal,
             );
             if trade.is_long() {
                 cash += trade.exit_value() - exit_commission + trade.unreinvested_dividends;
             } else {
-                cash -= trade.exit_value() + exit_commission - trade.unreinvested_dividends;
+                cash -=
+                    trade.exit_value() + exit_commission + exit_tax - trade.unreinvested_dividends;
             }
             trades.push(trade);
 
@@ -928,7 +937,8 @@ impl BacktestEngine {
         signal: &Signal,
         is_long: bool,
     ) -> bool {
-        let entry_price = self.config.apply_entry_slippage(candle.open, is_long);
+        let entry_price_slipped = self.config.apply_entry_slippage(candle.open, is_long);
+        let entry_price = self.config.apply_entry_spread(entry_price_slipped, is_long);
         let quantity = self.config.calculate_position_size(*cash, entry_price);
 
         if quantity <= 0.0 {
@@ -936,11 +946,13 @@ impl BacktestEngine {
         }
 
         let entry_value = entry_price * quantity;
-        let commission = self.config.calculate_commission(entry_value);
+        let commission = self.config.calculate_commission(quantity, entry_price);
+        // Tax on buy orders only: long entries are buys
+        let entry_tax = self.config.calculate_transaction_tax(entry_value, is_long);
 
         if is_long {
-            if entry_value + commission > *cash {
-                return false; // Not enough capital including commission
+            if entry_value + commission + entry_tax > *cash {
+                return false; // Not enough capital including commission and tax
             }
         } else if commission > *cash {
             return false; // Not enough cash to pay entry commission
@@ -953,16 +965,17 @@ impl BacktestEngine {
         };
 
         if is_long {
-            *cash -= entry_value + commission;
+            *cash -= entry_value + commission + entry_tax;
         } else {
             *cash += entry_value - commission;
         }
-        *position = Some(Position::new(
+        *position = Some(Position::new_with_tax(
             side,
             candle.timestamp,
             entry_price,
             quantity,
             commission,
+            entry_tax,
             signal.clone(),
         ));
 
@@ -999,20 +1012,28 @@ impl BacktestEngine {
             None => return false,
         };
 
-        let exit_price = self.config.apply_exit_slippage(fill_price, pos.is_long());
-        let exit_commission = self.config.calculate_commission(exit_price * pos.quantity);
+        let exit_price_slipped = self.config.apply_exit_slippage(fill_price, pos.is_long());
+        let exit_price = self
+            .config
+            .apply_exit_spread(exit_price_slipped, pos.is_long());
+        let exit_commission = self.config.calculate_commission(pos.quantity, exit_price);
+        // Tax on buy orders only: short covers are buys
+        let exit_tax = self
+            .config
+            .calculate_transaction_tax(exit_price * pos.quantity, !pos.is_long());
 
-        let trade = pos.close(
+        let trade = pos.close_with_tax(
             candle.timestamp,
             exit_price,
             exit_commission,
+            exit_tax,
             signal.clone(),
         );
 
         if trade.is_long() {
             *cash += trade.exit_value() - exit_commission + trade.unreinvested_dividends;
         } else {
-            *cash -= trade.exit_value() + exit_commission - trade.unreinvested_dividends;
+            *cash -= trade.exit_value() + exit_commission + exit_tax - trade.unreinvested_dividends;
         }
         trades.push(trade);
 

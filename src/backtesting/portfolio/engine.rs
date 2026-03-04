@@ -211,21 +211,31 @@ impl PortfolioEngine {
                 let Some(pos) = state.position.take() else {
                     continue;
                 };
-                let exit_price = self
+                let exit_price_slipped = self
                     .config
                     .base
                     .apply_exit_slippage(fill_price, pos.is_long());
+                let exit_price = self
+                    .config
+                    .base
+                    .apply_exit_spread(exit_price_slipped, pos.is_long());
                 let exit_comm = self
                     .config
                     .base
-                    .calculate_commission(exit_price * pos.quantity);
+                    .calculate_commission(pos.quantity, exit_price);
+                let exit_tax = self
+                    .config
+                    .base
+                    .calculate_transaction_tax(exit_price * pos.quantity, !pos.is_long());
                 let exit_reason = exit_signal.reason.clone();
                 let exit_tags = exit_signal.tags.clone();
-                let trade = pos.close(timestamp, exit_price, exit_comm, exit_signal);
+                let trade =
+                    pos.close_with_tax(timestamp, exit_price, exit_comm, exit_tax, exit_signal);
                 if trade.is_long() {
                     cash += trade.exit_value() - exit_comm + trade.unreinvested_dividends;
                 } else {
-                    cash -= trade.exit_value() + exit_comm - trade.unreinvested_dividends;
+                    cash -=
+                        trade.exit_value() + exit_comm + exit_tax - trade.unreinvested_dividends;
                 }
                 state.realized_pnl += trade.pnl;
                 state.trades.push(trade);
@@ -299,25 +309,34 @@ impl PortfolioEngine {
                         // Execute on next bar open to avoid same-bar close-fill bias.
                         if let Some(pos) = state.position.take() {
                             if let Some(fill_candle) = state.candles.get(candle_idx + 1) {
-                                let exit_price = self
+                                let exit_price_slipped = self
                                     .config
                                     .base
                                     .apply_exit_slippage(fill_candle.open, pos.is_long());
+                                let exit_price = self
+                                    .config
+                                    .base
+                                    .apply_exit_spread(exit_price_slipped, pos.is_long());
                                 let exit_comm = self
                                     .config
                                     .base
-                                    .calculate_commission(exit_price * pos.quantity);
-                                let trade = pos.close(
+                                    .calculate_commission(pos.quantity, exit_price);
+                                let exit_tax = self.config.base.calculate_transaction_tax(
+                                    exit_price * pos.quantity,
+                                    !pos.is_long(),
+                                );
+                                let trade = pos.close_with_tax(
                                     fill_candle.timestamp,
                                     exit_price,
                                     exit_comm,
+                                    exit_tax,
                                     signal.clone(),
                                 );
                                 if trade.is_long() {
                                     cash += trade.exit_value() - exit_comm
                                         + trade.unreinvested_dividends;
                                 } else {
-                                    cash -= trade.exit_value() + exit_comm
+                                    cash -= trade.exit_value() + exit_comm + exit_tax
                                         - trade.unreinvested_dividends;
                                 }
                                 state.realized_pnl += trade.pnl;
@@ -437,28 +456,49 @@ impl PortfolioEngine {
                     continue;
                 }
 
-                let entry_price = self.config.base.apply_entry_slippage(fill_open, is_long);
-                // Reserve the flat fee before computing quantity so that
-                // entry_cost == target_capital when both flat and pct fees are
-                // set. Without this, entry_cost > target_capital and the entry
-                // is silently rejected whenever a flat commission is configured.
-                //
-                // NOTE: Unlike the single-ticker `calculate_position_size()`,
-                // this formula only accounts for the **entry** commission.
-                // Exit commission is paid from proceeds at close time, so it
-                // need not reduce the entry allocation.  The two engines
-                // therefore produce slightly different position sizes when
-                // commission_pct > 0: the portfolio engine is marginally more
-                // aggressive (2× commission_pct ≈ 0.2% larger positions at
-                // default 0.1% each way), which is intentional.
-                let effective_target = (target_capital - self.config.base.commission).max(0.0);
-                let quantity =
-                    effective_target / (entry_price * (1.0 + self.config.base.commission_pct));
-                let entry_comm = self
+                let entry_price_slipped = self.config.base.apply_entry_slippage(fill_open, is_long);
+                // Spread is applied after slippage so that entry_price already
+                // embeds the half-spread cost; no extra spread term is needed in
+                // the denominator below.
+                let entry_price = self
                     .config
                     .base
-                    .calculate_commission(entry_price * quantity);
-                let entry_cost = entry_price * quantity + entry_comm;
+                    .apply_entry_spread(entry_price_slipped, is_long);
+
+                // Compute a target quantity that is guaranteed to fit within
+                // `target_capital` after all entry-side frictions are paid.
+                //
+                // Entry-side frictions:
+                //   • flat commission  — reserved upfront from effective_target
+                //   • % commission     — folded into denominator (entry only; exit
+                //                        commission is paid from close proceeds)
+                //   • half spread      — already embedded in entry_price above
+                //   • transaction tax  — buy orders only (long entries); folded
+                //                        into denominator because it scales with
+                //                        quantity and cannot be subtracted upfront
+                //
+                // When commission_fn is set we cannot analytically invert it, so
+                // we omit the % commission term and rely on the fill-rejection
+                // guard (`entry_cost > cash`) to catch any over-allocation.
+                let (flat_reserve, pct_friction) = if self.config.base.commission_fn.is_some() {
+                    (0.0, 0.0)
+                } else {
+                    (self.config.base.commission, self.config.base.commission_pct)
+                };
+                let tax_friction = if is_long {
+                    self.config.base.transaction_tax_pct
+                } else {
+                    0.0
+                };
+                let effective_target = (target_capital - flat_reserve).max(0.0);
+                let quantity =
+                    effective_target / (entry_price * (1.0 + pct_friction + tax_friction));
+                let entry_comm = self.config.base.calculate_commission(quantity, entry_price);
+                let entry_tax = self
+                    .config
+                    .base
+                    .calculate_transaction_tax(entry_price * quantity, is_long);
+                let entry_cost = entry_price * quantity + entry_comm + entry_tax;
 
                 if is_long {
                     if entry_cost > cash {
@@ -481,12 +521,13 @@ impl PortfolioEngine {
                 };
 
                 let state = states.get_mut(&sym).unwrap();
-                state.position = Some(Position::new(
+                state.position = Some(Position::new_with_tax(
                     side,
                     fill_ts,
                     entry_price,
                     quantity,
                     entry_comm,
+                    entry_tax,
                     signal.clone(),
                 ));
                 state.hwm = Some(entry_price);
@@ -573,22 +614,36 @@ impl PortfolioEngine {
             for state in states.values_mut() {
                 if let Some(pos) = state.position.take() {
                     let last_candle = state.candles.last().unwrap();
-                    let exit_price = self
+                    let exit_price_slipped = self
                         .config
                         .base
                         .apply_exit_slippage(last_candle.close, pos.is_long());
+                    let exit_price = self
+                        .config
+                        .base
+                        .apply_exit_spread(exit_price_slipped, pos.is_long());
                     let exit_comm = self
                         .config
                         .base
-                        .calculate_commission(exit_price * pos.quantity);
+                        .calculate_commission(pos.quantity, exit_price);
+                    let exit_tax = self
+                        .config
+                        .base
+                        .calculate_transaction_tax(exit_price * pos.quantity, !pos.is_long());
                     let exit_signal = Signal::exit(last_candle.timestamp, last_candle.close)
                         .with_reason("End of backtest");
-                    let trade =
-                        pos.close(last_candle.timestamp, exit_price, exit_comm, exit_signal);
+                    let trade = pos.close_with_tax(
+                        last_candle.timestamp,
+                        exit_price,
+                        exit_comm,
+                        exit_tax,
+                        exit_signal,
+                    );
                     if trade.is_long() {
                         cash += trade.exit_value() - exit_comm + trade.unreinvested_dividends;
                     } else {
-                        cash -= trade.exit_value() + exit_comm - trade.unreinvested_dividends;
+                        cash -= trade.exit_value() + exit_comm + exit_tax
+                            - trade.unreinvested_dividends;
                     }
                     state.realized_pnl += trade.pnl;
                     state.trades.push(trade);
