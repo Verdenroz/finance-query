@@ -302,10 +302,10 @@ impl PerformanceMetrics {
             0.0
         };
 
-        // Sharpe and Sortino ratios
+        // Sharpe and Sortino ratios (computed in one pass over shared excess returns)
         let returns: Vec<f64> = calculate_periodic_returns(equity_curve);
-        let sharpe_ratio = calculate_sharpe_ratio(&returns, risk_free_rate, bars_per_year);
-        let sortino_ratio = calculate_sortino_ratio(&returns, risk_free_rate, bars_per_year);
+        let (sharpe_ratio, sortino_ratio) =
+            calculate_risk_ratios(&returns, risk_free_rate, bars_per_year);
 
         // Calmar ratio = annualised return (%) / max drawdown (%).
         // Use f64::MAX instead of INFINITY when drawdown is zero to keep the
@@ -499,62 +499,50 @@ fn annual_to_periodic_rf(annual_rate: f64, bars_per_year: f64) -> f64 {
     (1.0 + annual_rate).powf(1.0 / bars_per_year) - 1.0
 }
 
-/// Calculate Sharpe ratio with a configurable annual risk-free rate.
+/// Calculate Sharpe and Sortino ratios in a single pass over excess returns.
 ///
-/// Uses sample standard deviation (divides by n-1) to match the `risk` module
-/// and standard financial convention. Annualised by `sqrt(bars_per_year)`.
-fn calculate_sharpe_ratio(returns: &[f64], annual_risk_free_rate: f64, bars_per_year: f64) -> f64 {
+/// Computes the shared `excess` vec and `mean` once, then derives both ratios.
+/// Uses sample standard deviation (n-1) and annualises by `sqrt(bars_per_year)`.
+/// Returns `f64::MAX` for the positive-mean / zero-deviation edge case so the
+/// value survives JSON round-trips (avoids `INFINITY`).
+fn calculate_risk_ratios(
+    returns: &[f64],
+    annual_risk_free_rate: f64,
+    bars_per_year: f64,
+) -> (f64, f64) {
     if returns.len() < 2 {
-        return 0.0;
+        return (0.0, 0.0);
     }
 
     let periodic_rf = annual_to_periodic_rf(annual_risk_free_rate, bars_per_year);
     let excess: Vec<f64> = returns.iter().map(|r| r - periodic_rf).collect();
     let n = excess.len() as f64;
     let mean = excess.iter().sum::<f64>() / n;
-    // Sample variance (n-1) for unbiased estimation
+
+    // Sharpe: sample variance (n-1) for unbiased estimation
     let variance = excess.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (n - 1.0);
     let std_dev = variance.sqrt();
-
-    if std_dev > 0.0 {
+    let sharpe = if std_dev > 0.0 {
         (mean / std_dev) * bars_per_year.sqrt()
     } else if mean > 0.0 {
-        // Use f64::MAX instead of INFINITY so the value survives JSON round-trips.
         f64::MAX
     } else {
         0.0
-    }
-}
+    };
 
-/// Calculate Sortino ratio with a configurable annual risk-free rate.
-///
-/// Uses downside deviation: only negative excess returns contribute to the
-/// deviation, but the denominator is the total observation count minus 1
-/// (sample convention, matching Sortino's original definition and the `risk`
-/// module). Annualised by `sqrt(bars_per_year)`.
-fn calculate_sortino_ratio(returns: &[f64], annual_risk_free_rate: f64, bars_per_year: f64) -> f64 {
-    if returns.len() < 2 {
-        return 0.0;
-    }
-
-    let periodic_rf = annual_to_periodic_rf(annual_risk_free_rate, bars_per_year);
-    let excess: Vec<f64> = returns.iter().map(|r| r - periodic_rf).collect();
-    let n = excess.len() as f64;
-    let mean = excess.iter().sum::<f64>() / n;
-
-    // Downside deviation: sum of squared negative excess returns, divided by n-1
-    // (total observations, not just negative ones — per Sortino's original definition)
+    // Sortino: downside deviation (only negative excess; denominator is n-1,
+    // per Sortino's original definition and the `risk` module convention)
     let downside_sq_sum: f64 = excess.iter().filter(|&&r| r < 0.0).map(|r| r.powi(2)).sum();
     let downside_dev = (downside_sq_sum / (n - 1.0)).sqrt();
-
-    if downside_dev > 0.0 {
+    let sortino = if downside_dev > 0.0 {
         (mean / downside_dev) * bars_per_year.sqrt()
     } else if mean > 0.0 {
-        // Use f64::MAX instead of INFINITY so the value survives JSON round-trips.
         f64::MAX
     } else {
         0.0
-    }
+    };
+
+    (sharpe, sortino)
 }
 
 /// Calculate average duration (in seconds) for winning and losing trades separately.
@@ -911,7 +899,7 @@ mod tests {
         //   std_dev = sqrt(0.001/3) ≈ 0.018257
         //   Sharpe = (0.0 / 0.018257) * sqrt(252) = 0.0
         let returns = vec![0.01, -0.01, 0.02, -0.02];
-        let sharpe = calculate_sharpe_ratio(&returns, 0.0, 252.0);
+        let (sharpe, _) = calculate_risk_ratios(&returns, 0.0, 252.0);
         // Mean is exactly 0 so Sharpe must be 0 regardless of std_dev
         assert!(
             (sharpe).abs() < 1e-10,

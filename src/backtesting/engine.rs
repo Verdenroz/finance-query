@@ -116,7 +116,7 @@ impl BacktestEngine {
                 &mut equity_curve,
             );
 
-            Self::update_trailing_hwm(position.as_ref(), &mut hwm, candle);
+            update_trailing_hwm(position.as_ref(), &mut hwm, candle);
 
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
@@ -734,36 +734,6 @@ impl BacktestEngine {
         equity
     }
 
-    /// Update the trailing-stop high-water mark (peak for longs, trough for shorts).
-    ///
-    /// Uses the candle's intrabar extreme (`high` for longs, `low` for shorts) so
-    /// that the trailing stop correctly reflects the best price reached during the bar,
-    /// not just the close.
-    ///
-    /// Cleared to `None` when no position is open so it resets on next entry.
-    fn update_trailing_hwm(position: Option<&Position>, hwm: &mut Option<f64>, candle: &Candle) {
-        if let Some(pos) = position {
-            *hwm = Some(match *hwm {
-                None => {
-                    if pos.is_long() {
-                        candle.high
-                    } else {
-                        candle.low
-                    }
-                }
-                Some(prev) => {
-                    if pos.is_long() {
-                        prev.max(candle.high)
-                    } else {
-                        prev.min(candle.low) // trough for shorts
-                    }
-                }
-            });
-        } else {
-            *hwm = None;
-        }
-    }
-
     /// Credit any dividends whose ex-date falls on or before the current candle.
     ///
     /// Advances `div_idx` forward so each dividend is credited exactly once.
@@ -1043,6 +1013,43 @@ impl BacktestEngine {
         trades.push(trade);
 
         true
+    }
+}
+
+// ── Shared helpers ─────────────────────────────────────────────────────────────
+
+/// Update the trailing-stop high-water mark (peak for longs, trough for shorts).
+///
+/// Uses the candle's intrabar extreme (`high` for longs, `low` for shorts) so
+/// that the trailing stop correctly reflects the best price reached during the bar,
+/// not just the close.
+///
+/// Cleared to `None` when no position is open so it resets on next entry.
+/// Also used by the portfolio engine.
+pub(crate) fn update_trailing_hwm(
+    position: Option<&Position>,
+    hwm: &mut Option<f64>,
+    candle: &Candle,
+) {
+    if let Some(pos) = position {
+        *hwm = Some(match *hwm {
+            None => {
+                if pos.is_long() {
+                    candle.high
+                } else {
+                    candle.low
+                }
+            }
+            Some(prev) => {
+                if pos.is_long() {
+                    prev.max(candle.high)
+                } else {
+                    prev.min(candle.low) // trough for shorts
+                }
+            }
+        });
+    } else {
+        *hwm = None;
     }
 }
 

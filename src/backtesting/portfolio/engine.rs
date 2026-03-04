@@ -1,10 +1,10 @@
 //! Multi-symbol portfolio backtesting engine.
 
 use std::cmp::Ordering;
-use std::collections::{BTreeSet, HashMap};
+use std::collections::{BTreeSet, HashMap, HashSet};
 
 use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::engine::BacktestEngine;
+use crate::backtesting::engine::{BacktestEngine, update_trailing_hwm};
 use crate::backtesting::error::{BacktestError, Result};
 use crate::backtesting::position::{Position, PositionSide, Trade};
 use crate::backtesting::result::{BacktestResult, EquityPoint, PerformanceMetrics, SignalRecord};
@@ -170,26 +170,7 @@ impl PortfolioEngine {
 
                 // Update HWM for trailing stop using the intrabar extreme so the
                 // trailing stop correctly reflects the best price reached during the bar.
-                if let Some(ref pos) = state.position {
-                    state.hwm = Some(match state.hwm {
-                        None => {
-                            if pos.is_long() {
-                                candle.high
-                            } else {
-                                candle.low
-                            }
-                        }
-                        Some(prev) => {
-                            if pos.is_long() {
-                                prev.max(candle.high)
-                            } else {
-                                prev.min(candle.low)
-                            }
-                        }
-                    });
-                } else {
-                    state.hwm = None;
-                }
+                update_trailing_hwm(state.position.as_ref(), &mut state.hwm, candle);
 
                 // Credit dividends ex-dated on or before this bar
                 while state.div_idx < state.dividends.len()
@@ -222,7 +203,7 @@ impl PortfolioEngine {
 
             // Process auto-exits (SL/TP/trailing) — execute on the current bar at the
             // fill price embedded in the signal (stop/TP level with gap guard).
-            let mut exited_this_bar: Vec<String> = Vec::new();
+            let mut exited_this_bar: HashSet<String> = HashSet::new();
             for (sym, exit_signal) in auto_exits {
                 let state = states.get_mut(&sym).unwrap();
                 let fill_price = exit_signal.price;
@@ -238,6 +219,7 @@ impl PortfolioEngine {
                     .config
                     .base
                     .calculate_commission(exit_price * pos.quantity);
+                let exit_reason = exit_signal.reason.clone();
                 let trade = pos.close(timestamp, exit_price, exit_comm, exit_signal);
                 if trade.is_long() {
                     cash += trade.exit_value() - exit_comm + trade.unreinvested_dividends;
@@ -252,10 +234,10 @@ impl PortfolioEngine {
                     price: fill_price,
                     direction: SignalDirection::Exit,
                     strength: 1.0,
-                    reason: Some("SL/TP/Trailing stop".to_string()),
+                    reason: exit_reason,
                     executed: true,
                 });
-                exited_this_bar.push(sym);
+                exited_this_bar.insert(sym);
             }
 
             // --- Step 2: Collect strategy signals --------------------------------
@@ -692,7 +674,7 @@ impl PortfolioEngine {
             .filter(|s| s.executed)
             .count();
 
-        let portfolio_metrics = PerformanceMetrics::calculate(
+        let mut portfolio_metrics = PerformanceMetrics::calculate(
             &all_trades,
             &portfolio_equity_curve,
             initial_capital,
@@ -701,8 +683,6 @@ impl PortfolioEngine {
             self.config.base.risk_free_rate,
             self.config.base.bars_per_year,
         );
-
-        let mut portfolio_metrics = portfolio_metrics;
         portfolio_metrics.time_in_market_pct =
             compute_portfolio_time_in_market(&allocation_history);
 
@@ -766,17 +746,18 @@ fn compute_portfolio_equity<S: Strategy>(
 }
 
 fn close_at_or_before<S: Strategy>(state: &SymbolState<S>, timestamp: i64) -> Option<f64> {
+    // Fast path: ts_index covers all candle timestamps.
     if let Some(&idx) = state.ts_index.get(&timestamp) {
         return Some(state.candles[idx].close);
     }
-
+    // Slow path: timestamp falls between candle bars (e.g. portfolio timeline
+    // has a bar this symbol does not trade on); return the most recent prior close.
     match state
         .candles
         .binary_search_by_key(&timestamp, |c| c.timestamp)
     {
-        Ok(idx) => Some(state.candles[idx].close),
-        Err(0) => None,
-        Err(idx) => Some(state.candles[idx - 1].close),
+        Ok(idx) | Err(idx) if idx > 0 => Some(state.candles[idx.saturating_sub(1)].close),
+        _ => None,
     }
 }
 

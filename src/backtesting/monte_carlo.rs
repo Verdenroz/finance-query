@@ -137,8 +137,11 @@ impl MonteCarloConfig {
         let mut sim_sharpes: Vec<f64> = Vec::with_capacity(self.num_simulations);
         let mut sim_pfs: Vec<f64> = Vec::with_capacity(self.num_simulations);
 
+        // Allocate once and reset via copy_from_slice each iteration to avoid
+        // per-simulation heap allocations (f64 is Copy).
+        let mut shuffled = trade_returns.clone();
         for _ in 0..self.num_simulations {
-            let mut shuffled = trade_returns.clone();
+            shuffled.copy_from_slice(&trade_returns);
             fisher_yates_shuffle(&mut shuffled, &mut rng);
 
             // Build synthetic equity curve from shuffled trade returns
