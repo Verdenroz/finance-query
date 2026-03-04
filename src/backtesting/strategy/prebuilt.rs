@@ -318,6 +318,14 @@ impl Strategy for MacdSignal {
 /// Exits when price reaches middle or upper band.
 /// Emits short signals when price touches upper band (execution gated by
 /// [`BacktestConfig::allow_short`](crate::backtesting::BacktestConfig)).
+///
+/// # Signal Strength
+///
+/// All entry signals emit at default strength (`1.0`). Strength is **not** scaled
+/// by how far price has penetrated through the band. This differs from
+/// [`RsiReversal`], which grades strength by RSI extremity. If you are relying
+/// on [`BacktestConfig::min_signal_strength`] to filter signals in a portfolio
+/// context, all Bollinger entries will pass the threshold equally.
 #[derive(Debug, Clone)]
 pub struct BollingerMeanReversion {
     /// SMA period for middle band

@@ -244,7 +244,6 @@ impl PerformanceMetrics {
 
         let win_rate = stats.winning_trades as f64 / total_trades as f64;
 
-        // Use f64::MAX instead of INFINITY so the value survives JSON round-trips.
         let profit_factor = if stats.gross_loss > 0.0 {
             stats.gross_profit / stats.gross_loss
         } else if stats.gross_profit > 0.0 {
@@ -287,11 +286,18 @@ impl PerformanceMetrics {
             .unwrap_or(initial_capital);
         let total_return_pct = ((final_equity / initial_capital) - 1.0) * 100.0;
 
-        // Annualized return using configured bars_per_year
-        let num_bars = equity_curve.len();
-        let years = num_bars as f64 / bars_per_year;
+        // Annualized return using configured bars_per_year.
+        // Use return periods (N-1), not points (N), to avoid overestimating
+        // elapsed time for short series.
+        let num_periods = equity_curve.len().saturating_sub(1);
+        let years = num_periods as f64 / bars_per_year;
+        let growth = final_equity / initial_capital;
         let annualized_return_pct = if years > 0.0 {
-            ((final_equity / initial_capital).powf(1.0 / years) - 1.0) * 100.0
+            if growth <= 0.0 {
+                -100.0
+            } else {
+                (growth.powf(1.0 / years) - 1.0) * 100.0
+            }
         } else {
             0.0
         };
@@ -628,7 +634,23 @@ pub struct BenchmarkMetrics {
     /// Buy-and-hold return of the backtested symbol over the same period (percentage)
     pub buy_and_hold_return_pct: f64,
 
-    /// Alpha: annualised strategy excess return over the benchmark (CAPM)
+    /// Jensen's Alpha: annualised strategy excess return over the benchmark (CAPM).
+    ///
+    /// Computed as `strategy_ann - rf - β × (benchmark_ann - rf)` on the
+    /// timestamp-aligned subset of strategy and benchmark returns.
+    ///
+    /// # Accuracy Caveat
+    ///
+    /// Annualisation uses `aligned_bars / bars_per_year` to estimate elapsed
+    /// years.  If the strategy and benchmark candles have **different sampling
+    /// frequencies** (e.g., daily strategy vs. weekly benchmark), the aligned
+    /// subset contains far fewer bars than the full backtest period and the
+    /// per-year estimate will be wrong — both `strategy_ann` and `benchmark_ann`
+    /// are inflated by the same factor, but the risk-free rate is always the
+    /// true annual rate, making alpha unreliable.
+    ///
+    /// For accurate alpha, supply benchmark candles with the **same interval**
+    /// as the strategy candles.
     pub alpha: f64,
 
     /// Beta: sensitivity of strategy returns to benchmark movements
@@ -746,10 +768,12 @@ mod tests {
             entry_price: 100.0,
             exit_price: 100.0 + pnl / 10.0,
             quantity: 10.0,
+            entry_quantity: 10.0,
             commission: 0.0,
             pnl,
             return_pct,
             dividend_income: 0.0,
+            unreinvested_dividends: 0.0,
             entry_signal: Signal::long(0, 100.0),
             exit_signal: Signal::exit(100, 110.0),
         }
@@ -930,5 +954,25 @@ mod tests {
             "max_drawdown_percentage() should be 10.0, got {}",
             metrics.max_drawdown_percentage()
         );
+    }
+
+    #[test]
+    fn test_profit_factor_all_wins_is_f64_max() {
+        let trades = vec![make_trade(100.0, 10.0, true), make_trade(50.0, 5.0, true)];
+        let equity = vec![
+            EquityPoint {
+                timestamp: 0,
+                equity: 10000.0,
+                drawdown_pct: 0.0,
+            },
+            EquityPoint {
+                timestamp: 1,
+                equity: 10150.0,
+                drawdown_pct: 0.0,
+            },
+        ];
+
+        let metrics = PerformanceMetrics::calculate(&trades, &equity, 10000.0, 2, 2, 0.0, 252.0);
+        assert_eq!(metrics.profit_factor, f64::MAX);
     }
 }

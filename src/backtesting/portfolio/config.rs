@@ -19,7 +19,22 @@ pub enum RebalanceMode {
     /// Divide the initial capital equally among all available position slots.
     ///
     /// Slot count = `max_total_positions` if set, else the number of symbols.
-    /// If a slot allocation exceeds available cash, available cash is used instead.
+    /// The per-slot target is `initial_capital / slots`, capped by available cash.
+    ///
+    /// # Important: Anchored to Initial Capital
+    ///
+    /// The allocation target is **anchored to `initial_capital`**, not to current
+    /// portfolio equity. This has two consequences:
+    ///
+    /// * **Profitable portfolios:** profits accumulate as uninvested cash — each new
+    ///   position still receives `initial_capital / slots`. Use [`AvailableCapital`]
+    ///   if you want profits to compound into new positions.
+    ///
+    /// * **Sequential positions in the same symbol:** each entry (enter, exit, re-enter)
+    ///   independently receives the full slot allocation. The `max_total_positions` cap
+    ///   controls only *concurrent* open positions, not lifetime capital per symbol.
+    ///
+    /// [`AvailableCapital`]: RebalanceMode::AvailableCapital
     EqualWeight,
 
     /// Custom per-symbol weight as a fraction of initial capital (0.0 – 1.0).
