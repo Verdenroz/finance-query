@@ -188,7 +188,7 @@ pub enum OptimizeMetric {
 
 impl OptimizeMetric {
     /// Extract the target value from a `BacktestResult`. Higher is always better.
-    fn score(&self, result: &BacktestResult) -> f64 {
+    pub(crate) fn score(&self, result: &BacktestResult) -> f64 {
         match self {
             OptimizeMetric::TotalReturn => result.metrics.total_return_pct,
             OptimizeMetric::SharpeRatio => result.metrics.sharpe_ratio,

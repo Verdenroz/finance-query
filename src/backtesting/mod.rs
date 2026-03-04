@@ -97,6 +97,7 @@
 //! - **Position Management**: `stop_loss()`, `take_profit()`, `trailing_stop()`, `trailing_take_profit()`
 //! - **Position State**: `has_position()`, `no_position()`, `is_long()`, `is_short()`, `in_profit()`, `in_loss()`
 
+pub mod comparison;
 pub mod condition;
 mod config;
 mod engine;
@@ -141,3 +142,6 @@ pub use walk_forward::{WalkForwardConfig, WalkForwardReport, WindowResult};
 
 // Re-export Monte Carlo types
 pub use monte_carlo::{MonteCarloConfig, MonteCarloResult, PercentileStats};
+
+// Re-export comparison types
+pub use comparison::{BacktestComparison, ComparisonReport, ComparisonRow};
