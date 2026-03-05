@@ -118,7 +118,9 @@ pub use engine::BacktestEngine;
 pub use error::{BacktestError, Result};
 pub use position::{Position, PositionSide, Trade};
 pub use result::{BacktestResult, BenchmarkMetrics, EquityPoint, PerformanceMetrics, SignalRecord};
-pub use signal::{Signal, SignalDirection, SignalMetadata, SignalStrength};
+pub use signal::{
+    OrderType, PendingOrder, Signal, SignalDirection, SignalMetadata, SignalStrength,
+};
 
 // Re-export strategy types
 pub use strategy::{Strategy, StrategyContext};

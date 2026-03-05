@@ -386,12 +386,7 @@ fn fisher_yates_shuffle(slice: &mut [f64], rng: &mut Xorshift64) {
 ///
 /// Draws random starting positions and copies `block_size` consecutive
 /// elements (wrapping around the end), filling `out` to exactly its length.
-fn block_bootstrap_into(
-    trades: &[f64],
-    block_size: usize,
-    rng: &mut Xorshift64,
-    out: &mut Vec<f64>,
-) {
+fn block_bootstrap_into(trades: &[f64], block_size: usize, rng: &mut Xorshift64, out: &mut [f64]) {
     let n = trades.len();
     let block_size = block_size.max(1);
     let mut filled = 0;
@@ -415,13 +410,13 @@ fn stationary_bootstrap_into(
     trades: &[f64],
     mean_block_size: usize,
     rng: &mut Xorshift64,
-    out: &mut Vec<f64>,
+    out: &mut [f64],
 ) {
     let n = trades.len();
     let mean_block_size = mean_block_size.max(1);
     let mut pos = rng.next_usize(n);
-    for i in 0..n {
-        out[i] = trades[pos % n];
+    for slot in out.iter_mut() {
+        *slot = trades[pos % n];
         if rng.next_usize(mean_block_size) == 0 {
             // Start a new block at a random position.
             pos = rng.next_usize(n);
@@ -437,7 +432,7 @@ fn stationary_bootstrap_into(
 /// standard-normal samples, then shifts and scales by the empirical mean and
 /// standard deviation. When fewer than 2 trades exist (σ undefined), all
 /// samples are set to the empirical mean.
-fn parametric_sample_into(trades: &[f64], rng: &mut Xorshift64, out: &mut Vec<f64>) {
+fn parametric_sample_into(trades: &[f64], rng: &mut Xorshift64, out: &mut [f64]) {
     let n = trades.len();
     let mean = trades.iter().sum::<f64>() / n as f64;
     let variance = if n > 1 {

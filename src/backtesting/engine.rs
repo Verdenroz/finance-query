@@ -11,7 +11,7 @@ use super::position::{Position, PositionSide, Trade};
 use super::result::{
     BacktestResult, BenchmarkMetrics, EquityPoint, PerformanceMetrics, SignalRecord,
 };
-use super::signal::{Signal, SignalDirection};
+use super::signal::{OrderType, PendingOrder, Signal, SignalDirection};
 use super::strategy::{Strategy, StrategyContext};
 
 /// Backtest execution engine.
@@ -104,6 +104,10 @@ impl BacktestEngine {
         // We advance this index forward as the simulation progresses in time.
         let mut div_idx: usize = 0;
 
+        // Pending limit / stop orders placed by the strategy.
+        // Checked each bar before strategy signal evaluation.
+        let mut pending_orders: Vec<PendingOrder> = Vec::new();
+
         // Main simulation loop
         for i in 0..candles.len() {
             let candle = &candles[i];
@@ -153,6 +157,91 @@ impl BacktestEngine {
                 }
             }
 
+            // ── Pending limit / stop orders ───────────────────────────────
+            // Check queued orders against the current bar before evaluating
+            // the strategy. This preserves the realistic ordering where a
+            // pending order placed on bar N can first fill on bar N+1.
+            //
+            // `retain_mut` preserves FIFO queue order (critical for correct
+            // order matching) while avoiding the temporary index vec and the
+            // ordering-destroying `swap_remove` used previously.
+            let mut filled_this_bar = false;
+            pending_orders.retain_mut(|order| {
+                // Expire orders past their GTC lifetime.
+                if let Some(exp) = order.expires_in_bars
+                    && i >= order.created_bar + exp
+                {
+                    return false; // drop
+                }
+
+                // Cannot fill into an existing position, or if another
+                // pending order already filled on this bar.
+                if position.is_some() || filled_this_bar {
+                    return true; // keep
+                }
+
+                // Short orders require allow_short.
+                if matches!(order.signal.direction, SignalDirection::Short)
+                    && !self.config.allow_short
+                {
+                    return true; // keep (config could change via re-run)
+                }
+
+                // BuyStopLimit state machine: if the stop price is triggered
+                // but the bar opens above the limit price the order can't fill
+                // this bar. In reality the stop has already "activated" the
+                // order, which now rests in the book as a plain limit order.
+                // Downgrade so subsequent bars treat it as a BuyLimit.
+                let upgrade_to_limit = match &order.order_type {
+                    OrderType::BuyStopLimit {
+                        stop_price,
+                        limit_price,
+                    } if candle.high >= *stop_price => {
+                        let trigger_fill = candle.open.max(*stop_price);
+                        if trigger_fill > *limit_price {
+                            Some(*limit_price) // triggered, limit not reached
+                        } else {
+                            None // triggered and fillable — handled below
+                        }
+                    }
+                    _ => None,
+                };
+                if let Some(new_limit) = upgrade_to_limit {
+                    order.order_type = OrderType::BuyLimit {
+                        limit_price: new_limit,
+                    };
+                    return true; // keep as plain BuyLimit; skip fill this bar
+                }
+
+                if let Some(fill_price) = order.order_type.try_fill(candle) {
+                    let is_long = matches!(order.signal.direction, SignalDirection::Long);
+                    let executed = self.open_position_at_price(
+                        &mut position,
+                        &mut cash,
+                        candle,
+                        &order.signal,
+                        is_long,
+                        fill_price,
+                    );
+                    if executed {
+                        hwm = position.as_ref().map(|p| p.entry_price);
+                        signals.push(SignalRecord {
+                            timestamp: candle.timestamp,
+                            price: fill_price,
+                            direction: order.signal.direction,
+                            strength: order.signal.strength.value(),
+                            reason: order.signal.reason.clone(),
+                            executed: true,
+                            tags: order.signal.tags.clone(),
+                        });
+                        filled_this_bar = true;
+                        return false; // drop — order filled
+                    }
+                }
+
+                true // keep unfilled order
+            });
+
             // Skip strategy signals during warmup period
             if i < warmup.saturating_sub(1) {
                 continue;
@@ -189,11 +278,62 @@ impl BacktestEngine {
                 continue;
             }
 
-            // Execute on next bar to avoid same-bar close-fill bias.
-            let executed = if let Some(fill_candle) = candles.get(i + 1) {
-                self.execute_signal(&signal, fill_candle, &mut position, &mut cash, &mut trades)
-            } else {
-                false
+            // Market orders execute on next bar to avoid same-bar close-fill
+            // bias.  Limit and stop entry orders are queued as PendingOrders
+            // and fill on a subsequent bar when the price level is reached.
+            // Non-Market directions other than Long/Short (Exit, ScaleIn,
+            // ScaleOut) are always treated as market orders.
+            let executed = match &signal.order_type {
+                OrderType::Market => {
+                    if let Some(fill_candle) = candles.get(i + 1) {
+                        self.execute_signal(
+                            &signal,
+                            fill_candle,
+                            &mut position,
+                            &mut cash,
+                            &mut trades,
+                        )
+                    } else {
+                        false
+                    }
+                }
+                _ if matches!(
+                    signal.direction,
+                    SignalDirection::Long | SignalDirection::Short
+                ) =>
+                {
+                    // Reject short orders immediately if shorts are disabled —
+                    // no point burning queue space for orders that can never fill.
+                    if matches!(signal.direction, SignalDirection::Short)
+                        && !self.config.allow_short
+                    {
+                        false
+                    } else {
+                        // Queue as a pending order; the signal record below will
+                        // show executed: false (order placed but not yet filled).
+                        pending_orders.push(PendingOrder {
+                            order_type: signal.order_type.clone(),
+                            expires_in_bars: signal.expires_in_bars,
+                            created_bar: i,
+                            signal: signal.clone(),
+                        });
+                        false
+                    }
+                }
+                _ => {
+                    // Non-market Exit / ScaleIn / ScaleOut — execute as market.
+                    if let Some(fill_candle) = candles.get(i + 1) {
+                        self.execute_signal(
+                            &signal,
+                            fill_candle,
+                            &mut position,
+                            &mut cash,
+                            &mut trades,
+                        )
+                    } else {
+                        false
+                    }
+                }
             };
 
             if executed
@@ -1056,7 +1196,7 @@ impl BacktestEngine {
         true
     }
 
-    /// Open a new position
+    /// Open a new position at `candle.open` (market fill).
     fn open_position(
         &self,
         position: &mut Option<Position>,
@@ -1065,7 +1205,23 @@ impl BacktestEngine {
         signal: &Signal,
         is_long: bool,
     ) -> bool {
-        let entry_price_slipped = self.config.apply_entry_slippage(candle.open, is_long);
+        self.open_position_at_price(position, cash, candle, signal, is_long, candle.open)
+    }
+
+    /// Open a new position at an explicit fill price.
+    ///
+    /// Used for pending limit/stop order fills where the computed order price
+    /// (with gap guard) is the fill price rather than the next bar's open.
+    fn open_position_at_price(
+        &self,
+        position: &mut Option<Position>,
+        cash: &mut f64,
+        candle: &Candle,
+        signal: &Signal,
+        is_long: bool,
+        fill_price_raw: f64,
+    ) -> bool {
+        let entry_price_slipped = self.config.apply_entry_slippage(fill_price_raw, is_long);
         let entry_price = self.config.apply_entry_spread(entry_price_slipped, is_long);
         let quantity = self.config.calculate_position_size(*cash, entry_price);
 

@@ -3,6 +3,8 @@
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+use crate::models::chart::Candle;
+
 use super::error::{BacktestError, Result};
 
 /// Trading signal direction
@@ -41,6 +43,141 @@ impl std::fmt::Display for SignalDirection {
             Self::ScaleOut => write!(f, "SCALE_OUT"),
         }
     }
+}
+
+/// Order type controlling how a signal's entry is executed.
+///
+/// [`OrderType::Market`] (the default) preserves the existing behaviour:
+/// fill at the next bar's open.  The limit and stop variants queue the order
+/// as a [`PendingOrder`] and fill when the bar's high/low reaches the
+/// specified price level.
+///
+/// This enum is `#[non_exhaustive]` so that adding new order types (e.g.
+/// `MarketOnClose`, `TrailingStopLimit`) in a future release is not a
+/// breaking change for library consumers that match on it exhaustively.
+#[non_exhaustive]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub enum OrderType {
+    /// Standard market order — fill at next bar's open (default).
+    #[default]
+    Market,
+    /// Limit buy — fill if `candle.low ≤ limit_price`.
+    BuyLimit {
+        /// Maximum price accepted for a long entry.
+        limit_price: f64,
+    },
+    /// Stop buy (breakout) — fill if `candle.high ≥ stop_price`.
+    BuyStop {
+        /// Price level that triggers a long entry.
+        stop_price: f64,
+    },
+    /// Limit sell — fill if `candle.high ≥ limit_price`.
+    SellLimit {
+        /// Minimum price accepted for a short entry.
+        limit_price: f64,
+    },
+    /// Stop sell (breakdown) — fill if `candle.low ≤ stop_price`.
+    SellStop {
+        /// Price level that triggers a short entry.
+        stop_price: f64,
+    },
+    /// Stop-limit buy — triggered when `candle.high ≥ stop_price`,
+    /// filled at the trigger price capped at `limit_price`.
+    ///
+    /// If the bar opens above `limit_price` the order cannot fill that bar.
+    BuyStopLimit {
+        /// Price that activates the limit order.
+        stop_price: f64,
+        /// Maximum acceptable fill price.
+        limit_price: f64,
+    },
+}
+
+impl OrderType {
+    /// Try to fill this order type against `candle`.
+    ///
+    /// Returns the computed fill price if the order's price level was reached,
+    /// or `None` if the level was not touched this bar.
+    ///
+    /// Gap guards ensure the fill is never unrealistically better than the
+    /// market would have provided:
+    /// - Buy orders: if the bar opens *below* the limit, fill at the open.
+    /// - Sell orders: analogous logic in the other direction.
+    pub(crate) fn try_fill(&self, candle: &Candle) -> Option<f64> {
+        match self {
+            Self::Market => None, // Market orders are never in the pending queue.
+            Self::BuyLimit { limit_price } => {
+                if candle.low <= *limit_price {
+                    // Gap guard: open already below the limit → fill at open.
+                    Some(candle.open.min(*limit_price))
+                } else {
+                    None
+                }
+            }
+            Self::BuyStop { stop_price } => {
+                if candle.high >= *stop_price {
+                    // Gap guard: open already above the stop → fill at open.
+                    Some(candle.open.max(*stop_price))
+                } else {
+                    None
+                }
+            }
+            Self::SellLimit { limit_price } => {
+                if candle.high >= *limit_price {
+                    // Gap guard: open already above the limit → fill at open.
+                    Some(candle.open.max(*limit_price))
+                } else {
+                    None
+                }
+            }
+            Self::SellStop { stop_price } => {
+                if candle.low <= *stop_price {
+                    // Gap guard: open already below the stop → fill at open.
+                    Some(candle.open.min(*stop_price))
+                } else {
+                    None
+                }
+            }
+            Self::BuyStopLimit {
+                stop_price,
+                limit_price,
+            } => {
+                // Triggered when price breaks up through stop_price.
+                // Fill at the trigger price (gap guard applied), but only if it
+                // does not exceed limit_price; if the bar gaps above the limit
+                // the order cannot fill this bar.
+                if candle.high >= *stop_price {
+                    let trigger_fill = candle.open.max(*stop_price);
+                    if trigger_fill <= *limit_price {
+                        Some(trigger_fill)
+                    } else {
+                        None // Gapped above the limit; unfillable this bar.
+                    }
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
+
+/// A queued limit or stop entry order awaiting price-level execution.
+///
+/// Created by the engine when a strategy returns a [`Signal`] whose
+/// [`Signal::order_type`] is not [`OrderType::Market`].  The engine checks
+/// the order each subsequent bar until it fills or expires.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PendingOrder {
+    /// The original signal returned by the strategy.
+    pub signal: Signal,
+    /// Order type carrying the price level(s) used for fill logic.
+    pub order_type: OrderType,
+    /// Bar index (in the candles slice) when this order was placed.
+    pub created_bar: usize,
+    /// Optional GTC expiry: cancel after this many bars if not filled.
+    ///
+    /// `None` means Good-Till-Cancelled.
+    pub expires_in_bars: Option<usize>,
 }
 
 /// Signal strength/confidence (0.0 to 1.0)
@@ -160,6 +297,27 @@ pub struct Signal {
     /// [`Signal::scale_out`] constructors.
     #[serde(default)]
     pub scale_fraction: Option<f64>,
+
+    /// Order type controlling how this signal's entry is executed.
+    ///
+    /// [`OrderType::Market`] (default) fills at next bar's open.  Limit and
+    /// stop types queue the order as a [`PendingOrder`] and fill when the
+    /// bar's high/low reaches the specified price level.
+    ///
+    /// Only meaningful for [`SignalDirection::Long`] and
+    /// [`SignalDirection::Short`] signals; ignored for Exit / ScaleIn /
+    /// ScaleOut / Hold.
+    #[serde(default)]
+    pub order_type: OrderType,
+
+    /// Expiry for pending limit/stop orders, measured in bars.
+    ///
+    /// When set, the pending order is cancelled if not filled within this
+    /// many bars after it is placed.  `None` means Good-Till-Cancelled.
+    ///
+    /// Only relevant when [`Signal::order_type`] is not [`OrderType::Market`].
+    #[serde(default)]
+    pub expires_in_bars: Option<usize>,
 }
 
 impl Signal {
@@ -174,6 +332,8 @@ impl Signal {
             metadata: None,
             tags: Vec::new(),
             scale_fraction: None,
+            order_type: OrderType::Market,
+            expires_in_bars: None,
         }
     }
 
@@ -188,6 +348,8 @@ impl Signal {
             metadata: None,
             tags: Vec::new(),
             scale_fraction: None,
+            order_type: OrderType::Market,
+            expires_in_bars: None,
         }
     }
 
@@ -202,6 +364,8 @@ impl Signal {
             metadata: None,
             tags: Vec::new(),
             scale_fraction: None,
+            order_type: OrderType::Market,
+            expires_in_bars: None,
         }
     }
 
@@ -216,6 +380,8 @@ impl Signal {
             metadata: None,
             tags: Vec::new(),
             scale_fraction: None,
+            order_type: OrderType::Market,
+            expires_in_bars: None,
         }
     }
 
@@ -271,6 +437,8 @@ impl Signal {
             metadata: None,
             tags: Vec::new(),
             scale_fraction: Some(fraction.clamp(0.0, 1.0)),
+            order_type: OrderType::Market,
+            expires_in_bars: None,
         }
     }
 
@@ -301,7 +469,185 @@ impl Signal {
             metadata: None,
             tags: Vec::new(),
             scale_fraction: Some(fraction.clamp(0.0, 1.0)),
+            order_type: OrderType::Market,
+            expires_in_bars: None,
         }
+    }
+
+    /// Create a limit buy order — enter long when price pulls back to `limit_price`.
+    ///
+    /// The order is queued as a [`PendingOrder`] and fills on the first subsequent
+    /// bar where `candle.low ≤ limit_price`.  Fill price is `limit_price`, or the
+    /// bar's open if a gap-down open is already below the limit (realistic gap fill).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, close) = (0i64, 100.0f64);
+    /// // Buy if price dips to 98 within the next 5 bars.
+    /// let signal = Signal::buy_limit(ts, close, 98.0).expires_in_bars(5);
+    /// ```
+    pub fn buy_limit(timestamp: i64, price: f64, limit_price: f64) -> Self {
+        Self {
+            direction: SignalDirection::Long,
+            order_type: OrderType::BuyLimit { limit_price },
+            strength: SignalStrength::default(),
+            timestamp,
+            price,
+            reason: None,
+            metadata: None,
+            tags: Vec::new(),
+            scale_fraction: None,
+            expires_in_bars: None,
+        }
+    }
+
+    /// Create a stop buy order (breakout entry) — enter long when price breaks above
+    /// `stop_price`.
+    ///
+    /// Fills on the first subsequent bar where `candle.high ≥ stop_price`.  Fill
+    /// price is `stop_price`, or the bar's open if a gap-up open is already above
+    /// the stop (open price used instead).
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, close) = (0i64, 100.0f64);
+    /// // Enter long on a breakout above 105.
+    /// let signal = Signal::buy_stop(ts, close, 105.0);
+    /// ```
+    pub fn buy_stop(timestamp: i64, price: f64, stop_price: f64) -> Self {
+        Self {
+            direction: SignalDirection::Long,
+            order_type: OrderType::BuyStop { stop_price },
+            strength: SignalStrength::default(),
+            timestamp,
+            price,
+            reason: None,
+            metadata: None,
+            tags: Vec::new(),
+            scale_fraction: None,
+            expires_in_bars: None,
+        }
+    }
+
+    /// Create a limit sell order — enter short when price rallies to `limit_price`.
+    ///
+    /// Fills on the first subsequent bar where `candle.high ≥ limit_price`.  Fill
+    /// price is `limit_price`, or the bar's open if a gap-up open is already at or
+    /// above the limit.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, close) = (0i64, 100.0f64);
+    /// // Short into a rally reaching 103.
+    /// let signal = Signal::sell_limit(ts, close, 103.0).expires_in_bars(10);
+    /// ```
+    pub fn sell_limit(timestamp: i64, price: f64, limit_price: f64) -> Self {
+        Self {
+            direction: SignalDirection::Short,
+            order_type: OrderType::SellLimit { limit_price },
+            strength: SignalStrength::default(),
+            timestamp,
+            price,
+            reason: None,
+            metadata: None,
+            tags: Vec::new(),
+            scale_fraction: None,
+            expires_in_bars: None,
+        }
+    }
+
+    /// Create a stop sell order (breakdown entry) — enter short when price breaks
+    /// below `stop_price`.
+    ///
+    /// Fills on the first subsequent bar where `candle.low ≤ stop_price`.  Fill
+    /// price is `stop_price`, or the bar's open if a gap-down open is already below
+    /// the stop.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, close) = (0i64, 100.0f64);
+    /// // Short on a breakdown below 95.
+    /// let signal = Signal::sell_stop(ts, close, 95.0);
+    /// ```
+    pub fn sell_stop(timestamp: i64, price: f64, stop_price: f64) -> Self {
+        Self {
+            direction: SignalDirection::Short,
+            order_type: OrderType::SellStop { stop_price },
+            strength: SignalStrength::default(),
+            timestamp,
+            price,
+            reason: None,
+            metadata: None,
+            tags: Vec::new(),
+            scale_fraction: None,
+            expires_in_bars: None,
+        }
+    }
+
+    /// Create a stop-limit buy order — triggered by a breakout above `stop_price`
+    /// but capped at `limit_price`.
+    ///
+    /// Fills when `candle.high ≥ stop_price` and the computed trigger price
+    /// (bar open or stop_price, whichever is higher) does not exceed `limit_price`.
+    /// If the bar gaps up above `limit_price`, the order cannot fill that bar and
+    /// remains pending.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, close) = (0i64, 100.0f64);
+    /// // Breakout buy above 105, but reject fills above 107.
+    /// let signal = Signal::buy_stop_limit(ts, close, 105.0, 107.0);
+    /// ```
+    pub fn buy_stop_limit(timestamp: i64, price: f64, stop_price: f64, limit_price: f64) -> Self {
+        Self {
+            direction: SignalDirection::Long,
+            order_type: OrderType::BuyStopLimit {
+                stop_price,
+                limit_price,
+            },
+            strength: SignalStrength::default(),
+            timestamp,
+            price,
+            reason: None,
+            metadata: None,
+            tags: Vec::new(),
+            scale_fraction: None,
+            expires_in_bars: None,
+        }
+    }
+
+    /// Set an expiry (in bars) for this pending limit/stop order.
+    ///
+    /// When the order is not filled within `bars` bars after being placed, it is
+    /// automatically cancelled.  Has no effect on [`OrderType::Market`] signals.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, close) = (0i64, 100.0f64);
+    /// // Day order: fill or cancel after 1 bar.
+    /// let signal = Signal::buy_limit(ts, close, 98.0).expires_in_bars(1);
+    /// ```
+    pub fn expires_in_bars(mut self, bars: usize) -> Self {
+        self.expires_in_bars = Some(bars);
+        self
     }
 
     /// Set signal strength
@@ -342,6 +688,197 @@ impl Default for Signal {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::models::chart::Candle;
+
+    fn make_candle(open: f64, high: f64, low: f64, close: f64) -> Candle {
+        Candle {
+            timestamp: 0,
+            open,
+            high,
+            low,
+            close,
+            volume: 1000,
+            adj_close: None,
+        }
+    }
+
+    #[test]
+    fn test_order_type_constructors() {
+        let sig = Signal::buy_limit(100, 105.0, 98.0);
+        assert_eq!(sig.direction, SignalDirection::Long);
+        assert_eq!(sig.order_type, OrderType::BuyLimit { limit_price: 98.0 });
+        assert!(sig.expires_in_bars.is_none());
+
+        let sig = Signal::buy_stop(100, 105.0, 110.0);
+        assert_eq!(sig.order_type, OrderType::BuyStop { stop_price: 110.0 });
+
+        let sig = Signal::sell_limit(100, 105.0, 108.0);
+        assert_eq!(sig.direction, SignalDirection::Short);
+        assert_eq!(sig.order_type, OrderType::SellLimit { limit_price: 108.0 });
+
+        let sig = Signal::sell_stop(100, 105.0, 100.0);
+        assert_eq!(sig.order_type, OrderType::SellStop { stop_price: 100.0 });
+
+        let sig = Signal::buy_stop_limit(100, 105.0, 110.0, 112.0);
+        assert_eq!(
+            sig.order_type,
+            OrderType::BuyStopLimit {
+                stop_price: 110.0,
+                limit_price: 112.0
+            }
+        );
+    }
+
+    #[test]
+    fn test_expires_in_bars_builder() {
+        let sig = Signal::buy_limit(0, 100.0, 95.0).expires_in_bars(5);
+        assert_eq!(sig.expires_in_bars, Some(5));
+
+        let sig = Signal::buy_stop(0, 100.0, 105.0);
+        assert!(sig.expires_in_bars.is_none());
+    }
+
+    #[test]
+    fn test_try_fill_buy_limit() {
+        // Bar that touches the limit
+        let candle = make_candle(101.0, 103.0, 97.0, 100.0);
+        assert_eq!(
+            OrderType::BuyLimit { limit_price: 98.0 }.try_fill(&candle),
+            Some(98.0)
+        );
+
+        // Gap-down: open already below limit — fill at open
+        let candle = make_candle(96.0, 99.0, 95.0, 98.0);
+        assert_eq!(
+            OrderType::BuyLimit { limit_price: 98.0 }.try_fill(&candle),
+            Some(96.0) // open < limit, fill at open
+        );
+
+        // Bar that does not touch the limit
+        let candle = make_candle(102.0, 104.0, 100.0, 101.0);
+        assert!(
+            OrderType::BuyLimit { limit_price: 98.0 }
+                .try_fill(&candle)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_try_fill_buy_stop() {
+        // Bar that breaks through the stop
+        let candle = make_candle(104.0, 111.0, 103.0, 108.0);
+        assert_eq!(
+            OrderType::BuyStop { stop_price: 110.0 }.try_fill(&candle),
+            Some(110.0)
+        );
+
+        // Gap-up: open already above stop — fill at open
+        let candle = make_candle(112.0, 115.0, 110.0, 113.0);
+        assert_eq!(
+            OrderType::BuyStop { stop_price: 110.0 }.try_fill(&candle),
+            Some(112.0) // open > stop, fill at open
+        );
+
+        // Bar that does not reach the stop
+        let candle = make_candle(105.0, 109.0, 103.0, 107.0);
+        assert!(
+            OrderType::BuyStop { stop_price: 110.0 }
+                .try_fill(&candle)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_try_fill_sell_limit() {
+        // Bar that reaches limit
+        let candle = make_candle(99.0, 109.0, 98.0, 105.0);
+        assert_eq!(
+            OrderType::SellLimit { limit_price: 108.0 }.try_fill(&candle),
+            Some(108.0)
+        );
+
+        // Gap-up: open above limit — fill at open
+        let candle = make_candle(110.0, 112.0, 108.0, 111.0);
+        assert_eq!(
+            OrderType::SellLimit { limit_price: 108.0 }.try_fill(&candle),
+            Some(110.0)
+        );
+
+        // Does not reach limit
+        let candle = make_candle(100.0, 107.0, 99.0, 104.0);
+        assert!(
+            OrderType::SellLimit { limit_price: 108.0 }
+                .try_fill(&candle)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_try_fill_sell_stop() {
+        // Bar that drops through the stop
+        let candle = make_candle(103.0, 105.0, 99.0, 101.0);
+        assert_eq!(
+            OrderType::SellStop { stop_price: 100.0 }.try_fill(&candle),
+            Some(100.0)
+        );
+
+        // Gap-down: open below stop — fill at open
+        let candle = make_candle(98.0, 102.0, 96.0, 99.0);
+        assert_eq!(
+            OrderType::SellStop { stop_price: 100.0 }.try_fill(&candle),
+            Some(98.0)
+        );
+
+        // Does not drop to stop
+        let candle = make_candle(105.0, 107.0, 101.0, 103.0);
+        assert!(
+            OrderType::SellStop { stop_price: 100.0 }
+                .try_fill(&candle)
+                .is_none()
+        );
+    }
+
+    #[test]
+    fn test_try_fill_buy_stop_limit() {
+        // Triggers and fills within limit
+        let candle = make_candle(104.0, 113.0, 103.0, 110.0);
+        assert_eq!(
+            OrderType::BuyStopLimit {
+                stop_price: 110.0,
+                limit_price: 112.0,
+            }
+            .try_fill(&candle),
+            Some(110.0) // trigger fill at stop (< limit)
+        );
+
+        // Gap-up above limit — cannot fill
+        let candle = make_candle(114.0, 116.0, 112.0, 115.0);
+        assert!(
+            OrderType::BuyStopLimit {
+                stop_price: 110.0,
+                limit_price: 112.0,
+            }
+            .try_fill(&candle)
+            .is_none() // 114 > limit 112
+        );
+
+        // Does not trigger
+        let candle = make_candle(105.0, 109.0, 103.0, 107.0);
+        assert!(
+            OrderType::BuyStopLimit {
+                stop_price: 110.0,
+                limit_price: 112.0,
+            }
+            .try_fill(&candle)
+            .is_none()
+        );
+    }
+
+    #[test]
+    fn test_market_order_not_filled() {
+        let candle = make_candle(100.0, 110.0, 90.0, 105.0);
+        assert!(OrderType::Market.try_fill(&candle).is_none());
+    }
 
     #[test]
     fn test_signal_strength_bounds() {
