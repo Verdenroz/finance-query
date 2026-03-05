@@ -426,6 +426,8 @@ mod tests {
             dividend_income: 0.0,
             unreinvested_dividends: 0.0,
             tags: Vec::new(),
+            is_partial: false,
+            scale_sequence: 0,
             entry_signal: make_signal(),
             exit_signal: Signal::exit(86400, exit),
         }

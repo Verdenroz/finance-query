@@ -17,6 +17,17 @@ pub enum SignalDirection {
     Exit,
     /// No action
     Hold,
+    /// Add to an existing position (pyramid / scale in).
+    ///
+    /// The fraction of current portfolio equity to allocate is stored in
+    /// [`Signal::scale_fraction`]. No-op when no position is open.
+    ScaleIn,
+    /// Partially exit an existing position (scale out).
+    ///
+    /// The fraction of the current position quantity to close is stored in
+    /// [`Signal::scale_fraction`]. A fraction of `1.0` is equivalent to a
+    /// full [`Exit`](Self::Exit). No-op when no position is open.
+    ScaleOut,
 }
 
 impl std::fmt::Display for SignalDirection {
@@ -26,6 +37,8 @@ impl std::fmt::Display for SignalDirection {
             Self::Short => write!(f, "SHORT"),
             Self::Exit => write!(f, "EXIT"),
             Self::Hold => write!(f, "HOLD"),
+            Self::ScaleIn => write!(f, "SCALE_IN"),
+            Self::ScaleOut => write!(f, "SCALE_OUT"),
         }
     }
 }
@@ -137,6 +150,16 @@ pub struct Signal {
     /// Use the `.tag()` builder to attach tags at signal creation time.
     #[serde(default)]
     pub tags: Vec<String>,
+
+    /// Fraction for [`SignalDirection::ScaleIn`] and [`SignalDirection::ScaleOut`] signals.
+    ///
+    /// - `ScaleIn`: fraction of current portfolio **equity** to add to the position (`0.0..=1.0`).
+    /// - `ScaleOut`: fraction of current **position quantity** to close (`0.0..=1.0`).
+    ///
+    /// `None` for all other signal directions. Set via [`Signal::scale_in`] /
+    /// [`Signal::scale_out`] constructors.
+    #[serde(default)]
+    pub scale_fraction: Option<f64>,
 }
 
 impl Signal {
@@ -150,6 +173,7 @@ impl Signal {
             reason: None,
             metadata: None,
             tags: Vec::new(),
+            scale_fraction: None,
         }
     }
 
@@ -163,6 +187,7 @@ impl Signal {
             reason: None,
             metadata: None,
             tags: Vec::new(),
+            scale_fraction: None,
         }
     }
 
@@ -176,6 +201,7 @@ impl Signal {
             reason: None,
             metadata: None,
             tags: Vec::new(),
+            scale_fraction: None,
         }
     }
 
@@ -189,6 +215,7 @@ impl Signal {
             reason: None,
             metadata: None,
             tags: Vec::new(),
+            scale_fraction: None,
         }
     }
 
@@ -208,6 +235,73 @@ impl Signal {
     /// Check if this is an exit signal
     pub fn is_exit(&self) -> bool {
         matches!(self.direction, SignalDirection::Exit)
+    }
+
+    /// Check if this is a scaling signal (scale-in or scale-out)
+    pub fn is_scaling(&self) -> bool {
+        matches!(
+            self.direction,
+            SignalDirection::ScaleIn | SignalDirection::ScaleOut
+        )
+    }
+
+    /// Create a scale-in signal — add to an existing position.
+    ///
+    /// `fraction` is the portion of current portfolio **equity** to allocate to
+    /// the additional shares. Must be in `0.0..=1.0`; values outside this range
+    /// are clamped by the engine. Has no effect if no position is currently open.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// // In a custom Strategy::on_candle implementation:
+    /// # let (ctx_timestamp, ctx_price) = (0i64, 0.0f64);
+    /// // Add 10% of current equity to the existing long position.
+    /// let signal = Signal::scale_in(0.10, ctx_timestamp, ctx_price);
+    /// ```
+    pub fn scale_in(fraction: f64, timestamp: i64, price: f64) -> Self {
+        Self {
+            direction: SignalDirection::ScaleIn,
+            strength: SignalStrength::default(),
+            timestamp,
+            price,
+            reason: None,
+            metadata: None,
+            tags: Vec::new(),
+            scale_fraction: Some(fraction.clamp(0.0, 1.0)),
+        }
+    }
+
+    /// Create a scale-out signal — partially exit an existing position.
+    ///
+    /// `fraction` is the portion of the current position **quantity** to close.
+    /// Must be in `0.0..=1.0`; values outside this range are clamped. A fraction
+    /// of `1.0` closes the entire position (equivalent to [`Signal::exit`]). Has
+    /// no effect if no position is currently open.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// // In a custom Strategy::on_candle implementation:
+    /// # let (ctx_timestamp, ctx_price) = (0i64, 0.0f64);
+    /// // Close half the current position to lock in partial profits.
+    /// let signal = Signal::scale_out(0.50, ctx_timestamp, ctx_price);
+    /// ```
+    pub fn scale_out(fraction: f64, timestamp: i64, price: f64) -> Self {
+        Self {
+            direction: SignalDirection::ScaleOut,
+            strength: SignalStrength::default(),
+            timestamp,
+            price,
+            reason: None,
+            metadata: None,
+            tags: Vec::new(),
+            scale_fraction: Some(fraction.clamp(0.0, 1.0)),
+        }
     }
 
     /// Set signal strength

@@ -370,6 +370,130 @@ impl PortfolioEngine {
                         // Queue for priority-ordered entry
                         pending_entries.push((sym.clone(), signal));
                     }
+                    SignalDirection::ScaleIn => {
+                        let fraction = signal.scale_fraction.unwrap_or(0.0).clamp(0.0, 1.0);
+                        let executed = fraction > 0.0
+                            && state.position.is_some()
+                            && state
+                                .candles
+                                .get(candle_idx + 1)
+                                .is_some_and(|fill_candle| {
+                                    let pos = state.position.as_mut().unwrap();
+                                    let is_long = pos.is_long();
+                                    let fill_price = self.config.base.apply_entry_spread(
+                                        self.config
+                                            .base
+                                            .apply_entry_slippage(fill_candle.open, is_long),
+                                        is_long,
+                                    );
+                                    if fill_price <= 0.0 {
+                                        return false;
+                                    }
+                                    let add_value = portfolio_equity * fraction;
+                                    let add_qty = add_value / fill_price;
+                                    let commission =
+                                        self.config.base.calculate_commission(add_qty, fill_price);
+                                    let entry_tax = self
+                                        .config
+                                        .base
+                                        .calculate_transaction_tax(add_value, is_long);
+                                    let total_cost = if is_long {
+                                        add_value + commission + entry_tax
+                                    } else {
+                                        commission
+                                    };
+                                    if add_qty <= 0.0 || total_cost > cash {
+                                        return false;
+                                    }
+                                    if is_long {
+                                        cash -= add_value + commission + entry_tax;
+                                    } else {
+                                        cash += add_value - commission;
+                                    }
+                                    pos.scale_in(fill_price, add_qty, commission, entry_tax);
+                                    true
+                                });
+                        state.signals.push(SignalRecord {
+                            timestamp: signal.timestamp,
+                            price: signal.price,
+                            direction: signal.direction,
+                            strength: signal.strength.value(),
+                            reason: signal.reason,
+                            executed,
+                            tags: signal.tags,
+                        });
+                    }
+                    SignalDirection::ScaleOut => {
+                        let fraction = signal.scale_fraction.unwrap_or(0.0).clamp(0.0, 1.0);
+                        let executed = fraction > 0.0 && {
+                            // Extract position metadata before any mutable borrow.
+                            let pos_meta =
+                                state.position.as_ref().map(|p| (p.is_long(), p.quantity));
+                            match (state.candles.get(candle_idx + 1), pos_meta) {
+                                (Some(fill_candle), Some((is_long, qty_full))) => {
+                                    let exit_price = self.config.base.apply_exit_spread(
+                                        self.config
+                                            .base
+                                            .apply_exit_slippage(fill_candle.open, is_long),
+                                        is_long,
+                                    );
+                                    let qty_to_close = if fraction >= 1.0 {
+                                        qty_full
+                                    } else {
+                                        qty_full * fraction
+                                    };
+                                    let commission = self
+                                        .config
+                                        .base
+                                        .calculate_commission(qty_to_close, exit_price);
+                                    let exit_tax = self.config.base.calculate_transaction_tax(
+                                        exit_price * qty_to_close,
+                                        !is_long,
+                                    );
+                                    let trade = if fraction >= 1.0 {
+                                        let pos = state.position.take().unwrap();
+                                        state.hwm = None;
+                                        pos.close_with_tax(
+                                            fill_candle.timestamp,
+                                            exit_price,
+                                            commission,
+                                            exit_tax,
+                                            signal.clone(),
+                                        )
+                                    } else {
+                                        state.position.as_mut().unwrap().partial_close(
+                                            fraction,
+                                            fill_candle.timestamp,
+                                            exit_price,
+                                            commission,
+                                            exit_tax,
+                                            signal.clone(),
+                                        )
+                                    };
+                                    if trade.is_long() {
+                                        cash += trade.exit_value() - commission
+                                            + trade.unreinvested_dividends;
+                                    } else {
+                                        cash -= trade.exit_value() + commission + exit_tax
+                                            - trade.unreinvested_dividends;
+                                    }
+                                    state.realized_pnl += trade.pnl;
+                                    state.trades.push(trade);
+                                    true
+                                }
+                                _ => false,
+                            }
+                        };
+                        state.signals.push(SignalRecord {
+                            timestamp: signal.timestamp,
+                            price: signal.price,
+                            direction: signal.direction,
+                            strength: signal.strength.value(),
+                            reason: signal.reason,
+                            executed,
+                            tags: signal.tags,
+                        });
+                    }
                     SignalDirection::Hold => {}
                 }
             }
