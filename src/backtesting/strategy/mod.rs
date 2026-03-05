@@ -20,6 +20,7 @@
 //! ```
 
 mod builder;
+mod ensemble;
 pub mod prebuilt;
 
 use std::collections::HashMap;
@@ -32,6 +33,9 @@ use super::signal::Signal;
 
 // Re-export builder
 pub use builder::{CustomStrategy, StrategyBuilder};
+
+// Re-export ensemble
+pub use ensemble::{EnsembleMode, EnsembleStrategy};
 
 // Re-export prebuilt strategies
 pub use prebuilt::{

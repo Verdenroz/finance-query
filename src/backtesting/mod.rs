@@ -132,6 +132,9 @@ pub use strategy::{
     SuperTrendFollow,
 };
 
+// Re-export ensemble types
+pub use strategy::{EnsembleMode, EnsembleStrategy};
+
 // Re-export optimiser types for convenience
 pub use optimizer::{
     GridSearch, OptimizationReport, OptimizationResult, OptimizeMetric, ParamRange, ParamValue,
