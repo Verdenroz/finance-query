@@ -65,12 +65,18 @@ impl BoxedCondition {
 ///
 /// The builder enforces that both entry and exit conditions are provided
 /// before a strategy can be built.
+///
+/// An optional regime filter can be set at any point in the chain via
+/// [`.regime_filter()`](StrategyBuilder::regime_filter). When set, the filter
+/// is evaluated on every bar; if it returns `false`, all entry signals are
+/// suppressed. Exit signals are **never** blocked by the regime filter.
 pub struct StrategyBuilder<E = (), X = ()> {
     name: String,
     entry_condition: E,
     exit_condition: X,
     short_entry_condition: Option<BoxedCondition>,
     short_exit_condition: Option<BoxedCondition>,
+    regime_filter: Option<BoxedCondition>,
     warmup_override: Option<usize>,
 }
 
@@ -89,6 +95,7 @@ impl StrategyBuilder<(), ()> {
             exit_condition: (),
             short_entry_condition: None,
             short_exit_condition: None,
+            regime_filter: None,
             warmup_override: None,
         }
     }
@@ -110,6 +117,7 @@ impl<X> StrategyBuilder<(), X> {
             exit_condition: self.exit_condition,
             short_entry_condition: self.short_entry_condition,
             short_exit_condition: self.short_exit_condition,
+            regime_filter: self.regime_filter,
             warmup_override: self.warmup_override,
         }
     }
@@ -132,8 +140,39 @@ impl<E> StrategyBuilder<E, ()> {
             exit_condition: condition,
             short_entry_condition: self.short_entry_condition,
             short_exit_condition: self.short_exit_condition,
+            regime_filter: self.regime_filter,
             warmup_override: self.warmup_override,
         }
+    }
+}
+
+impl<E, X> StrategyBuilder<E, X> {
+    /// Set a market regime filter.
+    ///
+    /// When set, entry signals (long and short) are suppressed on any bar
+    /// where the filter evaluates to `false`. Exit signals are **never**
+    /// blocked by the regime filter, ensuring open positions can always be
+    /// closed regardless of market conditions.
+    ///
+    /// The regime filter's indicators are included in `required_indicators()`
+    /// and therefore pre-computed by the engine like any other indicator.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::strategy::StrategyBuilder;
+    /// use finance_query::backtesting::refs::*;
+    ///
+    /// // Only trade when price is above the 200-period SMA
+    /// let strategy = StrategyBuilder::new("Trend Following")
+    ///     .regime_filter(sma(200).above_ref(sma(400)))
+    ///     .entry(ema(10).crosses_above_ref(ema(30)))
+    ///     .exit(ema(10).crosses_below_ref(ema(30)))
+    ///     .build();
+    /// ```
+    pub fn regime_filter<C: Condition>(mut self, condition: C) -> Self {
+        self.regime_filter = Some(BoxedCondition::new(condition));
+        self
     }
 }
 
@@ -195,6 +234,7 @@ impl<E: Condition, X: Condition> StrategyBuilder<E, X> {
             exit_condition: self.exit_condition,
             short_entry_condition: self.short_entry_condition,
             short_exit_condition: self.short_exit_condition,
+            regime_filter: self.regime_filter,
             warmup_override: self.warmup_override,
         }
     }
@@ -210,6 +250,11 @@ pub struct CustomStrategy<E: Condition, X: Condition> {
     exit_condition: X,
     short_entry_condition: Option<BoxedCondition>,
     short_exit_condition: Option<BoxedCondition>,
+    /// Optional market regime filter.
+    ///
+    /// When `Some`, entry signals are suppressed on bars where the filter
+    /// evaluates to `false`. Exit signals are unaffected.
+    regime_filter: Option<BoxedCondition>,
     /// Explicit warmup period set via [`StrategyBuilder::warmup`].
     ///
     /// Overrides the heuristic in [`warmup_period`] when set.
@@ -230,6 +275,9 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
         }
         if let Some(ref sx) = self.short_exit_condition {
             indicators.extend(sx.required_indicators().iter().cloned());
+        }
+        if let Some(ref rf) = self.regime_filter {
+            indicators.extend(rf.required_indicators().iter().cloned());
         }
 
         // Deduplicate by key
@@ -277,18 +325,26 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
 
         // Check entry conditions (when no position)
         if !ctx.has_position() {
-            // Long entry
-            if self.entry_condition.evaluate(ctx) {
-                return Signal::long(candle.timestamp, candle.close)
-                    .with_reason(self.entry_condition.description());
-            }
+            // Regime filter gates all entries; exits are never suppressed.
+            let regime_ok = self
+                .regime_filter
+                .as_ref()
+                .is_none_or(|rf| rf.evaluate(ctx));
 
-            // Short entry
-            if let Some(ref entry) = self.short_entry_condition
-                && entry.evaluate(ctx)
-            {
-                return Signal::short(candle.timestamp, candle.close)
-                    .with_reason(entry.description().to_string());
+            if regime_ok {
+                // Long entry
+                if self.entry_condition.evaluate(ctx) {
+                    return Signal::long(candle.timestamp, candle.close)
+                        .with_reason(self.entry_condition.description());
+                }
+
+                // Short entry
+                if let Some(ref entry) = self.short_entry_condition
+                    && entry.evaluate(ctx)
+                {
+                    return Signal::short(candle.timestamp, candle.close)
+                        .with_reason(entry.description().to_string());
+                }
             }
         }
 
@@ -298,8 +354,37 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+
     use super::*;
     use crate::backtesting::condition::{always_false, always_true};
+    use crate::backtesting::signal::SignalDirection;
+    use crate::models::chart::Candle;
+
+    fn make_candle(ts: i64, close: f64) -> Candle {
+        Candle {
+            timestamp: ts,
+            open: close,
+            high: close,
+            low: close,
+            close,
+            volume: 1000,
+            adj_close: None,
+        }
+    }
+
+    fn make_ctx<'a>(
+        candles: &'a [Candle],
+        indicators: &'a HashMap<String, Vec<Option<f64>>>,
+    ) -> StrategyContext<'a> {
+        StrategyContext {
+            candles,
+            index: 0,
+            position: None,
+            equity: 10_000.0,
+            indicators,
+        }
+    }
 
     #[test]
     fn test_strategy_builder() {
@@ -339,5 +424,145 @@ mod tests {
         // Should be deduplicated to just one rsi_14
         assert_eq!(indicators.len(), 1);
         assert_eq!(indicators[0].0, "rsi_14");
+    }
+
+    // ── Regime filter tests ────────────────────────────────────────────
+
+    #[test]
+    fn test_regime_filter_suppresses_entry_when_false() {
+        let strategy = StrategyBuilder::new("Regime Test")
+            .regime_filter(always_false()) // regime is never active
+            .entry(always_true())
+            .exit(always_false())
+            .build();
+
+        let candles = vec![make_candle(1, 100.0)];
+        let indicators = HashMap::new();
+        let ctx = make_ctx(&candles, &indicators);
+
+        // Entry should be blocked by the regime filter
+        assert_eq!(strategy.on_candle(&ctx).direction, SignalDirection::Hold);
+    }
+
+    #[test]
+    fn test_regime_filter_allows_entry_when_true() {
+        let strategy = StrategyBuilder::new("Regime Test")
+            .regime_filter(always_true()) // regime always active
+            .entry(always_true())
+            .exit(always_false())
+            .build();
+
+        let candles = vec![make_candle(1, 100.0)];
+        let indicators = HashMap::new();
+        let ctx = make_ctx(&candles, &indicators);
+
+        assert_eq!(strategy.on_candle(&ctx).direction, SignalDirection::Long);
+    }
+
+    #[test]
+    fn test_no_regime_filter_behaves_normally() {
+        let strategy = StrategyBuilder::new("No Regime")
+            .entry(always_true())
+            .exit(always_false())
+            .build();
+
+        let candles = vec![make_candle(1, 100.0)];
+        let indicators = HashMap::new();
+        let ctx = make_ctx(&candles, &indicators);
+
+        assert_eq!(strategy.on_candle(&ctx).direction, SignalDirection::Long);
+    }
+
+    #[test]
+    fn test_regime_filter_does_not_block_exit() {
+        use crate::backtesting::position::{Position, PositionSide};
+
+        let strategy = StrategyBuilder::new("Regime Exit Test")
+            .regime_filter(always_false()) // regime is off
+            .entry(always_false())
+            .exit(always_true()) // exit condition always fires
+            .build();
+
+        let candles = vec![make_candle(1, 100.0)];
+        let indicators = HashMap::new();
+
+        // Simulate an open long position using the public constructor
+        let position = Position::new(
+            PositionSide::Long,
+            1,
+            90.0,
+            10.0,
+            0.0,
+            Signal::long(1, 90.0),
+        );
+
+        let ctx = StrategyContext {
+            candles: &candles,
+            index: 0,
+            position: Some(&position),
+            equity: 10_000.0,
+            indicators: &indicators,
+        };
+
+        // Exit must fire even though regime filter is false
+        assert_eq!(strategy.on_candle(&ctx).direction, SignalDirection::Exit);
+    }
+
+    #[test]
+    fn test_regime_filter_indicators_included_in_required() {
+        use crate::backtesting::refs::{IndicatorRefExt, sma};
+        use crate::indicators::Indicator;
+
+        let strategy = StrategyBuilder::new("Regime Indicators")
+            .regime_filter(sma(200).above_ref(sma(400)))
+            .entry(always_true())
+            .exit(always_false())
+            .build();
+
+        let indicators = strategy.required_indicators();
+        let keys: Vec<&str> = indicators.iter().map(|(k, _)| k.as_str()).collect();
+
+        assert!(
+            keys.contains(&"sma_200"),
+            "sma_200 must be in required_indicators"
+        );
+        assert!(
+            keys.contains(&"sma_400"),
+            "sma_400 must be in required_indicators"
+        );
+
+        // Verify correct Indicator variants
+        let sma_200 = indicators.iter().find(|(k, _)| k == "sma_200").unwrap();
+        assert!(matches!(sma_200.1, Indicator::Sma(200)));
+    }
+
+    #[test]
+    fn test_regime_filter_callable_before_entry() {
+        // Verify the builder chain compiles when regime_filter is called first
+        let strategy = StrategyBuilder::new("Order Test")
+            .regime_filter(always_true())
+            .entry(always_true())
+            .exit(always_false())
+            .build();
+
+        assert!(strategy.regime_filter.is_some());
+    }
+
+    #[test]
+    fn test_regime_filter_warmup_accounts_for_filter_indicators() {
+        use crate::backtesting::refs::{IndicatorRefExt, sma};
+
+        let strategy = StrategyBuilder::new("Warmup Test")
+            .regime_filter(sma(400).above_ref(sma(200)))
+            .entry(always_true())
+            .exit(always_false())
+            .build();
+
+        // Warmup must be at least sma(400).warmup_bars() + 1 = 401
+        assert!(
+            strategy.warmup_period() >= 401,
+            "warmup_period must account for sma(400): got {}",
+            strategy.warmup_period()
+        );
     }
 }
