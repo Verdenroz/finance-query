@@ -144,7 +144,7 @@ pub use optimizer::{
 pub use walk_forward::{WalkForwardConfig, WalkForwardReport, WindowResult};
 
 // Re-export Monte Carlo types
-pub use monte_carlo::{MonteCarloConfig, MonteCarloResult, PercentileStats};
+pub use monte_carlo::{MonteCarloConfig, MonteCarloMethod, MonteCarloResult, PercentileStats};
 
 // Re-export comparison types
 pub use comparison::{BacktestComparison, ComparisonReport, ComparisonRow};

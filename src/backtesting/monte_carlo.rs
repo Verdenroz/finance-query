@@ -6,10 +6,12 @@
 //! # Example
 //!
 //! ```ignore
-//! use finance_query::backtesting::monte_carlo::{MonteCarloConfig, MonteCarloResult};
+//! use finance_query::backtesting::monte_carlo::{MonteCarloConfig, MonteCarloMethod, MonteCarloResult};
 //!
 //! // `result` is a completed BacktestResult
-//! let mc = MonteCarloConfig::default().run(&result);
+//! let mc = MonteCarloConfig::default()
+//!     .method(MonteCarloMethod::BlockBootstrap { block_size: 10 })
+//!     .run(&result);
 //! println!("Median return: {:.2}%", mc.total_return.p50);
 //! println!("5th pct drawdown: {:.2}%", mc.max_drawdown.p5 * 100.0);
 //! ```
@@ -17,6 +19,58 @@
 use serde::{Deserialize, Serialize};
 
 use super::result::BacktestResult;
+
+// ── Resampling method ─────────────────────────────────────────────────────────
+
+/// Resampling method used for Monte Carlo simulation.
+///
+/// Each method makes different assumptions about trade return structure.
+/// Choose based on your strategy's autocorrelation characteristics.
+#[non_exhaustive]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub enum MonteCarloMethod {
+    /// Random IID shuffle (Fisher-Yates). Default.
+    ///
+    /// Treats every trade return as an independent, identically distributed draw
+    /// and randomises the sequence. Fast and appropriate for mean-reversion
+    /// strategies whose trades are mostly independent. Destroys autocorrelation,
+    /// which may underestimate the probability of sustained drawdowns for
+    /// trend-following strategies.
+    #[default]
+    IidShuffle,
+
+    /// Fixed-size block bootstrap.
+    ///
+    /// Samples consecutive blocks of `block_size` trades (with circular
+    /// wrap-around) and reassembles them in random order. Preserves short-range
+    /// autocorrelation and regime structure better than IID shuffle. A good
+    /// default block size is `sqrt(n_trades)`. More conservative than IID for
+    /// trending strategies.
+    BlockBootstrap {
+        /// Number of consecutive trades per block.
+        block_size: usize,
+    },
+
+    /// Stationary bootstrap with geometrically-distributed block lengths.
+    ///
+    /// Like `BlockBootstrap` but block length is drawn from
+    /// Geometric(1 / mean_block_size) at each step. Less sensitive to the choice
+    /// of block size than the fixed variant — a good default when you are
+    /// uncertain about the true autocorrelation length.
+    StationaryBootstrap {
+        /// Expected (average) number of trades per block.
+        mean_block_size: usize,
+    },
+
+    /// Parametric simulation assuming normally-distributed trade returns.
+    ///
+    /// Fits N(μ, σ) to the observed trade returns and generates synthetic
+    /// sequences by sampling from that distribution (Box-Muller transform).
+    /// Useful when the observed trade count is very small and non-parametric
+    /// resampling would produce near-identical sequences. Assumes normality,
+    /// which may not hold in fat-tailed markets.
+    Parametric,
+}
 
 // ── Configuration ─────────────────────────────────────────────────────────────
 
@@ -35,6 +89,9 @@ pub struct MonteCarloConfig {
     /// `None` (default) uses a fixed internal seed (`12345`). Provide an
     /// explicit seed when you need deterministic output across runs.
     pub seed: Option<u64>,
+
+    /// Resampling method. Default: [`MonteCarloMethod::IidShuffle`].
+    pub method: MonteCarloMethod,
 }
 
 impl Default for MonteCarloConfig {
@@ -42,6 +99,7 @@ impl Default for MonteCarloConfig {
         Self {
             num_simulations: 1_000,
             seed: None,
+            method: MonteCarloMethod::IidShuffle,
         }
     }
 }
@@ -64,28 +122,20 @@ impl MonteCarloConfig {
         self
     }
 
+    /// Set the resampling method.
+    pub fn method(mut self, method: MonteCarloMethod) -> Self {
+        self.method = method;
+        self
+    }
+
     /// Run the Monte Carlo simulation against a completed backtest result.
     ///
-    /// Extracts the trade returns, reshuffles them `num_simulations` times using
-    /// Fisher-Yates, rebuilds a synthetic equity curve for each shuffle, and
-    /// reports percentile statistics over the simulated outcomes.
+    /// Extracts trade returns, generates `num_simulations` synthetic sequences
+    /// using the configured [`MonteCarloMethod`], rebuilds a synthetic equity
+    /// curve for each, and reports percentile statistics over all outcomes.
     ///
     /// If the result has fewer than 2 trades, every percentile is derived from
     /// the single observed result.
-    ///
-    /// # Statistical Assumptions
-    ///
-    /// This simulation uses **random shuffle (IID resampling)**: each trade
-    /// return is treated as an independent, identically distributed draw, and
-    /// the order is randomised across simulations.  This assumption is
-    /// convenient but not always valid:
-    ///
-    /// - Real trade returns can exhibit **autocorrelation** (winning or losing
-    ///   streaks, regime dependence).  The shuffle destroys this structure,
-    ///   potentially underestimating the probability of sustained drawdowns.
-    /// - For strategies with strong trend-following or mean-reversion behaviour,
-    ///   **block bootstrap** (resampling contiguous sub-sequences) would give
-    ///   more conservative tail estimates.
     ///
     /// Use the percentile outputs as a *relative* stress-test tool rather than
     /// a precise probability statement about future performance.
@@ -109,6 +159,7 @@ impl MonteCarloConfig {
             };
             return MonteCarloResult {
                 num_simulations: self.num_simulations,
+                method: self.method.clone(),
                 total_return: trivial(obs_return),
                 max_drawdown: trivial(obs_dd),
                 sharpe_ratio: trivial(obs_sharpe),
@@ -137,21 +188,39 @@ impl MonteCarloConfig {
         let mut sim_sharpes: Vec<f64> = Vec::with_capacity(self.num_simulations);
         let mut sim_pfs: Vec<f64> = Vec::with_capacity(self.num_simulations);
 
-        // Allocate once and reset via copy_from_slice each iteration to avoid
-        // per-simulation heap allocations (f64 is Copy).
-        let mut shuffled = trade_returns.clone();
-        for _ in 0..self.num_simulations {
-            shuffled.copy_from_slice(&trade_returns);
-            fisher_yates_shuffle(&mut shuffled, &mut rng);
+        // Single allocation reused across all simulations.
+        let mut sim_buf: Vec<f64> = vec![0.0; trade_returns.len()];
 
-            // Build synthetic equity curve from shuffled trade returns
+        for _ in 0..self.num_simulations {
+            match &self.method {
+                MonteCarloMethod::IidShuffle => {
+                    sim_buf.copy_from_slice(&trade_returns);
+                    fisher_yates_shuffle(&mut sim_buf, &mut rng);
+                }
+                MonteCarloMethod::BlockBootstrap { block_size } => {
+                    block_bootstrap_into(&trade_returns, *block_size, &mut rng, &mut sim_buf);
+                }
+                MonteCarloMethod::StationaryBootstrap { mean_block_size } => {
+                    stationary_bootstrap_into(
+                        &trade_returns,
+                        *mean_block_size,
+                        &mut rng,
+                        &mut sim_buf,
+                    );
+                }
+                MonteCarloMethod::Parametric => {
+                    parametric_sample_into(&trade_returns, &mut rng, &mut sim_buf);
+                }
+            }
+
+            // Build synthetic equity curve from the sampled trade returns.
             let (equity_curve, final_equity) =
-                build_equity_curve(&shuffled, initial_capital, position_size);
+                build_equity_curve(&sim_buf, initial_capital, position_size);
 
             let total_return = ((final_equity / initial_capital) - 1.0) * 100.0;
             let max_dd = compute_max_drawdown(&equity_curve);
             let sharpe = compute_sharpe(&equity_curve, periods_per_year);
-            let pf = compute_profit_factor(&shuffled);
+            let pf = compute_profit_factor(&sim_buf);
 
             sim_returns.push(total_return);
             sim_drawdowns.push(max_dd);
@@ -161,6 +230,7 @@ impl MonteCarloConfig {
 
         MonteCarloResult {
             num_simulations: self.num_simulations,
+            method: self.method.clone(),
             total_return: PercentileStats::from_sorted(&mut sim_returns),
             max_drawdown: PercentileStats::from_sorted(&mut sim_drawdowns),
             sharpe_ratio: PercentileStats::from_sorted(&mut sim_sharpes),
@@ -221,6 +291,9 @@ impl PercentileStats {
 pub struct MonteCarloResult {
     /// Number of simulations that were run
     pub num_simulations: usize,
+
+    /// Resampling method used to generate the simulations
+    pub method: MonteCarloMethod,
 
     /// Distribution of total return (%) across simulations
     pub total_return: PercentileStats,
@@ -287,9 +360,19 @@ impl Xorshift64 {
             }
         }
     }
+
+    /// Generate a uniform `f64` in `(0, 1]` using 53-bit precision.
+    ///
+    /// Returns a value strictly greater than zero, making it safe for use as
+    /// the argument to `f64::ln()` in Box-Muller transforms.
+    fn next_f64_positive(&mut self) -> f64 {
+        // Take the top 53 bits (full double mantissa precision), add 1 to shift
+        // from [0, 2^53) to [1, 2^53], then scale to (0, 1].
+        ((self.next() >> 11) + 1) as f64 * (1.0 / (1u64 << 53) as f64)
+    }
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// ── Sampling helpers ──────────────────────────────────────────────────────────
 
 /// Fisher-Yates in-place shuffle using the provided RNG.
 fn fisher_yates_shuffle(slice: &mut [f64], rng: &mut Xorshift64) {
@@ -298,6 +381,97 @@ fn fisher_yates_shuffle(slice: &mut [f64], rng: &mut Xorshift64) {
         slice.swap(i, j);
     }
 }
+
+/// Block bootstrap sampler — fixed block size, circular wrap-around.
+///
+/// Draws random starting positions and copies `block_size` consecutive
+/// elements (wrapping around the end), filling `out` to exactly its length.
+fn block_bootstrap_into(
+    trades: &[f64],
+    block_size: usize,
+    rng: &mut Xorshift64,
+    out: &mut Vec<f64>,
+) {
+    let n = trades.len();
+    let block_size = block_size.max(1);
+    let mut filled = 0;
+    while filled < n {
+        let start = rng.next_usize(n);
+        let take = block_size.min(n - filled);
+        for i in 0..take {
+            out[filled + i] = trades[(start + i) % n];
+        }
+        filled += take;
+    }
+}
+
+/// Stationary bootstrap sampler — geometrically-distributed block lengths.
+///
+/// At each position, continues the current block with probability
+/// `(mean_block_size - 1) / mean_block_size`, or jumps to a new random start
+/// with probability `1 / mean_block_size`. Implemented without floating-point
+/// division by testing `rng.next_usize(mean_block_size) == 0`.
+fn stationary_bootstrap_into(
+    trades: &[f64],
+    mean_block_size: usize,
+    rng: &mut Xorshift64,
+    out: &mut Vec<f64>,
+) {
+    let n = trades.len();
+    let mean_block_size = mean_block_size.max(1);
+    let mut pos = rng.next_usize(n);
+    for i in 0..n {
+        out[i] = trades[pos % n];
+        if rng.next_usize(mean_block_size) == 0 {
+            // Start a new block at a random position.
+            pos = rng.next_usize(n);
+        } else {
+            pos += 1;
+        }
+    }
+}
+
+/// Parametric sampler — draws from N(μ, σ) fitted to `trades`.
+///
+/// Uses the Box-Muller transform to convert pairs of uniform draws into
+/// standard-normal samples, then shifts and scales by the empirical mean and
+/// standard deviation. When fewer than 2 trades exist (σ undefined), all
+/// samples are set to the empirical mean.
+fn parametric_sample_into(trades: &[f64], rng: &mut Xorshift64, out: &mut Vec<f64>) {
+    let n = trades.len();
+    let mean = trades.iter().sum::<f64>() / n as f64;
+    let variance = if n > 1 {
+        trades.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (n as f64 - 1.0)
+    } else {
+        0.0
+    };
+    let std_dev = variance.sqrt();
+
+    // Nothing to sample if variance is zero.
+    if std_dev == 0.0 {
+        out.iter_mut().for_each(|v| *v = mean);
+        return;
+    }
+
+    let mut i = 0;
+    while i < n {
+        // Box-Muller: two uniform (0,1] draws → two independent standard-normal samples.
+        let u1 = rng.next_f64_positive();
+        let u2 = rng.next_f64_positive();
+        let mag = (-2.0 * u1.ln()).sqrt();
+        let angle = std::f64::consts::TAU * u2;
+        let z0 = mag * angle.cos();
+        let z1 = mag * angle.sin();
+
+        out[i] = mean + std_dev * z0;
+        if i + 1 < n {
+            out[i + 1] = mean + std_dev * z1;
+        }
+        i += 2;
+    }
+}
+
+// ── Equity-curve helpers ──────────────────────────────────────────────────────
 
 /// Build a per-trade equity curve from a sequence of trade returns.
 ///
@@ -473,16 +647,20 @@ mod tests {
         }
     }
 
-    #[test]
-    fn test_reproducible_with_seed() {
-        let trades = vec![
+    fn mixed_trades() -> Vec<Trade> {
+        vec![
             make_trade(100.0, 110.0, 10.0),
             make_trade(100.0, 90.0, 10.0),
             make_trade(100.0, 115.0, 10.0),
             make_trade(100.0, 95.0, 10.0),
-        ];
-        let result = minimal_result(trades);
+        ]
+    }
 
+    // ── IidShuffle ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_reproducible_with_seed() {
+        let result = minimal_result(mixed_trades());
         let config = MonteCarloConfig::default().seed(42);
         let mc1 = config.run(&result);
         let mc2 = config.run(&result);
@@ -501,29 +679,24 @@ mod tests {
             make_trade(100.0, 110.0, 10.0),
         ];
         let result = minimal_result(trades);
-
         let mc = MonteCarloConfig::default()
             .num_simulations(500)
             .seed(1)
             .run(&result);
 
-        // Percentiles must be ordered
         assert!(mc.total_return.p5 <= mc.total_return.p25);
         assert!(mc.total_return.p25 <= mc.total_return.p50);
         assert!(mc.total_return.p50 <= mc.total_return.p75);
         assert!(mc.total_return.p75 <= mc.total_return.p95);
-
         assert!(mc.max_drawdown.p5 <= mc.max_drawdown.p95);
     }
 
     #[test]
     fn test_degenerate_single_trade() {
-        let trades = vec![make_trade(100.0, 110.0, 10.0)];
-        let result = minimal_result(trades);
-
+        let result = minimal_result(vec![make_trade(100.0, 110.0, 10.0)]);
         let mc = MonteCarloConfig::default().run(&result);
 
-        // With only 1 trade there's nothing to shuffle — all percentiles equal observed value
+        // With only 1 trade there's nothing to resample — all percentiles equal observed
         assert_eq!(mc.total_return.p5, mc.total_return.p50);
         assert_eq!(mc.total_return.p50, mc.total_return.p95);
     }
@@ -532,16 +705,160 @@ mod tests {
     fn test_all_winning_trades_tight_distribution() {
         let trades: Vec<Trade> = (0..20).map(|_| make_trade(100.0, 110.0, 10.0)).collect();
         let result = minimal_result(trades);
-
         let mc = MonteCarloConfig::default().seed(99).run(&result);
 
-        // All trades identical → reshuffling makes no difference → tight distribution
         let spread = mc.total_return.p95 - mc.total_return.p5;
         assert!(
             spread < 1e-6,
             "expected tight spread for identical trades, got {spread}"
         );
     }
+
+    // ── BlockBootstrap ──────────────────────────────────────────────────────
+
+    #[test]
+    fn test_block_bootstrap_percentile_ordering() {
+        let trades = vec![
+            make_trade(100.0, 120.0, 10.0),
+            make_trade(100.0, 80.0, 10.0),
+            make_trade(100.0, 130.0, 10.0),
+            make_trade(100.0, 75.0, 10.0),
+            make_trade(100.0, 110.0, 10.0),
+            make_trade(100.0, 95.0, 10.0),
+        ];
+        let result = minimal_result(trades);
+        let mc = MonteCarloConfig::default()
+            .method(MonteCarloMethod::BlockBootstrap { block_size: 2 })
+            .num_simulations(500)
+            .seed(7)
+            .run(&result);
+
+        assert!(mc.total_return.p5 <= mc.total_return.p50);
+        assert!(mc.total_return.p50 <= mc.total_return.p95);
+    }
+
+    #[test]
+    fn test_block_bootstrap_reproducible() {
+        let result = minimal_result(mixed_trades());
+        let config = MonteCarloConfig::default()
+            .method(MonteCarloMethod::BlockBootstrap { block_size: 2 })
+            .seed(13);
+        let mc1 = config.run(&result);
+        let mc2 = config.run(&result);
+
+        assert!((mc1.total_return.p50 - mc2.total_return.p50).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_block_bootstrap_block_size_one_matches_iid_distribution() {
+        // block_size=1 is equivalent to IID shuffle in terms of return distribution
+        // (same set of individual values, different orderings). Both should give
+        // the same set of possible total returns.
+        let trades: Vec<Trade> = (0..10).map(|_| make_trade(100.0, 110.0, 10.0)).collect();
+        let result = minimal_result(trades);
+
+        let iid = MonteCarloConfig::default().seed(1).run(&result);
+        let bb = MonteCarloConfig::default()
+            .method(MonteCarloMethod::BlockBootstrap { block_size: 1 })
+            .seed(1)
+            .run(&result);
+
+        // All identical trades → both should give the same tight distribution
+        let iid_spread = iid.total_return.p95 - iid.total_return.p5;
+        let bb_spread = bb.total_return.p95 - bb.total_return.p5;
+        assert!(iid_spread < 1e-6, "iid spread {iid_spread}");
+        assert!(bb_spread < 1e-6, "bb spread {bb_spread}");
+    }
+
+    // ── StationaryBootstrap ─────────────────────────────────────────────────
+
+    #[test]
+    fn test_stationary_bootstrap_percentile_ordering() {
+        let trades = vec![
+            make_trade(100.0, 120.0, 10.0),
+            make_trade(100.0, 80.0, 10.0),
+            make_trade(100.0, 130.0, 10.0),
+            make_trade(100.0, 75.0, 10.0),
+            make_trade(100.0, 110.0, 10.0),
+            make_trade(100.0, 95.0, 10.0),
+        ];
+        let result = minimal_result(trades);
+        let mc = MonteCarloConfig::default()
+            .method(MonteCarloMethod::StationaryBootstrap { mean_block_size: 2 })
+            .num_simulations(500)
+            .seed(5)
+            .run(&result);
+
+        assert!(mc.total_return.p5 <= mc.total_return.p50);
+        assert!(mc.total_return.p50 <= mc.total_return.p95);
+    }
+
+    #[test]
+    fn test_stationary_bootstrap_reproducible() {
+        let result = minimal_result(mixed_trades());
+        let config = MonteCarloConfig::default()
+            .method(MonteCarloMethod::StationaryBootstrap { mean_block_size: 2 })
+            .seed(77);
+        let mc1 = config.run(&result);
+        let mc2 = config.run(&result);
+
+        assert!((mc1.total_return.p50 - mc2.total_return.p50).abs() < f64::EPSILON);
+    }
+
+    // ── Parametric ──────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_parametric_percentile_ordering() {
+        let trades = vec![
+            make_trade(100.0, 120.0, 10.0),
+            make_trade(100.0, 80.0, 10.0),
+            make_trade(100.0, 130.0, 10.0),
+            make_trade(100.0, 75.0, 10.0),
+            make_trade(100.0, 110.0, 10.0),
+        ];
+        let result = minimal_result(trades);
+        let mc = MonteCarloConfig::default()
+            .method(MonteCarloMethod::Parametric)
+            .num_simulations(1000)
+            .seed(3)
+            .run(&result);
+
+        assert!(mc.total_return.p5 <= mc.total_return.p25);
+        assert!(mc.total_return.p25 <= mc.total_return.p50);
+        assert!(mc.total_return.p50 <= mc.total_return.p75);
+        assert!(mc.total_return.p75 <= mc.total_return.p95);
+    }
+
+    #[test]
+    fn test_parametric_reproducible() {
+        let result = minimal_result(mixed_trades());
+        let config = MonteCarloConfig::default()
+            .method(MonteCarloMethod::Parametric)
+            .seed(99);
+        let mc1 = config.run(&result);
+        let mc2 = config.run(&result);
+
+        assert!((mc1.total_return.p50 - mc2.total_return.p50).abs() < f64::EPSILON);
+    }
+
+    #[test]
+    fn test_parametric_identical_trades_tight_distribution() {
+        // σ = 0 → all samples are the mean → tight distribution
+        let trades: Vec<Trade> = (0..10).map(|_| make_trade(100.0, 110.0, 10.0)).collect();
+        let result = minimal_result(trades);
+        let mc = MonteCarloConfig::default()
+            .method(MonteCarloMethod::Parametric)
+            .seed(1)
+            .run(&result);
+
+        let spread = mc.total_return.p95 - mc.total_return.p5;
+        assert!(
+            spread < 1e-6,
+            "expected tight spread for zero-variance trades, got {spread}"
+        );
+    }
+
+    // ── PRNG ────────────────────────────────────────────────────────────────
 
     #[test]
     fn test_xorshift_never_zero() {
@@ -552,8 +869,31 @@ mod tests {
     }
 
     #[test]
+    fn test_next_f64_positive_in_range() {
+        let mut rng = Xorshift64::new(42);
+        for _ in 0..10_000 {
+            let v = rng.next_f64_positive();
+            assert!(v > 0.0 && v <= 1.0, "out of range: {v}");
+        }
+    }
+
+    // ── Helpers ─────────────────────────────────────────────────────────────
+
+    #[test]
     fn test_profit_factor_all_wins_is_f64_max() {
         let pf = compute_profit_factor(&[0.01, 0.02, 0.03]);
         assert_eq!(pf, f64::MAX);
+    }
+
+    #[test]
+    fn test_result_carries_method() {
+        let result = minimal_result(mixed_trades());
+        let mc = MonteCarloConfig::default()
+            .method(MonteCarloMethod::BlockBootstrap { block_size: 3 })
+            .run(&result);
+        assert!(matches!(
+            mc.method,
+            MonteCarloMethod::BlockBootstrap { block_size: 3 }
+        ));
     }
 }
