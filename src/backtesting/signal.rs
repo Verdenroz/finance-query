@@ -318,6 +318,44 @@ pub struct Signal {
     /// Only relevant when [`Signal::order_type`] is not [`OrderType::Market`].
     #[serde(default)]
     pub expires_in_bars: Option<usize>,
+
+    /// Per-trade stop-loss percentage override (0.0 – 1.0).
+    ///
+    /// When set on an entry signal ([`SignalDirection::Long`] or
+    /// [`SignalDirection::Short`]), this value is stored on the resulting
+    /// [`Position`] and takes precedence over [`BacktestConfig::stop_loss_pct`]
+    /// for the lifetime of that position.
+    ///
+    /// Set via the `.stop_loss(pct)` builder method.
+    ///
+    /// [`Position`]: crate::backtesting::Position
+    /// [`BacktestConfig::stop_loss_pct`]: crate::backtesting::BacktestConfig::stop_loss_pct
+    #[serde(default)]
+    pub bracket_stop_loss_pct: Option<f64>,
+
+    /// Per-trade take-profit percentage override (0.0 – 1.0).
+    ///
+    /// When set on an entry signal, stored on the resulting [`Position`] and
+    /// takes precedence over [`BacktestConfig::take_profit_pct`].
+    ///
+    /// Set via the `.take_profit(pct)` builder method.
+    ///
+    /// [`Position`]: crate::backtesting::Position
+    /// [`BacktestConfig::take_profit_pct`]: crate::backtesting::BacktestConfig::take_profit_pct
+    #[serde(default)]
+    pub bracket_take_profit_pct: Option<f64>,
+
+    /// Per-trade trailing stop percentage override (0.0 – 1.0).
+    ///
+    /// When set on an entry signal, stored on the resulting [`Position`] and
+    /// takes precedence over [`BacktestConfig::trailing_stop_pct`].
+    ///
+    /// Set via the `.trailing_stop(pct)` builder method.
+    ///
+    /// [`Position`]: crate::backtesting::Position
+    /// [`BacktestConfig::trailing_stop_pct`]: crate::backtesting::BacktestConfig::trailing_stop_pct
+    #[serde(default)]
+    pub bracket_trailing_stop_pct: Option<f64>,
 }
 
 impl Signal {
@@ -334,6 +372,9 @@ impl Signal {
             scale_fraction: None,
             order_type: OrderType::Market,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -350,6 +391,9 @@ impl Signal {
             scale_fraction: None,
             order_type: OrderType::Market,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -366,6 +410,9 @@ impl Signal {
             scale_fraction: None,
             order_type: OrderType::Market,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -382,6 +429,9 @@ impl Signal {
             scale_fraction: None,
             order_type: OrderType::Market,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -439,6 +489,9 @@ impl Signal {
             scale_fraction: Some(fraction.clamp(0.0, 1.0)),
             order_type: OrderType::Market,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -471,6 +524,9 @@ impl Signal {
             scale_fraction: Some(fraction.clamp(0.0, 1.0)),
             order_type: OrderType::Market,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -501,6 +557,9 @@ impl Signal {
             tags: Vec::new(),
             scale_fraction: None,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -532,6 +591,9 @@ impl Signal {
             tags: Vec::new(),
             scale_fraction: None,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -562,6 +624,9 @@ impl Signal {
             tags: Vec::new(),
             scale_fraction: None,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -593,6 +658,9 @@ impl Signal {
             tags: Vec::new(),
             scale_fraction: None,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -628,6 +696,9 @@ impl Signal {
             tags: Vec::new(),
             scale_fraction: None,
             expires_in_bars: None,
+            bracket_stop_loss_pct: None,
+            bracket_take_profit_pct: None,
+            bracket_trailing_stop_pct: None,
         }
     }
 
@@ -675,6 +746,73 @@ impl Signal {
     /// Multiple tags can be chained: `.tag("breakout").tag("high_volume")`.
     pub fn tag(mut self, name: impl Into<String>) -> Self {
         self.tags.push(name.into());
+        self
+    }
+
+    /// Attach a per-trade stop-loss to this entry signal.
+    ///
+    /// `pct` is the loss fraction relative to the entry price (`0.0..=1.0`).
+    /// When set, the resulting position's stop-loss overrides
+    /// [`BacktestConfig::stop_loss_pct`] for the lifetime of that trade.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, price) = (0i64, 100.0f64);
+    /// // Stop out at -5% from entry, regardless of the config default.
+    /// let signal = Signal::long(ts, price).stop_loss(0.05);
+    /// ```
+    ///
+    /// [`BacktestConfig::stop_loss_pct`]: crate::backtesting::BacktestConfig::stop_loss_pct
+    pub fn stop_loss(mut self, pct: f64) -> Self {
+        self.bracket_stop_loss_pct = Some(pct.abs());
+        self
+    }
+
+    /// Attach a per-trade take-profit to this entry signal.
+    ///
+    /// `pct` is the profit fraction relative to the entry price (`0.0..=1.0`).
+    /// When set, the resulting position's take-profit overrides
+    /// [`BacktestConfig::take_profit_pct`] for the lifetime of that trade.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, price) = (0i64, 100.0f64);
+    /// // Take profit at +15% from entry.
+    /// let signal = Signal::long(ts, price).take_profit(0.15);
+    /// ```
+    ///
+    /// [`BacktestConfig::take_profit_pct`]: crate::backtesting::BacktestConfig::take_profit_pct
+    pub fn take_profit(mut self, pct: f64) -> Self {
+        self.bracket_take_profit_pct = Some(pct.abs());
+        self
+    }
+
+    /// Attach a per-trade trailing stop to this entry signal.
+    ///
+    /// `pct` is the trail fraction from the position's peak/trough price
+    /// (`0.0..=1.0`). When set, the resulting position's trailing stop
+    /// overrides [`BacktestConfig::trailing_stop_pct`] for the lifetime of
+    /// that trade.
+    ///
+    /// # Example
+    ///
+    /// ```rust,no_run
+    /// use finance_query::backtesting::Signal;
+    ///
+    /// # let (ts, price) = (0i64, 100.0f64);
+    /// // Exit if price drops 3% from its peak since entry.
+    /// let signal = Signal::long(ts, price).trailing_stop(0.03);
+    /// ```
+    ///
+    /// [`BacktestConfig::trailing_stop_pct`]: crate::backtesting::BacktestConfig::trailing_stop_pct
+    pub fn trailing_stop(mut self, pct: f64) -> Self {
+        self.bracket_trailing_stop_pct = Some(pct.abs());
         self
     }
 }
@@ -914,6 +1052,36 @@ mod tests {
         assert!(sig.is_hold());
         assert!(!sig.is_entry());
         assert!(!sig.is_exit());
+    }
+
+    #[test]
+    fn test_bracket_builders() {
+        let sig = Signal::long(0, 100.0)
+            .stop_loss(0.05)
+            .take_profit(0.15)
+            .trailing_stop(0.03);
+        assert_eq!(sig.bracket_stop_loss_pct, Some(0.05));
+        assert_eq!(sig.bracket_take_profit_pct, Some(0.15));
+        assert_eq!(sig.bracket_trailing_stop_pct, Some(0.03));
+
+        // No bracket by default
+        let sig = Signal::long(0, 100.0);
+        assert!(sig.bracket_stop_loss_pct.is_none());
+        assert!(sig.bracket_take_profit_pct.is_none());
+        assert!(sig.bracket_trailing_stop_pct.is_none());
+    }
+
+    #[test]
+    fn test_bracket_builders_abs_on_negative_input() {
+        // Negative inputs are converted to their absolute value so a fat-finger
+        // `-0.05` doesn't silently invert the stop-loss math.
+        let sig = Signal::long(0, 100.0)
+            .stop_loss(-0.05)
+            .take_profit(-0.10)
+            .trailing_stop(-0.03);
+        assert_eq!(sig.bracket_stop_loss_pct, Some(0.05));
+        assert_eq!(sig.bracket_take_profit_pct, Some(0.10));
+        assert_eq!(sig.bracket_trailing_stop_pct, Some(0.03));
     }
 
     #[test]

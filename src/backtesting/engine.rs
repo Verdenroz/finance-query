@@ -939,8 +939,17 @@ impl BacktestEngine {
         candle: &Candle,
         hwm: Option<f64>,
     ) -> Option<Signal> {
+        // Per-trade bracket overrides take precedence over config-level defaults.
+        let sl_pct = position.bracket_stop_loss_pct.or(self.config.stop_loss_pct);
+        let tp_pct = position
+            .bracket_take_profit_pct
+            .or(self.config.take_profit_pct);
+        let trail_pct = position
+            .bracket_trailing_stop_pct
+            .or(self.config.trailing_stop_pct);
+
         // Stop-loss — intrabar breach via low (long) or high (short)
-        if let Some(sl_pct) = self.config.stop_loss_pct {
+        if let Some(sl_pct) = sl_pct {
             let stop_price = if position.is_long() {
                 position.entry_price * (1.0 - sl_pct)
             } else {
@@ -968,7 +977,7 @@ impl BacktestEngine {
         }
 
         // Take-profit — intrabar breach via high (long) or low (short)
-        if let Some(tp_pct) = self.config.take_profit_pct {
+        if let Some(tp_pct) = tp_pct {
             let tp_price = if position.is_long() {
                 position.entry_price * (1.0 + tp_pct)
             } else {
@@ -996,7 +1005,7 @@ impl BacktestEngine {
 
         // Trailing stop — checked after SL/TP so explicit levels take priority.
         //    `hwm` is already updated to the intrabar extreme before this call.
-        if let Some(trail_pct) = self.config.trailing_stop_pct
+        if let Some(trail_pct) = trail_pct
             && let Some(extreme) = hwm
             && extreme > 0.0
         {
@@ -2546,6 +2555,522 @@ mod tests {
             "accounting invariant failed: final_equity={:.6}, expected={:.6}",
             result.final_equity,
             expected
+        );
+    }
+
+    // ── Per-trade bracket orders (Phase 11) ──────────────────────────────────
+
+    // Each bracket type is tested for both Long and Short sides.
+    // Long:  SL fires on low breach; TP fires on high breach; trail tracks HWM (peak).
+    // Short: SL fires on high breach; TP fires on low breach; trail tracks LWM (trough).
+
+    /// Enters a long position on bar 0 with a per-trade stop-loss.
+    #[derive(Clone)]
+    struct BracketLongStopLossStrategy {
+        stop_pct: f64,
+    }
+    impl Strategy for BracketLongStopLossStrategy {
+        fn name(&self) -> &str {
+            "BracketLongStopLoss"
+        }
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::long(ctx.timestamp(), ctx.close()).stop_loss(self.stop_pct)
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    /// Enters a short position on bar 0 with a per-trade stop-loss.
+    #[derive(Clone)]
+    struct BracketShortStopLossStrategy {
+        stop_pct: f64,
+    }
+    impl Strategy for BracketShortStopLossStrategy {
+        fn name(&self) -> &str {
+            "BracketShortStopLoss"
+        }
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::short(ctx.timestamp(), ctx.close()).stop_loss(self.stop_pct)
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    // ── Long stop-loss ────────────────────────────────────────────────────────
+
+    #[test]
+    fn test_per_trade_stop_loss_triggers_when_set() {
+        // Bar 0: signal @ 100. Bar 1: fill @ open=100.
+        // Bar 2: intrabar low=79.2. 5% stop = $95. low(79.2) <= 95 → stop fires.
+        // Gap-down guard: fill = min(open=80, stop=95) = 80.
+        let prices = [100.0, 100.0, 80.0, 80.0];
+        let mut candles = make_candles(&prices);
+        candles[2].low = 79.2;
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketLongStopLossStrategy { stop_pct: 0.05 },
+            )
+            .unwrap();
+
+        assert!(
+            !result.trades.is_empty(),
+            "stop-loss should have closed the position"
+        );
+        assert!(
+            result.trades[0].pnl < 0.0,
+            "stop-loss trade should be a loss"
+        );
+    }
+
+    #[test]
+    fn test_per_trade_stop_loss_overrides_config_none() {
+        // Config has no stop-loss; per-trade bracket stop of 5% should still fire.
+        let prices = [100.0, 100.0, 80.0, 80.0];
+        let mut candles = make_candles(&prices);
+        candles[2].low = 79.2;
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        assert!(
+            config.stop_loss_pct.is_none(),
+            "config must not have a default stop-loss for this test"
+        );
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketLongStopLossStrategy { stop_pct: 0.05 },
+            )
+            .unwrap();
+
+        assert!(
+            !result.trades.is_empty(),
+            "per-trade bracket stop should fire even when config stop_loss_pct is None"
+        );
+    }
+
+    #[test]
+    fn test_per_trade_stop_loss_overrides_config_looser() {
+        // Config has a loose 20% stop ($80); per-trade bracket stop of 5% ($95) fires first.
+        // Bar 2 opens at $97 (above $95) and dips to $93 intrabar — no gap-down — so the
+        // fill resolves to min(open=97, stop=95) = $95, proving it's the tighter bracket
+        // that fired and not the config's $80 level.
+        //
+        //   5% stop  = $95 → triggers (low=93 ≤ 95), fill = min(97, 95) = 95
+        //   20% stop = $80 → would NOT trigger (low=93 > 80)
+        let prices = [100.0, 100.0, 97.0, 97.0];
+        let mut candles = make_candles(&prices);
+        candles[2].low = 93.0; // below 5% stop=95, above 20% stop=80
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .stop_loss_pct(0.20) // loose config default
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketLongStopLossStrategy { stop_pct: 0.05 },
+            )
+            .unwrap();
+
+        assert!(!result.trades.is_empty());
+        let trade = &result.trades[0];
+        // Exit at the 5% bracket level ($95), not the 20% config level ($80).
+        assert!(
+            trade.exit_price > 90.0,
+            "expected exit near 5% bracket stop ($95), got {:.2}",
+            trade.exit_price
+        );
+    }
+
+    // ── Short stop-loss ───────────────────────────────────────────────────────
+
+    #[test]
+    fn test_per_trade_short_stop_loss_triggers_when_set() {
+        // Bar 0: signal short @ 100. Bar 1: fill @ open=100.
+        // Bar 2: intrabar high=112.5. 5% stop = $105. high(112.5) >= 105 → stop fires.
+        // Gap-up guard: fill = max(open=112, stop=105) = 112.
+        let prices = [100.0, 100.0, 112.0, 112.0];
+        let mut candles = make_candles(&prices);
+        candles[2].high = 112.5;
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketShortStopLossStrategy { stop_pct: 0.05 },
+            )
+            .unwrap();
+
+        assert!(
+            !result.trades.is_empty(),
+            "short stop-loss should have closed the position"
+        );
+        assert!(
+            result.trades[0].pnl < 0.0,
+            "short stop-loss trade should be a loss (price rose against the short)"
+        );
+    }
+
+    #[test]
+    fn test_per_trade_short_stop_loss_overrides_config_none() {
+        // Config has no stop-loss; per-trade bracket stop of 5% should still fire for shorts.
+        let prices = [100.0, 100.0, 112.0, 112.0];
+        let mut candles = make_candles(&prices);
+        candles[2].high = 112.5;
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        assert!(config.stop_loss_pct.is_none());
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketShortStopLossStrategy { stop_pct: 0.05 },
+            )
+            .unwrap();
+
+        assert!(
+            !result.trades.is_empty(),
+            "per-trade bracket stop should fire for shorts even with no config stop-loss"
+        );
+    }
+
+    #[test]
+    fn test_per_trade_short_stop_loss_overrides_config_looser() {
+        // Config has a loose 20% stop ($120); per-trade bracket stop of 5% ($105) fires first.
+        // Bar 2 opens at $103 (below $105) and rises to $108 intrabar — no gap-up — so
+        // the fill resolves to max(open=103, stop=105) = $105, not the config's $120.
+        //
+        //   5% stop  = $105 → triggers (high=108 ≥ 105), fill = max(103, 105) = 105
+        //   20% stop = $120 → would NOT trigger (high=108 < 120)
+        let prices = [100.0, 100.0, 103.0, 103.0];
+        let mut candles = make_candles(&prices);
+        candles[2].high = 108.0; // above 5% stop=105, below 20% stop=120
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .stop_loss_pct(0.20) // loose config default
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketShortStopLossStrategy { stop_pct: 0.05 },
+            )
+            .unwrap();
+
+        assert!(!result.trades.is_empty());
+        let trade = &result.trades[0];
+        // Exit at the 5% bracket level ($105), not the 20% config level ($120).
+        assert!(
+            trade.exit_price < 115.0,
+            "expected exit near 5% bracket stop ($105), got {:.2}",
+            trade.exit_price
+        );
+    }
+
+    // ── Take-profit ───────────────────────────────────────────────────────────
+
+    /// Enters a long position on bar 0 with a per-trade take-profit.
+    #[derive(Clone)]
+    struct BracketLongTakeProfitStrategy {
+        tp_pct: f64,
+    }
+    impl Strategy for BracketLongTakeProfitStrategy {
+        fn name(&self) -> &str {
+            "BracketLongTakeProfit"
+        }
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::long(ctx.timestamp(), ctx.close()).take_profit(self.tp_pct)
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    /// Enters a short position on bar 0 with a per-trade take-profit.
+    #[derive(Clone)]
+    struct BracketShortTakeProfitStrategy {
+        tp_pct: f64,
+    }
+    impl Strategy for BracketShortTakeProfitStrategy {
+        fn name(&self) -> &str {
+            "BracketShortTakeProfit"
+        }
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::short(ctx.timestamp(), ctx.close()).take_profit(self.tp_pct)
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    #[test]
+    fn test_per_trade_take_profit_triggers() {
+        // Bar 0: signal @ 100. Bar 1: fill @ open=100.
+        // Bar 2: intrabar high=121.2. TP at 10% = $110. high(121.2) >= 110 → fires.
+        // Gap-up guard: fill = max(open=120, tp=110) = 120.
+        let prices = [100.0, 100.0, 120.0, 120.0];
+        let mut candles = make_candles(&prices);
+        candles[2].high = 121.2;
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketLongTakeProfitStrategy { tp_pct: 0.10 },
+            )
+            .unwrap();
+
+        assert!(
+            !result.trades.is_empty(),
+            "long take-profit should have fired"
+        );
+        assert!(
+            result.trades[0].pnl > 0.0,
+            "long take-profit trade should be profitable"
+        );
+    }
+
+    #[test]
+    fn test_per_trade_short_take_profit_triggers() {
+        // Bar 0: signal short @ 100. Bar 1: fill @ open=100.
+        // Bar 2: intrabar low=84.15. TP at 10% = $90. low(84.15) <= 90 → fires.
+        // Gap-down guard: fill = min(open=85, tp=90) = 85.
+        let prices = [100.0, 100.0, 85.0, 85.0];
+        let mut candles = make_candles(&prices);
+        candles[2].low = 84.15;
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketShortTakeProfitStrategy { tp_pct: 0.10 },
+            )
+            .unwrap();
+
+        assert!(
+            !result.trades.is_empty(),
+            "short take-profit should have fired"
+        );
+        assert!(
+            result.trades[0].pnl > 0.0,
+            "short take-profit trade should be profitable (price fell in favor of short)"
+        );
+    }
+
+    // ── Trailing stop ─────────────────────────────────────────────────────────
+
+    /// Enters a long position on bar 0 with a per-trade trailing stop.
+    #[derive(Clone)]
+    struct BracketLongTrailingStopStrategy {
+        trail_pct: f64,
+    }
+    impl Strategy for BracketLongTrailingStopStrategy {
+        fn name(&self) -> &str {
+            "BracketLongTrailingStop"
+        }
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::long(ctx.timestamp(), ctx.close()).trailing_stop(self.trail_pct)
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    /// Enters a short position on bar 0 with a per-trade trailing stop.
+    #[derive(Clone)]
+    struct BracketShortTrailingStopStrategy {
+        trail_pct: f64,
+    }
+    impl Strategy for BracketShortTrailingStopStrategy {
+        fn name(&self) -> &str {
+            "BracketShortTrailingStop"
+        }
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            if ctx.index == 0 && !ctx.has_position() {
+                Signal::short(ctx.timestamp(), ctx.close()).trailing_stop(self.trail_pct)
+            } else {
+                Signal::hold()
+            }
+        }
+    }
+
+    #[test]
+    fn test_per_trade_trailing_stop_triggers() {
+        // Bar 0: signal @ 100.
+        // Bar 1: fill @ open=100. HWM initialised to entry_price=100.
+        // Bar 2: high=121.0 → HWM = max(100, 121) = 121. Trail stop = 121*(1-0.05) = 114.95.
+        //        low=118.8 → 118.8 > 114.95 → no trigger.
+        // Bar 3: low=108.9 → 108.9 <= 114.95 → trailing stop fires.
+        //        fill = min(open=110, trail=114.95) = 110. pnl > 0.
+        let prices = [100.0, 100.0, 120.0, 110.0, 110.0];
+        let mut candles = make_candles(&prices);
+        candles[2].high = 121.0;
+        candles[3].low = 108.9; // below 5% trail from 121.0 (= 114.95)
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketLongTrailingStopStrategy { trail_pct: 0.05 },
+            )
+            .unwrap();
+
+        assert!(
+            !result.trades.is_empty(),
+            "long trailing stop should have fired"
+        );
+        assert!(
+            result.trades[0].pnl > 0.0,
+            "long trailing stop should exit in profit (entry $100, exit near $110)"
+        );
+    }
+
+    #[test]
+    fn test_per_trade_short_trailing_stop_triggers() {
+        // Bar 0: signal short @ 100.
+        // Bar 1: fill @ open=100. LWM (trough) initialised to entry_price=100.
+        // Bar 2: price=80, low=79.2 → LWM = min(100, 79.2) = 79.2.
+        //        Trail stop = 79.2*(1+0.05) = 83.16. high=80.8 → 80.8 < 83.16 → no trigger.
+        // Bar 3: price=88, high=88.88 → 88.88 >= 83.16 → trailing stop fires.
+        //        fill = max(open=88, trail=83.16) = 88. pnl > 0 (short from 100, exit at 88).
+        let prices = [100.0, 100.0, 80.0, 88.0, 88.0];
+        let mut candles = make_candles(&prices);
+        candles[2].low = 79.2; // drives LWM to 79.2; trail stop = 79.2 * 1.05 = 83.16
+
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .allow_short(true)
+            .close_at_end(false)
+            .build()
+            .unwrap();
+
+        let engine = BacktestEngine::new(config);
+        let result = engine
+            .run(
+                "TEST",
+                &candles,
+                BracketShortTrailingStopStrategy { trail_pct: 0.05 },
+            )
+            .unwrap();
+
+        assert!(
+            !result.trades.is_empty(),
+            "short trailing stop should have fired"
+        );
+        assert!(
+            result.trades[0].pnl > 0.0,
+            "short trailing stop should exit in profit (entry $100, exit near $88)"
         );
     }
 }

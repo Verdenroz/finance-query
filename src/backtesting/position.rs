@@ -77,6 +77,39 @@ pub struct Position {
     /// to each [`Trade`] returned by [`Position::partial_close`].
     #[serde(default)]
     pub partial_close_count: usize,
+
+    /// Per-trade stop-loss percentage override.
+    ///
+    /// Populated from [`Signal::bracket_stop_loss_pct`] when the position is
+    /// opened. Takes precedence over [`BacktestConfig::stop_loss_pct`] when
+    /// `Some`. `None` means fall back to the config-level default.
+    ///
+    /// [`Signal::bracket_stop_loss_pct`]: crate::backtesting::Signal::bracket_stop_loss_pct
+    /// [`BacktestConfig::stop_loss_pct`]: crate::backtesting::BacktestConfig::stop_loss_pct
+    #[serde(default)]
+    pub bracket_stop_loss_pct: Option<f64>,
+
+    /// Per-trade take-profit percentage override.
+    ///
+    /// Populated from [`Signal::bracket_take_profit_pct`] when the position is
+    /// opened. Takes precedence over [`BacktestConfig::take_profit_pct`] when
+    /// `Some`.
+    ///
+    /// [`Signal::bracket_take_profit_pct`]: crate::backtesting::Signal::bracket_take_profit_pct
+    /// [`BacktestConfig::take_profit_pct`]: crate::backtesting::BacktestConfig::take_profit_pct
+    #[serde(default)]
+    pub bracket_take_profit_pct: Option<f64>,
+
+    /// Per-trade trailing stop percentage override.
+    ///
+    /// Populated from [`Signal::bracket_trailing_stop_pct`] when the position
+    /// is opened. Takes precedence over [`BacktestConfig::trailing_stop_pct`]
+    /// when `Some`.
+    ///
+    /// [`Signal::bracket_trailing_stop_pct`]: crate::backtesting::Signal::bracket_trailing_stop_pct
+    /// [`BacktestConfig::trailing_stop_pct`]: crate::backtesting::BacktestConfig::trailing_stop_pct
+    #[serde(default)]
+    pub bracket_trailing_stop_pct: Option<f64>,
 }
 
 impl Position {
@@ -110,6 +143,9 @@ impl Position {
         entry_transaction_tax: f64,
         entry_signal: Signal,
     ) -> Self {
+        let bracket_stop_loss_pct = entry_signal.bracket_stop_loss_pct;
+        let bracket_take_profit_pct = entry_signal.bracket_take_profit_pct;
+        let bracket_trailing_stop_pct = entry_signal.bracket_trailing_stop_pct;
         Self {
             side,
             entry_timestamp,
@@ -123,6 +159,9 @@ impl Position {
             unreinvested_dividends: 0.0,
             scale_in_count: 0,
             partial_close_count: 0,
+            bracket_stop_loss_pct,
+            bracket_take_profit_pct,
+            bracket_trailing_stop_pct,
         }
     }
 
