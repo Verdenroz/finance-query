@@ -140,7 +140,8 @@ pub use strategy::{EnsembleMode, EnsembleStrategy};
 
 // Re-export optimiser types for convenience
 pub use optimizer::{
-    GridSearch, OptimizationReport, OptimizationResult, OptimizeMetric, ParamRange, ParamValue,
+    BayesianSearch, GridSearch, OptimizationReport, OptimizationResult, OptimizeMetric, ParamRange,
+    ParamValue,
 };
 
 // Re-export walk-forward types

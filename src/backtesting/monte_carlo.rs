@@ -321,12 +321,15 @@ pub struct MonteCarloResult {
 // ── PRNG: xorshift64 ──────────────────────────────────────────────────────────
 
 /// Minimal xorshift64 PRNG — avoids adding a `rand` dependency.
-struct Xorshift64 {
+///
+/// `pub(crate)` so that other backtesting submodules (e.g. `bayesian_search`)
+/// can reuse the same PRNG without duplicating the implementation.
+pub(crate) struct Xorshift64 {
     state: u64,
 }
 
 impl Xorshift64 {
-    fn new(seed: u64) -> Self {
+    pub(crate) fn new(seed: u64) -> Self {
         // Ensure state is never zero (xorshift requirement)
         Self {
             state: if seed == 0 { 1 } else { seed },
@@ -334,7 +337,7 @@ impl Xorshift64 {
     }
 
     /// Generate the next pseudo-random u64.
-    fn next(&mut self) -> u64 {
+    pub(crate) fn next(&mut self) -> u64 {
         let mut x = self.state;
         x ^= x << 13;
         x ^= x >> 7;
@@ -348,7 +351,7 @@ impl Xorshift64 {
     /// Uses rejection sampling to eliminate modulo bias — otherwise the lower
     /// values of `[0, n)` would be slightly more probable when `n` is not a
     /// power of two (since `u64::MAX` is not evenly divisible by arbitrary `n`).
-    fn next_usize(&mut self, n: usize) -> usize {
+    pub(crate) fn next_usize(&mut self, n: usize) -> usize {
         let n64 = n as u64;
         // The largest multiple of n64 that fits in u64; values in [threshold, u64::MAX]
         // are rejected to ensure uniform distribution.
@@ -365,7 +368,7 @@ impl Xorshift64 {
     ///
     /// Returns a value strictly greater than zero, making it safe for use as
     /// the argument to `f64::ln()` in Box-Muller transforms.
-    fn next_f64_positive(&mut self) -> f64 {
+    pub(crate) fn next_f64_positive(&mut self) -> f64 {
         // Take the top 53 bits (full double mantissa precision), add 1 to shift
         // from [0, 2^53) to [1, 2^53], then scale to (0, 1].
         ((self.next() >> 11) + 1) as f64 * (1.0 / (1u64 << 53) as f64)
