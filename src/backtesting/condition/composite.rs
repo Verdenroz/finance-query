@@ -5,7 +5,7 @@
 use crate::backtesting::strategy::StrategyContext;
 use crate::indicators::Indicator;
 
-use super::Condition;
+use super::{Condition, HtfIndicatorSpec};
 
 /// Condition: both conditions must be true (AND logic).
 #[derive(Clone)]
@@ -33,6 +33,14 @@ impl<C1: Condition, C2: Condition> Condition for And<C1, C2> {
         indicators.sort_by(|a, b| a.0.cmp(&b.0));
         indicators.dedup_by(|a, b| a.0 == b.0);
         indicators
+    }
+
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        let mut reqs = self.left.htf_requirements();
+        reqs.extend(self.right.htf_requirements());
+        reqs.sort_by(|a, b| a.htf_key.cmp(&b.htf_key));
+        reqs.dedup_by(|a, b| a.htf_key == b.htf_key);
+        reqs
     }
 
     fn description(&self) -> String {
@@ -72,6 +80,14 @@ impl<C1: Condition, C2: Condition> Condition for Or<C1, C2> {
         indicators
     }
 
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        let mut reqs = self.left.htf_requirements();
+        reqs.extend(self.right.htf_requirements());
+        reqs.sort_by(|a, b| a.htf_key.cmp(&b.htf_key));
+        reqs.dedup_by(|a, b| a.htf_key == b.htf_key);
+        reqs
+    }
+
     fn description(&self) -> String {
         format!(
             "({} OR {})",
@@ -101,6 +117,10 @@ impl<C: Condition> Condition for Not<C> {
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         self.inner.required_indicators()
+    }
+
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        self.inner.htf_requirements()
     }
 
     fn description(&self) -> String {

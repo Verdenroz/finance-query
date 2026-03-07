@@ -1073,6 +1073,58 @@ impl Region {
             Region::Vietnam => "vn.finance.yahoo.com",
         }
     }
+
+    /// UTC offset in seconds for the region's primary exchange.
+    ///
+    /// Returns the standard-time (non-DST) UTC offset of each country's main
+    /// exchange. This is used by the backtesting engine to align higher-timeframe
+    /// resampling bucket boundaries to local calendar weeks and months, preventing
+    /// APAC and other non-UTC exchanges from having bars mis-bucketed into the
+    /// prior week due to UTC midnight falling inside their local trading day.
+    ///
+    /// # Note
+    ///
+    /// DST transitions are not modelled. For exchanges in regions with DST
+    /// (e.g. NYSE, LSE) the boundary shift is at most ±1 hour and affects only
+    /// the transition candles. This is a deliberate simplification — exact DST
+    /// handling would require a timezone database dependency.
+    pub const fn utc_offset_secs(&self) -> i64 {
+        match self {
+            // UTC-5 (NYSE/TSX winter)
+            Region::UnitedStates | Region::Canada => -18_000,
+            // UTC-3 (BYMA / B3 winter)
+            Region::Argentina | Region::Brazil => -10_800,
+            // UTC+0 (LSE / Euronext Lisbon)
+            Region::UnitedKingdom | Region::Portugal => 0,
+            // UTC+1 (Euronext Paris/Amsterdam/Milan/Madrid, Oslo, Stockholm, Copenhagen, Helsinki)
+            Region::France
+            | Region::Germany
+            | Region::Italy
+            | Region::Spain
+            | Region::Norway
+            | Region::Sweden
+            | Region::Denmark
+            | Region::Finland => 3_600,
+            // UTC+2 (Athens, Tel Aviv, Moscow — note Russia stays UTC+3 year-round)
+            Region::Greece | Region::Israel => 7_200,
+            // UTC+3 (MOEX — no DST since 2014)
+            Region::Turkey | Region::Russia => 10_800,
+            // UTC+5:30 (BSE/NSE — India has no DST)
+            Region::India => 19_800,
+            // UTC+7 (SET Bangkok, HSX Hanoi)
+            Region::Thailand | Region::Vietnam => 25_200,
+            // UTC+8 (SSE/SZSE, HKEX, SGX, Bursa Malaysia, TWSE)
+            Region::China
+            | Region::HongKong
+            | Region::Singapore
+            | Region::Malaysia
+            | Region::Taiwan => 28_800,
+            // UTC+10 (ASX — AEST winter)
+            Region::Australia => 36_000,
+            // UTC+12 (NZX — NZST winter)
+            Region::NewZealand => 43_200,
+        }
+    }
 }
 
 impl std::str::FromStr for Region {

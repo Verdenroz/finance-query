@@ -107,6 +107,7 @@ pub mod optimizer;
 pub mod portfolio;
 mod position;
 pub mod refs;
+pub mod resample;
 mod result;
 mod signal;
 pub mod strategy;
@@ -150,3 +151,6 @@ pub use monte_carlo::{MonteCarloConfig, MonteCarloMethod, MonteCarloResult, Perc
 
 // Re-export comparison types
 pub use comparison::{BacktestComparison, ComparisonReport, ComparisonRow};
+
+// Re-export resample utility
+pub use resample::resample;

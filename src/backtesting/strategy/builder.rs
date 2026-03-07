@@ -24,7 +24,7 @@
 
 use std::collections::HashSet;
 
-use crate::backtesting::condition::Condition;
+use crate::backtesting::condition::{Condition, HtfIndicatorSpec};
 use crate::backtesting::signal::Signal;
 use crate::indicators::Indicator;
 
@@ -34,16 +34,19 @@ use super::{Strategy, StrategyContext};
 struct BoxedCondition {
     evaluate_fn: Box<dyn Fn(&StrategyContext) -> bool + Send + Sync>,
     required_indicators: Vec<(String, Indicator)>,
+    htf_requirements: Vec<HtfIndicatorSpec>,
     description: String,
 }
 
 impl BoxedCondition {
     fn new<C: Condition>(cond: C) -> Self {
         let required_indicators = cond.required_indicators();
+        let htf_requirements = cond.htf_requirements();
         let description = cond.description();
         Self {
             evaluate_fn: Box::new(move |ctx| cond.evaluate(ctx)),
             required_indicators,
+            htf_requirements,
             description,
         }
     }
@@ -54,6 +57,10 @@ impl BoxedCondition {
 
     fn required_indicators(&self) -> &[(String, Indicator)] {
         &self.required_indicators
+    }
+
+    fn htf_requirements(&self) -> &[HtfIndicatorSpec] {
+        &self.htf_requirements
     }
 
     fn description(&self) -> &str {
@@ -285,6 +292,26 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
         indicators.retain(|(key, _)| seen.insert(key.clone()));
 
         indicators
+    }
+
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        let mut reqs = self.entry_condition.htf_requirements();
+        reqs.extend(self.exit_condition.htf_requirements());
+
+        if let Some(ref se) = self.short_entry_condition {
+            reqs.extend(se.htf_requirements().iter().cloned());
+        }
+        if let Some(ref sx) = self.short_exit_condition {
+            reqs.extend(sx.htf_requirements().iter().cloned());
+        }
+        if let Some(ref rf) = self.regime_filter {
+            reqs.extend(rf.htf_requirements().iter().cloned());
+        }
+
+        // Deduplicate by htf_key — same stretched array cannot be stored twice
+        let mut seen = HashSet::new();
+        reqs.retain(|spec| seen.insert(spec.htf_key.clone()));
+        reqs
     }
 
     fn warmup_period(&self) -> usize {

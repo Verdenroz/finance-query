@@ -25,6 +25,7 @@ pub mod prebuilt;
 
 use std::collections::HashMap;
 
+use crate::backtesting::condition::HtfIndicatorSpec;
 use crate::indicators::Indicator;
 use crate::models::chart::Candle;
 
@@ -283,6 +284,20 @@ pub trait Strategy: Send + Sync {
     /// The engine will pre-compute these and make them available via `StrategyContext::indicator()`.
     fn required_indicators(&self) -> Vec<(String, Indicator)>;
 
+    /// Higher-timeframe indicators required by this strategy.
+    ///
+    /// The engine resamples candles to each unique interval, computes the
+    /// listed indicators on the resampled data, and stores stretched
+    /// (base-timeframe-length) arrays in `StrategyContext::indicators` under
+    /// the `htf_key` names. Strategies built with [`StrategyBuilder`] implement
+    /// this automatically; raw [`Strategy`] implementations that use HTF
+    /// conditions should override this to avoid the O(n²) dynamic fallback.
+    ///
+    /// [`StrategyBuilder`]: crate::backtesting::strategy::StrategyBuilder
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        vec![]
+    }
+
     /// Called on each candle to generate a signal.
     ///
     /// Return `Signal::hold()` for no action, `Signal::long()` to enter long,
@@ -302,6 +317,9 @@ impl Strategy for Box<dyn Strategy> {
     }
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         (**self).required_indicators()
+    }
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        (**self).htf_requirements()
     }
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         (**self).on_candle(ctx)
