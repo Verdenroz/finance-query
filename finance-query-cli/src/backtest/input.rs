@@ -9,6 +9,42 @@ use super::types::{OptimizeConfig, OptimizerParamDef, all_optimize_metrics};
 use super::user_presets;
 use crossterm::event::{KeyCode, KeyModifiers};
 
+enum CondNavDir {
+    Prev,
+    Next,
+}
+
+fn active_condition_len(app: &App) -> usize {
+    match app.active_condition_panel {
+        ConditionPanel::Entry => app.config.strategy.entry_conditions.conditions.len(),
+        ConditionPanel::Exit => app.config.strategy.exit_conditions.conditions.len(),
+        ConditionPanel::Regime => app.config.strategy.regime_conditions.conditions.len(),
+        ConditionPanel::ScaleIn => app.config.strategy.scale_in_conditions.conditions.len(),
+        ConditionPanel::ScaleOut => app.config.strategy.scale_out_conditions.conditions.len(),
+    }
+}
+
+fn active_condition_idx(app: &mut App) -> &mut usize {
+    match app.active_condition_panel {
+        ConditionPanel::Entry => &mut app.entry_condition_idx,
+        ConditionPanel::Exit => &mut app.exit_condition_idx,
+        ConditionPanel::Regime => &mut app.regime_condition_idx,
+        ConditionPanel::ScaleIn => &mut app.scale_in_condition_idx,
+        ConditionPanel::ScaleOut => &mut app.scale_out_condition_idx,
+    }
+}
+
+fn navigate_condition(app: &mut App, dir: CondNavDir) {
+    let len = active_condition_len(app);
+    if len > 0 {
+        let idx = active_condition_idx(app);
+        *idx = match dir {
+            CondNavDir::Prev => (*idx + len - 1) % len,
+            CondNavDir::Next => (*idx + 1) % len,
+        };
+    }
+}
+
 /// Increment/decrement step for arrow-key adjustment of condition target values.
 const TARGET_VALUE_STEP: f64 = 0.1;
 /// Minimum allowed value for an optimizer parameter step (prevents zero/negative steps).
@@ -27,6 +63,12 @@ pub fn handle_input(app: &mut App, key: KeyCode, modifiers: KeyModifiers) {
     if app.editing {
         if app.screen == Screen::OptimizerSetup {
             handle_optimizer_input(app, key);
+        } else if app.screen == Screen::StrategyBuilder {
+            // Scale fraction editing is handled inside handle_strategy_input.
+            handle_strategy_input(app, key);
+        } else if app.screen == Screen::EnsembleCompose {
+            // Weight input editing is handled inside handle_ensemble_compose_input.
+            handle_ensemble_compose_input(app, key);
         } else {
             match key {
                 KeyCode::Enter => app.finish_editing(),
@@ -44,6 +86,7 @@ pub fn handle_input(app: &mut App, key: KeyCode, modifiers: KeyModifiers) {
     match app.screen {
         Screen::Welcome => handle_welcome_input(app, key),
         Screen::PresetSelect => handle_preset_input(app, key),
+        Screen::EnsembleCompose => handle_ensemble_compose_input(app, key),
         Screen::ConfigEditor => handle_config_input(app, key),
         Screen::StrategyBuilder => handle_strategy_input(app, key),
         Screen::IndicatorBrowser => handle_indicator_browser_input(app, key),
@@ -67,6 +110,9 @@ fn handle_welcome_input(app: &mut App, key: KeyCode) {
         }
         KeyCode::Char('3') | KeyCode::Char('s') => {
             app.push_screen(Screen::StrategyBuilder);
+        }
+        KeyCode::Char('4') | KeyCode::Char('c') => {
+            open_ensemble_compose(app, None);
         }
         _ => {}
     }
@@ -108,6 +154,187 @@ fn handle_preset_input(app: &mut App, key: KeyCode) {
                 }
             }
         }
+        KeyCode::Char('c') => {
+            open_ensemble_compose(app, Some(app.preset_idx));
+        }
+        _ => {}
+    }
+}
+
+fn open_ensemble_compose(app: &mut App, initial_idx: Option<usize>) {
+    let total = app.total_preset_count();
+
+    app.ensemble_selected.clear();
+    app.ensemble_weights.clear();
+    app.editing = false;
+    app.edit_buffer.clear();
+
+    if let Some(ensemble) = &app.config.ensemble {
+        app.ensemble_mode = ensemble.mode;
+        // Track which member positions have been consumed so that two presets
+        // with the same name do not both claim the same ensemble member.
+        let mut remaining: Vec<Option<(String, f64)>> = ensemble
+            .members
+            .iter()
+            .map(|m| Some((m.name.clone(), m.weight)))
+            .collect();
+        for idx in 0..total {
+            if let Some((name, _, _)) = app.preset_entry(idx)
+                && let Some(slot) = remaining
+                    .iter_mut()
+                    .find(|s| s.as_ref().map(|(n, _)| n == &name).unwrap_or(false))
+            {
+                let (_, weight) = slot.take().unwrap();
+                app.ensemble_selected.push(idx);
+                app.ensemble_weights.insert(idx, weight);
+            }
+        }
+    } else {
+        app.ensemble_mode = Default::default();
+    }
+
+    if total == 0 {
+        app.ensemble_cursor_idx = 0;
+    } else if let Some(idx) = initial_idx {
+        let clamped = idx.min(total - 1);
+        app.ensemble_cursor_idx = clamped;
+        if !app.ensemble_selected.contains(&clamped) {
+            app.ensemble_selected.push(clamped);
+        }
+        app.ensemble_weights.entry(clamped).or_insert(1.0);
+    } else if let Some(first) = app.ensemble_selected.first().copied() {
+        app.ensemble_cursor_idx = first;
+    } else {
+        app.ensemble_cursor_idx = app.ensemble_cursor_idx.min(total - 1);
+    }
+
+    app.ensemble_selected.sort_unstable();
+    app.ensemble_selected.dedup();
+    for idx in &app.ensemble_selected {
+        app.ensemble_weights.entry(*idx).or_insert(1.0);
+    }
+
+    app.edit_error = None;
+    app.push_screen(Screen::EnsembleCompose);
+}
+
+fn handle_ensemble_compose_input(app: &mut App, key: KeyCode) {
+    if app.editing {
+        match key {
+            KeyCode::Enter => {
+                let parsed = app.edit_buffer.trim().parse::<f64>();
+                match parsed {
+                    Ok(weight) => match app.set_ensemble_weight(app.ensemble_cursor_idx, weight) {
+                        Ok(()) => {
+                            app.editing = false;
+                            app.edit_buffer.clear();
+                            app.edit_error = None;
+                        }
+                        Err(e) => {
+                            app.edit_error = Some(e.to_string());
+                        }
+                    },
+                    Err(_) => {
+                        app.edit_error = Some("Invalid number".into());
+                    }
+                }
+            }
+            KeyCode::Esc => {
+                app.editing = false;
+                app.edit_buffer.clear();
+                app.edit_error = None;
+            }
+            KeyCode::Char(c) if c.is_ascii_digit() || c == '.' => {
+                app.edit_buffer.push(c);
+            }
+            KeyCode::Backspace => {
+                app.edit_buffer.pop();
+            }
+            _ => {}
+        }
+        return;
+    }
+
+    let total = app.total_preset_count();
+
+    match key {
+        KeyCode::Char('q') | KeyCode::Esc => app.pop_screen(),
+        KeyCode::Up | KeyCode::Char('k') => {
+            if total > 0 {
+                app.ensemble_cursor_idx = (app.ensemble_cursor_idx + total - 1) % total;
+            }
+        }
+        KeyCode::Down | KeyCode::Char('j') => {
+            if total > 0 {
+                app.ensemble_cursor_idx = (app.ensemble_cursor_idx + 1) % total;
+            }
+        }
+        KeyCode::Char(' ') => {
+            if total > 0 {
+                app.toggle_ensemble_selection(app.ensemble_cursor_idx);
+                app.edit_error = None;
+            }
+        }
+        KeyCode::Char('a') => {
+            if total > 0 {
+                if app.ensemble_selected.len() == total {
+                    app.ensemble_selected.clear();
+                    app.ensemble_weights.clear();
+                } else {
+                    app.ensemble_selected = (0..total).collect();
+                    for idx in 0..total {
+                        app.ensemble_weights.entry(idx).or_insert(1.0);
+                    }
+                }
+                app.edit_error = None;
+            }
+        }
+        KeyCode::Char('c') => {
+            app.ensemble_selected.clear();
+            app.ensemble_weights.clear();
+            app.edit_error = None;
+        }
+        KeyCode::Char('m') => {
+            app.ensemble_mode = app.ensemble_mode.cycle();
+        }
+        KeyCode::Left | KeyCode::Char('h') => {
+            if total > 0 && app.ensemble_selected.contains(&app.ensemble_cursor_idx) {
+                app.adjust_ensemble_weight(app.ensemble_cursor_idx, -0.1);
+                app.edit_error = None;
+            } else {
+                app.edit_error =
+                    Some("Select the preset first (Space) before editing weight".into());
+            }
+        }
+        KeyCode::Right | KeyCode::Char('l') => {
+            if total > 0 && app.ensemble_selected.contains(&app.ensemble_cursor_idx) {
+                app.adjust_ensemble_weight(app.ensemble_cursor_idx, 0.1);
+                app.edit_error = None;
+            } else {
+                app.edit_error =
+                    Some("Select the preset first (Space) before editing weight".into());
+            }
+        }
+        KeyCode::Char('w') => {
+            if total > 0 && app.ensemble_selected.contains(&app.ensemble_cursor_idx) {
+                app.editing = true;
+                app.edit_buffer =
+                    format!("{:.2}", app.ensemble_weight_for(app.ensemble_cursor_idx));
+                app.edit_error = None;
+            } else {
+                app.edit_error =
+                    Some("Select the preset first (Space) before editing weight".into());
+            }
+        }
+        KeyCode::Enter => match app.apply_selected_ensemble() {
+            Ok(()) => {
+                app.screen = Screen::ConfigEditor;
+                app.prev_screens.clear();
+            }
+            Err(e) => {
+                app.edit_error = Some(e.to_string());
+            }
+        },
         _ => {}
     }
 }
@@ -137,11 +364,16 @@ fn handle_config_input(app: &mut App, key: KeyCode) {
         KeyCode::Char('p') => {
             app.push_screen(Screen::PresetSelect);
         }
+        KeyCode::Char('c') => {
+            open_ensemble_compose(app, None);
+        }
         KeyCode::Char('r') => {
             if app.can_run() {
                 app.push_screen(Screen::Confirmation);
             } else {
-                app.edit_error = Some("Need symbol and at least one entry/exit condition".into());
+                app.edit_error = Some(
+                    "Need a symbol and either entry/exit conditions or a 2+ member ensemble".into(),
+                );
             }
         }
         _ => {}
@@ -149,6 +381,48 @@ fn handle_config_input(app: &mut App, key: KeyCode) {
 }
 
 fn handle_strategy_input(app: &mut App, key: KeyCode) {
+    // When editing a scale fraction value, intercept all keys here.
+    if app.editing {
+        match key {
+            KeyCode::Enter => {
+                if let Ok(v) = app.edit_buffer.trim().parse::<f64>() {
+                    if v > 0.0 && v <= 100.0 {
+                        let frac = v / 100.0;
+                        match app.active_condition_panel {
+                            ConditionPanel::ScaleIn => {
+                                app.config.strategy.scale_in_fraction = frac;
+                            }
+                            ConditionPanel::ScaleOut => {
+                                app.config.strategy.scale_out_fraction = frac;
+                            }
+                            _ => {}
+                        }
+                        app.editing = false;
+                        app.edit_buffer.clear();
+                        app.edit_error = None;
+                    } else {
+                        app.edit_error = Some("Enter a value between 1 and 100 (%)".into());
+                    }
+                } else {
+                    app.edit_error = Some("Invalid number".into());
+                }
+            }
+            KeyCode::Esc => {
+                app.editing = false;
+                app.edit_buffer.clear();
+                app.edit_error = None;
+            }
+            KeyCode::Char(c) if c.is_ascii_digit() || c == '.' => {
+                app.edit_buffer.push(c);
+            }
+            KeyCode::Backspace => {
+                app.edit_buffer.pop();
+            }
+            _ => {}
+        }
+        return;
+    }
+
     match key {
         KeyCode::Char('q') | KeyCode::Esc => {
             if app.prev_screens.is_empty() {
@@ -157,49 +431,31 @@ fn handle_strategy_input(app: &mut App, key: KeyCode) {
                 app.pop_screen();
             }
         }
-        // Switch between entry/exit panels
+        // Cycle through all 5 panels
         KeyCode::Left | KeyCode::Right | KeyCode::Tab => {
             app.active_condition_panel = match app.active_condition_panel {
                 ConditionPanel::Entry => ConditionPanel::Exit,
-                ConditionPanel::Exit => ConditionPanel::Entry,
+                ConditionPanel::Exit => ConditionPanel::Regime,
+                ConditionPanel::Regime => ConditionPanel::ScaleIn,
+                ConditionPanel::ScaleIn => ConditionPanel::ScaleOut,
+                ConditionPanel::ScaleOut => ConditionPanel::Entry,
             };
         }
         // Navigate within the active condition list
         KeyCode::Up | KeyCode::Char('k') => {
-            let len = match app.active_condition_panel {
-                ConditionPanel::Entry => app.config.strategy.entry_conditions.conditions.len(),
-                ConditionPanel::Exit => app.config.strategy.exit_conditions.conditions.len(),
-            };
-            if len > 0 {
-                let idx = match app.active_condition_panel {
-                    ConditionPanel::Entry => &mut app.entry_condition_idx,
-                    ConditionPanel::Exit => &mut app.exit_condition_idx,
-                };
-                *idx = (*idx + len - 1) % len;
-            }
+            navigate_condition(app, CondNavDir::Prev);
         }
         KeyCode::Down | KeyCode::Char('j') => {
-            let len = match app.active_condition_panel {
-                ConditionPanel::Entry => app.config.strategy.entry_conditions.conditions.len(),
-                ConditionPanel::Exit => app.config.strategy.exit_conditions.conditions.len(),
-            };
-            if len > 0 {
-                let idx = match app.active_condition_panel {
-                    ConditionPanel::Entry => &mut app.entry_condition_idx,
-                    ConditionPanel::Exit => &mut app.exit_condition_idx,
-                };
-                *idx = (*idx + 1) % len;
-            }
+            navigate_condition(app, CondNavDir::Next);
         }
         // Add new condition based on active panel
         KeyCode::Enter => {
             match app.active_condition_panel {
-                ConditionPanel::Entry => {
-                    app.condition_target = ConditionTarget::Entry;
-                }
-                ConditionPanel::Exit => {
-                    app.condition_target = ConditionTarget::Exit;
-                }
+                ConditionPanel::Entry => app.condition_target = ConditionTarget::Entry,
+                ConditionPanel::Exit => app.condition_target = ConditionTarget::Exit,
+                ConditionPanel::Regime => app.condition_target = ConditionTarget::Regime,
+                ConditionPanel::ScaleIn => app.condition_target = ConditionTarget::ScaleIn,
+                ConditionPanel::ScaleOut => app.condition_target = ConditionTarget::ScaleOut,
             }
             app.category_idx = 0;
             app.indicator_idx = 0;
@@ -235,6 +491,41 @@ fn handle_strategy_input(app: &mut App, key: KeyCode) {
                 app.push_screen(Screen::IndicatorBrowser);
             }
         }
+        // Add to regime filter
+        KeyCode::Char('5') | KeyCode::Char('g') => {
+            app.condition_target = ConditionTarget::Regime;
+            app.category_idx = 0;
+            app.indicator_idx = 0;
+            app.push_screen(Screen::IndicatorBrowser);
+        }
+        // Add to scale-in
+        KeyCode::Char('6') => {
+            app.condition_target = ConditionTarget::ScaleIn;
+            app.category_idx = 0;
+            app.indicator_idx = 0;
+            app.push_screen(Screen::IndicatorBrowser);
+        }
+        // Add to scale-out
+        KeyCode::Char('7') => {
+            app.condition_target = ConditionTarget::ScaleOut;
+            app.category_idx = 0;
+            app.indicator_idx = 0;
+            app.push_screen(Screen::IndicatorBrowser);
+        }
+        // Edit fraction for scale-in/out panels
+        KeyCode::Char('f') => match app.active_condition_panel {
+            ConditionPanel::ScaleIn => {
+                app.edit_buffer = format!("{:.0}", app.config.strategy.scale_in_fraction * 100.0);
+                app.editing = true;
+                app.edit_error = None;
+            }
+            ConditionPanel::ScaleOut => {
+                app.edit_buffer = format!("{:.0}", app.config.strategy.scale_out_fraction * 100.0);
+                app.editing = true;
+                app.edit_error = None;
+            }
+            _ => {}
+        },
         // Toggle AND/OR for the selected condition
         KeyCode::Char('c') => match app.active_condition_panel {
             ConditionPanel::Entry => {
@@ -245,6 +536,18 @@ fn handle_strategy_input(app: &mut App, key: KeyCode) {
                 let idx = app.exit_condition_idx;
                 app.config.strategy.exit_conditions.toggle_op_at(idx);
             }
+            ConditionPanel::Regime => {
+                let idx = app.regime_condition_idx;
+                app.config.strategy.regime_conditions.toggle_op_at(idx);
+            }
+            ConditionPanel::ScaleIn => {
+                let idx = app.scale_in_condition_idx;
+                app.config.strategy.scale_in_conditions.toggle_op_at(idx);
+            }
+            ConditionPanel::ScaleOut => {
+                let idx = app.scale_out_condition_idx;
+                app.config.strategy.scale_out_conditions.toggle_op_at(idx);
+            }
         },
         // Delete the selected condition
         KeyCode::Char('d') | KeyCode::Delete | KeyCode::Backspace => {
@@ -254,7 +557,6 @@ fn handle_strategy_input(app: &mut App, key: KeyCode) {
                     if len > 0 {
                         let idx = app.entry_condition_idx;
                         app.config.strategy.entry_conditions.remove_at(idx);
-                        // Adjust index if needed
                         if app.entry_condition_idx
                             >= app.config.strategy.entry_conditions.conditions.len()
                             && app.entry_condition_idx > 0
@@ -268,12 +570,50 @@ fn handle_strategy_input(app: &mut App, key: KeyCode) {
                     if len > 0 {
                         let idx = app.exit_condition_idx;
                         app.config.strategy.exit_conditions.remove_at(idx);
-                        // Adjust index if needed
                         if app.exit_condition_idx
                             >= app.config.strategy.exit_conditions.conditions.len()
                             && app.exit_condition_idx > 0
                         {
                             app.exit_condition_idx -= 1;
+                        }
+                    }
+                }
+                ConditionPanel::Regime => {
+                    let len = app.config.strategy.regime_conditions.conditions.len();
+                    if len > 0 {
+                        let idx = app.regime_condition_idx;
+                        app.config.strategy.regime_conditions.remove_at(idx);
+                        if app.regime_condition_idx
+                            >= app.config.strategy.regime_conditions.conditions.len()
+                            && app.regime_condition_idx > 0
+                        {
+                            app.regime_condition_idx -= 1;
+                        }
+                    }
+                }
+                ConditionPanel::ScaleIn => {
+                    let len = app.config.strategy.scale_in_conditions.conditions.len();
+                    if len > 0 {
+                        let idx = app.scale_in_condition_idx;
+                        app.config.strategy.scale_in_conditions.remove_at(idx);
+                        if app.scale_in_condition_idx
+                            >= app.config.strategy.scale_in_conditions.conditions.len()
+                            && app.scale_in_condition_idx > 0
+                        {
+                            app.scale_in_condition_idx -= 1;
+                        }
+                    }
+                }
+                ConditionPanel::ScaleOut => {
+                    let len = app.config.strategy.scale_out_conditions.conditions.len();
+                    if len > 0 {
+                        let idx = app.scale_out_condition_idx;
+                        app.config.strategy.scale_out_conditions.remove_at(idx);
+                        if app.scale_out_condition_idx
+                            >= app.config.strategy.scale_out_conditions.conditions.len()
+                            && app.scale_out_condition_idx > 0
+                        {
+                            app.scale_out_condition_idx -= 1;
                         }
                     }
                 }
@@ -326,10 +666,11 @@ fn handle_indicator_config_input(app: &mut App, key: KeyCode) {
     let param_len = app.param_values.len();
     if param_len == 0 {
         // No parameters, go directly to comparison
-        if matches!(key, KeyCode::Enter | KeyCode::Char('n')) {
-            app.finish_indicator_config();
-        } else if matches!(key, KeyCode::Esc | KeyCode::Char('q')) {
-            app.pop_screen();
+        match key {
+            KeyCode::Char('t') => app.cycle_building_htf_interval(),
+            KeyCode::Enter | KeyCode::Char('n') => app.finish_indicator_config(),
+            KeyCode::Esc | KeyCode::Char('q') => app.pop_screen(),
+            _ => {}
         }
         return;
     }
@@ -357,6 +698,9 @@ fn handle_indicator_config_input(app: &mut App, key: KeyCode) {
                 app.param_values[app.param_idx] =
                     (app.param_values[app.param_idx] + step).min(param.max);
             }
+        }
+        KeyCode::Char('t') => {
+            app.cycle_building_htf_interval();
         }
         KeyCode::Enter | KeyCode::Char('n') => {
             app.finish_indicator_config();
@@ -656,6 +1000,10 @@ fn handle_optimizer_input(app: &mut App, key: KeyCode) {
         KeyCode::Char('m') => {
             app.optimizer_metric_idx = (app.optimizer_metric_idx + 1) % n_metrics;
         }
+        // Toggle search method (Grid ↔ Bayesian)
+        KeyCode::Char('b') => {
+            app.optimizer_search_method = app.optimizer_search_method.toggle();
+        }
         // Toggle walk-forward
         KeyCode::Char('w') => {
             app.optimizer_walk_forward = !app.optimizer_walk_forward;
@@ -670,6 +1018,8 @@ fn handle_optimizer_input(app: &mut App, key: KeyCode) {
             app.config.optimizer = Some(OptimizeConfig {
                 params: app.optimizer_params.clone(),
                 metric,
+                search_method: app.optimizer_search_method,
+                bayesian_trials: 100,
                 walk_forward: app.optimizer_walk_forward,
                 in_sample_bars: app.optimizer_in_sample,
                 out_of_sample_bars: app.optimizer_oos,
@@ -681,5 +1031,62 @@ fn handle_optimizer_input(app: &mut App, key: KeyCode) {
             app.pop_screen();
         }
         _ => {}
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use crossterm::event::KeyModifiers;
+
+    use super::*;
+
+    #[test]
+    fn ensemble_weight_typing_sets_exact_value() {
+        let mut app = App::new(None);
+        open_ensemble_compose(&mut app, Some(0));
+
+        handle_input(&mut app, KeyCode::Char('w'), KeyModifiers::NONE);
+        assert!(app.editing);
+
+        app.edit_buffer = "2.75".to_string();
+        handle_input(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+
+        assert!(!app.editing);
+        assert!((app.ensemble_weight_for(0) - 2.75).abs() < 1e-9);
+    }
+
+    #[test]
+    fn ensemble_weight_typing_requires_selected_member() {
+        let mut app = App::new(None);
+        open_ensemble_compose(&mut app, None);
+        app.ensemble_selected.clear();
+        app.ensemble_weights.clear();
+        app.ensemble_cursor_idx = 0;
+
+        handle_input(&mut app, KeyCode::Char('w'), KeyModifiers::NONE);
+
+        assert!(!app.editing);
+        assert!(
+            app.edit_error
+                .as_deref()
+                .is_some_and(|msg| msg.contains("Select the preset first"))
+        );
+    }
+
+    #[test]
+    fn ensemble_weight_typing_rejects_out_of_range() {
+        let mut app = App::new(None);
+        open_ensemble_compose(&mut app, Some(0));
+
+        handle_input(&mut app, KeyCode::Char('w'), KeyModifiers::NONE);
+        app.edit_buffer = "11".to_string();
+        handle_input(&mut app, KeyCode::Enter, KeyModifiers::NONE);
+
+        assert!(app.editing);
+        assert!(
+            app.edit_error
+                .as_deref()
+                .is_some_and(|msg| msg.contains("between 0.0 and 10.0"))
+        );
     }
 }

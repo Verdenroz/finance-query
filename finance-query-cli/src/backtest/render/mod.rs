@@ -10,6 +10,7 @@ pub fn ui(f: &mut ratatui::Frame, app: &App) {
     match app.screen {
         Screen::Welcome => setup::render_welcome(f, app),
         Screen::PresetSelect => setup::render_preset_select(f, app),
+        Screen::EnsembleCompose => setup::render_ensemble_compose(f, app),
         Screen::ConfigEditor => setup::render_config_editor(f, app),
         Screen::StrategyBuilder => strategy::render_strategy_builder(f, app),
         Screen::IndicatorBrowser => strategy::render_indicator_browser(f, app),

@@ -13,6 +13,12 @@ use ratatui::{
 
 pub(super) fn render_confirmation(f: &mut Frame, app: &App) {
     let area = f.area();
+    let bars_per_year_str =
+        if (app.config.bars_per_year - app.config.bars_per_year.round()).abs() < 1e-6 {
+            format!("{:.0}", app.config.bars_per_year)
+        } else {
+            format!("{:.2}", app.config.bars_per_year)
+        };
 
     let chunks = Layout::default()
         .direction(Direction::Vertical)
@@ -123,12 +129,59 @@ pub(super) fn render_confirmation(f: &mut Frame, app: &App) {
             Span::styled("  RF Rate:      ", Style::default().fg(Color::DarkGray)),
             Span::raw(format!("{:.1}%", app.config.risk_free_rate * 100.0)),
         ]),
+        Line::from(vec![
+            Span::styled("  Signal Min:   ", Style::default().fg(Color::DarkGray)),
+            Span::raw(format!("{:.1}%", app.config.min_signal_strength * 100.0)),
+        ]),
+        Line::from(vec![
+            Span::styled("  Close At End: ", Style::default().fg(Color::DarkGray)),
+            Span::raw(format!("{}", app.config.close_at_end)),
+        ]),
+        Line::from(vec![
+            Span::styled("  Bars / Year:  ", Style::default().fg(Color::DarkGray)),
+            Span::raw(bars_per_year_str),
+        ]),
         {
             if let Some(bm) = &app.config.benchmark {
                 Line::from(vec![
                     Span::styled("  Benchmark:    ", Style::default().fg(Color::DarkGray)),
                     Span::styled(bm.as_str(), Style::default().fg(Color::Cyan)),
                 ])
+            } else {
+                Line::from("")
+            }
+        },
+        {
+            if let Some(ensemble) = &app.config.ensemble {
+                Line::from(vec![
+                    Span::styled("  Ensemble:     ", Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        format!(
+                            "{} ({} members)",
+                            ensemble.mode.name(),
+                            ensemble.members.len()
+                        ),
+                        Style::default().fg(Color::Magenta),
+                    ),
+                ])
+            } else {
+                Line::from("")
+            }
+        },
+        {
+            if let Some(ensemble) = &app.config.ensemble {
+                Line::from(vec![Span::styled(
+                    format!(
+                        "    {}",
+                        ensemble
+                            .members
+                            .iter()
+                            .map(|m| format!("{} (w={:.2})", m.name, m.weight))
+                            .collect::<Vec<_>>()
+                            .join(", ")
+                    ),
+                    Style::default().fg(Color::DarkGray),
+                )])
             } else {
                 Line::from("")
             }
@@ -320,7 +373,7 @@ pub(super) fn render_optimizer_setup(f: &mut Frame, app: &App) {
         .constraints([
             Constraint::Length(3),
             Constraint::Min(0),
-            Constraint::Length(5),
+            Constraint::Length(6),
             Constraint::Length(3),
         ])
         .split(area);
@@ -424,8 +477,29 @@ pub(super) fn render_optimizer_setup(f: &mut Frame, app: &App) {
         "No".to_string()
     };
 
+    let (search_method_label, search_method_hint, search_method_color) =
+        if app.optimizer_walk_forward {
+            ("Grid (forced)", "", Color::DarkGray)
+        } else {
+            (
+                app.optimizer_search_method.label(),
+                "  (b to toggle)",
+                Color::Cyan,
+            )
+        };
+
     let opts = Paragraph::new(vec![
         Line::from(""),
+        Line::from(vec![
+            Span::styled("  Search method: ", Style::default().fg(Color::DarkGray)),
+            Span::styled(
+                search_method_label,
+                Style::default()
+                    .fg(search_method_color)
+                    .add_modifier(Modifier::BOLD),
+            ),
+            Span::styled(search_method_hint, Style::default().fg(Color::DarkGray)),
+        ]),
         Line::from(vec![
             Span::styled("  Optimize for:  ", Style::default().fg(Color::DarkGray)),
             Span::styled(
@@ -472,7 +546,9 @@ pub(super) fn render_optimizer_setup(f: &mut Frame, app: &App) {
         Span::styled(":edit  ", Style::default().fg(Color::DarkGray)),
         Span::styled("Space", Style::default().fg(Color::White)),
         Span::styled(":toggle  ", Style::default().fg(Color::DarkGray)),
-        Span::styled("m", Style::default().fg(Color::Cyan)),
+        Span::styled("b", Style::default().fg(Color::Cyan)),
+        Span::styled(":method  ", Style::default().fg(Color::DarkGray)),
+        Span::styled("m", Style::default().fg(Color::Yellow)),
         Span::styled(":metric  ", Style::default().fg(Color::DarkGray)),
         Span::styled("w", Style::default().fg(Color::Magenta)),
         Span::styled(":walk-fwd  ", Style::default().fg(Color::DarkGray)),

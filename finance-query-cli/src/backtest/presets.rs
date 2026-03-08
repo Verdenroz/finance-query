@@ -5,7 +5,7 @@
 use super::indicators::IndicatorDef;
 use super::types::{
     BacktestConfiguration, BuiltCondition, BuiltIndicator, CompareTarget, ComparisonType,
-    ConditionGroup, LogicalOp,
+    ConditionGroup, LogicalOp, bars_per_year_for_interval,
 };
 use finance_query::{Interval, TimeRange};
 
@@ -46,6 +46,7 @@ fn entry(
         indicator,
         comparison,
         target,
+        htf_interval: None,
         next_op: LogicalOp::And,
     }
 }
@@ -224,11 +225,167 @@ impl StrategyPreset {
                 },
             },
             Self {
+                name: "Ichimoku TK Cross",
+                description: "Tenkan/Kijun crossover — the classic Ichimoku trend signal (daily, 2yr)",
+                config: || {
+                    let mut cfg = BacktestConfiguration::default();
+                    cfg.interval = Interval::OneDay;
+                    cfg.range = TimeRange::TwoYears;
+                    cfg.stop_loss = Some(0.04);
+                    cfg.take_profit = Some(0.12);
+                    cfg.strategy.name = "Ichimoku TK Cross".to_string();
+
+                    // Standard Ichimoku params: tenkan=9, kijun=26, lagging=26, displacement=26
+                    let ichimoku_params = vec![9.0, 26.0, 26.0, 26.0];
+                    let tenkan = ind("ichimoku", ichimoku_params.clone()); // default output = tenkan-sen
+                    let kijun = ind_out("ichimoku", ichimoku_params, "base"); // "base" = kijun-sen
+
+                    // Entry: Tenkan-sen crosses above Kijun-sen (bullish TK cross)
+                    cfg.strategy.entry_conditions.conditions.push(entry(
+                        tenkan.clone(),
+                        ComparisonType::CrossesAbove,
+                        CompareTarget::Indicator(kijun.clone()),
+                    ));
+                    // Exit: Tenkan-sen crosses below Kijun-sen (bearish TK cross)
+                    cfg.strategy.exit_conditions.conditions.push(entry(
+                        tenkan,
+                        ComparisonType::CrossesBelow,
+                        CompareTarget::Indicator(kijun),
+                    ));
+                    cfg
+                },
+            },
+            Self {
+                name: "Volume Flow",
+                description: "MFI oversold bounce above VWAP — volume-confirmed mean reversion (daily, 1yr)",
+                config: || {
+                    let mut cfg = BacktestConfiguration::default();
+                    cfg.interval = Interval::OneDay;
+                    cfg.range = TimeRange::OneYear;
+                    cfg.stop_loss = Some(0.04);
+                    cfg.strategy.name = "MFI + VWAP".to_string();
+
+                    let mfi = ind("mfi", vec![14.0]);
+                    let close = ind("close", vec![]);
+                    let vwap = ind("vwap", vec![]);
+
+                    // Entry: MFI crosses above 20 (money flowing back in) AND close above VWAP
+                    cfg.strategy.entry_conditions.conditions.push(entry(
+                        mfi.clone(),
+                        ComparisonType::CrossesAbove,
+                        CompareTarget::Value(20.0),
+                    ));
+                    cfg.strategy.entry_conditions.conditions.push(entry(
+                        close,
+                        ComparisonType::Above,
+                        CompareTarget::Indicator(vwap),
+                    ));
+                    // Exit: MFI crosses above 80 (overbought — take profit)
+                    cfg.strategy.exit_conditions.conditions.push(entry(
+                        mfi,
+                        ComparisonType::CrossesAbove,
+                        CompareTarget::Value(80.0),
+                    ));
+                    cfg
+                },
+            },
+            Self {
+                name: "Keltner Scalper",
+                description: "Keltner channel breakout with short side on 1-hour bars (1h, 3mo)",
+                config: || {
+                    let mut cfg = BacktestConfiguration::default();
+                    cfg.interval = Interval::OneHour;
+                    cfg.bars_per_year = bars_per_year_for_interval(cfg.interval);
+                    cfg.range = TimeRange::ThreeMonths;
+                    cfg.capital = 25_000.0;
+                    cfg.slippage = 0.001;
+                    cfg.allow_short = true;
+                    cfg.stop_loss = Some(0.02);
+                    cfg.take_profit = Some(0.06);
+                    cfg.strategy.name = "Keltner Breakout".to_string();
+
+                    // period=20, multiplier=2.0, atr_period=10
+                    let kc_params = vec![20.0, 2.0, 10.0];
+                    let close = ind("close", vec![]);
+                    let kc_upper = ind_out("keltner", kc_params.clone(), "upper");
+                    let kc_middle = ind("keltner", kc_params.clone()); // default = middle (EMA)
+                    let kc_lower = ind_out("keltner", kc_params, "lower");
+
+                    // Long entry: close crosses above upper band (upside momentum breakout)
+                    cfg.strategy.entry_conditions.conditions.push(entry(
+                        close.clone(),
+                        ComparisonType::CrossesAbove,
+                        CompareTarget::Indicator(kc_upper),
+                    ));
+                    // Long exit: close crosses below middle band (momentum stalls)
+                    cfg.strategy.exit_conditions.conditions.push(entry(
+                        close.clone(),
+                        ComparisonType::CrossesBelow,
+                        CompareTarget::Indicator(kc_middle.clone()),
+                    ));
+
+                    // Short entry: close crosses below lower band (downside momentum breakout)
+                    let mut short_entry = ConditionGroup::new();
+                    short_entry.conditions.push(entry(
+                        close.clone(),
+                        ComparisonType::CrossesBelow,
+                        CompareTarget::Indicator(kc_lower),
+                    ));
+                    cfg.strategy.short_entry_conditions = Some(short_entry);
+
+                    // Short exit: close crosses above middle band
+                    let mut short_exit = ConditionGroup::new();
+                    short_exit.conditions.push(entry(
+                        close,
+                        ComparisonType::CrossesAbove,
+                        CompareTarget::Indicator(kc_middle),
+                    ));
+                    cfg.strategy.short_exit_conditions = Some(short_exit);
+
+                    cfg
+                },
+            },
+            Self {
+                name: "EMA Momentum",
+                description: "EMA(9/21) crossover filtered by Chande Momentum Oscillator > 0 (daily, 1yr)",
+                config: || {
+                    let mut cfg = BacktestConfiguration::default();
+                    cfg.interval = Interval::OneDay;
+                    cfg.range = TimeRange::OneYear;
+                    cfg.stop_loss = Some(0.04);
+                    cfg.strategy.name = "EMA + CMO".to_string();
+
+                    let ema_fast = ind("ema", vec![9.0]);
+                    let ema_slow = ind("ema", vec![21.0]);
+                    let cmo = ind("cmo", vec![14.0]);
+
+                    // Entry: EMA(9) crosses above EMA(21) AND CMO(14) > 0 (positive momentum)
+                    cfg.strategy.entry_conditions.conditions.push(entry(
+                        ema_fast.clone(),
+                        ComparisonType::CrossesAbove,
+                        CompareTarget::Indicator(ema_slow.clone()),
+                    ));
+                    cfg.strategy.entry_conditions.conditions.push(entry(
+                        cmo,
+                        ComparisonType::Above,
+                        CompareTarget::Value(0.0),
+                    ));
+                    // Exit: EMA(9) crosses below EMA(21)
+                    cfg.strategy.exit_conditions.conditions.push(entry(
+                        ema_fast,
+                        ComparisonType::CrossesBelow,
+                        CompareTarget::Indicator(ema_slow),
+                    ));
+                    cfg
+                },
+            },
+            Self {
                 name: "Day Trader",
                 description: "Stochastic %K/%D crossover on 15-minute chart with overbought/oversold filter",
                 config: || {
                     let mut cfg = BacktestConfiguration::default();
                     cfg.interval = Interval::FifteenMinutes;
+                    cfg.bars_per_year = bars_per_year_for_interval(cfg.interval);
                     cfg.range = TimeRange::OneMonth;
                     cfg.capital = 25_000.0;
                     cfg.slippage = 0.002;

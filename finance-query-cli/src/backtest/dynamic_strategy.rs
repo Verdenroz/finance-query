@@ -1,10 +1,13 @@
 use std::collections::HashSet;
 
+use finance_query::Interval;
+use finance_query::backtesting::condition::HtfIndicatorSpec;
 use finance_query::backtesting::{Signal, Strategy, StrategyContext};
 use finance_query::indicators::Indicator;
 
 use super::types::{
     BuiltCondition, BuiltIndicator, CompareTarget, ComparisonType, ConditionGroup, LogicalOp,
+    LongOrderType, ShortOrderType,
 };
 
 /// Relative tolerance for floating-point equality comparisons in strategy conditions.
@@ -24,6 +27,45 @@ pub struct DynamicStrategy {
     pub exit: ConditionGroup,
     pub short_entry: Option<ConditionGroup>,
     pub short_exit: Option<ConditionGroup>,
+    /// Regime filter: if non-empty, all conditions must pass for entry signals to fire.
+    pub regime: ConditionGroup,
+    /// Number of bars to skip before generating signals.
+    pub warmup_bars: usize,
+    /// Conditions that trigger a scale-in (pyramid add) while in a position.
+    pub scale_in: ConditionGroup,
+    /// Fraction of current portfolio equity to allocate when scaling in (0.0–1.0).
+    pub scale_in_fraction: f64,
+    /// Conditions that trigger a partial exit (scale-out) while in a position.
+    pub scale_out: ConditionGroup,
+    /// Fraction of current position quantity to close when scaling out (0.0–1.0).
+    pub scale_out_fraction: f64,
+    /// Entry order type for long positions.
+    pub entry_order_type: LongOrderType,
+    /// Price offset fraction (stop trigger) for limit/stop long entries.
+    pub entry_price_offset_pct: f64,
+    /// Gap above the stop price for `StopLimitAbove` orders (fraction).
+    /// `limit_price = stop_price * (1 + gap)`. Unused for other order types.
+    pub entry_stop_limit_gap_pct: f64,
+    /// Bars until a pending long entry order expires. None = GTC.
+    pub entry_expires_bars: Option<usize>,
+    /// Per-trade stop-loss override for long entries.
+    pub entry_bracket_sl: Option<f64>,
+    /// Per-trade take-profit override for long entries.
+    pub entry_bracket_tp: Option<f64>,
+    /// Per-trade trailing-stop override for long entries.
+    pub entry_bracket_trail: Option<f64>,
+    /// Entry order type for short positions.
+    pub short_order_type: ShortOrderType,
+    /// Price offset fraction for limit/stop short entries.
+    pub short_price_offset_pct: f64,
+    /// Bars until a pending short entry order expires. None = GTC.
+    pub short_expires_bars: Option<usize>,
+    /// Per-trade stop-loss override for short entries.
+    pub short_bracket_sl: Option<f64>,
+    /// Per-trade take-profit override for short entries.
+    pub short_bracket_tp: Option<f64>,
+    /// Per-trade trailing-stop override for short entries.
+    pub short_bracket_trail: Option<f64>,
 }
 
 impl DynamicStrategy {
@@ -34,6 +76,25 @@ impl DynamicStrategy {
             exit,
             short_entry: None,
             short_exit: None,
+            regime: ConditionGroup::default(),
+            warmup_bars: 0,
+            scale_in: ConditionGroup::default(),
+            scale_in_fraction: 0.25,
+            scale_out: ConditionGroup::default(),
+            scale_out_fraction: 0.50,
+            entry_order_type: LongOrderType::Market,
+            entry_price_offset_pct: 0.005,
+            entry_stop_limit_gap_pct: 0.002,
+            entry_expires_bars: None,
+            entry_bracket_sl: None,
+            entry_bracket_tp: None,
+            entry_bracket_trail: None,
+            short_order_type: ShortOrderType::Market,
+            short_price_offset_pct: 0.005,
+            short_expires_bars: None,
+            short_bracket_sl: None,
+            short_bracket_tp: None,
+            short_bracket_trail: None,
         }
     }
 }
@@ -47,18 +108,23 @@ impl Strategy for DynamicStrategy {
         let mut result = Vec::new();
         let mut seen = HashSet::new();
 
-        let groups: [Option<&ConditionGroup>; 4] = [
+        let groups: [Option<&ConditionGroup>; 7] = [
             Some(&self.entry),
             Some(&self.exit),
             self.short_entry.as_ref(),
             self.short_exit.as_ref(),
+            Some(&self.regime),
+            Some(&self.scale_in),
+            Some(&self.scale_out),
         ];
 
         for group in groups.into_iter().flatten() {
             for cond in &group.conditions {
-                collect_indicator(&cond.indicator, &mut result, &mut seen);
-                if let CompareTarget::Indicator(ref other) = cond.target {
-                    collect_indicator(other, &mut result, &mut seen);
+                if cond.htf_interval.is_none() {
+                    collect_indicator(&cond.indicator, &mut result, &mut seen);
+                    if let CompareTarget::Indicator(ref other) = cond.target {
+                        collect_indicator(other, &mut result, &mut seen);
+                    }
                 }
             }
         }
@@ -66,30 +132,125 @@ impl Strategy for DynamicStrategy {
         result
     }
 
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        let mut requirements = Vec::new();
+        let mut seen = HashSet::new();
+
+        let groups: [Option<&ConditionGroup>; 7] = [
+            Some(&self.entry),
+            Some(&self.exit),
+            self.short_entry.as_ref(),
+            self.short_exit.as_ref(),
+            Some(&self.regime),
+            Some(&self.scale_in),
+            Some(&self.scale_out),
+        ];
+
+        for group in groups.into_iter().flatten() {
+            for cond in &group.conditions {
+                if let Some(interval) = cond.htf_interval {
+                    collect_htf_indicator(interval, &cond.indicator, &mut requirements, &mut seen);
+                    if let CompareTarget::Indicator(ref other) = cond.target {
+                        collect_htf_indicator(interval, other, &mut requirements, &mut seen);
+                    }
+                }
+            }
+        }
+
+        requirements.sort_by(|a, b| a.htf_key.cmp(&b.htf_key));
+        requirements
+    }
+
+    fn warmup_period(&self) -> usize {
+        self.warmup_bars
+    }
+
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let price = ctx.close();
         let ts = ctx.timestamp();
         let has_pos = ctx.has_position();
 
-        // Exit takes priority over entry
+        // Check regime filter — suppresses ALL entry signals when it fails.
+        let regime_ok = self.regime.conditions.is_empty() || eval_group(&self.regime, ctx);
+
+        // Priority 1: full exit (not gated by regime filter).
         if has_pos {
             if ctx.is_long() && eval_group(&self.exit, ctx) {
-                return Signal::exit(ts, price);
+                return Signal::exit(ts, price).tag("exit");
             }
             if ctx.is_short()
                 && let Some(ref sx) = self.short_exit
                 && eval_group(sx, ctx)
             {
-                return Signal::exit(ts, price);
+                return Signal::exit(ts, price).tag("short_exit");
             }
-        } else {
+
+            // Priority 2: partial exit (scale-out).
+            if !self.scale_out.conditions.is_empty() && eval_group(&self.scale_out, ctx) {
+                return Signal::scale_out(self.scale_out_fraction, ts, price).tag("scale_out");
+            }
+
+            // Priority 3: add to position (scale-in).
+            if !self.scale_in.conditions.is_empty() && eval_group(&self.scale_in, ctx) {
+                return Signal::scale_in(self.scale_in_fraction, ts, price).tag("scale_in");
+            }
+        } else if regime_ok {
             if eval_group(&self.entry, ctx) {
-                return Signal::long(ts, price);
+                let offset = self.entry_price_offset_pct;
+                let mut sig = match self.entry_order_type {
+                    LongOrderType::Market => Signal::long(ts, price),
+                    LongOrderType::LimitBelow => {
+                        Signal::buy_limit(ts, price, price * (1.0 - offset))
+                    }
+                    LongOrderType::StopAbove => Signal::buy_stop(ts, price, price * (1.0 + offset)),
+                    LongOrderType::StopLimitAbove => {
+                        let stop_price = price * (1.0 + offset);
+                        let limit_price = stop_price * (1.0 + self.entry_stop_limit_gap_pct);
+                        Signal::buy_stop_limit(ts, price, stop_price, limit_price)
+                    }
+                }
+                .tag("entry");
+                if let Some(n) = self.entry_expires_bars {
+                    sig = sig.expires_in_bars(n);
+                }
+                if let Some(sl) = self.entry_bracket_sl {
+                    sig = sig.stop_loss(sl);
+                }
+                if let Some(tp) = self.entry_bracket_tp {
+                    sig = sig.take_profit(tp);
+                }
+                if let Some(tr) = self.entry_bracket_trail {
+                    sig = sig.trailing_stop(tr);
+                }
+                return sig;
             }
             if let Some(ref se) = self.short_entry
                 && eval_group(se, ctx)
             {
-                return Signal::short(ts, price);
+                let offset = self.short_price_offset_pct;
+                let mut sig = match self.short_order_type {
+                    ShortOrderType::Market => Signal::short(ts, price),
+                    ShortOrderType::LimitAbove => {
+                        Signal::sell_limit(ts, price, price * (1.0 + offset))
+                    }
+                    ShortOrderType::StopBelow => {
+                        Signal::sell_stop(ts, price, price * (1.0 - offset))
+                    }
+                }
+                .tag("short_entry");
+                if let Some(n) = self.short_expires_bars {
+                    sig = sig.expires_in_bars(n);
+                }
+                if let Some(sl) = self.short_bracket_sl {
+                    sig = sig.stop_loss(sl);
+                }
+                if let Some(tp) = self.short_bracket_tp {
+                    sig = sig.take_profit(tp);
+                }
+                if let Some(tr) = self.short_bracket_trail {
+                    sig = sig.trailing_stop(tr);
+                }
+                return sig;
             }
         }
 
@@ -137,14 +298,14 @@ fn eval_group(group: &ConditionGroup, ctx: &StrategyContext) -> bool {
 }
 
 fn eval_condition(cond: &BuiltCondition, ctx: &StrategyContext) -> bool {
-    let Some(current) = indicator_value(&cond.indicator, ctx) else {
+    let Some(current) = indicator_value(&cond.indicator, cond.htf_interval, ctx) else {
         return false;
     };
 
     match &cond.target {
         CompareTarget::Value(threshold) => {
             eval_cmp_scalar(cond.comparison, current, *threshold, || {
-                indicator_prev(&cond.indicator, ctx)
+                indicator_prev(&cond.indicator, cond.htf_interval, ctx)
             })
         }
         CompareTarget::Range(low, high) => {
@@ -153,15 +314,15 @@ fn eval_condition(cond: &BuiltCondition, ctx: &StrategyContext) -> bool {
                 && current <= *high
         }
         CompareTarget::Indicator(other) => {
-            let Some(other_val) = indicator_value(other, ctx) else {
+            let Some(other_val) = indicator_value(other, cond.htf_interval, ctx) else {
                 return false;
             };
             eval_cmp_ref(
                 cond.comparison,
                 current,
                 other_val,
-                || indicator_prev(&cond.indicator, ctx),
-                || indicator_prev(other, ctx),
+                || indicator_prev(&cond.indicator, cond.htf_interval, ctx),
+                || indicator_prev(other, cond.htf_interval, ctx),
             )
         }
     }
@@ -305,12 +466,35 @@ fn price_action_prev(code: &str, ctx: &StrategyContext) -> Option<f64> {
     }
 }
 
-fn indicator_value(ind: &BuiltIndicator, ctx: &StrategyContext) -> Option<f64> {
-    price_action_value(ind.indicator.code, ctx).or_else(|| ctx.indicator(&indicator_key(ind)))
+fn indicator_value(
+    ind: &BuiltIndicator,
+    htf_interval: Option<Interval>,
+    ctx: &StrategyContext,
+) -> Option<f64> {
+    if let Some(interval) = htf_interval {
+        ctx.indicator(&htf_indicator_key(interval, ind))
+            .or_else(|| price_action_value(ind.indicator.code, ctx))
+    } else {
+        price_action_value(ind.indicator.code, ctx).or_else(|| ctx.indicator(&indicator_key(ind)))
+    }
 }
 
-fn indicator_prev(ind: &BuiltIndicator, ctx: &StrategyContext) -> Option<f64> {
-    price_action_prev(ind.indicator.code, ctx).or_else(|| ctx.indicator_prev(&indicator_key(ind)))
+fn indicator_prev(
+    ind: &BuiltIndicator,
+    htf_interval: Option<Interval>,
+    ctx: &StrategyContext,
+) -> Option<f64> {
+    if let Some(interval) = htf_interval {
+        ctx.indicator_prev(&htf_indicator_key(interval, ind))
+            .or_else(|| price_action_prev(ind.indicator.code, ctx))
+    } else {
+        price_action_prev(ind.indicator.code, ctx)
+            .or_else(|| ctx.indicator_prev(&indicator_key(ind)))
+    }
+}
+
+fn htf_indicator_key(interval: Interval, ind: &BuiltIndicator) -> String {
+    format!("htf_{}_{}", interval.as_str(), indicator_key(ind))
 }
 
 /// Compute the context key string for a `BuiltIndicator`.
@@ -551,5 +735,100 @@ fn collect_indicator(
         && seen.insert(key.clone())
     {
         out.push((key, lib_ind));
+    }
+}
+
+fn collect_htf_indicator(
+    interval: Interval,
+    ind: &BuiltIndicator,
+    out: &mut Vec<HtfIndicatorSpec>,
+    seen: &mut HashSet<String>,
+) {
+    if let Some((base_key, indicator)) = indicator_to_lib(ind) {
+        let htf_key = format!("htf_{}_{}", interval.as_str(), base_key);
+        if seen.insert(htf_key.clone()) {
+            out.push(HtfIndicatorSpec {
+                interval,
+                htf_key,
+                base_key,
+                indicator,
+                utc_offset_secs: 0,
+            });
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use finance_query::Interval;
+    use finance_query::backtesting::Strategy;
+
+    use crate::backtest::indicators::IndicatorDef;
+
+    use super::{
+        BuiltCondition, BuiltIndicator, CompareTarget, ComparisonType, ConditionGroup,
+        DynamicStrategy, LogicalOp,
+    };
+
+    #[test]
+    fn htf_requirements_deduplicate_by_scoped_key() {
+        let rsi = BuiltIndicator {
+            indicator: IndicatorDef::find("rsi"),
+            param_values: vec![14.0],
+            output: None,
+        };
+        let cond = BuiltCondition {
+            indicator: rsi.clone(),
+            comparison: ComparisonType::Above,
+            target: CompareTarget::Value(50.0),
+            htf_interval: Some(Interval::OneWeek),
+            next_op: LogicalOp::And,
+        };
+
+        let strategy = DynamicStrategy {
+            entry: ConditionGroup {
+                conditions: vec![cond.clone(), cond],
+            },
+            ..DynamicStrategy::new(
+                "HTF Test".to_string(),
+                ConditionGroup::default(),
+                ConditionGroup::default(),
+            )
+        };
+
+        let reqs = strategy.htf_requirements();
+        assert_eq!(reqs.len(), 1);
+        assert_eq!(reqs[0].htf_key, "htf_1wk_rsi_14");
+    }
+
+    #[test]
+    fn scoped_conditions_only_emit_htf_requirements() {
+        let cond = BuiltCondition {
+            indicator: BuiltIndicator {
+                indicator: IndicatorDef::find("rsi"),
+                param_values: vec![14.0],
+                output: None,
+            },
+            comparison: ComparisonType::Above,
+            target: CompareTarget::Value(50.0),
+            htf_interval: Some(Interval::OneWeek),
+            next_op: LogicalOp::And,
+        };
+
+        let strategy = DynamicStrategy::new(
+            "Scoped RSI".to_string(),
+            ConditionGroup {
+                conditions: vec![cond],
+            },
+            ConditionGroup::default(),
+        );
+
+        let base_requirements = strategy.required_indicators();
+        let htf_requirements = strategy.htf_requirements();
+
+        assert!(base_requirements.is_empty());
+        assert_eq!(htf_requirements.len(), 1);
+        assert_eq!(htf_requirements[0].base_key, "rsi_14");
+        assert_eq!(htf_requirements[0].htf_key, "htf_1wk_rsi_14");
     }
 }

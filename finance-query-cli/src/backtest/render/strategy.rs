@@ -1,5 +1,6 @@
 use super::super::indicators::IndicatorCategory;
 use super::super::state::{App, ConditionPanel};
+use super::super::types::ConditionGroup;
 use ratatui::{
     Frame,
     layout::{Constraint, Direction, Layout},
@@ -16,6 +17,7 @@ pub(super) fn render_strategy_builder(f: &mut Frame, app: &App) {
         .constraints([
             Constraint::Length(3),
             Constraint::Min(0),
+            Constraint::Length(9),
             Constraint::Length(4),
         ])
         .split(area);
@@ -31,183 +33,141 @@ pub(super) fn render_strategy_builder(f: &mut Frame, app: &App) {
                     .add_modifier(Modifier::BOLD),
             ),
             Span::styled(
-                " - Navigate with ←/→ and ↑/↓, toggle AND/OR with Enter/c, delete with d",
+                " - Navigate with ←/→ and ↑/↓, toggle AND/OR with c, delete with d",
                 Style::default().fg(Color::DarkGray),
             ),
         ]),
     ]);
     f.render_widget(title, chunks[0]);
 
-    // Main content - split into entry/exit sections
+    // Main content - split into entry/exit/regime sections (top row)
     let main_chunks = Layout::default()
         .direction(Direction::Horizontal)
-        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .constraints([
+            Constraint::Percentage(33),
+            Constraint::Percentage(34),
+            Constraint::Percentage(33),
+        ])
         .split(chunks[1]);
 
     // Determine which panel is active
     let entry_active = app.active_condition_panel == ConditionPanel::Entry;
     let exit_active = app.active_condition_panel == ConditionPanel::Exit;
+    let regime_active = app.active_condition_panel == ConditionPanel::Regime;
 
-    // Entry conditions panel
-    let entry_conds = &app.config.strategy.entry_conditions;
-    let entry_items: Vec<ListItem> = if entry_conds.conditions.is_empty() {
-        vec![ListItem::new(Line::from(vec![Span::styled(
+    f.render_widget(
+        build_condition_panel(
+            &app.config.strategy.entry_conditions,
+            app.entry_condition_idx,
+            entry_active,
+            Color::Green,
+            Color::Yellow,
+            "Entry (Long)",
+            '1',
             "(no conditions - press 1 to add)",
-            Style::default().fg(Color::DarkGray),
-        )]))]
-    } else {
-        entry_conds
-            .conditions
-            .iter()
-            .enumerate()
-            .flat_map(|(i, cond)| {
-                let mut items = Vec::new();
+        ),
+        main_chunks[0],
+    );
 
-                // Add the condition line
-                let is_selected = entry_active && i == app.entry_condition_idx;
-                let prefix = if is_selected { "▶ " } else { "  " };
-                let style = if is_selected {
-                    Style::default()
-                        .fg(Color::Green)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default().fg(Color::White)
-                };
-                items.push(ListItem::new(Line::from(vec![
-                    Span::styled(prefix, style),
-                    Span::styled(cond.display(), style),
-                ])));
-
-                // Add the operator line after this condition (if not the last)
-                if i < entry_conds.conditions.len() - 1 {
-                    let op_style = if is_selected {
-                        Style::default()
-                            .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default().fg(Color::Cyan)
-                    };
-                    items.push(ListItem::new(Line::from(vec![
-                        Span::raw("     "),
-                        Span::styled(format!("[{}]", cond.next_op.name()), op_style),
-                    ])));
-                }
-
-                items
-            })
-            .collect()
-    };
-
-    let entry_block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(if entry_active {
-            Style::default()
-                .fg(Color::Green)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::DarkGray)
-        })
-        .title(if entry_active {
-            " ▶ Entry (Long) - [1] add "
-        } else {
-            "   Entry (Long) - [1] add "
-        });
-
-    let entry_list = List::new(entry_items)
-        .block(entry_block)
-        .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-    f.render_widget(entry_list, main_chunks[0]);
-
-    // Exit conditions panel
-    let exit_conds = &app.config.strategy.exit_conditions;
-    let exit_items: Vec<ListItem> = if exit_conds.conditions.is_empty() {
-        vec![ListItem::new(Line::from(vec![Span::styled(
+    f.render_widget(
+        build_condition_panel(
+            &app.config.strategy.exit_conditions,
+            app.exit_condition_idx,
+            exit_active,
+            Color::Yellow,
+            Color::Yellow,
+            "Exit",
+            '2',
             "(no conditions - press 2 to add)",
-            Style::default().fg(Color::DarkGray),
-        )]))]
-    } else {
-        exit_conds
-            .conditions
-            .iter()
-            .enumerate()
-            .flat_map(|(i, cond)| {
-                let mut items = Vec::new();
+        ),
+        main_chunks[1],
+    );
 
-                // Add the condition line
-                let is_selected = exit_active && i == app.exit_condition_idx;
-                let prefix = if is_selected { "▶ " } else { "  " };
-                let style = if is_selected {
-                    Style::default()
-                        .fg(Color::Yellow)
-                        .add_modifier(Modifier::BOLD)
-                } else {
-                    Style::default().fg(Color::White)
-                };
-                items.push(ListItem::new(Line::from(vec![
-                    Span::styled(prefix, style),
-                    Span::styled(cond.display(), style),
-                ])));
+    f.render_widget(
+        build_condition_panel(
+            &app.config.strategy.regime_conditions,
+            app.regime_condition_idx,
+            regime_active,
+            Color::Cyan,
+            Color::Cyan,
+            "Regime Filter",
+            '5',
+            "(no filter - press 5 to add)",
+        ),
+        main_chunks[2],
+    );
 
-                // Add the operator line after this condition (if not the last)
-                if i < exit_conds.conditions.len() - 1 {
-                    let op_style = if is_selected {
-                        Style::default()
-                            .fg(Color::Yellow)
-                            .add_modifier(Modifier::BOLD)
-                    } else {
-                        Style::default().fg(Color::Cyan)
-                    };
-                    items.push(ListItem::new(Line::from(vec![
-                        Span::raw("     "),
-                        Span::styled(format!("[{}]", cond.next_op.name()), op_style),
-                    ])));
-                }
+    // Scale-in / Scale-out panels (bottom row)
+    let scale_chunks = Layout::default()
+        .direction(Direction::Horizontal)
+        .constraints([Constraint::Percentage(50), Constraint::Percentage(50)])
+        .split(chunks[2]);
 
-                items
-            })
-            .collect()
-    };
+    let scale_in_active = app.active_condition_panel == ConditionPanel::ScaleIn;
+    let scale_out_active = app.active_condition_panel == ConditionPanel::ScaleOut;
 
-    let exit_block = Block::default()
-        .borders(Borders::ALL)
-        .border_style(if exit_active {
-            Style::default()
-                .fg(Color::Yellow)
-                .add_modifier(Modifier::BOLD)
-        } else {
-            Style::default().fg(Color::DarkGray)
-        })
-        .title(if exit_active {
-            " ▶ Exit - [2] add "
-        } else {
-            "   Exit - [2] add "
-        });
+    f.render_widget(
+        build_scale_panel(
+            &app.config.strategy.scale_in_conditions,
+            app.scale_in_condition_idx,
+            scale_in_active,
+            app.config.strategy.scale_in_fraction,
+            Color::LightBlue,
+            "Scale-In",
+            '6',
+        ),
+        scale_chunks[0],
+    );
 
-    let exit_list = List::new(exit_items)
-        .block(exit_block)
-        .highlight_style(Style::default().add_modifier(Modifier::BOLD));
-    f.render_widget(exit_list, main_chunks[1]);
+    f.render_widget(
+        build_scale_panel(
+            &app.config.strategy.scale_out_conditions,
+            app.scale_out_condition_idx,
+            scale_out_active,
+            app.config.strategy.scale_out_fraction,
+            Color::LightRed,
+            "Scale-Out",
+            '7',
+        ),
+        scale_chunks[1],
+    );
 
-    // Footer with updated keybindings
+    // Footer
     let can_run = app.can_run();
+    let fraction_hint = if app.editing
+        && matches!(
+            app.active_condition_panel,
+            ConditionPanel::ScaleIn | ConditionPanel::ScaleOut
+        ) {
+        format!(" Fraction: {}%█", app.edit_buffer)
+    } else {
+        String::new()
+    };
     let footer = Paragraph::new(vec![
         Line::from(vec![
             Span::styled(" ←/→/Tab", Style::default().fg(Color::White)),
-            Span::styled(":switch panel  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(":panel  ", Style::default().fg(Color::DarkGray)),
             Span::styled("↑/↓", Style::default().fg(Color::White)),
             Span::styled(":select  ", Style::default().fg(Color::DarkGray)),
-            Span::styled("Enter", Style::default().fg(Color::White)),
-            Span::styled(":add condition  ", Style::default().fg(Color::DarkGray)),
             Span::styled("c", Style::default().fg(Color::White)),
-            Span::styled(":toggle AND/OR  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(":AND/OR  ", Style::default().fg(Color::DarkGray)),
             Span::styled("d", Style::default().fg(Color::White)),
             Span::styled(":delete  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("f", Style::default().fg(Color::LightBlue)),
+            Span::styled(":fraction  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(fraction_hint, Style::default().fg(Color::Yellow)),
         ]),
         Line::from(vec![
             Span::styled(" 1", Style::default().fg(Color::Green)),
-            Span::styled(":add entry  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(":entry  ", Style::default().fg(Color::DarkGray)),
             Span::styled("2", Style::default().fg(Color::Yellow)),
-            Span::styled(":add exit  ", Style::default().fg(Color::DarkGray)),
+            Span::styled(":exit  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("5", Style::default().fg(Color::Cyan)),
+            Span::styled(":regime  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("6", Style::default().fg(Color::LightBlue)),
+            Span::styled(":scale-in  ", Style::default().fg(Color::DarkGray)),
+            Span::styled("7", Style::default().fg(Color::LightRed)),
+            Span::styled(":scale-out  ", Style::default().fg(Color::DarkGray)),
             Span::styled("b", Style::default().fg(Color::White)),
             Span::styled(":back  ", Style::default().fg(Color::DarkGray)),
             if can_run {
@@ -218,7 +178,146 @@ pub(super) fn render_strategy_builder(f: &mut Frame, app: &App) {
             Span::styled(":run", Style::default().fg(Color::DarkGray)),
         ]),
     ]);
-    f.render_widget(footer, chunks[2]);
+    f.render_widget(footer, chunks[3]);
+}
+
+#[allow(clippy::too_many_arguments)]
+fn build_condition_panel<'a>(
+    conditions: &'a ConditionGroup,
+    sel_idx: usize,
+    is_active: bool,
+    color: Color,
+    op_color: Color,
+    label: &str,
+    key: char,
+    empty_msg: &'static str,
+) -> List<'a> {
+    let items: Vec<ListItem> = if conditions.conditions.is_empty() {
+        vec![ListItem::new(Line::from(vec![Span::styled(
+            empty_msg,
+            Style::default().fg(Color::DarkGray),
+        )]))]
+    } else {
+        conditions
+            .conditions
+            .iter()
+            .enumerate()
+            .flat_map(|(i, cond)| {
+                let mut items = Vec::new();
+                let is_selected = is_active && i == sel_idx;
+                let prefix = if is_selected { "▶ " } else { "  " };
+                let style = if is_selected {
+                    Style::default().fg(color).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+                items.push(ListItem::new(Line::from(vec![
+                    Span::styled(prefix, style),
+                    Span::styled(cond.display(), style),
+                ])));
+                if i < conditions.conditions.len() - 1 {
+                    let op_style = if is_selected {
+                        Style::default().fg(op_color).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::Cyan)
+                    };
+                    items.push(ListItem::new(Line::from(vec![
+                        Span::raw("     "),
+                        Span::styled(format!("[{}]", cond.next_op.name()), op_style),
+                    ])));
+                }
+                items
+            })
+            .collect()
+    };
+
+    let title = if is_active {
+        format!(" ▶ {} - [{}] add ", label, key)
+    } else {
+        format!("   {} - [{}] add ", label, key)
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(if is_active {
+            Style::default().fg(color).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        })
+        .title(title);
+
+    List::new(items)
+        .block(block)
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
+}
+
+fn build_scale_panel<'a>(
+    conditions: &'a ConditionGroup,
+    sel_idx: usize,
+    is_active: bool,
+    fraction: f64,
+    color: Color,
+    label: &str,
+    key: char,
+) -> List<'a> {
+    let items: Vec<ListItem> = if conditions.conditions.is_empty() {
+        vec![ListItem::new(Line::from(vec![Span::styled(
+            format!("(no conditions - press {} to add)", key),
+            Style::default().fg(Color::DarkGray),
+        )]))]
+    } else {
+        conditions
+            .conditions
+            .iter()
+            .enumerate()
+            .flat_map(|(i, cond)| {
+                let mut items = Vec::new();
+                let is_selected = is_active && i == sel_idx;
+                let prefix = if is_selected { "▶ " } else { "  " };
+                let style = if is_selected {
+                    Style::default().fg(color).add_modifier(Modifier::BOLD)
+                } else {
+                    Style::default().fg(Color::White)
+                };
+                items.push(ListItem::new(Line::from(vec![
+                    Span::styled(prefix, style),
+                    Span::styled(cond.display(), style),
+                ])));
+                if i < conditions.conditions.len() - 1 {
+                    let op_style = if is_selected {
+                        Style::default().fg(color).add_modifier(Modifier::BOLD)
+                    } else {
+                        Style::default().fg(Color::Cyan)
+                    };
+                    items.push(ListItem::new(Line::from(vec![
+                        Span::raw("     "),
+                        Span::styled(format!("[{}]", cond.next_op.name()), op_style),
+                    ])));
+                }
+                items
+            })
+            .collect()
+    };
+
+    let pct = (fraction * 100.0).round() as u32;
+    let title = if is_active {
+        format!(" ▶ {} ({}%) - [{}] add [f] fraction ", label, pct, key)
+    } else {
+        format!("   {} ({}%) - [{}] add ", label, pct, key)
+    };
+
+    let block = Block::default()
+        .borders(Borders::ALL)
+        .border_style(if is_active {
+            Style::default().fg(color).add_modifier(Modifier::BOLD)
+        } else {
+            Style::default().fg(Color::DarkGray)
+        })
+        .title(title);
+
+    List::new(items)
+        .block(block)
+        .highlight_style(Style::default().add_modifier(Modifier::BOLD))
 }
 
 pub(super) fn render_indicator_browser(f: &mut Frame, app: &App) {
@@ -407,6 +506,9 @@ pub(super) fn render_indicator_config(f: &mut Frame, app: &App) {
 
     let ind = app.building_indicator.as_ref();
     let ind_name = ind.map(|i| i.indicator.name).unwrap_or("Unknown");
+    let htf_supported = ind
+        .map(|i| !matches!(i.indicator.category, IndicatorCategory::PriceAction))
+        .unwrap_or(true);
 
     // Title
     let title = Paragraph::new(vec![
@@ -429,10 +531,37 @@ pub(super) fn render_indicator_config(f: &mut Frame, app: &App) {
     ]);
     f.render_widget(title, chunks[0]);
 
+    let htf_scope_label = app
+        .building_htf_interval
+        .map(|interval| interval.as_str().to_string())
+        .unwrap_or_else(|| "Base timeframe".to_string());
+
     // Parameters
     let param_lines: Vec<Line> = if let Some(ind) = ind {
         if ind.indicator.params.is_empty() {
             vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled(" Scope: ", Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        htf_scope_label,
+                        Style::default()
+                            .fg(Color::LightBlue)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]),
+                Line::from(vec![Span::styled(
+                    if htf_supported {
+                        " Press t to cycle higher timeframe scope."
+                    } else {
+                        " HTF scope unavailable for price-action indicators."
+                    },
+                    if htf_supported {
+                        Style::default().fg(Color::DarkGray)
+                    } else {
+                        Style::default().fg(Color::Yellow)
+                    },
+                )]),
                 Line::from(""),
                 Line::from(vec![Span::styled(
                     " This indicator has no configurable parameters.",
@@ -445,7 +574,31 @@ pub(super) fn render_indicator_config(f: &mut Frame, app: &App) {
                 )]),
             ]
         } else {
-            let mut lines = vec![Line::from("")];
+            let mut lines = vec![
+                Line::from(""),
+                Line::from(vec![
+                    Span::styled(" Scope: ", Style::default().fg(Color::DarkGray)),
+                    Span::styled(
+                        htf_scope_label,
+                        Style::default()
+                            .fg(Color::LightBlue)
+                            .add_modifier(Modifier::BOLD),
+                    ),
+                ]),
+                Line::from(vec![Span::styled(
+                    if htf_supported {
+                        " Press t to cycle higher timeframe scope."
+                    } else {
+                        " HTF scope unavailable for price-action indicators."
+                    },
+                    if htf_supported {
+                        Style::default().fg(Color::DarkGray)
+                    } else {
+                        Style::default().fg(Color::Yellow)
+                    },
+                )]),
+                Line::from(""),
+            ];
             for (idx, param) in ind.indicator.params.iter().enumerate() {
                 let selected = idx == app.param_idx;
                 let value = app.param_values.get(idx).copied().unwrap_or(param.default);
@@ -509,6 +662,15 @@ pub(super) fn render_indicator_config(f: &mut Frame, app: &App) {
         Span::styled(":select  ", Style::default().fg(Color::DarkGray)),
         Span::styled("←/→", Style::default().fg(Color::White)),
         Span::styled(":adjust value  ", Style::default().fg(Color::DarkGray)),
+        Span::styled("t", Style::default().fg(Color::LightBlue)),
+        Span::styled(
+            if htf_supported {
+                ":cycle HTF  "
+            } else {
+                ":HTF unavailable  "
+            },
+            Style::default().fg(Color::DarkGray),
+        ),
         Span::styled("Enter", Style::default().fg(Color::White)),
         Span::styled(":next  ", Style::default().fg(Color::DarkGray)),
         Span::styled("Esc", Style::default().fg(Color::White)),
