@@ -769,4 +769,3 @@ let recs_again = ticker.recommendations(10).await?;  // cached
 - [Batch Tickers](tickers.md) - Efficient operations for multiple symbols
 - [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis
 - [Configuration](configuration.md) - Customize language, region, and network settings
-- [Models Reference](models.md) - Detailed documentation of all response types

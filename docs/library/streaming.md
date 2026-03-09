@@ -139,3 +139,9 @@ stream.close().await;
     - **Heartbeats**: Subscriptions are refreshed every 15 seconds to keep the connection alive.
     - **Market hours**: Updates are sent during pre-market, regular, and post-market sessions.
     - **Data availability**: Not all fields are populated for every update — Yahoo only sends changed values.
+
+## Next Steps
+
+- [Ticker API](ticker.md) - Fetch snapshot quotes and historical data for the same symbols
+- [Finance Module](finance.md) - Market summary, trending tickers, and sector data
+- [Configuration](configuration.md) - Proxy and timeout settings that apply to the WebSocket connection

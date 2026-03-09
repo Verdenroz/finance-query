@@ -375,5 +375,4 @@ async fn analyze_company(ticker: &str) -> Result<(), Box<dyn std::error::Error>>
 
 - [Ticker API](ticker.md) - Yahoo Finance data for real-time quotes and charts
 - [Finance Module](finance.md) - Market-wide data (screeners, trending, news)
-- [Models Reference](models.md) - Understanding EDGAR response types
 - [Configuration](configuration.md) - Network and timeout settings

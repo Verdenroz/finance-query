@@ -553,4 +553,3 @@ if let Some(macd) = indicators.macd {
 - [Backtesting](backtesting.md) - Use indicators in custom trading strategies
 - [Ticker API](ticker.md) - Complete reference for fetching indicators and other data
 - [DataFrame Support](dataframe.md) - Convert indicator results to Polars DataFrames for analysis
-- [Models Reference](models.md) - Understanding indicator data structures

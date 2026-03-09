@@ -311,5 +311,6 @@ ValueFormat::Both    // Both raw and pretty values
 
 ## Next Steps
 
-- [Ticker API](ticker.md) - Full API reference
-- [Models](models.md) - Understanding response types
+- [Getting Started](getting-started.md) - Feature flags and initial setup
+- [Ticker API](ticker.md) - Full single-symbol API reference
+- [Batch Tickers](tickers.md) - Batch operations with shared configuration

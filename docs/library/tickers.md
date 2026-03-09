@@ -591,6 +591,6 @@ tickers.clear_chart_cache().await;   // Charts, sparks, and events
 ## Next Steps
 
 - [Ticker API](ticker.md) - Detailed operations for single symbols (financials, options, news)
+- [Backtesting](backtesting.md) - Portfolio backtesting across multiple symbols with `Tickers::backtest()`
 - [DataFrame Support](dataframe.md) - Convert batch responses to Polars DataFrames for analysis
 - [Configuration](configuration.md) - Customize regional settings and network options
-- [Models Reference](models.md) - Understanding response types

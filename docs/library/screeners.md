@@ -334,4 +334,5 @@ let results = finance::custom_screener(query).await?;
 ## Next Steps
 
 - [Finance Module](finance.md) - All market-wide functions including `screener()` and `custom_screener()`
-- [Models Reference](models.md) - `ScreenerResults` and `ScreenerQuote` response types
+- [Ticker API](ticker.md) - Deep-dive into individual symbols returned by a screener
+- [Batch Tickers](tickers.md) - Fetch quotes, charts, and indicators for screener results in bulk

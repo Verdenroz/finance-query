@@ -867,6 +867,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 ## Next Steps
 
 - [Technical Indicators](indicators.md) - Complete reference for all 40+ available indicators
-- [Ticker API](ticker.md) - Learn how to fetch data and run backtests
+- [Ticker API](ticker.md) - Fetch historical data and run single-symbol backtests
+- [Batch Tickers](tickers.md) - Portfolio backtesting across multiple symbols
+- [Risk Analytics](risk.md) - Standalone VaR, Sharpe, and drawdown metrics
 - [DataFrame Support](dataframe.md) - Analyze backtest results in Polars DataFrames
-- [Models Reference](models.md) - Understanding backtest result structures

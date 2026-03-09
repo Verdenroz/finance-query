@@ -197,7 +197,6 @@ println!("Beta vs SPY:  {:.2}", summary.beta.unwrap_or(0.0));
 - [Finance Module](finance.md) - Market-wide searches
 - [DataFrame Support](dataframe.md) - Data analysis with Polars
 - [Configuration](configuration.md) - Regional settings and customization
-- [Models Reference](models.md) - Response type documentation
 - [Real-time Streaming](streaming.md) - WebSocket price feeds
 - [SEC EDGAR](edgar.md) - SEC filings and XBRL data
 - [Risk Analytics](risk.md) - Portfolio risk metrics
