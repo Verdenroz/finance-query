@@ -1398,7 +1398,7 @@ dependencies = [
 
 [[package]]
 name = "finance-query"
-version = "2.3.0"
+version = "2.4.0"
 dependencies = [
  "anyhow",
  "async-trait",
@@ -1462,7 +1462,7 @@ dependencies = [
 
 [[package]]
 name = "finance-query-derive"
-version = "2.3.0"
+version = "2.4.0"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1471,7 +1471,7 @@ dependencies = [
 
 [[package]]
 name = "finance-query-server"
-version = "2.3.0"
+version = "2.4.0"
 dependencies = [
  "anyhow",
  "axum",
