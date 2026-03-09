@@ -20,10 +20,12 @@
 //! ```
 
 mod builder;
+mod ensemble;
 pub mod prebuilt;
 
 use std::collections::HashMap;
 
+use crate::backtesting::condition::HtfIndicatorSpec;
 use crate::indicators::Indicator;
 use crate::models::chart::Candle;
 
@@ -32,6 +34,9 @@ use super::signal::Signal;
 
 // Re-export builder
 pub use builder::{CustomStrategy, StrategyBuilder};
+
+// Re-export ensemble
+pub use ensemble::{EnsembleMode, EnsembleStrategy};
 
 // Re-export prebuilt strategies
 pub use prebuilt::{
@@ -154,6 +159,21 @@ impl<'a> StrategyContext<'a> {
         self.current_candle().timestamp
     }
 
+    /// Create a Long signal from the current candle's timestamp and close price.
+    pub fn signal_long(&self) -> Signal {
+        Signal::long(self.timestamp(), self.close())
+    }
+
+    /// Create a Short signal from the current candle's timestamp and close price.
+    pub fn signal_short(&self) -> Signal {
+        Signal::short(self.timestamp(), self.close())
+    }
+
+    /// Create an Exit signal from the current candle's timestamp and close price.
+    pub fn signal_exit(&self) -> Signal {
+        Signal::exit(self.timestamp(), self.close())
+    }
+
     /// Check if crossover occurred (fast crosses above slow)
     pub fn crossed_above(&self, fast_name: &str, slow_name: &str) -> bool {
         let fast_now = self.indicator(fast_name);
@@ -180,7 +200,15 @@ impl<'a> StrategyContext<'a> {
         }
     }
 
-    /// Check if indicator crossed above a threshold
+    /// Check if indicator crossed above a threshold.
+    ///
+    /// Returns `true` when `prev <= threshold` **and** `current > threshold`.
+    /// The inclusive lower bound (`<=`) means a signal fires even when the
+    /// previous bar sat exactly on the threshold, which is the conventional
+    /// "crosses above" definition.  This is intentionally asymmetric with the
+    /// strict crossover check in [`crossed_above`](Self::crossed_above) where
+    /// both sides use strict inequalities — threshold crossings and
+    /// indicator-vs-indicator crossings have different semantics.
     pub fn indicator_crossed_above(&self, name: &str, threshold: f64) -> bool {
         let now = self.indicator(name);
         let prev = self.indicator_prev(name);
@@ -191,7 +219,11 @@ impl<'a> StrategyContext<'a> {
         }
     }
 
-    /// Check if indicator crossed below a threshold
+    /// Check if indicator crossed below a threshold.
+    ///
+    /// Returns `true` when `prev >= threshold` **and** `current < threshold`.
+    /// See [`indicator_crossed_above`](Self::indicator_crossed_above) for the
+    /// rationale behind the inclusive/exclusive choice on each side.
     pub fn indicator_crossed_below(&self, name: &str, threshold: f64) -> bool {
         let now = self.indicator(name);
         let prev = self.indicator_prev(name);
@@ -252,6 +284,20 @@ pub trait Strategy: Send + Sync {
     /// The engine will pre-compute these and make them available via `StrategyContext::indicator()`.
     fn required_indicators(&self) -> Vec<(String, Indicator)>;
 
+    /// Higher-timeframe indicators required by this strategy.
+    ///
+    /// The engine resamples candles to each unique interval, computes the
+    /// listed indicators on the resampled data, and stores stretched
+    /// (base-timeframe-length) arrays in `StrategyContext::indicators` under
+    /// the `htf_key` names. Strategies built with [`StrategyBuilder`] implement
+    /// this automatically; raw [`Strategy`] implementations that use HTF
+    /// conditions should override this to avoid the O(n²) dynamic fallback.
+    ///
+    /// [`StrategyBuilder`]: crate::backtesting::strategy::StrategyBuilder
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        vec![]
+    }
+
     /// Called on each candle to generate a signal.
     ///
     /// Return `Signal::hold()` for no action, `Signal::long()` to enter long,
@@ -262,6 +308,24 @@ pub trait Strategy: Send + Sync {
     /// Default is 1 (strategy can run from first candle).
     fn warmup_period(&self) -> usize {
         1
+    }
+}
+
+impl Strategy for Box<dyn Strategy> {
+    fn name(&self) -> &str {
+        (**self).name()
+    }
+    fn required_indicators(&self) -> Vec<(String, Indicator)> {
+        (**self).required_indicators()
+    }
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        (**self).htf_requirements()
+    }
+    fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+        (**self).on_candle(ctx)
+    }
+    fn warmup_period(&self) -> usize {
+        (**self).warmup_period()
     }
 }
 

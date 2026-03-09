@@ -222,7 +222,7 @@ async fn test_compound_indicators() {
     }
 
     // Stochastic Oscillator - returns StochasticResult struct
-    let stoch = stochastic(&highs, &lows, &closes, 14, 3).unwrap();
+    let stoch = stochastic(&highs, &lows, &closes, 14, 1, 3).unwrap();
     if let Some(&k) = stoch.k.last().and_then(|v| v.as_ref())
         && let Some(&d) = stoch.d.last().and_then(|v| v.as_ref())
     {

@@ -83,8 +83,10 @@ impl<R: IndicatorRef> Condition for Below<R> {
 
 /// Condition: indicator crosses above a threshold.
 ///
-/// True when the previous value was at or below the threshold
-/// and the current value is above it.
+/// True when the previous value was **at or below** the threshold (`prev <=
+/// threshold`) and the current value is **strictly above** it (`curr >
+/// threshold`). The inclusive previous-bar test prevents missing a crossover
+/// when the value touches the threshold exactly before rising.
 #[derive(Clone)]
 pub struct CrossesAbove<R: IndicatorRef> {
     indicator: R,
@@ -127,8 +129,10 @@ impl<R: IndicatorRef> Condition for CrossesAbove<R> {
 
 /// Condition: indicator crosses below a threshold.
 ///
-/// True when the previous value was at or above the threshold
-/// and the current value is below it.
+/// True when the previous value was **at or above** the threshold (`prev >=
+/// threshold`) and the current value is **strictly below** it (`curr <
+/// threshold`). The inclusive previous-bar test prevents missing a crossover
+/// when the value touches the threshold exactly before falling.
 #[derive(Clone)]
 pub struct CrossesBelow<R: IndicatorRef> {
     indicator: R,
@@ -331,8 +335,16 @@ impl<R1: IndicatorRef, R2: IndicatorRef> Condition for BelowRef<R1, R2> {
 
 /// Condition: indicator crosses above another indicator.
 ///
-/// True when the fast indicator was at or below the slow indicator
-/// and is now above it.
+/// True when the fast indicator was **at or below** the slow indicator on the
+/// previous bar (`prev_fast <= prev_slow`) and is **strictly above** it on the
+/// current bar (`curr_fast > curr_slow`).
+///
+/// # Inclusive Previous Bar
+///
+/// The previous-bar test is inclusive (`<=`). This means the crossover fires
+/// even if fast == slow on the prior bar, treating that touch as "not yet
+/// crossed". This is the most common convention in technical analysis and
+/// avoids missing a crossover when the lines converge exactly.
 #[derive(Clone)]
 pub struct CrossesAboveRef<R1: IndicatorRef, R2: IndicatorRef> {
     fast: R1,
@@ -372,8 +384,14 @@ impl<R1: IndicatorRef, R2: IndicatorRef> Condition for CrossesAboveRef<R1, R2> {
 
 /// Condition: indicator crosses below another indicator.
 ///
-/// True when the fast indicator was at or above the slow indicator
-/// and is now below it.
+/// True when the fast indicator was **at or above** the slow indicator on the
+/// previous bar (`prev_fast >= prev_slow`) and is **strictly below** it on the
+/// current bar (`curr_fast < curr_slow`).
+///
+/// # Inclusive Previous Bar
+///
+/// The previous-bar test is inclusive (`>=`). See [`CrossesAboveRef`] for
+/// rationale.
 #[derive(Clone)]
 pub struct CrossesBelowRef<R1: IndicatorRef, R2: IndicatorRef> {
     fast: R1,

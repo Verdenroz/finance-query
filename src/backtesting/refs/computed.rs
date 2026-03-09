@@ -708,12 +708,12 @@ pub struct MacdLineRef {
 
 impl IndicatorRef for MacdLineRef {
     fn key(&self) -> String {
-        "macd_line".to_string()
+        format!("macd_line_{}_{}_{}", self.fast, self.slow, self.signal)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "macd".to_string(),
+            self.key(),
             Indicator::Macd {
                 fast: self.fast,
                 slow: self.slow,
@@ -723,11 +723,11 @@ impl IndicatorRef for MacdLineRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("macd_line")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("macd_line")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -744,12 +744,12 @@ pub struct MacdSignalRef {
 
 impl IndicatorRef for MacdSignalRef {
     fn key(&self) -> String {
-        "macd_signal".to_string()
+        format!("macd_signal_{}_{}_{}", self.fast, self.slow, self.signal)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "macd".to_string(),
+            self.key(),
             Indicator::Macd {
                 fast: self.fast,
                 slow: self.slow,
@@ -759,11 +759,11 @@ impl IndicatorRef for MacdSignalRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("macd_signal")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("macd_signal")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -780,12 +780,12 @@ pub struct MacdHistogramRef {
 
 impl IndicatorRef for MacdHistogramRef {
     fn key(&self) -> String {
-        "macd_histogram".to_string()
+        format!("macd_histogram_{}_{}_{}", self.fast, self.slow, self.signal)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "macd".to_string(),
+            self.key(),
             Indicator::Macd {
                 fast: self.fast,
                 slow: self.slow,
@@ -795,11 +795,11 @@ impl IndicatorRef for MacdHistogramRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("macd_histogram")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("macd_histogram")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -867,12 +867,12 @@ pub struct BollingerUpperRef {
 
 impl IndicatorRef for BollingerUpperRef {
     fn key(&self) -> String {
-        "bollinger_upper".to_string()
+        format!("bollinger_upper_{}_{}", self.period, self.std_dev)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "bollinger".to_string(),
+            self.key(),
             Indicator::Bollinger {
                 period: self.period,
                 std_dev: self.std_dev,
@@ -881,11 +881,11 @@ impl IndicatorRef for BollingerUpperRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("bollinger_upper")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("bollinger_upper")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -900,12 +900,12 @@ pub struct BollingerMiddleRef {
 
 impl IndicatorRef for BollingerMiddleRef {
     fn key(&self) -> String {
-        "bollinger_middle".to_string()
+        format!("bollinger_middle_{}_{}", self.period, self.std_dev)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "bollinger".to_string(),
+            self.key(),
             Indicator::Bollinger {
                 period: self.period,
                 std_dev: self.std_dev,
@@ -914,11 +914,11 @@ impl IndicatorRef for BollingerMiddleRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("bollinger_middle")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("bollinger_middle")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -933,12 +933,12 @@ pub struct BollingerLowerRef {
 
 impl IndicatorRef for BollingerLowerRef {
     fn key(&self) -> String {
-        "bollinger_lower".to_string()
+        format!("bollinger_lower_{}_{}", self.period, self.std_dev)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "bollinger".to_string(),
+            self.key(),
             Indicator::Bollinger {
                 period: self.period,
                 std_dev: self.std_dev,
@@ -947,11 +947,11 @@ impl IndicatorRef for BollingerLowerRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("bollinger_lower")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("bollinger_lower")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1000,22 +1000,19 @@ pub struct DonchianUpperRef {
 
 impl IndicatorRef for DonchianUpperRef {
     fn key(&self) -> String {
-        "donchian_upper".to_string()
+        format!("donchian_upper_{}", self.period)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(
-            "donchian".to_string(),
-            Indicator::DonchianChannels(self.period),
-        )]
+        vec![(self.key(), Indicator::DonchianChannels(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("donchian_upper")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("donchian_upper")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1027,22 +1024,19 @@ pub struct DonchianMiddleRef {
 
 impl IndicatorRef for DonchianMiddleRef {
     fn key(&self) -> String {
-        "donchian_middle".to_string()
+        format!("donchian_middle_{}", self.period)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(
-            "donchian".to_string(),
-            Indicator::DonchianChannels(self.period),
-        )]
+        vec![(self.key(), Indicator::DonchianChannels(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("donchian_middle")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("donchian_middle")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1054,22 +1048,19 @@ pub struct DonchianLowerRef {
 
 impl IndicatorRef for DonchianLowerRef {
     fn key(&self) -> String {
-        "donchian_lower".to_string()
+        format!("donchian_lower_{}", self.period)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(
-            "donchian".to_string(),
-            Indicator::DonchianChannels(self.period),
-        )]
+        vec![(self.key(), Indicator::DonchianChannels(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("donchian_lower")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("donchian_lower")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1115,12 +1106,12 @@ pub struct SupertrendValueRef {
 
 impl IndicatorRef for SupertrendValueRef {
     fn key(&self) -> String {
-        "supertrend_value".to_string()
+        format!("supertrend_value_{}_{}", self.period, self.multiplier)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "supertrend".to_string(),
+            self.key(),
             Indicator::Supertrend {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1129,11 +1120,11 @@ impl IndicatorRef for SupertrendValueRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("supertrend_value")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("supertrend_value")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1147,12 +1138,12 @@ pub struct SupertrendUptrendRef {
 
 impl IndicatorRef for SupertrendUptrendRef {
     fn key(&self) -> String {
-        "supertrend_uptrend".to_string()
+        format!("supertrend_uptrend_{}_{}", self.period, self.multiplier)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "supertrend".to_string(),
+            self.key(),
             Indicator::Supertrend {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1161,11 +1152,11 @@ impl IndicatorRef for SupertrendUptrendRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("supertrend_uptrend")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("supertrend_uptrend")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1219,12 +1210,15 @@ pub struct StochasticKRef {
 
 impl IndicatorRef for StochasticKRef {
     fn key(&self) -> String {
-        "stochastic_k".to_string()
+        format!(
+            "stochastic_k_{}_{}_{}",
+            self.k_period, self.k_slow, self.d_period
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "stochastic".to_string(),
+            self.key(),
             Indicator::Stochastic {
                 k_period: self.k_period,
                 k_slow: self.k_slow,
@@ -1234,11 +1228,11 @@ impl IndicatorRef for StochasticKRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("stochastic_k")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("stochastic_k")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1252,12 +1246,15 @@ pub struct StochasticDRef {
 
 impl IndicatorRef for StochasticDRef {
     fn key(&self) -> String {
-        "stochastic_d".to_string()
+        format!(
+            "stochastic_d_{}_{}_{}",
+            self.k_period, self.k_slow, self.d_period
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "stochastic".to_string(),
+            self.key(),
             Indicator::Stochastic {
                 k_period: self.k_period,
                 k_slow: self.k_slow,
@@ -1267,11 +1264,11 @@ impl IndicatorRef for StochasticDRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("stochastic_d")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("stochastic_d")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1313,19 +1310,19 @@ pub struct AroonUpRef {
 
 impl IndicatorRef for AroonUpRef {
     fn key(&self) -> String {
-        "aroon_up".to_string()
+        format!("aroon_up_{}", self.period)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![("aroon".to_string(), Indicator::Aroon(self.period))]
+        vec![(self.key(), Indicator::Aroon(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("aroon_up")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("aroon_up")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1337,19 +1334,19 @@ pub struct AroonDownRef {
 
 impl IndicatorRef for AroonDownRef {
     fn key(&self) -> String {
-        "aroon_down".to_string()
+        format!("aroon_down_{}", self.period)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![("aroon".to_string(), Indicator::Aroon(self.period))]
+        vec![(self.key(), Indicator::Aroon(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("aroon_down")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("aroon_down")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1454,12 +1451,15 @@ pub struct IchimokuConversionRef {
 
 impl IndicatorRef for IchimokuConversionRef {
     fn key(&self) -> String {
-        "ichimoku_conversion".to_string()
+        format!(
+            "ichimoku_conversion_{}_{}_{}_{}",
+            self.conversion, self.base, self.lagging, self.displacement
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "ichimoku".to_string(),
+            self.key(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1470,11 +1470,11 @@ impl IndicatorRef for IchimokuConversionRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("ichimoku_conversion")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("ichimoku_conversion")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1489,12 +1489,15 @@ pub struct IchimokuBaseRef {
 
 impl IndicatorRef for IchimokuBaseRef {
     fn key(&self) -> String {
-        "ichimoku_base".to_string()
+        format!(
+            "ichimoku_base_{}_{}_{}_{}",
+            self.conversion, self.base, self.lagging, self.displacement
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "ichimoku".to_string(),
+            self.key(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1505,11 +1508,11 @@ impl IndicatorRef for IchimokuBaseRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("ichimoku_base")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("ichimoku_base")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1524,12 +1527,15 @@ pub struct IchimokuLeadingARef {
 
 impl IndicatorRef for IchimokuLeadingARef {
     fn key(&self) -> String {
-        "ichimoku_leading_a".to_string()
+        format!(
+            "ichimoku_leading_a_{}_{}_{}_{}",
+            self.conversion, self.base, self.lagging, self.displacement
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "ichimoku".to_string(),
+            self.key(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1540,11 +1546,11 @@ impl IndicatorRef for IchimokuLeadingARef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("ichimoku_leading_a")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("ichimoku_leading_a")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1559,12 +1565,15 @@ pub struct IchimokuLeadingBRef {
 
 impl IndicatorRef for IchimokuLeadingBRef {
     fn key(&self) -> String {
-        "ichimoku_leading_b".to_string()
+        format!(
+            "ichimoku_leading_b_{}_{}_{}_{}",
+            self.conversion, self.base, self.lagging, self.displacement
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "ichimoku".to_string(),
+            self.key(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1575,11 +1584,11 @@ impl IndicatorRef for IchimokuLeadingBRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("ichimoku_leading_b")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("ichimoku_leading_b")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1594,12 +1603,15 @@ pub struct IchimokuLaggingRef {
 
 impl IndicatorRef for IchimokuLaggingRef {
     fn key(&self) -> String {
-        "ichimoku_lagging".to_string()
+        format!(
+            "ichimoku_lagging_{}_{}_{}_{}",
+            self.conversion, self.base, self.lagging, self.displacement
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "ichimoku".to_string(),
+            self.key(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1610,11 +1622,11 @@ impl IndicatorRef for IchimokuLaggingRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("ichimoku_lagging")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("ichimoku_lagging")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1677,12 +1689,15 @@ pub struct KeltnerUpperRef {
 
 impl IndicatorRef for KeltnerUpperRef {
     fn key(&self) -> String {
-        "keltner_upper".to_string()
+        format!(
+            "keltner_upper_{}_{}_{}",
+            self.period, self.multiplier, self.atr_period
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "keltner".to_string(),
+            self.key(),
             Indicator::KeltnerChannels {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1692,11 +1707,11 @@ impl IndicatorRef for KeltnerUpperRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("keltner_upper")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("keltner_upper")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1710,12 +1725,15 @@ pub struct KeltnerMiddleRef {
 
 impl IndicatorRef for KeltnerMiddleRef {
     fn key(&self) -> String {
-        "keltner_middle".to_string()
+        format!(
+            "keltner_middle_{}_{}_{}",
+            self.period, self.multiplier, self.atr_period
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "keltner".to_string(),
+            self.key(),
             Indicator::KeltnerChannels {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1725,11 +1743,11 @@ impl IndicatorRef for KeltnerMiddleRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("keltner_middle")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("keltner_middle")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1743,12 +1761,15 @@ pub struct KeltnerLowerRef {
 
 impl IndicatorRef for KeltnerLowerRef {
     fn key(&self) -> String {
-        "keltner_lower".to_string()
+        format!(
+            "keltner_lower_{}_{}_{}",
+            self.period, self.multiplier, self.atr_period
+        )
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            "keltner".to_string(),
+            self.key(),
             Indicator::KeltnerChannels {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1758,11 +1779,11 @@ impl IndicatorRef for KeltnerLowerRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("keltner_lower")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("keltner_lower")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -1867,7 +1888,23 @@ impl IndicatorRef for AlmaRef {
 
 // --- Stochastic RSI ---
 
-/// Stochastic RSI configuration.
+/// Stochastic RSI configuration — entry point for building K or D line refs.
+///
+/// Use [`.k()`](StochasticRsiConfig::k) to reference the smoothed %K line and
+/// [`.d()`](StochasticRsiConfig::d) for the %D signal line.  Both resolve
+/// against the same underlying `StochasticRsi` indicator computation, so only
+/// one indicator fetch is registered regardless of which lines you use.
+///
+/// # Example
+/// ```ignore
+/// let srsi = stochastic_rsi(14, 14, 3, 3);
+///
+/// // K crosses above D — a common bullish signal
+/// StrategyBuilder::new("StochRSI K/D Cross")
+///     .entry(srsi.k().crosses_above_ref(srsi.d()))
+///     .exit(srsi.k().crosses_below_ref(srsi.d()))
+///     .build()
+/// ```
 #[derive(Debug, Clone, Copy)]
 pub struct StochasticRsiConfig {
     pub rsi_period: usize,
@@ -1876,15 +1913,42 @@ pub struct StochasticRsiConfig {
     pub d_period: usize,
 }
 
+impl StochasticRsiConfig {
+    /// Reference to the smoothed %K line.
+    pub fn k(&self) -> StochasticRsiRef {
+        StochasticRsiRef {
+            rsi_period: self.rsi_period,
+            stoch_period: self.stoch_period,
+            k_period: self.k_period,
+            d_period: self.d_period,
+        }
+    }
+
+    /// Reference to the %D signal line (SMA of %K).
+    pub fn d(&self) -> StochasticRsiDRef {
+        StochasticRsiDRef {
+            rsi_period: self.rsi_period,
+            stoch_period: self.stoch_period,
+            k_period: self.k_period,
+            d_period: self.d_period,
+        }
+    }
+}
+
 /// Create a Stochastic RSI configuration.
+///
+/// Returns a [`StochasticRsiConfig`] from which you can obtain
+/// [`StochasticRsiConfig::k()`] or [`StochasticRsiConfig::d()`] refs.
+/// Calling `stochastic_rsi(...).k()` is equivalent to the previous API that
+/// returned `StochasticRsiRef` directly.
 #[inline]
 pub fn stochastic_rsi(
     rsi_period: usize,
     stoch_period: usize,
     k_period: usize,
     d_period: usize,
-) -> StochasticRsiRef {
-    StochasticRsiRef {
+) -> StochasticRsiConfig {
+    StochasticRsiConfig {
         rsi_period,
         stoch_period,
         k_period,
@@ -1892,7 +1956,7 @@ pub fn stochastic_rsi(
     }
 }
 
-/// Stochastic RSI reference.
+/// Stochastic RSI %K line reference.
 #[derive(Debug, Clone, Copy)]
 pub struct StochasticRsiRef {
     pub rsi_period: usize,
@@ -1904,7 +1968,7 @@ pub struct StochasticRsiRef {
 impl IndicatorRef for StochasticRsiRef {
     fn key(&self) -> String {
         format!(
-            "stoch_rsi_{}_{}_{}_{}",
+            "stoch_rsi_k_{}_{}_{}_{}",
             self.rsi_period, self.stoch_period, self.k_period, self.d_period
         )
     }
@@ -1912,6 +1976,50 @@ impl IndicatorRef for StochasticRsiRef {
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
             self.key(),
+            Indicator::StochasticRsi {
+                rsi_period: self.rsi_period,
+                stoch_period: self.stoch_period,
+                k_period: self.k_period,
+                d_period: self.d_period,
+            },
+        )]
+    }
+
+    fn value(&self, ctx: &StrategyContext) -> Option<f64> {
+        ctx.indicator(&self.key())
+    }
+
+    fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
+        ctx.indicator_prev(&self.key())
+    }
+}
+
+/// Stochastic RSI %D line reference (SMA of %K).
+#[derive(Debug, Clone, Copy)]
+pub struct StochasticRsiDRef {
+    pub rsi_period: usize,
+    pub stoch_period: usize,
+    pub k_period: usize,
+    pub d_period: usize,
+}
+
+impl IndicatorRef for StochasticRsiDRef {
+    fn key(&self) -> String {
+        format!(
+            "stoch_rsi_d_{}_{}_{}_{}",
+            self.rsi_period, self.stoch_period, self.k_period, self.d_period
+        )
+    }
+
+    fn required_indicators(&self) -> Vec<(String, Indicator)> {
+        // Registering the K key is sufficient — the engine computes both K and D
+        // from the same StochasticRsi indicator pass and stores both keys.
+        let k_key = format!(
+            "stoch_rsi_k_{}_{}_{}_{}",
+            self.rsi_period, self.stoch_period, self.k_period, self.d_period
+        );
+        vec![(
+            k_key,
             Indicator::StochasticRsi {
                 rsi_period: self.rsi_period,
                 stoch_period: self.stoch_period,
@@ -2184,7 +2292,7 @@ pub fn bull_power(period: usize) -> BullPowerRef {
 
 impl IndicatorRef for BullPowerRef {
     fn key(&self) -> String {
-        "bull_power".to_string()
+        format!("bull_power_{}", self.0)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -2192,11 +2300,11 @@ impl IndicatorRef for BullPowerRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("bull_power")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("bull_power")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -2212,7 +2320,7 @@ pub fn bear_power(period: usize) -> BearPowerRef {
 
 impl IndicatorRef for BearPowerRef {
     fn key(&self) -> String {
-        "bear_power".to_string()
+        format!("bear_power_{}", self.0)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -2220,11 +2328,11 @@ impl IndicatorRef for BearPowerRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("bear_power")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("bear_power")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -2242,7 +2350,7 @@ pub fn elder_bull_power(period: usize) -> ElderBullPowerRef {
 
 impl IndicatorRef for ElderBullPowerRef {
     fn key(&self) -> String {
-        "elder_bull".to_string()
+        format!("elder_bull_{}", self.0)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -2250,11 +2358,11 @@ impl IndicatorRef for ElderBullPowerRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("elder_bull")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("elder_bull")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -2270,7 +2378,7 @@ pub fn elder_bear_power(period: usize) -> ElderBearPowerRef {
 
 impl IndicatorRef for ElderBearPowerRef {
     fn key(&self) -> String {
-        "elder_bear".to_string()
+        format!("elder_bear_{}", self.0)
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -2278,11 +2386,11 @@ impl IndicatorRef for ElderBearPowerRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator("elder_bear")
+        ctx.indicator(&self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev("elder_bear")
+        ctx.indicator_prev(&self.key())
     }
 }
 
@@ -2309,7 +2417,15 @@ mod tests {
         assert_eq!(cci(20).key(), "cci_20");
         assert_eq!(williams_r(14).key(), "williams_r_14");
         assert_eq!(cmo(14).key(), "cmo_14");
-        assert_eq!(stochastic_rsi(14, 14, 3, 3).key(), "stoch_rsi_14_14_3_3");
+        // stochastic_rsi() returns StochasticRsiConfig; .k()/.d() give line refs
+        assert_eq!(
+            stochastic_rsi(14, 14, 3, 3).k().key(),
+            "stoch_rsi_k_14_14_3_3"
+        );
+        assert_eq!(
+            stochastic_rsi(14, 14, 3, 3).d().key(),
+            "stoch_rsi_d_14_14_3_3"
+        );
         assert_eq!(awesome_oscillator(5, 34).key(), "ao_5_34");
         assert_eq!(choppiness_index(14).key(), "chop_14");
     }
@@ -2317,64 +2433,67 @@ mod tests {
     #[test]
     fn test_macd_keys() {
         let m = macd(12, 26, 9);
-        assert_eq!(m.line().key(), "macd_line");
-        assert_eq!(m.signal_line().key(), "macd_signal");
-        assert_eq!(m.histogram().key(), "macd_histogram");
+        assert_eq!(m.line().key(), "macd_line_12_26_9");
+        assert_eq!(m.signal_line().key(), "macd_signal_12_26_9");
+        assert_eq!(m.histogram().key(), "macd_histogram_12_26_9");
     }
 
     #[test]
     fn test_bollinger_keys() {
         let bb = bollinger(20, 2.0);
-        assert_eq!(bb.upper().key(), "bollinger_upper");
-        assert_eq!(bb.middle().key(), "bollinger_middle");
-        assert_eq!(bb.lower().key(), "bollinger_lower");
+        assert_eq!(bb.upper().key(), "bollinger_upper_20_2");
+        assert_eq!(bb.middle().key(), "bollinger_middle_20_2");
+        assert_eq!(bb.lower().key(), "bollinger_lower_20_2");
     }
 
     #[test]
     fn test_donchian_keys() {
         let dc = donchian(20);
-        assert_eq!(dc.upper().key(), "donchian_upper");
-        assert_eq!(dc.middle().key(), "donchian_middle");
-        assert_eq!(dc.lower().key(), "donchian_lower");
+        assert_eq!(dc.upper().key(), "donchian_upper_20");
+        assert_eq!(dc.middle().key(), "donchian_middle_20");
+        assert_eq!(dc.lower().key(), "donchian_lower_20");
     }
 
     #[test]
     fn test_supertrend_keys() {
         let st = supertrend(10, 3.0);
-        assert_eq!(st.value().key(), "supertrend_value");
-        assert_eq!(st.uptrend().key(), "supertrend_uptrend");
+        assert_eq!(st.value().key(), "supertrend_value_10_3");
+        assert_eq!(st.uptrend().key(), "supertrend_uptrend_10_3");
     }
 
     #[test]
     fn test_stochastic_keys() {
         let stoch = stochastic(14, 3, 3);
-        assert_eq!(stoch.k().key(), "stochastic_k");
-        assert_eq!(stoch.d().key(), "stochastic_d");
+        assert_eq!(stoch.k().key(), "stochastic_k_14_3_3");
+        assert_eq!(stoch.d().key(), "stochastic_d_14_3_3");
     }
 
     #[test]
     fn test_aroon_keys() {
         let ar = aroon(25);
-        assert_eq!(ar.up().key(), "aroon_up");
-        assert_eq!(ar.down().key(), "aroon_down");
+        assert_eq!(ar.up().key(), "aroon_up_25");
+        assert_eq!(ar.down().key(), "aroon_down_25");
     }
 
     #[test]
     fn test_ichimoku_keys() {
         let ich = ichimoku();
-        assert_eq!(ich.conversion_line().key(), "ichimoku_conversion");
-        assert_eq!(ich.base_line().key(), "ichimoku_base");
-        assert_eq!(ich.leading_span_a().key(), "ichimoku_leading_a");
-        assert_eq!(ich.leading_span_b().key(), "ichimoku_leading_b");
-        assert_eq!(ich.lagging_span().key(), "ichimoku_lagging");
+        assert_eq!(
+            ich.conversion_line().key(),
+            "ichimoku_conversion_9_26_52_26"
+        );
+        assert_eq!(ich.base_line().key(), "ichimoku_base_9_26_52_26");
+        assert_eq!(ich.leading_span_a().key(), "ichimoku_leading_a_9_26_52_26");
+        assert_eq!(ich.leading_span_b().key(), "ichimoku_leading_b_9_26_52_26");
+        assert_eq!(ich.lagging_span().key(), "ichimoku_lagging_9_26_52_26");
     }
 
     #[test]
     fn test_keltner_keys() {
         let kc = keltner(20, 2.0, 10);
-        assert_eq!(kc.upper().key(), "keltner_upper");
-        assert_eq!(kc.middle().key(), "keltner_middle");
-        assert_eq!(kc.lower().key(), "keltner_lower");
+        assert_eq!(kc.upper().key(), "keltner_upper_20_2_10");
+        assert_eq!(kc.middle().key(), "keltner_middle_20_2_10");
+        assert_eq!(kc.lower().key(), "keltner_lower_20_2_10");
     }
 
     #[test]
@@ -2391,10 +2510,10 @@ mod tests {
 
     #[test]
     fn test_power_keys() {
-        assert_eq!(bull_power(13).key(), "bull_power");
-        assert_eq!(bear_power(13).key(), "bear_power");
-        assert_eq!(elder_bull_power(13).key(), "elder_bull");
-        assert_eq!(elder_bear_power(13).key(), "elder_bear");
+        assert_eq!(bull_power(13).key(), "bull_power_13");
+        assert_eq!(bear_power(13).key(), "bear_power_13");
+        assert_eq!(elder_bull_power(13).key(), "elder_bull_13");
+        assert_eq!(elder_bear_power(13).key(), "elder_bear_13");
     }
 
     #[test]

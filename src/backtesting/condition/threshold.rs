@@ -9,12 +9,22 @@ use super::Condition;
 
 /// Condition: position P/L is at or below the stop-loss threshold.
 ///
+/// # Execution Model
+///
+/// This condition evaluates at **bar close**: it fires when the closing price
+/// implies a loss ≥ `pct`. The resulting exit signal is deferred to the **next
+/// bar's open** (identical to all strategy-signal exits).
+///
+/// For intrabar detection (fill same bar at `min(open, stop_level)`), use
+/// [`BacktestConfig::stop_loss_pct`] instead. A −10% intraday move that closes
+/// at −3% will be caught by the config field but missed by this condition.
+///
 /// # Example
 ///
 /// ```ignore
 /// use finance_query::backtesting::condition::*;
 ///
-/// let exit = stop_loss(0.05); // Exit if loss >= 5%
+/// let exit = stop_loss(0.05); // Exit if loss >= 5% at bar close
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct StopLoss {
@@ -68,12 +78,21 @@ pub fn stop_loss(pct: f64) -> StopLoss {
 
 /// Condition: position P/L is at or above the take-profit threshold.
 ///
+/// # Execution Model
+///
+/// This condition evaluates at **bar close**: it fires when the closing price
+/// implies a gain ≥ `pct`. The resulting exit signal is deferred to the **next
+/// bar's open** (identical to all strategy-signal exits).
+///
+/// For intrabar detection (fill same bar at `max(open, target_level)`), use
+/// [`BacktestConfig::take_profit_pct`] instead.
+///
 /// # Example
 ///
 /// ```ignore
 /// use finance_query::backtesting::condition::*;
 ///
-/// let exit = take_profit(0.10); // Exit if gain >= 10%
+/// let exit = take_profit(0.10); // Exit if gain >= 10% at bar close
 /// ```
 #[derive(Debug, Clone, Copy)]
 pub struct TakeProfit {
@@ -329,6 +348,15 @@ pub fn held_for_bars(min_bars: usize) -> HeldForBars {
 ///
 /// For short positions: tracks the lowest price since entry and triggers
 /// when price rises by `trail_pct` from that low.
+///
+/// # Execution Model
+///
+/// The peak/trough is computed from bar **highs/lows** since entry, but the
+/// trigger test uses the **bar close**. The exit signal is deferred to the
+/// **next bar's open** (identical to all strategy-signal exits).
+///
+/// For intrabar enforcement, use [`BacktestConfig::trailing_stop_pct`] instead,
+/// which fills on the same bar when the trailing level is breached intraday.
 ///
 /// # Example
 ///

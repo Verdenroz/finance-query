@@ -418,5 +418,4 @@ for currency in &currencies {
 - [Crypto](crypto.md) - CoinGecko cryptocurrency data (requires `crypto` feature)
 - [Feeds](feeds.md) - RSS/Atom news aggregation (requires `rss` feature)
 - [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis
-- [Models](models.md) - Understanding response types
 - [Configuration](configuration.md) - Regional settings and network options

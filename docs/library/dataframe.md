@@ -500,5 +500,4 @@ match chart.to_dataframe() {
 - [Technical Indicators](indicators.md) - Convert indicator results to DataFrames for analysis
 - [Backtesting](backtesting.md) - Analyze backtest results in DataFrames
 - [Finance Module](finance.md) - Market-wide data with DataFrame support
-- [Models](models.md) - All response types and their structures
 - [Polars Documentation](https://docs.pola.rs/) - Complete Polars guide

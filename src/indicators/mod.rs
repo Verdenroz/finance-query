@@ -426,6 +426,85 @@ impl Indicator {
             Indicator::BalanceOfPower(_) => "Balance of Power",
         }
     }
+
+    /// Minimum number of data bars required before this indicator produces
+    /// meaningful output.
+    ///
+    /// Used by the backtesting engine's `CustomStrategy` to automatically
+    /// compute the warmup period instead of parsing key-name suffixes.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use finance_query::indicators::Indicator;
+    ///
+    /// assert_eq!(Indicator::Sma(20).warmup_bars(), 20);
+    /// assert_eq!(Indicator::Macd { fast: 12, slow: 26, signal: 9 }.warmup_bars(), 35);
+    /// assert_eq!(Indicator::Bollinger { period: 20, std_dev: 2.0 }.warmup_bars(), 20);
+    /// ```
+    pub fn warmup_bars(&self) -> usize {
+        match self {
+            Self::Sma(p)
+            | Self::Ema(p)
+            | Self::Rsi(p)
+            | Self::Atr(p)
+            | Self::Wma(p)
+            | Self::Dema(p)
+            | Self::Tema(p)
+            | Self::Hma(p)
+            | Self::Vwma(p)
+            | Self::McginleyDynamic(p)
+            | Self::Cci(p)
+            | Self::WilliamsR(p)
+            | Self::Roc(p)
+            | Self::Momentum(p)
+            | Self::Cmo(p)
+            | Self::Adx(p)
+            | Self::Aroon(p)
+            | Self::DonchianChannels(p)
+            | Self::ChoppinessIndex(p)
+            | Self::Mfi(p)
+            | Self::Cmf(p)
+            | Self::BullBearPower(p)
+            | Self::ElderRay(p) => *p,
+            Self::Macd { fast, slow, signal } => *slow.max(fast) + signal,
+            Self::Bollinger { period, .. } => *period,
+            Self::Alma { period, .. } => *period,
+            Self::Stochastic {
+                k_period,
+                k_slow,
+                d_period,
+            } => k_period + k_slow + d_period,
+            Self::StochasticRsi {
+                rsi_period,
+                stoch_period,
+                k_period,
+                d_period,
+            } => rsi_period + stoch_period + k_period.max(d_period),
+            Self::AwesomeOscillator { slow, .. } => *slow,
+            Self::CoppockCurve {
+                long_roc,
+                wma_period,
+                ..
+            } => long_roc + wma_period,
+            Self::Ichimoku {
+                base, displacement, ..
+            } => base + displacement,
+            Self::Supertrend { period, .. } => *period,
+            Self::ParabolicSar { .. } => 2,
+            Self::KeltnerChannels {
+                period, atr_period, ..
+            } => *period.max(atr_period),
+            Self::BalanceOfPower(Some(p)) => *p,
+            // Volume/price indicators with no meaningful lookback
+            Self::Obv
+            | Self::Vwap
+            | Self::TrueRange
+            | Self::ChaikinOscillator
+            | Self::AccumulationDistribution
+            | Self::BalanceOfPower(None) => 1,
+        }
+    }
 }
 
 /// Helper function to extract the last non-None value from a vector.

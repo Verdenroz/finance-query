@@ -20,9 +20,11 @@
 //! ```
 
 mod computed;
+mod htf;
 mod price;
 
 pub use computed::*;
+pub use htf::*;
 pub use price::*;
 
 use crate::indicators::Indicator;

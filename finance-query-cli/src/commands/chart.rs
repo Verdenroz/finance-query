@@ -76,15 +76,15 @@ enum IndicatorType {
     Macd(usize, usize, usize),
     Bollinger(usize, f64),
     Atr(usize),
-    Stochastic(usize, usize), // k_period, d_period
+    Stochastic(usize, usize, usize), // k_period, k_slow, d_period
     Adx(usize),
     Obv,
     Vwap,
     Cci(usize),
     WilliamsR(usize),
-    StochasticRsi(usize, usize), // rsi_period, stoch_period
-    ParabolicSar(f64, f64),      // acceleration, maximum
-    Supertrend(usize, f64),      // period, multiplier
+    StochasticRsi(usize, usize, usize, usize), // rsi_period, stoch_period, k_period, d_period
+    ParabolicSar(f64, f64),                    // acceleration, maximum
+    Supertrend(usize, f64),                    // period, multiplier
     Mfi(usize),
     Ichimoku,
     DonchianChannels(usize),
@@ -116,12 +116,13 @@ impl IndicatorType {
                 chart.bollinger_bands(*period, *std_dev)?,
             )),
             Self::Atr(period) => Ok(IndicatorResult::Single(chart.atr(*period)?)),
-            Self::Stochastic(k_period, d_period) => Ok(IndicatorResult::Stochastic(
+            Self::Stochastic(k_period, k_slow, d_period) => Ok(IndicatorResult::Stochastic(
                 finance_query::indicators::stochastic(
                     &chart.high_prices(),
                     &chart.low_prices(),
                     &chart.close_prices(),
                     *k_period,
+                    *k_slow,
                     *d_period,
                 )?,
             )),
@@ -155,13 +156,16 @@ impl IndicatorType {
                     *period,
                 )?,
             )),
-            Self::StochasticRsi(rsi_period, stoch_period) => Ok(IndicatorResult::Single(
-                finance_query::indicators::stochastic_rsi(
+            Self::StochasticRsi(rsi_period, stoch_period, k_period, d_period) => {
+                let stoch = finance_query::indicators::stochastic_rsi(
                     &chart.close_prices(),
                     *rsi_period,
                     *stoch_period,
-                )?,
-            )),
+                    *k_period,
+                    *d_period,
+                )?;
+                Ok(IndicatorResult::Stochastic(stoch))
+            }
             Self::ParabolicSar(acceleration, maximum) => Ok(IndicatorResult::Single(
                 finance_query::indicators::parabolic_sar(
                     &chart.high_prices(),
@@ -192,6 +196,10 @@ impl IndicatorType {
                     &chart.high_prices(),
                     &chart.low_prices(),
                     &chart.close_prices(),
+                    9,
+                    26,
+                    26,
+                    26,
                 )?,
             )),
             Self::DonchianChannels(period) => Ok(IndicatorResult::Donchian(
@@ -769,7 +777,7 @@ fn build_dynamic_indicator_table(
                 header.push("BB_Lower".to_string());
             }
             IndicatorType::Atr(_) => header.push("ATR".to_string()),
-            IndicatorType::Stochastic(_, _) => {
+            IndicatorType::Stochastic(_, _, _) => {
                 header.push("Stoch_%K".to_string());
                 header.push("Stoch_%D".to_string());
             }
@@ -778,7 +786,7 @@ fn build_dynamic_indicator_table(
             IndicatorType::Vwap => header.push("VWAP".to_string()),
             IndicatorType::Cci(_) => header.push("CCI".to_string()),
             IndicatorType::WilliamsR(_) => header.push("Williams_%R".to_string()),
-            IndicatorType::StochasticRsi(_, _) => header.push("Stoch_RSI".to_string()),
+            IndicatorType::StochasticRsi(_, _, _, _) => header.push("Stoch_RSI".to_string()),
             IndicatorType::ParabolicSar(_, _) => header.push("PSAR".to_string()),
             IndicatorType::Supertrend(_, _) => header.push("SuperTrend".to_string()),
             IndicatorType::Mfi(_) => header.push("MFI".to_string()),
@@ -1028,16 +1036,17 @@ fn parse_indicators(s: &str) -> Result<Vec<IndicatorType>> {
                 indicators.push(IndicatorType::Atr(period));
             }
             "stochastic" | "stoch" => {
-                // Parse as "stochastic:14:3" or use defaults
-                let (k_period, d_period) = if let Some(p) = params {
+                // Parse as "stochastic:14:1:3" (k_period:k_slow:d_period) or use defaults
+                let (k_period, k_slow, d_period) = if let Some(p) = params {
                     let parts: Vec<&str> = p.split(':').collect();
                     let k = parts.first().and_then(|s| s.parse().ok()).unwrap_or(14);
-                    let d = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(3);
-                    (k, d)
+                    let ks = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(1);
+                    let d = parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(3);
+                    (k, ks, d)
                 } else {
-                    (14, 3)
+                    (14, 1, 3)
                 };
-                indicators.push(IndicatorType::Stochastic(k_period, d_period));
+                indicators.push(IndicatorType::Stochastic(k_period, k_slow, d_period));
             }
             "adx" => {
                 let period = params.and_then(|p| p.parse().ok()).unwrap_or(14);
@@ -1058,16 +1067,23 @@ fn parse_indicators(s: &str) -> Result<Vec<IndicatorType>> {
                 indicators.push(IndicatorType::WilliamsR(period));
             }
             "stochrsi" | "stochastic_rsi" => {
-                // Parse as "stochrsi:14:14" or use defaults
-                let (rsi_period, stoch_period) = if let Some(p) = params {
+                // Parse as "stochrsi:14:14:3:3" (rsi_period:stoch_period:k_period:d_period) or use defaults
+                let (rsi_period, stoch_period, k_period, d_period) = if let Some(p) = params {
                     let parts: Vec<&str> = p.split(':').collect();
                     let r = parts.first().and_then(|s| s.parse().ok()).unwrap_or(14);
                     let s = parts.get(1).and_then(|s| s.parse().ok()).unwrap_or(14);
-                    (r, s)
+                    let k = parts.get(2).and_then(|s| s.parse().ok()).unwrap_or(3);
+                    let d = parts.get(3).and_then(|s| s.parse().ok()).unwrap_or(3);
+                    (r, s, k, d)
                 } else {
-                    (14, 14)
+                    (14, 14, 3, 3)
                 };
-                indicators.push(IndicatorType::StochasticRsi(rsi_period, stoch_period));
+                indicators.push(IndicatorType::StochasticRsi(
+                    rsi_period,
+                    stoch_period,
+                    k_period,
+                    d_period,
+                ));
             }
             "psar" | "parabolicsar" | "parabolic_sar" => {
                 // Parse as "psar:0.02:0.2" or use defaults

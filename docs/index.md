@@ -37,7 +37,6 @@ It is designed to be used in three ways:
     *   [Technical Indicators](library/indicators.md)
     *   [Backtesting](library/backtesting.md)
     *   [DataFrame Support](library/dataframe.md)
-    *   [Models](library/models.md)
     *   [Configuration](library/configuration.md)
 
 === "CLI"

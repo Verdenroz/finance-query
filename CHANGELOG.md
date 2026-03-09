@@ -7,6 +7,83 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-03-09
+
+### Added
+
+#### Backtesting Engine — Major Expansion
+
+- **Order types** (`Signal`): limit, stop, and stop-limit entry orders in addition to market orders
+  - `Signal::buy_limit(ts, px, limit_price)` — fill only if price reaches limit
+  - `Signal::buy_stop(ts, px, stop_price)` — fill when price breaks above stop
+  - `Signal::buy_stop_limit(ts, px, stop, limit)` — trigger at stop, fill at limit or better
+  - `Signal::sell_limit` / `sell_stop` for exit orders
+  - `.expires_in_bars(n)` — pending order auto-cancels after N bars (GTC by default)
+- **Per-trade bracket orders** on `Signal`: override global config stop-loss / take-profit / trailing-stop per individual signal
+  - `.stop_loss(pct)`, `.take_profit(pct)`, `.trailing_stop(pct)` builder methods on `Signal`
+- **Scale in / scale out** (`Signal::scale_in(fraction, ...)` / `Signal::scale_out(fraction, ...)`) — pyramid trading with configurable position fraction
+- **Signal tagging** (`.tag("name")`) — label signals/trades for post-backtest filtering via `BacktestResult::trades_by_tag` / `metrics_by_tag` / `all_tags`
+- **`StrategyBuilder` new methods**:
+  - `.regime_filter(condition)` — suppress entry signals unless all regime conditions pass
+  - `.with_short(entry, exit)` — define a separate short leg with independent entry/exit conditions
+  - `.warmup(bars)` — skip the first N bars before generating signals
+- **Ensemble Strategy** (`src/backtesting/strategy/ensemble.rs`):
+  - `EnsembleStrategy` — combine 2+ member strategies with configurable voting
+  - `EnsembleMode` enum: `WeightedMajority` (default), `Unanimous`, `AnySignal`, `StrongestSignal`
+- **Higher-Timeframe (HTF) Conditions** (`src/backtesting/refs/htf.rs`):
+  - `htf(interval, condition)` — evaluate a condition on a coarser timeframe within a lower-TF strategy
+  - `htf_region(interval, region, condition)` — with explicit exchange region
+  - `resample(candles, interval, utc_offset_secs)` utility for manual candle aggregation
+- **Advanced performance metrics** on `PerformanceMetrics` (all `#[non_exhaustive]`, non-breaking):
+  - `winning_trades`, `losing_trades`, `largest_win`, `largest_loss`
+  - `max_consecutive_wins`, `max_consecutive_losses`
+  - `total_signals`, `executed_signals`
+  - `avg_trade_return_pct`
+  - `kelly_criterion`, `sqn` (System Quality Number), `expectancy`
+  - `omega_ratio`, `tail_ratio`, `recovery_factor`, `ulcer_index`, `serenity_ratio`
+- **`BacktestResult` extensions**:
+  - `diagnostics: Vec<String>` — engine warnings and notes (e.g., rejected orders, skipped bars)
+  - `rolling_sharpe(window)`, `drawdown_series()`, `rolling_win_rate(window)` — rolling analytics
+  - `by_year()`, `by_month()`, `by_day_of_week()` — temporal breakdown returning `PerformanceMetrics`
+  - `trades_by_tag(tag)`, `metrics_by_tag(tag)`, `all_tags()` — tag-based filtering
+- **`BacktestConfig` new fields** (all `#[non_exhaustive]`, non-breaking):
+  - `spread_pct` — bid-ask spread cost, half applied per side
+  - `transaction_tax_pct` — one-time purchase tax (e.g. UK stamp duty, buy-side only)
+  - `max_positions: Option<usize>` — cap concurrent open positions across the engine
+  - `bars_per_year: f64` — annualisation denominator (default `252.0`)
+  - `commission_fn: Option<CommissionFn>` — custom `fn(size, price) -> commission` overrides flat + pct
+  - `BacktestConfig::zero_cost()` — convenience constructor with all friction zeroed
+- **`BacktestComparison`** (`src/backtesting/comparison.rs`): rank multiple `BacktestResult` values side-by-side
+  - `BacktestComparison::new().add(label, result).ranked_by(metric)` → `ComparisonReport`
+  - `ComparisonReport`: `winner()`, `table()` → `&[ComparisonRow]`, `winner_row()`
+- **Parameter Optimizer** (`src/backtesting/optimizer/`):
+  - `GridSearch` — exhaustive search over all parameter combinations, parallelised with rayon
+  - `BayesianSearch` (SAMBO) — Latin Hypercube Sampling init → Nadaraya-Watson surrogate → UCB acquisition; efficient for large/continuous parameter spaces
+  - `ParamRange`: `int_range` / `float_range` (grid), `int_bounds` / `float_bounds` (Bayesian)
+  - `OptimizeMetric` enum: `TotalReturn`, `SharpeRatio`, `SortinoRatio`, `CalmarRatio`, `ProfitFactor`, `WinRate`, `MinDrawdown`
+  - `OptimizationReport`: `best`, `results` (sorted), `convergence_curve`, `n_evaluations`, `skipped_errors`
+- **Walk-Forward Validation** (`src/backtesting/walk_forward.rs`):
+  - `WalkForwardConfig::new(grid, config).in_sample_bars(n).out_of_sample_bars(n).run(...)`
+  - `WalkForwardReport`: `aggregate_metrics`, `consistency_ratio`, `windows` (per-window IS/OOS results)
+- **Monte Carlo Simulation** (`src/backtesting/monte_carlo.rs`):
+  - `MonteCarloConfig::new().num_simulations(n).method(m).seed(s).run(&result)`
+  - `MonteCarloMethod` enum: `IidShuffle` (default), `BlockBootstrap { block_size }`, `StationaryBootstrap { mean_block_size }`, `Parametric`
+  - `MonteCarloResult`: `total_return`, `max_drawdown`, `sharpe_ratio`, `profit_factor` — each a `PercentileStats` (p5/p25/p50/p75/p95/mean)
+  - Internal `Xorshift64` PRNG — no `rand` dependency
+- **Portfolio Backtesting** (`src/backtesting/portfolio/`): full multi-symbol portfolio engine
+  - `PortfolioEngine::new(config).run(&symbol_data, factory)` → `PortfolioResult`
+  - `PortfolioConfig`: wraps `BacktestConfig` with `max_total_positions`, `max_allocation_per_symbol`, `rebalance`
+  - `RebalanceMode` enum: `AvailableCapital` (default), `EqualWeight`, `CustomWeights(HashMap<String, f64>)`
+  - `SymbolData::new(symbol, candles).with_dividends(divs)` — per-symbol data with optional dividend reinvestment
+  - `PortfolioResult`: `symbols: HashMap<String, BacktestResult>`, `portfolio_equity_curve`, `portfolio_metrics`, `allocation_history`
+  - `Tickers::backtest(interval, range, config, factory)` — fetches charts and dividends automatically, then runs `PortfolioEngine`
+
+### Fixed
+
+- Commission and slippage now correctly account for bid-ask spread as a separate cost component
+- Portfolio engine dividend cash accounting — dividends now correctly added to available cash when `reinvest_dividends` is false
+- Indicator smoothing: all indicators now accept fully customisable periods; no hardcoded defaults remain in public API
+
 ## [2.3.0] - 2026-02-25
 
 ### Added
@@ -197,7 +274,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/Verdenroz/finance-query/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/Verdenroz/finance-query/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/Verdenroz/finance-query/compare/v2.2.0...v2.2.1
 [2.2.0]: https://github.com/Verdenroz/finance-query/compare/v2.1.0...v2.2.0

@@ -28,9 +28,35 @@ pub use comparison::*;
 pub use composite::*;
 pub use threshold::*;
 
+use crate::constants::Interval;
 use crate::indicators::Indicator;
 
 use super::strategy::StrategyContext;
+
+/// Describes an indicator that must be pre-computed on a resampled (HTF) candle series.
+///
+/// Returned by [`Condition::htf_requirements`] and processed by the engine to build
+/// stretched arrays stored in `StrategyContext::indicators` under `htf_key`.
+#[derive(Clone, Debug)]
+pub struct HtfIndicatorSpec {
+    /// Target higher timeframe interval.
+    pub interval: Interval,
+    /// Key under which the stretched value is stored (e.g. `"htf_1wk_sma_20"`).
+    pub htf_key: String,
+    /// Key the inner condition looks up (e.g. `"sma_20"`).
+    pub base_key: String,
+    /// Indicator to compute on the resampled HTF candles.
+    pub indicator: Indicator,
+    /// UTC offset in seconds for the exchange whose candles are being resampled.
+    ///
+    /// Passed to [`resample`] so that weekly/monthly bucket boundaries align with
+    /// the exchange's local calendar rather than UTC. Use
+    /// [`Region::utc_offset_secs`] to obtain the correct value, or `0` for UTC.
+    ///
+    /// [`resample`]: crate::backtesting::resample::resample
+    /// [`Region::utc_offset_secs`]: crate::constants::Region::utc_offset_secs
+    pub utc_offset_secs: i64,
+}
 
 /// A condition that can be evaluated on each candle.
 ///
@@ -58,6 +84,17 @@ pub trait Condition: Clone + Send + Sync + 'static {
     /// The backtest engine will pre-compute these indicators
     /// before running the strategy.
     fn required_indicators(&self) -> Vec<(String, Indicator)>;
+
+    /// Get any higher-timeframe indicators required by this condition.
+    ///
+    /// The engine resamples candles to each unique interval, computes the
+    /// listed indicators on the resampled data, and stores stretched
+    /// (base-timeframe-length) arrays in `StrategyContext::indicators`
+    /// under the `htf_key` names.  [`HtfCondition`](crate::backtesting::refs::HtfCondition)
+    /// implements this automatically; all other conditions return `vec![]`.
+    fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
+        vec![]
+    }
 
     /// Get a human-readable description of this condition.
     ///

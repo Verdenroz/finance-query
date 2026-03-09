@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-09
+
+### Added
+
+#### `backtest` — Major Expansion
+
+- **Portfolio mode**: set `Portfolio Symbols` (comma-separated) to run the strategy across multiple symbols with a shared capital pool
+  - `Rebalance Mode` field cycles between `Available Capital` and `Equal Weight`
+  - `Max Allocation Per Symbol` field caps exposure to a single symbol
+  - New **Portfolio** result tab shows per-symbol equity curves and allocation history
+- **Parameter optimizer** (`Ctrl+O` in config editor):
+  - Configure start/end/step ranges per indicator parameter
+  - Choose search method: **Grid** (exhaustive, parallel) or **Bayesian/SAMBO** (adaptive, efficient for large spaces)
+  - Choose optimisation metric: Sharpe Ratio, Total Return, Sortino, Calmar, Profit Factor, Win Rate, Min Drawdown
+  - Optional **walk-forward validation** toggle (in-sample/out-of-sample windows)
+  - New **Optimizer** result tab shows best parameters, convergence curve, and per-window walk-forward results
+- **Ensemble strategy composition** (`4` / `c` on welcome screen):
+  - Combine multiple strategies with configurable member weights
+  - `h/l` keys adjust weight by step; `w` types an exact value
+  - Voting modes: Weighted Majority, Unanimous, Any Signal, Strongest Signal
+- **Order type configuration** in config editor:
+  - `Entry Order Type` — Market, Limit Below, Stop Above, Stop-Limit Above
+  - `Entry Price Offset`, `Entry Stop-Limit Gap`, `Entry Expiry Bars`
+  - Equivalent Short order fields for short-leg strategies
+- **Per-trade bracket orders** in config editor:
+  - `Entry Bracket SL`, `Entry Bracket TP`, `Entry Bracket Trail`
+  - `Short Bracket SL`, `Short Bracket TP`, `Short Bracket Trail`
+- **Strategy builder new condition tabs**: Scale-In (add to position) and Scale-Out (partial exit), each with configurable fraction via `e` key; Regime Filter tab
+- **Higher-timeframe (HTF) scope**: press `t` in the indicator config to cycle the HTF interval (e.g. daily RSI filter inside a 15-minute strategy)
+- **User-saved presets**: `Ctrl+S` in config editor saves the current strategy locally; saved presets appear in the preset list and can be deleted with `d`
+- **New result tabs**: Monte Carlo (1,000-run simulation, p5–p95 bands), Periods (breakdown by year / month / day of week), Comparison (strategy vs benchmark)
+- **Cost profile quick-select**: cycle between Free / Realistic / Aggressive / Custom cost presets in config editor
+- **New config fields**: `Spread %`, `Transaction Tax %`, `Max Positions`, `Bars / Year`, `Warmup Bars`
+- **New presets** (10 total, up from 6): `ichimoku`, `volume`, `keltner`, `ema-momentum` added; `mean-reversion`, `conservative`, `aggressive` replaced by strategy-named equivalents (`rsi`, `macd`, `bollinger`)
+
+### Changed
+
+- **Backtest presets renamed** for clarity — update any saved workflows:
+  - `mean-reversion` → `rsi`
+  - `conservative` → `bollinger`
+  - `aggressive` → `macd`
+- Config editor now uses **tabbed sections** (`Tab` / `Shift+Tab`) for faster navigation across the expanded field set
+
 ## [0.2.0] - 2026-02-14
 
 ### Added
@@ -99,6 +142,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Installation guide for all platforms
 - Screenshots of TUI interfaces
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/cli-v0.2.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/cli-v0.3.0...HEAD
+[0.3.0]: https://github.com/Verdenroz/finance-query/compare/cli-v0.2.0...cli-v0.3.0
 [0.2.0]: https://github.com/Verdenroz/finance-query/compare/cli-v0.1.0...cli-v0.2.0
 [0.1.0]: https://github.com/Verdenroz/finance-query/releases/tag/cli-v0.1.0

@@ -97,23 +97,31 @@
 //! - **Position Management**: `stop_loss()`, `take_profit()`, `trailing_stop()`, `trailing_take_profit()`
 //! - **Position State**: `has_position()`, `no_position()`, `is_long()`, `is_short()`, `in_profit()`, `in_loss()`
 
+pub mod comparison;
 pub mod condition;
 mod config;
 mod engine;
 mod error;
+pub mod monte_carlo;
+pub mod optimizer;
+pub mod portfolio;
 mod position;
 pub mod refs;
+pub mod resample;
 mod result;
 mod signal;
 pub mod strategy;
+pub mod walk_forward;
 
 // Re-export main types
 pub use config::{BacktestConfig, BacktestConfigBuilder};
 pub use engine::BacktestEngine;
 pub use error::{BacktestError, Result};
 pub use position::{Position, PositionSide, Trade};
-pub use result::{BacktestResult, EquityPoint, PerformanceMetrics, SignalRecord};
-pub use signal::{Signal, SignalDirection, SignalMetadata, SignalStrength};
+pub use result::{BacktestResult, BenchmarkMetrics, EquityPoint, PerformanceMetrics, SignalRecord};
+pub use signal::{
+    OrderType, PendingOrder, Signal, SignalDirection, SignalMetadata, SignalStrength,
+};
 
 // Re-export strategy types
 pub use strategy::{Strategy, StrategyContext};
@@ -126,3 +134,24 @@ pub use strategy::{
     BollingerMeanReversion, DonchianBreakout, MacdSignal, RsiReversal, SmaCrossover,
     SuperTrendFollow,
 };
+
+// Re-export ensemble types
+pub use strategy::{EnsembleMode, EnsembleStrategy};
+
+// Re-export optimiser types for convenience
+pub use optimizer::{
+    BayesianSearch, GridSearch, OptimizationReport, OptimizationResult, OptimizeMetric, ParamRange,
+    ParamValue,
+};
+
+// Re-export walk-forward types
+pub use walk_forward::{WalkForwardConfig, WalkForwardReport, WindowResult};
+
+// Re-export Monte Carlo types
+pub use monte_carlo::{MonteCarloConfig, MonteCarloMethod, MonteCarloResult, PercentileStats};
+
+// Re-export comparison types
+pub use comparison::{BacktestComparison, ComparisonReport, ComparisonRow};
+
+// Re-export resample utility
+pub use resample::resample;

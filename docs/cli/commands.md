@@ -320,23 +320,216 @@ sma, ema, rsi, macd, bollinger, atr, stochastic, adx, obv, vwap, cci, williamsr,
 
 ### `backtest`
 
-Test trading strategies with performance metrics.
+Test trading strategies with performance metrics. Supports custom strategies, presets, ensembles, portfolio mode, parameter optimization, walk-forward validation, and Monte Carlo simulation.
 
 ```bash
-fq backtest AAPL               # Interactive backtest TUI
-fq backtest AAPL --preset swing      # Use swing trading preset
-fq backtest AAPL --preset trend      # Use trend following preset
-fq backtest AAPL --json              # Output JSON instead of TUI
-fq backtest AAPL --no-tui --preset aggressive  # Run preset without TUI
+fq backtest AAPL                          # Interactive backtest TUI
+fq backtest AAPL --preset swing           # Load swing trading preset into TUI
+fq backtest AAPL --preset rsi --no-tui   # Run preset directly, skip TUI
+fq backtest AAPL --json                   # Output JSON instead of TUI
+fq backtest AAPL --preset trend --json    # JSON output with preset
 ```
-
-**Available presets:** swing, day, trend, mean-reversion, conservative, aggressive
 
 **Options:**
 
-- `-p, --preset` - Use a preset strategy
-- `--json` - Output JSON instead of TUI
-- `--no-tui` - Skip interactive TUI and run directly with preset
+- `-p, --preset` - Load a preset strategy
+- `--json` - Output JSON result instead of launching TUI
+- `--no-tui` - Run directly without interactive TUI (requires `--preset`)
+
+**Available presets:** swing, rsi, macd, bollinger, trend, ichimoku, volume, keltner, ema-momentum, day
+
+---
+
+#### Interactive TUI
+
+The TUI walks through strategy configuration, runs the backtest, and displays results across multiple analysis tabs.
+
+**Welcome Screen:**
+
+| Key | Action |
+|-----|--------|
+| `1` / `n` | New custom strategy |
+| `2` / `p` | Load a preset |
+| `3` / `s` | Open strategy builder (visual condition editor) |
+| `4` / `c` | Compose ensemble from multiple strategies |
+
+**Config Editor** — adjust all parameters before running:
+
+| Key | Action |
+|-----|--------|
+| `↑/↓`, `j/k` | Navigate fields |
+| `Tab` / `Shift+Tab` | Jump to next/previous section |
+| `Enter` | Edit selected field |
+| `Space` | Toggle boolean fields |
+| `Left/Right` | Cycle enum values (interval, order type, rebalance mode, etc.) |
+| `Ctrl+O` | Open optimizer configuration |
+| `Ctrl+S` | Save current strategy as a user preset |
+| `c` | Return to welcome screen |
+| `q` | Confirm and run backtest |
+
+**Strategy Builder** — visual condition editor for entry/exit/regime:
+
+| Key | Action |
+|-----|--------|
+| `↑/↓` | Navigate conditions |
+| `Left/Right` | Switch tabs (Entry / Exit / Short Entry / Short Exit / Regime / Scale-In / Scale-Out) |
+| `a` | Add condition |
+| `d` | Delete condition |
+| `o` | Toggle AND/OR between conditions |
+| `Enter` | Edit condition |
+| `Space` | Cycle condition fields |
+| `>` / `<` | Next / previous condition |
+| `e` | Edit scale fraction (scale tabs only) |
+| `t` | Cycle higher-timeframe (HTF) scope for current indicator |
+| `q` | Back to config editor |
+
+!!! note
+    HTF scope is available for computed indicators (RSI, SMA, MACD, etc.). Price-action fields (`close`, `open`, `high`, `low`, `volume`, etc.) always stay on the base timeframe.
+
+**Optimizer Setup** (`Ctrl+O` from config editor):
+
+| Key | Action |
+|-----|--------|
+| `↑/↓` | Navigate parameters |
+| `Space` | Toggle parameter enabled/disabled |
+| `Enter` | Edit field value (range start/end/step, metric, method) |
+| `q` | Back to config editor |
+
+- **Search methods:** Grid (exhaustive, parallel) or Bayesian/SAMBO (LHS init → Nadaraya-Watson surrogate → UCB acquisition)
+- **Metrics:** Sharpe Ratio, Total Return, Sortino Ratio, Calmar Ratio, Profit Factor, Win Rate, Min Drawdown
+- **Walk-forward:** toggle to enable in-sample/out-of-sample rolling validation
+
+**Results Tabs** (post-backtest):
+
+| Key | Action |
+|-----|--------|
+| `←/→`, `h/l` | Switch tabs |
+| `↑/↓`, `j/k` | Navigate within tab |
+| `p` | Cycle chart view: Equity → Drawdown → Rolling Sharpe → Rolling Win Rate |
+| `m` | Cycle periods view: Yearly → Monthly → Day of Week |
+| `r` | Re-run with same config |
+| `e` | Edit config and re-run |
+| `q` | Quit |
+
+**Available result tabs:**
+
+| Tab | Description |
+|-----|-------------|
+| Overview | Key metrics: return, Sharpe/Sortino/Calmar, drawdown, win rate, Kelly, trade counts |
+| Charts | Equity curve, drawdown, rolling Sharpe, rolling win rate |
+| Distribution | Trade return histogram, win/loss percentiles, largest win/loss |
+| Trades | All executed trades with entry/exit prices, dates, duration, P&L |
+| Signals | All generated signals with strength and triggering conditions |
+| Monte Carlo | 1,000-run simulation (p5/p25/p50/p75/p95) across 4 resampling methods |
+| Periods | Breakdown by year, month, or day of week |
+| Comparison | Strategy vs benchmark: alpha, beta, information ratio |
+| Optimizer | Best params, convergence curve (Bayesian), walk-forward window results |
+| Portfolio | Per-symbol equity curves, allocation history, portfolio-level metrics |
+
+---
+
+#### Configuration Fields
+
+**Symbol & Time Series:**
+
+- `Symbol` — Stock ticker (e.g., `AAPL`)
+- `Interval` — `1m`, `5m`, `15m`, `30m`, `1h`, `1d`, `1wk`, `1mo`, `3mo`
+- `Time Range` — `1d`, `5d`, `1mo`, `3mo`, `6mo`, `1y`, `2y`, `5y`, `10y`, `ytd`, `max`
+
+**Capital & Position Sizing:**
+
+- `Capital` — Initial capital (default: `$10,000`)
+- `Position Size` — Fraction of capital per trade (`0.0`–`1.0`, default: `1.0`)
+- `Max Positions` — Maximum concurrent open positions (`0` = unlimited)
+- `Bars / Year` — Bars per calendar year for metric annualization (auto-set per interval)
+
+**Costs & Friction:**
+
+- `Cost Profile` — Quick preset: Free, Realistic, Aggressive, Custom
+- `Commission %` — Percent commission per trade (default: `0.1%`)
+- `Flat Commission` — Fixed fee per trade (default: `$0`)
+- `Slippage %` — Slippage applied on entry/exit (default: `0.1%`)
+- `Spread %` — Bid-ask spread, half applied per side (default: `0%`)
+- `Transaction Tax %` — One-time purchase tax, e.g. UK stamp duty (default: `0%`)
+
+**Risk Management:**
+
+- `Allow Short` — Enable short selling
+- `Stop Loss` — Global stop loss percent (overridden per-trade by bracket orders)
+- `Take Profit` — Global take profit percent (overridden per-trade by bracket orders)
+- `Trailing Stop` — Global trailing stop percent (overridden per-trade by bracket orders)
+- `Min Signal %` — Minimum signal strength threshold (`0.0`–`1.0`)
+- `Close At End` — Force-close open positions at the final bar (default: on)
+
+**Advanced:**
+
+- `Warmup Bars` — Skip first N bars before generating signals
+- `Risk-Free Rate` — Annual risk-free rate for Sharpe/Sortino (default: `0%`)
+- `Reinvest Dividends` — Automatically reinvest dividend income
+- `Benchmark` — Symbol to compare against (e.g., `SPY`) — enables Comparison tab
+
+**Entry Order Configuration:**
+
+- `Entry Order Type` — `Market`, `Limit Below`, `Stop Above`, `Stop-Limit Above`
+- `Entry Price Offset` — Offset percent for limit/stop entry (e.g., `0.005` = 0.5%)
+- `Entry Stop-Limit Gap` — Gap above stop trigger for stop-limit orders
+- `Entry Expiry Bars` — Bars a pending order stays alive (`None` = GTC)
+- `Entry Bracket SL/TP/Trail` — Per-trade bracket overrides (long positions)
+
+**Short Order Configuration:**
+
+- `Short Order Type` — `Market`, `Limit Above`, `Stop Below`
+- `Short Price Offset` — Offset percent for short limit/stop entry
+- `Short Expiry Bars` — Bars a pending short order stays alive
+- `Short Bracket SL/TP/Trail` — Per-trade bracket overrides (short positions)
+
+**Portfolio Mode:**
+
+- `Portfolio Symbols` — Comma-separated extra symbols; primary symbol is always included
+- `Rebalance Mode` — `Available Capital` (each symbol uses `position_size_pct` of cash) or `Equal Weight` (split initial capital equally)
+- `Max Allocation Per Symbol` — Cap allocation to a single symbol (`0` = no limit)
+
+---
+
+#### Condition Builder
+
+**Comparison types:** Above, Below, Crosses Above, Crosses Below, Between, Equals
+
+**Condition groups:**
+
+| Group | Purpose |
+|-------|---------|
+| Entry | All conditions must pass to open a long position |
+| Exit | Any condition triggers long exit |
+| Short Entry | Conditions to open a short position (requires Allow Short) |
+| Short Exit | Conditions to close a short position |
+| Regime Filter | Entry signals suppressed unless all regime conditions pass |
+| Scale-In | Add to existing long position (pyramid); configurable fraction |
+| Scale-Out | Partially exit existing long position; configurable fraction |
+
+Conditions are combined with AND/OR operators per condition (toggle with `o`). Each condition can compare an indicator against a fixed value or another indicator. HTF scope can be toggled with `t` for computed indicators.
+
+---
+
+#### Ensemble Strategy
+
+Combine 2+ strategies with voting. In ensemble compose mode:
+
+| Key | Action |
+|-----|--------|
+| `h/l` | Adjust member weight by step |
+| `w` | Type an exact weight for the focused member |
+| `↑/↓` | Navigate members |
+| `Enter` | Edit selected member's strategy |
+
+**Voting modes:**
+
+| Mode | Description |
+|------|-------------|
+| Weighted Majority | Entry if weighted vote share > 50% |
+| Unanimous | Entry only if all members agree |
+| Any Signal | Entry if any member signals |
+| Strongest Signal | Entry from highest-strength member |
 
 ## Options & Dividends Commands
 
