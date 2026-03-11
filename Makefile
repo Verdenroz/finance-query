@@ -1,5 +1,5 @@
 .PHONY: help serve install install-dev build test test-fast lint fix audit docs docker docker-compose docker-compose-down clean publish-dry-run \
-        prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html
+        prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html mcp mcp-http build-mcp
 
 # Default target
 .DEFAULT_GOAL := help
@@ -19,6 +19,15 @@ help: ## Show available commands
 	@echo "$(GREEN)FinanceQuery Commands$(NC)"
 	@echo "===================="
 	@awk 'BEGIN {FS = ":.*?## "} /^[a-zA-Z_-]+:.*?## / {printf "$(YELLOW)%-20s$(NC) %s\n", $$1, $$2}' $(MAKEFILE_LIST)
+
+mcp: ## Run MCP server (stdio transport, for local development)
+	$(CARGO) run -p finance-query-mcp
+
+mcp-http: ## Run MCP server (HTTP streaming transport, for VPS — binds to MCP_ADDR, default 0.0.0.0:3000)
+	MCP_TRANSPORT=http $(CARGO) run -p finance-query-mcp
+
+build-mcp: ## Build MCP server release binary
+	$(CARGO) build --release -p finance-query-mcp
 
 serve: ## Start development server
 	@echo "$(GREEN)Starting server at http://localhost:$(PORT)$(NC)"

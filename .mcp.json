@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "finance-query": {
+      "command": "cargo",
+      "args": ["run", "-p", "finance-query-mcp", "--quiet"],
+      "env": {
+        "EDGAR_EMAIL": "your@email.com",
+        "FRED_API_KEY": "your_fred_api_key"
+      }
+    }
+  }
+}

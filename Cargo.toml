@@ -1,5 +1,5 @@
 [workspace]
-members = ["server", "finance-query-derive", "finance-query-cli"]
+members = ["server", "finance-query-derive", "finance-query-cli", "finance-query-mcp"]
 resolver = "2"
 
 [package]
