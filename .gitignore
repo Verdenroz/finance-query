@@ -1,28 +1,19 @@
 # Project-specific ignores
 /*.zip
-/.env
 *.bak
 *.orig
 tmp/
 trash/
 attic/
 .kash/
+.claude/
 
 # Rust build artifacts
 /target/
-Cargo.lock  # Uncomment for libraries: #Cargo.lock
 **/*.rs.bk
 *.pdb
 
-# Rust debug files
-debug/
-target/*/debug/
-*.dSYM/
-
-# Rustfmt backup files
-*.rs.bak
-
-# Clippy cache
+# Rustfmt / clippy
 .clippy.toml
 
 # Test coverage
@@ -38,7 +29,6 @@ lcov.info
 *.swp
 *.swo
 *~
-.DS_Store
 
 # Logs
 *.log
@@ -49,11 +39,10 @@ lcov.info
 docs/_build/
 
 # Environment variables
-.env
+*.env
+!*.env.template
 .env.local
 .env.*.local
-server/.env
-v1/.env
 
 # Nginx (SSL certs are sensitive)
 nginx/certs/
@@ -62,14 +51,14 @@ nginx/certs/
 caddy-data/
 caddy-config/
 
-# V1 Python artifacts (v1 has its own .gitignore but just in case)
+# V1 Python artifacts
 v1/.venv/
 v1/htmlcov/
 v1/*.egg-info/
 v1/__pycache__/
 v1/.pytest_cache/
 
-# Legacy Python artifacts at root (cleanup)
+# Legacy Python artifacts at root
 /.venv/
 /htmlcov/
 /.pytest_cache/
