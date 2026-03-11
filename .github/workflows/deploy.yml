@@ -10,11 +10,27 @@ env:
 
 jobs:
   build-and-push:
-    name: Build Docker Images
+    name: Build ${{ matrix.image.name }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
       packages: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - name: V2 (Rust)
+            context: .
+            file: server/Dockerfile
+            suffix: v2
+          - name: V1 (Python)
+            context: v1
+            file: v1/Dockerfile
+            suffix: v1
+          - name: MCP
+            context: .
+            file: finance-query-mcp/Dockerfile
+            suffix: mcp
 
     steps:
       - name: Checkout
@@ -33,29 +49,17 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build and push V2 (Rust)
+      - name: Build and push ${{ matrix.image.name }}
         uses: docker/build-push-action@v6
         with:
-          context: .
-          file: server/Dockerfile
+          context: ${{ matrix.image.context }}
+          file: ${{ matrix.image.file }}
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/v2:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/v2:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Build and push V1 (Python)
-        uses: docker/build-push-action@v6
-        with:
-          context: v1
-          file: v1/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/v1:latest
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/v1:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.suffix }}:latest
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.suffix }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.image.suffix }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image.suffix }}
 
   deploy-docs:
     name: Deploy MkDocs to GitHub Pages

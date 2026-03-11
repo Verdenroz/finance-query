@@ -24,6 +24,8 @@ services:
         condition: service_healthy
       finance-query-v2:
         condition: service_healthy
+      finance-query-mcp:
+        condition: service_healthy
     networks:
       - frontend
       - backend
@@ -86,6 +88,46 @@ services:
       - NET_BIND_SERVICE
     healthcheck:
       test: ["CMD", "curl", "-f", "-q", "http://localhost:8000/v2/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # MCP Server (HTTP streaming transport for AI agents)
+  finance-query-mcp:
+    image: ghcr.io/${GITHUB_REPO:-verdenroz/finance-query}/mcp:latest
+    container_name: finance-query-mcp
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - MCP_TRANSPORT=http
+      - MCP_ADDR=0.0.0.0:3000
+      - EDGAR_EMAIL=${EDGAR_EMAIL:-}
+      - FRED_API_KEY=${FRED_API_KEY:-}
+    networks:
+      - backend
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+        reservations:
+          cpus: '0.1'
+          memory: 64M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-q", "http://localhost:3000/health"]
       interval: 30s
       timeout: 10s
       retries: 3

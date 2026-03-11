@@ -18,15 +18,17 @@ COPY Cargo.toml Cargo.lock* ./
 COPY server/Cargo.toml ./server/
 COPY finance-query-derive/Cargo.toml ./finance-query-derive/
 COPY finance-query-cli/Cargo.toml ./finance-query-cli/
+COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
 
 # Create dummy sources to cache dependencies
-RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src && \
+RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src && \
     echo "pub fn dummy() {}" > src/lib.rs && \
     echo "fn main() {}" > server/src/main.rs && \
     echo "" > finance-query-derive/src/lib.rs && \
     echo "fn main() {}" > finance-query-cli/src/main.rs && \
+    echo "fn main() {}" > finance-query-mcp/src/main.rs && \
     cargo build --release -p finance-query-server && \
-    rm -rf src server/src finance-query-derive/src finance-query-cli/src
+    rm -rf src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src
 
 # Copy actual source code
 COPY src ./src

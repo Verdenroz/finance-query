@@ -118,6 +118,33 @@ jobs:
           docker stop test-container
           docker rm test-container
 
+  # Build and test MCP Docker image
+  docker-mcp:
+    name: MCP Docker Build
+    runs-on: ubuntu-latest
+    needs: [fmt, clippy, test, check]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      - name: Build MCP Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: finance-query-mcp/Dockerfile
+          push: false
+          load: true
+          tags: financequery:mcp-ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+      - name: Test MCP Docker image
+        run: |
+          docker run -d --name test-mcp -p 3000:3000 -e MCP_TRANSPORT=http financequery:mcp-ci
+          sleep 10
+          curl -f http://localhost:3000/health
+          docker stop test-mcp
+          docker rm test-mcp
+
   # Security audit
   security-audit:
     name: Security Audit
