@@ -20,7 +20,7 @@ path = "src/main.rs"
 finance-query = { path = "..", features = ["indicators", "fred", "crypto", "rss", "risk"] }
 
 # GraphQL
-async-graphql = { version = "7", features = ["playground"] }
+async-graphql = { version = "7", features = ["graphiql"] }
 async-graphql-axum = "7"
 
 # Web framework

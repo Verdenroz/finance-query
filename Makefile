@@ -184,6 +184,7 @@ endif
 	@echo "$(YELLOW)Updated files:$(NC)"
 	@echo "  - finance-query-cli/Cargo.toml"
 
+
 generate-api-html: ## Regenerate OpenAPI and AsyncAPI HTML docs from server specs
 	@echo "$(GREEN)Generating OpenAPI HTML...$(NC)"
 	@python3 -c '\

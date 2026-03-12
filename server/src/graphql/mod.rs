@@ -29,8 +29,8 @@ pub type FinanceSchema = Schema<QueryRoot, EmptyMutation, SubscriptionRoot>;
 pub fn build_schema(state: AppState) -> FinanceSchema {
     Schema::build(QueryRoot, EmptyMutation, SubscriptionRoot)
         .data(state)
-        .limit_depth(10)
-        .limit_complexity(500)
+        .limit_depth(20)
+        .limit_complexity(2000)
         .finish()
 }
 
@@ -39,11 +39,14 @@ async fn graphql_handler(schema: Extension<FinanceSchema>, req: GraphQLRequest) 
     schema.execute(req.into_inner()).await.into()
 }
 
-/// HTTP handler: serve the Apollo Sandbox / GraphQL Playground UI.
+/// HTTP handler: serve the GraphiQL IDE.
 async fn graphql_playground() -> impl IntoResponse {
-    Html(async_graphql::http::playground_source(
-        async_graphql::http::GraphQLPlaygroundConfig::new("/graphql"),
-    ))
+    Html(
+        async_graphql::http::GraphiQLSource::build()
+            .endpoint("/graphql")
+            .subscription_endpoint("/graphql/ws")
+            .finish(),
+    )
 }
 
 /// Build the `/graphql` sub-router. The `FinanceSchema` extension must already

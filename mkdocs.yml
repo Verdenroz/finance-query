@@ -80,6 +80,7 @@ nav:
   - Server:
       - REST API Reference: server/api-reference.md
       - WebSocket API Reference: server/websocket-api-reference.md
+      - GraphQL API Reference: server/graphql-api-reference.md
   - Development:
       - Contributing: development/contributing.md
 
