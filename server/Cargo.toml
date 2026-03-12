@@ -19,6 +19,10 @@ path = "src/main.rs"
 # Finance library (our own)
 finance-query = { path = "..", features = ["indicators", "fred", "crypto", "rss", "risk"] }
 
+# GraphQL
+async-graphql = { version = "7", features = ["playground"] }
+async-graphql-axum = "7"
+
 # Web framework
 axum = { version = "0.8.7", features = ["ws", "macros"] }
 tokio = { version = "1", features = ["full"] }
