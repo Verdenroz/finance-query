@@ -17,7 +17,9 @@ pub async fn get_edgar_facts(symbol: String) -> Result<CallToolResult, McpError>
     let cik = edgar::resolve_cik(&symbol).await.map_err(finance_err)?;
     let facts = edgar::company_facts(cik).await.map_err(finance_err)?;
     let json = serde_json::to_string(&facts).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
 pub async fn get_edgar_submissions(symbol: String) -> Result<CallToolResult, McpError> {
@@ -25,7 +27,9 @@ pub async fn get_edgar_submissions(symbol: String) -> Result<CallToolResult, Mcp
     let cik = edgar::resolve_cik(&symbol).await.map_err(finance_err)?;
     let submissions = edgar::submissions(cik).await.map_err(finance_err)?;
     let json = serde_json::to_string(&submissions).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
 pub async fn get_edgar_search(
@@ -55,5 +59,7 @@ pub async fn get_edgar_search(
     .await
     .map_err(finance_err)?;
     let json = serde_json::to_string(&results).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }

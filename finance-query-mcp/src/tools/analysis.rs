@@ -23,7 +23,10 @@ pub async fn get_holders(symbol: String, holder_type: String) -> Result<CallTool
             serde_json::to_value(d).map_err(ser_err)?
         }
         "insiderpurchases" => {
-            let d = ticker.share_purchase_activity().await.map_err(finance_err)?;
+            let d = ticker
+                .share_purchase_activity()
+                .await
+                .map_err(finance_err)?;
             serde_json::to_value(d).map_err(ser_err)?
         }
         "insiderroster" => {
@@ -34,14 +37,19 @@ pub async fn get_holders(symbol: String, holder_type: String) -> Result<CallTool
             return Err(invalid_params(format!(
                 "Invalid holder_type '{}'. Valid: major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster",
                 holder_type
-            )))
+            )));
         }
     };
     let json = serde_json::to_string(&json_val).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
-pub async fn get_analysis(symbol: String, analysis_type: String) -> Result<CallToolResult, McpError> {
+pub async fn get_analysis(
+    symbol: String,
+    analysis_type: String,
+) -> Result<CallToolResult, McpError> {
     let ticker = Ticker::new(&symbol).await.map_err(finance_err)?;
     let json_val: serde_json::Value = match analysis_type.to_lowercase().replace('-', "").as_str() {
         "recommendations" => {
@@ -64,9 +72,11 @@ pub async fn get_analysis(symbol: String, analysis_type: String) -> Result<CallT
             return Err(invalid_params(format!(
                 "Invalid analysis_type '{}'. Valid: recommendations, upgrades-downgrades, earnings-estimate, earnings-history",
                 analysis_type
-            )))
+            )));
         }
     };
     let json = serde_json::to_string(&json_val).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }

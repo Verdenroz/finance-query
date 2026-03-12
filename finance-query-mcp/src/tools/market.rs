@@ -25,35 +25,51 @@ fn parse_region(s: &str) -> Region {
 
 pub async fn get_market_summary(region: Option<String>) -> Result<CallToolResult, McpError> {
     let r = parse_region(region.as_deref().unwrap_or("US"));
-    let summary = finance::market_summary(Some(r)).await.map_err(finance_err)?;
+    let summary = finance::market_summary(Some(r))
+        .await
+        .map_err(finance_err)?;
     let json = serde_json::to_string(&summary).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
 pub async fn get_fear_and_greed() -> Result<CallToolResult, McpError> {
     let fng = finance::fear_and_greed().await.map_err(finance_err)?;
     let json = serde_json::to_string(&fng).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
 pub async fn get_trending(region: Option<String>) -> Result<CallToolResult, McpError> {
     let r = region.as_deref().map(parse_region);
     let trending = finance::trending(r).await.map_err(finance_err)?;
     let json = serde_json::to_string(&trending).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
 pub async fn get_indices(region: Option<String>) -> Result<CallToolResult, McpError> {
-    let r = region.as_deref().and_then(|s| s.parse::<IndicesRegion>().ok());
+    let r = region
+        .as_deref()
+        .and_then(|s| s.parse::<IndicesRegion>().ok());
     let quotes = finance::indices(r).await.map_err(finance_err)?;
     let json = serde_json::to_string(&quotes).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
 pub async fn get_market_hours(region: Option<String>) -> Result<CallToolResult, McpError> {
-    let hours = finance::hours(region.as_deref()).await.map_err(finance_err)?;
+    let hours = finance::hours(region.as_deref())
+        .await
+        .map_err(finance_err)?;
     let json = serde_json::to_string(&hours).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
 pub async fn get_sector(sector: String) -> Result<CallToolResult, McpError> {
@@ -67,11 +83,15 @@ pub async fn get_sector(sector: String) -> Result<CallToolResult, McpError> {
     })?;
     let data = finance::sector(s).await.map_err(finance_err)?;
     let json = serde_json::to_string(&data).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
 
 pub async fn get_industry(industry: String) -> Result<CallToolResult, McpError> {
     let data = finance::industry(&industry).await.map_err(finance_err)?;
     let json = serde_json::to_string(&data).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }

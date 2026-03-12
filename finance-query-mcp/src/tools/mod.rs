@@ -17,12 +17,8 @@ pub mod search;
 pub mod transcripts;
 
 use rmcp::{
-    ErrorData as McpError,
-    ServerHandler,
-    handler::server::tool::ToolRouter,
-    handler::server::wrapper::Parameters,
-    model::CallToolResult,
-    tool, tool_handler, tool_router,
+    ErrorData as McpError, ServerHandler, handler::server::tool::ToolRouter,
+    handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_handler, tool_router,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -296,7 +292,9 @@ impl FinanceTools {
         }
     }
 
-    #[tool(description = "Get current quote and company data for a stock symbol (price, market cap, PE ratio, 52-week range, etc.)")]
+    #[tool(
+        description = "Get current quote and company data for a stock symbol (price, market cap, PE ratio, 52-week range, etc.)"
+    )]
     async fn get_quote(&self, p: Parameters<SymbolParams>) -> Result<CallToolResult, McpError> {
         quotes::get_quote(p.0.symbol).await
     }
@@ -307,7 +305,10 @@ impl FinanceTools {
     }
 
     #[tool(description = "Get similar stock recommendations and analyst ratings for a symbol.")]
-    async fn get_recommendations(&self, p: Parameters<RecommendationsParams>) -> Result<CallToolResult, McpError> {
+    async fn get_recommendations(
+        &self,
+        p: Parameters<RecommendationsParams>,
+    ) -> Result<CallToolResult, McpError> {
         quotes::get_recommendations(p.0.symbol, p.0.limit).await
     }
 
@@ -321,33 +322,63 @@ impl FinanceTools {
         chart::get_chart(p.0.symbol, p.0.interval, p.0.range).await
     }
 
-    #[tool(description = "Get historical OHLCV candlestick data for multiple symbols in one request. Use for portfolio analysis and cross-symbol comparison.")]
-    async fn get_charts(&self, p: Parameters<BatchSymbolsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get historical OHLCV candlestick data for multiple symbols in one request. Use for portfolio analysis and cross-symbol comparison."
+    )]
+    async fn get_charts(
+        &self,
+        p: Parameters<BatchSymbolsParams>,
+    ) -> Result<CallToolResult, McpError> {
         chart::get_charts(p.0.symbols, p.0.interval, p.0.range).await
     }
 
-    #[tool(description = "Get lightweight close-price sparklines for multiple symbols. Faster and smaller than get_charts — use when you only need price direction/trend across many symbols.")]
-    async fn get_spark(&self, p: Parameters<BatchSymbolsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get lightweight close-price sparklines for multiple symbols. Faster and smaller than get_charts — use when you only need price direction/trend across many symbols."
+    )]
+    async fn get_spark(
+        &self,
+        p: Parameters<BatchSymbolsParams>,
+    ) -> Result<CallToolResult, McpError> {
         chart::get_spark(p.0.symbols, p.0.interval, p.0.range).await
     }
 
-    #[tool(description = "Get income statement, balance sheet, or cash flow statement for a symbol.")]
-    async fn get_financials(&self, p: Parameters<FinancialsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get income statement, balance sheet, or cash flow statement for a symbol."
+    )]
+    async fn get_financials(
+        &self,
+        p: Parameters<FinancialsParams>,
+    ) -> Result<CallToolResult, McpError> {
         financials::get_financials(p.0.symbol, p.0.statement, p.0.frequency).await
     }
 
-    #[tool(description = "Get financial statements for multiple symbols in one request. Use for comparing fundamentals across companies.")]
-    async fn get_batch_financials(&self, p: Parameters<BatchFinancialsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get financial statements for multiple symbols in one request. Use for comparing fundamentals across companies."
+    )]
+    async fn get_batch_financials(
+        &self,
+        p: Parameters<BatchFinancialsParams>,
+    ) -> Result<CallToolResult, McpError> {
         financials::get_batch_financials(p.0.symbols, p.0.statement, p.0.frequency).await
     }
 
-    #[tool(description = "Get all 42 technical analysis indicators (SMA, EMA, RSI, MACD, Bollinger Bands, Ichimoku, etc.) for a symbol.")]
-    async fn get_indicators(&self, p: Parameters<IndicatorsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get all 42 technical analysis indicators (SMA, EMA, RSI, MACD, Bollinger Bands, Ichimoku, etc.) for a symbol."
+    )]
+    async fn get_indicators(
+        &self,
+        p: Parameters<IndicatorsParams>,
+    ) -> Result<CallToolResult, McpError> {
         indicators::get_indicators(p.0.symbol, p.0.interval, p.0.range).await
     }
 
-    #[tool(description = "Get all technical indicators for multiple symbols in one request. Use for portfolio-wide technical screening.")]
-    async fn get_batch_indicators(&self, p: Parameters<BatchSymbolsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get all technical indicators for multiple symbols in one request. Use for portfolio-wide technical screening."
+    )]
+    async fn get_batch_indicators(
+        &self,
+        p: Parameters<BatchSymbolsParams>,
+    ) -> Result<CallToolResult, McpError> {
         indicators::get_batch_indicators(p.0.symbols, p.0.interval, p.0.range).await
     }
 
@@ -356,123 +387,207 @@ impl FinanceTools {
         search::search(p.0.query).await
     }
 
-    #[tool(description = "Discover tickers filtered by type (equity, ETF, mutual fund, index, future, currency, cryptocurrency).")]
+    #[tool(
+        description = "Discover tickers filtered by type (equity, ETF, mutual fund, index, future, currency, cryptocurrency)."
+    )]
     async fn lookup(&self, p: Parameters<LookupParams>) -> Result<CallToolResult, McpError> {
         search::get_lookup(p.0.query, p.0.query_type).await
     }
 
-    #[tool(description = "Get results from a predefined stock screener (e.g., most-actives, day-gainers, undervalued-growth-stocks).")]
+    #[tool(
+        description = "Get results from a predefined stock screener (e.g., most-actives, day-gainers, undervalued-growth-stocks)."
+    )]
     async fn screener(&self, p: Parameters<ScreenerParams>) -> Result<CallToolResult, McpError> {
         search::screener(p.0.screener_type, p.0.count).await
     }
 
-    #[tool(description = "Get recent news. If a symbol is provided, returns news for that stock; otherwise returns general market news.")]
+    #[tool(
+        description = "Get recent news. If a symbol is provided, returns news for that stock; otherwise returns general market news."
+    )]
     async fn get_news(&self, p: Parameters<NewsParams>) -> Result<CallToolResult, McpError> {
         news::get_news(p.0.symbol).await
     }
 
-    #[tool(description = "Fetch RSS/Atom news from financial publishers (Bloomberg, WSJ, MarketWatch, FT, SEC, etc.).")]
+    #[tool(
+        description = "Fetch RSS/Atom news from financial publishers (Bloomberg, WSJ, MarketWatch, FT, SEC, etc.)."
+    )]
     async fn get_feeds(&self, p: Parameters<FeedsParams>) -> Result<CallToolResult, McpError> {
         feeds::get_feeds(p.0.sources).await
     }
 
     #[tool(description = "Get market overview with major indices and currencies for a region.")]
-    async fn get_market_summary(&self, p: Parameters<MarketSummaryParams>) -> Result<CallToolResult, McpError> {
+    async fn get_market_summary(
+        &self,
+        p: Parameters<MarketSummaryParams>,
+    ) -> Result<CallToolResult, McpError> {
         market::get_market_summary(p.0.region).await
     }
 
-    #[tool(description = "Get the CNN Fear & Greed Index — market sentiment from extreme fear (0) to extreme greed (100).")]
+    #[tool(
+        description = "Get the CNN Fear & Greed Index — market sentiment from extreme fear (0) to extreme greed (100)."
+    )]
     async fn get_fear_and_greed(&self) -> Result<CallToolResult, McpError> {
         market::get_fear_and_greed().await
     }
 
     #[tool(description = "Get currently trending stock tickers for a region.")]
-    async fn get_trending(&self, p: Parameters<TrendingParams>) -> Result<CallToolResult, McpError> {
+    async fn get_trending(
+        &self,
+        p: Parameters<TrendingParams>,
+    ) -> Result<CallToolResult, McpError> {
         market::get_trending(p.0.region).await
     }
 
-    #[tool(description = "Get world market indices (S&P 500, DAX, Nikkei, etc.), optionally filtered by region.")]
+    #[tool(
+        description = "Get world market indices (S&P 500, DAX, Nikkei, etc.), optionally filtered by region."
+    )]
     async fn get_indices(&self, p: Parameters<IndicesParams>) -> Result<CallToolResult, McpError> {
         market::get_indices(p.0.region).await
     }
 
     #[tool(description = "Get current market hours and open/closed status for a region.")]
-    async fn get_market_hours(&self, p: Parameters<MarketHoursParams>) -> Result<CallToolResult, McpError> {
+    async fn get_market_hours(
+        &self,
+        p: Parameters<MarketHoursParams>,
+    ) -> Result<CallToolResult, McpError> {
         market::get_market_hours(p.0.region).await
     }
 
-    #[tool(description = "Get comprehensive sector data (overview, performance, top companies, ETFs) for one of the 11 GICS sectors.")]
+    #[tool(
+        description = "Get comprehensive sector data (overview, performance, top companies, ETFs) for one of the 11 GICS sectors."
+    )]
     async fn get_sector(&self, p: Parameters<SectorParams>) -> Result<CallToolResult, McpError> {
         market::get_sector(p.0.sector).await
     }
 
-    #[tool(description = "Get comprehensive industry data (overview, performance, top companies) for a specific industry slug.")]
-    async fn get_industry(&self, p: Parameters<IndustryParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get comprehensive industry data (overview, performance, top companies) for a specific industry slug."
+    )]
+    async fn get_industry(
+        &self,
+        p: Parameters<IndustryParams>,
+    ) -> Result<CallToolResult, McpError> {
         market::get_industry(p.0.industry).await
     }
 
-    #[tool(description = "Get dividend history and analytics (CAGR, average payment, payout count) for a dividend-paying stock.")]
-    async fn get_dividends(&self, p: Parameters<DividendsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get dividend history and analytics (CAGR, average payment, payout count) for a dividend-paying stock."
+    )]
+    async fn get_dividends(
+        &self,
+        p: Parameters<DividendsParams>,
+    ) -> Result<CallToolResult, McpError> {
         dividends::get_dividends(p.0.symbol, p.0.range).await
     }
 
-    #[tool(description = "Get dividend history for multiple symbols in one request. Use for portfolio income analysis.")]
-    async fn get_batch_dividends(&self, p: Parameters<BatchDividendsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get dividend history for multiple symbols in one request. Use for portfolio income analysis."
+    )]
+    async fn get_batch_dividends(
+        &self,
+        p: Parameters<BatchDividendsParams>,
+    ) -> Result<CallToolResult, McpError> {
         dividends::get_batch_dividends(p.0.symbols, p.0.range).await
     }
 
-    #[tool(description = "Get ownership data for a stock: major holders, institutional/fund ownership, or insider activity.")]
+    #[tool(
+        description = "Get ownership data for a stock: major holders, institutional/fund ownership, or insider activity."
+    )]
     async fn get_holders(&self, p: Parameters<HoldersParams>) -> Result<CallToolResult, McpError> {
         analysis::get_holders(p.0.symbol, p.0.holder_type).await
     }
 
-    #[tool(description = "Get analyst data for a stock: recommendation trends, upgrades/downgrades, earnings estimates, or earnings history.")]
-    async fn get_analysis(&self, p: Parameters<AnalysisParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get analyst data for a stock: recommendation trends, upgrades/downgrades, earnings estimates, or earnings history."
+    )]
+    async fn get_analysis(
+        &self,
+        p: Parameters<AnalysisParams>,
+    ) -> Result<CallToolResult, McpError> {
         analysis::get_analysis(p.0.symbol, p.0.analysis_type).await
     }
 
-    #[tool(description = "Get SEC EDGAR XBRL structured financial data (all reported accounting concepts) for a company. Requires EDGAR_EMAIL env var.")]
-    async fn get_edgar_facts(&self, p: Parameters<SymbolParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get SEC EDGAR XBRL structured financial data (all reported accounting concepts) for a company. Requires EDGAR_EMAIL env var."
+    )]
+    async fn get_edgar_facts(
+        &self,
+        p: Parameters<SymbolParams>,
+    ) -> Result<CallToolResult, McpError> {
         edgar::get_edgar_facts(p.0.symbol).await
     }
 
-    #[tool(description = "Get SEC filing history and company metadata from EDGAR (up to 1000 most recent filings). Requires EDGAR_EMAIL env var.")]
-    async fn get_edgar_submissions(&self, p: Parameters<SymbolParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get SEC filing history and company metadata from EDGAR (up to 1000 most recent filings). Requires EDGAR_EMAIL env var."
+    )]
+    async fn get_edgar_submissions(
+        &self,
+        p: Parameters<SymbolParams>,
+    ) -> Result<CallToolResult, McpError> {
         edgar::get_edgar_submissions(p.0.symbol).await
     }
 
-    #[tool(description = "Full-text search across SEC EDGAR filings with optional form type and date filters. Requires EDGAR_EMAIL env var.")]
-    async fn get_edgar_search(&self, p: Parameters<EdgarSearchParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Full-text search across SEC EDGAR filings with optional form type and date filters. Requires EDGAR_EMAIL env var."
+    )]
+    async fn get_edgar_search(
+        &self,
+        p: Parameters<EdgarSearchParams>,
+    ) -> Result<CallToolResult, McpError> {
         edgar::get_edgar_search(p.0.query, p.0.forms, p.0.start_date, p.0.end_date).await
     }
 
-    #[tool(description = "Get risk analytics: VaR (95/99%), Sharpe/Sortino/Calmar ratios, beta, and maximum drawdown for a symbol.")]
+    #[tool(
+        description = "Get risk analytics: VaR (95/99%), Sharpe/Sortino/Calmar ratios, beta, and maximum drawdown for a symbol."
+    )]
     async fn get_risk(&self, p: Parameters<RiskParams>) -> Result<CallToolResult, McpError> {
         risk::get_risk(p.0.symbol, p.0.interval, p.0.range, p.0.benchmark).await
     }
 
-    #[tool(description = "Get top cryptocurrency coins by market cap from CoinGecko (no API key required).")]
-    async fn get_crypto_coins(&self, p: Parameters<CryptoParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get top cryptocurrency coins by market cap from CoinGecko (no API key required)."
+    )]
+    async fn get_crypto_coins(
+        &self,
+        p: Parameters<CryptoParams>,
+    ) -> Result<CallToolResult, McpError> {
         crypto::get_crypto_coins(p.0.count, p.0.vs_currency).await
     }
 
-    #[tool(description = "Get the options chain for a symbol. Provide an expiration timestamp to get a specific expiry, or omit for the nearest expiration.")]
+    #[tool(
+        description = "Get the options chain for a symbol. Provide an expiration timestamp to get a specific expiry, or omit for the nearest expiration."
+    )]
     async fn get_options(&self, p: Parameters<OptionsParams>) -> Result<CallToolResult, McpError> {
         options::get_options(p.0.symbol, p.0.expiration).await
     }
 
-    #[tool(description = "Get FRED macroeconomic time series data (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE). Requires FRED_API_KEY env var.")]
-    async fn get_fred_series(&self, p: Parameters<FredSeriesParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get FRED macroeconomic time series data (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE). Requires FRED_API_KEY env var."
+    )]
+    async fn get_fred_series(
+        &self,
+        p: Parameters<FredSeriesParams>,
+    ) -> Result<CallToolResult, McpError> {
         fred::get_fred_series(p.0.id).await
     }
 
-    #[tool(description = "Get US Treasury yield curve data (1m through 30y) for a given year. No API key required.")]
-    async fn get_treasury_yields(&self, p: Parameters<TreasuryYieldsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get US Treasury yield curve data (1m through 30y) for a given year. No API key required."
+    )]
+    async fn get_treasury_yields(
+        &self,
+        p: Parameters<TreasuryYieldsParams>,
+    ) -> Result<CallToolResult, McpError> {
         fred::get_treasury_yields(p.0.year).await
     }
 
-    #[tool(description = "Get earnings call transcripts for a company. Returns the full text of earnings presentations.")]
-    async fn get_transcripts(&self, p: Parameters<TranscriptsParams>) -> Result<CallToolResult, McpError> {
+    #[tool(
+        description = "Get earnings call transcripts for a company. Returns the full text of earnings presentations."
+    )]
+    async fn get_transcripts(
+        &self,
+        p: Parameters<TranscriptsParams>,
+    ) -> Result<CallToolResult, McpError> {
         transcripts::get_transcripts(p.0.symbol, p.0.limit).await
     }
 }

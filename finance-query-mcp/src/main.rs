@@ -60,8 +60,7 @@ async fn start_stdio(handler: FinanceTools) -> Result<()> {
 async fn start_http(addr: String, _handler: FinanceTools) -> Result<()> {
     use axum::{Router, routing::get};
     use rmcp::transport::streamable_http_server::{
-        StreamableHttpService, StreamableHttpServerConfig,
-        session::local::LocalSessionManager,
+        StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
     };
 
     info!("Starting MCP server (HTTP transport) on {addr}");

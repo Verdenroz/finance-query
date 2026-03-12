@@ -51,5 +51,7 @@ pub async fn get_feeds(sources: Option<String>) -> Result<CallToolResult, McpErr
     };
     let entries = feeds::fetch_all(&feed_sources).await.map_err(finance_err)?;
     let json = serde_json::to_string(&entries).map_err(ser_err)?;
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }

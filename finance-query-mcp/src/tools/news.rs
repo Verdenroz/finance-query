@@ -1,4 +1,4 @@
-use finance_query::{finance, Ticker};
+use finance_query::{Ticker, finance};
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::{finance_err, ser_err};
@@ -15,5 +15,7 @@ pub async fn get_news(symbol: Option<String>) -> Result<CallToolResult, McpError
             serde_json::to_string(&news).map_err(ser_err)?
         }
     };
-    Ok(CallToolResult::success(vec![rmcp::model::Content::text(json)]))
+    Ok(CallToolResult::success(vec![rmcp::model::Content::text(
+        json,
+    )]))
 }
