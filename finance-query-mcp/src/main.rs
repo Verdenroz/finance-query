@@ -76,8 +76,8 @@ async fn start_http(addr: String, _handler: FinanceTools) -> Result<()> {
     );
 
     let router = Router::new()
-        .nest_service("/", service)
-        .route("/health", get(|| async { "ok" }));
+        .route("/health", get(|| async { "ok" }))
+        .fallback_service(service);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("Listening on http://{addr}/");
 

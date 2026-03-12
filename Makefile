@@ -1,5 +1,5 @@
 .PHONY: help serve install install-dev build test test-fast lint fix audit docs docker docker-compose docker-compose-down clean publish-dry-run \
-        prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html mcp mcp-http build-mcp
+        prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html generate-mcp-html mcp mcp-http build-mcp
 
 # Default target
 .DEFAULT_GOAL := help
@@ -173,6 +173,7 @@ endif
 	@echo "  - server/asyncapi.yaml"
 	@echo "  - docs/server/openapi-html/index.html"
 	@echo "  - docs/server/asyncapi-html/index.html"
+	@echo "  - docs/server/mcp-html/index.html"
 
 bump-cli: ## Bump version for CLI only (usage: make bump-cli VERSION=x.y.z)
 ifndef VERSION
@@ -223,3 +224,18 @@ html = """<!DOCTYPE html>\n\
 open("docs/server/openapi-html/index.html", "w").write(html)'
 	@echo "$(GREEN)Generating AsyncAPI HTML...$(NC)"
 	@npx -y @asyncapi/generator@2 server/asyncapi.yaml @asyncapi/html-template -o docs/server/asyncapi-html -p singleFile=true --force-write
+	@echo "$(GREEN)Generating MCP tools HTML...$(NC)"
+	@$(MAKE) -s generate-mcp-html
+
+generate-mcp-html: ## Generate MCP tools reference HTML from live server
+	@mkdir -p docs/server/mcp-html; \
+	MCP_TRANSPORT=http MCP_ADDR=127.0.0.1:13337 $(CARGO) run -p finance-query-mcp --quiet 2>/dev/null & \
+	MCP_PID=$$!; \
+	for i in $$(seq 1 15); do sleep 1; curl -sf http://127.0.0.1:13337/health >/dev/null 2>&1 && break; done; \
+	curl -s -X POST http://127.0.0.1:13337/ \
+	    -H 'Content-Type: application/json' \
+	    -H 'Accept: application/json, text/event-stream' \
+	    -d '{"jsonrpc":"2.0","method":"tools/list","id":1}' \
+	| python3 docs/server/generate-mcp-html.py > docs/server/mcp-html/index.html; \
+	STATUS=$$?; kill $$MCP_PID 2>/dev/null; exit $$STATUS
+	@echo "$(GREEN)✓ MCP tools HTML written to docs/server/mcp-html/index.html$(NC)"
