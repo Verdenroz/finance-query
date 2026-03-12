@@ -61,6 +61,7 @@
 
     # MCP Server (Model Context Protocol — for AI agents)
     handle /mcp* {
+        uri strip_prefix /mcp
         reverse_proxy finance-query-mcp:3000
     }
 

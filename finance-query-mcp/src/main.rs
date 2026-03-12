@@ -76,10 +76,10 @@ async fn start_http(addr: String, _handler: FinanceTools) -> Result<()> {
     );
 
     let router = Router::new()
-        .nest_service("/mcp", service)
+        .nest_service("/", service)
         .route("/health", get(|| async { "ok" }));
     let listener = tokio::net::TcpListener::bind(&addr).await?;
-    info!("Listening on http://{addr}/mcp");
+    info!("Listening on http://{addr}/");
 
     axum::serve(listener, router)
         .with_graceful_shutdown(async {
