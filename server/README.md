@@ -1,8 +1,8 @@
 # finance-query-server
 
-HTTP REST API and WebSocket server for financial data. Built on the [finance-query](https://crates.io/crates/finance-query) library.
+HTTP REST API, WebSocket, and GraphQL server for financial data. Built on the [finance-query](https://crates.io/crates/finance-query) library.
 
-A hosted version is available at [finance-query.com](https://finance-query.com).
+A hosted version is available at [finance-query.com](https://finance-query.com). For AI agent integration, see the [MCP server](../finance-query-mcp/README.md).
 
 ## Running
 
@@ -99,6 +99,14 @@ Requires `EDGAR_EMAIL` environment variable.
 | Route | Description |
 |-------|-------------|
 | `WS /v2/stream` | Real-time price streaming |
+
+### GraphQL
+
+| Route | Description |
+|-------|-------------|
+| `POST /graphql` | Execute queries and mutations |
+| `GET /graphql` | GraphiQL interactive playground |
+| `WS /graphql/ws` | Subscription endpoint (graphql-ws protocol) |
 
 ### Infrastructure
 

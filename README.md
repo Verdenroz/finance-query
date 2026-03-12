@@ -21,13 +21,21 @@ curl "https://finance-query.com/v2/quote/AAPL"
 
 # Real-time streaming
 wscat -c "wss://finance-query.com/v2/stream"
+
+# GraphQL — interactive playground
+open "https://finance-query.com/graphql"
+
+# MCP — for AI agents (Claude, Cursor, Windsurf, etc.)
+# Add to your MCP client config:
+# { "url": "https://finance-query.com/mcp" }
 ```
 
 ## What's in This Repository
 
 - **Library** (`finance-query`) - Core logic
 - **CLI** (`finance-query-cli`) - Command-line tool for market data, technical analysis, and backtesting
-- **Server** (`finance-query-server`) - HTTP REST API and WebSocket server
+- **Server** (`finance-query-server`) - HTTP REST API, WebSocket, and GraphQL server
+- **MCP Server** (`finance-query-mcp`) - 36 MCP tools for AI agents (Claude, Cursor, Windsurf, etc.)
 - **Derive Macros** (`finance-query-derive`) - Procedural macros for Polars DataFrame integration
 
 ## Quick Start
@@ -169,7 +177,8 @@ The v2 server provides REST endpoints at `/v2/*` and WebSocket streaming at `/v2
 **Package guides:**
 
 - [CLI](finance-query-cli/README.md) - Command-line tool with examples, installation, and features
-- [Server](server/README.md) - REST API and WebSocket server setup and endpoints
+- [Server](server/README.md) - REST API, WebSocket, and GraphQL server setup and endpoints
+- [MCP Server](finance-query-mcp/README.md) - AI agent integration (36 tools, hosted at `finance-query.com/mcp`)
 - [Derive Macros](finance-query-derive/README.md) - Procedural macros for Polars DataFrame support
 
 **Full documentation at [verdenroz.github.io/finance-query](https://verdenroz.github.io/finance-query):**
@@ -181,6 +190,8 @@ The v2 server provides REST endpoints at `/v2/*` and WebSocket streaming at `/v2
 - [Finance Module](https://verdenroz.github.io/finance-query/library/finance/) - Market-wide data
 - [REST API Reference](https://verdenroz.github.io/finance-query/server/api-reference/)
 - [WebSocket API](https://verdenroz.github.io/finance-query/server/websocket-api-reference/)
+- [GraphQL API Reference](https://finance-query.com/graphql)
+- [MCP Tools Reference](https://verdenroz.github.io/finance-query/server/mcp-reference/)
 - [Contributing](https://verdenroz.github.io/finance-query/development/contributing/)
 
 **API Documentation:**
