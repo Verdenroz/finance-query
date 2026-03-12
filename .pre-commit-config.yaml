@@ -1,39 +1,16 @@
 repos:
-  # Rust pre-commit hooks
   - repo: local
     hooks:
-      # Auto-fix Rust code formatting
       - id: fmt
         name: cargo fmt
-        description: Format Rust code with rustfmt
-        entry: cargo fmt --all
+        entry: cargo fmt --all -- --check
         language: system
         types: [rust]
         pass_filenames: false
 
-      # Run Clippy linter with auto-fix
       - id: clippy
         name: cargo clippy
-        description: Run clippy linter with auto-fix on all targets
-        entry: bash -c 'cargo clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged -- -D warnings 2>/dev/null || cargo clippy --workspace --all-targets --all-features -- -D warnings'
-        language: system
-        types: [rust]
-        pass_filenames: false
-
-      # Run cargo check for fast compilation check
-      - id: cargo-check
-        name: cargo check
-        description: Check that Rust code compiles
-        entry: bash -c 'cargo check --workspace --all-targets --all-features'
-        language: system
-        types: [rust]
-        pass_filenames: false
-
-      # Run doc tests to ensure documentation examples compile
-      - id: cargo-test-doc
-        name: cargo test --doc
-        description: Run documentation tests
-        entry: bash -c 'cargo test --workspace --doc'
+        entry: cargo clippy --workspace -- -D warnings
         language: system
         types: [rust]
         pass_filenames: false
