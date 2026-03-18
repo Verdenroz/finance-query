@@ -627,6 +627,18 @@ impl Ticker {
             }
         }
 
+        // For intraday intervals with ranges that exceed Yahoo's native support, bypass
+        // get_chart entirely and use chart_range so chunking is applied automatically.
+        if let Some((max_secs, native_ranges)) = crate::endpoints::chart::intraday_limit(interval)
+            && !native_ranges.contains(&range)
+        {
+            // Small buffer so the request window is strictly inside the hard limit.
+            const RANGE_BOUNDARY_BUFFER_SECS: i64 = 5;
+            let end = crate::utils::now_unix_secs();
+            let start = end - max_secs + RANGE_BOUNDARY_BUFFER_SECS;
+            return self.chart_range(interval, start, end).await;
+        }
+
         // Fetch from Yahoo
         let json = self.client.get_chart(&self.symbol, interval, range).await?;
         let chart_result = Self::parse_chart_result(json, &self.symbol)?;
@@ -693,6 +705,8 @@ impl Ticker {
     /// this method accepts absolute start/end timestamps for precise date control.
     ///
     /// Results are **not cached** since custom ranges have unbounded key space.
+    /// For intraday intervals whose span exceeds Yahoo's per-request limit, the
+    /// range is automatically split into parallel chunks and merged transparently.
     ///
     /// # Arguments
     ///
@@ -721,6 +735,22 @@ impl Ticker {
     /// # }
     /// ```
     pub async fn chart_range(&self, interval: Interval, start: i64, end: i64) -> Result<Chart> {
+        if start >= end {
+            return Err(crate::error::FinanceError::InvalidParameter {
+                param: "end".to_string(),
+                reason: format!("`end` ({end}) must be greater than `start` ({start})"),
+            });
+        }
+
+        // Auto-chunk when the span exceeds Yahoo's per-request limit for this interval
+        if let Some(chunk_secs) = crate::endpoints::chart::intraday_chunk_secs(interval)
+            && end - start > chunk_secs
+        {
+            return self
+                .chart_range_chunked(interval, start, end, chunk_secs)
+                .await;
+        }
+
         let json = self
             .client
             .get_chart_range(&self.symbol, interval, start, end)
@@ -737,6 +767,100 @@ impl Ticker {
             symbol: self.symbol.to_string(),
             meta: chart_result.meta.clone(),
             candles: chart_result.to_candles(),
+            interval: Some(interval),
+            range: None,
+        })
+    }
+
+    /// Fetch a large intraday date range by splitting it into parallel chunks.
+    ///
+    /// Yahoo Finance rejects requests with a span > ~8 days for sub-hour intervals.
+    /// This splits the window into `chunk_secs`-sized slices, fetches them concurrently,
+    /// and merges the candles (sorted, deduplicated by timestamp).
+    async fn chart_range_chunked(
+        &self,
+        interval: Interval,
+        start: i64,
+        end: i64,
+        chunk_secs: i64,
+    ) -> Result<Chart> {
+        // Build chunk boundaries
+        let mut chunks: Vec<(i64, i64)> = Vec::new();
+        let mut s = start;
+        while s < end {
+            chunks.push((s, (s + chunk_secs).min(end)));
+            s += chunk_secs;
+        }
+
+        // Fetch all chunks in parallel
+        let fetches: Vec<_> = chunks
+            .iter()
+            .map(|&(s, e)| self.client.get_chart_range(&self.symbol, interval, s, e))
+            .collect();
+
+        let results = futures::future::join_all(fetches).await;
+
+        // Parse and merge
+        let mut all_candles: Vec<crate::models::chart::Candle> = Vec::new();
+        let mut base_meta: Option<crate::models::chart::ChartMeta> = None;
+        let mut accumulated_events: Option<crate::models::chart::events::ChartEvents> = None;
+
+        for result in results {
+            // Skip empty chunks (e.g. weekend/holiday windows) rather than failing the whole call
+            let json = match result {
+                Ok(j) => j,
+                Err(e) => {
+                    tracing::warn!("Skipping failed chunk for {}: {}", self.symbol, e);
+                    continue;
+                }
+            };
+            let chart_result = match Self::parse_chart_result(json, &self.symbol) {
+                Ok(r) => r,
+                Err(e) => {
+                    tracing::warn!("Skipping unparseable chunk for {}: {}", self.symbol, e);
+                    continue;
+                }
+            };
+
+            if base_meta.is_none() {
+                base_meta = Some(chart_result.meta.clone());
+            }
+
+            // Accumulate events across all chunks — each chunk covers only its own window,
+            // so events (dividends, splits) may appear in any chunk.
+            let candles = chart_result.to_candles();
+            if let Some(events) = chart_result.events {
+                match &mut accumulated_events {
+                    None => accumulated_events = Some(events),
+                    Some(acc) => {
+                        acc.dividends.extend(events.dividends);
+                        acc.splits.extend(events.splits);
+                        acc.capital_gains.extend(events.capital_gains);
+                    }
+                }
+            }
+            all_candles.extend(candles);
+        }
+
+        // Write merged events cache once after all chunks are processed
+        if let Some(events) = accumulated_events {
+            let mut events_cache = self.events_cache.write().await;
+            *events_cache = Some(CacheEntry::new(events));
+        }
+
+        // Sort and deduplicate (chunk boundaries may overlap by one candle)
+        all_candles.sort_unstable_by_key(|c| c.timestamp);
+        all_candles.dedup_by_key(|c| c.timestamp);
+
+        let meta = base_meta.ok_or_else(|| crate::error::FinanceError::SymbolNotFound {
+            symbol: Some(self.symbol.to_string()),
+            context: "No chart data returned across all chunks".to_string(),
+        })?;
+
+        Ok(Chart {
+            symbol: self.symbol.to_string(),
+            meta,
+            candles: all_candles,
             interval: Some(interval),
             range: None,
         })
