@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.1] - 2026-03-18
+
+### Added
+
+- **`Ticker::chart_range(interval, start, end)`** — fetch chart data using absolute Unix timestamps instead of a named `TimeRange`
+  - Auto-chunking: intraday intervals (1m/5m/15m/30m/1h) that exceed Yahoo Finance's native window are automatically split into 7-day chunks, fetched in parallel, and merged (sorted + deduplicated, events accumulated across all chunks)
+  - Parameter validation: returns `InvalidParameter` if `start >= end`
+
+### Fixed
+
+- `range_to_cutoff` no longer panics on missing cutoff values — `.unwrap()` replaced with safe fallback
+
 ## [2.4.0] - 2026-03-09
 
 ### Added
