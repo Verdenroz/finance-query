@@ -174,21 +174,39 @@ impl GqlTicker {
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
+    // async-graphql requires each field to be an explicit function parameter, preventing a params struct
+    #[allow(clippy::too_many_arguments)]
     async fn chart(
         &self,
         ctx: &Context<'_>,
         #[graphql(default_with = "GqlInterval::OneDay")] interval: super::types::enums::GqlInterval,
         #[graphql(default_with = "GqlTimeRange::OneMonth")]
         range: super::types::enums::GqlTimeRange,
+        #[graphql(
+            desc = "Start date as Unix timestamp (seconds). When provided, overrides `range`."
+        )]
+        start: Option<i64>,
+        #[graphql(
+            desc = "End date as Unix timestamp (seconds). Defaults to now when `start` is set."
+        )]
+        end: Option<i64>,
         #[graphql(default)] events: bool,
         #[graphql(default)] patterns: bool,
     ) -> Result<super::types::chart::GqlChart> {
         let state = ctx.data::<AppState>()?;
+        if start.is_none() && end.is_some() {
+            return Err(async_graphql::Error::new(
+                "`end` requires `start` to be set",
+            ));
+        }
+
         let json = crate::services::chart::get_chart(
             &state.cache,
             &self.symbol,
             interval.into(),
             range.into(),
+            start,
+            end,
             events,
             patterns,
         )
