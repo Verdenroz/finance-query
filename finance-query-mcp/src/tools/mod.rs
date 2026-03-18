@@ -43,8 +43,12 @@ pub struct ChartParams {
     pub symbol: String,
     /// Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)
     pub interval: Option<String>,
-    /// Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)
+    /// Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo). Ignored when `start` is set.
     pub range: Option<String>,
+    /// Start date as Unix timestamp (seconds). When provided, overrides `range`.
+    pub start: Option<i64>,
+    /// End date as Unix timestamp (seconds). Defaults to now when `start` is set.
+    pub end: Option<i64>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -319,7 +323,7 @@ impl FinanceTools {
 
     #[tool(description = "Get historical OHLCV candlestick chart data for a symbol.")]
     async fn get_chart(&self, p: Parameters<ChartParams>) -> Result<CallToolResult, McpError> {
-        chart::get_chart(p.0.symbol, p.0.interval, p.0.range).await
+        chart::get_chart(p.0.symbol, p.0.interval, p.0.range, p.0.start, p.0.end).await
     }
 
     #[tool(

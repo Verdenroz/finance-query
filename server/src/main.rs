@@ -315,6 +315,11 @@ struct ChartQuery {
     interval: String,
     #[serde(default = "default_range")]
     range: String,
+    /// Start date as Unix timestamp (seconds). When provided together with `end`,
+    /// overrides `range` and uses absolute date boundaries.
+    start: Option<i64>,
+    /// End date as Unix timestamp (seconds). Defaults to now when `start` is set.
+    end: Option<i64>,
     /// Include events (dividends, splits, capital gains) in response
     #[serde(default)]
     events: bool,
@@ -1611,30 +1616,39 @@ async fn get_recommendations(
 
 /// GET /v2/chart/{symbol}
 ///
-/// Query: `interval` (str, default via `DEFAULT_INTERVAL`), `range` (str, default via `DEFAULT_RANGE`), `events` (bool, default false)
+/// Query: `interval`, `range`, `start` (Unix ts), `end` (Unix ts), `events`, `patterns`, `fields`.
+/// When `start` is provided it overrides `range` and uses absolute date boundaries.
 async fn get_chart(
     Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<ChartQuery>,
 ) -> impl IntoResponse {
     let interval = parse_interval(&params.interval);
-    let range = parse_range(&params.range);
     let fields = parse_fields(params.fields.as_deref());
     info!(
         "Fetching chart data for {} (events={}, patterns={}, fields={:?})",
         symbol, params.events, params.patterns, params.fields
     );
 
-    match services::chart::get_chart(
+    if params.start.is_none() && params.end.is_some() {
+        let error = serde_json::json!({"error": "`end` requires `start` to be set", "status": 400});
+        return (StatusCode::BAD_REQUEST, Json(error)).into_response();
+    }
+
+    let range = parse_range(&params.range);
+    let result = services::chart::get_chart(
         &state.cache,
         &symbol,
         interval,
         range,
+        params.start,
+        params.end,
         params.events,
         params.patterns,
     )
-    .await
-    {
+    .await;
+
+    match result {
         Ok(json) => {
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()

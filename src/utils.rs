@@ -4,6 +4,15 @@ use crate::constants::TimeRange;
 use crate::models::chart::{CapitalGain, Dividend, Split};
 use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
+/// Returns the current time as Unix timestamp in seconds.
+#[inline]
+pub(crate) fn now_unix_secs() -> i64 {
+    SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs() as i64
+}
+
 /// Maximum number of entries before we trigger a stale-entry eviction sweep.
 ///
 /// Eviction only runs when the map exceeds this size, amortizing the O(n)
@@ -76,10 +85,7 @@ impl HasTimestamp for CapitalGain {
 
 /// Calculate cutoff timestamp for a given time range
 pub(crate) fn range_to_cutoff(range: TimeRange) -> i64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_secs() as i64;
+    let now = now_unix_secs();
 
     const DAY: i64 = 86400;
 
