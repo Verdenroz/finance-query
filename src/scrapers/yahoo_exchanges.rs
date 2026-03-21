@@ -22,6 +22,14 @@ pub async fn scrape_exchanges() -> Result<Vec<Exchange>> {
         .map_err(FinanceError::HttpError)?;
 
     let response = client.get(EXCHANGES_URL).send().await?;
+
+    if !response.status().is_success() {
+        return Err(FinanceError::ServerError {
+            status: response.status().as_u16(),
+            context: "Failed to fetch exchanges page".to_string(),
+        });
+    }
+
     let html = response.text().await?;
 
     parse_exchanges_html(&html)
