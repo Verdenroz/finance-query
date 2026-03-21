@@ -41,8 +41,9 @@ pub(crate) async fn get_quartr_id(client: &YahooClient, symbol: &str) -> Result<
 
     data.quote_type
         .result
-        .first()
-        .and_then(|r| r.quartr_id.clone())
+        .into_iter()
+        .next()
+        .and_then(|r| r.quartr_id)
         .ok_or_else(|| FinanceError::ResponseStructureError {
             field: "quartrId".to_string(),
             context: format!("No quartrId found for symbol {}", symbol),
@@ -146,29 +147,29 @@ fn find_matching_call<'a>(
     year: Option<i32>,
 ) -> Result<&'a EarningsCall> {
     match (quarter, year) {
-        (Some(q), Some(y)) => {
-            let q_upper = q.to_uppercase();
-            calls
-                .iter()
-                .find(|c| {
-                    c.quarter.as_ref().map(|cq| cq.to_uppercase()) == Some(q_upper.clone())
-                        && c.year == Some(y)
-                })
-                .ok_or_else(|| FinanceError::ResponseStructureError {
-                    field: "earnings_call".to_string(),
-                    context: format!("No earnings call found for {} {}", q, y),
-                })
-        }
-        (Some(q), None) => {
-            let q_upper = q.to_uppercase();
-            calls
-                .iter()
-                .find(|c| c.quarter.as_ref().map(|cq| cq.to_uppercase()) == Some(q_upper.clone()))
-                .ok_or_else(|| FinanceError::ResponseStructureError {
-                    field: "earnings_call".to_string(),
-                    context: format!("No earnings call found for quarter {}", q),
-                })
-        }
+        (Some(q), Some(y)) => calls
+            .iter()
+            .find(|c| {
+                c.quarter
+                    .as_ref()
+                    .is_some_and(|cq| cq.eq_ignore_ascii_case(q))
+                    && c.year == Some(y)
+            })
+            .ok_or_else(|| FinanceError::ResponseStructureError {
+                field: "earnings_call".to_string(),
+                context: format!("No earnings call found for {} {}", q, y),
+            }),
+        (Some(q), None) => calls
+            .iter()
+            .find(|c| {
+                c.quarter
+                    .as_ref()
+                    .is_some_and(|cq| cq.eq_ignore_ascii_case(q))
+            })
+            .ok_or_else(|| FinanceError::ResponseStructureError {
+                field: "earnings_call".to_string(),
+                context: format!("No earnings call found for quarter {}", q),
+            }),
         (None, Some(y)) => calls.iter().find(|c| c.year == Some(y)).ok_or_else(|| {
             FinanceError::ResponseStructureError {
                 field: "earnings_call".to_string(),

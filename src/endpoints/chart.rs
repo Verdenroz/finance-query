@@ -7,6 +7,8 @@ use crate::constants::{Interval, TimeRange};
 use crate::error::Result;
 use tracing::info;
 
+const CHART_EVENTS: &str = "div|split|capitalGain";
+
 /// Yahoo Finance intraday limits (empirically verified).
 ///
 /// Returns `(max_lookback_secs, native_ranges)` for intervals that have restrictions:
@@ -100,7 +102,7 @@ pub async fn fetch(
     let params = [
         ("interval", interval.as_str()),
         ("range", range.as_str()),
-        ("events", "div|split|capitalGain"),
+        ("events", CHART_EVENTS),
     ];
     let response = client.request_with_params(&url, &params).await?;
 
@@ -142,7 +144,7 @@ pub async fn fetch_with_dates(
         ("interval", interval.as_str()),
         ("period1", start_str.as_str()),
         ("period2", end_str.as_str()),
-        ("events", "div|split|capitalGain"),
+        ("events", CHART_EVENTS),
     ];
     let response = client.request_with_params(&url, &params).await?;
 
