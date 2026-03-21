@@ -11,7 +11,7 @@ pub enum FinanceError {
     },
 
     /// The requested symbol was not found
-    #[error("Symbol not found: {}", symbol.as_ref().map(|s| s.as_str()).unwrap_or("unknown"))]
+    #[error("Symbol not found: {}", symbol.as_deref().unwrap_or("unknown"))]
     SymbolNotFound {
         /// The symbol that was not found
         symbol: Option<String>,
