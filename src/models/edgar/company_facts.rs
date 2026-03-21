@@ -171,23 +171,19 @@ impl FactConcept {
         use ::polars::prelude::*;
 
         // Collect all data points with their unit labels
-        let mut all_data: Vec<(String, FactUnit)> = Vec::new();
+        let mut units: Vec<String> = Vec::new();
+        let mut facts: Vec<FactUnit> = Vec::new();
         for (unit, data_points) in &self.units {
             for point in data_points {
-                all_data.push((unit.clone(), point.clone()));
+                units.push(unit.clone());
+                facts.push(point.clone());
             }
         }
 
-        if all_data.is_empty() {
+        if facts.is_empty() {
             // Return empty DataFrame with correct schema
             return Ok(DataFrame::empty());
         }
-
-        // Extract unit column
-        let units: Vec<String> = all_data.iter().map(|(u, _)| u.clone()).collect();
-
-        // Extract fact units (without unit field)
-        let facts: Vec<FactUnit> = all_data.into_iter().map(|(_, f)| f).collect();
 
         // Convert facts to DataFrame
         let mut df = FactUnit::vec_to_dataframe(&facts)?;

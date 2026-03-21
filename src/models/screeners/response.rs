@@ -108,13 +108,14 @@ impl ScreenerResults {
         let result = raw_response
             .finance
             .result
-            .first()
+            .into_iter()
+            .next()
             .ok_or_else(|| "No screener data in response".to_string())?;
 
         Ok(Self {
-            quotes: result.quotes.clone(),
-            screener_type: result.canonical_name.clone(),
-            description: result.description.clone(),
+            quotes: result.quotes,
+            screener_type: result.canonical_name,
+            description: result.description,
             last_updated: result.last_updated,
             total: None, // Predefined screeners don't provide total count
         })

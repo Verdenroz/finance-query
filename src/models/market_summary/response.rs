@@ -73,10 +73,8 @@ pub(crate) struct RawMarketSummaryResponse {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub(crate) struct MarketSummaryResult {
     pub result: Option<Vec<MarketSummaryQuote>>,
-    pub error: Option<serde_json::Value>,
 }
 
 impl MarketSummaryQuote {
