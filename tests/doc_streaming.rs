@@ -82,7 +82,7 @@ async fn test_builder_pattern() {
     // From streaming.md "Builder Pattern" section
     let stream = PriceStreamBuilder::new()
         .symbols(&["AAPL", "MSFT", "NVDA"])
-        .reconnect_delay(Duration::from_secs(5))
+        .retry(Duration::from_secs(5))
         .build()
         .await
         .unwrap();
