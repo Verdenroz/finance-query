@@ -660,10 +660,9 @@ impl Ticker {
 
         // Only clone when caching is enabled to avoid unnecessary allocations
         if self.cache_ttl.is_some() {
-            let ret = chart.clone();
             let mut cache = self.chart_cache.write().await;
-            self.cache_insert(&mut cache, (interval, range), chart);
-            Ok(ret)
+            self.cache_insert(&mut cache, (interval, range), chart.clone());
+            Ok(chart)
         } else {
             Ok(chart)
         }
@@ -1465,7 +1464,7 @@ impl Ticker {
         if self.cache_ttl.is_some() {
             let mut cache = self.recommendations_cache.write().await;
             *cache = Some(CacheEntry::new(response));
-            let entry = cache.as_ref().unwrap();
+            let entry = cache.as_ref().expect("just inserted");
             return Ok(self.build_recommendation_with_limit(&entry.value, limit));
         }
 
@@ -1544,8 +1543,10 @@ impl Ticker {
         // Check cache
         {
             let cache = self.news_cache.read().await;
-            if self.is_cache_fresh(cache.as_ref()) {
-                return Ok(cache.as_ref().unwrap().value.clone());
+            if let Some(entry) = cache.as_ref()
+                && self.is_cache_fresh(Some(entry))
+            {
+                return Ok(entry.value.clone());
             }
         }
 
@@ -1809,8 +1810,10 @@ impl Ticker {
         // Check cache
         {
             let cache = self.edgar_submissions_cache.read().await;
-            if self.is_cache_fresh(cache.as_ref()) {
-                return Ok(cache.as_ref().unwrap().value.clone());
+            if let Some(entry) = cache.as_ref()
+                && self.is_cache_fresh(Some(entry))
+            {
+                return Ok(entry.value.clone());
             }
         }
 
@@ -1855,8 +1858,10 @@ impl Ticker {
         // Check cache
         {
             let cache = self.edgar_facts_cache.read().await;
-            if self.is_cache_fresh(cache.as_ref()) {
-                return Ok(cache.as_ref().unwrap().value.clone());
+            if let Some(entry) = cache.as_ref()
+                && self.is_cache_fresh(Some(entry))
+            {
+                return Ok(entry.value.clone());
             }
         }
 
