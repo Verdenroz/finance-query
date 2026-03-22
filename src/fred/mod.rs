@@ -77,16 +77,7 @@ static FRED_SINGLETON: OnceLock<FredSingleton> = OnceLock::new();
 ///
 /// Returns [`FinanceError::InvalidParameter`] if already initialized.
 pub fn init(api_key: impl Into<String>) -> Result<()> {
-    FRED_SINGLETON
-        .set(FredSingleton {
-            api_key: api_key.into(),
-            timeout: Duration::from_secs(30),
-            limiter: Arc::new(RateLimiter::new(FRED_RATE_PER_SEC)),
-        })
-        .map_err(|_| FinanceError::InvalidParameter {
-            param: "fred".to_string(),
-            reason: "FRED client already initialized".to_string(),
-        })
+    init_with_timeout(api_key, Duration::from_secs(30))
 }
 
 /// Initialize the FRED client with a custom timeout.

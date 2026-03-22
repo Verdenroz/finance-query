@@ -3,6 +3,8 @@
 //! Fetches the daily Treasury yield curve from the US Treasury Department.
 //! No API key required. Data published daily on business days.
 
+use std::time::Duration;
+
 use crate::error::{FinanceError, Result};
 use crate::fred::models::TreasuryYield;
 use tracing::info;
@@ -20,17 +22,22 @@ pub(crate) async fn fetch_yields(year: u32) -> Result<Vec<TreasuryYield>> {
 
     info!("Fetching Treasury yields for {year}");
 
-    let resp = reqwest::get(&url).await.map_err(FinanceError::HttpError)?;
+    let resp = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?
+        .get(&url)
+        .send()
+        .await?;
 
-    let status = resp.status().as_u16();
-    if !resp.status().is_success() {
+    let status = resp.status();
+    if !status.is_success() {
         return Err(FinanceError::ExternalApiError {
             api: "US Treasury".to_string(),
-            status,
+            status: status.as_u16(),
         });
     }
 
-    let text = resp.text().await.map_err(FinanceError::HttpError)?;
+    let text = resp.text().await?;
     parse_csv(&text, year)
 }
 
