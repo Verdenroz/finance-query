@@ -33,6 +33,7 @@ use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::OnceLock;
+use std::time::Duration;
 
 use crate::error::{FinanceError, Result};
 
@@ -45,6 +46,8 @@ use crate::error::{FinanceError, Result};
 /// subsequent calls from a different runtime receive `DispatchGone`. Caching
 /// only the UA avoids this while still computing the environment lookup once.
 static FEED_UA: OnceLock<String> = OnceLock::new();
+
+const FEED_TIMEOUT_SECONDS: u64 = 30;
 
 fn feed_user_agent() -> &'static str {
     FEED_UA.get_or_init(|| {
@@ -73,6 +76,7 @@ fn feed_user_agent() -> &'static str {
 fn build_feed_client() -> reqwest::Client {
     reqwest::Client::builder()
         .user_agent(feed_user_agent())
+        .timeout(Duration::from_secs(FEED_TIMEOUT_SECONDS))
         .build()
         .expect("failed to build feeds HTTP client")
 }
