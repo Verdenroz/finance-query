@@ -18,8 +18,7 @@ pub async fn scrape_exchanges() -> Result<Vec<Exchange>> {
 
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
-        .build()
-        .map_err(FinanceError::HttpError)?;
+        .build()?;
 
     let response = client.get(EXCHANGES_URL).send().await?;
 

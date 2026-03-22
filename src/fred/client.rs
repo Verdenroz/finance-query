@@ -44,8 +44,7 @@ impl FredClientBuilder {
                 "finance-query/{} (https://github.com/Verdenroz/finance-query)",
                 env!("CARGO_PKG_VERSION")
             ))
-            .build()
-            .map_err(FinanceError::HttpError)?;
+            .build()?;
 
         Ok(FredClient {
             api_key: self.api_key,
@@ -73,12 +72,7 @@ impl FredClient {
         );
 
         debug!("FRED request: series_id={series_id}");
-        let resp = self
-            .http
-            .get(&url)
-            .send()
-            .await
-            .map_err(FinanceError::HttpError)?;
+        let resp = self.http.get(&url).send().await?;
 
         match resp.status() {
             StatusCode::OK => {}
@@ -107,7 +101,7 @@ impl FredClient {
             }
         }
 
-        let json: serde_json::Value = resp.json().await.map_err(FinanceError::HttpError)?;
+        let json: serde_json::Value = resp.json().await?;
 
         let observations = json
             .get("observations")

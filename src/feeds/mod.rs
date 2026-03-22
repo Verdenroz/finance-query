@@ -298,14 +298,7 @@ async fn fetch_with_client(
 ) -> Result<Vec<FeedEntry>> {
     let source = source_name.to_string();
 
-    let text = client
-        .get(url)
-        .send()
-        .await
-        .map_err(FinanceError::HttpError)?
-        .text()
-        .await
-        .map_err(FinanceError::HttpError)?;
+    let text = client.get(url).send().await?.text().await?;
 
     let feed = parser::parse(text.as_bytes()).map_err(|e| FinanceError::FeedParseError {
         url: url.to_string(),

@@ -37,11 +37,8 @@ pub use models::CoinQuote;
 static COINGECKO_CLIENT: OnceLock<CoinGeckoClient> = OnceLock::new();
 
 fn client() -> Result<&'static CoinGeckoClient> {
-    // Lazy init: no user-facing `init()` required since no key is needed.
     if COINGECKO_CLIENT.get().is_none() {
-        let c = CoinGeckoClient::new()?;
-        // Ignore error if another thread already set it
-        let _ = COINGECKO_CLIENT.set(c);
+        let _ = COINGECKO_CLIENT.set(CoinGeckoClient::new()?);
     }
     Ok(COINGECKO_CLIENT.get().expect("just set above"))
 }
