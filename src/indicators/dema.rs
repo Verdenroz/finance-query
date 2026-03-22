@@ -52,15 +52,14 @@ pub fn dema(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
     let ema2 = ema(&valid_ema1, period);
 
     let mut result = vec![None; data.len()];
+    let offset = period - 1;
 
-    for i in 0..data.len() {
-        if i >= period - 1 {
-            let j = i - (period - 1);
-            if j < ema2.len()
-                && let (Some(e1), Some(e2)) = (ema1[i], ema2[j])
-            {
-                result[i] = Some(2.0 * e1 - e2);
-            }
+    for i in offset..data.len() {
+        let j = i - offset;
+        if j < ema2.len()
+            && let (Some(e1), Some(e2)) = (ema1[i], ema2[j])
+        {
+            result[i] = Some(2.0 * e1 - e2);
         }
     }
 

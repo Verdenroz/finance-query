@@ -45,7 +45,7 @@ pub fn wma(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
     }
 
     let mut result = vec![None; period - 1];
-    let weight_sum: f64 = (1..=period).map(|i| i as f64).sum();
+    let weight_sum = (period * (period + 1) / 2) as f64;
 
     for i in (period - 1)..data.len() {
         let window = &data[(i + 1 - period)..=i];

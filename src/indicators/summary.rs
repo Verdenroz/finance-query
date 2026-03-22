@@ -6,6 +6,7 @@
 //! This module reuses the main indicator implementations and extracts the last value,
 //! ensuring consistency and eliminating code duplication.
 
+use super::last_value;
 use crate::Candle;
 use crate::indicators::{
     accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
@@ -14,14 +15,6 @@ use crate::indicators::{
     mcginley_dynamic, mfi, momentum, obv, parabolic_sar, roc, rsi, sma, stochastic, stochastic_rsi,
     supertrend, tema, true_range, vwap, vwma, williams_r, wma,
 };
-
-/// Extract the last non-None value from a time series.
-///
-/// Iterates from the end of the series to find the most recent valid value.
-#[inline]
-fn last_value(series: &[Option<f64>]) -> Option<f64> {
-    series.iter().rev().find_map(|&v| v)
-}
 
 /// Helper to extract last value from Result-returning indicators
 #[inline]
