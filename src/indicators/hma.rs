@@ -1,6 +1,6 @@
 //! Hull Moving Average (HMA) indicator.
 
-use super::{IndicatorError, Result, wma::wma};
+use super::{IndicatorError, Result, wma::wma_raw};
 
 /// Calculate Hull Moving Average (HMA).
 ///
@@ -46,39 +46,34 @@ pub fn hma(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
         ));
     }
 
-    let wma_half = wma(data, half_period)?;
-    let wma_full = wma(data, period)?;
+    // wma_raw eliminates 2 × Vec<Option<f64>>(N) and the Option-check collection loop
+    let half_raw = wma_raw(data, half_period); // len = N - (half_period - 1)
+    let full_raw = wma_raw(data, period); // len = N - (period - 1)
 
-    // Calculate 2 * WMA(n/2) - WMA(n)
-    // We collect valid values to pass to the next WMA
-    let mut valid_diff_series = Vec::with_capacity(data.len());
+    // Align: full_raw[k] → orig k + period-1; half_raw[k + shift] → same orig index
+    let shift = period - half_period;
+    let diff: Vec<f64> = full_raw
+        .iter()
+        .enumerate()
+        .map(|(k, &fv)| 2.0 * half_raw[k + shift] - fv)
+        .collect();
 
-    for i in 0..data.len() {
-        // Skip None values
-        if let (Some(wh), Some(wf)) = (wma_half[i], wma_full[i]) {
-            let val = 2.0 * wh - wf;
-            valid_diff_series.push(val);
-        }
-    }
-
-    if valid_diff_series.len() < sqrt_period {
+    if diff.len() < sqrt_period {
         return Err(IndicatorError::InsufficientData {
             need: period + sqrt_period,
             got: data.len(),
         });
     }
 
-    let hma_values = wma(&valid_diff_series, sqrt_period)?;
+    let hma_raw = wma_raw(&diff, sqrt_period);
 
+    // hma_raw[k] → diff[k + sqrt_period - 1] → orig k + period - 1 + sqrt_period - 1
     let mut result = vec![None; data.len()];
-
-    // valid_diff_series starts at index (period - 1) of original data.
-    // hma_values[k] corresponds to valid_diff_series[k]
-
-    for (k, val) in hma_values.into_iter().enumerate() {
-        let original_idx = k + period - 1;
-        if original_idx < result.len() {
-            result[original_idx] = val;
+    let base = period + sqrt_period - 2;
+    for (k, &v) in hma_raw.iter().enumerate() {
+        let orig = k + base;
+        if orig < data.len() {
+            result[orig] = Some(v);
         }
     }
 

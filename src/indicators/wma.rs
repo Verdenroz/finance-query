@@ -2,6 +2,31 @@
 
 use super::{IndicatorError, Result};
 
+/// Internal WMA returning only valid values as plain `f64` (no `Option` wrapping, no padding).
+/// Length = `data.len() - (period - 1)`. Index `k` corresponds to original index `k + period - 1`.
+pub(crate) fn wma_raw(data: &[f64], period: usize) -> Vec<f64> {
+    if period == 0 || data.len() < period {
+        return Vec::new();
+    }
+    let weight_sum = (period * (period + 1) / 2) as f64;
+    let period_f = period as f64;
+    let initial_weighted: f64 = data[..period]
+        .iter()
+        .enumerate()
+        .map(|(j, &x)| x * (j + 1) as f64)
+        .sum();
+    let mut wma_val = initial_weighted / weight_sum;
+    let mut window_sum: f64 = data[..period].iter().sum();
+    let mut result = Vec::with_capacity(data.len() - period + 1);
+    result.push(wma_val);
+    for i in period..data.len() {
+        wma_val += (period_f * data[i] - window_sum) / weight_sum;
+        result.push(wma_val);
+        window_sum += data[i] - data[i - period];
+    }
+    result
+}
+
 /// Calculate Weighted Moving Average (WMA).
 ///
 /// WMA gives more weight to recent prices in the calculation.

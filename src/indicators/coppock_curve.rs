@@ -1,6 +1,6 @@
 //! Coppock Curve indicator.
 
-use super::{IndicatorError, Result, wma::wma};
+use super::{IndicatorError, Result, wma::wma_raw};
 
 /// Calculate Coppock Curve.
 ///
@@ -42,36 +42,32 @@ pub fn coppock_curve(
         });
     }
 
-    let mut roc_sum_series = Vec::with_capacity(data.len());
-
-    for i in 0..data.len() {
-        if i >= long_roc {
+    // Build only the valid ROC sums (starting from index roc_period) — no leading zeros
+    let valid_roc_sums: Vec<f64> = (roc_period..data.len())
+        .map(|i| {
             let roc_long = if data[i - long_roc] != 0.0 {
-                ((data[i] - data[i - long_roc]) / data[i - long_roc]) * 100.0
+                (data[i] - data[i - long_roc]) / data[i - long_roc] * 100.0
             } else {
                 0.0
             };
-
-            let roc_short = if i >= short_roc && data[i - short_roc] != 0.0 {
-                ((data[i] - data[i - short_roc]) / data[i - short_roc]) * 100.0
+            let roc_short = if data[i - short_roc] != 0.0 {
+                (data[i] - data[i - short_roc]) / data[i - short_roc] * 100.0
             } else {
                 0.0
             };
+            roc_long + roc_short
+        })
+        .collect();
 
-            roc_sum_series.push(roc_long + roc_short);
-        } else {
-            roc_sum_series.push(0.0);
-        }
-    }
-
-    let valid_roc_sums = &roc_sum_series[roc_period..];
-    let wma_values = wma(valid_roc_sums, wma_period)?;
+    let wma_vals = wma_raw(&valid_roc_sums, wma_period);
 
     let mut result = vec![None; data.len()];
-    for (j, val) in wma_values.into_iter().enumerate() {
-        let original_idx = j + roc_period;
-        if original_idx < result.len() {
-            result[original_idx] = val;
+    // wma_vals[j] → valid_roc_sums[j + wma_period - 1] → original index j + roc_period + wma_period - 1
+    let base = roc_period + wma_period - 1;
+    for (j, &v) in wma_vals.iter().enumerate() {
+        let orig = j + base;
+        if orig < data.len() {
+            result[orig] = Some(v);
         }
     }
 

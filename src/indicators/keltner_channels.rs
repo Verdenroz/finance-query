@@ -89,6 +89,50 @@ pub fn keltner_channels(
     })
 }
 
+/// Internal variant accepting pre-computed dense ATR values (avoids redundant ATR computation
+/// when caller already has atr_raw output for the same period).
+/// `atr_dense[k]` corresponds to original index `k + atr_period - 1`.
+pub(crate) fn keltner_with_atr_dense(
+    closes: &[f64],
+    period: usize,
+    atr_dense: &[f64],
+    atr_period: usize,
+    multiplier: f64,
+) -> Result<KeltnerChannelsResult> {
+    if period == 0 || atr_period == 0 {
+        return Err(IndicatorError::InvalidPeriod(
+            "Periods must be greater than 0".to_string(),
+        ));
+    }
+    let len = closes.len();
+    if len < period {
+        return Err(IndicatorError::InsufficientData {
+            need: period,
+            got: len,
+        });
+    }
+    let ema_vals = ema_raw(closes, period);
+    let ema_off = period - 1;
+    let atr_off = atr_period - 1;
+    let mut upper = vec![None; len];
+    let mut middle = vec![None; len];
+    let mut lower = vec![None; len];
+    for (k, &ev) in ema_vals.iter().enumerate() {
+        let i = k + ema_off;
+        middle[i] = Some(ev);
+        if i >= atr_off {
+            let av = atr_dense[i - atr_off];
+            upper[i] = Some(ev + multiplier * av);
+            lower[i] = Some(ev - multiplier * av);
+        }
+    }
+    Ok(KeltnerChannelsResult {
+        upper,
+        middle,
+        lower,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

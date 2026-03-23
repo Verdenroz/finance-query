@@ -76,100 +76,93 @@ pub fn ichimoku(
     let mut leading_span_b = vec![None; len];
     let mut lagging_span = vec![None; len];
 
-    // Pass 1: conv + base + lagging in a single loop — 4 inline deques, no closure overhead.
-    // Eliminates 2 intermediate Vec<f64> allocations vs the 3-pass closure approach.
-    {
-        let conv_off = conversion - 1;
-        let base_off = base - 1;
-        let mut conv_max: VecDeque<usize> = VecDeque::new();
-        let mut conv_min: VecDeque<usize> = VecDeque::new();
-        let mut base_max: VecDeque<usize> = VecDeque::new();
-        let mut base_min: VecDeque<usize> = VecDeque::new();
+    // Single pass with 6 inline deques — loads highs[i]/lows[i] once per iteration.
+    let conv_off = conversion - 1;
+    let base_off = base - 1;
+    let span_b_off = span_b_period - 1;
+    let mut conv_max: VecDeque<usize> = VecDeque::new();
+    let mut conv_min: VecDeque<usize> = VecDeque::new();
+    let mut base_max: VecDeque<usize> = VecDeque::new();
+    let mut base_min: VecDeque<usize> = VecDeque::new();
+    let mut sb_max: VecDeque<usize> = VecDeque::new();
+    let mut sb_min: VecDeque<usize> = VecDeque::new();
 
-        for i in 0..len {
-            while conv_max.front().is_some_and(|&j| j + conversion <= i) {
-                conv_max.pop_front();
-            }
-            while conv_min.front().is_some_and(|&j| j + conversion <= i) {
-                conv_min.pop_front();
-            }
-            while base_max.front().is_some_and(|&j| j + base <= i) {
-                base_max.pop_front();
-            }
-            while base_min.front().is_some_and(|&j| j + base <= i) {
-                base_min.pop_front();
-            }
+    for i in 0..len {
+        let hi = highs[i];
+        let lo = lows[i];
 
-            while conv_max.back().is_some_and(|&j| highs[j] <= highs[i]) {
-                conv_max.pop_back();
-            }
-            while conv_min.back().is_some_and(|&j| lows[j] >= lows[i]) {
-                conv_min.pop_back();
-            }
-            while base_max.back().is_some_and(|&j| highs[j] <= highs[i]) {
-                base_max.pop_back();
-            }
-            while base_min.back().is_some_and(|&j| lows[j] >= lows[i]) {
-                base_min.pop_back();
-            }
+        // Evict fronts
+        while conv_max.front().is_some_and(|&j| j + conversion <= i) {
+            conv_max.pop_front();
+        }
+        while conv_min.front().is_some_and(|&j| j + conversion <= i) {
+            conv_min.pop_front();
+        }
+        while base_max.front().is_some_and(|&j| j + base <= i) {
+            base_max.pop_front();
+        }
+        while base_min.front().is_some_and(|&j| j + base <= i) {
+            base_min.pop_front();
+        }
+        while sb_max.front().is_some_and(|&j| j + span_b_period <= i) {
+            sb_max.pop_front();
+        }
+        while sb_min.front().is_some_and(|&j| j + span_b_period <= i) {
+            sb_min.pop_front();
+        }
 
-            conv_max.push_back(i);
-            conv_min.push_back(i);
-            base_max.push_back(i);
-            base_min.push_back(i);
+        // Maintain monotonic backs
+        while conv_max.back().is_some_and(|&j| highs[j] <= hi) {
+            conv_max.pop_back();
+        }
+        while conv_min.back().is_some_and(|&j| lows[j] >= lo) {
+            conv_min.pop_back();
+        }
+        while base_max.back().is_some_and(|&j| highs[j] <= hi) {
+            base_max.pop_back();
+        }
+        while base_min.back().is_some_and(|&j| lows[j] >= lo) {
+            base_min.pop_back();
+        }
+        while sb_max.back().is_some_and(|&j| highs[j] <= hi) {
+            sb_max.pop_back();
+        }
+        while sb_min.back().is_some_and(|&j| lows[j] >= lo) {
+            sb_min.pop_back();
+        }
 
-            let conv_val = if i >= conv_off {
-                let cv =
-                    (highs[*conv_max.front().unwrap()] + lows[*conv_min.front().unwrap()]) / 2.0;
-                conversion_line[i] = Some(cv);
-                Some(cv)
-            } else {
-                None
-            };
+        conv_max.push_back(i);
+        conv_min.push_back(i);
+        base_max.push_back(i);
+        base_min.push_back(i);
+        sb_max.push_back(i);
+        sb_min.push_back(i);
 
-            if i >= base_off {
-                let bv =
-                    (highs[*base_max.front().unwrap()] + lows[*base_min.front().unwrap()]) / 2.0;
-                base_line[i] = Some(bv);
-                if let Some(cv) = conv_val
-                    && i + displacement < len
-                {
-                    leading_span_a[i + displacement] = Some((cv + bv) / 2.0);
-                }
-            }
+        let conv_val = if i >= conv_off {
+            let cv = (highs[*conv_max.front().unwrap()] + lows[*conv_min.front().unwrap()]) / 2.0;
+            conversion_line[i] = Some(cv);
+            Some(cv)
+        } else {
+            None
+        };
 
-            if i >= lagging {
-                lagging_span[i - lagging] = Some(closes[i]);
+        if i >= base_off {
+            let bv = (highs[*base_max.front().unwrap()] + lows[*base_min.front().unwrap()]) / 2.0;
+            base_line[i] = Some(bv);
+            if let Some(cv) = conv_val
+                && i + displacement < len
+            {
+                leading_span_a[i + displacement] = Some((cv + bv) / 2.0);
             }
         }
-    }
 
-    // Pass 2: span_b via 2 inline deques — writes directly to leading_span_b
-    {
-        let span_b_off = span_b_period - 1;
-        let mut max_deque: VecDeque<usize> = VecDeque::new();
-        let mut min_deque: VecDeque<usize> = VecDeque::new();
+        if i >= span_b_off && i + displacement < len {
+            let bv = (highs[*sb_max.front().unwrap()] + lows[*sb_min.front().unwrap()]) / 2.0;
+            leading_span_b[i + displacement] = Some(bv);
+        }
 
-        for i in 0..len {
-            while max_deque.front().is_some_and(|&j| j + span_b_period <= i) {
-                max_deque.pop_front();
-            }
-            while min_deque.front().is_some_and(|&j| j + span_b_period <= i) {
-                min_deque.pop_front();
-            }
-            while max_deque.back().is_some_and(|&j| highs[j] <= highs[i]) {
-                max_deque.pop_back();
-            }
-            while min_deque.back().is_some_and(|&j| lows[j] >= lows[i]) {
-                min_deque.pop_back();
-            }
-            max_deque.push_back(i);
-            min_deque.push_back(i);
-            if i >= span_b_off && i + displacement < len {
-                let bv =
-                    (highs[*max_deque.front().unwrap()] + lows[*min_deque.front().unwrap()]) / 2.0;
-                leading_span_b[i + displacement] = Some(bv);
-            }
+        if i >= lagging {
+            lagging_span[i - lagging] = Some(closes[i]);
         }
     }
 

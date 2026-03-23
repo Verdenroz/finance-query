@@ -2,6 +2,54 @@
 
 use super::{IndicatorError, Result};
 
+/// Internal ATR returning only valid values as plain `f64` (no `Option` wrapping, no padding).
+/// Length = `highs.len() - (period - 1)`. Index `k` corresponds to original index `k + period - 1`.
+pub(crate) fn atr_raw(
+    highs: &[f64],
+    lows: &[f64],
+    closes: &[f64],
+    period: usize,
+) -> Result<Vec<f64>> {
+    if period == 0 {
+        return Err(IndicatorError::InvalidPeriod(
+            "Period must be greater than 0".to_string(),
+        ));
+    }
+    if highs.len() != lows.len() || highs.len() != closes.len() {
+        return Err(IndicatorError::InvalidPeriod(
+            "All arrays must have the same length".to_string(),
+        ));
+    }
+    if highs.len() <= period {
+        return Err(IndicatorError::InsufficientData {
+            need: period + 1,
+            got: highs.len(),
+        });
+    }
+    let len = highs.len();
+    let period_m1 = (period - 1) as f64;
+    let period_f = period as f64;
+    let mut tr_sum = highs[0] - lows[0];
+    for i in 1..period {
+        let h_l = highs[i] - lows[i];
+        let h_pc = (highs[i] - closes[i - 1]).abs();
+        let l_pc = (lows[i] - closes[i - 1]).abs();
+        tr_sum += h_l.max(h_pc).max(l_pc);
+    }
+    let mut prev_atr = tr_sum / period_f;
+    let mut result = Vec::with_capacity(len - period + 1);
+    result.push(prev_atr);
+    for i in period..len {
+        let h_l = highs[i] - lows[i];
+        let h_pc = (highs[i] - closes[i - 1]).abs();
+        let l_pc = (lows[i] - closes[i - 1]).abs();
+        let tr = h_l.max(h_pc).max(l_pc);
+        prev_atr = (prev_atr * period_m1 + tr) / period_f;
+        result.push(prev_atr);
+    }
+    Ok(result)
+}
+
 /// Calculate Average True Range (ATR).
 ///
 /// ATR measures market volatility by calculating the average of true ranges over a period.
@@ -35,52 +83,12 @@ use super::{IndicatorError, Result};
 /// assert!(result[2].is_some()); // ATR available after period
 /// ```
 pub fn atr(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
-    if period == 0 {
-        return Err(IndicatorError::InvalidPeriod(
-            "Period must be greater than 0".to_string(),
-        ));
-    }
-
-    if highs.len() != lows.len() || highs.len() != closes.len() {
-        return Err(IndicatorError::InvalidPeriod(
-            "All arrays must have the same length".to_string(),
-        ));
-    }
-
-    if highs.len() <= period {
-        return Err(IndicatorError::InsufficientData {
-            need: period + 1,
-            got: highs.len(),
-        });
-    }
-
-    // Inline TR computation — eliminates intermediate true_ranges Vec allocation
+    let raw = atr_raw(highs, lows, closes, period)?;
     let len = highs.len();
-    let period_m1 = (period - 1) as f64;
-    let period_f = period as f64;
-
-    // Seed: SMA of first `period` true ranges
-    let mut tr_sum = highs[0] - lows[0];
-    for i in 1..period {
-        let h_l = highs[i] - lows[i];
-        let h_pc = (highs[i] - closes[i - 1]).abs();
-        let l_pc = (lows[i] - closes[i - 1]).abs();
-        tr_sum += h_l.max(h_pc).max(l_pc);
-    }
-
     let mut result = vec![None; len];
-    let mut prev_atr = tr_sum / period_f;
-    result[period - 1] = Some(prev_atr);
-
-    for i in period..len {
-        let h_l = highs[i] - lows[i];
-        let h_pc = (highs[i] - closes[i - 1]).abs();
-        let l_pc = (lows[i] - closes[i - 1]).abs();
-        let tr = h_l.max(h_pc).max(l_pc);
-        prev_atr = (prev_atr * period_m1 + tr) / period_f;
-        result[i] = Some(prev_atr);
+    for (k, v) in raw.into_iter().enumerate() {
+        result[k + period - 1] = Some(v);
     }
-
     Ok(result)
 }
 

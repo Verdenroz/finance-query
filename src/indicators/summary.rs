@@ -9,12 +9,13 @@
 use super::last_value;
 use crate::Candle;
 use crate::indicators::{
-    accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
-    bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
-    coppock_curve, dema, donchian_channels, elder_ray, ema::ema_raw, hma, ichimoku,
-    keltner_channels, macd, mcginley_dynamic, mfi, momentum, obv, parabolic_sar, roc, rsi,
-    sma::sma_raw, stochastic, stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r,
-    wma,
+    accumulation_distribution, adx, alma, aroon, atr, atr::atr_raw, awesome_oscillator,
+    balance_of_power, bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index,
+    cmf, cmo, coppock_curve, dema, donchian_channels, elder_ray, ema::ema_raw, hma, ichimoku,
+    keltner_channels::keltner_with_atr_dense, macd, mcginley_dynamic, mfi, momentum, obv,
+    parabolic_sar, roc, rsi::rsi_raw, sma::sma_raw, stochastic,
+    stochastic_rsi::stochastic_rsi_from_rsi_dense, supertrend::supertrend_with_atr_dense, tema,
+    true_range, vwap, vwma, williams_r, wma::wma_raw,
 };
 
 /// Helper to extract last value from Result-returning indicators
@@ -47,6 +48,10 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
         volumes.push(c.volume as f64);
     }
 
+    // Pre-compute shared intermediates (avoids redundant passes)
+    let rsi_14_dense = rsi_raw(&closes, 14).ok();
+    let atr_10_dense = atr_raw(&highs, &lows, &closes, 10).ok();
+
     IndicatorsSummary {
         // === MOVING AVERAGES ===
         // Simple Moving Averages — sma_raw returns only valid f64 values, take last
@@ -63,12 +68,12 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
         ema_100: ema_raw(&closes, 100).last().copied(),
         ema_200: ema_raw(&closes, 200).last().copied(),
 
-        // Weighted Moving Averages (Result types)
-        wma_10: wma(&closes, 10).ok().and_then(|v| last_value(&v)),
-        wma_20: wma(&closes, 20).ok().and_then(|v| last_value(&v)),
-        wma_50: wma(&closes, 50).ok().and_then(|v| last_value(&v)),
-        wma_100: wma(&closes, 100).ok().and_then(|v| last_value(&v)),
-        wma_200: wma(&closes, 200).ok().and_then(|v| last_value(&v)),
+        // Weighted Moving Averages — wma_raw returns only valid f64 values, take last
+        wma_10: wma_raw(&closes, 10).last().copied(),
+        wma_20: wma_raw(&closes, 20).last().copied(),
+        wma_50: wma_raw(&closes, 50).last().copied(),
+        wma_100: wma_raw(&closes, 100).last().copied(),
+        wma_200: wma_raw(&closes, 200).last().copied(),
 
         // Advanced Moving Averages (Result types)
         dema_20: dema(&closes, 20).ok().and_then(|v| last_value(&v)),
@@ -85,7 +90,7 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
             .and_then(|v| last_value(&v)),
 
         // === MOMENTUM OSCILLATORS ===
-        rsi_14: last_from_result(rsi(&closes, 14)),
+        rsi_14: rsi_14_dense.as_deref().and_then(|v| v.last().copied()),
         stochastic: {
             stochastic(&highs, &lows, &closes, 14, 1, 3)
                 .ok()
@@ -95,12 +100,14 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
                 })
         },
         stochastic_rsi: {
-            stochastic_rsi(&closes, 14, 14, 3, 3)
-                .ok()
-                .map(|result| StochasticData {
-                    k: last_value(&result.k),
-                    d: last_value(&result.d),
-                })
+            rsi_14_dense.as_deref().and_then(|rsi_dense| {
+                stochastic_rsi_from_rsi_dense(rsi_dense, len, 14, 14, 3, 3)
+                    .ok()
+                    .map(|result| StochasticData {
+                        k: last_value(&result.k),
+                        d: last_value(&result.d),
+                    })
+            })
         },
         cci_20: last_from_result(cci(&highs, &lows, &closes, 20)),
         williams_r_14: last_from_result(williams_r(&highs, &lows, &closes, 14)),
@@ -126,18 +133,20 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
             })
         },
         supertrend: {
-            supertrend(&highs, &lows, &closes, 10, 3.0)
-                .ok()
-                .map(|result| SuperTrendData {
-                    value: last_value(&result.value),
-                    trend: result.is_uptrend.last().and_then(|&v| v).map(|v| {
-                        if v {
-                            "up".to_string()
-                        } else {
-                            "down".to_string()
-                        }
-                    }),
-                })
+            atr_10_dense.as_deref().and_then(|atr_dense| {
+                supertrend_with_atr_dense(&highs, &lows, &closes, atr_dense, 10, 3.0)
+                    .ok()
+                    .map(|result| SuperTrendData {
+                        value: last_value(&result.value),
+                        trend: result.is_uptrend.last().and_then(|&v| v).map(|v| {
+                            if v {
+                                "up".to_string()
+                            } else {
+                                "down".to_string()
+                            }
+                        }),
+                    })
+            })
         },
         ichimoku: {
             ichimoku(&highs, &lows, &closes, 9, 26, 26, 26)
@@ -179,13 +188,15 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
                 })
         },
         keltner_channels: {
-            keltner_channels(&highs, &lows, &closes, 20, 10, 2.0)
-                .ok()
-                .map(|result| KeltnerChannelsData {
-                    upper: last_value(&result.upper),
-                    middle: last_value(&result.middle),
-                    lower: last_value(&result.lower),
-                })
+            atr_10_dense.as_deref().and_then(|atr_dense| {
+                keltner_with_atr_dense(&closes, 20, atr_dense, 10, 2.0)
+                    .ok()
+                    .map(|result| KeltnerChannelsData {
+                        upper: last_value(&result.upper),
+                        middle: last_value(&result.middle),
+                        lower: last_value(&result.lower),
+                    })
+            })
         },
         donchian_channels: {
             donchian_channels(&highs, &lows, 20)

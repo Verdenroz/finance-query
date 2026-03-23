@@ -2,7 +2,7 @@
 
 use std::collections::VecDeque;
 
-use super::{IndicatorError, Result, rsi::rsi, sma::sma_raw, stochastic::StochasticResult};
+use super::{IndicatorError, Result, rsi::rsi_raw, sma::sma_raw, stochastic::StochasticResult};
 
 /// Calculate Stochastic RSI.
 ///
@@ -51,24 +51,49 @@ pub fn stochastic_rsi(
         });
     }
 
-    let rsi_values = rsi(data, rsi_period)?;
+    let rsi_dense = rsi_raw(data, rsi_period)?;
     let len = data.len();
+    stochastic_rsi_from_rsi_dense(
+        &rsi_dense,
+        len,
+        rsi_period,
+        stoch_period,
+        k_period,
+        d_period,
+    )
+}
+
+/// Internal variant accepting pre-computed RSI dense values (avoids redundant RSI computation
+/// when the caller already holds the `rsi_raw` output for the same period).
+///
+/// `rsi_dense` = output of `rsi_raw(data, rsi_period)`, length = `len - rsi_period`.
+/// `len` = original data length (needed to allocate output vecs).
+pub(crate) fn stochastic_rsi_from_rsi_dense(
+    rsi_dense: &[f64],
+    len: usize,
+    rsi_period: usize,
+    stoch_period: usize,
+    k_period: usize,
+    d_period: usize,
+) -> Result<StochasticResult> {
+    if stoch_period == 0 || k_period == 0 || d_period == 0 {
+        return Err(IndicatorError::InvalidPeriod(
+            "Periods must be greater than 0".to_string(),
+        ));
+    }
+    let rsi_len = rsi_dense.len();
+    if rsi_len < stoch_period {
+        return Err(IndicatorError::InsufficientData {
+            need: rsi_period + stoch_period,
+            got: len,
+        });
+    }
     let raw_start = rsi_period + stoch_period - 1;
-
-    // Step 1: compute raw StochRSI (0–100) via monotonic deques — O(N) instead of O(N * stoch_period)
-    // RSI is first valid at index rsi_period; all values from there onward are Some.
-    let mut raw_stoch = vec![None; len];
-    let mut raw_stoch_values = vec![0.0; len];
-
-    let rsi_start = rsi_period; // first valid RSI index
-    // Index directly into rsi_values to avoid an intermediate allocation.
-    let rsi_val = |k: usize| unsafe { rsi_values[k + rsi_start].unwrap_unchecked() };
-
+    let raw_count = rsi_len.saturating_sub(stoch_period - 1);
+    let mut raw_stoch_dense = Vec::with_capacity(raw_count);
     {
         let mut max_deque: VecDeque<usize> = VecDeque::new();
         let mut min_deque: VecDeque<usize> = VecDeque::new();
-        let rsi_len = len - rsi_start;
-
         for k in 0..rsi_len {
             while max_deque.front().is_some_and(|&j| j + stoch_period <= k) {
                 max_deque.pop_front();
@@ -76,41 +101,42 @@ pub fn stochastic_rsi(
             while min_deque.front().is_some_and(|&j| j + stoch_period <= k) {
                 min_deque.pop_front();
             }
-            while max_deque.back().is_some_and(|&j| rsi_val(j) <= rsi_val(k)) {
+            while max_deque
+                .back()
+                .is_some_and(|&j| rsi_dense[j] <= rsi_dense[k])
+            {
                 max_deque.pop_back();
             }
-            while min_deque.back().is_some_and(|&j| rsi_val(j) >= rsi_val(k)) {
+            while min_deque
+                .back()
+                .is_some_and(|&j| rsi_dense[j] >= rsi_dense[k])
+            {
                 min_deque.pop_back();
             }
             max_deque.push_back(k);
             min_deque.push_back(k);
-
             if k + 1 >= stoch_period {
-                let max_rsi = rsi_val(*max_deque.front().unwrap());
-                let min_rsi = rsi_val(*min_deque.front().unwrap());
-                let current_rsi = rsi_val(k);
+                let max_rsi = rsi_dense[*max_deque.front().unwrap()];
+                let min_rsi = rsi_dense[*min_deque.front().unwrap()];
                 let range = max_rsi - min_rsi;
-                let stoch = if range.abs() < f64::EPSILON {
+                raw_stoch_dense.push(if range.abs() < f64::EPSILON {
                     50.0
                 } else {
-                    ((current_rsi - min_rsi) / range) * 100.0
-                };
-                let orig_idx = k + rsi_start;
-                raw_stoch[orig_idx] = Some(stoch);
-                raw_stoch_values[orig_idx] = stoch;
+                    (rsi_dense[k] - min_rsi) / range * 100.0
+                });
             }
         }
     }
-
-    // Step 2: smooth raw StochRSI → %K
-    // k_dense: dense f64 K values starting at k_valid_start (used directly for D smoothing)
     let k_dense: Vec<f64>;
     let (k_line, k_valid_start) = if k_period == 1 {
-        k_dense = raw_stoch_values[raw_start..].to_vec();
-        (raw_stoch.clone(), raw_start)
+        k_dense = raw_stoch_dense.clone();
+        let mut k_line = vec![None; len];
+        for (j, &v) in raw_stoch_dense.iter().enumerate() {
+            k_line[j + raw_start] = Some(v);
+        }
+        (k_line, raw_start)
     } else {
-        let slice = &raw_stoch_values[raw_start..];
-        k_dense = sma_raw(slice, k_period); // Vec<f64>, avoids Vec<Option<f64>>
+        k_dense = sma_raw(&raw_stoch_dense, k_period);
         let k_start = raw_start + k_period - 1;
         let mut k_line = vec![None; len];
         for (j, &val) in k_dense.iter().enumerate() {
@@ -121,12 +147,10 @@ pub fn stochastic_rsi(
         }
         (k_line, k_start)
     };
-
-    // Step 3: smooth %K → %D — use k_dense directly (eliminates k_values_raw allocation)
     let d_line = if d_period == 1 {
         k_line.clone()
     } else {
-        let d_raw = sma_raw(&k_dense, d_period); // Vec<f64>
+        let d_raw = sma_raw(&k_dense, d_period);
         let d_start = k_valid_start + d_period - 1;
         let mut d_line = vec![None; len];
         for (j, &val) in d_raw.iter().enumerate() {
@@ -137,7 +161,6 @@ pub fn stochastic_rsi(
         }
         d_line
     };
-
     Ok(StochasticResult {
         k: k_line,
         d: d_line,
