@@ -1,6 +1,8 @@
 //! Stochastic Oscillator indicator.
 
-use super::{IndicatorError, Result, sma::sma};
+use std::collections::VecDeque;
+
+use super::{IndicatorError, Result, sma::sma_raw};
 use serde::{Deserialize, Serialize};
 
 /// Result of Stochastic Oscillator calculation
@@ -64,55 +66,76 @@ pub fn stochastic(
         });
     }
 
-    // Step 1: compute raw %K
+    // Step 1: compute raw %K using monotonic deques — O(N) instead of O(N * k_period)
     let mut raw_k = vec![None; len];
     let mut raw_k_for_sma = vec![0.0; len];
+    {
+        let mut max_deque: VecDeque<usize> = VecDeque::new(); // tracks highest high
+        let mut min_deque: VecDeque<usize> = VecDeque::new(); // tracks lowest low
 
-    for i in (k_period - 1)..len {
-        let start = i + 1 - k_period;
-        let highest = highs[start..=i]
-            .iter()
-            .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let lowest = lows[start..=i].iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let k = if (highest - lowest).abs() < f64::EPSILON {
-            50.0 // Neutral when no range
-        } else {
-            ((closes[i] - lowest) / (highest - lowest)) * 100.0
-        };
-        raw_k[i] = Some(k);
-        raw_k_for_sma[i] = k;
+        for i in 0..len {
+            // Evict indices that have fallen outside the k_period window
+            while max_deque.front().is_some_and(|&j| j + k_period <= i) {
+                max_deque.pop_front();
+            }
+            while min_deque.front().is_some_and(|&j| j + k_period <= i) {
+                min_deque.pop_front();
+            }
+            // Maintain decreasing monotone for max(highs)
+            while max_deque.back().is_some_and(|&j| highs[j] <= highs[i]) {
+                max_deque.pop_back();
+            }
+            // Maintain increasing monotone for min(lows)
+            while min_deque.back().is_some_and(|&j| lows[j] >= lows[i]) {
+                min_deque.pop_back();
+            }
+            max_deque.push_back(i);
+            min_deque.push_back(i);
+
+            if i + 1 >= k_period {
+                let highest = highs[*max_deque.front().unwrap()];
+                let lowest = lows[*min_deque.front().unwrap()];
+                let k = if (highest - lowest).abs() < f64::EPSILON {
+                    50.0 // Neutral when no range
+                } else {
+                    ((closes[i] - lowest) / (highest - lowest)) * 100.0
+                };
+                raw_k[i] = Some(k);
+                raw_k_for_sma[i] = k;
+            }
+        }
     }
 
     // Step 2: apply k_slow smoothing to raw %K
+    // slow_dense: dense f64 slow-K values starting at slow_k_valid_start (used for D smoothing)
     let raw_k_valid_start = k_period - 1;
+    let slow_dense: Vec<f64>;
     let (slow_k, slow_k_valid_start) = if k_slow == 1 {
-        // No smoothing: slow %K = raw %K
+        slow_dense = raw_k_for_sma[raw_k_valid_start..].to_vec();
         (raw_k.clone(), raw_k_valid_start)
     } else {
         let raw_k_slice = &raw_k_for_sma[raw_k_valid_start..];
-        let smoothed = sma(raw_k_slice, k_slow);
+        slow_dense = sma_raw(raw_k_slice, k_slow); // Vec<f64>, avoids Vec<Option<f64>>
         let slow_valid_start = raw_k_valid_start + k_slow - 1;
 
         let mut slow_k = vec![None; len];
-        for (j, val) in smoothed.into_iter().enumerate() {
-            let idx = j + raw_k_valid_start;
+        for (j, &val) in slow_dense.iter().enumerate() {
+            let idx = j + slow_valid_start;
             if idx < len {
-                slow_k[idx] = val;
+                slow_k[idx] = Some(val);
             }
         }
         (slow_k, slow_valid_start)
     };
 
-    // Step 3: compute %D as SMA of slow %K
-    let slow_k_values: Vec<f64> = slow_k.iter().map(|v| v.unwrap_or(0.0)).collect();
-    let slow_k_slice = &slow_k_values[slow_k_valid_start..];
-    let d_smoothed = sma(slow_k_slice, d_period);
-
+    // Step 3: %D = SMA of slow_dense — eliminates slow_k_values extraction allocation
+    let d_raw = sma_raw(&slow_dense, d_period);
+    let d_off = slow_k_valid_start + d_period - 1;
     let mut d_values = vec![None; len];
-    for (j, val) in d_smoothed.into_iter().enumerate() {
-        let idx = j + slow_k_valid_start;
+    for (j, &val) in d_raw.iter().enumerate() {
+        let idx = j + d_off;
         if idx < len {
-            d_values[idx] = val;
+            d_values[idx] = Some(val);
         }
     }
 

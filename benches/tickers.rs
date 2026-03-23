@@ -94,16 +94,16 @@ fn bench_symbols_join(c: &mut Criterion) {
         // Alternative: itertools-style fold (avoids intermediate Vec allocation)
         group.bench_with_input(BenchmarkId::new("fold_join", n), &symbols, |b, syms| {
             b.iter(|| {
-                let joined = syms
-                    .iter()
-                    .enumerate()
-                    .fold(String::with_capacity(n * 6), |mut acc, (i, s)| {
+                let joined = syms.iter().enumerate().fold(
+                    String::with_capacity(n * 6),
+                    |mut acc, (i, s)| {
                         if i > 0 {
                             acc.push(',');
                         }
                         acc.push_str(s);
                         acc
-                    });
+                    },
+                );
                 black_box(joined)
             })
         });
@@ -136,8 +136,7 @@ fn bench_concurrent_cache(c: &mut Criterion) {
 
     // all_cached check — done on fast path before any network I/O
     let symbols_10: Vec<Arc<str>> = (0..10usize).map(|i| format!("SYM{i:04}").into()).collect();
-    let symbols_100: Vec<Arc<str>> =
-        (0..100usize).map(|i| format!("SYM{i:04}").into()).collect();
+    let symbols_100: Vec<Arc<str>> = (0..100usize).map(|i| format!("SYM{i:04}").into()).collect();
 
     group.bench_function("all_cached_check_10", |b| {
         b.iter(|| {

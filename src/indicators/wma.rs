@@ -44,18 +44,27 @@ pub fn wma(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
         });
     }
 
-    let mut result = vec![None; period - 1];
     let weight_sum = (period * (period + 1) / 2) as f64;
+    let period_f = period as f64;
 
-    for i in (period - 1)..data.len() {
-        let window = &data[(i + 1 - period)..=i];
-        let weighted_sum: f64 = window
-            .iter()
-            .enumerate()
-            .map(|(j, &price)| price * (j + 1) as f64)
-            .sum();
+    // Compute first window weighted sum directly, then use O(N) recurrence:
+    // WMA(i+1) = WMA(i) + (period * data[i+1] - window_sum) / weight_sum
+    // where window_sum is the plain sum of the current window.
+    let initial_weighted: f64 = data[..period]
+        .iter()
+        .enumerate()
+        .map(|(j, &x)| x * (j + 1) as f64)
+        .sum();
+    let mut wma_val = initial_weighted / weight_sum;
+    let mut window_sum: f64 = data[..period].iter().sum();
 
-        result.push(Some(weighted_sum / weight_sum));
+    let mut result = vec![None; period - 1];
+    result.push(Some(wma_val));
+
+    for i in period..data.len() {
+        wma_val += (period_f * data[i] - window_sum) / weight_sum;
+        result.push(Some(wma_val));
+        window_sum += data[i] - data[i - period];
     }
 
     Ok(result)

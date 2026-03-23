@@ -1,5 +1,24 @@
 //! Simple Moving Average (SMA) indicator.
 
+/// Internal O(N) SMA — returns only valid values as plain `f64` (no None padding).
+///
+/// Length = `data.len() - (period - 1)`. Index `k` in the result corresponds to
+/// the window ending at `data[k + period - 1]`.
+pub(crate) fn sma_raw(data: &[f64], period: usize) -> Vec<f64> {
+    if period == 0 || data.len() < period {
+        return Vec::new();
+    }
+    let period_f = period as f64;
+    let mut window_sum: f64 = data[..period].iter().sum();
+    let mut result = Vec::with_capacity(data.len() - period + 1);
+    result.push(window_sum / period_f);
+    for i in period..data.len() {
+        window_sum += data[i] - data[i - period];
+        result.push(window_sum / period_f);
+    }
+    result
+}
+
 /// Calculate Simple Moving Average (SMA).
 ///
 /// Returns a vector where each element is the average of the previous `period` values.
@@ -37,15 +56,20 @@ pub fn sma(data: &[f64], period: usize) -> Vec<Option<f64>> {
         return vec![None; data.len()];
     }
 
-    let mut result = Vec::with_capacity(data.len());
+    if data.len() < period {
+        return vec![None; data.len()];
+    }
 
-    for i in 0..data.len() {
-        if i + 1 < period {
-            result.push(None);
-        } else {
-            let sum: f64 = data[i + 1 - period..=i].iter().sum();
-            result.push(Some(sum / period as f64));
-        }
+    let mut result = Vec::with_capacity(data.len());
+    result.extend(std::iter::repeat_n(None, period - 1));
+
+    // Compute the initial window sum once, then use a sliding window (O(N) total)
+    let mut window_sum: f64 = data[..period].iter().sum();
+    result.push(Some(window_sum / period as f64));
+
+    for i in period..data.len() {
+        window_sum += data[i] - data[i - period];
+        result.push(Some(window_sum / period as f64));
     }
 
     result

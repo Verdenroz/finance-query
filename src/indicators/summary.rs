@@ -11,9 +11,10 @@ use crate::Candle;
 use crate::indicators::{
     accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
     bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
-    coppock_curve, dema, donchian_channels, elder_ray, ema, hma, ichimoku, keltner_channels, macd,
-    mcginley_dynamic, mfi, momentum, obv, parabolic_sar, roc, rsi, sma, stochastic, stochastic_rsi,
-    supertrend, tema, true_range, vwap, vwma, williams_r, wma,
+    coppock_curve, dema, donchian_channels, elder_ray, ema::ema_raw, hma, ichimoku,
+    keltner_channels, macd, mcginley_dynamic, mfi, momentum, obv, parabolic_sar, roc, rsi,
+    sma::sma_raw, stochastic, stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r,
+    wma,
 };
 
 /// Helper to extract last value from Result-returning indicators
@@ -31,28 +32,36 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
         return IndicatorsSummary::default();
     }
 
-    // Extract price data from candles
-    let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
-    let highs: Vec<f64> = candles.iter().map(|c| c.high).collect();
-    let lows: Vec<f64> = candles.iter().map(|c| c.low).collect();
-    let opens: Vec<f64> = candles.iter().map(|c| c.open).collect();
-    let volumes: Vec<f64> = candles.iter().map(|c| c.volume as f64).collect();
+    // Extract price data from candles in a single pass (avoids 5 separate iterations)
+    let len = candles.len();
+    let mut closes = Vec::with_capacity(len);
+    let mut highs = Vec::with_capacity(len);
+    let mut lows = Vec::with_capacity(len);
+    let mut opens = Vec::with_capacity(len);
+    let mut volumes = Vec::with_capacity(len);
+    for c in candles {
+        closes.push(c.close);
+        highs.push(c.high);
+        lows.push(c.low);
+        opens.push(c.open);
+        volumes.push(c.volume as f64);
+    }
 
     IndicatorsSummary {
         // === MOVING AVERAGES ===
-        // Simple Moving Averages
-        sma_10: last_value(&sma(&closes, 10)),
-        sma_20: last_value(&sma(&closes, 20)),
-        sma_50: last_value(&sma(&closes, 50)),
-        sma_100: last_value(&sma(&closes, 100)),
-        sma_200: last_value(&sma(&closes, 200)),
+        // Simple Moving Averages — sma_raw returns only valid f64 values, take last
+        sma_10: sma_raw(&closes, 10).last().copied(),
+        sma_20: sma_raw(&closes, 20).last().copied(),
+        sma_50: sma_raw(&closes, 50).last().copied(),
+        sma_100: sma_raw(&closes, 100).last().copied(),
+        sma_200: sma_raw(&closes, 200).last().copied(),
 
-        // Exponential Moving Averages
-        ema_10: last_value(&ema(&closes, 10)),
-        ema_20: last_value(&ema(&closes, 20)),
-        ema_50: last_value(&ema(&closes, 50)),
-        ema_100: last_value(&ema(&closes, 100)),
-        ema_200: last_value(&ema(&closes, 200)),
+        // Exponential Moving Averages — ema_raw returns only valid f64 values, take last
+        ema_10: ema_raw(&closes, 10).last().copied(),
+        ema_20: ema_raw(&closes, 20).last().copied(),
+        ema_50: ema_raw(&closes, 50).last().copied(),
+        ema_100: ema_raw(&closes, 100).last().copied(),
+        ema_200: ema_raw(&closes, 200).last().copied(),
 
         // Weighted Moving Averages (Result types)
         wma_10: wma(&closes, 10).ok().and_then(|v| last_value(&v)),

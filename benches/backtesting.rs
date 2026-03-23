@@ -45,13 +45,17 @@ fn bench_backtest_engine(c: &mut Criterion) {
 
     for n in [500usize, 1000, 2000] {
         let candles = synthetic_candles(n);
-        group.bench_with_input(BenchmarkId::new("sma_crossover", n), &candles, |b, candles| {
-            b.iter(|| {
-                let engine = BacktestEngine::new(black_box(config.clone()));
-                let strategy = SmaCrossover::new(10, 20);
-                black_box(engine.run(black_box("BENCH"), candles, strategy))
-            })
-        });
+        group.bench_with_input(
+            BenchmarkId::new("sma_crossover", n),
+            &candles,
+            |b, candles| {
+                b.iter(|| {
+                    let engine = BacktestEngine::new(black_box(config.clone()));
+                    let strategy = SmaCrossover::new(10, 20);
+                    black_box(engine.run(black_box("BENCH"), candles, strategy))
+                })
+            },
+        );
     }
 
     group.finish();
@@ -100,7 +104,10 @@ fn bench_grid_search(c: &mut Criterion) {
                 .param("slow", ParamRange::int_range(20, 40, 10))
                 .optimize_for(OptimizeMetric::SharpeRatio);
             black_box(search.run("BENCH", &candles, &config, |params| {
-                SmaCrossover::new(params["fast"].as_int() as usize, params["slow"].as_int() as usize)
+                SmaCrossover::new(
+                    params["fast"].as_int() as usize,
+                    params["slow"].as_int() as usize,
+                )
             }))
         })
     });
@@ -113,7 +120,10 @@ fn bench_grid_search(c: &mut Criterion) {
                 .param("slow", ParamRange::int_range(20, 60, 10))
                 .optimize_for(OptimizeMetric::SharpeRatio);
             black_box(search.run("BENCH", &candles, &config, |params| {
-                SmaCrossover::new(params["fast"].as_int() as usize, params["slow"].as_int() as usize)
+                SmaCrossover::new(
+                    params["fast"].as_int() as usize,
+                    params["slow"].as_int() as usize,
+                )
             }))
         })
     });
@@ -139,14 +149,10 @@ fn bench_monte_carlo(c: &mut Criterion) {
     let mut group = c.benchmark_group("monte_carlo");
 
     for n_sims in [100usize, 500, 1000] {
-        group.bench_with_input(
-            BenchmarkId::new("iid_shuffle", n_sims),
-            &n_sims,
-            |b, &n| {
-                let mc_config = MonteCarloConfig::new().num_simulations(n).seed(42);
-                b.iter(|| black_box(mc_config.run(black_box(&result))))
-            },
-        );
+        group.bench_with_input(BenchmarkId::new("iid_shuffle", n_sims), &n_sims, |b, &n| {
+            let mc_config = MonteCarloConfig::new().num_simulations(n).seed(42);
+            b.iter(|| black_box(mc_config.run(black_box(&result))))
+        });
     }
 
     group.finish();

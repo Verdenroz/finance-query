@@ -1,6 +1,6 @@
 //! Double Exponential Moving Average (DEMA) indicator.
 
-use super::{IndicatorError, Result, ema::ema};
+use super::{IndicatorError, Result, ema::ema_raw};
 
 /// Calculate Double Exponential Moving Average (DEMA).
 ///
@@ -37,30 +37,24 @@ pub fn dema(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
         });
     }
 
-    let ema1 = ema(data, period);
-
-    // Extract valid values for EMA2 calculation
-    let valid_ema1: Vec<f64> = ema1.iter().filter_map(|&x| x).collect();
-
-    if valid_ema1.len() < period {
+    // ema_raw returns only valid values (no Option/None padding)
+    let ema1 = ema_raw(data, period); // len = N - (period-1)
+    if ema1.len() < period {
         return Err(IndicatorError::InsufficientData {
             need: 2 * period - 1,
             got: data.len(),
         });
     }
-
-    let ema2 = ema(&valid_ema1, period);
+    let ema2 = ema_raw(&ema1, period); // len = N - 2*(period-1)
 
     let mut result = vec![None; data.len()];
-    let offset = period - 1;
+    let off = period - 1;
 
-    for i in offset..data.len() {
-        let j = i - offset;
-        if j < ema2.len()
-            && let (Some(e1), Some(e2)) = (ema1[i], ema2[j])
-        {
-            result[i] = Some(2.0 * e1 - e2);
-        }
+    // ema1[k1] → original index k1 + off
+    // ema2[k2] → original index k2 + 2*off; matching ema1 index = k2 + off
+    for (k2, &e2) in ema2.iter().enumerate() {
+        let orig_idx = k2 + 2 * off;
+        result[orig_idx] = Some(2.0 * ema1[k2 + off] - e2);
     }
 
     Ok(result)

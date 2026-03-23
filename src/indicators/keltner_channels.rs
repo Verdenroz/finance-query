@@ -1,6 +1,6 @@
 //! Keltner Channels indicator.
 
-use super::{IndicatorError, Result, atr::atr, ema::ema};
+use super::{IndicatorError, Result, atr::atr, ema::ema_raw};
 use serde::{Deserialize, Serialize};
 
 /// Result of Keltner Channels calculation
@@ -65,20 +65,20 @@ pub fn keltner_channels(
         });
     }
 
-    let ema_values = ema(closes, period);
+    let ema_vals = ema_raw(closes, period); // len = N-(period-1), index k → orig k+(period-1)
     let atr_values = atr(highs, lows, closes, atr_period)?;
+    let ema_off = period - 1;
 
     let mut upper = vec![None; len];
     let mut middle = vec![None; len];
     let mut lower = vec![None; len];
 
-    for i in 0..len {
-        if let (Some(ema_val), Some(atr_val)) = (ema_values[i], atr_values[i]) {
-            middle[i] = Some(ema_val);
-            upper[i] = Some(ema_val + (multiplier * atr_val));
-            lower[i] = Some(ema_val - (multiplier * atr_val));
-        } else if let Some(ema_val) = ema_values[i] {
-            middle[i] = Some(ema_val);
+    for (k, &ev) in ema_vals.iter().enumerate() {
+        let i = k + ema_off;
+        middle[i] = Some(ev);
+        if let Some(atr_val) = atr_values[i] {
+            upper[i] = Some(ev + multiplier * atr_val);
+            lower[i] = Some(ev - multiplier * atr_val);
         }
     }
 

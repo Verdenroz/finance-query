@@ -1,6 +1,6 @@
 //! Relative Strength Index (RSI) indicator.
 
-use super::{IndicatorError, Result, ema::ema};
+use super::{IndicatorError, Result, ema::ema_raw};
 
 /// Calculate Relative Strength Index (RSI).
 ///
@@ -72,24 +72,18 @@ pub fn rsi(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
         }
     }
 
-    // Calculate EMA of gains and losses
-    let avg_gains = ema(&gains, period);
-    let avg_losses = ema(&losses, period);
+    // Calculate EMA of gains and losses using raw variant (no Option overhead)
+    let avg_gains = ema_raw(&gains, period);
+    let avg_losses = ema_raw(&losses, period);
 
-    // Calculate RSI
-    for i in 0..avg_gains.len() {
-        match (avg_gains[i], avg_losses[i]) {
-            (Some(avg_gain), Some(avg_loss)) => {
-                let rsi_value = if avg_loss == 0.0 {
-                    100.0 // No losses means maximum RSI
-                } else {
-                    let rs = avg_gain / avg_loss;
-                    100.0 - (100.0 / (1.0 + rs))
-                };
-                result[i + 1] = Some(rsi_value); // +1 because we lost one data point in change calculation
-            }
-            _ => result[i + 1] = None,
-        }
+    // avg_gains[k] is valid from gains index `period - 1`, which maps to result index `period`.
+    for (k, (&ag, &al)) in avg_gains.iter().zip(avg_losses.iter()).enumerate() {
+        let rsi_value = if al == 0.0 {
+            100.0
+        } else {
+            100.0 - (100.0 / (1.0 + ag / al))
+        };
+        result[k + period] = Some(rsi_value);
     }
 
     Ok(result)

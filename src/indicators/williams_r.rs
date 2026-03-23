@@ -1,5 +1,7 @@
 //! Williams %R indicator.
 
+use std::collections::VecDeque;
+
 use super::{IndicatorError, Result};
 
 /// Calculate Williams %R.
@@ -51,25 +53,35 @@ pub fn williams_r(
 
     let mut result = vec![None; len];
 
-    for (i, item) in result.iter_mut().enumerate().skip(period - 1) {
-        let start_idx = i + 1 - period;
-        let end_idx = i;
+    // Monotonic deques for O(N) sliding window max/min instead of O(N * period)
+    let mut max_deque: VecDeque<usize> = VecDeque::new();
+    let mut min_deque: VecDeque<usize> = VecDeque::new();
 
-        let period_highs = &highs[start_idx..=end_idx];
-        let period_lows = &lows[start_idx..=end_idx];
-        let close = closes[end_idx];
+    for i in 0..len {
+        while max_deque.front().is_some_and(|&j| j + period <= i) {
+            max_deque.pop_front();
+        }
+        while min_deque.front().is_some_and(|&j| j + period <= i) {
+            min_deque.pop_front();
+        }
+        while max_deque.back().is_some_and(|&j| highs[j] <= highs[i]) {
+            max_deque.pop_back();
+        }
+        while min_deque.back().is_some_and(|&j| lows[j] >= lows[i]) {
+            min_deque.pop_back();
+        }
+        max_deque.push_back(i);
+        min_deque.push_back(i);
 
-        let highest = period_highs
-            .iter()
-            .fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let lowest = period_lows.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-
-        let range = highest - lowest;
-        if range == 0.0 {
-            *item = Some(-50.0); // Neutral
-        } else {
-            let wr = ((highest - close) / range) * -100.0;
-            *item = Some(wr);
+        if i + 1 >= period {
+            let highest = highs[*max_deque.front().unwrap()];
+            let lowest = lows[*min_deque.front().unwrap()];
+            let range = highest - lowest;
+            result[i] = Some(if range == 0.0 {
+                -50.0
+            } else {
+                ((highest - closes[i]) / range) * -100.0
+            });
         }
     }
 

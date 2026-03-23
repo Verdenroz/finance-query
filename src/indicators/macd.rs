@@ -1,6 +1,6 @@
 //! Moving Average Convergence Divergence (MACD) indicator.
 
-use super::{IndicatorError, Result, ema::ema};
+use super::{IndicatorError, Result, ema::ema_raw};
 use serde::{Deserialize, Serialize};
 
 /// MACD calculation result containing the MACD line, signal line, and histogram.
@@ -72,41 +72,40 @@ pub fn macd(
         });
     }
 
-    // Calculate fast and slow EMAs
-    let fast_ema = ema(data, fast_period);
-    let slow_ema = ema(data, slow_period);
+    // Compute EMAs using raw variant (no Option/None padding)
+    let fast_raw = ema_raw(data, fast_period); // len = N - (fast_period-1)
+    let slow_raw = ema_raw(data, slow_period); // len = N - (slow_period-1)
 
-    // Calculate MACD line (fast - slow)
-    let mut macd_line = Vec::with_capacity(data.len());
-    for i in 0..data.len() {
-        match (fast_ema[i], slow_ema[i]) {
-            (Some(fast), Some(slow)) => macd_line.push(Some(fast - slow)),
-            _ => macd_line.push(None),
-        }
+    // MACD line: fast - slow, valid from original index slow_period - 1
+    // fast_raw[k + (slow_period - fast_period)] aligns with slow_raw[k]
+    let shift = slow_period - fast_period;
+    let macd_values: Vec<f64> = slow_raw
+        .iter()
+        .enumerate()
+        .map(|(k, &s)| fast_raw[k + shift] - s)
+        .collect();
+
+    // Signal line: EMA of MACD values
+    let signal_raw = ema_raw(&macd_values, signal_period);
+
+    // Build full-length output vectors
+    let macd_start = slow_period - 1;
+    let signal_start = macd_start + signal_period - 1;
+    let n = data.len();
+
+    let mut macd_line = vec![None; n];
+    let mut signal_line = vec![None; n];
+    let mut histogram = vec![None; n];
+
+    for (k, &mv) in macd_values.iter().enumerate() {
+        let i = k + macd_start;
+        macd_line[i] = Some(mv);
     }
-
-    // Extract non-None MACD values for signal line calculation
-    let macd_values: Vec<f64> = macd_line.iter().filter_map(|&v| v).collect();
-
-    // Calculate signal line (EMA of MACD line)
-    let signal_ema = ema(&macd_values, signal_period);
-
-    // Map signal EMA back to full length vector
-    let mut signal_line = vec![None; data.len()];
-    let mut signal_idx = 0;
-    for i in 0..data.len() {
-        if macd_line[i].is_some() {
-            signal_line[i] = signal_ema.get(signal_idx).copied().flatten();
-            signal_idx += 1;
-        }
-    }
-
-    // Calculate histogram (MACD - Signal)
-    let mut histogram = Vec::with_capacity(data.len());
-    for i in 0..data.len() {
-        match (macd_line[i], signal_line[i]) {
-            (Some(macd), Some(signal)) => histogram.push(Some(macd - signal)),
-            _ => histogram.push(None),
+    for (k, &sv) in signal_raw.iter().enumerate() {
+        let i = k + signal_start;
+        signal_line[i] = Some(sv);
+        if let Some(mv) = macd_line[i] {
+            histogram[i] = Some(mv - sv);
         }
     }
 

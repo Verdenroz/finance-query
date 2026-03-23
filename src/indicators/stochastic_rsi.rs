@@ -1,6 +1,8 @@
 //! Stochastic RSI indicator.
 
-use super::{IndicatorError, Result, rsi::rsi, sma::sma, stochastic::StochasticResult};
+use std::collections::VecDeque;
+
+use super::{IndicatorError, Result, rsi::rsi, sma::sma_raw, stochastic::StochasticResult};
 
 /// Calculate Stochastic RSI.
 ///
@@ -53,78 +55,84 @@ pub fn stochastic_rsi(
     let len = data.len();
     let raw_start = rsi_period + stoch_period - 1;
 
-    // Step 1: compute raw StochRSI (0–100)
+    // Step 1: compute raw StochRSI (0–100) via monotonic deques — O(N) instead of O(N * stoch_period)
+    // RSI is first valid at index rsi_period; all values from there onward are Some.
     let mut raw_stoch = vec![None; len];
     let mut raw_stoch_values = vec![0.0; len];
 
-    for i in raw_start..len {
-        let start_idx = i + 1 - stoch_period;
-        let end_idx = i;
+    let rsi_start = rsi_period; // first valid RSI index
+    // Index directly into rsi_values to avoid an intermediate allocation.
+    let rsi_val = |k: usize| unsafe { rsi_values[k + rsi_start].unwrap_unchecked() };
 
-        let mut min_rsi = f64::INFINITY;
-        let mut max_rsi = f64::NEG_INFINITY;
-        let mut current_rsi = 0.0;
-        let mut valid = true;
+    {
+        let mut max_deque: VecDeque<usize> = VecDeque::new();
+        let mut min_deque: VecDeque<usize> = VecDeque::new();
+        let rsi_len = len - rsi_start;
 
-        for (j, rsi_val) in rsi_values
-            .iter()
-            .enumerate()
-            .skip(start_idx)
-            .take(stoch_period)
-        {
-            if let Some(val) = rsi_val {
-                min_rsi = min_rsi.min(*val);
-                max_rsi = max_rsi.max(*val);
-                if j == end_idx {
-                    current_rsi = *val;
-                }
-            } else {
-                valid = false;
-                break;
+        for k in 0..rsi_len {
+            while max_deque.front().is_some_and(|&j| j + stoch_period <= k) {
+                max_deque.pop_front();
             }
-        }
+            while min_deque.front().is_some_and(|&j| j + stoch_period <= k) {
+                min_deque.pop_front();
+            }
+            while max_deque.back().is_some_and(|&j| rsi_val(j) <= rsi_val(k)) {
+                max_deque.pop_back();
+            }
+            while min_deque.back().is_some_and(|&j| rsi_val(j) >= rsi_val(k)) {
+                min_deque.pop_back();
+            }
+            max_deque.push_back(k);
+            min_deque.push_back(k);
 
-        if valid {
-            let range = max_rsi - min_rsi;
-            let stoch = if range.abs() < f64::EPSILON {
-                50.0
-            } else {
-                ((current_rsi - min_rsi) / range) * 100.0
-            };
-            raw_stoch[i] = Some(stoch);
-            raw_stoch_values[i] = stoch;
+            if k + 1 >= stoch_period {
+                let max_rsi = rsi_val(*max_deque.front().unwrap());
+                let min_rsi = rsi_val(*min_deque.front().unwrap());
+                let current_rsi = rsi_val(k);
+                let range = max_rsi - min_rsi;
+                let stoch = if range.abs() < f64::EPSILON {
+                    50.0
+                } else {
+                    ((current_rsi - min_rsi) / range) * 100.0
+                };
+                let orig_idx = k + rsi_start;
+                raw_stoch[orig_idx] = Some(stoch);
+                raw_stoch_values[orig_idx] = stoch;
+            }
         }
     }
 
     // Step 2: smooth raw StochRSI → %K
+    // k_dense: dense f64 K values starting at k_valid_start (used directly for D smoothing)
+    let k_dense: Vec<f64>;
     let (k_line, k_valid_start) = if k_period == 1 {
+        k_dense = raw_stoch_values[raw_start..].to_vec();
         (raw_stoch.clone(), raw_start)
     } else {
         let slice = &raw_stoch_values[raw_start..];
-        let smoothed = sma(slice, k_period);
+        k_dense = sma_raw(slice, k_period); // Vec<f64>, avoids Vec<Option<f64>>
         let k_start = raw_start + k_period - 1;
         let mut k_line = vec![None; len];
-        for (j, val) in smoothed.into_iter().enumerate() {
-            let idx = j + raw_start;
+        for (j, &val) in k_dense.iter().enumerate() {
+            let idx = j + k_start;
             if idx < len {
-                k_line[idx] = val;
+                k_line[idx] = Some(val);
             }
         }
         (k_line, k_start)
     };
 
-    // Step 3: smooth %K → %D
-    let k_values_raw: Vec<f64> = k_line.iter().map(|v| v.unwrap_or(0.0)).collect();
+    // Step 3: smooth %K → %D — use k_dense directly (eliminates k_values_raw allocation)
     let d_line = if d_period == 1 {
         k_line.clone()
     } else {
-        let slice = &k_values_raw[k_valid_start..];
-        let smoothed = sma(slice, d_period);
+        let d_raw = sma_raw(&k_dense, d_period); // Vec<f64>
+        let d_start = k_valid_start + d_period - 1;
         let mut d_line = vec![None; len];
-        for (j, val) in smoothed.into_iter().enumerate() {
-            let idx = j + k_valid_start;
+        for (j, &val) in d_raw.iter().enumerate() {
+            let idx = j + d_start;
             if idx < len {
-                d_line[idx] = val;
+                d_line[idx] = Some(val);
             }
         }
         d_line

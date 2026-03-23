@@ -1,5 +1,7 @@
 //! Donchian Channels indicator.
 
+use std::collections::VecDeque;
+
 use super::{IndicatorError, Result};
 use serde::{Deserialize, Serialize};
 
@@ -62,18 +64,33 @@ pub fn donchian_channels(
     let mut middle = vec![None; len];
     let mut lower = vec![None; len];
 
-    for i in (period - 1)..len {
-        let start_idx = i + 1 - period;
-        let slice_highs = &highs[start_idx..=i];
-        let slice_lows = &lows[start_idx..=i];
+    // Use monotonic deques for O(N) sliding window max/min instead of O(N * period)
+    let mut max_deque: VecDeque<usize> = VecDeque::new();
+    let mut min_deque: VecDeque<usize> = VecDeque::new();
 
-        let highest = slice_highs.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let lowest = slice_lows.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        let mid = (highest + lowest) / 2.0;
+    for i in 0..len {
+        while max_deque.front().is_some_and(|&j| j + period <= i) {
+            max_deque.pop_front();
+        }
+        while min_deque.front().is_some_and(|&j| j + period <= i) {
+            min_deque.pop_front();
+        }
+        while max_deque.back().is_some_and(|&j| highs[j] <= highs[i]) {
+            max_deque.pop_back();
+        }
+        while min_deque.back().is_some_and(|&j| lows[j] >= lows[i]) {
+            min_deque.pop_back();
+        }
+        max_deque.push_back(i);
+        min_deque.push_back(i);
 
-        upper[i] = Some(highest);
-        lower[i] = Some(lowest);
-        middle[i] = Some(mid);
+        if i + 1 >= period {
+            let highest = highs[*max_deque.front().unwrap()];
+            let lowest = lows[*min_deque.front().unwrap()];
+            upper[i] = Some(highest);
+            lower[i] = Some(lowest);
+            middle[i] = Some((highest + lowest) / 2.0);
+        }
     }
 
     Ok(DonchianChannelsResult {

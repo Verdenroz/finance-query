@@ -52,23 +52,26 @@ pub fn cci(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result
 
     let mut result = vec![None; len];
 
-    for (i, item) in result.iter_mut().enumerate().skip(period - 1) {
+    // Sliding window sum for SMA — O(N) instead of O(N * period) for the sum pass.
+    // Mean deviation still requires O(period) per step (depends on current window mean).
+    let period_f = period as f64;
+    let mut window_sum: f64 = typical_prices[..period].iter().sum();
+
+    for i in (period - 1)..len {
+        if i > period - 1 {
+            window_sum += typical_prices[i] - typical_prices[i - period];
+        }
+        let sma = window_sum / period_f;
         let start_idx = i + 1 - period;
         let slice = &typical_prices[start_idx..=i];
-
-        let sum: f64 = slice.iter().sum();
-        let sma = sum / period as f64;
-
         let deviations_sum: f64 = slice.iter().map(|&tp| (tp - sma).abs()).sum();
-        let mean_deviation = deviations_sum / period as f64;
+        let mean_deviation = deviations_sum / period_f;
 
-        if mean_deviation == 0.0 {
-            *item = Some(0.0);
+        result[i] = Some(if mean_deviation == 0.0 {
+            0.0
         } else {
-            let latest_tp = typical_prices[i];
-            let cci_val = (latest_tp - sma) / (0.015 * mean_deviation);
-            *item = Some(cci_val);
-        }
+            (typical_prices[i] - sma) / (0.015 * mean_deviation)
+        });
     }
 
     Ok(result)

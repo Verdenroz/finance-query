@@ -54,34 +54,31 @@ pub fn atr(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result
         });
     }
 
-    // Calculate true range for each period
-    let mut true_ranges = Vec::with_capacity(highs.len());
-    true_ranges.push(highs[0] - lows[0]); // First TR is just high - low
+    // Inline TR computation — eliminates intermediate true_ranges Vec allocation
+    let len = highs.len();
+    let period_m1 = (period - 1) as f64;
+    let period_f = period as f64;
 
-    for i in 1..highs.len() {
+    // Seed: SMA of first `period` true ranges
+    let mut tr_sum = highs[0] - lows[0];
+    for i in 1..period {
         let h_l = highs[i] - lows[i];
         let h_pc = (highs[i] - closes[i - 1]).abs();
         let l_pc = (lows[i] - closes[i - 1]).abs();
-
-        let tr = h_l.max(h_pc).max(l_pc);
-        true_ranges.push(tr);
+        tr_sum += h_l.max(h_pc).max(l_pc);
     }
 
-    // Calculate ATR using Wilder's smoothing (similar to EMA with alpha = 1/period)
-    let mut result = vec![None; highs.len()];
+    let mut result = vec![None; len];
+    let mut prev_atr = tr_sum / period_f;
+    result[period - 1] = Some(prev_atr);
 
-    // First ATR is SMA of true ranges
-    if true_ranges.len() >= period {
-        let first_atr: f64 = true_ranges[..period].iter().sum::<f64>() / period as f64;
-        result[period - 1] = Some(first_atr);
-
-        // Subsequent ATR values use Wilder's smoothing
-        let mut prev_atr = first_atr;
-        for i in period..true_ranges.len() {
-            let atr = (prev_atr * (period - 1) as f64 + true_ranges[i]) / period as f64;
-            result[i] = Some(atr);
-            prev_atr = atr;
-        }
+    for i in period..len {
+        let h_l = highs[i] - lows[i];
+        let h_pc = (highs[i] - closes[i - 1]).abs();
+        let l_pc = (lows[i] - closes[i - 1]).abs();
+        let tr = h_l.max(h_pc).max(l_pc);
+        prev_atr = (prev_atr * period_m1 + tr) / period_f;
+        result[i] = Some(prev_atr);
     }
 
     Ok(result)
