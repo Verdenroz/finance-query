@@ -120,6 +120,34 @@ tokio-test = "0.4"
 mockito = "1"
 serial_test = "3"
 tokio = { version = "1", features = ["full", "test-util"] }
+# Benchmarking
+criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
+
+[[bench]]
+name = "indicators"
+harness = false
+required-features = ["indicators"]
+
+[[bench]]
+name = "backtesting"
+harness = false
+required-features = ["backtesting"]
+
+[[bench]]
+name = "ticker"
+harness = false
+
+[[bench]]
+name = "tickers"
+harness = false
+
+[[bench]]
+name = "finance"
+harness = false
+
+[[bench]]
+name = "stream"
+harness = false
 
 [profile.release]
 opt-level = 3
@@ -129,6 +157,13 @@ strip = true
 
 [profile.dev]
 opt-level = 0
+
+[profile.bench]
+inherits = "release"
+debug = true
+strip = false
+lto = false
+codegen-units = 16
 
 # The profile that 'dist' will build with
 [profile.dist]
