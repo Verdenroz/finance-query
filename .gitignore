@@ -7,6 +7,12 @@ trash/
 attic/
 .kash/
 .claude/
+IDEAS.md
+*.py
+flamegraph.svg
+*.data
+/CLAUDE.md
+/.cargo/
 
 # Rust build artifacts
 /target/
