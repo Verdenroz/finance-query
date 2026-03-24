@@ -1,8 +1,8 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use finance_query::Candle;
 use finance_query::backtesting::{
-    BacktestConfig, BacktestEngine, GridSearch, MonteCarloConfig, OptimizeMetric, ParamRange,
-    SmaCrossover,
+    BacktestConfig, BacktestEngine, BayesianSearch, GridSearch, MonteCarloConfig, OptimizeMetric,
+    ParamRange, SmaCrossover,
 };
 use std::hint::black_box;
 
@@ -158,11 +158,45 @@ fn bench_monte_carlo(c: &mut Criterion) {
     group.finish();
 }
 
+// ── Bayesian optimiser ───────────────────────────────────────────────────────
+
+fn bench_bayesian_search(c: &mut Criterion) {
+    let candles = synthetic_candles(500);
+    let config = BacktestConfig::builder()
+        .initial_capital(10_000.0)
+        .commission_pct(0.001)
+        .build()
+        .unwrap();
+
+    let mut group = c.benchmark_group("bayesian_search");
+
+    // 2-param search, 20 evaluations (10 LHS + 10 sequential)
+    group.bench_function("sma_2param_20eval", |b| {
+        b.iter(|| {
+            let search = BayesianSearch::new()
+                .param("fast", ParamRange::int_bounds(5, 25))
+                .param("slow", ParamRange::int_bounds(20, 60))
+                .optimize_for(OptimizeMetric::SharpeRatio)
+                .max_evaluations(20)
+                .seed(42);
+            std::hint::black_box(search.run("BENCH", &candles, &config, |params| {
+                SmaCrossover::new(
+                    params["fast"].as_int() as usize,
+                    params["slow"].as_int() as usize,
+                )
+            }))
+        })
+    });
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_backtest_engine,
     bench_performance_metrics,
     bench_grid_search,
     bench_monte_carlo,
+    bench_bayesian_search,
 );
 criterion_main!(benches);

@@ -235,20 +235,22 @@ impl BayesianSearch {
                 (0..d).map(|_| rng.next_f64_positive()).collect()
             } else {
                 let surrogate = Surrogate::fit(&observations, beta);
-                (0..N_CANDIDATES)
-                    .map(|_| {
-                        (0..d)
-                            .map(|_| rng.next_f64_positive())
-                            .collect::<Vec<f64>>()
-                    })
-                    .max_by(|a, b| {
-                        surrogate
-                            .acquisition(a)
-                            .partial_cmp(&surrogate.acquisition(b))
-                            .unwrap_or(std::cmp::Ordering::Equal)
-                    })
-                    // SAFETY: N_CANDIDATES > 0.
-                    .unwrap()
+                // Reuse a single candidate buffer across all N_CANDIDATES evaluations,
+                // eliminating N_CANDIDATES heap allocations per sequential step.
+                let mut candidate = vec![0.0_f64; d];
+                let mut best_ucb = f64::NEG_INFINITY;
+                let mut best = vec![0.0_f64; d];
+                for _ in 0..N_CANDIDATES {
+                    for xi in candidate.iter_mut() {
+                        *xi = rng.next_f64_positive();
+                    }
+                    let ucb = surrogate.acquisition(&candidate);
+                    if ucb > best_ucb {
+                        best_ucb = ucb;
+                        best.copy_from_slice(&candidate);
+                    }
+                }
+                best
             };
 
             n_evaluations += 1;
@@ -446,29 +448,32 @@ impl<'a> Surrogate<'a> {
     ///
     /// Returns `(0.0, 1.0)` — maximum uncertainty — when all observations are
     /// too distant to contribute meaningful kernel weight.
+    ///
+    /// Uses Chan's single-pass online weighted mean+variance algorithm,
+    /// evaluating each RBF weight exactly once (vs. the two-pass approach
+    /// that would call `rbf` twice per observation).
     fn predict(&self, x: &[f64]) -> (f64, f64) {
         let mut w_sum = 0.0_f64;
-        let mut wy_sum = 0.0_f64;
+        let mut mean = 0.0_f64;
+        let mut s = 0.0_f64; // weighted sum of squared deviations
 
         for (xi, yi) in self.observations {
             let w = self.rbf(x, xi);
-            w_sum += w;
-            wy_sum += w * yi;
+            if w < f64::EPSILON {
+                continue;
+            }
+            let w_new = w_sum + w;
+            let delta = yi - mean;
+            mean += (w / w_new) * delta;
+            s += w * delta * (yi - mean);
+            w_sum = w_new;
         }
 
         if w_sum < f64::EPSILON {
             return (0.0, 1.0);
         }
 
-        let mean = wy_sum / w_sum;
-
-        let mut wvar = 0.0_f64;
-        for (xi, yi) in self.observations {
-            let diff = yi - mean;
-            wvar += self.rbf(x, xi) * diff * diff;
-        }
-        let std = (wvar / w_sum).max(0.0).sqrt();
-
+        let std = (s / w_sum).max(0.0).sqrt();
         (mean, std)
     }
 
