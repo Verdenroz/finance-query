@@ -6,8 +6,28 @@
 //! This data includes historical financial statement values (revenue, assets,
 //! liabilities, etc.) extracted from 10-K and 10-Q filings.
 
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
+
+/// Deserialize CIK that may come as a number or a zero-padded string.
+fn deserialize_cik<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum CikValue {
+        Num(u64),
+        Str(String),
+    }
+
+    match Option::<CikValue>::deserialize(deserializer)? {
+        Some(CikValue::Num(n)) => Ok(Some(n)),
+        Some(CikValue::Str(s)) => s
+            .trim_start_matches('0')
+            .parse::<u64>()
+            .map(Some)
+            .map_err(serde::de::Error::custom),
+        None => Ok(None),
+    }
+}
 
 /// Complete company facts response containing all XBRL financial data.
 ///
@@ -30,8 +50,8 @@ use std::collections::HashMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CompanyFacts {
-    /// CIK number
-    #[serde(default)]
+    /// CIK number (SEC returns this as either a number or a zero-padded string)
+    #[serde(default, deserialize_with = "deserialize_cik")]
     pub cik: Option<u64>,
 
     /// Company name
