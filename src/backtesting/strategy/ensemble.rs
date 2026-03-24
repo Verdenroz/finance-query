@@ -353,6 +353,12 @@ impl Strategy for EnsembleStrategy {
         indicators
     }
 
+    fn setup(&mut self, indicators: &std::collections::HashMap<String, Vec<Option<f64>>>) {
+        for (strategy, _) in &mut self.strategies {
+            strategy.setup(indicators);
+        }
+    }
+
     fn warmup_period(&self) -> usize {
         self.strategies
             .iter()

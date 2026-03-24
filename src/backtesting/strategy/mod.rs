@@ -298,6 +298,12 @@ pub trait Strategy: Send + Sync {
         vec![]
     }
 
+    /// Called once by the engine after indicator pre-computation, before the
+    /// simulation loop.  Strategies may cache references into the indicator
+    /// map here to avoid per-bar HashMap lookups.  The default implementation
+    /// does nothing; pre-built strategies override this for performance.
+    fn setup(&mut self, _indicators: &HashMap<String, Vec<Option<f64>>>) {}
+
     /// Called on each candle to generate a signal.
     ///
     /// Return `Signal::hold()` for no action, `Signal::long()` to enter long,
@@ -320,6 +326,9 @@ impl Strategy for Box<dyn Strategy> {
     }
     fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
         (**self).htf_requirements()
+    }
+    fn setup(&mut self, indicators: &HashMap<String, Vec<Option<f64>>>) {
+        (**self).setup(indicators)
     }
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         (**self).on_candle(ctx)

@@ -26,10 +26,56 @@
 //! let config = BacktestConfig::builder().allow_short(true).build().unwrap();
 //! ```
 
+use std::collections::HashMap;
+
 use crate::indicators::Indicator;
 
 use super::{Signal, Strategy, StrategyContext};
 use crate::backtesting::signal::SignalStrength;
+
+// ── Per-key pointer cache ─────────────────────────────────────────────────────
+
+/// One-slot pointer cache for a pre-computed indicator `Vec`.
+///
+/// Set once by [`Strategy::setup`] before the simulation loop; dereferenced on
+/// every bar in [`Strategy::on_candle`].  Clones as `None` so a cloned strategy
+/// is safe to pass to a fresh `BacktestEngine::run` call (the engine will call
+/// `setup` again).
+///
+/// # Safety invariant
+/// The pointer is valid for the duration of the enclosing `simulate()` call: it
+/// is taken from the `indicators` HashMap which is owned by that frame, never
+/// mutated during the loop, and outlives all `on_candle` calls.
+#[derive(Debug, Default)]
+struct IndicatorSlot(Option<*const Vec<Option<f64>>>);
+
+// SAFETY: The pointer is only read inside the engine's simulation loop (single-
+// threaded).  We never send it across threads while it could be dangling.
+unsafe impl Send for IndicatorSlot {}
+unsafe impl Sync for IndicatorSlot {}
+
+impl Clone for IndicatorSlot {
+    /// Returns an empty slot — the clone must go through `setup()` before use.
+    fn clone(&self) -> Self {
+        IndicatorSlot(None)
+    }
+}
+
+impl IndicatorSlot {
+    fn set(&mut self, v: &Vec<Option<f64>>) {
+        self.0 = Some(v as *const _);
+    }
+
+    /// Returns the cached slice, if set.
+    ///
+    /// # Safety
+    /// Must only be called during a simulation loop whose `setup()` populated
+    /// this slot from a HashMap that is still alive and unmodified.
+    #[inline]
+    unsafe fn get(&self) -> Option<&Vec<Option<f64>>> {
+        self.0.map(|p| unsafe { &*p })
+    }
+}
 
 /// SMA Crossover Strategy
 ///
@@ -45,6 +91,8 @@ pub struct SmaCrossover {
     pub slow_period: usize,
     fast_key: String,
     slow_key: String,
+    fast_slot: IndicatorSlot,
+    slow_slot: IndicatorSlot,
 }
 
 impl SmaCrossover {
@@ -55,6 +103,8 @@ impl SmaCrossover {
             slow_period,
             fast_key: format!("sma_{fast_period}"),
             slow_key: format!("sma_{slow_period}"),
+            fast_slot: IndicatorSlot::default(),
+            slow_slot: IndicatorSlot::default(),
         }
     }
 }
@@ -77,6 +127,15 @@ impl Strategy for SmaCrossover {
         ]
     }
 
+    fn setup(&mut self, indicators: &HashMap<String, Vec<Option<f64>>>) {
+        if let Some(v) = indicators.get(&self.fast_key) {
+            self.fast_slot.set(v);
+        }
+        if let Some(v) = indicators.get(&self.slow_key) {
+            self.slow_slot.set(v);
+        }
+    }
+
     fn warmup_period(&self) -> usize {
         self.slow_period.max(self.fast_period) + 1
     }
@@ -88,11 +147,15 @@ impl Strategy for SmaCrossover {
             return Signal::hold();
         }
 
-        // Fetch each slice once (2 lookups) rather than using crossed_above/below (8 lookups).
-        let (Some(fast_vals), Some(slow_vals)) = (
-            ctx.indicators.get(&self.fast_key),
-            ctx.indicators.get(&self.slow_key),
-        ) else {
+        // Use cached pointer (0 HashMap lookups); fall back to map lookup if
+        // setup() was not called (e.g., strategy used outside the engine).
+        // SAFETY: setup() was called from simulate() with the indicators map
+        // that is alive and unmodified for the duration of the loop.
+        let fast_vals =
+            unsafe { self.fast_slot.get() }.or_else(|| ctx.indicators.get(&self.fast_key));
+        let slow_vals =
+            unsafe { self.slow_slot.get() }.or_else(|| ctx.indicators.get(&self.slow_key));
+        let (Some(fast_vals), Some(slow_vals)) = (fast_vals, slow_vals) else {
             return Signal::hold();
         };
 
@@ -149,6 +212,7 @@ pub struct RsiReversal {
     /// Overbought threshold (default 70)
     pub overbought: f64,
     rsi_key: String,
+    rsi_slot: IndicatorSlot,
 }
 
 impl RsiReversal {
@@ -159,6 +223,7 @@ impl RsiReversal {
             oversold: 30.0,
             overbought: 70.0,
             rsi_key: format!("rsi_{period}"),
+            rsi_slot: IndicatorSlot::default(),
         }
     }
 
@@ -185,6 +250,12 @@ impl Strategy for RsiReversal {
         vec![(self.rsi_key.clone(), Indicator::Rsi(self.period))]
     }
 
+    fn setup(&mut self, indicators: &HashMap<String, Vec<Option<f64>>>) {
+        if let Some(v) = indicators.get(&self.rsi_key) {
+            self.rsi_slot.set(v);
+        }
+    }
+
     fn warmup_period(&self) -> usize {
         self.period + 1
     }
@@ -193,8 +264,9 @@ impl Strategy for RsiReversal {
         let candle = ctx.current_candle();
         let i = ctx.index;
 
-        // Fetch slice once (1 lookup) instead of 3 separate ctx.indicator() calls.
-        let Some(rsi_vals) = ctx.indicators.get(&self.rsi_key) else {
+        // SAFETY: see SmaCrossover::on_candle.
+        let rsi_vals = unsafe { self.rsi_slot.get() }.or_else(|| ctx.indicators.get(&self.rsi_key));
+        let Some(rsi_vals) = rsi_vals else {
             return Signal::hold();
         };
         let get = |idx: usize| rsi_vals.get(idx).and_then(|&v| v);
@@ -270,6 +342,8 @@ pub struct MacdSignal {
     pub signal: usize,
     line_key: String,
     sig_key: String,
+    line_slot: IndicatorSlot,
+    sig_slot: IndicatorSlot,
 }
 
 impl MacdSignal {
@@ -281,6 +355,8 @@ impl MacdSignal {
             signal,
             line_key: format!("macd_line_{fast}_{slow}_{signal}"),
             sig_key: format!("macd_signal_{fast}_{slow}_{signal}"),
+            line_slot: IndicatorSlot::default(),
+            sig_slot: IndicatorSlot::default(),
         }
     }
 }
@@ -307,6 +383,15 @@ impl Strategy for MacdSignal {
         )]
     }
 
+    fn setup(&mut self, indicators: &HashMap<String, Vec<Option<f64>>>) {
+        if let Some(v) = indicators.get(&self.line_key) {
+            self.line_slot.set(v);
+        }
+        if let Some(v) = indicators.get(&self.sig_key) {
+            self.sig_slot.set(v);
+        }
+    }
+
     fn warmup_period(&self) -> usize {
         self.slow + self.signal
     }
@@ -318,11 +403,11 @@ impl Strategy for MacdSignal {
             return Signal::hold();
         }
 
-        // Fetch each slice once (2 lookups) instead of crossed_above/below (8 lookups).
-        let (Some(line_vals), Some(sig_vals)) = (
-            ctx.indicators.get(&self.line_key),
-            ctx.indicators.get(&self.sig_key),
-        ) else {
+        // SAFETY: see SmaCrossover::on_candle.
+        let line_vals =
+            unsafe { self.line_slot.get() }.or_else(|| ctx.indicators.get(&self.line_key));
+        let sig_vals = unsafe { self.sig_slot.get() }.or_else(|| ctx.indicators.get(&self.sig_key));
+        let (Some(line_vals), Some(sig_vals)) = (line_vals, sig_vals) else {
             return Signal::hold();
         };
 
@@ -390,6 +475,9 @@ pub struct BollingerMeanReversion {
     lower_key: String,
     middle_key: String,
     upper_key: String,
+    lower_slot: IndicatorSlot,
+    middle_slot: IndicatorSlot,
+    upper_slot: IndicatorSlot,
 }
 
 impl BollingerMeanReversion {
@@ -402,6 +490,9 @@ impl BollingerMeanReversion {
             lower_key: format!("bollinger_lower_{period}_{std_dev}"),
             middle_key: format!("bollinger_middle_{period}_{std_dev}"),
             upper_key: format!("bollinger_upper_{period}_{std_dev}"),
+            lower_slot: IndicatorSlot::default(),
+            middle_slot: IndicatorSlot::default(),
+            upper_slot: IndicatorSlot::default(),
         }
     }
 
@@ -433,6 +524,18 @@ impl Strategy for BollingerMeanReversion {
         )]
     }
 
+    fn setup(&mut self, indicators: &HashMap<String, Vec<Option<f64>>>) {
+        if let Some(v) = indicators.get(&self.lower_key) {
+            self.lower_slot.set(v);
+        }
+        if let Some(v) = indicators.get(&self.middle_key) {
+            self.middle_slot.set(v);
+        }
+        if let Some(v) = indicators.get(&self.upper_key) {
+            self.upper_slot.set(v);
+        }
+    }
+
     fn warmup_period(&self) -> usize {
         self.period
     }
@@ -440,12 +543,25 @@ impl Strategy for BollingerMeanReversion {
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
         let close = candle.close;
+        let i = ctx.index;
 
-        let lower = ctx.indicator(&self.lower_key);
-        let middle = ctx.indicator(&self.middle_key);
-        let upper = ctx.indicator(&self.upper_key);
+        // SAFETY: see SmaCrossover::on_candle.
+        let lower_vals =
+            unsafe { self.lower_slot.get() }.or_else(|| ctx.indicators.get(&self.lower_key));
+        let middle_vals =
+            unsafe { self.middle_slot.get() }.or_else(|| ctx.indicators.get(&self.middle_key));
+        let upper_vals =
+            unsafe { self.upper_slot.get() }.or_else(|| ctx.indicators.get(&self.upper_key));
+        let (Some(lower_vals), Some(middle_vals), Some(upper_vals)) =
+            (lower_vals, middle_vals, upper_vals)
+        else {
+            return Signal::hold();
+        };
 
-        let (Some(lower_val), Some(middle_val), Some(upper_val)) = (lower, middle, upper) else {
+        let get = |vals: &Vec<Option<f64>>, idx: usize| vals.get(idx).and_then(|&v| v);
+        let (Some(lower_val), Some(middle_val), Some(upper_val)) =
+            (get(lower_vals, i), get(middle_vals, i), get(upper_vals, i))
+        else {
             return Signal::hold();
         };
 
@@ -515,6 +631,7 @@ pub struct SuperTrendFollow {
     /// ATR multiplier
     pub multiplier: f64,
     uptrend_key: String,
+    uptrend_slot: IndicatorSlot,
 }
 
 impl SuperTrendFollow {
@@ -524,6 +641,7 @@ impl SuperTrendFollow {
             period,
             multiplier,
             uptrend_key: format!("supertrend_uptrend_{period}_{multiplier}"),
+            uptrend_slot: IndicatorSlot::default(),
         }
     }
 }
@@ -549,6 +667,12 @@ impl Strategy for SuperTrendFollow {
         )]
     }
 
+    fn setup(&mut self, indicators: &HashMap<String, Vec<Option<f64>>>) {
+        if let Some(v) = indicators.get(&self.uptrend_key) {
+            self.uptrend_slot.set(v);
+        }
+    }
+
     fn warmup_period(&self) -> usize {
         self.period + 1
     }
@@ -557,9 +681,10 @@ impl Strategy for SuperTrendFollow {
         let candle = ctx.current_candle();
         let i = ctx.index;
 
-        // SuperTrend uptrend stored as 1.0, downtrend as 0.0.
-        // Fetch slice once (1 lookup) instead of 2 separate indicator() calls.
-        let Some(vals) = ctx.indicators.get(&self.uptrend_key) else {
+        // SAFETY: see SmaCrossover::on_candle.
+        let vals =
+            unsafe { self.uptrend_slot.get() }.or_else(|| ctx.indicators.get(&self.uptrend_key));
+        let Some(vals) = vals else {
             return Signal::hold();
         };
         let get = |idx: usize| vals.get(idx).and_then(|&v| v);
@@ -613,6 +738,9 @@ pub struct DonchianBreakout {
     upper_key: String,
     middle_key: String,
     lower_key: String,
+    upper_slot: IndicatorSlot,
+    middle_slot: IndicatorSlot,
+    lower_slot: IndicatorSlot,
 }
 
 impl DonchianBreakout {
@@ -624,6 +752,9 @@ impl DonchianBreakout {
             upper_key: format!("donchian_upper_{period}"),
             middle_key: format!("donchian_middle_{period}"),
             lower_key: format!("donchian_lower_{period}"),
+            upper_slot: IndicatorSlot::default(),
+            middle_slot: IndicatorSlot::default(),
+            lower_slot: IndicatorSlot::default(),
         }
     }
 
@@ -652,6 +783,18 @@ impl Strategy for DonchianBreakout {
         )]
     }
 
+    fn setup(&mut self, indicators: &HashMap<String, Vec<Option<f64>>>) {
+        if let Some(v) = indicators.get(&self.upper_key) {
+            self.upper_slot.set(v);
+        }
+        if let Some(v) = indicators.get(&self.middle_key) {
+            self.middle_slot.set(v);
+        }
+        if let Some(v) = indicators.get(&self.lower_key) {
+            self.lower_slot.set(v);
+        }
+    }
+
     fn warmup_period(&self) -> usize {
         self.period
     }
@@ -659,14 +802,18 @@ impl Strategy for DonchianBreakout {
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
         let close = candle.close;
-
-        // Fetch each slice once (3 lookups) instead of 5 ctx.indicator() calls.
         let i = ctx.index;
-        let (Some(upper_vals), Some(middle_vals), Some(lower_vals)) = (
-            ctx.indicators.get(&self.upper_key),
-            ctx.indicators.get(&self.middle_key),
-            ctx.indicators.get(&self.lower_key),
-        ) else {
+
+        // SAFETY: see SmaCrossover::on_candle.
+        let upper_vals =
+            unsafe { self.upper_slot.get() }.or_else(|| ctx.indicators.get(&self.upper_key));
+        let middle_vals =
+            unsafe { self.middle_slot.get() }.or_else(|| ctx.indicators.get(&self.middle_key));
+        let lower_vals =
+            unsafe { self.lower_slot.get() }.or_else(|| ctx.indicators.get(&self.lower_key));
+        let (Some(upper_vals), Some(middle_vals), Some(lower_vals)) =
+            (upper_vals, middle_vals, lower_vals)
+        else {
             return Signal::hold();
         };
         let get = |vals: &Vec<Option<f64>>, idx: usize| vals.get(idx).and_then(|&v| v);

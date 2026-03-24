@@ -34,27 +34,50 @@ pub(crate) fn compute_for_candles(
 ) -> Result<HashMap<String, Vec<Option<f64>>>> {
     let mut result = HashMap::new();
 
-    let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
-    let highs: Vec<f64> = candles.iter().map(|c| c.high).collect();
-    let lows: Vec<f64> = candles.iter().map(|c| c.low).collect();
-    let volumes: Vec<f64> = candles.iter().map(|c| c.volume as f64).collect();
+    // Lazy price-series extraction: each array is built at most once, only if
+    // some indicator actually needs it.
+    let mut closes: Option<Vec<f64>> = None;
+    let mut highs: Option<Vec<f64>> = None;
+    let mut lows: Option<Vec<f64>> = None;
+    let mut volumes: Option<Vec<f64>> = None;
+
+    macro_rules! closes {
+        () => {
+            closes.get_or_insert_with(|| candles.iter().map(|c| c.close).collect())
+        };
+    }
+    macro_rules! highs {
+        () => {
+            highs.get_or_insert_with(|| candles.iter().map(|c| c.high).collect())
+        };
+    }
+    macro_rules! lows {
+        () => {
+            lows.get_or_insert_with(|| candles.iter().map(|c| c.low).collect())
+        };
+    }
+    macro_rules! volumes {
+        () => {
+            volumes.get_or_insert_with(|| candles.iter().map(|c| c.volume as f64).collect())
+        };
+    }
 
     for (name, indicator) in required {
         match indicator {
             Indicator::Sma(period) => {
-                let values = indicators::sma(&closes, period);
+                let values = indicators::sma(closes!(), period);
                 result.insert(name, values);
             }
             Indicator::Ema(period) => {
-                let values = indicators::ema(&closes, period);
+                let values = indicators::ema(closes!(), period);
                 result.insert(name, values);
             }
             Indicator::Rsi(period) => {
-                let values = indicators::rsi(&closes, period)?;
+                let values = indicators::rsi(closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Macd { fast, slow, signal } => {
-                let macd_result = indicators::macd(&closes, fast, slow, signal)?;
+                let macd_result = indicators::macd(closes!(), fast, slow, signal)?;
                 result.insert(
                     format!("macd_line_{fast}_{slow}_{signal}"),
                     macd_result.macd_line,
@@ -69,17 +92,17 @@ pub(crate) fn compute_for_candles(
                 );
             }
             Indicator::Bollinger { period, std_dev } => {
-                let bb = indicators::bollinger_bands(&closes, period, std_dev)?;
+                let bb = indicators::bollinger_bands(closes!(), period, std_dev)?;
                 result.insert(format!("bollinger_upper_{period}_{std_dev}"), bb.upper);
                 result.insert(format!("bollinger_middle_{period}_{std_dev}"), bb.middle);
                 result.insert(format!("bollinger_lower_{period}_{std_dev}"), bb.lower);
             }
             Indicator::Atr(period) => {
-                let values = indicators::atr(&highs, &lows, &closes, period)?;
+                let values = indicators::atr(highs!(), lows!(), closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Supertrend { period, multiplier } => {
-                let st = indicators::supertrend(&highs, &lows, &closes, period, multiplier)?;
+                let st = indicators::supertrend(highs!(), lows!(), closes!(), period, multiplier)?;
                 result.insert(format!("supertrend_value_{period}_{multiplier}"), st.value);
                 let uptrend: Vec<Option<f64>> = st
                     .is_uptrend
@@ -89,65 +112,65 @@ pub(crate) fn compute_for_candles(
                 result.insert(format!("supertrend_uptrend_{period}_{multiplier}"), uptrend);
             }
             Indicator::DonchianChannels(period) => {
-                let dc = indicators::donchian_channels(&highs, &lows, period)?;
+                let dc = indicators::donchian_channels(highs!(), lows!(), period)?;
                 result.insert(format!("donchian_upper_{period}"), dc.upper);
                 result.insert(format!("donchian_middle_{period}"), dc.middle);
                 result.insert(format!("donchian_lower_{period}"), dc.lower);
             }
             Indicator::Wma(period) => {
-                let values = indicators::wma(&closes, period)?;
+                let values = indicators::wma(closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Dema(period) => {
-                let values = indicators::dema(&closes, period)?;
+                let values = indicators::dema(closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Tema(period) => {
-                let values = indicators::tema(&closes, period)?;
+                let values = indicators::tema(closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Hma(period) => {
-                let values = indicators::hma(&closes, period)?;
+                let values = indicators::hma(closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Obv => {
-                let values = indicators::obv(&closes, &volumes)?;
+                let values = indicators::obv(closes!(), volumes!())?;
                 result.insert(name, values);
             }
             Indicator::Momentum(period) => {
-                let values = indicators::momentum(&closes, period)?;
+                let values = indicators::momentum(closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Roc(period) => {
-                let values = indicators::roc(&closes, period)?;
+                let values = indicators::roc(closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Cci(period) => {
-                let values = indicators::cci(&highs, &lows, &closes, period)?;
+                let values = indicators::cci(highs!(), lows!(), closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::WilliamsR(period) => {
-                let values = indicators::williams_r(&highs, &lows, &closes, period)?;
+                let values = indicators::williams_r(highs!(), lows!(), closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Adx(period) => {
-                let values = indicators::adx(&highs, &lows, &closes, period)?;
+                let values = indicators::adx(highs!(), lows!(), closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Mfi(period) => {
-                let values = indicators::mfi(&highs, &lows, &closes, &volumes, period)?;
+                let values = indicators::mfi(highs!(), lows!(), closes!(), volumes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Cmf(period) => {
-                let values = indicators::cmf(&highs, &lows, &closes, &volumes, period)?;
+                let values = indicators::cmf(highs!(), lows!(), closes!(), volumes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Cmo(period) => {
-                let values = indicators::cmo(&closes, period)?;
+                let values = indicators::cmo(closes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Vwma(period) => {
-                let values = indicators::vwma(&closes, &volumes, period)?;
+                let values = indicators::vwma(closes!(), volumes!(), period)?;
                 result.insert(name, values);
             }
             Indicator::Alma {
@@ -155,11 +178,11 @@ pub(crate) fn compute_for_candles(
                 offset,
                 sigma,
             } => {
-                let values = indicators::alma(&closes, period, offset, sigma)?;
+                let values = indicators::alma(closes!(), period, offset, sigma)?;
                 result.insert(name, values);
             }
             Indicator::McginleyDynamic(period) => {
-                let values = indicators::mcginley_dynamic(&closes, period)?;
+                let values = indicators::mcginley_dynamic(closes!(), period)?;
                 result.insert(name, values);
             }
             // === OSCILLATORS ===
@@ -168,8 +191,14 @@ pub(crate) fn compute_for_candles(
                 k_slow,
                 d_period,
             } => {
-                let stoch =
-                    indicators::stochastic(&highs, &lows, &closes, k_period, k_slow, d_period)?;
+                let stoch = indicators::stochastic(
+                    highs!(),
+                    lows!(),
+                    closes!(),
+                    k_period,
+                    k_slow,
+                    d_period,
+                )?;
                 result.insert(
                     format!("stochastic_k_{k_period}_{k_slow}_{d_period}"),
                     stoch.k,
@@ -186,7 +215,7 @@ pub(crate) fn compute_for_candles(
                 d_period,
             } => {
                 let stoch = indicators::stochastic_rsi(
-                    &closes,
+                    closes!(),
                     rsi_period,
                     stoch_period,
                     k_period,
@@ -202,7 +231,7 @@ pub(crate) fn compute_for_candles(
                 );
             }
             Indicator::AwesomeOscillator { fast, slow } => {
-                let values = indicators::awesome_oscillator(&highs, &lows, fast, slow)?;
+                let values = indicators::awesome_oscillator(highs!(), lows!(), fast, slow)?;
                 result.insert(name, values);
             }
             Indicator::CoppockCurve {
@@ -210,12 +239,12 @@ pub(crate) fn compute_for_candles(
                 long_roc,
                 short_roc,
             } => {
-                let values = indicators::coppock_curve(&closes, long_roc, short_roc, wma_period)?;
+                let values = indicators::coppock_curve(closes!(), long_roc, short_roc, wma_period)?;
                 result.insert(name, values);
             }
             // === TREND INDICATORS ===
             Indicator::Aroon(period) => {
-                let aroon_result = indicators::aroon(&highs, &lows, period)?;
+                let aroon_result = indicators::aroon(highs!(), lows!(), period)?;
                 result.insert(format!("aroon_up_{period}"), aroon_result.aroon_up);
                 result.insert(format!("aroon_down_{period}"), aroon_result.aroon_down);
             }
@@ -226,9 +255,9 @@ pub(crate) fn compute_for_candles(
                 displacement,
             } => {
                 let ich = indicators::ichimoku(
-                    &highs,
-                    &lows,
-                    &closes,
+                    highs!(),
+                    lows!(),
+                    closes!(),
                     conversion,
                     base,
                     lagging,
@@ -256,7 +285,7 @@ pub(crate) fn compute_for_candles(
                 );
             }
             Indicator::ParabolicSar { step, max } => {
-                let values = indicators::parabolic_sar(&highs, &lows, &closes, step, max)?;
+                let values = indicators::parabolic_sar(highs!(), lows!(), closes!(), step, max)?;
                 result.insert(name, values);
             }
             // === VOLATILITY ===
@@ -266,7 +295,12 @@ pub(crate) fn compute_for_candles(
                 atr_period,
             } => {
                 let kc = indicators::keltner_channels(
-                    &highs, &lows, &closes, period, atr_period, multiplier,
+                    highs!(),
+                    lows!(),
+                    closes!(),
+                    period,
+                    atr_period,
+                    multiplier,
                 )?;
                 result.insert(
                     format!("keltner_upper_{period}_{multiplier}_{atr_period}"),
@@ -282,40 +316,46 @@ pub(crate) fn compute_for_candles(
                 );
             }
             Indicator::TrueRange => {
-                let values = indicators::true_range(&highs, &lows, &closes)?;
+                let values = indicators::true_range(highs!(), lows!(), closes!())?;
                 result.insert(name, values);
             }
             Indicator::ChoppinessIndex(period) => {
-                let values = indicators::choppiness_index(&highs, &lows, &closes, period)?;
+                let values = indicators::choppiness_index(highs!(), lows!(), closes!(), period)?;
                 result.insert(name, values);
             }
             // === VOLUME INDICATORS ===
             Indicator::Vwap => {
-                let values = indicators::vwap(&highs, &lows, &closes, &volumes)?;
+                let values = indicators::vwap(highs!(), lows!(), closes!(), volumes!())?;
                 result.insert(name, values);
             }
             Indicator::ChaikinOscillator => {
-                let values = indicators::chaikin_oscillator(&highs, &lows, &closes, &volumes)?;
+                let values =
+                    indicators::chaikin_oscillator(highs!(), lows!(), closes!(), volumes!())?;
                 result.insert(name, values);
             }
             Indicator::AccumulationDistribution => {
-                let values =
-                    indicators::accumulation_distribution(&highs, &lows, &closes, &volumes)?;
+                let values = indicators::accumulation_distribution(
+                    highs!(),
+                    lows!(),
+                    closes!(),
+                    volumes!(),
+                )?;
                 result.insert(name, values);
             }
             Indicator::BalanceOfPower(period) => {
                 let opens: Vec<f64> = candles.iter().map(|c| c.open).collect();
-                let values = indicators::balance_of_power(&opens, &highs, &lows, &closes, period)?;
+                let values =
+                    indicators::balance_of_power(&opens, highs!(), lows!(), closes!(), period)?;
                 result.insert(name, values);
             }
             // === POWER/STRENGTH INDICATORS ===
             Indicator::BullBearPower(period) => {
-                let bbp = indicators::bull_bear_power(&highs, &lows, &closes, period)?;
+                let bbp = indicators::bull_bear_power(highs!(), lows!(), closes!(), period)?;
                 result.insert(format!("bull_power_{period}"), bbp.bull_power);
                 result.insert(format!("bear_power_{period}"), bbp.bear_power);
             }
             Indicator::ElderRay(period) => {
-                let er = indicators::elder_ray(&highs, &lows, &closes, period)?;
+                let er = indicators::elder_ray(highs!(), lows!(), closes!(), period)?;
                 result.insert(format!("elder_bull_{period}"), er.bull_power);
                 result.insert(format!("elder_bear_{period}"), er.bear_power);
             }
@@ -370,7 +410,7 @@ impl BacktestEngine {
         &self,
         symbol: &str,
         candles: &[Candle],
-        strategy: S,
+        mut strategy: S,
         dividends: &[Dividend],
     ) -> Result<BacktestResult> {
         let warmup = strategy.warmup_period();
@@ -393,12 +433,16 @@ impl BacktestEngine {
         let mut indicators = self.compute_indicators(candles, &strategy)?;
         indicators.extend(self.compute_htf_indicators(candles, &strategy)?);
 
+        // Let the strategy cache direct pointers into the indicator map, eliminating
+        // per-bar HashMap lookups in on_candle.
+        strategy.setup(&indicators);
+
         // Initialize state
         let mut equity = self.config.initial_capital;
         let mut cash = self.config.initial_capital;
         let mut position: Option<Position> = None;
         let mut trades: Vec<Trade> = Vec::new();
-        let mut equity_curve: Vec<EquityPoint> = Vec::new();
+        let mut equity_curve: Vec<EquityPoint> = Vec::with_capacity(candles.len());
         let mut signals: Vec<SignalRecord> = Vec::new();
         let mut peak_equity = equity;
         // High-water mark for the trailing stop: tracks peak price (longs) or
