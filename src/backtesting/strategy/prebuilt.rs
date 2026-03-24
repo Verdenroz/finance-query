@@ -43,6 +43,8 @@ pub struct SmaCrossover {
     pub fast_period: usize,
     /// Slow SMA period
     pub slow_period: usize,
+    fast_key: String,
+    slow_key: String,
 }
 
 impl SmaCrossover {
@@ -51,15 +53,9 @@ impl SmaCrossover {
         Self {
             fast_period,
             slow_period,
+            fast_key: format!("sma_{fast_period}"),
+            slow_key: format!("sma_{slow_period}"),
         }
-    }
-
-    fn fast_key(&self) -> String {
-        format!("sma_{}", self.fast_period)
-    }
-
-    fn slow_key(&self) -> String {
-        format!("sma_{}", self.slow_period)
     }
 }
 
@@ -76,8 +72,8 @@ impl Strategy for SmaCrossover {
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![
-            (self.fast_key(), Indicator::Sma(self.fast_period)),
-            (self.slow_key(), Indicator::Sma(self.slow_period)),
+            (self.fast_key.clone(), Indicator::Sma(self.fast_period)),
+            (self.slow_key.clone(), Indicator::Sma(self.slow_period)),
         ]
     }
 
@@ -89,7 +85,7 @@ impl Strategy for SmaCrossover {
         let candle = ctx.current_candle();
 
         // Bullish crossover: fast crosses above slow
-        if ctx.crossed_above(&self.fast_key(), &self.slow_key()) {
+        if ctx.crossed_above(&self.fast_key, &self.slow_key) {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("SMA bullish crossover - close short");
@@ -101,7 +97,7 @@ impl Strategy for SmaCrossover {
         }
 
         // Bearish crossover: fast crosses below slow
-        if ctx.crossed_below(&self.fast_key(), &self.slow_key()) {
+        if ctx.crossed_below(&self.fast_key, &self.slow_key) {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("SMA bearish crossover - close long");
@@ -130,6 +126,7 @@ pub struct RsiReversal {
     pub oversold: f64,
     /// Overbought threshold (default 70)
     pub overbought: f64,
+    rsi_key: String,
 }
 
 impl RsiReversal {
@@ -139,6 +136,7 @@ impl RsiReversal {
             period,
             oversold: 30.0,
             overbought: 70.0,
+            rsi_key: format!("rsi_{period}"),
         }
     }
 
@@ -147,10 +145,6 @@ impl RsiReversal {
         self.oversold = oversold;
         self.overbought = overbought;
         self
-    }
-
-    fn rsi_key(&self) -> String {
-        format!("rsi_{}", self.period)
     }
 }
 
@@ -166,7 +160,7 @@ impl Strategy for RsiReversal {
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.rsi_key(), Indicator::Rsi(self.period))]
+        vec![(self.rsi_key.clone(), Indicator::Rsi(self.period))]
     }
 
     fn warmup_period(&self) -> usize {
@@ -175,7 +169,7 @@ impl Strategy for RsiReversal {
 
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
-        let rsi = ctx.indicator(&self.rsi_key());
+        let rsi = ctx.indicator(&self.rsi_key);
 
         let Some(rsi_val) = rsi else {
             return Signal::hold();
@@ -191,7 +185,7 @@ impl Strategy for RsiReversal {
         };
 
         // Bullish: RSI crosses above oversold
-        if ctx.indicator_crossed_above(&self.rsi_key(), self.oversold) {
+        if ctx.indicator_crossed_above(&self.rsi_key, self.oversold) {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_strength(strength)
@@ -208,7 +202,7 @@ impl Strategy for RsiReversal {
         }
 
         // Bearish: RSI crosses below overbought
-        if ctx.indicator_crossed_below(&self.rsi_key(), self.overbought) {
+        if ctx.indicator_crossed_below(&self.rsi_key, self.overbought) {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_strength(strength)
@@ -242,12 +236,20 @@ pub struct MacdSignal {
     pub slow: usize,
     /// Signal line period
     pub signal: usize,
+    line_key: String,
+    sig_key: String,
 }
 
 impl MacdSignal {
     /// Create a new MACD signal strategy
     pub fn new(fast: usize, slow: usize, signal: usize) -> Self {
-        Self { fast, slow, signal }
+        Self {
+            fast,
+            slow,
+            signal,
+            line_key: format!("macd_line_{fast}_{slow}_{signal}"),
+            sig_key: format!("macd_signal_{fast}_{slow}_{signal}"),
+        }
     }
 }
 
@@ -280,12 +282,9 @@ impl Strategy for MacdSignal {
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
 
-        let line_key = format!("macd_line_{}_{}_{}", self.fast, self.slow, self.signal);
-        let sig_key = format!("macd_signal_{}_{}_{}", self.fast, self.slow, self.signal);
-
         // MACD line and signal line are stored separately by the engine
         // Bullish crossover
-        if ctx.crossed_above(&line_key, &sig_key) {
+        if ctx.crossed_above(&self.line_key, &self.sig_key) {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("MACD bullish crossover - close short");
@@ -297,7 +296,7 @@ impl Strategy for MacdSignal {
         }
 
         // Bearish crossover
-        if ctx.crossed_below(&line_key, &sig_key) {
+        if ctx.crossed_below(&self.line_key, &self.sig_key) {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("MACD bearish crossover - close long");
@@ -334,6 +333,9 @@ pub struct BollingerMeanReversion {
     pub std_dev: f64,
     /// Exit at middle band (true) or upper/lower band (false)
     pub exit_at_middle: bool,
+    lower_key: String,
+    middle_key: String,
+    upper_key: String,
 }
 
 impl BollingerMeanReversion {
@@ -343,6 +345,9 @@ impl BollingerMeanReversion {
             period,
             std_dev,
             exit_at_middle: true,
+            lower_key: format!("bollinger_lower_{period}_{std_dev}"),
+            middle_key: format!("bollinger_middle_{period}_{std_dev}"),
+            upper_key: format!("bollinger_upper_{period}_{std_dev}"),
         }
     }
 
@@ -382,12 +387,9 @@ impl Strategy for BollingerMeanReversion {
         let candle = ctx.current_candle();
         let close = candle.close;
 
-        let lower = ctx.indicator(&format!("bollinger_lower_{}_{}", self.period, self.std_dev));
-        let middle = ctx.indicator(&format!(
-            "bollinger_middle_{}_{}",
-            self.period, self.std_dev
-        ));
-        let upper = ctx.indicator(&format!("bollinger_upper_{}_{}", self.period, self.std_dev));
+        let lower = ctx.indicator(&self.lower_key);
+        let middle = ctx.indicator(&self.middle_key);
+        let upper = ctx.indicator(&self.upper_key);
 
         let (Some(lower_val), Some(middle_val), Some(upper_val)) = (lower, middle, upper) else {
             return Signal::hold();
@@ -458,12 +460,17 @@ pub struct SuperTrendFollow {
     pub period: usize,
     /// ATR multiplier
     pub multiplier: f64,
+    uptrend_key: String,
 }
 
 impl SuperTrendFollow {
     /// Create a new SuperTrend following strategy
     pub fn new(period: usize, multiplier: f64) -> Self {
-        Self { period, multiplier }
+        Self {
+            period,
+            multiplier,
+            uptrend_key: format!("supertrend_uptrend_{period}_{multiplier}"),
+        }
     }
 }
 
@@ -496,9 +503,8 @@ impl Strategy for SuperTrendFollow {
         let candle = ctx.current_candle();
 
         // SuperTrend uptrend stored as 1.0, downtrend as 0.0
-        let uptrend_key = format!("supertrend_uptrend_{}_{}", self.period, self.multiplier);
-        let trend_now = ctx.indicator(&uptrend_key);
-        let trend_prev = ctx.indicator_prev(&uptrend_key);
+        let trend_now = ctx.indicator(&self.uptrend_key);
+        let trend_prev = ctx.indicator_prev(&self.uptrend_key);
 
         let (Some(now), Some(prev)) = (trend_now, trend_prev) else {
             return Signal::hold();
@@ -547,6 +553,9 @@ pub struct DonchianBreakout {
     pub period: usize,
     /// Use middle channel for exit (true) or opposite channel (false)
     pub exit_at_middle: bool,
+    upper_key: String,
+    middle_key: String,
+    lower_key: String,
 }
 
 impl DonchianBreakout {
@@ -555,6 +564,9 @@ impl DonchianBreakout {
         Self {
             period,
             exit_at_middle: true,
+            upper_key: format!("donchian_upper_{period}"),
+            middle_key: format!("donchian_middle_{period}"),
+            lower_key: format!("donchian_lower_{period}"),
         }
     }
 
@@ -591,14 +603,11 @@ impl Strategy for DonchianBreakout {
         let candle = ctx.current_candle();
         let close = candle.close;
 
-        let upper_key = format!("donchian_upper_{}", self.period);
-        let middle_key = format!("donchian_middle_{}", self.period);
-        let lower_key = format!("donchian_lower_{}", self.period);
-        let upper = ctx.indicator(&upper_key);
-        let middle = ctx.indicator(&middle_key);
-        let lower = ctx.indicator(&lower_key);
-        let prev_upper = ctx.indicator_prev(&upper_key);
-        let prev_lower = ctx.indicator_prev(&lower_key);
+        let upper = ctx.indicator(&self.upper_key);
+        let middle = ctx.indicator(&self.middle_key);
+        let lower = ctx.indicator(&self.lower_key);
+        let prev_upper = ctx.indicator_prev(&self.upper_key);
+        let prev_lower = ctx.indicator_prev(&self.lower_key);
 
         let (Some(_upper_val), Some(middle_val), Some(_lower_val)) = (upper, middle, lower) else {
             return Signal::hold();

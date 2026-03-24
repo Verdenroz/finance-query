@@ -765,13 +765,20 @@ fn calculate_risk_ratios(
     }
 
     let periodic_rf = annual_to_periodic_rf(annual_risk_free_rate, bars_per_year);
-    let excess: Vec<f64> = returns.iter().map(|r| r - periodic_rf).collect();
-    let n = excess.len() as f64;
-    let mean = excess.iter().sum::<f64>() / n;
+    let n = returns.len() as f64;
+
+    // Pass 1: mean of excess returns (no allocation)
+    let mean = returns.iter().map(|r| r - periodic_rf).sum::<f64>() / n;
+
+    // Pass 2: variance and downside sum in one loop (no allocation)
+    let (var_sum, downside_sq_sum) = returns.iter().fold((0.0_f64, 0.0_f64), |(v, d), &r| {
+        let e = r - periodic_rf;
+        let delta = e - mean;
+        (v + delta * delta, if e < 0.0 { d + e * e } else { d })
+    });
 
     // Sharpe: sample variance (n-1) for unbiased estimation
-    let variance = excess.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (n - 1.0);
-    let std_dev = variance.sqrt();
+    let std_dev = (var_sum / (n - 1.0)).sqrt();
     let sharpe = if std_dev > 0.0 {
         (mean / std_dev) * bars_per_year.sqrt()
     } else if mean > 0.0 {
@@ -782,7 +789,6 @@ fn calculate_risk_ratios(
 
     // Sortino: downside deviation (only negative excess; denominator is n-1,
     // per Sortino's original definition and the `risk` module convention)
-    let downside_sq_sum: f64 = excess.iter().filter(|&&r| r < 0.0).map(|r| r.powi(2)).sum();
     let downside_dev = (downside_sq_sum / (n - 1.0)).sqrt();
     let sortino = if downside_dev > 0.0 {
         (mean / downside_dev) * bars_per_year.sqrt()
@@ -797,27 +803,28 @@ fn calculate_risk_ratios(
 
 /// Calculate average duration (in seconds) for winning and losing trades separately.
 fn calculate_win_loss_durations(trades: &[Trade]) -> (f64, f64) {
-    let win_durations: Vec<i64> = trades
-        .iter()
-        .filter(|t| t.is_profitable())
-        .map(|t| t.duration_secs())
-        .collect();
-    let loss_durations: Vec<i64> = trades
-        .iter()
-        .filter(|t| t.is_loss())
-        .map(|t| t.duration_secs())
-        .collect();
+    let (win_sum, win_count, loss_sum, loss_count) =
+        trades
+            .iter()
+            .fold((0i64, 0usize, 0i64, 0usize), |(ws, wc, ls, lc), t| {
+                if t.is_profitable() {
+                    (ws + t.duration_secs(), wc + 1, ls, lc)
+                } else if t.is_loss() {
+                    (ws, wc, ls + t.duration_secs(), lc + 1)
+                } else {
+                    (ws, wc, ls, lc)
+                }
+            });
 
-    let avg_win = if win_durations.is_empty() {
+    let avg_win = if win_count == 0 {
         0.0
     } else {
-        win_durations.iter().sum::<i64>() as f64 / win_durations.len() as f64
+        win_sum as f64 / win_count as f64
     };
-
-    let avg_loss = if loss_durations.is_empty() {
+    let avg_loss = if loss_count == 0 {
         0.0
     } else {
-        loss_durations.iter().sum::<i64>() as f64 / loss_durations.len() as f64
+        loss_sum as f64 / loss_count as f64
     };
 
     (avg_win, avg_loss)
