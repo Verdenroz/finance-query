@@ -83,9 +83,31 @@ impl Strategy for SmaCrossover {
 
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
+        let i = ctx.index;
+        if i == 0 {
+            return Signal::hold();
+        }
+
+        // Fetch each slice once (2 lookups) rather than using crossed_above/below (8 lookups).
+        let (Some(fast_vals), Some(slow_vals)) = (
+            ctx.indicators.get(&self.fast_key),
+            ctx.indicators.get(&self.slow_key),
+        ) else {
+            return Signal::hold();
+        };
+
+        let get = |vals: &Vec<Option<f64>>, idx: usize| vals.get(idx).and_then(|&v| v);
+        let (Some(fn_), Some(sn), Some(fp), Some(sp)) = (
+            get(fast_vals, i),
+            get(slow_vals, i),
+            get(fast_vals, i - 1),
+            get(slow_vals, i - 1),
+        ) else {
+            return Signal::hold();
+        };
 
         // Bullish crossover: fast crosses above slow
-        if ctx.crossed_above(&self.fast_key, &self.slow_key) {
+        if fp < sp && fn_ > sn {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("SMA bullish crossover - close short");
@@ -97,7 +119,7 @@ impl Strategy for SmaCrossover {
         }
 
         // Bearish crossover: fast crosses below slow
-        if ctx.crossed_below(&self.fast_key, &self.slow_key) {
+        if fp > sp && fn_ < sn {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("SMA bearish crossover - close long");
@@ -169,11 +191,17 @@ impl Strategy for RsiReversal {
 
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
-        let rsi = ctx.indicator(&self.rsi_key);
+        let i = ctx.index;
 
-        let Some(rsi_val) = rsi else {
+        // Fetch slice once (1 lookup) instead of 3 separate ctx.indicator() calls.
+        let Some(rsi_vals) = ctx.indicators.get(&self.rsi_key) else {
             return Signal::hold();
         };
+        let get = |idx: usize| rsi_vals.get(idx).and_then(|&v| v);
+        let Some(rsi_val) = get(i) else {
+            return Signal::hold();
+        };
+        let rsi_prev = if i > 0 { get(i - 1) } else { None };
 
         // Calculate signal strength based on RSI extremity
         let strength = if !(20.0..=80.0).contains(&rsi_val) {
@@ -185,7 +213,9 @@ impl Strategy for RsiReversal {
         };
 
         // Bullish: RSI crosses above oversold
-        if ctx.indicator_crossed_above(&self.rsi_key, self.oversold) {
+        let crossed_above_oversold =
+            rsi_prev.is_some_and(|p| p <= self.oversold) && rsi_val > self.oversold;
+        if crossed_above_oversold {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_strength(strength)
@@ -202,7 +232,9 @@ impl Strategy for RsiReversal {
         }
 
         // Bearish: RSI crosses below overbought
-        if ctx.indicator_crossed_below(&self.rsi_key, self.overbought) {
+        let crossed_below_overbought =
+            rsi_prev.is_some_and(|p| p >= self.overbought) && rsi_val < self.overbought;
+        if crossed_below_overbought {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_strength(strength)
@@ -281,10 +313,32 @@ impl Strategy for MacdSignal {
 
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
+        let i = ctx.index;
+        if i == 0 {
+            return Signal::hold();
+        }
+
+        // Fetch each slice once (2 lookups) instead of crossed_above/below (8 lookups).
+        let (Some(line_vals), Some(sig_vals)) = (
+            ctx.indicators.get(&self.line_key),
+            ctx.indicators.get(&self.sig_key),
+        ) else {
+            return Signal::hold();
+        };
+
+        let get = |vals: &Vec<Option<f64>>, idx: usize| vals.get(idx).and_then(|&v| v);
+        let (Some(ln), Some(sn), Some(lp), Some(sp)) = (
+            get(line_vals, i),
+            get(sig_vals, i),
+            get(line_vals, i - 1),
+            get(sig_vals, i - 1),
+        ) else {
+            return Signal::hold();
+        };
 
         // MACD line and signal line are stored separately by the engine
         // Bullish crossover
-        if ctx.crossed_above(&self.line_key, &self.sig_key) {
+        if lp < sp && ln > sn {
             if ctx.is_short() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("MACD bullish crossover - close short");
@@ -296,7 +350,7 @@ impl Strategy for MacdSignal {
         }
 
         // Bearish crossover
-        if ctx.crossed_below(&self.line_key, &self.sig_key) {
+        if lp > sp && ln < sn {
             if ctx.is_long() {
                 return Signal::exit(candle.timestamp, candle.close)
                     .with_reason("MACD bearish crossover - close long");
@@ -501,12 +555,15 @@ impl Strategy for SuperTrendFollow {
 
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         let candle = ctx.current_candle();
+        let i = ctx.index;
 
-        // SuperTrend uptrend stored as 1.0, downtrend as 0.0
-        let trend_now = ctx.indicator(&self.uptrend_key);
-        let trend_prev = ctx.indicator_prev(&self.uptrend_key);
-
-        let (Some(now), Some(prev)) = (trend_now, trend_prev) else {
+        // SuperTrend uptrend stored as 1.0, downtrend as 0.0.
+        // Fetch slice once (1 lookup) instead of 2 separate indicator() calls.
+        let Some(vals) = ctx.indicators.get(&self.uptrend_key) else {
+            return Signal::hold();
+        };
+        let get = |idx: usize| vals.get(idx).and_then(|&v| v);
+        let (Some(now), Some(prev)) = (get(i), if i > 0 { get(i - 1) } else { None }) else {
             return Signal::hold();
         };
 
@@ -603,15 +660,23 @@ impl Strategy for DonchianBreakout {
         let candle = ctx.current_candle();
         let close = candle.close;
 
-        let upper = ctx.indicator(&self.upper_key);
-        let middle = ctx.indicator(&self.middle_key);
-        let lower = ctx.indicator(&self.lower_key);
-        let prev_upper = ctx.indicator_prev(&self.upper_key);
-        let prev_lower = ctx.indicator_prev(&self.lower_key);
-
-        let (Some(_upper_val), Some(middle_val), Some(_lower_val)) = (upper, middle, lower) else {
+        // Fetch each slice once (3 lookups) instead of 5 ctx.indicator() calls.
+        let i = ctx.index;
+        let (Some(upper_vals), Some(middle_vals), Some(lower_vals)) = (
+            ctx.indicators.get(&self.upper_key),
+            ctx.indicators.get(&self.middle_key),
+            ctx.indicators.get(&self.lower_key),
+        ) else {
             return Signal::hold();
         };
+        let get = |vals: &Vec<Option<f64>>, idx: usize| vals.get(idx).and_then(|&v| v);
+        let (Some(_upper_val), Some(middle_val), Some(_lower_val)) =
+            (get(upper_vals, i), get(middle_vals, i), get(lower_vals, i))
+        else {
+            return Signal::hold();
+        };
+        let prev_upper = if i > 0 { get(upper_vals, i - 1) } else { None };
+        let prev_lower = if i > 0 { get(lower_vals, i - 1) } else { None };
 
         // Breakout above the *previous* bar's upper channel level → go long.
         // Using the lagged level rather than the current bar's channel prevents
