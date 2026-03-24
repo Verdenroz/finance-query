@@ -228,8 +228,9 @@ open("docs/server/openapi-html/index.html", "w").write(html)'
 	@$(MAKE) -s generate-mcp-html
 
 generate-mcp-html: ## Generate MCP tools reference HTML from live server
+	@$(CARGO) build -p finance-query-mcp --quiet
 	@mkdir -p docs/server/mcp-html; \
-	MCP_TRANSPORT=http MCP_ADDR=127.0.0.1:13337 $(CARGO) run -p finance-query-mcp --quiet 2>/dev/null & \
+	MCP_TRANSPORT=http MCP_ADDR=127.0.0.1:13337 target/debug/fq-mcp 2>/dev/null & \
 	MCP_PID=$$!; \
 	for i in $$(seq 1 15); do sleep 1; curl -sf http://127.0.0.1:13337/health >/dev/null 2>&1 && break; done; \
 	curl -s -X POST http://127.0.0.1:13337/ \

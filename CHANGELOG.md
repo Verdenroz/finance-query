@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.4.2] - 2026-03-24
+
+### Fixed
+
+- `CompanyFacts::cik` now deserializes correctly when the SEC EDGAR API returns the field as a zero-padded string (e.g. `"0001835724"`) instead of a number — fixes ~92 symbols that previously failed deserialization
+- Bumped `aws-lc-sys` 0.35.0 → 0.39.0 and `rustls-webpki` 0.103.8 → 0.103.10 (security: RUSTSEC-2026-0044 through -0049)
+
 ## [2.4.1] - 2026-03-18
 
 ### Added
@@ -286,7 +293,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.4.2...HEAD
+[2.4.2]: https://github.com/Verdenroz/finance-query/compare/v2.4.1...v2.4.2
+[2.4.1]: https://github.com/Verdenroz/finance-query/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/Verdenroz/finance-query/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/Verdenroz/finance-query/compare/v2.2.1...v2.3.0
 [2.2.1]: https://github.com/Verdenroz/finance-query/compare/v2.2.0...v2.2.1
