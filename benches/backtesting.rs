@@ -1,8 +1,10 @@
 use criterion::{BenchmarkId, Criterion, criterion_group, criterion_main};
 use finance_query::Candle;
+use finance_query::backtesting::condition::Condition;
+use finance_query::backtesting::refs::{IndicatorRefExt, atr, ema, macd, rsi, sma};
 use finance_query::backtesting::{
     BacktestConfig, BacktestEngine, BayesianSearch, GridSearch, MonteCarloConfig, OptimizeMetric,
-    ParamRange, SmaCrossover,
+    ParamRange, SmaCrossover, StrategyBuilder,
 };
 use std::hint::black_box;
 
@@ -191,6 +193,48 @@ fn bench_bayesian_search(c: &mut Criterion) {
     group.finish();
 }
 
+// ── Parallel indicator computation (≥4 indicators triggers par_iter) ─────────
+
+fn bench_indicator_computation(c: &mut Criterion) {
+    let mut group = c.benchmark_group("indicator_computation");
+
+    for n in [500usize, 2000] {
+        let candles = synthetic_candles(n);
+        let config = BacktestConfig::builder()
+            .initial_capital(10_000.0)
+            .commission_pct(0.001)
+            .build()
+            .unwrap();
+
+        // 6 distinct indicators → triggers parallel path (threshold = 4)
+        // RSI + SMA(50) + SMA(200) + EMA(20) + ATR(14) + MACD_line
+        group.bench_with_input(
+            BenchmarkId::new("multi_indicator_6", n),
+            &candles,
+            |b, candles| {
+                b.iter(|| {
+                    let m = macd(12, 26, 9);
+                    let strategy = StrategyBuilder::new("multi_indicator")
+                        .entry(
+                            rsi(14)
+                                .below(50.0)
+                                .and(sma(50).above_ref(sma(200)))
+                                .and(ema(20).above_ref(sma(50)))
+                                .and(atr(14).above(1.0))
+                                .and(m.line().above(0.0)),
+                        )
+                        .exit(rsi(14).above(70.0))
+                        .build();
+                    let engine = BacktestEngine::new(black_box(config.clone()));
+                    black_box(engine.run(black_box("BENCH"), candles, strategy))
+                })
+            },
+        );
+    }
+
+    group.finish();
+}
+
 criterion_group!(
     benches,
     bench_backtest_engine,
@@ -198,5 +242,6 @@ criterion_group!(
     bench_grid_search,
     bench_monte_carlo,
     bench_bayesian_search,
+    bench_indicator_computation,
 );
 criterion_main!(benches);
