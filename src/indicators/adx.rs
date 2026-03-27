@@ -71,6 +71,17 @@ pub fn adx(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result
     s_plus /= period_f;
     s_minus /= period_f;
 
+    let tr_dm = |i: usize| -> (f64, f64, f64) {
+        let high_low = highs[i] - lows[i];
+        let high_close = (highs[i] - closes[i - 1]).abs();
+        let low_close = (lows[i] - closes[i - 1]).abs();
+        let tr = high_low.max(high_close).max(low_close);
+        let up = highs[i] - highs[i - 1];
+        let dn = lows[i - 1] - lows[i];
+        let plus = if up > dn && up > 0.0 { up } else { 0.0 };
+        let minus = if dn > up && dn > 0.0 { dn } else { 0.0 };
+        (tr, plus, minus)
+    };
     let dx_at = |str: f64, sp: f64, sm: f64| -> f64 {
         let p_di = if str != 0.0 { 100.0 * sp / str } else { 0.0 };
         let m_di = if str != 0.0 { 100.0 * sm / str } else { 0.0 };
@@ -85,14 +96,7 @@ pub fn adx(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result
     // Accumulate DX values from index `period` to `2*period - 1` for the first ADX seed.
     let mut dx_sum = dx_at(s_tr, s_plus, s_minus);
     for i in (period + 1)..=(2 * period - 1).min(len - 1) {
-        let high_low = highs[i] - lows[i];
-        let high_close = (highs[i] - closes[i - 1]).abs();
-        let low_close = (lows[i] - closes[i - 1]).abs();
-        let tr = high_low.max(high_close).max(low_close);
-        let up = highs[i] - highs[i - 1];
-        let dn = lows[i - 1] - lows[i];
-        let plus = if up > dn && up > 0.0 { up } else { 0.0 };
-        let minus = if dn > up && dn > 0.0 { dn } else { 0.0 };
+        let (tr, plus, minus) = tr_dm(i);
         s_tr = (s_tr * period_m1 + tr) / period_f;
         s_plus = (s_plus * period_m1 + plus) / period_f;
         s_minus = (s_minus * period_m1 + minus) / period_f;
@@ -106,20 +110,13 @@ pub fn adx(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result
         let mut adx = dx_sum / period_f;
         result[first_adx_idx] = Some(adx);
 
-        for i in (first_adx_idx + 1)..len {
-            let high_low = highs[i] - lows[i];
-            let high_close = (highs[i] - closes[i - 1]).abs();
-            let low_close = (lows[i] - closes[i - 1]).abs();
-            let tr = high_low.max(high_close).max(low_close);
-            let up = highs[i] - highs[i - 1];
-            let dn = lows[i - 1] - lows[i];
-            let plus = if up > dn && up > 0.0 { up } else { 0.0 };
-            let minus = if dn > up && dn > 0.0 { dn } else { 0.0 };
+        for (i, slot) in result.iter_mut().enumerate().skip(first_adx_idx + 1) {
+            let (tr, plus, minus) = tr_dm(i);
             s_tr = (s_tr * period_m1 + tr) / period_f;
             s_plus = (s_plus * period_m1 + plus) / period_f;
             s_minus = (s_minus * period_m1 + minus) / period_f;
             adx = (adx * period_m1 + dx_at(s_tr, s_plus, s_minus)) / period_f;
-            result[i] = Some(adx);
+            *slot = Some(adx);
         }
     }
 

@@ -54,21 +54,18 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
 
     IndicatorsSummary {
         // === MOVING AVERAGES ===
-        // Simple Moving Averages — sma_raw returns only valid f64 values, take last
         sma_10: sma_raw(&closes, 10).last().copied(),
         sma_20: sma_raw(&closes, 20).last().copied(),
         sma_50: sma_raw(&closes, 50).last().copied(),
         sma_100: sma_raw(&closes, 100).last().copied(),
         sma_200: sma_raw(&closes, 200).last().copied(),
 
-        // Exponential Moving Averages — ema_raw returns only valid f64 values, take last
         ema_10: ema_raw(&closes, 10).last().copied(),
         ema_20: ema_raw(&closes, 20).last().copied(),
         ema_50: ema_raw(&closes, 50).last().copied(),
         ema_100: ema_raw(&closes, 100).last().copied(),
         ema_200: ema_raw(&closes, 200).last().copied(),
 
-        // Weighted Moving Averages — wma_raw returns only valid f64 values, take last
         wma_10: wma_raw(&closes, 10).last().copied(),
         wma_20: wma_raw(&closes, 20).last().copied(),
         wma_50: wma_raw(&closes, 50).last().copied(),

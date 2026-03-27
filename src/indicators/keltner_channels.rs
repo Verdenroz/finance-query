@@ -1,6 +1,6 @@
 //! Keltner Channels indicator.
 
-use super::{IndicatorError, Result, atr::atr, ema::ema_raw};
+use super::{IndicatorError, Result, atr::atr_raw, ema::ema_raw};
 use serde::{Deserialize, Serialize};
 
 /// Result of Keltner Channels calculation
@@ -65,28 +65,8 @@ pub fn keltner_channels(
         });
     }
 
-    let ema_vals = ema_raw(closes, period); // len = N-(period-1), index k → orig k+(period-1)
-    let atr_values = atr(highs, lows, closes, atr_period)?;
-    let ema_off = period - 1;
-
-    let mut upper = vec![None; len];
-    let mut middle = vec![None; len];
-    let mut lower = vec![None; len];
-
-    for (k, &ev) in ema_vals.iter().enumerate() {
-        let i = k + ema_off;
-        middle[i] = Some(ev);
-        if let Some(atr_val) = atr_values[i] {
-            upper[i] = Some(ev + multiplier * atr_val);
-            lower[i] = Some(ev - multiplier * atr_val);
-        }
-    }
-
-    Ok(KeltnerChannelsResult {
-        upper,
-        middle,
-        lower,
-    })
+    let atr_dense = atr_raw(highs, lows, closes, atr_period)?;
+    keltner_with_atr_dense(closes, period, &atr_dense, atr_period, multiplier)
 }
 
 /// Internal variant accepting pre-computed dense ATR values (avoids redundant ATR computation

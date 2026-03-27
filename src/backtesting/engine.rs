@@ -337,7 +337,6 @@ pub(crate) fn compute_for_candles(
         return Ok(HashMap::new());
     }
 
-    // Determine which auxiliary price series are needed.
     let use_hl = required.iter().any(|(_, i)| needs_high_low(i));
     let use_vol = required.iter().any(|(_, i)| needs_volumes(i));
     let use_open = required
@@ -346,15 +345,10 @@ pub(crate) fn compute_for_candles(
 
     // Extract price series upfront (single pass each, cache-friendly).
     let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
-    let highs: Vec<f64> = if use_hl {
-        candles.iter().map(|c| c.high).collect()
+    let (highs, lows): (Vec<f64>, Vec<f64>) = if use_hl {
+        candles.iter().map(|c| (c.high, c.low)).unzip()
     } else {
-        vec![]
-    };
-    let lows: Vec<f64> = if use_hl {
-        candles.iter().map(|c| c.low).collect()
-    } else {
-        vec![]
+        (vec![], vec![])
     };
     let volumes: Vec<f64> = if use_vol {
         candles.iter().map(|c| c.volume as f64).collect()
