@@ -80,12 +80,13 @@ fn bench_rwlock_read(c: &mut Criterion) {
 
 // ── HashMap cache lookup (MapCache hot path) ─────────────────────────────────
 
+type ChartCache = Arc<RwLock<HashMap<(Arc<str>, u8, u8), f64>>>;
+
 fn bench_map_cache_lookup(c: &mut Criterion) {
     let rt = tokio::runtime::Runtime::new().unwrap();
 
     // Simulate the chart MapCache: keyed by (Arc<str>, u8, u8) tuples
-    let cache: Arc<RwLock<HashMap<(Arc<str>, u8, u8), f64>>> =
-        Arc::new(RwLock::new(HashMap::new()));
+    let cache: ChartCache = Arc::new(RwLock::new(HashMap::new()));
 
     // Pre-populate with entries
     rt.block_on(async {
