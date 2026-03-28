@@ -39,6 +39,7 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
 COPY src ./src
 COPY server/src ./server/src
 COPY finance-query-derive/src ./finance-query-derive/src
+COPY benches ./benches
 
 # Build the actual application
 RUN touch src/lib.rs server/src/main.rs && \
