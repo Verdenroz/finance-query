@@ -3,7 +3,6 @@
 //! Fetches the daily Treasury yield curve from the US Treasury Department.
 //! No API key required. Data published daily on business days.
 
-use std::sync::OnceLock;
 use std::time::Duration;
 
 use crate::error::{FinanceError, Result};
@@ -12,17 +11,6 @@ use tracing::info;
 
 /// Base URL for Treasury yield curve CSV downloads.
 const TREASURY_CSV_BASE: &str = "https://home.treasury.gov/resource-center/data-chart-center/interest-rates/daily-treasury-rates.csv";
-
-static CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-
-fn client() -> &'static reqwest::Client {
-    CLIENT.get_or_init(|| {
-        reqwest::Client::builder()
-            .timeout(Duration::from_secs(30))
-            .build()
-            .expect("failed to build HTTP client")
-    })
-}
 
 /// Fetch the Treasury yield curve CSV for a given year and parse into typed records.
 ///
@@ -34,7 +22,17 @@ pub(crate) async fn fetch_yields(year: u32) -> Result<Vec<TreasuryYield>> {
 
     info!("Fetching Treasury yields for {year}");
 
-    let resp = client().get(&url).send().await?;
+    // Per-call client construction is intentional: treasury_yields is called at most
+    // once per year-fetch, so connection-pool reuse provides no measurable benefit.
+    // A static OnceLock<reqwest::Client> binds the pool to the initialising tokio
+    // runtime; if that runtime drops the pool tasks die, causing DispatchGone on the
+    // next call from a different runtime.
+    let resp = reqwest::Client::builder()
+        .timeout(Duration::from_secs(30))
+        .build()?
+        .get(&url)
+        .send()
+        .await?;
 
     let status = resp.status();
     if !status.is_success() {
