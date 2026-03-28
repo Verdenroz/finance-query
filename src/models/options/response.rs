@@ -106,7 +106,7 @@ impl Options {
             .map(|r| {
                 r.options
                     .iter()
-                    .flat_map(|chain| chain.calls.as_ref().map(|c| c.iter()).unwrap_or_default())
+                    .flat_map(|chain| chain.calls.as_deref().unwrap_or_default().iter())
                     .cloned()
                     .collect()
             })
@@ -134,7 +134,7 @@ impl Options {
             .map(|r| {
                 r.options
                     .iter()
-                    .flat_map(|chain| chain.puts.as_ref().map(|p| p.iter()).unwrap_or_default())
+                    .flat_map(|chain| chain.puts.as_deref().unwrap_or_default().iter())
                     .cloned()
                     .collect()
             })

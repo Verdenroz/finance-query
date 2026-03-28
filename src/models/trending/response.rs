@@ -23,20 +23,14 @@ pub(crate) struct RawTrendingResponse {
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub(crate) struct TrendingFinance {
     pub result: Option<Vec<TrendingResult>>,
-    pub error: Option<serde_json::Value>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
-#[allow(dead_code)]
 pub(crate) struct TrendingResult {
-    pub count: Option<i32>,
     pub quotes: Option<Vec<TrendingQuote>>,
-    pub job_timestamp: Option<i64>,
-    pub start_interval: Option<i64>,
 }
 
 impl TrendingQuote {

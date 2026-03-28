@@ -176,6 +176,15 @@ pub struct YahooClient {
 }
 
 impl YahooClient {
+    /// Check response status and return it if successful, or map the error code
+    fn check_response(response: reqwest::Response) -> Result<reqwest::Response> {
+        let status = response.status();
+        if !status.is_success() {
+            return Err(Self::map_http_status(status.as_u16()));
+        }
+        Ok(response)
+    }
+
     /// HTTP error mapping
     fn map_http_status(status: u16) -> FinanceError {
         match status {
@@ -250,13 +259,7 @@ impl YahooClient {
             .await
             .map_err(|e| self.map_request_error(e))?;
 
-        // Check response status
-        let status = response.status();
-        if !status.is_success() {
-            return Err(Self::map_http_status(status.as_u16()));
-        }
-
-        Ok(response)
+        Self::check_response(response)
     }
 
     /// Get the client configuration
@@ -362,12 +365,7 @@ impl YahooClient {
             .await
             .map_err(|e| self.map_request_error(e))?;
 
-        let status = response.status();
-        if !status.is_success() {
-            return Err(Self::map_http_status(status.as_u16()));
-        }
-
-        Ok(response)
+        Self::check_response(response)
     }
 
     /// Make a GET request with query parameters and crumb authentication
@@ -393,12 +391,7 @@ impl YahooClient {
             .await
             .map_err(|e| self.map_request_error(e))?;
 
-        let status = response.status();
-        if !status.is_success() {
-            return Err(Self::map_http_status(status.as_u16()));
-        }
-
-        Ok(response)
+        Self::check_response(response)
     }
 
     /// Fetch batch quotes for multiple symbols

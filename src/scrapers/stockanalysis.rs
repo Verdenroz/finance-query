@@ -70,6 +70,13 @@ static EXCHANGE_MAPPING: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|
     ])
 });
 
+/// Build a reqwest client with the StockAnalysis user agent.
+fn build_client() -> Result<reqwest::Client> {
+    Ok(reqwest::Client::builder()
+        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+        .build()?)
+}
+
 /// Parse a Yahoo Finance symbol into base symbol and StockAnalysis exchange code.
 fn parse_symbol_exchange(yahoo_symbol: &str) -> (&str, Option<&'static str>) {
     if let Some(dot_pos) = yahoo_symbol.rfind('.') {
@@ -127,10 +134,9 @@ fn parse_news(html: &str) -> Result<Vec<News>> {
             let link = title_el.value().attr("href").unwrap_or("").to_string();
 
             // Skip if missing essential fields or already seen (dedup)
-            if title.is_empty() || link.is_empty() || seen_titles.contains(&title) {
+            if title.is_empty() || link.is_empty() || !seen_titles.insert(title.clone()) {
                 continue;
             }
-            seen_titles.insert(title.clone());
 
             let source_time_text = source_time_el.text().collect::<String>();
             let img = item
@@ -161,9 +167,7 @@ fn parse_news(html: &str) -> Result<Vec<News>> {
 pub(crate) async fn scrape_symbol_news(symbol: &str) -> Result<Vec<News>> {
     let urls = build_symbol_urls(symbol);
 
-    let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .build()?;
+    let client = build_client()?;
 
     for url in urls {
         info!("Trying URL: {}", url);
@@ -194,9 +198,7 @@ pub(crate) async fn scrape_general_news() -> Result<Vec<News>> {
 
     info!("Fetching general news");
 
-    let client = reqwest::Client::builder()
-        .user_agent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
-        .build()?;
+    let client = build_client()?;
 
     let response = client.get(url).send().await?;
 

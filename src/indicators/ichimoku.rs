@@ -1,5 +1,7 @@
 //! Ichimoku Cloud indicator.
 
+use std::collections::VecDeque;
+
 use super::{IndicatorError, Result};
 use serde::{Deserialize, Serialize};
 
@@ -74,38 +76,89 @@ pub fn ichimoku(
     let mut leading_span_b = vec![None; len];
     let mut lagging_span = vec![None; len];
 
-    let midpoint = |h: &[f64], l: &[f64]| -> f64 {
-        let highest = h.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let lowest = l.iter().fold(f64::INFINITY, |a, &b| a.min(b));
-        (highest + lowest) / 2.0
-    };
+    // Single pass with 6 inline deques — loads highs[i]/lows[i] once per iteration.
+    let conv_off = conversion - 1;
+    let base_off = base - 1;
+    let span_b_off = span_b_period - 1;
+    let mut conv_max: VecDeque<usize> = VecDeque::new();
+    let mut conv_min: VecDeque<usize> = VecDeque::new();
+    let mut base_max: VecDeque<usize> = VecDeque::new();
+    let mut base_min: VecDeque<usize> = VecDeque::new();
+    let mut sb_max: VecDeque<usize> = VecDeque::new();
+    let mut sb_min: VecDeque<usize> = VecDeque::new();
 
     for i in 0..len {
-        if i >= conversion - 1 {
-            let start = i + 1 - conversion;
-            conversion_line[i] = Some(midpoint(&highs[start..=i], &lows[start..=i]));
+        let hi = highs[i];
+        let lo = lows[i];
+
+        // Evict fronts
+        while conv_max.front().is_some_and(|&j| j + conversion <= i) {
+            conv_max.pop_front();
+        }
+        while conv_min.front().is_some_and(|&j| j + conversion <= i) {
+            conv_min.pop_front();
+        }
+        while base_max.front().is_some_and(|&j| j + base <= i) {
+            base_max.pop_front();
+        }
+        while base_min.front().is_some_and(|&j| j + base <= i) {
+            base_min.pop_front();
+        }
+        while sb_max.front().is_some_and(|&j| j + span_b_period <= i) {
+            sb_max.pop_front();
+        }
+        while sb_min.front().is_some_and(|&j| j + span_b_period <= i) {
+            sb_min.pop_front();
         }
 
-        if i >= base - 1 {
-            let start = i + 1 - base;
-            base_line[i] = Some(midpoint(&highs[start..=i], &lows[start..=i]));
+        // Maintain monotonic backs
+        while conv_max.back().is_some_and(|&j| highs[j] <= hi) {
+            conv_max.pop_back();
+        }
+        while conv_min.back().is_some_and(|&j| lows[j] >= lo) {
+            conv_min.pop_back();
+        }
+        while base_max.back().is_some_and(|&j| highs[j] <= hi) {
+            base_max.pop_back();
+        }
+        while base_min.back().is_some_and(|&j| lows[j] >= lo) {
+            base_min.pop_back();
+        }
+        while sb_max.back().is_some_and(|&j| highs[j] <= hi) {
+            sb_max.pop_back();
+        }
+        while sb_min.back().is_some_and(|&j| lows[j] >= lo) {
+            sb_min.pop_back();
         }
 
-        if i >= base - 1
-            && let (Some(conv), Some(base_val)) = (conversion_line[i], base_line[i])
-        {
-            let val = (conv + base_val) / 2.0;
-            if i + displacement < len {
-                leading_span_a[i + displacement] = Some(val);
+        conv_max.push_back(i);
+        conv_min.push_back(i);
+        base_max.push_back(i);
+        base_min.push_back(i);
+        sb_max.push_back(i);
+        sb_min.push_back(i);
+
+        let conv_val = if i >= conv_off {
+            let cv = (highs[*conv_max.front().unwrap()] + lows[*conv_min.front().unwrap()]) / 2.0;
+            conversion_line[i] = Some(cv);
+            Some(cv)
+        } else {
+            None
+        };
+
+        if i >= base_off {
+            let bv = (highs[*base_max.front().unwrap()] + lows[*base_min.front().unwrap()]) / 2.0;
+            base_line[i] = Some(bv);
+            if let Some(cv) = conv_val
+                && i + displacement < len
+            {
+                leading_span_a[i + displacement] = Some((cv + bv) / 2.0);
             }
         }
 
-        if i >= span_b_period - 1 {
-            let start = i + 1 - span_b_period;
-            let val = midpoint(&highs[start..=i], &lows[start..=i]);
-            if i + displacement < len {
-                leading_span_b[i + displacement] = Some(val);
-            }
+        if i >= span_b_off && i + displacement < len {
+            let bv = (highs[*sb_max.front().unwrap()] + lows[*sb_min.front().unwrap()]) / 2.0;
+            leading_span_b[i + displacement] = Some(bv);
         }
 
         if i >= lagging {

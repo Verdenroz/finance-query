@@ -741,9 +741,9 @@ impl Tickers {
                 Ok(json) => match ChartResponse::from_json(json) {
                     Ok(chart_response) => {
                         if let Some(mut chart_results) = chart_response.chart.result {
-                            if let Some(chart_result) = chart_results.pop() {
+                            if let Some(mut chart_result) = chart_results.pop() {
                                 // Collect events for later caching
-                                if let Some(events) = chart_result.events.clone() {
+                                if let Some(events) = chart_result.events.take() {
                                     parsed_events.push((Arc::clone(&symbol), events));
                                 }
 
@@ -889,9 +889,9 @@ impl Tickers {
                 Ok(json) => match ChartResponse::from_json(json) {
                     Ok(chart_response) => {
                         if let Some(mut chart_results) = chart_response.chart.result {
-                            if let Some(chart_result) = chart_results.pop() {
+                            if let Some(mut chart_result) = chart_results.pop() {
                                 // Collect events for later caching
-                                if let Some(events) = chart_result.events.clone() {
+                                if let Some(events) = chart_result.events.take() {
                                     parsed_events.push((Arc::clone(&symbol), events));
                                 }
 
@@ -1822,7 +1822,7 @@ mod tests {
     use super::*;
 
     #[tokio::test]
-    #[ignore] // Requires network access
+    #[ignore = "requires network access"]
     async fn test_tickers_quotes() {
         let tickers = Tickers::new(["AAPL", "MSFT", "GOOGL"]).await.unwrap();
         let result = tickers.quotes().await.unwrap();
@@ -1831,7 +1831,7 @@ mod tests {
     }
 
     #[tokio::test]
-    #[ignore] // Requires network access
+    #[ignore = "requires network access"]
     async fn test_tickers_charts() {
         let tickers = Tickers::new(["AAPL", "MSFT"]).await.unwrap();
         let result = tickers

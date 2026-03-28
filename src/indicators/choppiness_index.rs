@@ -1,5 +1,7 @@
 //! Choppiness Index indicator.
 
+use std::collections::VecDeque;
+
 use super::{IndicatorError, Result};
 
 /// Calculate Choppiness Index.
@@ -52,35 +54,75 @@ pub fn choppiness_index(
 
     let mut result = vec![None; len];
 
-    let mut tr_values = Vec::with_capacity(len);
-    tr_values.push(highs[0] - lows[0]);
+    // Circular buffer of size `period` replaces the full tr_values Vec
+    // tr_circ[i % period] holds TR[i-period] just before i's iteration overwrites it
+    let mut tr_circ = vec![0.0f64; period];
+    let mut max_deque: VecDeque<usize> = VecDeque::new();
+    let mut min_deque: VecDeque<usize> = VecDeque::new();
 
-    for i in 1..len {
-        let high_low = highs[i] - lows[i];
-        let high_close = (highs[i] - closes[i - 1]).abs();
-        let low_close = (lows[i] - closes[i - 1]).abs();
-        let tr = high_low.max(high_close).max(low_close);
-        tr_values.push(tr);
+    // Seed: TR[0] uses high-low only (no previous close); pre-fill deques for window [0, period)
+    let first_tr = highs[0] - lows[0];
+    tr_circ[0] = first_tr;
+    let mut tr_window_sum = first_tr;
+    max_deque.push_back(0);
+    min_deque.push_back(0);
+
+    for j in 1..period {
+        let h_l = highs[j] - lows[j];
+        let h_pc = (highs[j] - closes[j - 1]).abs();
+        let l_pc = (lows[j] - closes[j - 1]).abs();
+        let tr = h_l.max(h_pc).max(l_pc);
+        tr_circ[j] = tr;
+        tr_window_sum += tr;
+        while max_deque.back().is_some_and(|&k| highs[k] <= highs[j]) {
+            max_deque.pop_back();
+        }
+        while min_deque.back().is_some_and(|&k| lows[k] >= lows[j]) {
+            min_deque.pop_back();
+        }
+        max_deque.push_back(j);
+        min_deque.push_back(j);
     }
 
+    // Precompute 100 / ln(period) to replace per-iteration division with multiplication
+    let scale = 100.0 / (period as f64).ln();
+
     for i in period..len {
+        let buf_pos = i % period;
+        let old_tr = tr_circ[buf_pos]; // TR[i - period] being evicted
+
+        let h_l = highs[i] - lows[i];
+        let h_pc = (highs[i] - closes[i - 1]).abs();
+        let l_pc = (lows[i] - closes[i - 1]).abs();
+        let new_tr = h_l.max(h_pc).max(l_pc);
+        tr_circ[buf_pos] = new_tr;
+        tr_window_sum += new_tr - old_tr;
+
         let start_idx = i + 1 - period;
+        while max_deque.front().is_some_and(|&j| j < start_idx) {
+            max_deque.pop_front();
+        }
+        while min_deque.front().is_some_and(|&j| j < start_idx) {
+            min_deque.pop_front();
+        }
+        while max_deque.back().is_some_and(|&j| highs[j] <= highs[i]) {
+            max_deque.pop_back();
+        }
+        while min_deque.back().is_some_and(|&j| lows[j] >= lows[i]) {
+            min_deque.pop_back();
+        }
+        max_deque.push_back(i);
+        min_deque.push_back(i);
 
-        let tr_sum: f64 = tr_values[start_idx..=i].iter().sum();
-
-        let slice_highs = &highs[start_idx..=i];
-        let slice_lows = &lows[start_idx..=i];
-
-        let highest = slice_highs.iter().fold(f64::NEG_INFINITY, |a, &b| a.max(b));
-        let lowest = slice_lows.iter().fold(f64::INFINITY, |a, &b| a.min(b));
+        let highest = highs[*max_deque.front().unwrap()];
+        let lowest = lows[*min_deque.front().unwrap()];
         let range = highest - lowest;
 
-        if range == 0.0 || tr_sum == 0.0 {
-            result[i] = Some(50.0);
+        result[i] = Some(if range == 0.0 || tr_window_sum == 0.0 {
+            50.0
         } else {
-            let ci = 100.0 * (tr_sum / range).ln() / (period as f64).ln();
-            result[i] = Some(ci);
-        }
+            scale * (tr_window_sum / range).ln()
+        });
     }
 
     Ok(result)

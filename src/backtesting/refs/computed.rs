@@ -26,24 +26,27 @@ use super::IndicatorRef;
 // ============================================================================
 
 /// Simple Moving Average reference.
-#[derive(Debug, Clone, Copy)]
-pub struct SmaRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct SmaRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for SmaRef {
-    fn key(&self) -> String {
-        format!("sma_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Sma(self.0))]
+        vec![(self.key.clone(), Indicator::Sma(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -59,203 +62,248 @@ impl IndicatorRef for SmaRef {
 /// ```
 #[inline]
 pub fn sma(period: usize) -> SmaRef {
-    SmaRef(period)
+    SmaRef {
+        period,
+        key: format!("sma_{period}"),
+    }
 }
 
 /// Exponential Moving Average reference.
-#[derive(Debug, Clone, Copy)]
-pub struct EmaRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct EmaRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for EmaRef {
-    fn key(&self) -> String {
-        format!("ema_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Ema(self.0))]
+        vec![(self.key.clone(), Indicator::Ema(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create an Exponential Moving Average reference.
 #[inline]
 pub fn ema(period: usize) -> EmaRef {
-    EmaRef(period)
+    EmaRef {
+        period,
+        key: format!("ema_{period}"),
+    }
 }
 
 /// Weighted Moving Average reference.
-#[derive(Debug, Clone, Copy)]
-pub struct WmaRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct WmaRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for WmaRef {
-    fn key(&self) -> String {
-        format!("wma_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Wma(self.0))]
+        vec![(self.key.clone(), Indicator::Wma(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Weighted Moving Average reference.
 #[inline]
 pub fn wma(period: usize) -> WmaRef {
-    WmaRef(period)
+    WmaRef {
+        period,
+        key: format!("wma_{period}"),
+    }
 }
 
 /// Double Exponential Moving Average reference.
-#[derive(Debug, Clone, Copy)]
-pub struct DemaRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct DemaRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for DemaRef {
-    fn key(&self) -> String {
-        format!("dema_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Dema(self.0))]
+        vec![(self.key.clone(), Indicator::Dema(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Double Exponential Moving Average reference.
 #[inline]
 pub fn dema(period: usize) -> DemaRef {
-    DemaRef(period)
+    DemaRef {
+        period,
+        key: format!("dema_{period}"),
+    }
 }
 
 /// Triple Exponential Moving Average reference.
-#[derive(Debug, Clone, Copy)]
-pub struct TemaRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct TemaRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for TemaRef {
-    fn key(&self) -> String {
-        format!("tema_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Tema(self.0))]
+        vec![(self.key.clone(), Indicator::Tema(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Triple Exponential Moving Average reference.
 #[inline]
 pub fn tema(period: usize) -> TemaRef {
-    TemaRef(period)
+    TemaRef {
+        period,
+        key: format!("tema_{period}"),
+    }
 }
 
 /// Hull Moving Average reference.
-#[derive(Debug, Clone, Copy)]
-pub struct HmaRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct HmaRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for HmaRef {
-    fn key(&self) -> String {
-        format!("hma_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Hma(self.0))]
+        vec![(self.key.clone(), Indicator::Hma(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Hull Moving Average reference.
 #[inline]
 pub fn hma(period: usize) -> HmaRef {
-    HmaRef(period)
+    HmaRef {
+        period,
+        key: format!("hma_{period}"),
+    }
 }
 
 /// Volume Weighted Moving Average reference.
-#[derive(Debug, Clone, Copy)]
-pub struct VwmaRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct VwmaRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for VwmaRef {
-    fn key(&self) -> String {
-        format!("vwma_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Vwma(self.0))]
+        vec![(self.key.clone(), Indicator::Vwma(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Volume Weighted Moving Average reference.
 #[inline]
 pub fn vwma(period: usize) -> VwmaRef {
-    VwmaRef(period)
+    VwmaRef {
+        period,
+        key: format!("vwma_{period}"),
+    }
 }
 
 /// McGinley Dynamic indicator reference.
-#[derive(Debug, Clone, Copy)]
-pub struct McginleyDynamicRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct McginleyDynamicRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for McginleyDynamicRef {
-    fn key(&self) -> String {
-        format!("mcginley_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::McginleyDynamic(self.0))]
+        vec![(self.key.clone(), Indicator::McginleyDynamic(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a McGinley Dynamic indicator reference.
 #[inline]
 pub fn mcginley(period: usize) -> McginleyDynamicRef {
-    McginleyDynamicRef(period)
+    McginleyDynamicRef {
+        period,
+        key: format!("mcginley_{period}"),
+    }
 }
 
 // ============================================================================
@@ -263,24 +311,27 @@ pub fn mcginley(period: usize) -> McginleyDynamicRef {
 // ============================================================================
 
 /// Relative Strength Index reference.
-#[derive(Debug, Clone, Copy)]
-pub struct RsiRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct RsiRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for RsiRef {
-    fn key(&self) -> String {
-        format!("rsi_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Rsi(self.0))]
+        vec![(self.key.clone(), Indicator::Rsi(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -297,91 +348,112 @@ impl IndicatorRef for RsiRef {
 /// ```
 #[inline]
 pub fn rsi(period: usize) -> RsiRef {
-    RsiRef(period)
+    RsiRef {
+        period,
+        key: format!("rsi_{period}"),
+    }
 }
 
 /// Commodity Channel Index reference.
-#[derive(Debug, Clone, Copy)]
-pub struct CciRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct CciRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for CciRef {
-    fn key(&self) -> String {
-        format!("cci_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Cci(self.0))]
+        vec![(self.key.clone(), Indicator::Cci(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Commodity Channel Index reference.
 #[inline]
 pub fn cci(period: usize) -> CciRef {
-    CciRef(period)
+    CciRef {
+        period,
+        key: format!("cci_{period}"),
+    }
 }
 
 /// Williams %R reference.
-#[derive(Debug, Clone, Copy)]
-pub struct WilliamsRRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct WilliamsRRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for WilliamsRRef {
-    fn key(&self) -> String {
-        format!("williams_r_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::WilliamsR(self.0))]
+        vec![(self.key.clone(), Indicator::WilliamsR(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Williams %R reference.
 #[inline]
 pub fn williams_r(period: usize) -> WilliamsRRef {
-    WilliamsRRef(period)
+    WilliamsRRef {
+        period,
+        key: format!("williams_r_{period}"),
+    }
 }
 
 /// Chande Momentum Oscillator reference.
-#[derive(Debug, Clone, Copy)]
-pub struct CmoRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct CmoRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for CmoRef {
-    fn key(&self) -> String {
-        format!("cmo_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Cmo(self.0))]
+        vec![(self.key.clone(), Indicator::Cmo(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Chande Momentum Oscillator reference.
 #[inline]
 pub fn cmo(period: usize) -> CmoRef {
-    CmoRef(period)
+    CmoRef {
+        period,
+        key: format!("cmo_{period}"),
+    }
 }
 
 // ============================================================================
@@ -389,59 +461,71 @@ pub fn cmo(period: usize) -> CmoRef {
 // ============================================================================
 
 /// Momentum indicator reference.
-#[derive(Debug, Clone, Copy)]
-pub struct MomentumRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct MomentumRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for MomentumRef {
-    fn key(&self) -> String {
-        format!("momentum_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Momentum(self.0))]
+        vec![(self.key.clone(), Indicator::Momentum(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Momentum indicator reference.
 #[inline]
 pub fn momentum(period: usize) -> MomentumRef {
-    MomentumRef(period)
+    MomentumRef {
+        period,
+        key: format!("momentum_{period}"),
+    }
 }
 
 /// Rate of Change reference.
-#[derive(Debug, Clone, Copy)]
-pub struct RocRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct RocRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for RocRef {
-    fn key(&self) -> String {
-        format!("roc_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Roc(self.0))]
+        vec![(self.key.clone(), Indicator::Roc(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Rate of Change reference.
 #[inline]
 pub fn roc(period: usize) -> RocRef {
-    RocRef(period)
+    RocRef {
+        period,
+        key: format!("roc_{period}"),
+    }
 }
 
 // ============================================================================
@@ -449,24 +533,27 @@ pub fn roc(period: usize) -> RocRef {
 // ============================================================================
 
 /// Average Directional Index reference.
-#[derive(Debug, Clone, Copy)]
-pub struct AdxRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct AdxRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for AdxRef {
-    fn key(&self) -> String {
-        format!("adx_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Adx(self.0))]
+        vec![(self.key.clone(), Indicator::Adx(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -482,7 +569,10 @@ impl IndicatorRef for AdxRef {
 /// ```
 #[inline]
 pub fn adx(period: usize) -> AdxRef {
-    AdxRef(period)
+    AdxRef {
+        period,
+        key: format!("adx_{period}"),
+    }
 }
 
 // ============================================================================
@@ -490,31 +580,37 @@ pub fn adx(period: usize) -> AdxRef {
 // ============================================================================
 
 /// Average True Range reference.
-#[derive(Debug, Clone, Copy)]
-pub struct AtrRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct AtrRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for AtrRef {
-    fn key(&self) -> String {
-        format!("atr_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Atr(self.0))]
+        vec![(self.key.clone(), Indicator::Atr(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create an Average True Range reference.
 #[inline]
 pub fn atr(period: usize) -> AtrRef {
-    AtrRef(period)
+    AtrRef {
+        period,
+        key: format!("atr_{period}"),
+    }
 }
 
 // ============================================================================
@@ -526,20 +622,20 @@ pub fn atr(period: usize) -> AtrRef {
 pub struct ObvRef;
 
 impl IndicatorRef for ObvRef {
-    fn key(&self) -> String {
-        "obv".to_string()
+    fn key(&self) -> &str {
+        "obv"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Obv)]
+        vec![("obv".to_string(), Indicator::Obv)]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -554,20 +650,20 @@ pub fn obv() -> ObvRef {
 pub struct VwapRef;
 
 impl IndicatorRef for VwapRef {
-    fn key(&self) -> String {
-        "vwap".to_string()
+    fn key(&self) -> &str {
+        "vwap"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Vwap)]
+        vec![("vwap".to_string(), Indicator::Vwap)]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -578,59 +674,71 @@ pub fn vwap() -> VwapRef {
 }
 
 /// Money Flow Index reference.
-#[derive(Debug, Clone, Copy)]
-pub struct MfiRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct MfiRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for MfiRef {
-    fn key(&self) -> String {
-        format!("mfi_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Mfi(self.0))]
+        vec![(self.key.clone(), Indicator::Mfi(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Money Flow Index reference.
 #[inline]
 pub fn mfi(period: usize) -> MfiRef {
-    MfiRef(period)
+    MfiRef {
+        period,
+        key: format!("mfi_{period}"),
+    }
 }
 
 /// Chaikin Money Flow reference.
-#[derive(Debug, Clone, Copy)]
-pub struct CmfRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct CmfRef {
+    pub period: usize,
+    key: String,
+}
 
 impl IndicatorRef for CmfRef {
-    fn key(&self) -> String {
-        format!("cmf_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Cmf(self.0))]
+        vec![(self.key.clone(), Indicator::Cmf(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Create a Chaikin Money Flow reference.
 #[inline]
 pub fn cmf(period: usize) -> CmfRef {
-    CmfRef(period)
+    CmfRef {
+        period,
+        key: format!("cmf_{period}"),
+    }
 }
 
 // ============================================================================
@@ -653,29 +761,17 @@ pub struct MacdConfig {
 impl MacdConfig {
     /// Get the MACD line reference.
     pub fn line(&self) -> MacdLineRef {
-        MacdLineRef {
-            fast: self.fast,
-            slow: self.slow,
-            signal: self.signal,
-        }
+        MacdLineRef::new(self.fast, self.slow, self.signal)
     }
 
     /// Get the MACD signal line reference.
     pub fn signal_line(&self) -> MacdSignalRef {
-        MacdSignalRef {
-            fast: self.fast,
-            slow: self.slow,
-            signal: self.signal,
-        }
+        MacdSignalRef::new(self.fast, self.slow, self.signal)
     }
 
     /// Get the MACD histogram reference.
     pub fn histogram(&self) -> MacdHistogramRef {
-        MacdHistogramRef {
-            fast: self.fast,
-            slow: self.slow,
-            signal: self.signal,
-        }
+        MacdHistogramRef::new(self.fast, self.slow, self.signal)
     }
 }
 
@@ -696,7 +792,7 @@ pub fn macd(fast: usize, slow: usize, signal: usize) -> MacdConfig {
 }
 
 /// MACD Line reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct MacdLineRef {
     /// Fast EMA period.
     pub fast: usize,
@@ -704,16 +800,28 @@ pub struct MacdLineRef {
     pub slow: usize,
     /// Signal line period.
     pub signal: usize,
+    key: String,
+}
+
+impl MacdLineRef {
+    fn new(fast: usize, slow: usize, signal: usize) -> Self {
+        Self {
+            fast,
+            slow,
+            signal,
+            key: format!("macd_line_{fast}_{slow}_{signal}"),
+        }
+    }
 }
 
 impl IndicatorRef for MacdLineRef {
-    fn key(&self) -> String {
-        format!("macd_line_{}_{}_{}", self.fast, self.slow, self.signal)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Macd {
                 fast: self.fast,
                 slow: self.slow,
@@ -723,16 +831,16 @@ impl IndicatorRef for MacdLineRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// MACD Signal Line reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct MacdSignalRef {
     /// Fast EMA period.
     pub fast: usize,
@@ -740,16 +848,28 @@ pub struct MacdSignalRef {
     pub slow: usize,
     /// Signal line period.
     pub signal: usize,
+    key: String,
+}
+
+impl MacdSignalRef {
+    fn new(fast: usize, slow: usize, signal: usize) -> Self {
+        Self {
+            fast,
+            slow,
+            signal,
+            key: format!("macd_signal_{fast}_{slow}_{signal}"),
+        }
+    }
 }
 
 impl IndicatorRef for MacdSignalRef {
-    fn key(&self) -> String {
-        format!("macd_signal_{}_{}_{}", self.fast, self.slow, self.signal)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Macd {
                 fast: self.fast,
                 slow: self.slow,
@@ -759,16 +879,16 @@ impl IndicatorRef for MacdSignalRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// MACD Histogram reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct MacdHistogramRef {
     /// Fast EMA period.
     pub fast: usize,
@@ -776,16 +896,28 @@ pub struct MacdHistogramRef {
     pub slow: usize,
     /// Signal line period.
     pub signal: usize,
+    key: String,
+}
+
+impl MacdHistogramRef {
+    fn new(fast: usize, slow: usize, signal: usize) -> Self {
+        Self {
+            fast,
+            slow,
+            signal,
+            key: format!("macd_histogram_{fast}_{slow}_{signal}"),
+        }
+    }
 }
 
 impl IndicatorRef for MacdHistogramRef {
-    fn key(&self) -> String {
-        format!("macd_histogram_{}_{}_{}", self.fast, self.slow, self.signal)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Macd {
                 fast: self.fast,
                 slow: self.slow,
@@ -795,11 +927,11 @@ impl IndicatorRef for MacdHistogramRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -817,26 +949,17 @@ pub struct BollingerConfig {
 impl BollingerConfig {
     /// Get the upper band reference.
     pub fn upper(&self) -> BollingerUpperRef {
-        BollingerUpperRef {
-            period: self.period,
-            std_dev: self.std_dev,
-        }
+        BollingerUpperRef::new(self.period, self.std_dev)
     }
 
     /// Get the middle band (SMA) reference.
     pub fn middle(&self) -> BollingerMiddleRef {
-        BollingerMiddleRef {
-            period: self.period,
-            std_dev: self.std_dev,
-        }
+        BollingerMiddleRef::new(self.period, self.std_dev)
     }
 
     /// Get the lower band reference.
     pub fn lower(&self) -> BollingerLowerRef {
-        BollingerLowerRef {
-            period: self.period,
-            std_dev: self.std_dev,
-        }
+        BollingerLowerRef::new(self.period, self.std_dev)
     }
 }
 
@@ -857,22 +980,33 @@ pub fn bollinger(period: usize, std_dev: f64) -> BollingerConfig {
 }
 
 /// Bollinger upper band reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct BollingerUpperRef {
     /// Moving average period.
     pub period: usize,
     /// Standard deviation multiplier.
     pub std_dev: f64,
+    key: String,
+}
+
+impl BollingerUpperRef {
+    fn new(period: usize, std_dev: f64) -> Self {
+        Self {
+            period,
+            std_dev,
+            key: format!("bollinger_upper_{period}_{std_dev}"),
+        }
+    }
 }
 
 impl IndicatorRef for BollingerUpperRef {
-    fn key(&self) -> String {
-        format!("bollinger_upper_{}_{}", self.period, self.std_dev)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Bollinger {
                 period: self.period,
                 std_dev: self.std_dev,
@@ -881,31 +1015,42 @@ impl IndicatorRef for BollingerUpperRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Bollinger middle band reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct BollingerMiddleRef {
     /// Moving average period.
     pub period: usize,
     /// Standard deviation multiplier.
     pub std_dev: f64,
+    key: String,
+}
+
+impl BollingerMiddleRef {
+    fn new(period: usize, std_dev: f64) -> Self {
+        Self {
+            period,
+            std_dev,
+            key: format!("bollinger_middle_{period}_{std_dev}"),
+        }
+    }
 }
 
 impl IndicatorRef for BollingerMiddleRef {
-    fn key(&self) -> String {
-        format!("bollinger_middle_{}_{}", self.period, self.std_dev)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Bollinger {
                 period: self.period,
                 std_dev: self.std_dev,
@@ -914,31 +1059,42 @@ impl IndicatorRef for BollingerMiddleRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Bollinger lower band reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct BollingerLowerRef {
     /// Moving average period.
     pub period: usize,
     /// Standard deviation multiplier.
     pub std_dev: f64,
+    key: String,
+}
+
+impl BollingerLowerRef {
+    fn new(period: usize, std_dev: f64) -> Self {
+        Self {
+            period,
+            std_dev,
+            key: format!("bollinger_lower_{period}_{std_dev}"),
+        }
+    }
 }
 
 impl IndicatorRef for BollingerLowerRef {
-    fn key(&self) -> String {
-        format!("bollinger_lower_{}_{}", self.period, self.std_dev)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Bollinger {
                 period: self.period,
                 std_dev: self.std_dev,
@@ -947,11 +1103,11 @@ impl IndicatorRef for BollingerLowerRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -966,23 +1122,17 @@ pub struct DonchianConfig {
 impl DonchianConfig {
     /// Get the upper channel reference.
     pub fn upper(&self) -> DonchianUpperRef {
-        DonchianUpperRef {
-            period: self.period,
-        }
+        DonchianUpperRef::new(self.period)
     }
 
     /// Get the middle channel reference.
     pub fn middle(&self) -> DonchianMiddleRef {
-        DonchianMiddleRef {
-            period: self.period,
-        }
+        DonchianMiddleRef::new(self.period)
     }
 
     /// Get the lower channel reference.
     pub fn lower(&self) -> DonchianLowerRef {
-        DonchianLowerRef {
-            period: self.period,
-        }
+        DonchianLowerRef::new(self.period)
     }
 }
 
@@ -993,74 +1143,104 @@ pub fn donchian(period: usize) -> DonchianConfig {
 }
 
 /// Donchian upper channel reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct DonchianUpperRef {
     pub period: usize,
+    key: String,
+}
+
+impl DonchianUpperRef {
+    fn new(period: usize) -> Self {
+        Self {
+            period,
+            key: format!("donchian_upper_{period}"),
+        }
+    }
 }
 
 impl IndicatorRef for DonchianUpperRef {
-    fn key(&self) -> String {
-        format!("donchian_upper_{}", self.period)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::DonchianChannels(self.period))]
+        vec![(self.key.clone(), Indicator::DonchianChannels(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Donchian middle channel reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct DonchianMiddleRef {
     pub period: usize,
+    key: String,
+}
+
+impl DonchianMiddleRef {
+    fn new(period: usize) -> Self {
+        Self {
+            period,
+            key: format!("donchian_middle_{period}"),
+        }
+    }
 }
 
 impl IndicatorRef for DonchianMiddleRef {
-    fn key(&self) -> String {
-        format!("donchian_middle_{}", self.period)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::DonchianChannels(self.period))]
+        vec![(self.key.clone(), Indicator::DonchianChannels(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Donchian lower channel reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct DonchianLowerRef {
     pub period: usize,
+    key: String,
+}
+
+impl DonchianLowerRef {
+    fn new(period: usize) -> Self {
+        Self {
+            period,
+            key: format!("donchian_lower_{period}"),
+        }
+    }
 }
 
 impl IndicatorRef for DonchianLowerRef {
-    fn key(&self) -> String {
-        format!("donchian_lower_{}", self.period)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::DonchianChannels(self.period))]
+        vec![(self.key.clone(), Indicator::DonchianChannels(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -1076,18 +1256,12 @@ pub struct SupertrendConfig {
 impl SupertrendConfig {
     /// Get the SuperTrend value reference.
     pub fn value(&self) -> SupertrendValueRef {
-        SupertrendValueRef {
-            period: self.period,
-            multiplier: self.multiplier,
-        }
+        SupertrendValueRef::new(self.period, self.multiplier)
     }
 
     /// Get the SuperTrend uptrend indicator (1.0 = uptrend, 0.0 = downtrend).
     pub fn uptrend(&self) -> SupertrendUptrendRef {
-        SupertrendUptrendRef {
-            period: self.period,
-            multiplier: self.multiplier,
-        }
+        SupertrendUptrendRef::new(self.period, self.multiplier)
     }
 }
 
@@ -1098,20 +1272,31 @@ pub fn supertrend(period: usize, multiplier: f64) -> SupertrendConfig {
 }
 
 /// SuperTrend value reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct SupertrendValueRef {
     pub period: usize,
     pub multiplier: f64,
+    key: String,
+}
+
+impl SupertrendValueRef {
+    fn new(period: usize, multiplier: f64) -> Self {
+        Self {
+            period,
+            multiplier,
+            key: format!("supertrend_value_{period}_{multiplier}"),
+        }
+    }
 }
 
 impl IndicatorRef for SupertrendValueRef {
-    fn key(&self) -> String {
-        format!("supertrend_value_{}_{}", self.period, self.multiplier)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Supertrend {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1120,30 +1305,41 @@ impl IndicatorRef for SupertrendValueRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// SuperTrend uptrend indicator reference.
 /// Returns 1.0 for uptrend, 0.0 for downtrend.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct SupertrendUptrendRef {
     pub period: usize,
     pub multiplier: f64,
+    key: String,
+}
+
+impl SupertrendUptrendRef {
+    fn new(period: usize, multiplier: f64) -> Self {
+        Self {
+            period,
+            multiplier,
+            key: format!("supertrend_uptrend_{period}_{multiplier}"),
+        }
+    }
 }
 
 impl IndicatorRef for SupertrendUptrendRef {
-    fn key(&self) -> String {
-        format!("supertrend_uptrend_{}_{}", self.period, self.multiplier)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Supertrend {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1152,11 +1348,11 @@ impl IndicatorRef for SupertrendUptrendRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -1173,20 +1369,12 @@ pub struct StochasticConfig {
 impl StochasticConfig {
     /// Get the %K line reference.
     pub fn k(&self) -> StochasticKRef {
-        StochasticKRef {
-            k_period: self.k_period,
-            k_slow: self.k_slow,
-            d_period: self.d_period,
-        }
+        StochasticKRef::new(self.k_period, self.k_slow, self.d_period)
     }
 
     /// Get the %D line reference.
     pub fn d(&self) -> StochasticDRef {
-        StochasticDRef {
-            k_period: self.k_period,
-            k_slow: self.k_slow,
-            d_period: self.d_period,
-        }
+        StochasticDRef::new(self.k_period, self.k_slow, self.d_period)
     }
 }
 
@@ -1201,24 +1389,33 @@ pub fn stochastic(k_period: usize, k_slow: usize, d_period: usize) -> Stochastic
 }
 
 /// Stochastic %K line reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct StochasticKRef {
     pub k_period: usize,
     pub k_slow: usize,
     pub d_period: usize,
+    key: String,
+}
+
+impl StochasticKRef {
+    fn new(k_period: usize, k_slow: usize, d_period: usize) -> Self {
+        Self {
+            k_period,
+            k_slow,
+            d_period,
+            key: format!("stochastic_k_{k_period}_{k_slow}_{d_period}"),
+        }
+    }
 }
 
 impl IndicatorRef for StochasticKRef {
-    fn key(&self) -> String {
-        format!(
-            "stochastic_k_{}_{}_{}",
-            self.k_period, self.k_slow, self.d_period
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Stochastic {
                 k_period: self.k_period,
                 k_slow: self.k_slow,
@@ -1228,33 +1425,42 @@ impl IndicatorRef for StochasticKRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Stochastic %D line reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct StochasticDRef {
     pub k_period: usize,
     pub k_slow: usize,
     pub d_period: usize,
+    key: String,
+}
+
+impl StochasticDRef {
+    fn new(k_period: usize, k_slow: usize, d_period: usize) -> Self {
+        Self {
+            k_period,
+            k_slow,
+            d_period,
+            key: format!("stochastic_d_{k_period}_{k_slow}_{d_period}"),
+        }
+    }
 }
 
 impl IndicatorRef for StochasticDRef {
-    fn key(&self) -> String {
-        format!(
-            "stochastic_d_{}_{}_{}",
-            self.k_period, self.k_slow, self.d_period
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Stochastic {
                 k_period: self.k_period,
                 k_slow: self.k_slow,
@@ -1264,11 +1470,11 @@ impl IndicatorRef for StochasticDRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -1283,16 +1489,12 @@ pub struct AroonConfig {
 impl AroonConfig {
     /// Get the Aroon Up reference.
     pub fn up(&self) -> AroonUpRef {
-        AroonUpRef {
-            period: self.period,
-        }
+        AroonUpRef::new(self.period)
     }
 
     /// Get the Aroon Down reference.
     pub fn down(&self) -> AroonDownRef {
-        AroonDownRef {
-            period: self.period,
-        }
+        AroonDownRef::new(self.period)
     }
 }
 
@@ -1303,50 +1505,70 @@ pub fn aroon(period: usize) -> AroonConfig {
 }
 
 /// Aroon Up reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AroonUpRef {
     pub period: usize,
+    key: String,
+}
+
+impl AroonUpRef {
+    fn new(period: usize) -> Self {
+        Self {
+            period,
+            key: format!("aroon_up_{period}"),
+        }
+    }
 }
 
 impl IndicatorRef for AroonUpRef {
-    fn key(&self) -> String {
-        format!("aroon_up_{}", self.period)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Aroon(self.period))]
+        vec![(self.key.clone(), Indicator::Aroon(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Aroon Down reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AroonDownRef {
     pub period: usize,
+    key: String,
+}
+
+impl AroonDownRef {
+    fn new(period: usize) -> Self {
+        Self {
+            period,
+            key: format!("aroon_down_{period}"),
+        }
+    }
 }
 
 impl IndicatorRef for AroonDownRef {
-    fn key(&self) -> String {
-        format!("aroon_down_{}", self.period)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::Aroon(self.period))]
+        vec![(self.key.clone(), Indicator::Aroon(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -1364,52 +1586,27 @@ pub struct IchimokuConfig {
 impl IchimokuConfig {
     /// Get the Tenkan-sen (Conversion Line) reference.
     pub fn conversion_line(&self) -> IchimokuConversionRef {
-        IchimokuConversionRef {
-            conversion: self.conversion,
-            base: self.base,
-            lagging: self.lagging,
-            displacement: self.displacement,
-        }
+        IchimokuConversionRef::new(self.conversion, self.base, self.lagging, self.displacement)
     }
 
     /// Get the Kijun-sen (Base Line) reference.
     pub fn base_line(&self) -> IchimokuBaseRef {
-        IchimokuBaseRef {
-            conversion: self.conversion,
-            base: self.base,
-            lagging: self.lagging,
-            displacement: self.displacement,
-        }
+        IchimokuBaseRef::new(self.conversion, self.base, self.lagging, self.displacement)
     }
 
     /// Get the Senkou Span A (Leading Span A) reference.
     pub fn leading_span_a(&self) -> IchimokuLeadingARef {
-        IchimokuLeadingARef {
-            conversion: self.conversion,
-            base: self.base,
-            lagging: self.lagging,
-            displacement: self.displacement,
-        }
+        IchimokuLeadingARef::new(self.conversion, self.base, self.lagging, self.displacement)
     }
 
     /// Get the Senkou Span B (Leading Span B) reference.
     pub fn leading_span_b(&self) -> IchimokuLeadingBRef {
-        IchimokuLeadingBRef {
-            conversion: self.conversion,
-            base: self.base,
-            lagging: self.lagging,
-            displacement: self.displacement,
-        }
+        IchimokuLeadingBRef::new(self.conversion, self.base, self.lagging, self.displacement)
     }
 
     /// Get the Chikou Span (Lagging Span) reference.
     pub fn lagging_span(&self) -> IchimokuLaggingRef {
-        IchimokuLaggingRef {
-            conversion: self.conversion,
-            base: self.base,
-            lagging: self.lagging,
-            displacement: self.displacement,
-        }
+        IchimokuLaggingRef::new(self.conversion, self.base, self.lagging, self.displacement)
     }
 }
 
@@ -1441,25 +1638,35 @@ pub fn ichimoku_custom(
 }
 
 /// Ichimoku Conversion Line (Tenkan-sen) reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct IchimokuConversionRef {
     pub conversion: usize,
     pub base: usize,
     pub lagging: usize,
     pub displacement: usize,
+    key: String,
+}
+
+impl IchimokuConversionRef {
+    fn new(conversion: usize, base: usize, lagging: usize, displacement: usize) -> Self {
+        Self {
+            conversion,
+            base,
+            lagging,
+            displacement,
+            key: format!("ichimoku_conversion_{conversion}_{base}_{lagging}_{displacement}"),
+        }
+    }
 }
 
 impl IndicatorRef for IchimokuConversionRef {
-    fn key(&self) -> String {
-        format!(
-            "ichimoku_conversion_{}_{}_{}_{}",
-            self.conversion, self.base, self.lagging, self.displacement
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1470,34 +1677,44 @@ impl IndicatorRef for IchimokuConversionRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Ichimoku Base Line (Kijun-sen) reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct IchimokuBaseRef {
     pub conversion: usize,
     pub base: usize,
     pub lagging: usize,
     pub displacement: usize,
+    key: String,
+}
+
+impl IchimokuBaseRef {
+    fn new(conversion: usize, base: usize, lagging: usize, displacement: usize) -> Self {
+        Self {
+            conversion,
+            base,
+            lagging,
+            displacement,
+            key: format!("ichimoku_base_{conversion}_{base}_{lagging}_{displacement}"),
+        }
+    }
 }
 
 impl IndicatorRef for IchimokuBaseRef {
-    fn key(&self) -> String {
-        format!(
-            "ichimoku_base_{}_{}_{}_{}",
-            self.conversion, self.base, self.lagging, self.displacement
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1508,34 +1725,44 @@ impl IndicatorRef for IchimokuBaseRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Ichimoku Leading Span A (Senkou Span A) reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct IchimokuLeadingARef {
     pub conversion: usize,
     pub base: usize,
     pub lagging: usize,
     pub displacement: usize,
+    key: String,
+}
+
+impl IchimokuLeadingARef {
+    fn new(conversion: usize, base: usize, lagging: usize, displacement: usize) -> Self {
+        Self {
+            conversion,
+            base,
+            lagging,
+            displacement,
+            key: format!("ichimoku_leading_a_{conversion}_{base}_{lagging}_{displacement}"),
+        }
+    }
 }
 
 impl IndicatorRef for IchimokuLeadingARef {
-    fn key(&self) -> String {
-        format!(
-            "ichimoku_leading_a_{}_{}_{}_{}",
-            self.conversion, self.base, self.lagging, self.displacement
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1546,34 +1773,44 @@ impl IndicatorRef for IchimokuLeadingARef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Ichimoku Leading Span B (Senkou Span B) reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct IchimokuLeadingBRef {
     pub conversion: usize,
     pub base: usize,
     pub lagging: usize,
     pub displacement: usize,
+    key: String,
+}
+
+impl IchimokuLeadingBRef {
+    fn new(conversion: usize, base: usize, lagging: usize, displacement: usize) -> Self {
+        Self {
+            conversion,
+            base,
+            lagging,
+            displacement,
+            key: format!("ichimoku_leading_b_{conversion}_{base}_{lagging}_{displacement}"),
+        }
+    }
 }
 
 impl IndicatorRef for IchimokuLeadingBRef {
-    fn key(&self) -> String {
-        format!(
-            "ichimoku_leading_b_{}_{}_{}_{}",
-            self.conversion, self.base, self.lagging, self.displacement
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1584,34 +1821,44 @@ impl IndicatorRef for IchimokuLeadingBRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Ichimoku Lagging Span (Chikou Span) reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct IchimokuLaggingRef {
     pub conversion: usize,
     pub base: usize,
     pub lagging: usize,
     pub displacement: usize,
+    key: String,
+}
+
+impl IchimokuLaggingRef {
+    fn new(conversion: usize, base: usize, lagging: usize, displacement: usize) -> Self {
+        Self {
+            conversion,
+            base,
+            lagging,
+            displacement,
+            key: format!("ichimoku_lagging_{conversion}_{base}_{lagging}_{displacement}"),
+        }
+    }
 }
 
 impl IndicatorRef for IchimokuLaggingRef {
-    fn key(&self) -> String {
-        format!(
-            "ichimoku_lagging_{}_{}_{}_{}",
-            self.conversion, self.base, self.lagging, self.displacement
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Ichimoku {
                 conversion: self.conversion,
                 base: self.base,
@@ -1622,11 +1869,11 @@ impl IndicatorRef for IchimokuLaggingRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -1643,29 +1890,17 @@ pub struct KeltnerConfig {
 impl KeltnerConfig {
     /// Get the upper channel reference.
     pub fn upper(&self) -> KeltnerUpperRef {
-        KeltnerUpperRef {
-            period: self.period,
-            multiplier: self.multiplier,
-            atr_period: self.atr_period,
-        }
+        KeltnerUpperRef::new(self.period, self.multiplier, self.atr_period)
     }
 
     /// Get the middle channel (EMA) reference.
     pub fn middle(&self) -> KeltnerMiddleRef {
-        KeltnerMiddleRef {
-            period: self.period,
-            multiplier: self.multiplier,
-            atr_period: self.atr_period,
-        }
+        KeltnerMiddleRef::new(self.period, self.multiplier, self.atr_period)
     }
 
     /// Get the lower channel reference.
     pub fn lower(&self) -> KeltnerLowerRef {
-        KeltnerLowerRef {
-            period: self.period,
-            multiplier: self.multiplier,
-            atr_period: self.atr_period,
-        }
+        KeltnerLowerRef::new(self.period, self.multiplier, self.atr_period)
     }
 }
 
@@ -1680,24 +1915,33 @@ pub fn keltner(period: usize, multiplier: f64, atr_period: usize) -> KeltnerConf
 }
 
 /// Keltner upper channel reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct KeltnerUpperRef {
     pub period: usize,
     pub multiplier: f64,
     pub atr_period: usize,
+    key: String,
+}
+
+impl KeltnerUpperRef {
+    fn new(period: usize, multiplier: f64, atr_period: usize) -> Self {
+        Self {
+            period,
+            multiplier,
+            atr_period,
+            key: format!("keltner_upper_{period}_{multiplier}_{atr_period}"),
+        }
+    }
 }
 
 impl IndicatorRef for KeltnerUpperRef {
-    fn key(&self) -> String {
-        format!(
-            "keltner_upper_{}_{}_{}",
-            self.period, self.multiplier, self.atr_period
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::KeltnerChannels {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1707,33 +1951,42 @@ impl IndicatorRef for KeltnerUpperRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Keltner middle channel reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct KeltnerMiddleRef {
     pub period: usize,
     pub multiplier: f64,
     pub atr_period: usize,
+    key: String,
+}
+
+impl KeltnerMiddleRef {
+    fn new(period: usize, multiplier: f64, atr_period: usize) -> Self {
+        Self {
+            period,
+            multiplier,
+            atr_period,
+            key: format!("keltner_middle_{period}_{multiplier}_{atr_period}"),
+        }
+    }
 }
 
 impl IndicatorRef for KeltnerMiddleRef {
-    fn key(&self) -> String {
-        format!(
-            "keltner_middle_{}_{}_{}",
-            self.period, self.multiplier, self.atr_period
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::KeltnerChannels {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1743,33 +1996,42 @@ impl IndicatorRef for KeltnerMiddleRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Keltner lower channel reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct KeltnerLowerRef {
     pub period: usize,
     pub multiplier: f64,
     pub atr_period: usize,
+    key: String,
+}
+
+impl KeltnerLowerRef {
+    fn new(period: usize, multiplier: f64, atr_period: usize) -> Self {
+        Self {
+            period,
+            multiplier,
+            atr_period,
+            key: format!("keltner_lower_{period}_{multiplier}_{atr_period}"),
+        }
+    }
 }
 
 impl IndicatorRef for KeltnerLowerRef {
-    fn key(&self) -> String {
-        format!(
-            "keltner_lower_{}_{}_{}",
-            self.period, self.multiplier, self.atr_period
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::KeltnerChannels {
                 period: self.period,
                 multiplier: self.multiplier,
@@ -1779,11 +2041,11 @@ impl IndicatorRef for KeltnerLowerRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -1799,24 +2061,35 @@ pub struct ParabolicSarConfig {
 /// Create a Parabolic SAR configuration.
 #[inline]
 pub fn parabolic_sar(step: f64, max: f64) -> ParabolicSarRef {
-    ParabolicSarRef { step, max }
+    ParabolicSarRef::new(step, max)
 }
 
 /// Parabolic SAR reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct ParabolicSarRef {
     pub step: f64,
     pub max: f64,
+    key: String,
+}
+
+impl ParabolicSarRef {
+    fn new(step: f64, max: f64) -> Self {
+        Self {
+            step,
+            max,
+            key: format!("psar_{step}_{max}"),
+        }
+    }
 }
 
 impl IndicatorRef for ParabolicSarRef {
-    fn key(&self) -> String {
-        format!("psar_{}_{}", self.step, self.max)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::ParabolicSar {
                 step: self.step,
                 max: self.max,
@@ -1825,11 +2098,11 @@ impl IndicatorRef for ParabolicSarRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -1846,29 +2119,37 @@ pub struct AlmaConfig {
 /// Create an ALMA configuration.
 #[inline]
 pub fn alma(period: usize, offset: f64, sigma: f64) -> AlmaRef {
-    AlmaRef {
-        period,
-        offset,
-        sigma,
-    }
+    AlmaRef::new(period, offset, sigma)
 }
 
 /// ALMA reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AlmaRef {
     pub period: usize,
     pub offset: f64,
     pub sigma: f64,
+    key: String,
+}
+
+impl AlmaRef {
+    fn new(period: usize, offset: f64, sigma: f64) -> Self {
+        Self {
+            period,
+            offset,
+            sigma,
+            key: format!("alma_{period}_{offset}_{sigma}"),
+        }
+    }
 }
 
 impl IndicatorRef for AlmaRef {
-    fn key(&self) -> String {
-        format!("alma_{}_{}_{}", self.period, self.offset, self.sigma)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::Alma {
                 period: self.period,
                 offset: self.offset,
@@ -1878,11 +2159,11 @@ impl IndicatorRef for AlmaRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -1916,22 +2197,22 @@ pub struct StochasticRsiConfig {
 impl StochasticRsiConfig {
     /// Reference to the smoothed %K line.
     pub fn k(&self) -> StochasticRsiRef {
-        StochasticRsiRef {
-            rsi_period: self.rsi_period,
-            stoch_period: self.stoch_period,
-            k_period: self.k_period,
-            d_period: self.d_period,
-        }
+        StochasticRsiRef::new(
+            self.rsi_period,
+            self.stoch_period,
+            self.k_period,
+            self.d_period,
+        )
     }
 
     /// Reference to the %D signal line (SMA of %K).
     pub fn d(&self) -> StochasticRsiDRef {
-        StochasticRsiDRef {
-            rsi_period: self.rsi_period,
-            stoch_period: self.stoch_period,
-            k_period: self.k_period,
-            d_period: self.d_period,
-        }
+        StochasticRsiDRef::new(
+            self.rsi_period,
+            self.stoch_period,
+            self.k_period,
+            self.d_period,
+        )
     }
 }
 
@@ -1957,25 +2238,35 @@ pub fn stochastic_rsi(
 }
 
 /// Stochastic RSI %K line reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct StochasticRsiRef {
     pub rsi_period: usize,
     pub stoch_period: usize,
     pub k_period: usize,
     pub d_period: usize,
+    key: String,
+}
+
+impl StochasticRsiRef {
+    fn new(rsi_period: usize, stoch_period: usize, k_period: usize, d_period: usize) -> Self {
+        Self {
+            rsi_period,
+            stoch_period,
+            k_period,
+            d_period,
+            key: format!("stoch_rsi_k_{rsi_period}_{stoch_period}_{k_period}_{d_period}"),
+        }
+    }
 }
 
 impl IndicatorRef for StochasticRsiRef {
-    fn key(&self) -> String {
-        format!(
-            "stoch_rsi_k_{}_{}_{}_{}",
-            self.rsi_period, self.stoch_period, self.k_period, self.d_period
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::StochasticRsi {
                 rsi_period: self.rsi_period,
                 stoch_period: self.stoch_period,
@@ -1986,29 +2277,39 @@ impl IndicatorRef for StochasticRsiRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Stochastic RSI %D line reference (SMA of %K).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct StochasticRsiDRef {
     pub rsi_period: usize,
     pub stoch_period: usize,
     pub k_period: usize,
     pub d_period: usize,
+    key: String,
+}
+
+impl StochasticRsiDRef {
+    fn new(rsi_period: usize, stoch_period: usize, k_period: usize, d_period: usize) -> Self {
+        Self {
+            rsi_period,
+            stoch_period,
+            k_period,
+            d_period,
+            key: format!("stoch_rsi_d_{rsi_period}_{stoch_period}_{k_period}_{d_period}"),
+        }
+    }
 }
 
 impl IndicatorRef for StochasticRsiDRef {
-    fn key(&self) -> String {
-        format!(
-            "stoch_rsi_d_{}_{}_{}_{}",
-            self.rsi_period, self.stoch_period, self.k_period, self.d_period
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -2030,37 +2331,42 @@ impl IndicatorRef for StochasticRsiDRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 // --- Awesome Oscillator ---
 
 /// Awesome Oscillator reference (uses default 5/34 periods).
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct AwesomeOscillatorRef {
     pub fast: usize,
     pub slow: usize,
+    key: String,
 }
 
 /// Create an Awesome Oscillator reference.
 #[inline]
 pub fn awesome_oscillator(fast: usize, slow: usize) -> AwesomeOscillatorRef {
-    AwesomeOscillatorRef { fast, slow }
+    AwesomeOscillatorRef {
+        fast,
+        slow,
+        key: format!("ao_{fast}_{slow}"),
+    }
 }
 
 impl IndicatorRef for AwesomeOscillatorRef {
-    fn key(&self) -> String {
-        format!("ao_{}_{}", self.fast, self.slow)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::AwesomeOscillator {
                 fast: self.fast,
                 slow: self.slow,
@@ -2069,22 +2375,23 @@ impl IndicatorRef for AwesomeOscillatorRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 // --- Coppock Curve ---
 
 /// Coppock Curve reference.
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct CoppockCurveRef {
     pub wma_period: usize,
     pub long_roc: usize,
     pub short_roc: usize,
+    key: String,
 }
 
 /// Create a Coppock Curve reference (uses default 10/14/11 periods).
@@ -2094,20 +2401,18 @@ pub fn coppock_curve(wma_period: usize, long_roc: usize, short_roc: usize) -> Co
         wma_period,
         long_roc,
         short_roc,
+        key: format!("coppock_{wma_period}_{long_roc}_{short_roc}"),
     }
 }
 
 impl IndicatorRef for CoppockCurveRef {
-    fn key(&self) -> String {
-        format!(
-            "coppock_{}_{}_{}",
-            self.wma_period, self.long_roc, self.short_roc
-        )
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
         vec![(
-            self.key(),
+            self.key.clone(),
             Indicator::CoppockCurve {
                 wma_period: self.wma_period,
                 long_roc: self.long_roc,
@@ -2117,41 +2422,47 @@ impl IndicatorRef for CoppockCurveRef {
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 // --- Choppiness Index ---
 
 /// Choppiness Index reference.
-#[derive(Debug, Clone, Copy)]
-pub struct ChoppinessIndexRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct ChoppinessIndexRef {
+    pub period: usize,
+    key: String,
+}
 
 /// Create a Choppiness Index reference.
 #[inline]
 pub fn choppiness_index(period: usize) -> ChoppinessIndexRef {
-    ChoppinessIndexRef(period)
+    ChoppinessIndexRef {
+        period,
+        key: format!("chop_{period}"),
+    }
 }
 
 impl IndicatorRef for ChoppinessIndexRef {
-    fn key(&self) -> String {
-        format!("chop_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::ChoppinessIndex(self.0))]
+        vec![(self.key.clone(), Indicator::ChoppinessIndex(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -2168,20 +2479,20 @@ pub fn true_range() -> TrueRangeRef {
 }
 
 impl IndicatorRef for TrueRangeRef {
-    fn key(&self) -> String {
-        "true_range".to_string()
+    fn key(&self) -> &str {
+        "true_range"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::TrueRange)]
+        vec![("true_range".to_string(), Indicator::TrueRange)]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -2198,20 +2509,20 @@ pub fn chaikin_oscillator() -> ChaikinOscillatorRef {
 }
 
 impl IndicatorRef for ChaikinOscillatorRef {
-    fn key(&self) -> String {
-        "chaikin_osc".to_string()
+    fn key(&self) -> &str {
+        "chaikin_osc"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::ChaikinOscillator)]
+        vec![("chaikin_osc".to_string(), Indicator::ChaikinOscillator)]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
@@ -2228,169 +2539,197 @@ pub fn accumulation_distribution() -> AccumulationDistributionRef {
 }
 
 impl IndicatorRef for AccumulationDistributionRef {
-    fn key(&self) -> String {
-        "ad".to_string()
+    fn key(&self) -> &str {
+        "ad"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::AccumulationDistribution)]
+        vec![("ad".to_string(), Indicator::AccumulationDistribution)]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 // --- Balance of Power ---
 
 /// Balance of Power reference.
-#[derive(Debug, Clone, Copy)]
-pub struct BalanceOfPowerRef(pub Option<usize>);
+#[derive(Debug, Clone)]
+pub struct BalanceOfPowerRef {
+    pub period: Option<usize>,
+    key: String,
+}
 
 /// Create a Balance of Power reference.
 #[inline]
 pub fn balance_of_power(period: Option<usize>) -> BalanceOfPowerRef {
-    BalanceOfPowerRef(period)
+    let key = match period {
+        Some(p) => format!("bop_{p}"),
+        None => "bop".to_string(),
+    };
+    BalanceOfPowerRef { period, key }
 }
 
 impl IndicatorRef for BalanceOfPowerRef {
-    fn key(&self) -> String {
-        match self.0 {
-            Some(p) => format!("bop_{}", p),
-            None => "bop".to_string(),
-        }
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::BalanceOfPower(self.0))]
+        vec![(self.key.clone(), Indicator::BalanceOfPower(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 // --- Bull/Bear Power ---
 
 /// Bull Power reference.
-#[derive(Debug, Clone, Copy)]
-pub struct BullPowerRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct BullPowerRef {
+    pub period: usize,
+    key: String,
+}
 
 /// Create a Bull Power reference.
 #[inline]
 pub fn bull_power(period: usize) -> BullPowerRef {
-    BullPowerRef(period)
+    BullPowerRef {
+        period,
+        key: format!("bull_power_{period}"),
+    }
 }
 
 impl IndicatorRef for BullPowerRef {
-    fn key(&self) -> String {
-        format!("bull_power_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::BullBearPower(self.0))]
+        vec![(self.key.clone(), Indicator::BullBearPower(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Bear Power reference.
-#[derive(Debug, Clone, Copy)]
-pub struct BearPowerRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct BearPowerRef {
+    pub period: usize,
+    key: String,
+}
 
 /// Create a Bear Power reference.
 #[inline]
 pub fn bear_power(period: usize) -> BearPowerRef {
-    BearPowerRef(period)
+    BearPowerRef {
+        period,
+        key: format!("bear_power_{period}"),
+    }
 }
 
 impl IndicatorRef for BearPowerRef {
-    fn key(&self) -> String {
-        format!("bear_power_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::BullBearPower(self.0))]
+        vec![(self.key.clone(), Indicator::BullBearPower(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 // --- Elder Ray ---
 
 /// Elder Ray Bull Power reference.
-#[derive(Debug, Clone, Copy)]
-pub struct ElderBullPowerRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct ElderBullPowerRef {
+    pub period: usize,
+    key: String,
+}
 
 /// Create an Elder Ray Bull Power reference.
 #[inline]
 pub fn elder_bull_power(period: usize) -> ElderBullPowerRef {
-    ElderBullPowerRef(period)
+    ElderBullPowerRef {
+        period,
+        key: format!("elder_bull_{period}"),
+    }
 }
 
 impl IndicatorRef for ElderBullPowerRef {
-    fn key(&self) -> String {
-        format!("elder_bull_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::ElderRay(self.0))]
+        vec![(self.key.clone(), Indicator::ElderRay(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 
 /// Elder Ray Bear Power reference.
-#[derive(Debug, Clone, Copy)]
-pub struct ElderBearPowerRef(pub usize);
+#[derive(Debug, Clone)]
+pub struct ElderBearPowerRef {
+    pub period: usize,
+    key: String,
+}
 
 /// Create an Elder Ray Bear Power reference.
 #[inline]
 pub fn elder_bear_power(period: usize) -> ElderBearPowerRef {
-    ElderBearPowerRef(period)
+    ElderBearPowerRef {
+        period,
+        key: format!("elder_bear_{period}"),
+    }
 }
 
 impl IndicatorRef for ElderBearPowerRef {
-    fn key(&self) -> String {
-        format!("elder_bear_{}", self.0)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-        vec![(self.key(), Indicator::ElderRay(self.0))]
+        vec![(self.key.clone(), Indicator::ElderRay(self.period))]
     }
 
     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator(&self.key())
+        ctx.indicator(self.key())
     }
 
     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-        ctx.indicator_prev(&self.key())
+        ctx.indicator_prev(self.key())
     }
 }
 

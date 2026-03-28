@@ -40,7 +40,7 @@ use std::time::Duration;
 
 let mut stream = PriceStreamBuilder::new()
     .symbols(&["AAPL", "MSFT", "NVDA"])
-    .reconnect_delay(Duration::from_secs(5))
+    .retry(Duration::from_secs(5))
     .build()
     .await?;
 ```

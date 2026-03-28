@@ -43,116 +43,80 @@ pub fn adx(highs: &[f64], lows: &[f64], closes: &[f64], period: usize) -> Result
         });
     }
 
-    let mut tr_values = Vec::with_capacity(len);
-    let mut plus_dm = Vec::with_capacity(len);
-    let mut minus_dm = Vec::with_capacity(len);
+    // Single-pass: compute TR/+DM/-DM inline, apply Wilder smoothing, accumulate DX,
+    // then compute ADX — eliminates 7 intermediate Vec allocations.
+    let period_f = period as f64;
+    let period_m1 = (period - 1) as f64;
 
-    tr_values.push(0.0);
-    plus_dm.push(0.0);
-    minus_dm.push(0.0);
+    // Seed smoothed values from the first `period` bars (indices 1..=period).
+    let mut s_tr = 0.0_f64;
+    let mut s_plus = 0.0_f64;
+    let mut s_minus = 0.0_f64;
+    for i in 1..=period {
+        let high_low = highs[i] - lows[i];
+        let high_close = (highs[i] - closes[i - 1]).abs();
+        let low_close = (lows[i] - closes[i - 1]).abs();
+        s_tr += high_low.max(high_close).max(low_close);
 
-    for i in 1..len {
+        let up = highs[i] - highs[i - 1];
+        let dn = lows[i - 1] - lows[i];
+        if up > dn && up > 0.0 {
+            s_plus += up;
+        }
+        if dn > up && dn > 0.0 {
+            s_minus += dn;
+        }
+    }
+    s_tr /= period_f;
+    s_plus /= period_f;
+    s_minus /= period_f;
+
+    let tr_dm = |i: usize| -> (f64, f64, f64) {
         let high_low = highs[i] - lows[i];
         let high_close = (highs[i] - closes[i - 1]).abs();
         let low_close = (lows[i] - closes[i - 1]).abs();
         let tr = high_low.max(high_close).max(low_close);
-        tr_values.push(tr);
-
-        let up_move = highs[i] - highs[i - 1];
-        let down_move = lows[i - 1] - lows[i];
-
-        let plus = if up_move > down_move && up_move > 0.0 {
-            up_move
+        let up = highs[i] - highs[i - 1];
+        let dn = lows[i - 1] - lows[i];
+        let plus = if up > dn && up > 0.0 { up } else { 0.0 };
+        let minus = if dn > up && dn > 0.0 { dn } else { 0.0 };
+        (tr, plus, minus)
+    };
+    let dx_at = |str: f64, sp: f64, sm: f64| -> f64 {
+        let p_di = if str != 0.0 { 100.0 * sp / str } else { 0.0 };
+        let m_di = if str != 0.0 { 100.0 * sm / str } else { 0.0 };
+        let di_sum = p_di + m_di;
+        if di_sum != 0.0 {
+            100.0 * (p_di - m_di).abs() / di_sum
         } else {
             0.0
-        };
-        let minus = if down_move > up_move && down_move > 0.0 {
-            down_move
-        } else {
-            0.0
-        };
-
-        plus_dm.push(plus);
-        minus_dm.push(minus);
-    }
-
-    let mut smoothed_tr = vec![0.0; len];
-    let mut smoothed_plus = vec![0.0; len];
-    let mut smoothed_minus = vec![0.0; len];
-    let mut dx_values = vec![0.0; len];
-
-    let mut tr_sum = 0.0;
-    let mut plus_sum = 0.0;
-    let mut minus_sum = 0.0;
-
-    for i in 1..=period {
-        tr_sum += tr_values[i];
-        plus_sum += plus_dm[i];
-        minus_sum += minus_dm[i];
-    }
-
-    smoothed_tr[period] = tr_sum / period as f64;
-    smoothed_plus[period] = plus_sum / period as f64;
-    smoothed_minus[period] = minus_sum / period as f64;
-
-    let plus_di = if smoothed_tr[period] != 0.0 {
-        100.0 * smoothed_plus[period] / smoothed_tr[period]
-    } else {
-        0.0
-    };
-    let minus_di = if smoothed_tr[period] != 0.0 {
-        100.0 * smoothed_minus[period] / smoothed_tr[period]
-    } else {
-        0.0
-    };
-    let di_sum = plus_di + minus_di;
-    dx_values[period] = if di_sum != 0.0 {
-        100.0 * (plus_di - minus_di).abs() / di_sum
-    } else {
-        0.0
+        }
     };
 
-    for i in (period + 1)..len {
-        smoothed_tr[i] =
-            ((smoothed_tr[i - 1] * (period - 1) as f64) + tr_values[i]) / period as f64;
-        smoothed_plus[i] =
-            ((smoothed_plus[i - 1] * (period - 1) as f64) + plus_dm[i]) / period as f64;
-        smoothed_minus[i] =
-            ((smoothed_minus[i - 1] * (period - 1) as f64) + minus_dm[i]) / period as f64;
-
-        let plus_di = if smoothed_tr[i] != 0.0 {
-            100.0 * smoothed_plus[i] / smoothed_tr[i]
-        } else {
-            0.0
-        };
-        let minus_di = if smoothed_tr[i] != 0.0 {
-            100.0 * smoothed_minus[i] / smoothed_tr[i]
-        } else {
-            0.0
-        };
-        let di_sum = plus_di + minus_di;
-        dx_values[i] = if di_sum != 0.0 {
-            100.0 * (plus_di - minus_di).abs() / di_sum
-        } else {
-            0.0
-        };
+    // Accumulate DX values from index `period` to `2*period - 1` for the first ADX seed.
+    let mut dx_sum = dx_at(s_tr, s_plus, s_minus);
+    for i in (period + 1)..=(2 * period - 1).min(len - 1) {
+        let (tr, plus, minus) = tr_dm(i);
+        s_tr = (s_tr * period_m1 + tr) / period_f;
+        s_plus = (s_plus * period_m1 + plus) / period_f;
+        s_minus = (s_minus * period_m1 + minus) / period_f;
+        dx_sum += dx_at(s_tr, s_plus, s_minus);
     }
 
     let mut result = vec![None; len];
-
-    let mut dx_sum = 0.0;
-    for &dx in dx_values.iter().skip(period).take(period) {
-        dx_sum += dx;
-    }
-
     let first_adx_idx = 2 * period - 1;
+
     if first_adx_idx < len {
-        let mut adx = dx_sum / period as f64;
+        let mut adx = dx_sum / period_f;
         result[first_adx_idx] = Some(adx);
 
-        for i in (first_adx_idx + 1)..len {
-            adx = ((adx * (period - 1) as f64) + dx_values[i]) / period as f64;
-            result[i] = Some(adx);
+        for (i, slot) in result.iter_mut().enumerate().skip(first_adx_idx + 1) {
+            let (tr, plus, minus) = tr_dm(i);
+            s_tr = (s_tr * period_m1 + tr) / period_f;
+            s_plus = (s_plus * period_m1 + plus) / period_f;
+            s_minus = (s_minus * period_m1 + minus) / period_f;
+            adx = (adx * period_m1 + dx_at(s_tr, s_plus, s_minus)) / period_f;
+            *slot = Some(adx);
         }
     }
 

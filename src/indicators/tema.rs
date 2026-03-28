@@ -1,6 +1,6 @@
 //! Triple Exponential Moving Average (TEMA) indicator.
 
-use super::{IndicatorError, Result, ema::ema};
+use super::{IndicatorError, Result, ema::ema_raw};
 
 /// Calculate Triple Exponential Moving Average (TEMA).
 ///
@@ -37,45 +37,33 @@ pub fn tema(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
         });
     }
 
-    let ema1 = ema(data, period);
-
-    let valid_ema1: Vec<f64> = ema1.iter().filter_map(|&x| x).collect();
-    if valid_ema1.len() < period {
+    // ema_raw returns only valid values — no Option/None padding or filter_map needed
+    let ema1 = ema_raw(data, period); // len = N - (period-1)
+    if ema1.len() < period {
         return Err(IndicatorError::InsufficientData {
             need: 2 * period - 1,
             got: data.len(),
         });
     }
-
-    let ema2 = ema(&valid_ema1, period);
-
-    let valid_ema2: Vec<f64> = ema2.iter().filter_map(|&x| x).collect();
-    if valid_ema2.len() < period {
+    let ema2 = ema_raw(&ema1, period); // len = N - 2*(period-1)
+    if ema2.len() < period {
         return Err(IndicatorError::InsufficientData {
             need: 3 * period - 2,
             got: data.len(),
         });
     }
-
-    let ema3 = ema(&valid_ema2, period);
+    let ema3 = ema_raw(&ema2, period); // len = N - 3*(period-1)
 
     let mut result = vec![None; data.len()];
+    let off = period - 1;
 
-    for i in 0..data.len() {
-        let offset1 = period - 1;
-        let offset2 = 2 * (period - 1);
-
-        if i >= offset2 {
-            let j = i - offset1;
-            let k = i - offset2;
-
-            if j < ema2.len()
-                && k < ema3.len()
-                && let (Some(e1), Some(e2), Some(e3)) = (ema1[i], ema2[j], ema3[k])
-            {
-                result[i] = Some(3.0 * e1 - 3.0 * e2 + e3);
-            }
-        }
+    // ema3[k3] → original index k3 + 3*off
+    // matching ema2 index = k3 + off, ema1 index = k3 + 2*off
+    for (k3, &e3) in ema3.iter().enumerate() {
+        let orig_idx = k3 + 3 * off;
+        let e1 = ema1[k3 + 2 * off];
+        let e2 = ema2[k3 + off];
+        result[orig_idx] = Some(3.0 * e1 - 3.0 * e2 + e3);
     }
 
     Ok(result)

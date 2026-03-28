@@ -5,13 +5,12 @@
 use serde::{Deserialize, Serialize};
 
 use super::{
-    AssetProfile, BalanceSheetHistory, BalanceSheetHistoryQuarterly, CalendarEvents,
-    CashflowStatementHistory, CashflowStatementHistoryQuarterly, DefaultKeyStatistics, Earnings,
-    EarningsHistory, EarningsTrend, EquityPerformance, FinancialData, FundOwnership,
-    FundPerformance, FundProfile, IncomeStatementHistory, IncomeStatementHistoryQuarterly,
-    IndexTrend, IndustryTrend, InsiderHolders, InsiderTransactions, InstitutionOwnership,
-    MajorHoldersBreakdown, NetSharePurchaseActivity, Price, QuoteSummaryResponse, QuoteTypeData,
-    RecommendationTrend, SecFilings, SectorTrend, SummaryDetail, SummaryProfile, TopHoldings,
+    BalanceSheetHistory, BalanceSheetHistoryQuarterly, CalendarEvents, CashflowStatementHistory,
+    CashflowStatementHistoryQuarterly, Earnings, EarningsHistory, EarningsTrend, EquityPerformance,
+    FundOwnership, FundPerformance, FundProfile, IncomeStatementHistory,
+    IncomeStatementHistoryQuarterly, IndexTrend, IndustryTrend, InsiderHolders,
+    InsiderTransactions, InstitutionOwnership, MajorHoldersBreakdown, NetSharePurchaseActivity,
+    QuoteSummaryResponse, RecommendationTrend, SecFilings, SectorTrend, TopHoldings,
     UpgradeDowngradeHistory,
 };
 
@@ -750,27 +749,45 @@ pub struct Quote {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub sec_filings: Option<SecFilings>,
 
-    /// Balance sheet history (annual)
+    /// Balance sheet history (annual).
+    ///
+    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
+    /// [`crate::StatementType::Balance`] and [`crate::Frequency::Annual`] instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub balance_sheet_history: Option<BalanceSheetHistory>,
 
-    /// Balance sheet history (quarterly)
+    /// Balance sheet history (quarterly).
+    ///
+    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
+    /// [`crate::StatementType::Balance`] and [`crate::Frequency::Quarterly`] instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub balance_sheet_history_quarterly: Option<BalanceSheetHistoryQuarterly>,
 
-    /// Cash flow statement history (annual)
+    /// Cash flow statement history (annual).
+    ///
+    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
+    /// [`crate::StatementType::CashFlow`] and [`crate::Frequency::Annual`] instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cashflow_statement_history: Option<CashflowStatementHistory>,
 
-    /// Cash flow statement history (quarterly)
+    /// Cash flow statement history (quarterly).
+    ///
+    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
+    /// [`crate::StatementType::CashFlow`] and [`crate::Frequency::Quarterly`] instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub cashflow_statement_history_quarterly: Option<CashflowStatementHistoryQuarterly>,
 
-    /// Income statement history (annual)
+    /// Income statement history (annual).
+    ///
+    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
+    /// [`crate::StatementType::Income`] and [`crate::Frequency::Annual`] instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub income_statement_history: Option<IncomeStatementHistory>,
 
-    /// Income statement history (quarterly)
+    /// Income statement history (quarterly).
+    ///
+    /// Always `None` on `Quote` — use [`crate::Ticker::financials`] with
+    /// [`crate::StatementType::Income`] and [`crate::Frequency::Quarterly`] instead.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub income_statement_history_quarterly: Option<IncomeStatementHistoryQuarterly>,
 
@@ -819,15 +836,13 @@ impl Quote {
         logo_url: Option<String>,
         company_logo_url: Option<String>,
     ) -> Self {
-        // Deserialize all modules first
-        let price: Option<Price> = response.get_typed("price").ok();
-        let quote_type: Option<QuoteTypeData> = response.get_typed("quoteType").ok();
-        let summary_detail: Option<SummaryDetail> = response.get_typed("summaryDetail").ok();
-        let financial_data: Option<FinancialData> = response.get_typed("financialData").ok();
-        let key_stats: Option<DefaultKeyStatistics> =
-            response.get_typed("defaultKeyStatistics").ok();
-        let asset_profile: Option<AssetProfile> = response.get_typed("assetProfile").ok();
-        let summary_profile: Option<SummaryProfile> = response.get_typed("summaryProfile").ok();
+        let price = response.price.as_ref();
+        let quote_type = response.quote_type.as_ref();
+        let summary_detail = response.summary_detail.as_ref();
+        let financial_data = response.financial_data.as_ref();
+        let key_stats = response.default_key_statistics.as_ref();
+        let asset_profile = response.asset_profile.as_ref();
+        let summary_profile = response.summary_profile.as_ref();
 
         Self {
             symbol: response.symbol.clone(),
@@ -837,479 +852,303 @@ impl Quote {
             // ===== IDENTITY & METADATA =====
             // Price priority, fallback to QuoteTypeData
             short_name: price
-                .as_ref()
                 .and_then(|p| p.short_name.clone())
-                .or_else(|| quote_type.as_ref().and_then(|q| q.short_name.clone())),
+                .or_else(|| quote_type.and_then(|q| q.short_name.clone())),
 
             long_name: price
-                .as_ref()
                 .and_then(|p| p.long_name.clone())
-                .or_else(|| quote_type.as_ref().and_then(|q| q.long_name.clone())),
+                .or_else(|| quote_type.and_then(|q| q.long_name.clone())),
 
             exchange: price
-                .as_ref()
                 .and_then(|p| p.exchange.clone())
-                .or_else(|| quote_type.as_ref().and_then(|q| q.exchange.clone())),
+                .or_else(|| quote_type.and_then(|q| q.exchange.clone())),
 
-            exchange_name: price.as_ref().and_then(|p| p.exchange_name.clone()),
+            exchange_name: price.and_then(|p| p.exchange_name.clone()),
 
             quote_type: price
-                .as_ref()
                 .and_then(|p| p.quote_type.clone())
-                .or_else(|| quote_type.as_ref().and_then(|q| q.quote_type.clone())),
+                .or_else(|| quote_type.and_then(|q| q.quote_type.clone())),
 
-            currency: price.as_ref().and_then(|p| p.currency.clone()).or_else(|| {
+            currency: price.and_then(|p| p.currency.clone()).or_else(|| {
                 summary_detail
-                    .as_ref()
                     .and_then(|s| s.currency.clone())
-                    .or_else(|| {
-                        financial_data
-                            .as_ref()
-                            .and_then(|f| f.financial_currency.clone())
-                    })
+                    .or_else(|| financial_data.and_then(|f| f.financial_currency.clone()))
             }),
 
-            currency_symbol: price.as_ref().and_then(|p| p.currency_symbol.clone()),
+            currency_symbol: price.and_then(|p| p.currency_symbol.clone()),
 
             underlying_symbol: price
-                .as_ref()
                 .and_then(|p| p.underlying_symbol.clone())
-                .or_else(|| {
-                    quote_type
-                        .as_ref()
-                        .and_then(|q| q.underlying_symbol.clone())
-                }),
+                .or_else(|| quote_type.and_then(|q| q.underlying_symbol.clone())),
             from_currency: price
-                .as_ref()
                 .and_then(|p| p.from_currency.clone())
-                .or_else(|| {
-                    summary_detail
-                        .as_ref()
-                        .and_then(|s| s.from_currency.clone())
-                }),
+                .or_else(|| summary_detail.and_then(|s| s.from_currency.clone())),
             to_currency: price
-                .as_ref()
                 .and_then(|p| p.to_currency.clone())
-                .or_else(|| summary_detail.as_ref().and_then(|s| s.to_currency.clone())),
+                .or_else(|| summary_detail.and_then(|s| s.to_currency.clone())),
 
             // ===== REAL-TIME PRICE DATA (from Price only) =====
-            regular_market_price: price.as_ref().and_then(|p| p.regular_market_price.clone()),
-            regular_market_change: price.as_ref().and_then(|p| p.regular_market_change.clone()),
+            regular_market_price: price.and_then(|p| p.regular_market_price.clone()),
+            regular_market_change: price.and_then(|p| p.regular_market_change.clone()),
             regular_market_change_percent: price
-                .as_ref()
                 .and_then(|p| p.regular_market_change_percent.clone()),
-            regular_market_time: price.as_ref().and_then(|p| p.regular_market_time),
-            regular_market_day_high: price
-                .as_ref()
-                .and_then(|p| p.regular_market_day_high.clone()),
-            regular_market_day_low: price
-                .as_ref()
-                .and_then(|p| p.regular_market_day_low.clone()),
-            regular_market_open: price.as_ref().and_then(|p| p.regular_market_open.clone()),
+            regular_market_time: price.and_then(|p| p.regular_market_time),
+            regular_market_day_high: price.and_then(|p| p.regular_market_day_high.clone()),
+            regular_market_day_low: price.and_then(|p| p.regular_market_day_low.clone()),
+            regular_market_open: price.and_then(|p| p.regular_market_open.clone()),
             regular_market_previous_close: price
-                .as_ref()
                 .and_then(|p| p.regular_market_previous_close.clone()),
-            regular_market_volume: price.as_ref().and_then(|p| p.regular_market_volume.clone()),
-            market_state: price.as_ref().and_then(|p| p.market_state.clone()),
+            regular_market_volume: price.and_then(|p| p.regular_market_volume.clone()),
+            market_state: price.and_then(|p| p.market_state.clone()),
 
             // ===== ALTERNATIVE TRADING METRICS (from summaryDetail) =====
-            day_high: summary_detail.as_ref().and_then(|s| s.day_high.clone()),
-            day_low: summary_detail.as_ref().and_then(|s| s.day_low.clone()),
-            open: summary_detail.as_ref().and_then(|s| s.open.clone()),
-            previous_close: summary_detail
-                .as_ref()
-                .and_then(|s| s.previous_close.clone()),
-            volume: summary_detail.as_ref().and_then(|s| s.volume.clone()),
+            day_high: summary_detail.and_then(|s| s.day_high.clone()),
+            day_low: summary_detail.and_then(|s| s.day_low.clone()),
+            open: summary_detail.and_then(|s| s.open.clone()),
+            previous_close: summary_detail.and_then(|s| s.previous_close.clone()),
+            volume: summary_detail.and_then(|s| s.volume.clone()),
 
             // ===== PRICE HISTORY =====
-            all_time_high: summary_detail
-                .as_ref()
-                .and_then(|s| s.all_time_high.clone()),
-            all_time_low: summary_detail.as_ref().and_then(|s| s.all_time_low.clone()),
+            all_time_high: summary_detail.and_then(|s| s.all_time_high.clone()),
+            all_time_low: summary_detail.and_then(|s| s.all_time_low.clone()),
 
             // ===== PRE/POST MARKET DATA =====
-            pre_market_price: price.as_ref().and_then(|p| p.pre_market_price.clone()),
-            pre_market_change: price.as_ref().and_then(|p| p.pre_market_change.clone()),
-            pre_market_change_percent: price
-                .as_ref()
-                .and_then(|p| p.pre_market_change_percent.clone()),
-            pre_market_time: price.as_ref().and_then(|p| p.pre_market_time),
-            post_market_price: price.as_ref().and_then(|p| p.post_market_price.clone()),
-            post_market_change: price.as_ref().and_then(|p| p.post_market_change.clone()),
-            post_market_change_percent: price
-                .as_ref()
-                .and_then(|p| p.post_market_change_percent.clone()),
-            post_market_time: price.as_ref().and_then(|p| p.post_market_time),
+            pre_market_price: price.and_then(|p| p.pre_market_price.clone()),
+            pre_market_change: price.and_then(|p| p.pre_market_change.clone()),
+            pre_market_change_percent: price.and_then(|p| p.pre_market_change_percent.clone()),
+            pre_market_time: price.and_then(|p| p.pre_market_time),
+            post_market_price: price.and_then(|p| p.post_market_price.clone()),
+            post_market_change: price.and_then(|p| p.post_market_change.clone()),
+            post_market_change_percent: price.and_then(|p| p.post_market_change_percent.clone()),
+            post_market_time: price.and_then(|p| p.post_market_time),
 
             // ===== VOLUME DATA =====
             // Price priority, fallback to SummaryDetail
             average_daily_volume10_day: price
-                .as_ref()
                 .and_then(|p| p.average_daily_volume10_day.clone())
-                .or_else(|| {
-                    summary_detail
-                        .as_ref()
-                        .and_then(|s| s.average_daily_volume10_day.clone())
-                }),
-            average_daily_volume3_month: price
-                .as_ref()
-                .and_then(|p| p.average_daily_volume3_month.clone()),
-            average_volume: summary_detail
-                .as_ref()
-                .and_then(|s| s.average_volume.clone()),
-            average_volume10days: summary_detail
-                .as_ref()
-                .and_then(|s| s.average_volume10days.clone()),
+                .or_else(|| summary_detail.and_then(|s| s.average_daily_volume10_day.clone())),
+            average_daily_volume3_month: price.and_then(|p| p.average_daily_volume3_month.clone()),
+            average_volume: summary_detail.and_then(|s| s.average_volume.clone()),
+            average_volume10days: summary_detail.and_then(|s| s.average_volume10days.clone()),
 
             // ===== VALUATION METRICS =====
             // Price priority for market_cap (real-time)
-            market_cap: price.as_ref().and_then(|p| p.market_cap.clone()),
-            enterprise_value: key_stats.as_ref().and_then(|k| k.enterprise_value.clone()),
-            enterprise_to_revenue: key_stats
-                .as_ref()
-                .and_then(|k| k.enterprise_to_revenue.clone()),
-            enterprise_to_ebitda: key_stats
-                .as_ref()
-                .and_then(|k| k.enterprise_to_ebitda.clone()),
-            price_to_book: key_stats.as_ref().and_then(|k| k.price_to_book.clone()),
+            market_cap: price.and_then(|p| p.market_cap.clone()),
+            enterprise_value: key_stats.and_then(|k| k.enterprise_value.clone()),
+            enterprise_to_revenue: key_stats.and_then(|k| k.enterprise_to_revenue.clone()),
+            enterprise_to_ebitda: key_stats.and_then(|k| k.enterprise_to_ebitda.clone()),
+            price_to_book: key_stats.and_then(|k| k.price_to_book.clone()),
             price_to_sales_trailing12_months: summary_detail
-                .as_ref()
                 .and_then(|s| s.price_to_sales_trailing12_months.clone()),
 
             // ===== PE RATIOS =====
             // SummaryDetail priority, fallback to KeyStats
             forward_pe: summary_detail
-                .as_ref()
                 .and_then(|s| s.forward_pe.clone())
-                .or_else(|| key_stats.as_ref().and_then(|k| k.forward_pe.clone())),
-            trailing_pe: summary_detail.as_ref().and_then(|s| s.trailing_pe.clone()),
+                .or_else(|| key_stats.and_then(|k| k.forward_pe.clone())),
+            trailing_pe: summary_detail.and_then(|s| s.trailing_pe.clone()),
 
             // ===== RISK METRICS =====
             // SummaryDetail priority, fallback to KeyStats
             beta: summary_detail
-                .as_ref()
                 .and_then(|s| s.beta.clone())
-                .or_else(|| key_stats.as_ref().and_then(|k| k.beta.clone())),
+                .or_else(|| key_stats.and_then(|k| k.beta.clone())),
 
             // ===== 52-WEEK RANGE & MOVING AVERAGES =====
-            fifty_two_week_high: summary_detail
-                .as_ref()
-                .and_then(|s| s.fifty_two_week_high.clone()),
-            fifty_two_week_low: summary_detail
-                .as_ref()
-                .and_then(|s| s.fifty_two_week_low.clone()),
-            fifty_day_average: summary_detail
-                .as_ref()
-                .and_then(|s| s.fifty_day_average.clone()),
-            two_hundred_day_average: summary_detail
-                .as_ref()
-                .and_then(|s| s.two_hundred_day_average.clone()),
-            week_52_change: key_stats.as_ref().and_then(|k| k.week_52_change.clone()),
-            sand_p_52_week_change: key_stats
-                .as_ref()
-                .and_then(|k| k.sand_p_52_week_change.clone()),
+            fifty_two_week_high: summary_detail.and_then(|s| s.fifty_two_week_high.clone()),
+            fifty_two_week_low: summary_detail.and_then(|s| s.fifty_two_week_low.clone()),
+            fifty_day_average: summary_detail.and_then(|s| s.fifty_day_average.clone()),
+            two_hundred_day_average: summary_detail.and_then(|s| s.two_hundred_day_average.clone()),
+            week_52_change: key_stats.and_then(|k| k.week_52_change.clone()),
+            sand_p_52_week_change: key_stats.and_then(|k| k.sand_p_52_week_change.clone()),
 
             // ===== DIVIDENDS =====
-            dividend_rate: summary_detail
-                .as_ref()
-                .and_then(|s| s.dividend_rate.clone()),
-            dividend_yield: summary_detail
-                .as_ref()
-                .and_then(|s| s.dividend_yield.clone()),
+            dividend_rate: summary_detail.and_then(|s| s.dividend_rate.clone()),
+            dividend_yield: summary_detail.and_then(|s| s.dividend_yield.clone()),
             trailing_annual_dividend_rate: summary_detail
-                .as_ref()
                 .and_then(|s| s.trailing_annual_dividend_rate.clone()),
             trailing_annual_dividend_yield: summary_detail
-                .as_ref()
                 .and_then(|s| s.trailing_annual_dividend_yield.clone()),
             five_year_avg_dividend_yield: summary_detail
-                .as_ref()
                 .and_then(|s| s.five_year_avg_dividend_yield.clone()),
-            ex_dividend_date: summary_detail
-                .as_ref()
-                .and_then(|s| s.ex_dividend_date.clone()),
-            payout_ratio: summary_detail.as_ref().and_then(|s| s.payout_ratio.clone()),
-            last_dividend_value: key_stats
-                .as_ref()
-                .and_then(|k| k.last_dividend_value.clone()),
-            last_dividend_date: key_stats
-                .as_ref()
-                .and_then(|k| k.last_dividend_date.clone()),
+            ex_dividend_date: summary_detail.and_then(|s| s.ex_dividend_date.clone()),
+            payout_ratio: summary_detail.and_then(|s| s.payout_ratio.clone()),
+            last_dividend_value: key_stats.and_then(|k| k.last_dividend_value.clone()),
+            last_dividend_date: key_stats.and_then(|k| k.last_dividend_date.clone()),
 
             // ===== BID/ASK =====
-            bid: summary_detail.as_ref().and_then(|s| s.bid.clone()),
-            bid_size: summary_detail.as_ref().and_then(|s| s.bid_size.clone()),
-            ask: summary_detail.as_ref().and_then(|s| s.ask.clone()),
-            ask_size: summary_detail.as_ref().and_then(|s| s.ask_size.clone()),
+            bid: summary_detail.and_then(|s| s.bid.clone()),
+            bid_size: summary_detail.and_then(|s| s.bid_size.clone()),
+            ask: summary_detail.and_then(|s| s.ask.clone()),
+            ask_size: summary_detail.and_then(|s| s.ask_size.clone()),
 
             // ===== SHARES & OWNERSHIP =====
-            shares_outstanding: key_stats
-                .as_ref()
-                .and_then(|k| k.shares_outstanding.clone()),
-            float_shares: key_stats.as_ref().and_then(|k| k.float_shares.clone()),
+            shares_outstanding: key_stats.and_then(|k| k.shares_outstanding.clone()),
+            float_shares: key_stats.and_then(|k| k.float_shares.clone()),
             implied_shares_outstanding: key_stats
-                .as_ref()
                 .and_then(|k| k.implied_shares_outstanding.clone()),
-            held_percent_insiders: key_stats
-                .as_ref()
-                .and_then(|k| k.held_percent_insiders.clone()),
-            held_percent_institutions: key_stats
-                .as_ref()
-                .and_then(|k| k.held_percent_institutions.clone()),
-            shares_short: key_stats.as_ref().and_then(|k| k.shares_short.clone()),
-            shares_short_prior_month: key_stats
-                .as_ref()
-                .and_then(|k| k.shares_short_prior_month.clone()),
-            short_ratio: key_stats.as_ref().and_then(|k| k.short_ratio.clone()),
-            short_percent_of_float: key_stats
-                .as_ref()
-                .and_then(|k| k.short_percent_of_float.clone()),
-            shares_percent_shares_out: key_stats
-                .as_ref()
-                .and_then(|k| k.shares_percent_shares_out.clone()),
-            date_short_interest: key_stats
-                .as_ref()
-                .and_then(|k| k.date_short_interest.clone()),
+            held_percent_insiders: key_stats.and_then(|k| k.held_percent_insiders.clone()),
+            held_percent_institutions: key_stats.and_then(|k| k.held_percent_institutions.clone()),
+            shares_short: key_stats.and_then(|k| k.shares_short.clone()),
+            shares_short_prior_month: key_stats.and_then(|k| k.shares_short_prior_month.clone()),
+            short_ratio: key_stats.and_then(|k| k.short_ratio.clone()),
+            short_percent_of_float: key_stats.and_then(|k| k.short_percent_of_float.clone()),
+            shares_percent_shares_out: key_stats.and_then(|k| k.shares_percent_shares_out.clone()),
+            date_short_interest: key_stats.and_then(|k| k.date_short_interest.clone()),
 
             // ===== FINANCIAL METRICS =====
-            current_price: financial_data
-                .as_ref()
-                .and_then(|f| f.current_price.clone()),
-            target_high_price: financial_data
-                .as_ref()
-                .and_then(|f| f.target_high_price.clone()),
-            target_low_price: financial_data
-                .as_ref()
-                .and_then(|f| f.target_low_price.clone()),
-            target_mean_price: financial_data
-                .as_ref()
-                .and_then(|f| f.target_mean_price.clone()),
-            target_median_price: financial_data
-                .as_ref()
-                .and_then(|f| f.target_median_price.clone()),
-            recommendation_mean: financial_data
-                .as_ref()
-                .and_then(|f| f.recommendation_mean.clone()),
-            recommendation_key: financial_data
-                .as_ref()
-                .and_then(|f| f.recommendation_key.clone()),
+            current_price: financial_data.and_then(|f| f.current_price.clone()),
+            target_high_price: financial_data.and_then(|f| f.target_high_price.clone()),
+            target_low_price: financial_data.and_then(|f| f.target_low_price.clone()),
+            target_mean_price: financial_data.and_then(|f| f.target_mean_price.clone()),
+            target_median_price: financial_data.and_then(|f| f.target_median_price.clone()),
+            recommendation_mean: financial_data.and_then(|f| f.recommendation_mean.clone()),
+            recommendation_key: financial_data.and_then(|f| f.recommendation_key.clone()),
             number_of_analyst_opinions: financial_data
-                .as_ref()
                 .and_then(|f| f.number_of_analyst_opinions.clone()),
-            total_cash: financial_data.as_ref().and_then(|f| f.total_cash.clone()),
-            total_cash_per_share: financial_data
-                .as_ref()
-                .and_then(|f| f.total_cash_per_share.clone()),
-            ebitda: financial_data.as_ref().and_then(|f| f.ebitda.clone()),
-            total_debt: financial_data.as_ref().and_then(|f| f.total_debt.clone()),
-            total_revenue: financial_data
-                .as_ref()
-                .and_then(|f| f.total_revenue.clone()),
-            net_income_to_common: key_stats
-                .as_ref()
-                .and_then(|k| k.net_income_to_common.clone()),
-            debt_to_equity: financial_data
-                .as_ref()
-                .and_then(|f| f.debt_to_equity.clone()),
-            revenue_per_share: financial_data
-                .as_ref()
-                .and_then(|f| f.revenue_per_share.clone()),
-            return_on_assets: financial_data
-                .as_ref()
-                .and_then(|f| f.return_on_assets.clone()),
-            return_on_equity: financial_data
-                .as_ref()
-                .and_then(|f| f.return_on_equity.clone()),
-            free_cashflow: financial_data
-                .as_ref()
-                .and_then(|f| f.free_cashflow.clone()),
-            operating_cashflow: financial_data
-                .as_ref()
-                .and_then(|f| f.operating_cashflow.clone()),
+            total_cash: financial_data.and_then(|f| f.total_cash.clone()),
+            total_cash_per_share: financial_data.and_then(|f| f.total_cash_per_share.clone()),
+            ebitda: financial_data.and_then(|f| f.ebitda.clone()),
+            total_debt: financial_data.and_then(|f| f.total_debt.clone()),
+            total_revenue: financial_data.and_then(|f| f.total_revenue.clone()),
+            net_income_to_common: key_stats.and_then(|k| k.net_income_to_common.clone()),
+            debt_to_equity: financial_data.and_then(|f| f.debt_to_equity.clone()),
+            revenue_per_share: financial_data.and_then(|f| f.revenue_per_share.clone()),
+            return_on_assets: financial_data.and_then(|f| f.return_on_assets.clone()),
+            return_on_equity: financial_data.and_then(|f| f.return_on_equity.clone()),
+            free_cashflow: financial_data.and_then(|f| f.free_cashflow.clone()),
+            operating_cashflow: financial_data.and_then(|f| f.operating_cashflow.clone()),
 
             // ===== MARGINS =====
             // FinancialData priority
-            profit_margins: financial_data
-                .as_ref()
-                .and_then(|f| f.profit_margins.clone()),
-            gross_margins: financial_data
-                .as_ref()
-                .and_then(|f| f.gross_margins.clone()),
-            ebitda_margins: financial_data
-                .as_ref()
-                .and_then(|f| f.ebitda_margins.clone()),
-            operating_margins: financial_data
-                .as_ref()
-                .and_then(|f| f.operating_margins.clone()),
-            gross_profits: financial_data
-                .as_ref()
-                .and_then(|f| f.gross_profits.clone()),
+            profit_margins: financial_data.and_then(|f| f.profit_margins.clone()),
+            gross_margins: financial_data.and_then(|f| f.gross_margins.clone()),
+            ebitda_margins: financial_data.and_then(|f| f.ebitda_margins.clone()),
+            operating_margins: financial_data.and_then(|f| f.operating_margins.clone()),
+            gross_profits: financial_data.and_then(|f| f.gross_profits.clone()),
 
             // ===== GROWTH RATES =====
-            earnings_growth: financial_data
-                .as_ref()
-                .and_then(|f| f.earnings_growth.clone()),
-            revenue_growth: financial_data
-                .as_ref()
-                .and_then(|f| f.revenue_growth.clone()),
-            earnings_quarterly_growth: key_stats
-                .as_ref()
-                .and_then(|k| k.earnings_quarterly_growth.clone()),
+            earnings_growth: financial_data.and_then(|f| f.earnings_growth.clone()),
+            revenue_growth: financial_data.and_then(|f| f.revenue_growth.clone()),
+            earnings_quarterly_growth: key_stats.and_then(|k| k.earnings_quarterly_growth.clone()),
 
             // ===== RATIOS =====
-            current_ratio: financial_data
-                .as_ref()
-                .and_then(|f| f.current_ratio.clone()),
-            quick_ratio: financial_data.as_ref().and_then(|f| f.quick_ratio.clone()),
+            current_ratio: financial_data.and_then(|f| f.current_ratio.clone()),
+            quick_ratio: financial_data.and_then(|f| f.quick_ratio.clone()),
 
             // ===== EPS & BOOK VALUE =====
-            trailing_eps: key_stats.as_ref().and_then(|k| k.trailing_eps.clone()),
-            forward_eps: key_stats.as_ref().and_then(|k| k.forward_eps.clone()),
-            book_value: key_stats.as_ref().and_then(|k| k.book_value.clone()),
+            trailing_eps: key_stats.and_then(|k| k.trailing_eps.clone()),
+            forward_eps: key_stats.and_then(|k| k.forward_eps.clone()),
+            book_value: key_stats.and_then(|k| k.book_value.clone()),
 
             // ===== COMPANY PROFILE =====
             // AssetProfile priority, fallback to SummaryProfile
             sector: asset_profile
-                .as_ref()
                 .and_then(|a| a.sector.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.sector.clone())),
-            sector_key: asset_profile.as_ref().and_then(|a| a.sector_key.clone()),
-            sector_disp: asset_profile.as_ref().and_then(|a| a.sector_disp.clone()),
+                .or_else(|| summary_profile.and_then(|s| s.sector.clone())),
+            sector_key: asset_profile.and_then(|a| a.sector_key.clone()),
+            sector_disp: asset_profile.and_then(|a| a.sector_disp.clone()),
             industry: asset_profile
-                .as_ref()
                 .and_then(|a| a.industry.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.industry.clone())),
-            industry_key: asset_profile.as_ref().and_then(|a| a.industry_key.clone()),
-            industry_disp: asset_profile.as_ref().and_then(|a| a.industry_disp.clone()),
+                .or_else(|| summary_profile.and_then(|s| s.industry.clone())),
+            industry_key: asset_profile.and_then(|a| a.industry_key.clone()),
+            industry_disp: asset_profile.and_then(|a| a.industry_disp.clone()),
             long_business_summary: asset_profile
-                .as_ref()
                 .and_then(|a| a.long_business_summary.clone())
-                .or_else(|| {
-                    summary_profile
-                        .as_ref()
-                        .and_then(|s| s.long_business_summary.clone())
-                }),
+                .or_else(|| summary_profile.and_then(|s| s.long_business_summary.clone())),
             address1: asset_profile
-                .as_ref()
                 .and_then(|a| a.address1.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.address1.clone())),
+                .or_else(|| summary_profile.and_then(|s| s.address1.clone())),
             city: asset_profile
-                .as_ref()
                 .and_then(|a| a.city.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.city.clone())),
+                .or_else(|| summary_profile.and_then(|s| s.city.clone())),
             state: asset_profile
-                .as_ref()
                 .and_then(|a| a.state.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.state.clone())),
+                .or_else(|| summary_profile.and_then(|s| s.state.clone())),
             zip: asset_profile
-                .as_ref()
                 .and_then(|a| a.zip.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.zip.clone())),
+                .or_else(|| summary_profile.and_then(|s| s.zip.clone())),
             country: asset_profile
-                .as_ref()
                 .and_then(|a| a.country.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.country.clone())),
+                .or_else(|| summary_profile.and_then(|s| s.country.clone())),
             phone: asset_profile
-                .as_ref()
                 .and_then(|a| a.phone.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.phone.clone())),
+                .or_else(|| summary_profile.and_then(|s| s.phone.clone())),
             full_time_employees: asset_profile
-                .as_ref()
                 .and_then(|a| a.full_time_employees)
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.full_time_employees)),
+                .or_else(|| summary_profile.and_then(|s| s.full_time_employees)),
 
             website: asset_profile
-                .as_ref()
                 .and_then(|a| a.website.clone())
-                .or_else(|| summary_profile.as_ref().and_then(|s| s.website.clone())),
-            ir_website: summary_profile.as_ref().and_then(|s| s.ir_website.clone()),
+                .or_else(|| summary_profile.and_then(|s| s.website.clone())),
+            ir_website: summary_profile.and_then(|s| s.ir_website.clone()),
 
-            category: key_stats.as_ref().and_then(|k| k.category.clone()),
-            fund_family: key_stats.as_ref().and_then(|k| k.fund_family.clone()),
+            category: key_stats.and_then(|k| k.category.clone()),
+            fund_family: key_stats.and_then(|k| k.fund_family.clone()),
 
             // ===== RISK SCORES =====
-            audit_risk: asset_profile.as_ref().and_then(|a| a.audit_risk),
-            board_risk: asset_profile.as_ref().and_then(|a| a.board_risk),
-            compensation_risk: asset_profile.as_ref().and_then(|a| a.compensation_risk),
-            shareholder_rights_risk: asset_profile
-                .as_ref()
-                .and_then(|a| a.shareholder_rights_risk),
-            overall_risk: asset_profile.as_ref().and_then(|a| a.overall_risk),
+            audit_risk: asset_profile.and_then(|a| a.audit_risk),
+            board_risk: asset_profile.and_then(|a| a.board_risk),
+            compensation_risk: asset_profile.and_then(|a| a.compensation_risk),
+            shareholder_rights_risk: asset_profile.and_then(|a| a.shareholder_rights_risk),
+            overall_risk: asset_profile.and_then(|a| a.overall_risk),
 
             // ===== TIMEZONE & EXCHANGE =====
-            time_zone_full_name: quote_type
-                .as_ref()
-                .and_then(|q| q.time_zone_full_name.clone()),
-            time_zone_short_name: quote_type
-                .as_ref()
-                .and_then(|q| q.time_zone_short_name.clone()),
-            gmt_off_set_milliseconds: quote_type.as_ref().and_then(|q| q.gmt_off_set_milliseconds),
-            first_trade_date_epoch_utc: quote_type
-                .as_ref()
-                .and_then(|q| q.first_trade_date_epoch_utc),
-            message_board_id: quote_type.as_ref().and_then(|q| q.message_board_id.clone()),
-            exchange_data_delayed_by: price.as_ref().and_then(|p| p.exchange_data_delayed_by),
+            time_zone_full_name: quote_type.and_then(|q| q.time_zone_full_name.clone()),
+            time_zone_short_name: quote_type.and_then(|q| q.time_zone_short_name.clone()),
+            gmt_off_set_milliseconds: quote_type.and_then(|q| q.gmt_off_set_milliseconds),
+            first_trade_date_epoch_utc: quote_type.and_then(|q| q.first_trade_date_epoch_utc),
+            message_board_id: quote_type.and_then(|q| q.message_board_id.clone()),
+            exchange_data_delayed_by: price.and_then(|p| p.exchange_data_delayed_by),
 
             // ===== FUND-SPECIFIC =====
-            nav_price: summary_detail.as_ref().and_then(|s| s.nav_price.clone()),
-            total_assets: summary_detail.as_ref().and_then(|s| s.total_assets.clone()),
-            yield_value: summary_detail.as_ref().and_then(|s| s.yield_value.clone()),
+            nav_price: summary_detail.and_then(|s| s.nav_price.clone()),
+            total_assets: summary_detail.and_then(|s| s.total_assets.clone()),
+            yield_value: summary_detail.and_then(|s| s.yield_value.clone()),
 
             // ===== STOCK SPLITS & DATES =====
-            last_split_factor: key_stats.as_ref().and_then(|k| k.last_split_factor.clone()),
-            last_split_date: key_stats.as_ref().and_then(|k| k.last_split_date.clone()),
-            last_fiscal_year_end: key_stats
-                .as_ref()
-                .and_then(|k| k.last_fiscal_year_end.clone()),
-            next_fiscal_year_end: key_stats
-                .as_ref()
-                .and_then(|k| k.next_fiscal_year_end.clone()),
-            most_recent_quarter: key_stats
-                .as_ref()
-                .and_then(|k| k.most_recent_quarter.clone()),
+            last_split_factor: key_stats.and_then(|k| k.last_split_factor.clone()),
+            last_split_date: key_stats.and_then(|k| k.last_split_date.clone()),
+            last_fiscal_year_end: key_stats.and_then(|k| k.last_fiscal_year_end.clone()),
+            next_fiscal_year_end: key_stats.and_then(|k| k.next_fiscal_year_end.clone()),
+            most_recent_quarter: key_stats.and_then(|k| k.most_recent_quarter.clone()),
 
             // ===== MISC =====
             // Price priority for price_hint
-            price_hint: price.as_ref().and_then(|p| p.price_hint.clone()),
-            tradeable: summary_detail.as_ref().and_then(|s| s.tradeable),
-            financial_currency: financial_data
-                .as_ref()
-                .and_then(|f| f.financial_currency.clone()),
+            price_hint: price.and_then(|p| p.price_hint.clone()),
+            tradeable: summary_detail.and_then(|s| s.tradeable),
+            financial_currency: financial_data.and_then(|f| f.financial_currency.clone()),
 
             // ===== PRESERVED NESTED OBJECTS =====
-            company_officers: asset_profile.as_ref().map(|a| a.company_officers.clone()),
-            earnings: response.get_typed("earnings").ok(),
-            calendar_events: response.get_typed("calendarEvents").ok(),
-            recommendation_trend: response.get_typed("recommendationTrend").ok(),
-            upgrade_downgrade_history: response.get_typed("upgradeDowngradeHistory").ok(),
-            earnings_history: response.get_typed("earningsHistory").ok(),
-            earnings_trend: response.get_typed("earningsTrend").ok(),
-            insider_holders: response.get_typed("insiderHolders").ok(),
-            insider_transactions: response.get_typed("insiderTransactions").ok(),
-            institution_ownership: response.get_typed("institutionOwnership").ok(),
-            fund_ownership: response.get_typed("fundOwnership").ok(),
-            major_holders_breakdown: response.get_typed("majorHoldersBreakdown").ok(),
-            net_share_purchase_activity: response.get_typed("netSharePurchaseActivity").ok(),
-            sec_filings: response.get_typed("secFilings").ok(),
-            balance_sheet_history: response.get_typed("balanceSheetHistory").ok(),
-            balance_sheet_history_quarterly: response
-                .get_typed("balanceSheetHistoryQuarterly")
-                .ok(),
-            cashflow_statement_history: response.get_typed("cashflowStatementHistory").ok(),
-            cashflow_statement_history_quarterly: response
-                .get_typed("cashflowStatementHistoryQuarterly")
-                .ok(),
-            income_statement_history: response.get_typed("incomeStatementHistory").ok(),
-            income_statement_history_quarterly: response
-                .get_typed("incomeStatementHistoryQuarterly")
-                .ok(),
-            equity_performance: response.get_typed("equityPerformance").ok(),
-            index_trend: response.get_typed("indexTrend").ok(),
-            industry_trend: response.get_typed("industryTrend").ok(),
-            sector_trend: response.get_typed("sectorTrend").ok(),
-            fund_profile: response.get_typed("fundProfile").ok(),
-            fund_performance: response.get_typed("fundPerformance").ok(),
-            top_holdings: response.get_typed("topHoldings").ok(),
+            company_officers: asset_profile.map(|a| a.company_officers.clone()),
+            earnings: response.earnings.clone(),
+            calendar_events: response.calendar_events.clone(),
+            recommendation_trend: response.recommendation_trend.clone(),
+            upgrade_downgrade_history: response.upgrade_downgrade_history.clone(),
+            earnings_history: response.earnings_history.clone(),
+            earnings_trend: response.earnings_trend.clone(),
+            insider_holders: response.insider_holders.clone(),
+            insider_transactions: response.insider_transactions.clone(),
+            institution_ownership: response.institution_ownership.clone(),
+            fund_ownership: response.fund_ownership.clone(),
+            major_holders_breakdown: response.major_holders_breakdown.clone(),
+            net_share_purchase_activity: response.net_share_purchase_activity.clone(),
+            sec_filings: response.sec_filings.clone(),
+            // Financial statement history is fetched via the dedicated financials() endpoint
+            // (timeseries API), not from quoteSummary — always None here.
+            balance_sheet_history: None,
+            balance_sheet_history_quarterly: None,
+            cashflow_statement_history: None,
+            cashflow_statement_history_quarterly: None,
+            income_statement_history: None,
+            income_statement_history_quarterly: None,
+            equity_performance: response.equity_performance.clone(),
+            index_trend: response.index_trend.clone(),
+            industry_trend: response.industry_trend.clone(),
+            sector_trend: response.sector_trend.clone(),
+            fund_profile: response.fund_profile.clone(),
+            fund_performance: response.fund_performance.clone(),
+            top_holdings: response.top_holdings.clone(),
         }
     }
 

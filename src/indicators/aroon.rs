@@ -1,5 +1,7 @@
 //! Aroon indicator.
 
+use std::collections::VecDeque;
+
 use super::{IndicatorError, Result};
 use serde::{Deserialize, Serialize};
 
@@ -54,39 +56,36 @@ pub fn aroon(highs: &[f64], lows: &[f64], period: usize) -> Result<AroonResult> 
     let mut aroon_up = vec![None; len];
     let mut aroon_down = vec![None; len];
 
-    for i in (period - 1)..len {
-        let start_idx = i + 1 - period;
-        let slice_highs = &highs[start_idx..=i];
-        let slice_lows = &lows[start_idx..=i];
+    // Monotonic deques for O(N) sliding window argmax/argmin instead of O(N * period)
+    // Pop back on <= (highs) / >= (lows) so newest index wins on ties, matching original.
+    let mut max_deque: VecDeque<usize> = VecDeque::new();
+    let mut min_deque: VecDeque<usize> = VecDeque::new();
+    let period_f = period as f64;
 
-        let mut highest_idx = 0;
-        let mut highest_val = f64::NEG_INFINITY;
-
-        for (j, &val) in slice_highs.iter().enumerate() {
-            if val >= highest_val {
-                highest_val = val;
-                highest_idx = j;
-            }
+    for i in 0..len {
+        while max_deque.front().is_some_and(|&j| j + period <= i) {
+            max_deque.pop_front();
         }
-
-        let periods_since_high = (period - 1) - highest_idx;
-        let up = ((period as f64 - periods_since_high as f64) / period as f64) * 100.0;
-
-        let mut lowest_idx = 0;
-        let mut lowest_val = f64::INFINITY;
-
-        for (j, &val) in slice_lows.iter().enumerate() {
-            if val <= lowest_val {
-                lowest_val = val;
-                lowest_idx = j;
-            }
+        while min_deque.front().is_some_and(|&j| j + period <= i) {
+            min_deque.pop_front();
         }
+        while max_deque.back().is_some_and(|&j| highs[j] <= highs[i]) {
+            max_deque.pop_back();
+        }
+        while min_deque.back().is_some_and(|&j| lows[j] >= lows[i]) {
+            min_deque.pop_back();
+        }
+        max_deque.push_back(i);
+        min_deque.push_back(i);
 
-        let periods_since_low = (period - 1) - lowest_idx;
-        let down = ((period as f64 - periods_since_low as f64) / period as f64) * 100.0;
-
-        aroon_up[i] = Some(up);
-        aroon_down[i] = Some(down);
+        if i + 1 >= period {
+            let high_idx = *max_deque.front().unwrap();
+            let low_idx = *min_deque.front().unwrap();
+            let periods_since_high = i - high_idx;
+            let periods_since_low = i - low_idx;
+            aroon_up[i] = Some(((period_f - periods_since_high as f64) / period_f) * 100.0);
+            aroon_down[i] = Some(((period_f - periods_since_low as f64) / period_f) * 100.0);
+        }
     }
 
     Ok(AroonResult {

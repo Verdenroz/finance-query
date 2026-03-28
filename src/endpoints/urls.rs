@@ -36,21 +36,17 @@ pub mod api {
     pub const QUOTES: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v7/finance/quote");
 
     /// Historical chart data endpoint
-    #[allow(dead_code)]
     pub fn chart(symbol: &str) -> String {
         format!("{}/v8/finance/chart/{}", YAHOO_FINANCE_QUERY1, symbol)
     }
 
     /// Search endpoint
-    #[allow(dead_code)]
     pub const SEARCH: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/finance/search");
 
     /// Lookup endpoint (type-filtered symbol discovery)
-    #[allow(dead_code)]
     pub const LOOKUP: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY1, "/v1/finance/lookup");
 
     /// Financial timeseries endpoint (financials)
-    #[allow(dead_code)]
     pub fn financials(symbol: &str) -> String {
         format!(
             "{}/ws/fundamentals-timeseries/v1/finance/timeseries/{}",
@@ -59,7 +55,6 @@ pub mod api {
     }
 
     /// Recommendations endpoint (similar stocks)
-    #[allow(dead_code)]
     pub fn recommendations(symbol: &str) -> String {
         format!(
             "{}/v6/finance/recommendationsbysymbol/{}",
@@ -68,17 +63,11 @@ pub mod api {
     }
 
     /// Quote type endpoint (get quartr ID)
-    #[allow(dead_code)]
     pub fn quote_type(symbol: &str) -> String {
         format!("{}/v1/finance/quoteType/{}", YAHOO_FINANCE_QUERY1, symbol)
     }
 
-    /// News endpoint
-    #[allow(dead_code)]
-    pub const NEWS: &str = const_format::concatcp!(YAHOO_FINANCE_QUERY2, "/v2/finance/news");
-
     /// Options endpoint
-    #[allow(dead_code)]
     pub fn options(symbol: &str) -> String {
         format!("{}/v7/finance/options/{}", YAHOO_FINANCE_QUERY2, symbol)
     }

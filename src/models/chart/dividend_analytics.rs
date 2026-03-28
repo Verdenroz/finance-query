@@ -44,8 +44,8 @@ impl DividendAnalytics {
         let payment_count = dividends.len();
         let average_payment = total_paid / payment_count as f64;
 
-        let first = dividends.first().cloned();
-        let last = dividends.last().cloned();
+        let first = dividends.first().copied();
+        let last = dividends.last().copied();
 
         let cagr = compute_cagr(&first, &last);
 

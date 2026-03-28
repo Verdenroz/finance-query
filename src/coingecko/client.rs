@@ -29,8 +29,7 @@ impl CoinGeckoClient {
                 "finance-query/{} (https://github.com/Verdenroz/finance-query)",
                 env!("CARGO_PKG_VERSION")
             ))
-            .build()
-            .map_err(FinanceError::HttpError)?;
+            .build()?;
 
         Ok(Self {
             http,
@@ -53,14 +52,9 @@ impl CoinGeckoClient {
         );
 
         debug!("CoinGecko request: coins(vs_currency={vs_currency}, count={count})");
-        let resp = self
-            .http
-            .get(&url)
-            .send()
-            .await
-            .map_err(FinanceError::HttpError)?;
-        self.check_status(&resp)?;
-        resp.json().await.map_err(FinanceError::HttpError)
+        let resp = self.http.get(&url).send().await?;
+        CoinGeckoClient::check_status(&resp)?;
+        Ok(resp.json().await?)
     }
 
     /// Fetch a single coin by its CoinGecko ID (e.g., `"bitcoin"`, `"ethereum"`).
@@ -72,14 +66,9 @@ impl CoinGeckoClient {
         );
 
         debug!("CoinGecko request: coin(id={id})");
-        let resp = self
-            .http
-            .get(&url)
-            .send()
-            .await
-            .map_err(FinanceError::HttpError)?;
-        self.check_status(&resp)?;
-        let mut list: Vec<CoinQuote> = resp.json().await.map_err(FinanceError::HttpError)?;
+        let resp = self.http.get(&url).send().await?;
+        CoinGeckoClient::check_status(&resp)?;
+        let mut list: Vec<CoinQuote> = resp.json().await?;
 
         list.pop().ok_or_else(|| FinanceError::SymbolNotFound {
             symbol: Some(id.to_string()),
@@ -87,7 +76,7 @@ impl CoinGeckoClient {
         })
     }
 
-    fn check_status(&self, resp: &reqwest::Response) -> Result<()> {
+    fn check_status(resp: &reqwest::Response) -> Result<()> {
         match resp.status() {
             StatusCode::OK => Ok(()),
             StatusCode::TOO_MANY_REQUESTS => Err(FinanceError::RateLimited {

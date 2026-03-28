@@ -103,7 +103,7 @@ fn parse_earnings_calls(html: &str, symbol: &str) -> Result<Vec<EarningsCall>> {
     for caps in url_pattern.captures_iter(html) {
         let quarter = caps.get(1).map(|m| m.as_str().to_uppercase());
         let year = caps.get(2).and_then(|m| m.as_str().parse::<i32>().ok());
-        let event_id = caps.get(3).map(|m| m.as_str().to_string()).unwrap();
+        let event_id = caps[3].to_string();
 
         // Skip duplicates
         if seen_event_ids.contains(&event_id) {
@@ -137,21 +137,8 @@ fn parse_earnings_calls(html: &str, symbol: &str) -> Result<Vec<EarningsCall>> {
         });
     }
 
-    // Sort by year (descending) and quarter (descending)
-    calls.sort_by(|a, b| {
-        match (b.year, a.year) {
-            (Some(by), Some(ay)) => {
-                if by != ay {
-                    return by.cmp(&ay);
-                }
-            }
-            (Some(_), None) => return std::cmp::Ordering::Less,
-            (None, Some(_)) => return std::cmp::Ordering::Greater,
-            (None, None) => {}
-        }
-        // Sort by quarter descending (Q4 > Q3 > Q2 > Q1)
-        b.quarter.cmp(&a.quarter)
-    });
+    // Sort by year (descending) then quarter (descending: Q4 > Q3 > Q2 > Q1)
+    calls.sort_by(|a, b| b.year.cmp(&a.year).then_with(|| b.quarter.cmp(&a.quarter)));
 
     Ok(calls)
 }

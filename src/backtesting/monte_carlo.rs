@@ -213,14 +213,9 @@ impl MonteCarloConfig {
                 }
             }
 
-            // Build synthetic equity curve from the sampled trade returns.
-            let (equity_curve, final_equity) =
-                build_equity_curve(&sim_buf, initial_capital, position_size);
-
-            let total_return = ((final_equity / initial_capital) - 1.0) * 100.0;
-            let max_dd = compute_max_drawdown(&equity_curve);
-            let sharpe = compute_sharpe(&equity_curve, periods_per_year);
-            let pf = compute_profit_factor(&sim_buf);
+            // Single-pass: equity curve, drawdown, Sharpe (Welford), profit factor — no allocation.
+            let (total_return, max_dd, sharpe, pf) =
+                run_simulation(&sim_buf, initial_capital, position_size, periods_per_year);
 
             sim_returns.push(total_return);
             sim_drawdowns.push(max_dd);
@@ -475,98 +470,88 @@ fn parametric_sample_into(trades: &[f64], rng: &mut Xorshift64, out: &mut [f64])
 ///
 /// Returns `(equity_points, final_equity)`. Each point represents the
 /// portfolio value after applying one trade's return to the previous equity.
-fn build_equity_curve(
+/// Single-pass simulation: computes total return, max drawdown, Sharpe ratio, and profit factor
+/// from a shuffled trade-return sequence without any heap allocations.
+///
+/// Replaces the four separate passes (build_equity_curve → compute_max_drawdown →
+/// compute_sharpe → compute_profit_factor) with one loop using Welford's online
+/// mean/variance algorithm for the Sharpe computation.
+fn run_simulation(
     trade_returns: &[f64],
     initial_capital: f64,
     position_size_pct: f64,
-) -> (Vec<f64>, f64) {
-    let mut curve = Vec::with_capacity(trade_returns.len() + 1);
-    curve.push(initial_capital);
-    let mut equity = initial_capital;
+    periods_per_year: f64,
+) -> (f64, f64, f64, f64) {
     let exposure = position_size_pct.max(0.0);
+    let mut equity = initial_capital;
+    let mut peak = initial_capital;
+    let mut max_dd = 0.0f64;
+    // Welford's online mean/variance for inter-trade returns (used for Sharpe).
+    let mut w_count = 0usize;
+    let mut w_mean = 0.0f64;
+    let mut w_m2 = 0.0f64;
+    // Profit factor accumulators.
+    let mut gross_profit = 0.0f64;
+    let mut gross_loss = 0.0f64;
+
+    let mut prev_equity = initial_capital;
     for &ret in trade_returns {
         equity *= 1.0 + ret * exposure;
-        curve.push(equity);
-    }
-    (curve, equity)
-}
 
-/// Compute maximum drawdown (fraction, 0.0–1.0) from an equity curve.
-fn compute_max_drawdown(equity_curve: &[f64]) -> f64 {
-    let mut peak = f64::NEG_INFINITY;
-    let mut max_dd = 0.0_f64;
-    for &equity in equity_curve {
+        // Drawdown
         if equity > peak {
             peak = equity;
         }
         if peak > 0.0 {
             let dd = (peak - equity) / peak;
-            max_dd = max_dd.max(dd);
+            if dd > max_dd {
+                max_dd = dd;
+            }
+        }
+
+        // Inter-trade return for Sharpe (Welford update — no Vec needed)
+        let bar_ret = if prev_equity > 0.0 {
+            (equity - prev_equity) / prev_equity
+        } else {
+            0.0
+        };
+        prev_equity = equity;
+        w_count += 1;
+        let delta = bar_ret - w_mean;
+        w_mean += delta / w_count as f64;
+        w_m2 += delta * (bar_ret - w_mean);
+
+        // Profit factor
+        if ret > 0.0 {
+            gross_profit += ret;
+        } else if ret < 0.0 {
+            gross_loss += -ret;
         }
     }
-    max_dd
-}
 
-/// Compute a simplified Sharpe ratio from the Monte Carlo equity curve.
-///
-/// Uses bar-to-bar returns with no risk-free rate adjustment. Uses sample
-/// standard deviation (n-1) and annualises by `sqrt(bars_per_year)`, consistent
-/// with [`PerformanceMetrics`].
-///
-/// **Important**: the equity curve passed here is built from shuffled *trade*
-/// returns (one equity point per trade), **not** from bar-by-bar values.  For
-/// a backtest with N trades over M bars (N << M), the resulting Sharpe is
-/// computed from N−1 inter-trade returns rather than the M−1 daily returns used
-/// by `PerformanceMetrics`.  This produces a different annualisation baseline
-/// and should be interpreted as a *relative* metric for comparing simulations
-/// against each other rather than compared directly to the bar-by-bar Sharpe in
-/// the original `BacktestResult`.
-///
-/// [`PerformanceMetrics`]: super::result::PerformanceMetrics
-fn compute_sharpe(equity_curve: &[f64], periods_per_year: f64) -> f64 {
-    if equity_curve.len() < 2 {
-        return 0.0;
-    }
-    let returns: Vec<f64> = equity_curve
-        .windows(2)
-        .map(|w| {
-            if w[0] > 0.0 {
-                (w[1] - w[0]) / w[0]
-            } else {
-                0.0
-            }
-        })
-        .collect();
+    let total_return = ((equity / initial_capital) - 1.0) * 100.0;
 
-    if returns.len() < 2 {
-        return 0.0;
-    }
-    let n = returns.len() as f64;
-    let mean = returns.iter().sum::<f64>() / n;
-    // Sample variance (n-1)
-    let variance = returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (n - 1.0);
-    let std_dev = variance.sqrt();
-    if std_dev == 0.0 {
-        return 0.0;
-    }
-    (mean / std_dev) * periods_per_year.sqrt()
-}
+    let sharpe = if w_count >= 2 {
+        let variance = w_m2 / (w_count - 1) as f64;
+        let std_dev = variance.sqrt();
+        if std_dev > 0.0 {
+            (w_mean / std_dev) * periods_per_year.sqrt()
+        } else {
+            0.0
+        }
+    } else {
+        0.0
+    };
 
-/// Compute profit factor from a sequence of trade return fractions.
-fn compute_profit_factor(trade_returns: &[f64]) -> f64 {
-    let gross_profit: f64 = trade_returns.iter().filter(|&&r| r > 0.0).sum();
-    let gross_loss: f64 = trade_returns
-        .iter()
-        .filter(|&&r| r < 0.0)
-        .map(|r| r.abs())
-        .sum();
-    if gross_loss > 0.0 {
+    let pf = if gross_loss > 0.0 {
         gross_profit / gross_loss
     } else if gross_profit > 0.0 {
         f64::MAX
     } else {
         0.0
-    }
+    };
+
+    (total_return, max_dd, sharpe, pf)
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -879,7 +864,7 @@ mod tests {
 
     #[test]
     fn test_profit_factor_all_wins_is_f64_max() {
-        let pf = compute_profit_factor(&[0.01, 0.02, 0.03]);
+        let (_, _, _, pf) = run_simulation(&[0.01, 0.02, 0.03], 10_000.0, 1.0, 252.0);
         assert_eq!(pf, f64::MAX);
     }
 

@@ -1,6 +1,65 @@
 //! Relative Strength Index (RSI) indicator.
 
-use super::{IndicatorError, Result, ema::ema};
+use super::{IndicatorError, Result};
+
+/// Internal RSI returning only valid values as plain `f64` (no `Option` wrapping, no padding).
+/// Length = `data.len() - period`. Index `k` corresponds to original index `k + period`.
+///
+/// Inlines EMA of gains/losses to eliminate 4 intermediate `Vec` allocations.
+pub(crate) fn rsi_raw(data: &[f64], period: usize) -> Result<Vec<f64>> {
+    if period == 0 {
+        return Err(IndicatorError::InvalidPeriod(
+            "Period must be greater than 0".to_string(),
+        ));
+    }
+    if data.len() <= period {
+        return Err(IndicatorError::InsufficientData {
+            need: period + 1,
+            got: data.len(),
+        });
+    }
+
+    let multiplier = 2.0 / (period as f64 + 1.0);
+    let period_f = period as f64;
+
+    // Seed: SMA of first `period` gains/losses
+    let mut avg_gain = 0.0f64;
+    let mut avg_loss = 0.0f64;
+    for i in 1..=period {
+        let change = data[i] - data[i - 1];
+        if change > 0.0 {
+            avg_gain += change;
+        } else {
+            avg_loss += change.abs();
+        }
+    }
+    avg_gain /= period_f;
+    avg_loss /= period_f;
+
+    let n_valid = data.len() - period;
+    let mut result = Vec::with_capacity(n_valid);
+    result.push(if avg_loss == 0.0 {
+        100.0
+    } else {
+        100.0 - 100.0 / (1.0 + avg_gain / avg_loss)
+    });
+
+    // EMA smoothing on inline gain/loss (no intermediate Vec)
+    for i in (period + 1)..data.len() {
+        let change = data[i] - data[i - 1];
+        let gain = if change > 0.0 { change } else { 0.0 };
+        let loss = if change < 0.0 { change.abs() } else { 0.0 };
+        avg_gain = (gain - avg_gain) * multiplier + avg_gain;
+        avg_loss = (loss - avg_loss) * multiplier + avg_loss;
+        result.push(if avg_loss == 0.0 {
+            100.0
+        } else {
+            100.0 - 100.0 / (1.0 + avg_gain / avg_loss)
+        });
+    }
+
+    Ok(result)
+}
 
 /// Calculate Relative Strength Index (RSI).
 ///
@@ -35,63 +94,11 @@ use super::{IndicatorError, Result, ema::ema};
 /// assert!(result[14].is_some());
 /// ```
 pub fn rsi(data: &[f64], period: usize) -> Result<Vec<Option<f64>>> {
-    if period == 0 {
-        return Err(IndicatorError::InvalidPeriod(
-            "Period must be greater than 0".to_string(),
-        ));
-    }
-
-    if data.len() <= period {
-        return Err(IndicatorError::InsufficientData {
-            need: period + 1,
-            got: data.len(),
-        });
-    }
-
+    let raw = rsi_raw(data, period)?;
     let mut result = vec![None; data.len()];
-
-    // Calculate price changes
-    let mut gains = Vec::with_capacity(data.len() - 1);
-    let mut losses = Vec::with_capacity(data.len() - 1);
-
-    for i in 1..data.len() {
-        let change = data[i] - data[i - 1];
-        match change {
-            c if c > 0.0 => {
-                gains.push(c);
-                losses.push(0.0);
-            }
-            c if c < 0.0 => {
-                gains.push(0.0);
-                losses.push(c.abs());
-            }
-            _ => {
-                gains.push(0.0);
-                losses.push(0.0);
-            }
-        }
+    for (k, v) in raw.into_iter().enumerate() {
+        result[k + period] = Some(v);
     }
-
-    // Calculate EMA of gains and losses
-    let avg_gains = ema(&gains, period);
-    let avg_losses = ema(&losses, period);
-
-    // Calculate RSI
-    for i in 0..avg_gains.len() {
-        match (avg_gains[i], avg_losses[i]) {
-            (Some(avg_gain), Some(avg_loss)) => {
-                let rsi_value = if avg_loss == 0.0 {
-                    100.0 // No losses means maximum RSI
-                } else {
-                    let rs = avg_gain / avg_loss;
-                    100.0 - (100.0 / (1.0 + rs))
-                };
-                result[i + 1] = Some(rsi_value); // +1 because we lost one data point in change calculation
-            }
-            _ => result[i + 1] = None,
-        }
-    }
-
     Ok(result)
 }
 

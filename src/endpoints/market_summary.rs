@@ -28,14 +28,15 @@ use tracing::info;
 /// # }
 /// ```
 pub async fn fetch(client: &YahooClient, region: Option<Region>) -> Result<serde_json::Value> {
+    let config = client.config();
     let (lang, region) = match region {
-        Some(c) => (c.lang().to_string(), c.region().to_string()),
-        None => (client.config().lang.clone(), client.config().region.clone()),
+        Some(r) => (r.lang(), r.region()),
+        None => (config.lang.as_str(), config.region.as_str()),
     };
 
     info!("Fetching market summary (lang={}, region={})", lang, region);
 
-    let params = [("lang", lang.as_str()), ("region", region.as_str())];
+    let params = [("lang", lang), ("region", region)];
 
     let response = client
         .request_with_params(api::MARKET_SUMMARY, &params)

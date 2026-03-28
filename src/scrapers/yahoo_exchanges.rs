@@ -18,10 +18,17 @@ pub async fn scrape_exchanges() -> Result<Vec<Exchange>> {
 
     let client = reqwest::Client::builder()
         .user_agent("Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36")
-        .build()
-        .map_err(FinanceError::HttpError)?;
+        .build()?;
 
     let response = client.get(EXCHANGES_URL).send().await?;
+
+    if !response.status().is_success() {
+        return Err(FinanceError::ServerError {
+            status: response.status().as_u16(),
+            context: "Failed to fetch exchanges page".to_string(),
+        });
+    }
+
     let html = response.text().await?;
 
     parse_exchanges_html(&html)

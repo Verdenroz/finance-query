@@ -70,7 +70,7 @@ pub(crate) struct CapitalGainEvent {
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::dividends()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct Dividend {
     /// Timestamp (Unix)
@@ -100,7 +100,7 @@ pub struct Split {
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::capital_gains()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct CapitalGain {
     /// Timestamp (Unix)

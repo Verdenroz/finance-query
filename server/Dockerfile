@@ -20,20 +20,26 @@ COPY finance-query-derive/Cargo.toml ./finance-query-derive/
 COPY finance-query-cli/Cargo.toml ./finance-query-cli/
 COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
 
-# Create dummy sources to cache dependencies
-RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src && \
+# Create dummy sources to cache dependencies.
+# benches/ stubs are required because [[bench]] targets are declared in Cargo.toml;
+# Cargo validates their source paths during workspace resolution even when not building them.
+RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches && \
     echo "pub fn dummy() {}" > src/lib.rs && \
     echo "fn main() {}" > server/src/main.rs && \
     echo "" > finance-query-derive/src/lib.rs && \
     echo "fn main() {}" > finance-query-cli/src/main.rs && \
     echo "fn main() {}" > finance-query-mcp/src/main.rs && \
+    for b in indicators backtesting ticker tickers finance stream; do \
+        echo "fn main() {}" > benches/$b.rs; \
+    done && \
     cargo build --release -p finance-query-server && \
-    rm -rf src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src
+    rm -rf src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches
 
 # Copy actual source code
 COPY src ./src
 COPY server/src ./server/src
 COPY finance-query-derive/src ./finance-query-derive/src
+COPY benches ./benches
 
 # Build the actual application
 RUN touch src/lib.rs server/src/main.rs && \

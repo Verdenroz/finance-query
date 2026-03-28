@@ -75,8 +75,7 @@ impl EdgarClientBuilder {
         let http = reqwest::Client::builder()
             .user_agent(&user_agent)
             .timeout(self.timeout)
-            .build()
-            .map_err(FinanceError::HttpError)?;
+            .build()?;
 
         Ok(EdgarClient {
             http,
@@ -102,16 +101,11 @@ impl EdgarClient {
     async fn get(&self, url: &str) -> Result<reqwest::Response> {
         self.rate_limiter.acquire().await;
         debug!("EDGAR GET {}", url);
-        let response = self
-            .http
-            .get(url)
-            .send()
-            .await
-            .map_err(FinanceError::HttpError)?;
+        let response = self.http.get(url).send().await?;
 
-        let status = response.status().as_u16();
-        if !response.status().is_success() {
-            return Err(Self::map_status(status, url));
+        let status = response.status();
+        if !status.is_success() {
+            return Err(Self::map_status(status.as_u16(), url));
         }
         Ok(response)
     }
@@ -124,17 +118,11 @@ impl EdgarClient {
     ) -> Result<reqwest::Response> {
         self.rate_limiter.acquire().await;
         debug!("EDGAR GET {} (with params)", url);
-        let response = self
-            .http
-            .get(url)
-            .query(params)
-            .send()
-            .await
-            .map_err(FinanceError::HttpError)?;
+        let response = self.http.get(url).query(params).send().await?;
 
-        let status = response.status().as_u16();
-        if !response.status().is_success() {
-            return Err(Self::map_status(status, url));
+        let status = response.status();
+        if !status.is_success() {
+            return Err(Self::map_status(status.as_u16(), url));
         }
         Ok(response)
     }
@@ -218,7 +206,7 @@ impl EdgarClient {
 
         // Fetch the full mapping
         let response = self.get(urls::COMPANY_TICKERS).await?;
-        let json: serde_json::Value = response.json().await.map_err(FinanceError::HttpError)?;
+        let json: serde_json::Value = response.json().await?;
 
         // Parse: {"0":{"cik_str":320193,"ticker":"AAPL","title":"Apple Inc"},...}
         let mut map = HashMap::new();
@@ -254,7 +242,7 @@ impl EdgarClient {
     pub async fn submissions(&self, cik: u64) -> Result<EdgarSubmissions> {
         let url = urls::submissions(cik);
         let response = self.get(&url).await?;
-        response.json().await.map_err(FinanceError::HttpError)
+        Ok(response.json().await?)
     }
 
     // ========================================================================
@@ -268,7 +256,7 @@ impl EdgarClient {
     pub async fn company_facts(&self, cik: u64) -> Result<CompanyFacts> {
         let url = urls::company_facts(cik);
         let response = self.get(&url).await?;
-        response.json().await.map_err(FinanceError::HttpError)
+        Ok(response.json().await?)
     }
 
     /// Fetch the filing index for a specific accession number.
@@ -276,7 +264,7 @@ impl EdgarClient {
         let (cik, accession_no_dashes) = super::accession_parts(accession_number)?;
         let url = urls::filing_index(&cik, &accession_no_dashes);
         let response = self.get(&url).await?;
-        response.json().await.map_err(FinanceError::HttpError)
+        Ok(response.json().await?)
     }
 
     // ========================================================================
@@ -348,7 +336,7 @@ impl EdgarClient {
         let response = self
             .get_with_params(urls::FULL_TEXT_SEARCH, &params)
             .await?;
-        response.json().await.map_err(FinanceError::HttpError)
+        Ok(response.json().await?)
     }
 }
 

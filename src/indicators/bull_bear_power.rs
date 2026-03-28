@@ -1,6 +1,6 @@
 //! Bull Bear Power indicator.
 
-use super::{IndicatorError, Result, ema::ema};
+use super::{IndicatorError, Result, ema::ema_raw};
 use serde::{Deserialize, Serialize};
 
 /// Result of Bull Bear Power calculation
@@ -58,16 +58,16 @@ pub fn bull_bear_power(
         });
     }
 
-    let ema_values = ema(closes, period);
+    let ema_vals = ema_raw(closes, period); // len = N - (period-1), index k → orig k+(period-1)
+    let off = period - 1;
 
     let mut bull_power = vec![None; len];
     let mut bear_power = vec![None; len];
 
-    for i in 0..len {
-        if let Some(ema_val) = ema_values[i] {
-            bull_power[i] = Some(highs[i] - ema_val);
-            bear_power[i] = Some(lows[i] - ema_val);
-        }
+    for (k, &ev) in ema_vals.iter().enumerate() {
+        let i = k + off;
+        bull_power[i] = Some(highs[i] - ev);
+        bear_power[i] = Some(lows[i] - ev);
     }
 
     Ok(BullBearPowerResult {

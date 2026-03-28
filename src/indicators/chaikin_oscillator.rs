@@ -1,6 +1,6 @@
 //! Chaikin Oscillator indicator.
 
-use super::{IndicatorError, Result, ema::ema};
+use super::{IndicatorError, Result, ema::ema_raw};
 
 /// Calculate Chaikin Oscillator.
 ///
@@ -52,15 +52,15 @@ pub fn chaikin_oscillator(
         ad_series.push(ad_cumulative);
     }
 
-    let ema3 = ema(&ad_series, 3);
-    let ema10 = ema(&ad_series, 10);
+    // ema_raw returns only valid values — no Option overhead
+    let ema3_raw = ema_raw(&ad_series, 3); // len = N-2, index k → orig k+2
+    let ema10_raw = ema_raw(&ad_series, 10); // len = N-9, index k → orig k+9
 
     let mut result = vec![None; len];
 
-    for i in 0..len {
-        if let (Some(e3), Some(e10)) = (ema3[i], ema10[i]) {
-            result[i] = Some(e3 - e10);
-        }
+    // ema10_raw[k] aligns with orig index k+9; ema3_raw at same orig = ema3_raw[k+7]
+    for (k, &e10) in ema10_raw.iter().enumerate() {
+        result[k + 9] = Some(ema3_raw[k + 7] - e10);
     }
 
     Ok(result)

@@ -94,18 +94,7 @@ static EDGAR_SINGLETON: OnceLock<EdgarSingleton> = OnceLock::new();
 ///
 /// Returns an error if EDGAR has already been initialized.
 pub fn init(email: impl Into<String>) -> Result<()> {
-    EDGAR_SINGLETON
-        .set(EdgarSingleton {
-            email: email.into(),
-            app_name: "finance-query".to_string(),
-            timeout: Duration::from_secs(30),
-            rate_limiter: Arc::new(RateLimiter::new(EDGAR_RATE_PER_SEC)),
-            cik_cache: Arc::new(RwLock::new(None)),
-        })
-        .map_err(|_| FinanceError::InvalidParameter {
-            param: "edgar".to_string(),
-            reason: "EDGAR client already initialized".to_string(),
-        })
+    init_with_config(email, "finance-query", Duration::from_secs(30))
 }
 
 /// Initialize the global EDGAR client with full configuration.

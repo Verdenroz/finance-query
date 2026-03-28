@@ -1,6 +1,26 @@
 //! Exponential Moving Average (EMA) indicator.
 
-use super::sma::sma;
+/// Internal EMA returning only the valid values as plain `f64` (no `Option` wrapping,
+/// no leading `None` padding). The returned `Vec<f64>` has length `data.len() - period + 1`,
+/// where index 0 corresponds to original index `period - 1`.
+///
+/// Use this inside other indicator computations to avoid the `Option<f64>` overhead.
+pub(crate) fn ema_raw(data: &[f64], period: usize) -> Vec<f64> {
+    if period == 0 || data.is_empty() || data.len() < period {
+        return Vec::new();
+    }
+    let multiplier = 2.0 / (period as f64 + 1.0);
+    let initial: f64 = data[..period].iter().sum::<f64>() / period as f64;
+    let mut result = Vec::with_capacity(data.len() - period + 1);
+    result.push(initial);
+    let mut prev = initial;
+    for &price in &data[period..] {
+        let val = (price - prev) * multiplier + prev;
+        result.push(val);
+        prev = val;
+    }
+    result
+}
 
 /// Calculate Exponential Moving Average (EMA).
 ///
@@ -40,29 +60,18 @@ pub fn ema(data: &[f64], period: usize) -> Vec<Option<f64>> {
     let multiplier = 2.0 / (period as f64 + 1.0);
     let mut result = Vec::with_capacity(data.len());
 
-    // Calculate initial SMA for the first EMA value
-    let sma_values = sma(data, period);
+    // First EMA value is the SMA of the first `period` elements — computed inline
+    // (avoids calling sma() which would allocate a Vec<Option<f64>> of size N)
+    let initial: f64 = data[..period].iter().sum::<f64>() / period as f64;
 
-    for (i, &sma_val) in sma_values.iter().enumerate() {
-        match (sma_val, i) {
-            (Some(sma), idx) if idx == period - 1 => {
-                // First EMA value is the SMA
-                result.push(Some(sma));
-            }
-            (_, idx) if idx < period - 1 => {
-                // Not enough data yet
-                result.push(None);
-            }
-            _ => {
-                // Calculate EMA using previous EMA
-                if let Some(prev_ema) = result.last().and_then(|&v| v) {
-                    let ema_val = (data[i] - prev_ema) * multiplier + prev_ema;
-                    result.push(Some(ema_val));
-                } else {
-                    result.push(None);
-                }
-            }
-        }
+    result.extend(std::iter::repeat_n(None, period - 1));
+    result.push(Some(initial));
+
+    let mut prev = initial;
+    for &price in &data[period..] {
+        let val = (price - prev) * multiplier + prev;
+        result.push(Some(val));
+        prev = val;
     }
 
     result

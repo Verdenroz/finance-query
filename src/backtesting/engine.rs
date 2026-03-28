@@ -21,6 +21,304 @@ pub struct BacktestEngine {
     config: BacktestConfig,
 }
 
+/// Returns true if the indicator needs high/low price series.
+#[inline]
+fn needs_high_low(indicator: &Indicator) -> bool {
+    matches!(
+        indicator,
+        Indicator::Atr(_)
+            | Indicator::Supertrend { .. }
+            | Indicator::DonchianChannels(_)
+            | Indicator::Cci(_)
+            | Indicator::WilliamsR(_)
+            | Indicator::Adx(_)
+            | Indicator::Mfi(_)
+            | Indicator::Cmf(_)
+            | Indicator::Stochastic { .. }
+            | Indicator::Aroon(_)
+            | Indicator::Ichimoku { .. }
+            | Indicator::ParabolicSar { .. }
+            | Indicator::KeltnerChannels { .. }
+            | Indicator::TrueRange
+            | Indicator::ChoppinessIndex(_)
+            | Indicator::Vwap
+            | Indicator::ChaikinOscillator
+            | Indicator::AccumulationDistribution
+            | Indicator::BalanceOfPower(_)
+            | Indicator::BullBearPower(_)
+            | Indicator::ElderRay(_)
+            | Indicator::AwesomeOscillator { .. }
+    )
+}
+
+/// Returns true if the indicator needs the volume series.
+#[inline]
+fn needs_volumes(indicator: &Indicator) -> bool {
+    matches!(
+        indicator,
+        Indicator::Obv
+            | Indicator::Mfi(_)
+            | Indicator::Cmf(_)
+            | Indicator::Vwma(_)
+            | Indicator::Vwap
+            | Indicator::ChaikinOscillator
+            | Indicator::AccumulationDistribution
+    )
+}
+
+/// Compute a single indicator and return all resulting (key, values) pairs.
+fn compute_one(
+    closes: &[f64],
+    highs: &[f64],
+    lows: &[f64],
+    volumes: &[f64],
+    opens: &[f64],
+    name: String,
+    indicator: Indicator,
+) -> Result<Vec<(String, Vec<Option<f64>>)>> {
+    let mut out = Vec::with_capacity(5);
+    match indicator {
+        Indicator::Sma(period) => {
+            out.push((name, indicators::sma(closes, period)));
+        }
+        Indicator::Ema(period) => {
+            out.push((name, indicators::ema(closes, period)));
+        }
+        Indicator::Rsi(period) => {
+            out.push((name, indicators::rsi(closes, period)?));
+        }
+        Indicator::Macd { fast, slow, signal } => {
+            let m = indicators::macd(closes, fast, slow, signal)?;
+            out.push((format!("macd_line_{fast}_{slow}_{signal}"), m.macd_line));
+            out.push((format!("macd_signal_{fast}_{slow}_{signal}"), m.signal_line));
+            out.push((
+                format!("macd_histogram_{fast}_{slow}_{signal}"),
+                m.histogram,
+            ));
+        }
+        Indicator::Bollinger { period, std_dev } => {
+            let bb = indicators::bollinger_bands(closes, period, std_dev)?;
+            out.push((format!("bollinger_upper_{period}_{std_dev}"), bb.upper));
+            out.push((format!("bollinger_middle_{period}_{std_dev}"), bb.middle));
+            out.push((format!("bollinger_lower_{period}_{std_dev}"), bb.lower));
+        }
+        Indicator::Atr(period) => {
+            out.push((name, indicators::atr(highs, lows, closes, period)?));
+        }
+        Indicator::Supertrend { period, multiplier } => {
+            let st = indicators::supertrend(highs, lows, closes, period, multiplier)?;
+            out.push((format!("supertrend_value_{period}_{multiplier}"), st.value));
+            let uptrend: Vec<Option<f64>> = st
+                .is_uptrend
+                .into_iter()
+                .map(|v| v.map(|b| if b { 1.0 } else { 0.0 }))
+                .collect();
+            out.push((format!("supertrend_uptrend_{period}_{multiplier}"), uptrend));
+        }
+        Indicator::DonchianChannels(period) => {
+            let dc = indicators::donchian_channels(highs, lows, period)?;
+            out.push((format!("donchian_upper_{period}"), dc.upper));
+            out.push((format!("donchian_middle_{period}"), dc.middle));
+            out.push((format!("donchian_lower_{period}"), dc.lower));
+        }
+        Indicator::Wma(period) => {
+            out.push((name, indicators::wma(closes, period)?));
+        }
+        Indicator::Dema(period) => {
+            out.push((name, indicators::dema(closes, period)?));
+        }
+        Indicator::Tema(period) => {
+            out.push((name, indicators::tema(closes, period)?));
+        }
+        Indicator::Hma(period) => {
+            out.push((name, indicators::hma(closes, period)?));
+        }
+        Indicator::Obv => {
+            out.push((name, indicators::obv(closes, volumes)?));
+        }
+        Indicator::Momentum(period) => {
+            out.push((name, indicators::momentum(closes, period)?));
+        }
+        Indicator::Roc(period) => {
+            out.push((name, indicators::roc(closes, period)?));
+        }
+        Indicator::Cci(period) => {
+            out.push((name, indicators::cci(highs, lows, closes, period)?));
+        }
+        Indicator::WilliamsR(period) => {
+            out.push((name, indicators::williams_r(highs, lows, closes, period)?));
+        }
+        Indicator::Adx(period) => {
+            out.push((name, indicators::adx(highs, lows, closes, period)?));
+        }
+        Indicator::Mfi(period) => {
+            out.push((name, indicators::mfi(highs, lows, closes, volumes, period)?));
+        }
+        Indicator::Cmf(period) => {
+            out.push((name, indicators::cmf(highs, lows, closes, volumes, period)?));
+        }
+        Indicator::Cmo(period) => {
+            out.push((name, indicators::cmo(closes, period)?));
+        }
+        Indicator::Vwma(period) => {
+            out.push((name, indicators::vwma(closes, volumes, period)?));
+        }
+        Indicator::Alma {
+            period,
+            offset,
+            sigma,
+        } => {
+            out.push((name, indicators::alma(closes, period, offset, sigma)?));
+        }
+        Indicator::McginleyDynamic(period) => {
+            out.push((name, indicators::mcginley_dynamic(closes, period)?));
+        }
+        Indicator::Stochastic {
+            k_period,
+            k_slow,
+            d_period,
+        } => {
+            let s = indicators::stochastic(highs, lows, closes, k_period, k_slow, d_period)?;
+            out.push((format!("stochastic_k_{k_period}_{k_slow}_{d_period}"), s.k));
+            out.push((format!("stochastic_d_{k_period}_{k_slow}_{d_period}"), s.d));
+        }
+        Indicator::StochasticRsi {
+            rsi_period,
+            stoch_period,
+            k_period,
+            d_period,
+        } => {
+            let s =
+                indicators::stochastic_rsi(closes, rsi_period, stoch_period, k_period, d_period)?;
+            out.push((
+                format!("stoch_rsi_k_{rsi_period}_{stoch_period}_{k_period}_{d_period}"),
+                s.k,
+            ));
+            out.push((
+                format!("stoch_rsi_d_{rsi_period}_{stoch_period}_{k_period}_{d_period}"),
+                s.d,
+            ));
+        }
+        Indicator::AwesomeOscillator { fast, slow } => {
+            out.push((
+                name,
+                indicators::awesome_oscillator(highs, lows, fast, slow)?,
+            ));
+        }
+        Indicator::CoppockCurve {
+            wma_period,
+            long_roc,
+            short_roc,
+        } => {
+            out.push((
+                name,
+                indicators::coppock_curve(closes, long_roc, short_roc, wma_period)?,
+            ));
+        }
+        Indicator::Aroon(period) => {
+            let a = indicators::aroon(highs, lows, period)?;
+            out.push((format!("aroon_up_{period}"), a.aroon_up));
+            out.push((format!("aroon_down_{period}"), a.aroon_down));
+        }
+        Indicator::Ichimoku {
+            conversion,
+            base,
+            lagging,
+            displacement,
+        } => {
+            let ich =
+                indicators::ichimoku(highs, lows, closes, conversion, base, lagging, displacement)?;
+            out.push((
+                format!("ichimoku_conversion_{conversion}_{base}_{lagging}_{displacement}"),
+                ich.conversion_line,
+            ));
+            out.push((
+                format!("ichimoku_base_{conversion}_{base}_{lagging}_{displacement}"),
+                ich.base_line,
+            ));
+            out.push((
+                format!("ichimoku_leading_a_{conversion}_{base}_{lagging}_{displacement}"),
+                ich.leading_span_a,
+            ));
+            out.push((
+                format!("ichimoku_leading_b_{conversion}_{base}_{lagging}_{displacement}"),
+                ich.leading_span_b,
+            ));
+            out.push((
+                format!("ichimoku_lagging_{conversion}_{base}_{lagging}_{displacement}"),
+                ich.lagging_span,
+            ));
+        }
+        Indicator::ParabolicSar { step, max } => {
+            out.push((
+                name,
+                indicators::parabolic_sar(highs, lows, closes, step, max)?,
+            ));
+        }
+        Indicator::KeltnerChannels {
+            period,
+            multiplier,
+            atr_period,
+        } => {
+            let kc =
+                indicators::keltner_channels(highs, lows, closes, period, atr_period, multiplier)?;
+            out.push((
+                format!("keltner_upper_{period}_{multiplier}_{atr_period}"),
+                kc.upper,
+            ));
+            out.push((
+                format!("keltner_middle_{period}_{multiplier}_{atr_period}"),
+                kc.middle,
+            ));
+            out.push((
+                format!("keltner_lower_{period}_{multiplier}_{atr_period}"),
+                kc.lower,
+            ));
+        }
+        Indicator::TrueRange => {
+            out.push((name, indicators::true_range(highs, lows, closes)?));
+        }
+        Indicator::ChoppinessIndex(period) => {
+            out.push((
+                name,
+                indicators::choppiness_index(highs, lows, closes, period)?,
+            ));
+        }
+        Indicator::Vwap => {
+            out.push((name, indicators::vwap(highs, lows, closes, volumes)?));
+        }
+        Indicator::ChaikinOscillator => {
+            out.push((
+                name,
+                indicators::chaikin_oscillator(highs, lows, closes, volumes)?,
+            ));
+        }
+        Indicator::AccumulationDistribution => {
+            out.push((
+                name,
+                indicators::accumulation_distribution(highs, lows, closes, volumes)?,
+            ));
+        }
+        Indicator::BalanceOfPower(period) => {
+            out.push((
+                name,
+                indicators::balance_of_power(opens, highs, lows, closes, period)?,
+            ));
+        }
+        Indicator::BullBearPower(period) => {
+            let bbp = indicators::bull_bear_power(highs, lows, closes, period)?;
+            out.push((format!("bull_power_{period}"), bbp.bull_power));
+            out.push((format!("bear_power_{period}"), bbp.bear_power));
+        }
+        Indicator::ElderRay(period) => {
+            let er = indicators::elder_ray(highs, lows, closes, period)?;
+            out.push((format!("elder_bull_{period}"), er.bull_power));
+            out.push((format!("elder_bear_{period}"), er.bear_power));
+        }
+    }
+    Ok(out)
+}
+
 /// Pre-compute a set of indicators on the given candles.
 ///
 /// Accepts a list of `(key, Indicator)` pairs as returned by
@@ -28,300 +326,67 @@ pub struct BacktestEngine {
 /// the computed `Vec<Option<f64>>`. Multi-output indicators (MACD,
 /// Bollinger, Supertrend, etc.) insert additional derived keys,
 /// ignoring the supplied key for those variants.
+///
+/// When 4 or more indicators are requested, computation runs in parallel
+/// using rayon's thread pool.
 pub(crate) fn compute_for_candles(
     candles: &[Candle],
     required: Vec<(String, Indicator)>,
 ) -> Result<HashMap<String, Vec<Option<f64>>>> {
-    let mut result = HashMap::new();
-
-    let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
-    let highs: Vec<f64> = candles.iter().map(|c| c.high).collect();
-    let lows: Vec<f64> = candles.iter().map(|c| c.low).collect();
-    let volumes: Vec<f64> = candles.iter().map(|c| c.volume as f64).collect();
-
-    for (name, indicator) in required {
-        match indicator {
-            Indicator::Sma(period) => {
-                let values = indicators::sma(&closes, period);
-                result.insert(name, values);
-            }
-            Indicator::Ema(period) => {
-                let values = indicators::ema(&closes, period);
-                result.insert(name, values);
-            }
-            Indicator::Rsi(period) => {
-                let values = indicators::rsi(&closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Macd { fast, slow, signal } => {
-                let macd_result = indicators::macd(&closes, fast, slow, signal)?;
-                result.insert(
-                    format!("macd_line_{fast}_{slow}_{signal}"),
-                    macd_result.macd_line,
-                );
-                result.insert(
-                    format!("macd_signal_{fast}_{slow}_{signal}"),
-                    macd_result.signal_line,
-                );
-                result.insert(
-                    format!("macd_histogram_{fast}_{slow}_{signal}"),
-                    macd_result.histogram,
-                );
-            }
-            Indicator::Bollinger { period, std_dev } => {
-                let bb = indicators::bollinger_bands(&closes, period, std_dev)?;
-                result.insert(format!("bollinger_upper_{period}_{std_dev}"), bb.upper);
-                result.insert(format!("bollinger_middle_{period}_{std_dev}"), bb.middle);
-                result.insert(format!("bollinger_lower_{period}_{std_dev}"), bb.lower);
-            }
-            Indicator::Atr(period) => {
-                let values = indicators::atr(&highs, &lows, &closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Supertrend { period, multiplier } => {
-                let st = indicators::supertrend(&highs, &lows, &closes, period, multiplier)?;
-                result.insert(format!("supertrend_value_{period}_{multiplier}"), st.value);
-                let uptrend: Vec<Option<f64>> = st
-                    .is_uptrend
-                    .into_iter()
-                    .map(|v| v.map(|b| if b { 1.0 } else { 0.0 }))
-                    .collect();
-                result.insert(format!("supertrend_uptrend_{period}_{multiplier}"), uptrend);
-            }
-            Indicator::DonchianChannels(period) => {
-                let dc = indicators::donchian_channels(&highs, &lows, period)?;
-                result.insert(format!("donchian_upper_{period}"), dc.upper);
-                result.insert(format!("donchian_middle_{period}"), dc.middle);
-                result.insert(format!("donchian_lower_{period}"), dc.lower);
-            }
-            Indicator::Wma(period) => {
-                let values = indicators::wma(&closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Dema(period) => {
-                let values = indicators::dema(&closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Tema(period) => {
-                let values = indicators::tema(&closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Hma(period) => {
-                let values = indicators::hma(&closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Obv => {
-                let values = indicators::obv(&closes, &volumes)?;
-                result.insert(name, values);
-            }
-            Indicator::Momentum(period) => {
-                let values = indicators::momentum(&closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Roc(period) => {
-                let values = indicators::roc(&closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Cci(period) => {
-                let values = indicators::cci(&highs, &lows, &closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::WilliamsR(period) => {
-                let values = indicators::williams_r(&highs, &lows, &closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Adx(period) => {
-                let values = indicators::adx(&highs, &lows, &closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Mfi(period) => {
-                let values = indicators::mfi(&highs, &lows, &closes, &volumes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Cmf(period) => {
-                let values = indicators::cmf(&highs, &lows, &closes, &volumes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Cmo(period) => {
-                let values = indicators::cmo(&closes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Vwma(period) => {
-                let values = indicators::vwma(&closes, &volumes, period)?;
-                result.insert(name, values);
-            }
-            Indicator::Alma {
-                period,
-                offset,
-                sigma,
-            } => {
-                let values = indicators::alma(&closes, period, offset, sigma)?;
-                result.insert(name, values);
-            }
-            Indicator::McginleyDynamic(period) => {
-                let values = indicators::mcginley_dynamic(&closes, period)?;
-                result.insert(name, values);
-            }
-            // === OSCILLATORS ===
-            Indicator::Stochastic {
-                k_period,
-                k_slow,
-                d_period,
-            } => {
-                let stoch =
-                    indicators::stochastic(&highs, &lows, &closes, k_period, k_slow, d_period)?;
-                result.insert(
-                    format!("stochastic_k_{k_period}_{k_slow}_{d_period}"),
-                    stoch.k,
-                );
-                result.insert(
-                    format!("stochastic_d_{k_period}_{k_slow}_{d_period}"),
-                    stoch.d,
-                );
-            }
-            Indicator::StochasticRsi {
-                rsi_period,
-                stoch_period,
-                k_period,
-                d_period,
-            } => {
-                let stoch = indicators::stochastic_rsi(
-                    &closes,
-                    rsi_period,
-                    stoch_period,
-                    k_period,
-                    d_period,
-                )?;
-                result.insert(
-                    format!("stoch_rsi_k_{rsi_period}_{stoch_period}_{k_period}_{d_period}"),
-                    stoch.k,
-                );
-                result.insert(
-                    format!("stoch_rsi_d_{rsi_period}_{stoch_period}_{k_period}_{d_period}"),
-                    stoch.d,
-                );
-            }
-            Indicator::AwesomeOscillator { fast, slow } => {
-                let values = indicators::awesome_oscillator(&highs, &lows, fast, slow)?;
-                result.insert(name, values);
-            }
-            Indicator::CoppockCurve {
-                wma_period,
-                long_roc,
-                short_roc,
-            } => {
-                let values = indicators::coppock_curve(&closes, long_roc, short_roc, wma_period)?;
-                result.insert(name, values);
-            }
-            // === TREND INDICATORS ===
-            Indicator::Aroon(period) => {
-                let aroon_result = indicators::aroon(&highs, &lows, period)?;
-                result.insert(format!("aroon_up_{period}"), aroon_result.aroon_up);
-                result.insert(format!("aroon_down_{period}"), aroon_result.aroon_down);
-            }
-            Indicator::Ichimoku {
-                conversion,
-                base,
-                lagging,
-                displacement,
-            } => {
-                let ich = indicators::ichimoku(
-                    &highs,
-                    &lows,
-                    &closes,
-                    conversion,
-                    base,
-                    lagging,
-                    displacement,
-                )?;
-                result.insert(
-                    format!("ichimoku_conversion_{conversion}_{base}_{lagging}_{displacement}"),
-                    ich.conversion_line,
-                );
-                result.insert(
-                    format!("ichimoku_base_{conversion}_{base}_{lagging}_{displacement}"),
-                    ich.base_line,
-                );
-                result.insert(
-                    format!("ichimoku_leading_a_{conversion}_{base}_{lagging}_{displacement}"),
-                    ich.leading_span_a,
-                );
-                result.insert(
-                    format!("ichimoku_leading_b_{conversion}_{base}_{lagging}_{displacement}"),
-                    ich.leading_span_b,
-                );
-                result.insert(
-                    format!("ichimoku_lagging_{conversion}_{base}_{lagging}_{displacement}"),
-                    ich.lagging_span,
-                );
-            }
-            Indicator::ParabolicSar { step, max } => {
-                let values = indicators::parabolic_sar(&highs, &lows, &closes, step, max)?;
-                result.insert(name, values);
-            }
-            // === VOLATILITY ===
-            Indicator::KeltnerChannels {
-                period,
-                multiplier,
-                atr_period,
-            } => {
-                let kc = indicators::keltner_channels(
-                    &highs, &lows, &closes, period, atr_period, multiplier,
-                )?;
-                result.insert(
-                    format!("keltner_upper_{period}_{multiplier}_{atr_period}"),
-                    kc.upper,
-                );
-                result.insert(
-                    format!("keltner_middle_{period}_{multiplier}_{atr_period}"),
-                    kc.middle,
-                );
-                result.insert(
-                    format!("keltner_lower_{period}_{multiplier}_{atr_period}"),
-                    kc.lower,
-                );
-            }
-            Indicator::TrueRange => {
-                let values = indicators::true_range(&highs, &lows, &closes)?;
-                result.insert(name, values);
-            }
-            Indicator::ChoppinessIndex(period) => {
-                let values = indicators::choppiness_index(&highs, &lows, &closes, period)?;
-                result.insert(name, values);
-            }
-            // === VOLUME INDICATORS ===
-            Indicator::Vwap => {
-                let values = indicators::vwap(&highs, &lows, &closes, &volumes)?;
-                result.insert(name, values);
-            }
-            Indicator::ChaikinOscillator => {
-                let values = indicators::chaikin_oscillator(&highs, &lows, &closes, &volumes)?;
-                result.insert(name, values);
-            }
-            Indicator::AccumulationDistribution => {
-                let values =
-                    indicators::accumulation_distribution(&highs, &lows, &closes, &volumes)?;
-                result.insert(name, values);
-            }
-            Indicator::BalanceOfPower(period) => {
-                let opens: Vec<f64> = candles.iter().map(|c| c.open).collect();
-                let values = indicators::balance_of_power(&opens, &highs, &lows, &closes, period)?;
-                result.insert(name, values);
-            }
-            // === POWER/STRENGTH INDICATORS ===
-            Indicator::BullBearPower(period) => {
-                let bbp = indicators::bull_bear_power(&highs, &lows, &closes, period)?;
-                result.insert(format!("bull_power_{period}"), bbp.bull_power);
-                result.insert(format!("bear_power_{period}"), bbp.bear_power);
-            }
-            Indicator::ElderRay(period) => {
-                let er = indicators::elder_ray(&highs, &lows, &closes, period)?;
-                result.insert(format!("elder_bull_{period}"), er.bull_power);
-                result.insert(format!("elder_bear_{period}"), er.bear_power);
-            }
-        }
+    if required.is_empty() {
+        return Ok(HashMap::new());
     }
 
+    let use_hl = required.iter().any(|(_, i)| needs_high_low(i));
+    let use_vol = required.iter().any(|(_, i)| needs_volumes(i));
+    let use_open = required
+        .iter()
+        .any(|(_, i)| matches!(i, Indicator::BalanceOfPower(_)));
+
+    // Extract price series upfront (single pass each, cache-friendly).
+    let closes: Vec<f64> = candles.iter().map(|c| c.close).collect();
+    let (highs, lows): (Vec<f64>, Vec<f64>) = if use_hl {
+        candles.iter().map(|c| (c.high, c.low)).unzip()
+    } else {
+        (vec![], vec![])
+    };
+    let volumes: Vec<f64> = if use_vol {
+        candles.iter().map(|c| c.volume as f64).collect()
+    } else {
+        vec![]
+    };
+    let opens: Vec<f64> = if use_open {
+        candles.iter().map(|c| c.open).collect()
+    } else {
+        vec![]
+    };
+
+    type IndPairs = Vec<(String, Vec<Option<f64>>)>;
+
+    // Parallelise only when both the indicator count and candle count are large
+    // enough that rayon task-dispatch overhead is outweighed by the savings.
+    // Empirically: ≥4 indicators AND ≥1 000 candles.
+    let groups: Result<Vec<IndPairs>> = if required.len() >= 4 && candles.len() >= 1_000 {
+        use rayon::prelude::*;
+        required
+            .into_par_iter()
+            .map(|(name, ind)| compute_one(&closes, &highs, &lows, &volumes, &opens, name, ind))
+            .collect()
+    } else {
+        required
+            .into_iter()
+            .map(|(name, ind)| compute_one(&closes, &highs, &lows, &volumes, &opens, name, ind))
+            .collect()
+    };
+
+    let groups = groups?;
+    let capacity: usize = groups.iter().map(|v| v.len()).sum();
+    let mut result = HashMap::with_capacity(capacity);
+    for group in groups {
+        for (k, v) in group {
+            result.insert(k, v);
+        }
+    }
     Ok(result)
 }
 
@@ -370,7 +435,7 @@ impl BacktestEngine {
         &self,
         symbol: &str,
         candles: &[Candle],
-        strategy: S,
+        mut strategy: S,
         dividends: &[Dividend],
     ) -> Result<BacktestResult> {
         let warmup = strategy.warmup_period();
@@ -393,12 +458,16 @@ impl BacktestEngine {
         let mut indicators = self.compute_indicators(candles, &strategy)?;
         indicators.extend(self.compute_htf_indicators(candles, &strategy)?);
 
+        // Let the strategy cache direct pointers into the indicator map, eliminating
+        // per-bar HashMap lookups in on_candle.
+        strategy.setup(&indicators);
+
         // Initialize state
         let mut equity = self.config.initial_capital;
         let mut cash = self.config.initial_capital;
         let mut position: Option<Position> = None;
         let mut trades: Vec<Trade> = Vec::new();
-        let mut equity_curve: Vec<EquityPoint> = Vec::new();
+        let mut equity_curve: Vec<EquityPoint> = Vec::with_capacity(candles.len());
         let mut signals: Vec<SignalRecord> = Vec::new();
         let mut peak_equity = equity;
         // High-water mark for the trailing stop: tracks peak price (longs) or

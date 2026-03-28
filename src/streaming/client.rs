@@ -127,17 +127,22 @@ impl PriceStream {
     /// # }
     /// ```
     pub async fn subscribe(symbols: &[&str]) -> StreamResult<Self> {
+        Self::subscribe_inner(symbols, Duration::from_secs(RECONNECT_BACKOFF_SECS)).await
+    }
+
+    async fn subscribe_inner(symbols: &[&str], retry_delay: Duration) -> StreamResult<Self> {
         let (broadcast_tx, broadcast_rx) = broadcast::channel(CHANNEL_CAPACITY);
         let (command_tx, command_rx) = mpsc::channel(32);
 
-        let symbols: Vec<String> = symbols.iter().map(|s| s.to_string()).collect();
-        let initial_symbols = symbols.clone();
+        let initial_symbols: Vec<String> = symbols.iter().map(|s| s.to_string()).collect();
 
         let tx_clone = broadcast_tx.clone();
 
         // Spawn the WebSocket task
         tokio::spawn(async move {
-            if let Err(e) = run_websocket_loop(initial_symbols, broadcast_tx, command_rx).await {
+            if let Err(e) =
+                run_websocket_loop(initial_symbols, broadcast_tx, command_rx, retry_delay).await
+            {
                 error!("WebSocket loop error: {}", e);
             }
         });
@@ -236,6 +241,7 @@ async fn run_websocket_loop(
     initial_symbols: Vec<String>,
     broadcast_tx: broadcast::Sender<PriceUpdate>,
     mut command_rx: mpsc::Receiver<StreamCommand>,
+    retry_delay: Duration,
 ) -> StreamResult<()> {
     let subscriptions = Arc::new(RwLock::new(HashSet::<String>::from_iter(initial_symbols)));
 
@@ -247,10 +253,11 @@ async fn run_websocket_loop(
             }
             Err(e) => {
                 error!(
-                    "WebSocket error: {}, reconnecting in {}s...",
-                    e, RECONNECT_BACKOFF_SECS
+                    "WebSocket error: {}, reconnecting in {:.1}s...",
+                    e,
+                    retry_delay.as_secs_f32()
                 );
-                tokio::time::sleep(Duration::from_secs(RECONNECT_BACKOFF_SECS)).await;
+                tokio::time::sleep(retry_delay).await;
             }
         }
     }
@@ -425,7 +432,7 @@ fn handle_text_message(
 /// Builder for creating price streams with custom configuration
 pub struct PriceStreamBuilder {
     symbols: Vec<String>,
-    reconnect_delay: Duration,
+    retry_delay: Duration,
 }
 
 impl PriceStreamBuilder {
@@ -433,7 +440,7 @@ impl PriceStreamBuilder {
     pub fn new() -> Self {
         Self {
             symbols: Vec::new(),
-            reconnect_delay: Duration::from_secs(RECONNECT_BACKOFF_SECS),
+            retry_delay: Duration::from_secs(RECONNECT_BACKOFF_SECS),
         }
     }
 
@@ -443,16 +450,16 @@ impl PriceStreamBuilder {
         self
     }
 
-    /// Set reconnection delay
-    pub fn reconnect_delay(mut self, delay: Duration) -> Self {
-        self.reconnect_delay = delay;
+    /// Set the delay between reconnection attempts (default: 3s)
+    pub fn retry(mut self, delay: Duration) -> Self {
+        self.retry_delay = delay;
         self
     }
 
     /// Build and start the price stream
     pub async fn build(self) -> StreamResult<PriceStream> {
         let symbol_refs: Vec<&str> = self.symbols.iter().map(|s| s.as_str()).collect();
-        PriceStream::subscribe(&symbol_refs).await
+        PriceStream::subscribe_inner(&symbol_refs, self.retry_delay).await
     }
 }
 

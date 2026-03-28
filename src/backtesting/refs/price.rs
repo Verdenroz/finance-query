@@ -21,8 +21,8 @@ use crate::backtesting::strategy::StrategyContext;
 pub struct ClosePrice;
 
 impl IndicatorRef for ClosePrice {
-    fn key(&self) -> String {
-        "close".to_string()
+    fn key(&self) -> &str {
+        "close"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -43,8 +43,8 @@ impl IndicatorRef for ClosePrice {
 pub struct OpenPrice;
 
 impl IndicatorRef for OpenPrice {
-    fn key(&self) -> String {
-        "open".to_string()
+    fn key(&self) -> &str {
+        "open"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -65,8 +65,8 @@ impl IndicatorRef for OpenPrice {
 pub struct HighPrice;
 
 impl IndicatorRef for HighPrice {
-    fn key(&self) -> String {
-        "high".to_string()
+    fn key(&self) -> &str {
+        "high"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -87,8 +87,8 @@ impl IndicatorRef for HighPrice {
 pub struct LowPrice;
 
 impl IndicatorRef for LowPrice {
-    fn key(&self) -> String {
-        "low".to_string()
+    fn key(&self) -> &str {
+        "low"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -109,8 +109,8 @@ impl IndicatorRef for LowPrice {
 pub struct VolumeRef;
 
 impl IndicatorRef for VolumeRef {
-    fn key(&self) -> String {
-        "volume".to_string()
+    fn key(&self) -> &str {
+        "volume"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -131,8 +131,8 @@ impl IndicatorRef for VolumeRef {
 pub struct TypicalPrice;
 
 impl IndicatorRef for TypicalPrice {
-    fn key(&self) -> String {
-        "typical_price".to_string()
+    fn key(&self) -> &str {
+        "typical_price"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -155,8 +155,8 @@ impl IndicatorRef for TypicalPrice {
 pub struct MedianPrice;
 
 impl IndicatorRef for MedianPrice {
-    fn key(&self) -> String {
-        "median_price".to_string()
+    fn key(&self) -> &str {
+        "median_price"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -195,8 +195,8 @@ impl IndicatorRef for MedianPrice {
 pub struct PriceChangePct;
 
 impl IndicatorRef for PriceChangePct {
-    fn key(&self) -> String {
-        "price_change_pct".to_string()
+    fn key(&self) -> &str {
+        "price_change_pct"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -250,8 +250,8 @@ impl IndicatorRef for PriceChangePct {
 pub struct GapPct;
 
 impl IndicatorRef for GapPct {
-    fn key(&self) -> String {
-        "gap_pct".to_string()
+    fn key(&self) -> &str {
+        "gap_pct"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -300,8 +300,8 @@ impl IndicatorRef for GapPct {
 pub struct CandleRange;
 
 impl IndicatorRef for CandleRange {
-    fn key(&self) -> String {
-        "candle_range".to_string()
+    fn key(&self) -> &str {
+        "candle_range"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -332,8 +332,8 @@ impl IndicatorRef for CandleRange {
 pub struct CandleBody;
 
 impl IndicatorRef for CandleBody {
-    fn key(&self) -> String {
-        "candle_body".to_string()
+    fn key(&self) -> &str {
+        "candle_body"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -366,8 +366,8 @@ impl IndicatorRef for CandleBody {
 pub struct IsBullish;
 
 impl IndicatorRef for IsBullish {
-    fn key(&self) -> String {
-        "is_bullish".to_string()
+    fn key(&self) -> &str {
+        "is_bullish"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -392,8 +392,8 @@ impl IndicatorRef for IsBullish {
 pub struct IsBearish;
 
 impl IndicatorRef for IsBearish {
-    fn key(&self) -> String {
-        "is_bearish".to_string()
+    fn key(&self) -> &str {
+        "is_bearish"
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -542,15 +542,16 @@ pub fn is_bearish() -> IsBearish {
 /// // High volume breakout (volume > 1.5x average)
 /// let high_volume = relative_volume(20).above(1.5);
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct RelativeVolume {
     /// Number of periods for volume average
     pub period: usize,
+    key: String,
 }
 
 impl IndicatorRef for RelativeVolume {
-    fn key(&self) -> String {
-        format!("relative_volume_{}", self.period)
+    fn key(&self) -> &str {
+        &self.key
     }
 
     fn required_indicators(&self) -> Vec<(String, Indicator)> {
@@ -620,7 +621,10 @@ impl IndicatorRef for RelativeVolume {
 /// ```
 #[inline]
 pub fn relative_volume(period: usize) -> RelativeVolume {
-    RelativeVolume { period }
+    RelativeVolume {
+        period,
+        key: format!("relative_volume_{period}"),
+    }
 }
 
 #[cfg(test)]

@@ -96,31 +96,39 @@ pub(crate) async fn fetch_with_fields(
         include_logo
     );
 
-    // Build parameters
-    let mut params = vec![
-        ("symbols", symbols.join(",")),
-        ("formatted", formatted.to_string()),
+    // Get client config for lang and region (read once)
+    let config = client.config();
+
+    // Build parameters — static string literals avoid per-call allocations
+    let mut params: Vec<(&str, std::borrow::Cow<str>)> = vec![
+        ("symbols", symbols.join(",").into()),
+        (
+            "formatted",
+            if formatted {
+                "true".into()
+            } else {
+                "false".into()
+            },
+        ),
     ];
 
     // Add fields if specified
     if let Some(field_list) = fields {
-        params.push(("fields", field_list.join(",")));
+        params.push(("fields", field_list.join(",").into()));
     }
 
     // Add logo parameters if requested
     if include_logo {
-        params.push(("imgHeights", "50".to_string()));
-        params.push(("imgWidths", "50".to_string()));
-        params.push(("imgLabels", "logoUrl".to_string()));
+        params.push(("imgHeights", "50".into()));
+        params.push(("imgWidths", "50".into()));
+        params.push(("imgLabels", "logoUrl".into()));
     }
 
     // Add overnight price support
-    params.push(("overnightPrice", "true".to_string()));
+    params.push(("overnightPrice", "true".into()));
 
-    // Get client config for lang and region
-    let config = client.config();
-    params.push(("lang", config.lang.clone()));
-    params.push(("region", config.region.clone()));
+    params.push(("lang", (&*config.lang).into()));
+    params.push(("region", (&*config.region).into()));
 
     let response = client.request_with_params(api::QUOTES, &params).await?;
 

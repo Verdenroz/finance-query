@@ -1,6 +1,6 @@
 //! Awesome Oscillator (AO) indicator.
 
-use super::{IndicatorError, Result, sma::sma};
+use super::{IndicatorError, Result, sma::sma_raw};
 
 /// Calculate Awesome Oscillator (AO).
 ///
@@ -58,17 +58,15 @@ pub fn awesome_oscillator(
         .map(|(h, l)| (h + l) / 2.0)
         .collect();
 
-    let sma_fast = sma(&median_prices, fast);
-    let sma_slow = sma(&median_prices, slow);
+    let fast_raw = sma_raw(&median_prices, fast); // len = N-(fast-1), k → orig k+(fast-1)
+    let slow_raw = sma_raw(&median_prices, slow); // len = N-(slow-1), k → orig k+(slow-1)
+    let shift = slow - fast; // fast_raw[k+shift] aligns with slow_raw[k] at orig k+(slow-1)
+    let slow_off = slow - 1;
 
-    let result = sma_fast
-        .into_iter()
-        .zip(sma_slow)
-        .map(|(f, s)| match (f, s) {
-            (Some(fv), Some(sv)) => Some(fv - sv),
-            _ => None,
-        })
-        .collect();
+    let mut result = vec![None; len];
+    for (k, &sv) in slow_raw.iter().enumerate() {
+        result[k + slow_off] = Some(fast_raw[k + shift] - sv);
+    }
 
     Ok(result)
 }

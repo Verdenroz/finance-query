@@ -1,6 +1,6 @@
 //! Bollinger Bands indicator.
 
-use super::{IndicatorError, Result, sma::sma};
+use super::{IndicatorError, Result};
 use serde::{Deserialize, Serialize};
 
 /// Bollinger Bands result containing upper, middle, and lower bands.
@@ -64,30 +64,35 @@ pub fn bollinger_bands(
         });
     }
 
-    // Calculate middle band (SMA)
-    let middle = sma(data, period);
+    // O(N) computation using running sum and sum-of-squares (no per-window iteration):
+    // mean = sum_x / period
+    // variance = sum_x2 / period - mean²   (Var = E[X²] - E[X]²)
+    let period_f = period as f64;
+    let mut sum_x: f64 = data[..period].iter().sum();
+    let mut sum_x2: f64 = data[..period].iter().map(|&x| x * x).sum();
 
-    let mut upper = Vec::with_capacity(data.len());
-    let mut lower = Vec::with_capacity(data.len());
+    let mut upper = vec![None; data.len()];
+    let mut middle = vec![None; data.len()];
+    let mut lower = vec![None; data.len()];
 
-    // Calculate upper and lower bands
-    for i in 0..data.len() {
-        if i + 1 < period {
-            upper.push(None);
-            lower.push(None);
-        } else {
-            // Calculate standard deviation for this window
-            let window = &data[i + 1 - period..=i];
-            let mean = middle[i].unwrap(); // We know this exists because i >= period - 1
+    let emit = |sum_x: f64, sum_x2: f64| -> (f64, f64) {
+        let mean = sum_x / period_f;
+        let variance = (sum_x2 / period_f - mean * mean).max(0.0);
+        (mean, variance.sqrt())
+    };
 
-            let variance: f64 =
-                window.iter().map(|&x| (x - mean).powi(2)).sum::<f64>() / period as f64;
+    let (mean, std_dev) = emit(sum_x, sum_x2);
+    middle[period - 1] = Some(mean);
+    upper[period - 1] = Some(mean + std_dev_multiplier * std_dev);
+    lower[period - 1] = Some(mean - std_dev_multiplier * std_dev);
 
-            let std_dev = variance.sqrt();
-
-            upper.push(Some(mean + std_dev_multiplier * std_dev));
-            lower.push(Some(mean - std_dev_multiplier * std_dev));
-        }
+    for i in period..data.len() {
+        sum_x += data[i] - data[i - period];
+        sum_x2 += data[i] * data[i] - data[i - period] * data[i - period];
+        let (mean, std_dev) = emit(sum_x, sum_x2);
+        middle[i] = Some(mean);
+        upper[i] = Some(mean + std_dev_multiplier * std_dev);
+        lower[i] = Some(mean - std_dev_multiplier * std_dev);
     }
 
     Ok(BollingerBands {

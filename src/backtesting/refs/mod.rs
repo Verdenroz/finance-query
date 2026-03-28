@@ -50,20 +50,20 @@ use super::strategy::StrategyContext;
 /// }
 ///
 /// impl IndicatorRef for MyCustomRef {
-///     fn key(&self) -> String {
-///         format!("my_custom_{}", self.period)
+///     fn key(&self) -> &str {
+///         "my_custom_14" // pre-computed at construction time
 ///     }
 ///
 ///     fn required_indicators(&self) -> Vec<(String, Indicator)> {
-///         vec![(self.key(), Indicator::Sma(self.period))]
+///         vec![(self.key().to_string(), Indicator::Sma(self.period))]
 ///     }
 ///
 ///     fn value(&self, ctx: &StrategyContext) -> Option<f64> {
-///         ctx.indicator(&self.key())
+///         ctx.indicator(self.key())
 ///     }
 ///
 ///     fn prev_value(&self, ctx: &StrategyContext) -> Option<f64> {
-///         ctx.indicator_prev(&self.key())
+///         ctx.indicator_prev(self.key())
 ///     }
 /// }
 /// ```
@@ -72,7 +72,7 @@ pub trait IndicatorRef: Clone + Send + Sync + 'static {
     ///
     /// This key is used to look up pre-computed indicator values
     /// in the `StrategyContext::indicators` map.
-    fn key(&self) -> String;
+    fn key(&self) -> &str;
 
     /// Required indicators to compute this reference.
     ///

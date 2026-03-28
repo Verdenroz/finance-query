@@ -6,10 +6,11 @@ use prost::Message;
 use serde::{Deserialize, Serialize};
 
 /// Quote type enumeration
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[allow(missing_docs)]
-#[derive(Default)]
 pub enum QuoteType {
     #[default]
     None,
@@ -59,10 +60,11 @@ impl From<i32> for QuoteType {
 }
 
 /// Option type enumeration
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[allow(missing_docs)]
-#[derive(Default)]
 pub enum OptionType {
     #[default]
     Call,
@@ -80,10 +82,11 @@ impl From<i32> for OptionType {
 }
 
 /// Market hours type enumeration
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(
+    Clone, Copy, Debug, Default, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize,
+)]
 #[serde(rename_all = "SCREAMING_SNAKE_CASE")]
 #[allow(missing_docs)]
-#[derive(Default)]
 pub enum MarketHoursType {
     #[default]
     PreMarket,
