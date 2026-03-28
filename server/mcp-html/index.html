@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Finance Query — MCP Tools Reference</title>
+  <style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  background: #0d1117;
+  color: #e6edf3;
+  display: flex;
+  height: 100vh;
+  overflow: hidden;
+}
+a { color: #58a6ff; text-decoration: none; }
+a:hover { text-decoration: underline; }
+code {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 0.85em;
+}
+#sidebar {
+  width: 240px;
+  min-width: 240px;
+  background: #161b22;
+  border-right: 1px solid #30363d;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.sidebar-header {
+  padding: 18px 16px 12px;
+  border-bottom: 1px solid #30363d;
+  flex-shrink: 0;
+}
+.sidebar-logo {
+  font-size: 1em;
+  font-weight: 700;
+  color: #e6edf3;
+  letter-spacing: -0.01em;
+}
+.sidebar-meta {
+  font-size: 0.75em;
+  color: #8b949e;
+  margin-top: 2px;
+}
+nav {
+  overflow-y: auto;
+  flex: 1;
+  padding: 8px 0 20px;
+}
+.nav-group { margin-bottom: 2px; }
+.nav-group-title {
+  padding: 8px 16px 3px;
+  font-size: 0.68em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #8b949e;
+}
+.nav-item {
+  display: block;
+  padding: 3px 16px 3px 22px;
+  color: #c9d1d9;
+  font-size: 0.8em;
+  font-family: "SFMono-Regular", Consolas, monospace;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  border-left: 2px solid transparent;
+  margin-left: 0;
+}
+.nav-item:hover { color: #58a6ff; text-decoration: none; background: rgba(88,166,255,0.06); }
+.nav-item.active { color: #58a6ff; border-left-color: #58a6ff; background: rgba(88,166,255,0.08); }
+#main {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 40px 60px;
+}
+.section-label {
+  font-size: 0.68em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #8b949e;
+  border-bottom: 1px solid #21262d;
+  padding-bottom: 6px;
+  margin: 28px 0 12px;
+}
+.section-label:first-child { margin-top: 0; }
+.tool-card {
+  background: #161b22;
+  border: 1px solid #30363d;
+  border-radius: 8px;
+  padding: 18px 22px;
+  margin-bottom: 10px;
+  scroll-margin-top: 16px;
+  transition: border-color 0.15s;
+}
+.tool-card:target { border-color: #388bfd; }
+.tool-name {
+  font-family: "SFMono-Regular", Consolas, monospace;
+  font-size: 1em;
+  font-weight: 600;
+  color: #79c0ff;
+  margin-bottom: 6px;
+}
+.tool-desc {
+  color: #c9d1d9;
+  font-size: 0.88em;
+  margin-bottom: 14px;
+  line-height: 1.55;
+}
+table.params {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.83em;
+}
+table.params th {
+  text-align: left;
+  padding: 5px 12px;
+  font-size: 0.72em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #8b949e;
+  border-bottom: 1px solid #30363d;
+}
+table.params td {
+  padding: 7px 12px;
+  border-bottom: 1px solid #21262d;
+  vertical-align: top;
+}
+table.params tr:last-child td { border-bottom: none; }
+.p-name { color: #e6edf3; font-weight: 500; }
+.p-type { color: #d2a8ff; }
+.p-desc { color: #c9d1d9; line-height: 1.5; }
+.badge {
+  display: inline-block;
+  font-size: 0.65em;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  margin-left: 5px;
+  vertical-align: middle;
+  font-family: -apple-system, sans-serif;
+  letter-spacing: 0.02em;
+}
+.req { background: rgba(248,81,73,0.15); color: #f85149; }
+.opt { background: rgba(63,185,80,0.1); color: #56d364; }
+.no-params { color: #8b949e; font-size: 0.83em; font-style: italic; }
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #484f58; }
+</style>
+</head>
+<body>
+<div id="sidebar">
+  <div class="sidebar-header">
+    <div class="sidebar-logo">Finance Query MCP</div>
+    <div class="sidebar-meta">36 tools</div>
+  </div>
+  <nav><div class="nav-group"><div class="nav-group-title">Quotes & Charts</div><a href="#get_quote" class="nav-item">get_quote</a><a href="#get_quotes" class="nav-item">get_quotes</a><a href="#get_chart" class="nav-item">get_chart</a><a href="#get_charts" class="nav-item">get_charts</a><a href="#get_spark" class="nav-item">get_spark</a><a href="#get_recommendations" class="nav-item">get_recommendations</a><a href="#get_splits" class="nav-item">get_splits</a></div><div class="nav-group"><div class="nav-group-title">Financials</div><a href="#get_financials" class="nav-item">get_financials</a><a href="#get_batch_financials" class="nav-item">get_batch_financials</a></div><div class="nav-group"><div class="nav-group-title">Indicators</div><a href="#get_indicators" class="nav-item">get_indicators</a><a href="#get_batch_indicators" class="nav-item">get_batch_indicators</a></div><div class="nav-group"><div class="nav-group-title">Dividends</div><a href="#get_dividends" class="nav-item">get_dividends</a><a href="#get_batch_dividends" class="nav-item">get_batch_dividends</a></div><div class="nav-group"><div class="nav-group-title">Options</div><a href="#get_options" class="nav-item">get_options</a></div><div class="nav-group"><div class="nav-group-title">Market</div><a href="#get_market_summary" class="nav-item">get_market_summary</a><a href="#get_fear_and_greed" class="nav-item">get_fear_and_greed</a><a href="#get_trending" class="nav-item">get_trending</a><a href="#get_indices" class="nav-item">get_indices</a><a href="#get_market_hours" class="nav-item">get_market_hours</a><a href="#get_sector" class="nav-item">get_sector</a><a href="#get_industry" class="nav-item">get_industry</a></div><div class="nav-group"><div class="nav-group-title">Discovery</div><a href="#search" class="nav-item">search</a><a href="#lookup" class="nav-item">lookup</a><a href="#screener" class="nav-item">screener</a></div><div class="nav-group"><div class="nav-group-title">News & Feeds</div><a href="#get_news" class="nav-item">get_news</a><a href="#get_feeds" class="nav-item">get_feeds</a></div><div class="nav-group"><div class="nav-group-title">Analysis</div><a href="#get_holders" class="nav-item">get_holders</a><a href="#get_analysis" class="nav-item">get_analysis</a></div><div class="nav-group"><div class="nav-group-title">Risk</div><a href="#get_risk" class="nav-item">get_risk</a></div><div class="nav-group"><div class="nav-group-title">Crypto</div><a href="#get_crypto_coins" class="nav-item">get_crypto_coins</a></div><div class="nav-group"><div class="nav-group-title">FRED & Treasury</div><a href="#get_fred_series" class="nav-item">get_fred_series</a><a href="#get_treasury_yields" class="nav-item">get_treasury_yields</a></div><div class="nav-group"><div class="nav-group-title">EDGAR</div><a href="#get_edgar_facts" class="nav-item">get_edgar_facts</a><a href="#get_edgar_submissions" class="nav-item">get_edgar_submissions</a><a href="#get_edgar_search" class="nav-item">get_edgar_search</a></div><div class="nav-group"><div class="nav-group-title">Transcripts</div><a href="#get_transcripts" class="nav-item">get_transcripts</a></div></nav>
+</div>
+<div id="main"><div class="section-label">Quotes & Charts</div><div id="get_quote" class="tool-card"><div class="tool-name">get_quote</div><div class="tool-desc">Get current quote and company data for a stock symbol (price, market cap, PE ratio, 52-week range, etc.)</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol (e.g., "AAPL", "MSFT", "TSLA")</td></tr></tbody></table></div><div id="get_quotes" class="tool-card"><div class="tool-name">get_quotes</div><div class="tool-desc">Get current quotes for multiple stock symbols in one request.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">symbols</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOG")</td></tr></tbody></table></div><div id="get_chart" class="tool-card"><div class="tool-name">get_chart</div><div class="tool-desc">Get historical OHLCV candlestick chart data for a symbol.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">end</code><span class="badge opt">optional</span></td><td><code class="p-type">['integer', 'null']</code></td><td class="p-desc">End date as Unix timestamp (seconds). Defaults to now when `start` is set.</td></tr><tr><td><code class="p-name">interval</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)</td></tr><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo). Ignored when `start` is set.</td></tr><tr><td><code class="p-name">start</code><span class="badge opt">optional</span></td><td><code class="p-type">['integer', 'null']</code></td><td class="p-desc">Start date as Unix timestamp (seconds). When provided, overrides `range`.</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div id="get_charts" class="tool-card"><div class="tool-name">get_charts</div><div class="tool-desc">Get historical OHLCV candlestick data for multiple symbols in one request. Use for portfolio analysis and cross-symbol comparison.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">interval</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)</td></tr><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)</td></tr><tr><td><code class="p-name">symbols</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOG")</td></tr></tbody></table></div><div id="get_spark" class="tool-card"><div class="tool-name">get_spark</div><div class="tool-desc">Get lightweight close-price sparklines for multiple symbols. Faster and smaller than get_charts — use when you only need price direction/trend across many symbols.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">interval</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)</td></tr><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)</td></tr><tr><td><code class="p-name">symbols</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOG")</td></tr></tbody></table></div><div id="get_recommendations" class="tool-card"><div class="tool-name">get_recommendations</div><div class="tool-desc">Get similar stock recommendations and analyst ratings for a symbol.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">limit</code><span class="badge opt">optional</span></td><td><code class="p-type">['integer', 'null']</code></td><td class="p-desc">Maximum number of recommendations to return (default: 5)</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div id="get_splits" class="tool-card"><div class="tool-name">get_splits</div><div class="tool-desc">Get historical stock split history for a symbol.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1y|2y|5y|10y|max (default: max)</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div class="section-label">Financials</div><div id="get_financials" class="tool-card"><div class="tool-name">get_financials</div><div class="tool-desc">Get income statement, balance sheet, or cash flow statement for a symbol.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">frequency</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Reporting frequency: annual | quarterly (default: annual)</td></tr><tr><td><code class="p-name">statement</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Statement type: income | balance | cashflow</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div id="get_batch_financials" class="tool-card"><div class="tool-name">get_batch_financials</div><div class="tool-desc">Get financial statements for multiple symbols in one request. Use for comparing fundamentals across companies.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">frequency</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Reporting frequency: annual | quarterly (default: annual)</td></tr><tr><td><code class="p-name">statement</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Statement type: income | balance | cashflow</td></tr><tr><td><code class="p-name">symbols</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOGL")</td></tr></tbody></table></div><div class="section-label">Indicators</div><div id="get_indicators" class="tool-card"><div class="tool-name">get_indicators</div><div class="tool-desc">Get all 42 technical analysis indicators (SMA, EMA, RSI, MACD, Bollinger Bands, Ichimoku, etc.) for a symbol.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">interval</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Candle interval: 1d|1wk|1mo (default: 1d)</td></tr><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1mo|3mo|6mo|1y|2y|5y (default: 1y)</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div id="get_batch_indicators" class="tool-card"><div class="tool-name">get_batch_indicators</div><div class="tool-desc">Get all technical indicators for multiple symbols in one request. Use for portfolio-wide technical screening.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">interval</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)</td></tr><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)</td></tr><tr><td><code class="p-name">symbols</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOG")</td></tr></tbody></table></div><div class="section-label">Dividends</div><div id="get_dividends" class="tool-card"><div class="tool-name">get_dividends</div><div class="tool-desc">Get dividend history and analytics (CAGR, average payment, payout count) for a dividend-paying stock.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1y|2y|5y|10y|max (default: max)</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div id="get_batch_dividends" class="tool-card"><div class="tool-name">get_batch_dividends</div><div class="tool-desc">Get dividend history for multiple symbols in one request. Use for portfolio income analysis.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1y|2y|5y|10y|max (default: 1y)</td></tr><tr><td><code class="p-name">symbols</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Comma-separated list of ticker symbols (e.g., "AAPL,KO,JNJ")</td></tr></tbody></table></div><div class="section-label">Options</div><div id="get_options" class="tool-card"><div class="tool-name">get_options</div><div class="tool-desc">Get the options chain for a symbol. Provide an expiration timestamp to get a specific expiry, or omit for the nearest expiration.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">expiration</code><span class="badge opt">optional</span></td><td><code class="p-type">['integer', 'null']</code></td><td class="p-desc">Expiration date as Unix timestamp in seconds (optional; defaults to nearest expiration)</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div class="section-label">Market</div><div id="get_market_summary" class="tool-card"><div class="tool-name">get_market_summary</div><div class="tool-desc">Get market overview with major indices and currencies for a region.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">region</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)</td></tr></tbody></table></div><div id="get_fear_and_greed" class="tool-card"><div class="tool-name">get_fear_and_greed</div><div class="tool-desc">Get the CNN Fear & Greed Index — market sentiment from extreme fear (0) to extreme greed (100).</div><p class="no-params">No parameters required.</p></div><div id="get_trending" class="tool-card"><div class="tool-name">get_trending</div><div class="tool-desc">Get currently trending stock tickers for a region.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">region</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)</td></tr></tbody></table></div><div id="get_indices" class="tool-card"><div class="tool-name">get_indices</div><div class="tool-desc">Get world market indices (S&P 500, DAX, Nikkei, etc.), optionally filtered by region.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">region</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Region: americas|europe|asia-pacific|middle-east-africa|currencies (default: all)</td></tr></tbody></table></div><div id="get_market_hours" class="tool-card"><div class="tool-name">get_market_hours</div><div class="tool-desc">Get current market hours and open/closed status for a region.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">region</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)</td></tr></tbody></table></div><div id="get_sector" class="tool-card"><div class="tool-name">get_sector</div><div class="tool-desc">Get comprehensive sector data (overview, performance, top companies, ETFs) for one of the 11 GICS sectors.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">sector</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Sector slug: technology|financial-services|consumer-cyclical|communication-services|
+healthcare|industrials|consumer-defensive|energy|basic-materials|real-estate|utilities</td></tr></tbody></table></div><div id="get_industry" class="tool-card"><div class="tool-name">get_industry</div><div class="tool-desc">Get comprehensive industry data (overview, performance, top companies) for a specific industry slug.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">industry</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Industry slug (e.g., semiconductors, biotechnology, banks-diversified)</td></tr></tbody></table></div><div class="section-label">Discovery</div><div id="search" class="tool-card"><div class="tool-name">search</div><div class="tool-desc">Search for stocks, ETFs, and companies by name or ticker symbol.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">query</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Search query string (company name or ticker symbol)</td></tr></tbody></table></div><div id="lookup" class="tool-card"><div class="tool-name">lookup</div><div class="tool-desc">Discover tickers filtered by type (equity, ETF, mutual fund, index, future, currency, cryptocurrency).</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">query</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Search query (company name or ticker symbol)</td></tr><tr><td><code class="p-name">query_type</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Filter by type: equity|etf|mutualfund|index|future|currency|cryptocurrency (default: all)</td></tr></tbody></table></div><div id="screener" class="tool-card"><div class="tool-name">screener</div><div class="tool-desc">Get results from a predefined stock screener (e.g., most-actives, day-gainers, undervalued-growth-stocks).</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">count</code><span class="badge opt">optional</span></td><td><code class="p-type">['integer', 'null']</code></td><td class="p-desc">Number of results to return (default: 25, max: 250)</td></tr><tr><td><code class="p-name">screener_type</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Screener type: most-actives | day-gainers | day-losers | growth-technology-stocks |
+undervalued-growth-stocks | undervalued-large-caps | aggressive-small-caps |
+small-cap-gainers | most-shorted-stocks | high-yield-bond | top-mutual-funds |
+conservative-foreign-funds | portfolio-anchors | solid-large-growth-funds |
+solid-midcap-growth-funds</td></tr></tbody></table></div><div class="section-label">News & Feeds</div><div id="get_news" class="tool-card"><div class="tool-name">get_news</div><div class="tool-desc">Get recent news. If a symbol is provided, returns news for that stock; otherwise returns general market news.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">symbol</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Stock ticker symbol (optional; omit for general market news)</td></tr></tbody></table></div><div id="get_feeds" class="tool-card"><div class="tool-name">get_feeds</div><div class="tool-desc">Fetch RSS/Atom news from financial publishers (Bloomberg, WSJ, MarketWatch, FT, SEC, etc.).</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">sources</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Comma-separated feed sources: federal-reserve|sec|marketwatch|cnbc|bloomberg|ft|nyt|
+guardian|investing|bea|ecb|cfpb|wsj|fortune|businesswire|coindesk|cointelegraph|
+techcrunch|hackernews|oilprice|calculatedrisk|scmp|nikkei|boe|venturebeat|yc|
+economist|financialpost|ftlex|ritholtz
+(default: marketwatch, bloomberg, wsj, fortune)</td></tr></tbody></table></div><div class="section-label">Analysis</div><div id="get_holders" class="tool-card"><div class="tool-name">get_holders</div><div class="tool-desc">Get ownership data for a stock: major holders, institutional/fund ownership, or insider activity.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">holder_type</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Holder type: major | institutional | mutualfund | insider-transactions | insider-purchases | insider-roster</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div id="get_analysis" class="tool-card"><div class="tool-name">get_analysis</div><div class="tool-desc">Get analyst data for a stock: recommendation trends, upgrades/downgrades, earnings estimates, or earnings history.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">analysis_type</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Analysis type: recommendations | upgrades-downgrades | earnings-estimate | earnings-history</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div class="section-label">Risk</div><div id="get_risk" class="tool-card"><div class="tool-name">get_risk</div><div class="tool-desc">Get risk analytics: VaR (95/99%), Sharpe/Sortino/Calmar ratios, beta, and maximum drawdown for a symbol.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">benchmark</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Benchmark symbol for beta calculation (e.g., "SPY")</td></tr><tr><td><code class="p-name">interval</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Candle interval: 1d|1wk (default: 1d)</td></tr><tr><td><code class="p-name">range</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Time range: 1y|2y|5y (default: 1y)</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div><div class="section-label">Crypto</div><div id="get_crypto_coins" class="tool-card"><div class="tool-name">get_crypto_coins</div><div class="tool-desc">Get top cryptocurrency coins by market cap from CoinGecko (no API key required).</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">count</code><span class="badge opt">optional</span></td><td><code class="p-type">['integer', 'null']</code></td><td class="p-desc">Number of top coins to return (default: 50, max: 250)</td></tr><tr><td><code class="p-name">vs_currency</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Quote currency (default: usd)</td></tr></tbody></table></div><div class="section-label">FRED & Treasury</div><div id="get_fred_series" class="tool-card"><div class="tool-name">get_fred_series</div><div class="tool-desc">Get FRED macroeconomic time series data (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE). Requires FRED_API_KEY env var.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">id</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">FRED series ID (e.g., "FEDFUNDS", "CPIAUCSL", "GDP", "UNRATE")</td></tr></tbody></table></div><div id="get_treasury_yields" class="tool-card"><div class="tool-name">get_treasury_yields</div><div class="tool-desc">Get US Treasury yield curve data (1m through 30y) for a given year. No API key required.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">year</code><span class="badge opt">optional</span></td><td><code class="p-type">['integer', 'null']</code></td><td class="p-desc">Year to fetch yield curve data for (default: current year)</td></tr></tbody></table></div><div class="section-label">EDGAR</div><div id="get_edgar_facts" class="tool-card"><div class="tool-name">get_edgar_facts</div><div class="tool-desc">Get SEC EDGAR XBRL structured financial data (all reported accounting concepts) for a company. Requires EDGAR_EMAIL env var.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol (e.g., "AAPL", "MSFT", "TSLA")</td></tr></tbody></table></div><div id="get_edgar_submissions" class="tool-card"><div class="tool-name">get_edgar_submissions</div><div class="tool-desc">Get SEC filing history and company metadata from EDGAR (up to 1000 most recent filings). Requires EDGAR_EMAIL env var.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol (e.g., "AAPL", "MSFT", "TSLA")</td></tr></tbody></table></div><div id="get_edgar_search" class="tool-card"><div class="tool-name">get_edgar_search</div><div class="tool-desc">Full-text search across SEC EDGAR filings with optional form type and date filters. Requires EDGAR_EMAIL env var.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">end_date</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">End date filter in YYYY-MM-DD format</td></tr><tr><td><code class="p-name">forms</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Comma-separated form types to filter (e.g., "10-K,10-Q,8-K")</td></tr><tr><td><code class="p-name">query</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Search query (keywords in filing text)</td></tr><tr><td><code class="p-name">start_date</code><span class="badge opt">optional</span></td><td><code class="p-type">['string', 'null']</code></td><td class="p-desc">Start date filter in YYYY-MM-DD format</td></tr></tbody></table></div><div class="section-label">Transcripts</div><div id="get_transcripts" class="tool-card"><div class="tool-name">get_transcripts</div><div class="tool-desc">Get earnings call transcripts for a company. Returns the full text of earnings presentations.</div><table class="params"><thead><tr><th>Parameter</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td><code class="p-name">limit</code><span class="badge opt">optional</span></td><td><code class="p-type">['integer', 'null']</code></td><td class="p-desc">Maximum number of transcripts to return (default: all)</td></tr><tr><td><code class="p-name">symbol</code><span class="badge req">required</span></td><td><code class="p-type">string</code></td><td class="p-desc">Stock ticker symbol</td></tr></tbody></table></div></div>
+<script>
+const navItems = document.querySelectorAll('.nav-item');
+const cards = document.querySelectorAll('.tool-card');
+const main = document.getElementById('main');
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      navItems.forEach(a => a.classList.remove('active'));
+      const link = document.querySelector(`.nav-item[href="#${e.target.id}"]`);
+      if (link) {
+        link.classList.add('active');
+        link.scrollIntoView({ block: 'nearest' });
+      }
+    }
+  });
+}, { root: main, threshold: 0.25 });
+
+cards.forEach(c => io.observe(c));
+</script>
+</body>
+</html>
