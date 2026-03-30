@@ -107,6 +107,12 @@ fred = ["dep:csv"]
 crypto = []
 # Enable RSS/Atom news feed aggregation
 rss = ["dep:feed-rs"]
+# Enable Alpha Vantage financial data API
+alphavantage = []
+# Enable Polygon.io financial data API
+polygon = []
+# Enable Financial Modeling Prep (FMP) financial data API
+fmp = []
 # Enable standalone risk analytics: VaR, Sharpe/Sortino/Calmar ratios, beta, drawdown
 risk = ["indicators"]
 

@@ -88,6 +88,9 @@ pub mod crypto {
 #[cfg(feature = "crypto")]
 mod coingecko;
 
+#[cfg(any(feature = "alphavantage", feature = "polygon", feature = "fmp"))]
+pub mod adapters;
+
 #[cfg(feature = "rss")]
 pub mod feeds;
 
