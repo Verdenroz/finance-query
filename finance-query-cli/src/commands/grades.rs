@@ -74,12 +74,8 @@ pub async fn execute(args: GradesArgs) -> Result<()> {
     }
 
     if grades.is_empty() {
-        let msg = if args.action.is_some() {
-            format!(
-                "No {} grade changes found for {}",
-                args.action.as_ref().unwrap(),
-                args.symbol
-            )
+        let msg = if let Some(action) = &args.action {
+            format!("No {} grade changes found for {}", action, args.symbol)
         } else {
             format!("No analyst grade history found for {}", args.symbol)
         };

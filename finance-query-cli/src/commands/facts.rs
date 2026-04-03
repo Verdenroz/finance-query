@@ -77,11 +77,10 @@ pub async fn execute(args: FactsArgs) -> Result<()> {
     );
 
     if rows.is_empty() {
-        let msg = if args.concept.is_some() {
+        let msg = if let Some(concept) = &args.concept {
             format!(
                 "No XBRL facts found for concept '{}' in {}",
-                args.concept.unwrap(),
-                args.symbol
+                concept, args.symbol
             )
         } else {
             format!("No XBRL facts found for {}", args.symbol)
