@@ -116,7 +116,5 @@ pub async fn risk_factors(params: &[(&str, &str)]) -> Result<PaginatedResponse<R
 /// Fetch risk factor categories.
 pub async fn risk_categories() -> Result<PaginatedResponse<RiskCategory>> {
     let client = build_client()?;
-    client
-        .get("/v1/reference/sec/risk-categories", &[])
-        .await
+    client.get("/v1/reference/sec/risk-categories", &[]).await
 }

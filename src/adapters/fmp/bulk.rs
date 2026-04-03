@@ -55,10 +55,7 @@ pub async fn bulk_cash_flow(year: &str, period: &str) -> Result<Value> {
 pub async fn bulk_ratios(year: &str, period: &str) -> Result<Value> {
     let client = build_client()?;
     client
-        .get_raw(
-            "/api/v4/ratios-bulk",
-            &[("year", year), ("period", period)],
-        )
+        .get_raw("/api/v4/ratios-bulk", &[("year", year), ("period", period)])
         .await
 }
 

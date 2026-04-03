@@ -60,9 +60,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/symbol/available-forex-currency-pairs")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([

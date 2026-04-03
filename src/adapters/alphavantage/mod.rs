@@ -38,14 +38,14 @@
 mod client;
 pub mod models;
 
-mod core_stocks;
-mod options;
-mod intelligence;
-mod fundamentals;
-mod forex;
-mod crypto;
 mod commodities;
+mod core_stocks;
+mod crypto;
 mod economic_indicators;
+mod forex;
+mod fundamentals;
+mod intelligence;
+mod options;
 mod technical_indicators;
 
 use crate::error::{FinanceError, Result};
@@ -55,14 +55,14 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 // Re-export all public query functions
-pub use core_stocks::*;
-pub use options::*;
-pub use intelligence::*;
-pub use fundamentals::*;
-pub use forex::*;
-pub use crypto::*;
 pub use commodities::*;
+pub use core_stocks::*;
+pub use crypto::*;
 pub use economic_indicators::*;
+pub use forex::*;
+pub use fundamentals::*;
+pub use intelligence::*;
+pub use options::*;
 pub use technical_indicators::*;
 
 pub use models::*;

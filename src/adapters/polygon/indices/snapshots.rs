@@ -116,10 +116,7 @@ mod tests {
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
         let json = client
-            .get_raw(
-                "/v3/snapshot/indices",
-                &[("ticker.any_of", "I:SPX")],
-            )
+            .get_raw("/v3/snapshot/indices", &[("ticker.any_of", "I:SPX")])
             .await
             .unwrap();
 

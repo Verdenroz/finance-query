@@ -46,10 +46,8 @@ pub async fn options_aggregates(
         }
     }
 
-    let query_refs: Vec<(&str, &str)> = query_params
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect();
+    let query_refs: Vec<(&str, &str)> =
+        query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
     let json = client.get_raw(&path, &query_refs).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
@@ -197,9 +195,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v1/open-close/O:AAPL250117C00150000/2024-01-15")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(

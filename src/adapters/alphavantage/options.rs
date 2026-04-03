@@ -7,13 +7,12 @@ use super::models::*;
 
 /// Helper to parse options contracts from the response.
 fn parse_contracts(json: &serde_json::Value) -> Result<Vec<OptionContract>> {
-    let data = json
-        .get("data")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| FinanceError::ResponseStructureError {
+    let data = json.get("data").and_then(|v| v.as_array()).ok_or_else(|| {
+        FinanceError::ResponseStructureError {
             field: "data".to_string(),
             context: "Missing data array in options response".to_string(),
-        })?;
+        }
+    })?;
 
     Ok(data
         .iter()

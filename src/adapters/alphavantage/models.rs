@@ -7,7 +7,9 @@ use serde::{Deserialize, Deserializer, Serialize};
 /// Alpha Vantage returns numeric values as strings, and uses `"None"` or `"."`
 /// for missing data.
 #[allow(dead_code)]
-pub(crate) fn deserialize_optional_f64<'de, D>(deserializer: D) -> std::result::Result<Option<f64>, D::Error>
+pub(crate) fn deserialize_optional_f64<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<f64>, D::Error>
 where
     D: Deserializer<'de>,
 {
@@ -20,7 +22,9 @@ where
 
 /// Deserialize a string to `f64`, defaulting to `0.0` on failure.
 #[allow(dead_code)]
-pub(crate) fn deserialize_f64_from_str<'de, D>(deserializer: D) -> std::result::Result<f64, D::Error>
+pub(crate) fn deserialize_f64_from_str<'de, D>(
+    deserializer: D,
+) -> std::result::Result<f64, D::Error>
 where
     D: Deserializer<'de>,
 {

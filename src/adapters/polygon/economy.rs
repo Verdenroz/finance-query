@@ -36,9 +36,7 @@ pub async fn inflation_expectations(
 }
 
 /// Fetch labor market data (unemployment, participation, earnings, job openings).
-pub async fn labor_market(
-    params: &[(&str, &str)],
-) -> Result<PaginatedResponse<EconomicDataPoint>> {
+pub async fn labor_market(params: &[(&str, &str)]) -> Result<PaginatedResponse<EconomicDataPoint>> {
     let client = build_client()?;
     client
         .get("/v1/indicators/economy/labor-market", params)

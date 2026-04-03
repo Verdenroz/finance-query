@@ -431,9 +431,7 @@ pub async fn historical_dcf(
 /// Fetch company rating for a symbol.
 pub async fn company_rating(symbol: &str) -> Result<Vec<CompanyRating>> {
     let client = super::build_client()?;
-    client
-        .get(&format!("/api/v3/rating/{symbol}"), &[])
-        .await
+    client.get(&format!("/api/v3/rating/{symbol}"), &[]).await
 }
 
 /// Fetch historical ratings for a symbol.
@@ -518,9 +516,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/rating/AAPL")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([{
@@ -540,10 +539,7 @@ mod tests {
             .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let result: Vec<CompanyRating> = client
-            .get("/api/v3/rating/AAPL", &[])
-            .await
-            .unwrap();
+        let result: Vec<CompanyRating> = client.get("/api/v3/rating/AAPL", &[]).await.unwrap();
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].rating.as_deref(), Some("S"));

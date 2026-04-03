@@ -61,9 +61,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/stock/list")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([
@@ -90,10 +91,7 @@ mod tests {
             .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let result: Vec<StockListEntry> = client
-            .get("/api/v3/stock/list", &[])
-            .await
-            .unwrap();
+        let result: Vec<StockListEntry> = client.get("/api/v3/stock/list", &[]).await.unwrap();
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
         assert_eq!(result[0].type_.as_deref(), Some("stock"));

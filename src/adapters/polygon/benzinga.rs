@@ -160,11 +160,11 @@ pub struct FirmDetail {
 }
 
 /// Fetch analyst ratings.
-pub async fn analyst_ratings(
-    params: &[(&str, &str)],
-) -> Result<PaginatedResponse<AnalystRating>> {
+pub async fn analyst_ratings(params: &[(&str, &str)]) -> Result<PaginatedResponse<AnalystRating>> {
     let client = build_client()?;
-    client.get("/v2/reference/news/benzinga/analyst-ratings", params).await
+    client
+        .get("/v2/reference/news/benzinga/analyst-ratings", params)
+        .await
 }
 
 /// Fetch analyst insights.
@@ -172,23 +172,25 @@ pub async fn analyst_insights(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<AnalystInsight>> {
     let client = build_client()?;
-    client.get("/v2/reference/news/benzinga/analyst-insights", params).await
+    client
+        .get("/v2/reference/news/benzinga/analyst-insights", params)
+        .await
 }
 
 /// Fetch analyst details.
-pub async fn analyst_details(
-    params: &[(&str, &str)],
-) -> Result<PaginatedResponse<AnalystDetail>> {
+pub async fn analyst_details(params: &[(&str, &str)]) -> Result<PaginatedResponse<AnalystDetail>> {
     let client = build_client()?;
-    client.get("/v2/reference/news/benzinga/analyst-details", params).await
+    client
+        .get("/v2/reference/news/benzinga/analyst-details", params)
+        .await
 }
 
 /// Fetch bull/bear summaries.
-pub async fn bulls_bears(
-    params: &[(&str, &str)],
-) -> Result<PaginatedResponse<BullBear>> {
+pub async fn bulls_bears(params: &[(&str, &str)]) -> Result<PaginatedResponse<BullBear>> {
     let client = build_client()?;
-    client.get("/v2/reference/news/benzinga/bulls-bears-say", params).await
+    client
+        .get("/v2/reference/news/benzinga/bulls-bears-say", params)
+        .await
 }
 
 /// Fetch consensus ratings.
@@ -196,7 +198,9 @@ pub async fn consensus_ratings(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<ConsensusRating>> {
     let client = build_client()?;
-    client.get("/v2/reference/news/benzinga/consensus-ratings", params).await
+    client
+        .get("/v2/reference/news/benzinga/consensus-ratings", params)
+        .await
 }
 
 /// Fetch corporate guidance.
@@ -204,7 +208,9 @@ pub async fn corporate_guidance(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<CorporateGuidance>> {
     let client = build_client()?;
-    client.get("/v2/reference/news/benzinga/corporate-guidance", params).await
+    client
+        .get("/v2/reference/news/benzinga/corporate-guidance", params)
+        .await
 }
 
 /// Fetch earnings announcements.
@@ -212,13 +218,15 @@ pub async fn benzinga_earnings(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<EarningsAnnouncement>> {
     let client = build_client()?;
-    client.get("/v2/reference/news/benzinga/earnings", params).await
+    client
+        .get("/v2/reference/news/benzinga/earnings", params)
+        .await
 }
 
 /// Fetch firm details.
-pub async fn firm_details(
-    params: &[(&str, &str)],
-) -> Result<PaginatedResponse<FirmDetail>> {
+pub async fn firm_details(params: &[(&str, &str)]) -> Result<PaginatedResponse<FirmDetail>> {
     let client = build_client()?;
-    client.get("/v2/reference/news/benzinga/firm-details", params).await
+    client
+        .get("/v2/reference/news/benzinga/firm-details", params)
+        .await
 }

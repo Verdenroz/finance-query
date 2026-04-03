@@ -170,13 +170,11 @@ mod tests {
     async fn test_sic_codes_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock(
-                "GET",
-                "/api/v4/standard_industrial_classification_list",
-            )
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .mock("GET", "/api/v4/standard_industrial_classification_list")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([

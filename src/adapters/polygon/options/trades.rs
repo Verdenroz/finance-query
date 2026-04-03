@@ -53,9 +53,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v2/last/trade/O:AAPL250117C00150000")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -133,9 +134,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v3/quotes/O:AAPL250117C00150000")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(

@@ -129,9 +129,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v3/reference/futures/contracts")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -169,9 +170,6 @@ mod tests {
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].ticker.as_deref(), Some("ESZ4"));
-        assert_eq!(
-            results[0].name.as_deref(),
-            Some("E-mini S&P 500 Dec 2024")
-        );
+        assert_eq!(results[0].name.as_deref(), Some("E-mini S&P 500 Dec 2024"));
     }
 }

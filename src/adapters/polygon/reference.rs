@@ -304,7 +304,10 @@ mod tests {
             .create_async().await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let json = client.get_raw("/v3/reference/tickers/AAPL", &[]).await.unwrap();
+        let json = client
+            .get_raw("/v3/reference/tickers/AAPL", &[])
+            .await
+            .unwrap();
         let resp: TickerDetailsResponse = serde_json::from_value(json).unwrap();
         let details = resp.results.unwrap();
         assert_eq!(details.name.as_deref(), Some("Apple Inc."));
@@ -317,17 +320,22 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v1/marketstatus/now")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
-            .with_body(serde_json::json!({
-                "market": "open",
-                "earlyHours": false,
-                "afterHours": false,
-                "serverTime": "2024-01-15T12:00:00-05:00"
-            }).to_string())
-            .create_async().await;
+            .with_body(
+                serde_json::json!({
+                    "market": "open",
+                    "earlyHours": false,
+                    "afterHours": false,
+                    "serverTime": "2024-01-15T12:00:00-05:00"
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
         let json = client.get_raw("/v1/marketstatus/now", &[]).await.unwrap();

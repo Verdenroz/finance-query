@@ -46,10 +46,8 @@ pub async fn stock_aggregates(
         }
     }
 
-    let query_refs: Vec<(&str, &str)> = query_params
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect();
+    let query_refs: Vec<(&str, &str)> =
+        query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
     let json = client.get_raw(&path, &query_refs).await?;
     serde_json::from_value(json).map_err(|e| crate::error::FinanceError::ResponseStructureError {
@@ -82,10 +80,7 @@ pub async fn stock_previous_close(
 ///
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
-pub async fn stock_grouped_daily(
-    date: &str,
-    adjusted: Option<bool>,
-) -> Result<AggregateResponse> {
+pub async fn stock_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
     let client = build_client()?;
     let path = format!("/v2/aggs/grouped/locale/us/market/stocks/{}", date);
 
@@ -214,9 +209,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v1/open-close/AAPL/2024-01-15")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(

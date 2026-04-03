@@ -125,11 +125,7 @@ impl FmpClient {
     }
 
     /// GET and deserialize into `T` directly.
-    pub async fn get<T: DeserializeOwned>(
-        &self,
-        path: &str,
-        params: &[(&str, &str)],
-    ) -> Result<T> {
+    pub async fn get<T: DeserializeOwned>(&self, path: &str, params: &[(&str, &str)]) -> Result<T> {
         let json = self.get_raw(path, params).await?;
         serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
             field: "response".to_string(),

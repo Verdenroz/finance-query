@@ -107,9 +107,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/sp500_constituent")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([
@@ -130,10 +131,8 @@ mod tests {
             .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let result: Vec<IndexConstituent> = client
-            .get("/api/v3/sp500_constituent", &[])
-            .await
-            .unwrap();
+        let result: Vec<IndexConstituent> =
+            client.get("/api/v3/sp500_constituent", &[]).await.unwrap();
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
         assert_eq!(result[0].sector.as_deref(), Some("Information Technology"));

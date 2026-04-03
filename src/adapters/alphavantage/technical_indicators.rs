@@ -816,9 +816,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("function".into(), "BBANDS".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "BBANDS".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(

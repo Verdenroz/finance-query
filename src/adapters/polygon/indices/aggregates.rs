@@ -46,10 +46,8 @@ pub async fn index_aggregates(
         }
     }
 
-    let query_refs: Vec<(&str, &str)> = query_params
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect();
+    let query_refs: Vec<(&str, &str)> =
+        query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
     let json = client.get_raw(&path, &query_refs).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {

@@ -97,7 +97,7 @@ pub async fn stock_financials(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<FinancialResult>> {
     let client = build_client()?;
-    let path = format!("/vX/reference/financials");
+    let path = "/vX/reference/financials".to_string();
     let mut query: Vec<(&str, &str)> = vec![("ticker", ticker)];
     query.extend_from_slice(params);
     client.get(&path, &query).await
@@ -136,7 +136,7 @@ pub async fn stock_ratios(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<FinancialRatios>> {
     let client = build_client()?;
-    let path = format!("/vX/reference/financials/ratios");
+    let path = "/vX/reference/financials/ratios".to_string();
     let mut query: Vec<(&str, &str)> = vec![("ticker", ticker)];
     query.extend_from_slice(params);
     client.get(&path, &query).await
@@ -156,23 +156,28 @@ mod tests {
                 mockito::Matcher::UrlEncoded("ticker".into(), "AAPL".into()),
             ]))
             .with_status(200)
-            .with_body(serde_json::json!({
-                "status": "OK",
-                "request_id": "abc",
-                "results": [{
-                    "tickers": ["AAPL"],
-                    "company_name": "Apple Inc",
-                    "fiscal_period": "Q1",
-                    "fiscal_year": "2024",
-                    "filing_date": "2024-02-01"
-                }]
-            }).to_string())
-            .create_async().await;
+            .with_body(
+                serde_json::json!({
+                    "status": "OK",
+                    "request_id": "abc",
+                    "results": [{
+                        "tickers": ["AAPL"],
+                        "company_name": "Apple Inc",
+                        "fiscal_period": "Q1",
+                        "fiscal_year": "2024",
+                        "filing_date": "2024-02-01"
+                    }]
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
         let resp: PaginatedResponse<FinancialResult> = client
             .get("/vX/reference/financials", &[("ticker", "AAPL")])
-            .await.unwrap();
+            .await
+            .unwrap();
         let results = resp.results.unwrap();
         assert_eq!(results[0].company_name.as_deref(), Some("Apple Inc"));
     }

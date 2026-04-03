@@ -173,9 +173,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v3/snapshot/options/AAPL")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -256,13 +257,11 @@ mod tests {
     async fn test_options_contract_snapshot_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock(
-                "GET",
-                "/v3/snapshot/options/AAPL/O:AAPL250117C00150000",
-            )
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .mock("GET", "/v3/snapshot/options/AAPL/O:AAPL250117C00150000")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -299,10 +298,7 @@ mod tests {
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
         let json = client
-            .get_raw(
-                "/v3/snapshot/options/AAPL/O:AAPL250117C00150000",
-                &[],
-            )
+            .get_raw("/v3/snapshot/options/AAPL/O:AAPL250117C00150000", &[])
             .await
             .unwrap();
 

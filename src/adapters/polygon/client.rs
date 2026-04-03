@@ -99,24 +99,24 @@ impl PolygonClient {
     }
 
     fn check_body_error(json: &Value) -> Result<()> {
-        if let Some(status) = json.get("status").and_then(|v| v.as_str()) {
-            if status == "ERROR" || status == "NOT_FOUND" {
-                let msg = json
-                    .get("error")
-                    .or_else(|| json.get("message"))
-                    .and_then(|v| v.as_str())
-                    .unwrap_or("Unknown error");
-                if status == "NOT_FOUND" {
-                    return Err(FinanceError::SymbolNotFound {
-                        symbol: None,
-                        context: msg.to_string(),
-                    });
-                }
-                return Err(FinanceError::ExternalApiError {
-                    api: "Polygon".to_string(),
-                    status: 400,
+        if let Some(status) = json.get("status").and_then(|v| v.as_str())
+            && (status == "ERROR" || status == "NOT_FOUND")
+        {
+            let msg = json
+                .get("error")
+                .or_else(|| json.get("message"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("Unknown error");
+            if status == "NOT_FOUND" {
+                return Err(FinanceError::SymbolNotFound {
+                    symbol: None,
+                    context: msg.to_string(),
                 });
             }
+            return Err(FinanceError::ExternalApiError {
+                api: "Polygon".to_string(),
+                status: 400,
+            });
         }
         Ok(())
     }

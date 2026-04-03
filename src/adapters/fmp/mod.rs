@@ -29,18 +29,18 @@
 mod client;
 pub mod models;
 
-pub mod fundamentals;
-pub mod analysis;
-pub mod company;
-pub mod prices;
-pub mod crypto;
-pub mod forex;
-pub mod commodities;
-pub mod etf_mutual_funds;
-pub mod indexes;
-pub mod screener;
 pub mod advanced;
+pub mod analysis;
 pub mod bulk;
+pub mod commodities;
+pub mod company;
+pub mod crypto;
+pub mod etf_mutual_funds;
+pub mod forex;
+pub mod fundamentals;
+pub mod indexes;
+pub mod prices;
+pub mod screener;
 pub mod stock_list;
 
 use crate::error::{FinanceError, Result};
@@ -49,20 +49,20 @@ use client::FmpClientBuilder;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-pub use fundamentals::*;
-pub use analysis::*;
-pub use company::*;
-pub use prices::*;
-pub use crypto::*;
-pub use forex::*;
-pub use commodities::*;
-pub use etf_mutual_funds::*;
-pub use indexes::*;
-pub use screener::*;
 pub use advanced::*;
+pub use analysis::*;
 pub use bulk::*;
-pub use stock_list::*;
+pub use commodities::*;
+pub use company::*;
+pub use crypto::*;
+pub use etf_mutual_funds::*;
+pub use forex::*;
+pub use fundamentals::*;
+pub use indexes::*;
 pub use models::*;
+pub use prices::*;
+pub use screener::*;
+pub use stock_list::*;
 
 /// FMP default rate limit: 5 req/sec.
 const FMP_RATE_PER_SEC: f64 = 5.0;

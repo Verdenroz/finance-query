@@ -111,9 +111,7 @@ pub async fn etf_profiles(params: &[(&str, &str)]) -> Result<PaginatedResponse<E
 }
 
 /// Fetch ETF taxonomies.
-pub async fn etf_taxonomies(
-    params: &[(&str, &str)],
-) -> Result<PaginatedResponse<EtfTaxonomy>> {
+pub async fn etf_taxonomies(params: &[(&str, &str)]) -> Result<PaginatedResponse<EtfTaxonomy>> {
     let client = build_client()?;
     client.get("/v3/reference/etfs/taxonomies", params).await
 }

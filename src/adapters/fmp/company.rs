@@ -195,9 +195,7 @@ pub struct DelistedCompany {
 /// Fetch company profile for a symbol.
 pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfile>> {
     let client = super::build_client()?;
-    client
-        .get(&format!("/api/v3/profile/{symbol}"), &[])
-        .await
+    client.get(&format!("/api/v3/profile/{symbol}"), &[]).await
 }
 
 /// Fetch key executives for a symbol.
@@ -262,9 +260,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/profile/AAPL")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([{
@@ -290,10 +289,7 @@ mod tests {
             .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let result: Vec<CompanyProfile> = client
-            .get("/api/v3/profile/AAPL", &[])
-            .await
-            .unwrap();
+        let result: Vec<CompanyProfile> = client.get("/api/v3/profile/AAPL", &[]).await.unwrap();
 
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
@@ -307,9 +303,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/key-executives/AAPL")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([

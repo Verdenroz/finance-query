@@ -36,13 +36,12 @@ pub async fn news_sentiment(
 
     let json = client.get("NEWS_SENTIMENT", &params).await?;
 
-    let feed = json
-        .get("feed")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| FinanceError::ResponseStructureError {
+    let feed = json.get("feed").and_then(|v| v.as_array()).ok_or_else(|| {
+        FinanceError::ResponseStructureError {
             field: "feed".to_string(),
             context: "Missing feed array in news sentiment response".to_string(),
-        })?;
+        }
+    })?;
 
     Ok(feed
         .iter()
@@ -108,7 +107,10 @@ pub async fn news_sentiment(
 ///
 /// * `symbol` - Ticker symbol (e.g., `"AAPL"`)
 /// * `quarter` - Quarter identifier in `YYYYQN` format (e.g., `"2024Q1"`)
-pub async fn earnings_call_transcript(symbol: &str, quarter: &str) -> Result<EarningsCallTranscript> {
+pub async fn earnings_call_transcript(
+    symbol: &str,
+    quarter: &str,
+) -> Result<EarningsCallTranscript> {
     let client = build_client()?;
     let json = client
         .get(

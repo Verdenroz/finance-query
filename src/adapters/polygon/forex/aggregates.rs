@@ -46,10 +46,8 @@ pub async fn forex_aggregates(
         }
     }
 
-    let query_refs: Vec<(&str, &str)> = query_params
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect();
+    let query_refs: Vec<(&str, &str)> =
+        query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
     let json = client.get_raw(&path, &query_refs).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
@@ -83,10 +81,7 @@ pub async fn forex_previous_close(
 ///
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
-pub async fn forex_grouped_daily(
-    date: &str,
-    adjusted: Option<bool>,
-) -> Result<AggregateResponse> {
+pub async fn forex_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
     let client = build_client()?;
     let path = format!("/v2/aggs/grouped/locale/global/market/fx/{}", date);
 
@@ -217,10 +212,7 @@ mod tests {
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
         let json = client
-            .get_raw(
-                "/v2/aggs/grouped/locale/global/market/fx/2024-01-15",
-                &[],
-            )
+            .get_raw("/v2/aggs/grouped/locale/global/market/fx/2024-01-15", &[])
             .await
             .unwrap();
 

@@ -39,7 +39,10 @@ impl AlphaVantageClientBuilder {
         self
     }
 
-    pub(super) fn build_with_limiter(self, limiter: Arc<RateLimiter>) -> Result<AlphaVantageClient> {
+    pub(super) fn build_with_limiter(
+        self,
+        limiter: Arc<RateLimiter>,
+    ) -> Result<AlphaVantageClient> {
         let http = Client::builder()
             .timeout(self.timeout)
             .user_agent(format!(
@@ -108,12 +111,12 @@ impl AlphaVantageClient {
                 reason: error_msg.to_string(),
             });
         }
-        if let Some(note) = json.get("Note").and_then(|v| v.as_str()) {
-            if note.contains("call frequency") {
-                return Err(FinanceError::RateLimited {
-                    retry_after: Some(60),
-                });
-            }
+        if let Some(note) = json.get("Note").and_then(|v| v.as_str())
+            && note.contains("call frequency")
+        {
+            return Err(FinanceError::RateLimited {
+                retry_after: Some(60),
+            });
         }
         if let Some(info) = json.get("Information").and_then(|v| v.as_str()) {
             if info.contains("rate limit") || info.contains("API call frequency") {

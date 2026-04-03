@@ -252,20 +252,19 @@ fn merge_chart_data(merged: &mut serde_json::Value, chunk: serde_json::Value) ->
         .and_then(|m| m.as_object())
         .map(|o| o.is_empty())
         .unwrap_or(true)
+        && let Some(meta) = chunk_result.get("meta")
     {
-        if let Some(meta) = chunk_result.get("meta") {
-            merged_result["meta"] = meta.clone();
-        }
+        merged_result["meta"] = meta.clone();
     }
 
     // Merge timestamps
     if let Some(chunk_timestamps) = chunk_result.get("timestamp").and_then(|t| t.as_array()) {
-        let merged_timestamps = merged_result["timestamp"]
-            .as_array_mut()
-            .ok_or_else(|| FinanceError::ResponseStructureError {
+        let merged_timestamps = merged_result["timestamp"].as_array_mut().ok_or_else(|| {
+            FinanceError::ResponseStructureError {
                 field: "timestamp".to_string(),
                 context: "Invalid timestamp array".to_string(),
-            })?;
+            }
+        })?;
         merged_timestamps.extend_from_slice(chunk_timestamps);
     }
 
@@ -288,13 +287,12 @@ fn merge_chart_data(merged: &mut serde_json::Value, chunk: serde_json::Value) ->
 
         for field in &["open", "high", "low", "close", "volume"] {
             if let Some(chunk_values) = chunk_quote.get(field).and_then(|v| v.as_array()) {
-                let merged_values =
-                    merged_quote[field]
-                        .as_array_mut()
-                        .ok_or_else(|| FinanceError::ResponseStructureError {
-                            field: field.to_string(),
-                            context: "Invalid field array".to_string(),
-                        })?;
+                let merged_values = merged_quote[field].as_array_mut().ok_or_else(|| {
+                    FinanceError::ResponseStructureError {
+                        field: field.to_string(),
+                        context: "Invalid field array".to_string(),
+                    }
+                })?;
                 merged_values.extend_from_slice(chunk_values);
             }
         }
@@ -325,21 +323,20 @@ fn merge_chart_data(merged: &mut serde_json::Value, chunk: serde_json::Value) ->
 
     // Merge events (dividends, splits, capitalGains)
     if let Some(chunk_events) = chunk_result.get("events") {
-        let merged_events = merged_result
-            .get_mut("events")
-            .ok_or_else(|| FinanceError::ResponseStructureError {
+        let merged_events = merged_result.get_mut("events").ok_or_else(|| {
+            FinanceError::ResponseStructureError {
                 field: "events".to_string(),
                 context: "Invalid events structure".to_string(),
-            })?;
+            }
+        })?;
 
         if let Some(chunk_events_obj) = chunk_events.as_object() {
-            let merged_events_obj =
-                merged_events
-                    .as_object_mut()
-                    .ok_or_else(|| FinanceError::ResponseStructureError {
-                        field: "events".to_string(),
-                        context: "Events is not an object".to_string(),
-                    })?;
+            let merged_events_obj = merged_events.as_object_mut().ok_or_else(|| {
+                FinanceError::ResponseStructureError {
+                    field: "events".to_string(),
+                    context: "Events is not an object".to_string(),
+                }
+            })?;
 
             for (event_type, event_data) in chunk_events_obj {
                 if let Some(event_map) = event_data.as_object() {
@@ -575,8 +572,20 @@ mod tests {
 
         let result = &merged["chart"]["result"][0];
         assert_eq!(result["timestamp"].as_array().unwrap().len(), 2);
-        assert_eq!(result["indicators"]["quote"][0]["open"].as_array().unwrap().len(), 2);
-        assert_eq!(result["indicators"]["adjclose"][0]["adjclose"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            result["indicators"]["quote"][0]["open"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            result["indicators"]["adjclose"][0]["adjclose"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
         assert_eq!(result["meta"]["symbol"].as_str().unwrap(), "AAPL");
         assert!(result["events"]["dividends"]["1609459200"].is_object());
 
@@ -607,8 +616,20 @@ mod tests {
 
         let result = &merged["chart"]["result"][0];
         assert_eq!(result["timestamp"].as_array().unwrap().len(), 3);
-        assert_eq!(result["indicators"]["quote"][0]["close"].as_array().unwrap().len(), 3);
-        assert_eq!(result["indicators"]["adjclose"][0]["adjclose"].as_array().unwrap().len(), 3);
+        assert_eq!(
+            result["indicators"]["quote"][0]["close"]
+                .as_array()
+                .unwrap()
+                .len(),
+            3
+        );
+        assert_eq!(
+            result["indicators"]["adjclose"][0]["adjclose"]
+                .as_array()
+                .unwrap()
+                .len(),
+            3
+        );
     }
 
     #[test]

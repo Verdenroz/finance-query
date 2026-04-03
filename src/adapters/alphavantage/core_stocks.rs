@@ -241,9 +241,7 @@ pub async fn time_series_monthly_adjusted(symbol: &str) -> Result<AdjustedTimeSe
 /// Fetch the latest price and volume for a single ticker.
 pub async fn global_quote(symbol: &str) -> Result<GlobalQuote> {
     let client = build_client()?;
-    let json = client
-        .get("GLOBAL_QUOTE", &[("symbol", symbol)])
-        .await?;
+    let json = client.get("GLOBAL_QUOTE", &[("symbol", symbol)]).await?;
 
     let q = json
         .get("Global Quote")
@@ -310,13 +308,12 @@ pub async fn realtime_bulk_quotes(symbols: &str) -> Result<Vec<BulkQuote>> {
         .get("REALTIME_BULK_QUOTES", &[("symbol", symbols)])
         .await?;
 
-    let data = json
-        .get("data")
-        .and_then(|v| v.as_array())
-        .ok_or_else(|| FinanceError::ResponseStructureError {
+    let data = json.get("data").and_then(|v| v.as_array()).ok_or_else(|| {
+        FinanceError::ResponseStructureError {
             field: "data".to_string(),
             context: "Missing data array in bulk quotes response".to_string(),
-        })?;
+        }
+    })?;
 
     Ok(data
         .iter()
@@ -401,7 +398,11 @@ pub async fn market_status() -> Result<Vec<MarketStatus>> {
                 local_open: m.get("local_open")?.as_str()?.to_string(),
                 local_close: m.get("local_close")?.as_str()?.to_string(),
                 current_status: m.get("current_status")?.as_str()?.to_string(),
-                notes: m.get("notes").and_then(|v| v.as_str()).unwrap_or("").to_string(),
+                notes: m
+                    .get("notes")
+                    .and_then(|v| v.as_str())
+                    .unwrap_or("")
+                    .to_string(),
             })
         })
         .collect())
@@ -492,9 +493,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("function".into(), "GLOBAL_QUOTE".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "GLOBAL_QUOTE".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -518,7 +520,10 @@ mod tests {
             .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let json = client.get("GLOBAL_QUOTE", &[("symbol", "AAPL")]).await.unwrap();
+        let json = client
+            .get("GLOBAL_QUOTE", &[("symbol", "AAPL")])
+            .await
+            .unwrap();
 
         let q = json.get("Global Quote").unwrap();
         assert_eq!(q.get("01. symbol").unwrap().as_str().unwrap(), "AAPL");
@@ -531,9 +536,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let mock = server
             .mock("GET", "/")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("function".into(), "SYMBOL_SEARCH".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "SYMBOL_SEARCH".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -640,9 +646,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("function".into(), "TIME_SERIES_DAILY".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "TIME_SERIES_DAILY".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(

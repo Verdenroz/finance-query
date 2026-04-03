@@ -442,11 +442,7 @@ pub async fn balance_sheet(
 }
 
 /// Fetch cash flow statements for a symbol.
-pub async fn cash_flow(
-    symbol: &str,
-    period: Period,
-    limit: Option<u32>,
-) -> Result<Vec<CashFlow>> {
+pub async fn cash_flow(symbol: &str, period: Period, limit: Option<u32>) -> Result<Vec<CashFlow>> {
     let client = super::build_client()?;
     let limit_str = limit.unwrap_or(4).to_string();
     client

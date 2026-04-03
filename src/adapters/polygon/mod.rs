@@ -29,20 +29,20 @@
 mod client;
 pub mod models;
 
-pub mod stocks;
 mod reference;
+pub mod stocks;
 
-pub mod options;
-pub mod forex;
 pub mod crypto;
-pub mod indices;
+pub mod forex;
 pub mod futures;
+pub mod indices;
+pub mod options;
 
-mod economy;
-mod benzinga;
-mod etf;
-mod corporate_events;
 mod alternative;
+mod benzinga;
+mod corporate_events;
+mod economy;
+mod etf;
 pub mod websocket;
 
 use crate::error::{FinanceError, Result};
@@ -51,19 +51,46 @@ use client::PolygonClientBuilder;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-pub use stocks::*;
-pub use options::*;
-pub use forex::*;
-pub use crypto::*;
-pub use indices::*;
-pub use futures::*;
-pub use reference::*;
-pub use economy::*;
-pub use benzinga::*;
-pub use etf::*;
-pub use corporate_events::*;
 pub use alternative::*;
+pub use benzinga::*;
+pub use corporate_events::*;
+pub use economy::*;
+pub use etf::*;
 pub use models::*;
+pub use reference::*;
+
+// Re-export items explicitly for modules with overlapping submodule names
+// to avoid ambiguous glob re-exports (aggregates, snapshots, etc.).
+pub use crypto::{
+    CryptoDailyOpenClose, CryptoLastTrade, CryptoLastTradeResponse, CryptoOpenCloseTrade,
+    crypto_aggregates, crypto_daily_open_close, crypto_ema, crypto_grouped_daily,
+    crypto_last_trade, crypto_macd, crypto_previous_close, crypto_rsi, crypto_sma, crypto_snapshot,
+    crypto_snapshots_all, crypto_top_movers, crypto_trades,
+};
+pub use forex::{
+    ConversionLast, CurrencyConversion, ForexLastQuote, ForexQuoteResponse, currency_conversion,
+    forex_aggregates, forex_ema, forex_grouped_daily, forex_last_quote, forex_macd,
+    forex_previous_close, forex_quotes, forex_rsi, forex_sma, forex_snapshot, forex_snapshots_all,
+    forex_top_movers,
+};
+pub use futures::{
+    FuturesContract, FuturesProduct, FuturesSchedule, FuturesSession, FuturesSnapshot,
+    FuturesSnapshotResponse, futures_aggregates, futures_contracts, futures_products,
+    futures_quotes, futures_schedules, futures_snapshot, futures_trades,
+};
+pub use indices::{
+    IndexSession, IndexSnapshot, IndexSnapshotResponse, index_aggregates, index_daily_open_close,
+    index_ema, index_macd, index_previous_close, index_rsi, index_sma, index_snapshot,
+};
+pub use options::{
+    AdditionalUnderlying, OptionsContract, OptionsContractResponse,
+    OptionsContractSnapshotResponse, OptionsGreeks, OptionsSnapshot, OptionsSnapshotDetails,
+    OptionsSnapshotQuote, OptionsSnapshotTrade, OptionsUnderlyingAsset, options_aggregates,
+    options_chain_snapshot, options_contract_details, options_contract_snapshot, options_contracts,
+    options_daily_open_close, options_ema, options_last_trade, options_macd,
+    options_previous_close, options_quotes, options_rsi, options_sma, options_trades,
+};
+pub use stocks::*;
 
 /// Polygon.io free-tier rate limit: 5 req/sec.
 const PG_RATE_PER_SEC: f64 = 5.0;

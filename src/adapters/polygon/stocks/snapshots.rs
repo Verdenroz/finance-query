@@ -38,10 +38,7 @@ pub async fn stock_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsRespo
 /// * `direction` - `"gainers"` or `"losers"`
 pub async fn stock_top_movers(direction: &str) -> Result<SnapshotsResponse> {
     let client = build_client()?;
-    let path = format!(
-        "/v2/snapshot/locale/us/markets/stocks/{}",
-        direction
-    );
+    let path = format!("/v2/snapshot/locale/us/markets/stocks/{}", direction);
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "top_movers".to_string(),
@@ -86,10 +83,7 @@ mod tests {
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
         let json = client
-            .get_raw(
-                "/v2/snapshot/locale/us/markets/stocks/tickers/AAPL",
-                &[],
-            )
+            .get_raw("/v2/snapshot/locale/us/markets/stocks/tickers/AAPL", &[])
             .await
             .unwrap();
 
@@ -108,9 +102,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v2/snapshot/locale/us/markets/stocks/gainers")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(
@@ -132,10 +127,7 @@ mod tests {
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
         let json = client
-            .get_raw(
-                "/v2/snapshot/locale/us/markets/stocks/gainers",
-                &[],
-            )
+            .get_raw("/v2/snapshot/locale/us/markets/stocks/gainers", &[])
             .await
             .unwrap();
 

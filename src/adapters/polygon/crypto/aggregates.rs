@@ -91,10 +91,8 @@ pub async fn crypto_aggregates(
         }
     }
 
-    let query_refs: Vec<(&str, &str)> = query_params
-        .iter()
-        .map(|(k, v)| (*k, v.as_str()))
-        .collect();
+    let query_refs: Vec<(&str, &str)> =
+        query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
     let json = client.get_raw(&path, &query_refs).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
@@ -128,10 +126,7 @@ pub async fn crypto_previous_close(
 ///
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted (default: true)
-pub async fn crypto_grouped_daily(
-    date: &str,
-    adjusted: Option<bool>,
-) -> Result<AggregateResponse> {
+pub async fn crypto_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
     let client = build_client()?;
     let path = format!("/v2/aggs/grouped/locale/global/market/crypto/{}", date);
 

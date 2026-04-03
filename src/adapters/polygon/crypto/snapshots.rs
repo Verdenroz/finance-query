@@ -43,10 +43,7 @@ pub async fn crypto_snapshot(ticker: &str) -> Result<SingleSnapshotResponse> {
 /// * `direction` - `"gainers"` or `"losers"`
 pub async fn crypto_top_movers(direction: &str) -> Result<SnapshotsResponse> {
     let client = build_client()?;
-    let path = format!(
-        "/v2/snapshot/locale/global/markets/crypto/{}",
-        direction
-    );
+    let path = format!("/v2/snapshot/locale/global/markets/crypto/{}", direction);
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "crypto_top_movers".to_string(),

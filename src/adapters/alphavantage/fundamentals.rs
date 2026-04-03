@@ -10,10 +10,12 @@ pub async fn company_overview(symbol: &str) -> Result<CompanyOverview> {
     let client = build_client()?;
     let json = client.get("OVERVIEW", &[("symbol", symbol)]).await?;
 
-    let obj = json.as_object().ok_or_else(|| FinanceError::ResponseStructureError {
-        field: "overview".to_string(),
-        context: "Expected object in OVERVIEW response".to_string(),
-    })?;
+    let obj = json
+        .as_object()
+        .ok_or_else(|| FinanceError::ResponseStructureError {
+            field: "overview".to_string(),
+            context: "Expected object in OVERVIEW response".to_string(),
+        })?;
 
     fn str_val(obj: &serde_json::Map<String, serde_json::Value>, key: &str) -> Option<String> {
         let v = obj.get(key)?.as_str()?;
@@ -82,7 +84,11 @@ pub async fn etf_profile(symbol: &str) -> Result<EtfProfile> {
 
     fn str_val(v: &serde_json::Value, key: &str) -> Option<String> {
         let s = v.get(key)?.as_str()?;
-        if s == "None" || s.is_empty() { None } else { Some(s.to_string()) }
+        if s == "None" || s.is_empty() {
+            None
+        } else {
+            Some(s.to_string())
+        }
     }
 
     fn f64_val(v: &serde_json::Value, key: &str) -> Option<f64> {
@@ -94,12 +100,13 @@ pub async fn etf_profile(symbol: &str) -> Result<EtfProfile> {
         .and_then(|v| v.as_array())
         .map(|arr| {
             arr.iter()
-                .filter_map(|h| {
-                    Some(EtfHolding {
-                        symbol: h.get("symbol").and_then(|v| v.as_str()).map(String::from),
-                        description: h.get("description").and_then(|v| v.as_str()).map(String::from),
-                        weight: h.get("weight").and_then(|v| v.as_str()?.parse().ok()),
-                    })
+                .map(|h| EtfHolding {
+                    symbol: h.get("symbol").and_then(|v| v.as_str()).map(String::from),
+                    description: h
+                        .get("description")
+                        .and_then(|v| v.as_str())
+                        .map(String::from),
+                    weight: h.get("weight").and_then(|v| v.as_str()?.parse().ok()),
                 })
                 .collect()
         })
@@ -188,29 +195,21 @@ pub async fn earnings(symbol: &str) -> Result<EarningsHistory> {
             .and_then(|v| v.as_array())
             .map(|arr| {
                 arr.iter()
-                    .filter_map(|e| {
-                        Some(EarningsData {
-                            fiscal_date_ending: e
-                                .get("fiscalDateEnding")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            reported_date: e
-                                .get("reportedDate")
-                                .and_then(|v| v.as_str())
-                                .map(String::from),
-                            reported_eps: e
-                                .get("reportedEPS")
-                                .and_then(|v| v.as_str()?.parse().ok()),
-                            estimated_eps: e
-                                .get("estimatedEPS")
-                                .and_then(|v| v.as_str()?.parse().ok()),
-                            surprise: e
-                                .get("surprise")
-                                .and_then(|v| v.as_str()?.parse().ok()),
-                            surprise_percentage: e
-                                .get("surprisePercentage")
-                                .and_then(|v| v.as_str()?.parse().ok()),
-                        })
+                    .map(|e| EarningsData {
+                        fiscal_date_ending: e
+                            .get("fiscalDateEnding")
+                            .and_then(|v| v.as_str())
+                            .map(String::from),
+                        reported_date: e
+                            .get("reportedDate")
+                            .and_then(|v| v.as_str())
+                            .map(String::from),
+                        reported_eps: e.get("reportedEPS").and_then(|v| v.as_str()?.parse().ok()),
+                        estimated_eps: e.get("estimatedEPS").and_then(|v| v.as_str()?.parse().ok()),
+                        surprise: e.get("surprise").and_then(|v| v.as_str()?.parse().ok()),
+                        surprise_percentage: e
+                            .get("surprisePercentage")
+                            .and_then(|v| v.as_str()?.parse().ok()),
                     })
                     .collect()
             })
@@ -231,9 +230,7 @@ pub async fn earnings(symbol: &str) -> Result<EarningsHistory> {
 /// Fetch historical dividend events.
 pub async fn dividends(symbol: &str) -> Result<Vec<DividendEvent>> {
     let client = build_client()?;
-    let csv = client
-        .get_csv("DIVIDENDS", &[("symbol", symbol)])
-        .await?;
+    let csv = client.get_csv("DIVIDENDS", &[("symbol", symbol)]).await?;
     parse_dividend_csv(&csv)
 }
 
@@ -298,7 +295,7 @@ pub async fn listing_status(status: Option<&str>) -> Result<Vec<ListingEntry>> {
 
     for line in lines {
         let cols: Vec<&str> = line.split(',').collect();
-        if cols.len() >= 1 {
+        if !cols.is_empty() {
             entries.push(ListingEntry {
                 symbol: cols[0].to_string(),
                 name: cols.get(1).map(|s| s.to_string()),
@@ -324,7 +321,7 @@ pub async fn earnings_calendar() -> Result<Vec<EarningsCalendarEntry>> {
 
     for line in lines {
         let cols: Vec<&str> = line.split(',').collect();
-        if cols.len() >= 1 {
+        if !cols.is_empty() {
             entries.push(EarningsCalendarEntry {
                 symbol: cols[0].to_string(),
                 name: cols.get(1).map(|s| s.to_string()),
@@ -349,9 +346,9 @@ pub async fn ipo_calendar() -> Result<Vec<IpoCalendarEntry>> {
 
     for line in lines {
         let cols: Vec<&str> = line.split(',').collect();
-        if cols.len() >= 1 {
+        if !cols.is_empty() {
             entries.push(IpoCalendarEntry {
-                symbol: cols.get(0).map(|s| s.to_string()),
+                symbol: cols.first().map(|s| s.to_string()),
                 name: cols.get(1).map(|s| s.to_string()),
                 ipo_date: cols.get(2).map(|s| s.to_string()),
                 price_range: cols.get(3).map(|s| s.to_string()),
@@ -433,10 +430,7 @@ mod tests {
             .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let json = client
-            .get("OVERVIEW", &[("symbol", "AAPL")])
-            .await
-            .unwrap();
+        let json = client.get("OVERVIEW", &[("symbol", "AAPL")]).await.unwrap();
 
         let obj = json.as_object().unwrap();
         assert_eq!(obj.get("Symbol").unwrap().as_str().unwrap(), "AAPL");
@@ -448,9 +442,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("function".into(), "DIVIDENDS".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "DIVIDENDS".into(),
+            )]))
             .with_status(200)
             .with_body(
                 "ex_dividend_date,declaration_date,record_date,payment_date,amount\n\

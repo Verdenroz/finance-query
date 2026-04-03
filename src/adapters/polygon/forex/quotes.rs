@@ -111,11 +111,7 @@ pub async fn forex_quotes(
 /// * `from` - Base currency code (e.g., `"EUR"`)
 /// * `to` - Quote currency code (e.g., `"USD"`)
 /// * `amount` - Amount to convert
-pub async fn currency_conversion(
-    from: &str,
-    to: &str,
-    amount: f64,
-) -> Result<CurrencyConversion> {
+pub async fn currency_conversion(from: &str, to: &str, amount: f64) -> Result<CurrencyConversion> {
     let client = build_client()?;
     let path = format!("/v1/conversion/{}/{}", from, to);
     let amount_str = amount.to_string();
@@ -136,9 +132,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/v1/last_quote/currencies/EUR/USD")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apiKey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apiKey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(

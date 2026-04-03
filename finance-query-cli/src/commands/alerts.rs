@@ -619,7 +619,7 @@ async fn manage_service(action: ServiceAction) -> Result<()> {
 
     #[cfg(target_os = "macos")]
     {
-        return manage_launchd_service(action).await;
+        manage_launchd_service(action).await
     }
 
     #[cfg(not(any(target_os = "linux", target_os = "macos")))]

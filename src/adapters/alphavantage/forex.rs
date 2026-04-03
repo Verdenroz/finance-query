@@ -18,12 +18,12 @@ pub async fn exchange_rate(from_currency: &str, to_currency: &str) -> Result<Exc
         )
         .await?;
 
-    let rate = json
-        .get("Realtime Currency Exchange Rate")
-        .ok_or_else(|| FinanceError::ResponseStructureError {
+    let rate = json.get("Realtime Currency Exchange Rate").ok_or_else(|| {
+        FinanceError::ResponseStructureError {
             field: "Realtime Currency Exchange Rate".to_string(),
             context: "Missing exchange rate data in response".to_string(),
-        })?;
+        }
+    })?;
 
     Ok(ExchangeRate {
         from_currency_code: rate

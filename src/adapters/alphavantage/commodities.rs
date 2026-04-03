@@ -137,7 +137,10 @@ mod tests {
         });
 
         let series = parse_commodity_series(&json).unwrap();
-        assert_eq!(series.name, "Crude Oil Prices - West Texas Intermediate (WTI)");
+        assert_eq!(
+            series.name,
+            "Crude Oil Prices - West Texas Intermediate (WTI)"
+        );
         assert_eq!(series.interval, "monthly");
         assert_eq!(series.unit, "dollars per barrel");
         assert_eq!(series.data.len(), 3);
@@ -156,9 +159,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("function".into(), "WTI".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "WTI".into(),
+            )]))
             .with_status(200)
             .with_header("content-type", "application/json")
             .with_body(

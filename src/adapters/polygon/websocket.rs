@@ -181,17 +181,14 @@ impl PolygonStreamBuilder {
 
     /// Connect and return a `PolygonStream`.
     pub async fn build(self) -> Result<PolygonStream> {
-        let url = format!(
-            "wss://socket.polygon.io/{}",
-            self.cluster.as_str()
-        );
+        let url = format!("wss://socket.polygon.io/{}", self.cluster.as_str());
 
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&url)
-            .await
-            .map_err(|e| FinanceError::ExternalApiError {
+        let (ws_stream, _) = tokio_tungstenite::connect_async(&url).await.map_err(|_e| {
+            FinanceError::ExternalApiError {
                 api: "Polygon WebSocket".to_string(),
                 status: 0,
-            })?;
+            }
+        })?;
 
         let (write, read) = futures::StreamExt::split(ws_stream);
         let write = std::sync::Arc::new(tokio::sync::Mutex::new(write));
@@ -208,10 +205,10 @@ impl PolygonStreamBuilder {
                 .await
                 .send(Message::Text(auth_msg.to_string().into()))
                 .await
-                .map_err(|e| FinanceError::ExternalApiError {
-                api: "Polygon WebSocket".to_string(),
-                status: 0,
-            })?;
+                .map_err(|_e| FinanceError::ExternalApiError {
+                    api: "Polygon WebSocket".to_string(),
+                    status: 0,
+                })?;
         }
 
         // Subscribe
@@ -226,10 +223,10 @@ impl PolygonStreamBuilder {
                 .await
                 .send(Message::Text(sub_msg.to_string().into()))
                 .await
-                .map_err(|e| FinanceError::ExternalApiError {
-                api: "Polygon WebSocket".to_string(),
-                status: 0,
-            })?;
+                .map_err(|_e| FinanceError::ExternalApiError {
+                    api: "Polygon WebSocket".to_string(),
+                    status: 0,
+                })?;
         }
 
         Ok(PolygonStream {
@@ -334,7 +331,8 @@ mod tests {
 
     #[test]
     fn test_parse_trade_message() {
-        let msg = r#"[{"ev":"T","sym":"AAPL","p":186.19,"s":100,"x":4,"c":[12,37],"t":1705363200000}]"#;
+        let msg =
+            r#"[{"ev":"T","sym":"AAPL","p":186.19,"s":100,"x":4,"c":[12,37],"t":1705363200000}]"#;
         match parse_message(msg) {
             PolygonMessage::Trade(t) => {
                 assert_eq!(t.sym.as_deref(), Some("AAPL"));
