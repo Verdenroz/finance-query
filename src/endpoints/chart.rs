@@ -4,8 +4,8 @@ use super::urls::api;
 /// Fetches historical price and volume data for a symbol.
 use crate::client::YahooClient;
 use crate::constants::{Interval, TimeRange};
-use crate::error::Result;
-use tracing::info;
+use crate::error::{FinanceError, Result};
+use tracing::{debug, info};
 
 const CHART_EVENTS: &str = "div|split|capitalGain";
 
@@ -91,6 +91,25 @@ pub async fn fetch(
 ) -> Result<serde_json::Value> {
     super::common::validate_symbol(symbol)?;
 
+    // Max range with daily/weekly intervals requires chunking into 10-year periods
+    // because Yahoo Finance truncates the response for these combinations.
+    if matches!(range, TimeRange::Max) && matches!(interval, Interval::OneDay) {
+        return fetch_max_chunked(client, symbol, Interval::OneDay).await;
+    }
+    if matches!(range, TimeRange::Max) && matches!(interval, Interval::OneWeek) {
+        return fetch_max_chunked(client, symbol, Interval::OneWeek).await;
+    }
+
+    fetch_direct(client, symbol, interval, range).await
+}
+
+/// Direct fetch without chunking (used for non-max ranges and as building block for chunking).
+async fn fetch_direct(
+    client: &YahooClient,
+    symbol: &str,
+    interval: Interval,
+    range: TimeRange,
+) -> Result<serde_json::Value> {
     info!(
         "Fetching chart for {} ({}, {})",
         symbol,
@@ -107,6 +126,315 @@ pub async fn fetch(
     let response = client.request_with_params(&url, &params).await?;
 
     Ok(response.json().await?)
+}
+
+/// Fetch entire history by chunking into 10-year periods.
+///
+/// Yahoo Finance truncates max-range responses for daily and weekly intervals.
+/// This function first detects the stock's earliest date using monthly data,
+/// then fetches daily/weekly data in 10-year chunks and merges them.
+async fn fetch_max_chunked(
+    client: &YahooClient,
+    symbol: &str,
+    interval: Interval,
+) -> Result<serde_json::Value> {
+    // Step 1: Detect earliest available date using monthly interval (always works with max)
+    let earliest_data = fetch_direct(client, symbol, Interval::OneMonth, TimeRange::Max).await?;
+    let earliest_timestamp = extract_earliest_timestamp(&earliest_data)?;
+
+    debug!(
+        "Detected earliest timestamp for {}: {} ({})",
+        symbol,
+        earliest_timestamp,
+        chrono::DateTime::from_timestamp(earliest_timestamp, 0)
+            .map(|dt| dt.to_rfc3339())
+            .unwrap_or_else(|| "unknown".to_string())
+    );
+
+    // Step 2: Chunk into ~10-year periods
+    let now = chrono::Utc::now().timestamp();
+    // 3650 days (~10 years; ignores leap years for simplicity).
+    // Yahoo Finance truncates max-range daily/weekly responses, so we walk
+    // the full history in chunks of this size. Drift across multi-decade
+    // histories may add 1 extra request; correctness is preserved by the
+    // dedup pass at the end of fetch_max_chunked.
+    const CHUNK_SIZE_SECONDS: i64 = 3650 * 24 * 60 * 60;
+
+    let mut period1 = earliest_timestamp;
+    let mut merged_result = init_chart_response();
+
+    loop {
+        let period2 = (period1 + CHUNK_SIZE_SECONDS).min(now);
+
+        let chunk_data = fetch_with_dates(client, symbol, interval, period1, period2).await?;
+        merge_chart_data(&mut merged_result, chunk_data)?;
+
+        if period2 >= now {
+            break;
+        }
+
+        period1 = period2 + 1;
+    }
+
+    dedup_timestamps_in_place(&mut merged_result)?;
+    Ok(merged_result)
+}
+
+/// Extract the earliest timestamp from a chart response.
+fn extract_earliest_timestamp(data: &serde_json::Value) -> Result<i64> {
+    let timestamps = data
+        .get("chart")
+        .and_then(|c| c.get("result"))
+        .and_then(|r| r.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|result| result.get("timestamp"))
+        .and_then(|t| t.as_array())
+        .ok_or_else(|| FinanceError::ResponseStructureError {
+            field: "chart.result[0].timestamp".to_string(),
+            context: "Missing timestamp array in chart response".to_string(),
+        })?;
+
+    timestamps
+        .iter()
+        .filter_map(|v| v.as_i64())
+        .min()
+        .ok_or_else(|| FinanceError::ResponseStructureError {
+            field: "timestamp".to_string(),
+            context: "No valid timestamps found in chart response".to_string(),
+        })
+}
+
+/// Initialize an empty chart response structure for merging chunks into.
+fn init_chart_response() -> serde_json::Value {
+    serde_json::json!({
+        "chart": {
+            "result": [{
+                "meta": {},
+                "timestamp": [],
+                "indicators": {
+                    "quote": [{
+                        "open": [],
+                        "high": [],
+                        "low": [],
+                        "close": [],
+                        "volume": []
+                    }],
+                    "adjclose": [{
+                        "adjclose": []
+                    }]
+                },
+                "events": {}
+            }],
+            "error": null
+        }
+    })
+}
+
+/// Merge a chunk of chart data into the accumulated result.
+fn merge_chart_data(merged: &mut serde_json::Value, chunk: serde_json::Value) -> Result<()> {
+    let chunk_result = chunk
+        .get("chart")
+        .and_then(|c| c.get("result"))
+        .and_then(|r| r.as_array())
+        .and_then(|arr| arr.first())
+        .ok_or_else(|| FinanceError::ResponseStructureError {
+            field: "chart.result".to_string(),
+            context: "Missing chart result in chunk".to_string(),
+        })?;
+
+    let merged_result = merged
+        .get_mut("chart")
+        .and_then(|c| c.get_mut("result"))
+        .and_then(|r| r.as_array_mut())
+        .and_then(|arr| arr.first_mut())
+        .ok_or_else(|| FinanceError::ResponseStructureError {
+            field: "chart.result".to_string(),
+            context: "Invalid merged result structure".to_string(),
+        })?;
+
+    // Copy meta from first chunk
+    if merged_result
+        .get("meta")
+        .and_then(|m| m.as_object())
+        .map(|o| o.is_empty())
+        .unwrap_or(true)
+        && let Some(meta) = chunk_result.get("meta")
+    {
+        merged_result["meta"] = meta.clone();
+    }
+
+    // Merge timestamps
+    if let Some(chunk_timestamps) = chunk_result.get("timestamp").and_then(|t| t.as_array()) {
+        let merged_timestamps = merged_result["timestamp"].as_array_mut().ok_or_else(|| {
+            FinanceError::ResponseStructureError {
+                field: "timestamp".to_string(),
+                context: "Invalid timestamp array".to_string(),
+            }
+        })?;
+        merged_timestamps.extend_from_slice(chunk_timestamps);
+    }
+
+    // Merge quote data (open, high, low, close, volume)
+    if let Some(chunk_quote) = chunk_result
+        .get("indicators")
+        .and_then(|i| i.get("quote"))
+        .and_then(|q| q.as_array())
+        .and_then(|arr| arr.first())
+    {
+        let merged_quote = merged_result
+            .get_mut("indicators")
+            .and_then(|i| i.get_mut("quote"))
+            .and_then(|q| q.as_array_mut())
+            .and_then(|arr| arr.first_mut())
+            .ok_or_else(|| FinanceError::ResponseStructureError {
+                field: "indicators.quote".to_string(),
+                context: "Invalid quote structure".to_string(),
+            })?;
+
+        for field in &["open", "high", "low", "close", "volume"] {
+            if let Some(chunk_values) = chunk_quote.get(field).and_then(|v| v.as_array()) {
+                let merged_values = merged_quote[field].as_array_mut().ok_or_else(|| {
+                    FinanceError::ResponseStructureError {
+                        field: field.to_string(),
+                        context: "Invalid field array".to_string(),
+                    }
+                })?;
+                merged_values.extend_from_slice(chunk_values);
+            }
+        }
+    }
+
+    // Merge adjclose data
+    if let Some(chunk_adjclose) = chunk_result
+        .get("indicators")
+        .and_then(|i| i.get("adjclose"))
+        .and_then(|a| a.as_array())
+        .and_then(|arr| arr.first())
+        .and_then(|ac| ac.get("adjclose"))
+        .and_then(|v| v.as_array())
+    {
+        let merged_adjclose = merged_result
+            .get_mut("indicators")
+            .and_then(|i| i.get_mut("adjclose"))
+            .and_then(|a| a.as_array_mut())
+            .and_then(|arr| arr.first_mut())
+            .and_then(|ac| ac.get_mut("adjclose"))
+            .and_then(|v| v.as_array_mut())
+            .ok_or_else(|| FinanceError::ResponseStructureError {
+                field: "indicators.adjclose".to_string(),
+                context: "Invalid adjclose structure".to_string(),
+            })?;
+        merged_adjclose.extend_from_slice(chunk_adjclose);
+    }
+
+    // Merge events (dividends, splits, capitalGains)
+    if let Some(chunk_events) = chunk_result.get("events") {
+        let merged_events = merged_result.get_mut("events").ok_or_else(|| {
+            FinanceError::ResponseStructureError {
+                field: "events".to_string(),
+                context: "Invalid events structure".to_string(),
+            }
+        })?;
+
+        if let Some(chunk_events_obj) = chunk_events.as_object() {
+            let merged_events_obj = merged_events.as_object_mut().ok_or_else(|| {
+                FinanceError::ResponseStructureError {
+                    field: "events".to_string(),
+                    context: "Events is not an object".to_string(),
+                }
+            })?;
+
+            for (event_type, event_data) in chunk_events_obj {
+                if let Some(event_map) = event_data.as_object() {
+                    let merged_event_map = merged_events_obj
+                        .entry(event_type)
+                        .or_insert_with(|| serde_json::json!({}))
+                        .as_object_mut()
+                        .ok_or_else(|| FinanceError::ResponseStructureError {
+                            field: format!("events.{}", event_type),
+                            context: "Event type is not an object".to_string(),
+                        })?;
+
+                    for (key, value) in event_map {
+                        merged_event_map.insert(key.clone(), value.clone());
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Remove consecutive-duplicate timestamps (and corresponding entries in all
+/// parallel arrays) after merging chunked responses. Yahoo's daily/weekly
+/// bars are monotonically non-decreasing per chunk, so duplicates only ever
+/// arise at chunk boundaries — a single forward scan is sufficient.
+fn dedup_timestamps_in_place(merged: &mut serde_json::Value) -> Result<()> {
+    let result = merged
+        .get_mut("chart")
+        .and_then(|c| c.get_mut("result"))
+        .and_then(|r| r.as_array_mut())
+        .and_then(|arr| arr.first_mut())
+        .ok_or_else(|| FinanceError::ResponseStructureError {
+            field: "chart.result[0]".to_string(),
+            context: "merged structure missing chart.result[0]".to_string(),
+        })?;
+
+    let timestamps_owned: Vec<i64> = result
+        .get("timestamp")
+        .and_then(|t| t.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect())
+        .unwrap_or_default();
+
+    let mut keep: Vec<usize> = Vec::with_capacity(timestamps_owned.len());
+    let mut last: Option<i64> = None;
+    for (i, &ts) in timestamps_owned.iter().enumerate() {
+        if Some(ts) != last {
+            keep.push(i);
+            last = Some(ts);
+        }
+    }
+
+    if keep.len() == timestamps_owned.len() {
+        return Ok(());
+    }
+
+    // Apply the keep-mask to every parallel array.
+    let arrays_to_filter: &[&[&str]] = &[
+        &["timestamp"],
+        &["indicators", "quote", "0", "open"],
+        &["indicators", "quote", "0", "high"],
+        &["indicators", "quote", "0", "low"],
+        &["indicators", "quote", "0", "close"],
+        &["indicators", "quote", "0", "volume"],
+        &["indicators", "adjclose", "0", "adjclose"],
+    ];
+
+    for path in arrays_to_filter {
+        if let Some(arr) = walk_to_array_mut(result, path) {
+            let kept: Vec<serde_json::Value> =
+                keep.iter().filter_map(|&i| arr.get(i).cloned()).collect();
+            *arr = kept;
+        }
+    }
+
+    Ok(())
+}
+
+fn walk_to_array_mut<'a>(
+    root: &'a mut serde_json::Value,
+    path: &[&str],
+) -> Option<&'a mut Vec<serde_json::Value>> {
+    let mut cur: &mut serde_json::Value = root;
+    for seg in path {
+        cur = if let Ok(idx) = seg.parse::<usize>() {
+            cur.get_mut(idx)?
+        } else {
+            cur.get_mut(*seg)?
+        };
+    }
+    cur.as_array_mut()
 }
 
 /// Fetch chart data for a symbol using absolute date boundaries.
@@ -260,7 +588,8 @@ mod tests {
 
     #[test]
     fn test_daily_weekly_no_restriction() {
-        // Daily and coarser have no restrictions — max, 10y, etc. all use range param
+        // Daily and coarser have no intraday_limit restrictions
+        // (Max range is handled by fetch_max_chunked, not intraday_limit)
         assert!(uses_native_range(Interval::OneDay, TimeRange::Max));
         assert!(uses_native_range(Interval::OneDay, TimeRange::TenYears));
         assert!(uses_native_range(Interval::OneWeek, TimeRange::FiveYears));
@@ -269,6 +598,115 @@ mod tests {
             Interval::ThreeMonths,
             TimeRange::TwoYears
         ));
+    }
+
+    #[test]
+    fn test_extract_earliest_timestamp() {
+        let data = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "timestamp": [1609459200, 1609545600, 1609632000]
+                }]
+            }
+        });
+        assert_eq!(extract_earliest_timestamp(&data).unwrap(), 1609459200);
+    }
+
+    #[test]
+    fn test_extract_earliest_timestamp_missing() {
+        let data = serde_json::json!({"chart": {"result": [{}]}});
+        assert!(extract_earliest_timestamp(&data).is_err());
+    }
+
+    #[test]
+    fn test_merge_chart_data() {
+        let mut merged = init_chart_response();
+        let chunk = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "meta": {"symbol": "AAPL", "currency": "USD"},
+                    "timestamp": [1609459200, 1609545600],
+                    "indicators": {
+                        "quote": [{
+                            "open": [130.0, 131.0],
+                            "high": [133.0, 134.0],
+                            "low": [129.0, 130.0],
+                            "close": [132.0, 133.0],
+                            "volume": [100000000, 90000000]
+                        }],
+                        "adjclose": [{
+                            "adjclose": [131.5, 132.5]
+                        }]
+                    },
+                    "events": {
+                        "dividends": {"1609459200": {"amount": 0.205}}
+                    }
+                }]
+            }
+        });
+
+        merge_chart_data(&mut merged, chunk).unwrap();
+
+        let result = &merged["chart"]["result"][0];
+        assert_eq!(result["timestamp"].as_array().unwrap().len(), 2);
+        assert_eq!(
+            result["indicators"]["quote"][0]["open"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(
+            result["indicators"]["adjclose"][0]["adjclose"]
+                .as_array()
+                .unwrap()
+                .len(),
+            2
+        );
+        assert_eq!(result["meta"]["symbol"].as_str().unwrap(), "AAPL");
+        assert!(result["events"]["dividends"]["1609459200"].is_object());
+
+        // Merge a second chunk
+        let chunk2 = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "meta": {"symbol": "AAPL"},
+                    "timestamp": [1609718400],
+                    "indicators": {
+                        "quote": [{
+                            "open": [134.0],
+                            "high": [136.0],
+                            "low": [133.0],
+                            "close": [135.0],
+                            "volume": [80000000]
+                        }],
+                        "adjclose": [{
+                            "adjclose": [134.5]
+                        }]
+                    },
+                    "events": {}
+                }]
+            }
+        });
+
+        merge_chart_data(&mut merged, chunk2).unwrap();
+
+        let result = &merged["chart"]["result"][0];
+        assert_eq!(result["timestamp"].as_array().unwrap().len(), 3);
+        assert_eq!(
+            result["indicators"]["quote"][0]["close"]
+                .as_array()
+                .unwrap()
+                .len(),
+            3
+        );
+        assert_eq!(
+            result["indicators"]["adjclose"][0]["adjclose"]
+                .as_array()
+                .unwrap()
+                .len(),
+            3
+        );
     }
 
     #[test]
@@ -281,5 +719,76 @@ mod tests {
         assert_eq!(secs, 728 * 24 * 3600);
         assert!(intraday_limit(Interval::OneDay).is_none());
         assert!(intraday_limit(Interval::OneWeek).is_none());
+    }
+
+    #[test]
+    fn test_dedup_timestamps_in_place_removes_overlapping_entries() {
+        let mut acc = init_chart_response();
+        let chunk1 = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "meta": {},
+                    "timestamp": [100, 200, 300],
+                    "indicators": {
+                        "quote": [{
+                            "open": [1.0, 2.0, 3.0],
+                            "high": [1.0, 2.0, 3.0],
+                            "low": [1.0, 2.0, 3.0],
+                            "close": [1.0, 2.0, 3.0],
+                            "volume": [10, 20, 30]
+                        }],
+                        "adjclose": [{ "adjclose": [1.0, 2.0, 3.0] }]
+                    }
+                }]
+            }
+        });
+        let chunk2 = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "meta": {},
+                    "timestamp": [300, 400],
+                    "indicators": {
+                        "quote": [{
+                            "open": [3.0, 4.0],
+                            "high": [3.0, 4.0],
+                            "low": [3.0, 4.0],
+                            "close": [3.0, 4.0],
+                            "volume": [30, 40]
+                        }],
+                        "adjclose": [{ "adjclose": [3.0, 4.0] }]
+                    }
+                }]
+            }
+        });
+
+        merge_chart_data(&mut acc, chunk1).unwrap();
+        merge_chart_data(&mut acc, chunk2).unwrap();
+        dedup_timestamps_in_place(&mut acc).unwrap();
+
+        let timestamps = acc["chart"]["result"][0]["timestamp"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_i64().unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(timestamps, vec![100, 200, 300, 400]);
+
+        // Parallel arrays should be the same length.
+        let opens = acc["chart"]["result"][0]["indicators"]["quote"][0]["open"]
+            .as_array()
+            .unwrap()
+            .len();
+        let closes = acc["chart"]["result"][0]["indicators"]["quote"][0]["close"]
+            .as_array()
+            .unwrap()
+            .len();
+        let adjcloses = acc["chart"]["result"][0]["indicators"]["adjclose"][0]["adjclose"]
+            .as_array()
+            .unwrap()
+            .len();
+        assert_eq!(opens, 4);
+        assert_eq!(closes, 4);
+        assert_eq!(adjcloses, 4);
     }
 }

@@ -14,6 +14,7 @@ pub struct ScreenerQuote {
     /// Stock symbol (e.g., "NVDA")
     pub symbol: String,
     /// Short display name (e.g., "NVIDIA Corporation")
+    #[serde(default, alias = "companyshortname")]
     pub short_name: String,
     /// Full company name
     #[serde(skip_serializing_if = "Option::is_none")]
