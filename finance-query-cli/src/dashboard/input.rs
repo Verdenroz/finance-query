@@ -76,18 +76,17 @@ pub async fn handle_key_event(app: &mut App, key: event::KeyEvent) -> Result<()>
             KeyCode::Char('h') if app.focus_pane == FocusPane::Right => {
                 app.focus_pane = FocusPane::Left;
             }
-            KeyCode::Char('l') | KeyCode::Right if app.focus_pane == FocusPane::Left => {
-                if app.active_tab == Tab::Charts
+            KeyCode::Char('l') | KeyCode::Right if app.focus_pane == FocusPane::Left
+                && (app.active_tab == Tab::Charts
                     || app.active_tab == Tab::News
                     || app.active_tab == Tab::Lookup
-                    || app.active_tab == Tab::Screeners
-                {
+                    || app.active_tab == Tab::Screeners)
+                => {
                     app.focus_pane = FocusPane::Right;
                     if app.active_tab == Tab::Screeners && app.screener_data.is_empty() {
                         let _ = app.fetch_screeners().await;
                     }
                 }
-            }
 
             KeyCode::Char('j') | KeyCode::Down => {
                 if app.active_tab == Tab::Sectors {
@@ -334,8 +333,8 @@ pub async fn handle_key_event(app: &mut App, key: event::KeyEvent) -> Result<()>
                 }
             }
             // 'd' to delete alert when on Alerts tab
-            KeyCode::Char('d') if app.active_tab == Tab::Alerts && !app.alerts.is_empty() => {
-                if app.selected_alert_idx < app.alerts.len() {
+            KeyCode::Char('d') if app.active_tab == Tab::Alerts && !app.alerts.is_empty()
+                && app.selected_alert_idx < app.alerts.len() => {
                     let alert = &app.alerts[app.selected_alert_idx];
                     let alert_id = alert.id;
                     let symbol = alert.symbol.clone();
@@ -350,10 +349,9 @@ pub async fn handle_key_event(app: &mut App, key: event::KeyEvent) -> Result<()>
                         app.status_message = format!("Deleted alert for {}", symbol);
                     }
                 }
-            }
             // 'e' to toggle enable/disable alert
-            KeyCode::Char('e') if app.active_tab == Tab::Alerts && !app.alerts.is_empty() => {
-                if app.selected_alert_idx < app.alerts.len() {
+            KeyCode::Char('e') if app.active_tab == Tab::Alerts && !app.alerts.is_empty()
+                && app.selected_alert_idx < app.alerts.len() => {
                     let alert = &app.alerts[app.selected_alert_idx];
                     let alert_id = alert.id;
                     let new_state = !alert.enabled;
@@ -365,7 +363,6 @@ pub async fn handle_key_event(app: &mut App, key: event::KeyEvent) -> Result<()>
                         app.status_message = format!("Alert {}", status);
                     }
                 }
-            }
             // 'd' or Delete to remove symbol/position (not on Alerts tab)
             KeyCode::Char('d') | KeyCode::Delete
                 if app.active_tab != Tab::Alerts && app.focus_pane == FocusPane::Left =>
@@ -523,12 +520,11 @@ pub async fn handle_key_event(app: &mut App, key: event::KeyEvent) -> Result<()>
                     1 => {
                         // Use left/right arrows to cycle types
                     }
-                    2 => {
+                    2
                         // Only allow numbers, decimal point, and minus for threshold
-                        if c.is_ascii_digit() || c == '.' || c == '-' {
+                        if (c.is_ascii_digit() || c == '.' || c == '-') => {
                             app.alert_form_threshold.push(c);
                         }
-                    }
                     _ => {}
                 }
             }
@@ -563,15 +559,14 @@ pub async fn handle_key_event(app: &mut App, key: event::KeyEvent) -> Result<()>
             }
             KeyCode::Char(c) => match app.add_form_field {
                 0 => app.add_form_symbol.push(c.to_ascii_uppercase()),
-                1 | 2 => {
-                    if c.is_ascii_digit() || c == '.' {
+                1 | 2
+                    if (c.is_ascii_digit() || c == '.') => {
                         match app.add_form_field {
                             1 => app.add_form_shares.push(c),
                             2 => app.add_form_cost.push(c),
                             _ => {}
                         }
                     }
-                }
                 _ => {}
             },
             KeyCode::Backspace => match app.add_form_field {

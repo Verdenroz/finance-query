@@ -281,15 +281,14 @@ pub fn run_results_tui(result: RunResult) -> crate::error::Result<ResultsAction>
                 KeyCode::Char('n') => break ResultsAction::NewStrategy,
                 KeyCode::Char('e') => app.export_csv(),
                 KeyCode::Char('d') => app.show_diagnostics = !app.show_diagnostics,
-                KeyCode::Char('c') => {
+                KeyCode::Char('c')
                     // Comparison is per-symbol only; skip silently in portfolio mode
                     // to avoid storing a single-symbol result that misrepresents the portfolio.
-                    if app.result.portfolio.is_none() && app.saved_results.len() < 5 {
+                    if app.result.portfolio.is_none() && app.saved_results.len() < 5 => {
                         let n = app.saved_results.len() + 1;
                         let label = format!("Run {} — {}", n, app.result.backtest.strategy_name);
                         app.saved_results.push((label, app.result.backtest.clone()));
                     }
-                }
                 KeyCode::Char('x') => app.saved_results.clear(),
                 KeyCode::Char('m') => {
                     // Cycle period breakdown or comparison metric depending on active tab

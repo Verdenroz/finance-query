@@ -1965,4 +1965,46 @@ impl Ticker {
             }
         );
     }
+
+    /// Polygon.io adapter handle scoped to this ticker.
+    ///
+    /// Requires [`crate::adapters::polygon::init`] to have been called once
+    /// before any handle method is invoked. Methods return Polygon-native
+    /// types — no translation or fallback.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::Ticker;
+    /// use finance_query::adapters::polygon;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// polygon::init("YOUR_KEY")?;
+    /// let aapl = Ticker::new("AAPL").await?;
+    /// let snap = aapl.polygon().snapshot().await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    #[cfg(feature = "polygon")]
+    pub fn polygon(&self) -> crate::ticker::PolygonHandle {
+        crate::ticker::PolygonHandle::new(std::sync::Arc::clone(&self.symbol))
+    }
+
+    /// Financial Modeling Prep (FMP) adapter handle scoped to this ticker.
+    ///
+    /// Requires [`crate::adapters::fmp::init`] to have been called once
+    /// before any handle method is invoked.
+    #[cfg(feature = "fmp")]
+    pub fn fmp(&self) -> crate::ticker::FmpHandle {
+        crate::ticker::FmpHandle::new(std::sync::Arc::clone(&self.symbol))
+    }
+
+    /// Alpha Vantage adapter handle scoped to this ticker.
+    ///
+    /// Requires [`crate::adapters::alphavantage::init`] to have been called
+    /// once before any handle method is invoked.
+    #[cfg(feature = "alphavantage")]
+    pub fn alphavantage(&self) -> crate::ticker::AlphaVantageHandle {
+        crate::ticker::AlphaVantageHandle::new(std::sync::Arc::clone(&self.symbol))
+    }
 }

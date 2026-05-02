@@ -202,11 +202,10 @@ fn render_interactive_news(news: &[finance_query::News], title: &str) -> Result<
                     KeyCode::Up | KeyCode::Char('k') => {
                         selected_index = selected_index.saturating_sub(1);
                     }
-                    KeyCode::Down | KeyCode::Char('j') => {
-                        if selected_index < news.len() - 1 {
+                    KeyCode::Down | KeyCode::Char('j')
+                        if selected_index < news.len() - 1 => {
                             selected_index += 1;
                         }
-                    }
                     KeyCode::Enter => {
                         // Open selected article in browser
                         if let Some(article) = news.get(selected_index) {
