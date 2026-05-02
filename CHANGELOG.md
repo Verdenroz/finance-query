@@ -7,6 +7,73 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.0] - 2026-05-02
+
+The adapter additions in this release were contributed by [@Johnson-f](https://github.com/Johnson-f) in [#132](https://github.com/Verdenroz/finance-query/pull/132).
+
+### Added
+
+- **Alpha Vantage adapter** (`finance_query::adapters::alphavantage`, feature: `alphavantage`)
+  - Core stocks: intraday/daily/weekly/monthly time series (raw + adjusted), global quote, bulk quotes, symbol search, market status
+  - Options: realtime and historical chains with greeks
+  - Forex: exchange rates and FX time series
+  - Crypto: intraday, daily, weekly, and monthly OHLCV series
+  - Commodities: WTI, Brent, natural gas, copper, aluminum, wheat, corn, cotton, sugar, coffee, composite index
+  - Economic indicators: GDP, CPI, Treasury yield, Fed funds rate, unemployment, nonfarm payroll
+  - Alpha Intelligence: news sentiment, earnings call transcripts, top gainers/losers/most-active
+  - Fundamentals: company overview, ETF profile, income/balance/cash flow statements, earnings history, dividends, splits, IPO/earnings calendars
+  - Technical indicators: 50+ typed wrappers — SMA, EMA, RSI, MACD, BBANDS, STOCH, ADX, and more
+  - Singleton: `alphavantage::init(api_key)` / `init_with_timeout(api_key, timeout)` — call once at startup; rate-limited to 1 req/sec by default
+
+- **Polygon.io adapter** (`finance_query::adapters::polygon`, feature: `polygon`)
+  - Stocks: aggregate bars, tick-level trades, NBBO quotes, snapshots, fundamentals (balance sheets, income, cash flow, ratios, short interest), corporate actions (dividends, splits, IPOs), SEC filings (10-K, 8-K, risk factors), news with sentiment, technical indicators
+  - Options: aggregates, contracts, chain/contract snapshots with greeks, trades/quotes, indicators
+  - Forex: aggregates, quotes, currency conversion, snapshots, indicators
+  - Crypto: aggregates, trades, snapshots, indicators
+  - Indices: aggregates, snapshots, indicators
+  - Futures: aggregates, contracts/products/schedules, snapshots, trades/quotes
+  - Economy: inflation, inflation expectations, labor market data, Treasury yields
+  - Reference: ticker details, types, related tickers, exchanges, condition codes, market holidays/status
+  - Partner data: Benzinga analyst ratings/insights/consensus/guidance/earnings/news; ETF Global analytics, constituents, flows, profiles
+  - WebSocket streaming (`polygon::websocket`): real-time trades, quotes, per-second/minute aggregates for all asset classes
+  - Cursor-based pagination via `get_all_pages<T>()` with configurable safety cap
+  - Singleton: `polygon::init(api_key)` / `init_with_timeout(api_key, timeout)`
+
+- **Financial Modeling Prep adapter** (`finance_query::adapters::fmp`, feature: `fmp`)
+  - Fundamentals: income statement, balance sheet, cash flow (standard, as-reported, and full financial)
+  - Analysis: financial ratios, key metrics, enterprise value, DCF, company rating, financial growth
+  - Company: profile, key executives, market cap, outlook, peers, delisted companies
+  - Prices: real-time quotes, batch quotes, historical daily/intraday (1min–4hour)
+  - Dividends and splits: full historical records
+  - Technical indicators: SMA, EMA, WMA, DEMA, TEMA, Williams %R, RSI, ADX, MACD (daily + intraday)
+  - Calendars: earnings, IPO, stock split, dividend, economic
+  - News: stock news, FMP articles, press releases, crypto/forex news
+  - Insider trading: SEC Form 4, CIK mapper, insider RSS, fail-to-deliver, congressional trading
+  - Institutional: holders, ETF/mutual fund holders, Form 13F
+  - Fund holdings: ETF sector/country weightings and holdings
+  - Estimates: analyst estimates/recommendations, earnings surprises, stock grades, earnings transcripts
+  - Market performance: sector/industry PE ratios, sector performance, gainers, losers, most active
+  - Crypto, forex, commodities: quotes, available symbols, historical daily/intraday
+  - ETF and mutual funds: quotes, available lists, historical prices
+  - Indexes: major indexes, S&P 500/Nasdaq/Dow constituents (current + historical)
+  - Screener: stock screener (market cap, sector, country, etc.), symbol search, CIK search
+  - Advanced: SIC codes, COT reports/analysis
+  - Bulk: bulk income statements, balance sheets, cash flow, ratios, key metrics, profiles
+  - Singleton: `fmp::init(api_key)` / `init_with_timeout(api_key, timeout)`
+
+- **Shared adapter infrastructure** (`finance_query::adapters`):
+  - Consistent singleton pattern across all three providers: `OnceLock` + shared token-bucket `RateLimiter`
+  - Percent-encoded URL path segments (`adapters::common`) for safe handling of complex symbols (options tickers, forex pairs)
+  - All adapters feature-gated — zero compile-time cost when the feature is not enabled
+  - Full mockito test coverage — no API key or network access required to run tests
+
+### Fixed
+
+- `ScreenerQuote::short_name` now defaults to `""` when Yahoo Finance omits the `shortName` field, preventing parse failures for predefined screeners (`DayGainers`, `MostActives`, etc.)
+- `TimeRange::Max` with `Interval::OneDay` or `Interval::OneWeek` now chunks requests into sequential 10-year periods to avoid Yahoo Finance response truncation
+- Security: bumped `rustls-webpki` 0.103.10 → 0.103.13 (RUSTSEC-2026-0098, RUSTSEC-2026-0099, RUSTSEC-2026-0104: name constraint and CRL parsing vulnerabilities in TLS certificate verification)
+- Security: bumped `rand` 0.8.5 → 0.8.6, 0.9.2 → 0.9.4, 0.10.0 → 0.10.1 (RUSTSEC-2026-0097: unsoundness with custom global loggers)
+
 ## [2.4.3] - 2026-03-27
 
 ### Changed
@@ -310,7 +377,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.4.2...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.5.0...HEAD
+[2.5.0]: https://github.com/Verdenroz/finance-query/compare/v2.4.3...v2.5.0
+[2.4.3]: https://github.com/Verdenroz/finance-query/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/Verdenroz/finance-query/compare/v2.4.1...v2.4.2
 [2.4.1]: https://github.com/Verdenroz/finance-query/compare/v2.4.0...v2.4.1
 [2.4.0]: https://github.com/Verdenroz/finance-query/compare/v2.3.0...v2.4.0
