@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -113,7 +114,7 @@ pub async fn symbol_search(
 /// * `cik` - CIK number (e.g., `"0000320193"`)
 pub async fn cik_search(cik: &str) -> Result<Vec<CikResult>> {
     let client = build_client()?;
-    let path = format!("/api/v3/cik/{cik}");
+    let path = format!("/api/v3/cik/{}", encode_path_segment(cik));
     client.get(&path, &[]).await
 }
 

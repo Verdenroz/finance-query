@@ -1,5 +1,6 @@
 //! Forex endpoints for Financial Modeling Prep.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -11,7 +12,7 @@ use super::models::{FmpQuote, HistoricalPriceResponse, IntradayPrice};
 /// * `symbol` - e.g., `"EURUSD"`
 pub async fn forex_quote(symbol: &str) -> Result<Vec<FmpQuote>> {
     let client = build_client()?;
-    let path = format!("/api/v3/quote/{symbol}");
+    let path = format!("/api/v3/quote/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
@@ -32,7 +33,7 @@ pub async fn forex_historical(
     params: &[(&str, &str)],
 ) -> Result<HistoricalPriceResponse> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-price-full/{symbol}");
+    let path = format!("/api/v3/historical-price-full/{}", encode_path_segment(symbol));
     client.get(&path, params).await
 }
 
@@ -47,7 +48,7 @@ pub async fn forex_intraday(
     params: &[(&str, &str)],
 ) -> Result<Vec<IntradayPrice>> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-chart/{interval}/{symbol}");
+    let path = format!("/api/v3/historical-chart/{}/{}", encode_path_segment(interval), encode_path_segment(symbol));
     client.get(&path, params).await
 }
 

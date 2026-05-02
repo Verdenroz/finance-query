@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -99,21 +100,21 @@ pub struct Form13F {
 /// Fetch institutional holders of a stock.
 pub async fn institutional_holders(symbol: &str) -> Result<Vec<InstitutionalHolder>> {
     let client = build_client()?;
-    let path = format!("/api/v3/institutional-holder/{symbol}");
+    let path = format!("/api/v3/institutional-holder/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
 /// Fetch ETF holders of a stock.
 pub async fn etf_holders(symbol: &str) -> Result<Vec<EtfHolder>> {
     let client = build_client()?;
-    let path = format!("/api/v3/etf-holder/{symbol}");
+    let path = format!("/api/v3/etf-holder/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
 /// Fetch mutual fund holders of a stock.
 pub async fn mutual_fund_holders(symbol: &str) -> Result<Vec<MutualFundHolder>> {
     let client = build_client()?;
-    let path = format!("/api/v3/mutual-fund-holder/{symbol}");
+    let path = format!("/api/v3/mutual-fund-holder/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
@@ -123,7 +124,7 @@ pub async fn mutual_fund_holders(symbol: &str) -> Result<Vec<MutualFundHolder>> 
 /// * `date` - Filing date (YYYY-MM-DD)
 pub async fn form_13f(cik: &str, date: &str) -> Result<Vec<Form13F>> {
     let client = build_client()?;
-    let path = format!("/api/v3/form-thirteen/{cik}");
+    let path = format!("/api/v3/form-thirteen/{}", encode_path_segment(cik));
     client.get(&path, &[("date", date)]).await
 }
 

@@ -94,10 +94,7 @@ fn extract_symbol(json: &serde_json::Value) -> String {
 /// Extract last refreshed from AV Meta Data.
 fn extract_last_refreshed(json: &serde_json::Value) -> String {
     json.get("Meta Data")
-        .and_then(|m| {
-            m.get("3. Last Refreshed")
-                .or_else(|| m.get("3. Last Refreshed"))
-        })
+        .and_then(|m| m.get("3. Last Refreshed"))
         .and_then(|v| v.as_str())
         .unwrap_or("")
         .to_string()
@@ -639,6 +636,28 @@ mod tests {
             result,
             Err(crate::error::FinanceError::AuthenticationFailed { .. })
         ));
+    }
+
+    #[tokio::test]
+    async fn test_information_field_premium_endpoint_includes_message() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"Information": "Thank you for using Alpha Vantage! This is a premium endpoint."}"#)
+            .create_async()
+            .await;
+
+        let client = super::super::build_test_client(&server.url()).unwrap();
+        let result = client.get("OVERVIEW", &[("symbol", "AAPL")]).await;
+
+        let err = result.expect_err("expected an error from a 200 OK with non-rate-limit Information field");
+        let msg = format!("{err:?}");
+        assert!(
+            msg.contains("premium endpoint"),
+            "expected error to include AV info text, got: {msg}"
+        );
     }
 
     #[tokio::test]

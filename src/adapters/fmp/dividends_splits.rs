@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -75,14 +76,14 @@ pub struct SplitHistoryResponse {
 /// Fetch historical dividend data for a symbol.
 pub async fn historical_dividends(symbol: &str) -> Result<DividendHistoryResponse> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-price-full/stock_dividend/{symbol}");
+    let path = format!("/api/v3/historical-price-full/stock_dividend/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
 /// Fetch historical stock split data for a symbol.
 pub async fn historical_splits(symbol: &str) -> Result<SplitHistoryResponse> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-price-full/stock_split/{symbol}");
+    let path = format!("/api/v3/historical-price-full/stock_split/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 

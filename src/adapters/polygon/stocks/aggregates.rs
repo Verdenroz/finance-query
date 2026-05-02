@@ -1,5 +1,6 @@
 //! Stock aggregate bar endpoints: OHLCV bars, daily summary, previous close.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::super::build_client;
@@ -64,7 +65,7 @@ pub async fn stock_previous_close(
     adjusted: Option<bool>,
 ) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/ticker/{}/prev", ticker);
+    let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
@@ -82,7 +83,7 @@ pub async fn stock_previous_close(
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
 pub async fn stock_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/grouped/locale/us/market/stocks/{}", date);
+    let path = format!("/v2/aggs/grouped/locale/us/market/stocks/{}", encode_path_segment(date));
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
@@ -105,7 +106,7 @@ pub async fn stock_daily_open_close(
     adjusted: Option<bool>,
 ) -> Result<DailyOpenClose> {
     let client = build_client()?;
-    let path = format!("/v1/open-close/{}/{}", ticker, date);
+    let path = format!("/v1/open-close/{}/{}", encode_path_segment(ticker), encode_path_segment(date));
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
@@ -243,5 +244,91 @@ mod tests {
         assert_eq!(resp.symbol.as_deref(), Some("AAPL"));
         assert!((resp.open.unwrap() - 185.09).abs() < 0.01);
         assert!((resp.after_hours.unwrap() - 186.50).abs() < 0.01);
+    }
+
+    #[tokio::test]
+    async fn test_polygon_rate_limit_returns_rate_limited_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(429)
+            .with_body("{}")
+            .create_async()
+            .await;
+
+        let client = crate::adapters::polygon::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/v2/aggs/ticker/AAPL/prev", &[]).await;
+
+        assert!(matches!(result, Err(crate::error::FinanceError::RateLimited { .. })));
+    }
+
+    #[tokio::test]
+    async fn test_polygon_401_returns_authentication_failed() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(401)
+            .with_body("{}")
+            .create_async()
+            .await;
+
+        let client = crate::adapters::polygon::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/v2/aggs/ticker/AAPL/prev", &[]).await;
+
+        assert!(matches!(result, Err(crate::error::FinanceError::AuthenticationFailed { .. })));
+    }
+
+    #[tokio::test]
+    async fn test_polygon_body_error_status_returns_external_api_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(r#"{"status":"ERROR","error":"bad request"}"#)
+            .create_async()
+            .await;
+
+        let client = crate::adapters::polygon::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/v2/aggs/ticker/AAPL/prev", &[]).await;
+
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::ExternalApiError { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_polygon_body_not_found_returns_symbol_not_found() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(r#"{"status":"NOT_FOUND","message":"ticker not found"}"#)
+            .create_async()
+            .await;
+
+        let client = crate::adapters::polygon::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/v2/aggs/ticker/XYZ/prev", &[]).await;
+
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::SymbolNotFound { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_polygon_500_returns_server_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(500)
+            .with_body("{}")
+            .create_async()
+            .await;
+
+        let client = crate::adapters::polygon::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/v2/aggs/ticker/AAPL/prev", &[]).await;
+
+        assert!(matches!(result, Err(crate::error::FinanceError::ServerError { .. })));
     }
 }

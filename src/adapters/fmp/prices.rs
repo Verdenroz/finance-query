@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::models::{FmpQuote, HistoricalPriceResponse, IntradayPrice};
@@ -65,21 +66,21 @@ pub struct HistoricalPriceParams {
 /// Fetch real-time quote for a symbol.
 pub async fn quote(symbol: &str) -> Result<Vec<FmpQuote>> {
     let client = super::build_client()?;
-    client.get(&format!("/api/v3/quote/{symbol}"), &[]).await
+    client.get(&format!("/api/v3/quote/{}", encode_path_segment(symbol)), &[]).await
 }
 
 /// Fetch real-time quotes for multiple symbols (comma-separated).
 pub async fn batch_quote(symbols: &[&str]) -> Result<Vec<FmpQuote>> {
     let client = super::build_client()?;
     let joined = symbols.join(",");
-    client.get(&format!("/api/v3/quote/{joined}"), &[]).await
+    client.get(&format!("/api/v3/quote/{}", encode_path_segment(&joined)), &[]).await
 }
 
 /// Fetch stock price change percentages for a symbol.
 pub async fn stock_price(symbol: &str) -> Result<Vec<StockPriceChange>> {
     let client = super::build_client()?;
     client
-        .get(&format!("/api/v3/stock-price-change/{symbol}"), &[])
+        .get(&format!("/api/v3/stock-price-change/{}", encode_path_segment(symbol)), &[])
         .await
 }
 
@@ -99,7 +100,7 @@ pub async fn historical_price_daily(
     }
     client
         .get(
-            &format!("/api/v3/historical-price-full/{symbol}"),
+            &format!("/api/v3/historical-price-full/{}", encode_path_segment(symbol)),
             &query_params,
         )
         .await
@@ -124,7 +125,7 @@ pub async fn historical_price_intraday(
     }
     client
         .get(
-            &format!("/api/v3/historical-chart/{interval}/{symbol}"),
+            &format!("/api/v3/historical-chart/{}/{}", encode_path_segment(interval), encode_path_segment(symbol)),
             &query_params,
         )
         .await

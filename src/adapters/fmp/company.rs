@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 // ============================================================================
@@ -195,14 +196,14 @@ pub struct DelistedCompany {
 /// Fetch company profile for a symbol.
 pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfile>> {
     let client = super::build_client()?;
-    client.get(&format!("/api/v3/profile/{symbol}"), &[]).await
+    client.get(&format!("/api/v3/profile/{}", encode_path_segment(symbol)), &[]).await
 }
 
 /// Fetch key executives for a symbol.
 pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutive>> {
     let client = super::build_client()?;
     client
-        .get(&format!("/api/v3/key-executives/{symbol}"), &[])
+        .get(&format!("/api/v3/key-executives/{}", encode_path_segment(symbol)), &[])
         .await
 }
 
@@ -210,7 +211,7 @@ pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutive>> {
 pub async fn market_cap(symbol: &str) -> Result<Vec<MarketCap>> {
     let client = super::build_client()?;
     client
-        .get(&format!("/api/v3/market-capitalization/{symbol}"), &[])
+        .get(&format!("/api/v3/market-capitalization/{}", encode_path_segment(symbol)), &[])
         .await
 }
 
@@ -220,7 +221,7 @@ pub async fn historical_market_cap(symbol: &str, limit: Option<u32>) -> Result<V
     let limit_str = limit.unwrap_or(100).to_string();
     client
         .get(
-            &format!("/api/v3/historical-market-capitalization/{symbol}"),
+            &format!("/api/v3/historical-market-capitalization/{}", encode_path_segment(symbol)),
             &[("limit", &limit_str)],
         )
         .await
@@ -341,5 +342,72 @@ mod tests {
         assert_eq!(result.len(), 2);
         assert_eq!(result[0].name.as_deref(), Some("Mr. Timothy D. Cook"));
         assert_eq!(result[0].pay, Some(16425933.0));
+    }
+
+    #[tokio::test]
+    async fn test_fmp_rate_limit_returns_rate_limited_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(429)
+            .with_body("{}")
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+
+        assert!(matches!(result, Err(crate::error::FinanceError::RateLimited { .. })));
+    }
+
+    #[tokio::test]
+    async fn test_fmp_401_returns_authentication_failed() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(401)
+            .with_body("{}")
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+
+        assert!(matches!(result, Err(crate::error::FinanceError::AuthenticationFailed { .. })));
+    }
+
+    #[tokio::test]
+    async fn test_fmp_body_error_message_returns_invalid_parameter() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(200)
+            .with_body(r#"{"Error Message":"Invalid API KEY."}"#)
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::InvalidParameter { .. })
+        ));
+    }
+
+    #[tokio::test]
+    async fn test_fmp_500_returns_server_error() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", mockito::Matcher::Any)
+            .with_status(500)
+            .with_body("{}")
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
+
+        assert!(matches!(result, Err(crate::error::FinanceError::ServerError { .. })));
     }
 }

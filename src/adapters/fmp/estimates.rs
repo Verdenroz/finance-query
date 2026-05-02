@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -158,7 +159,7 @@ pub async fn analyst_estimates(
     limit: u32,
 ) -> Result<Vec<AnalystEstimate>> {
     let client = build_client()?;
-    let path = format!("/api/v3/analyst-estimates/{symbol}");
+    let path = format!("/api/v3/analyst-estimates/{}", encode_path_segment(symbol));
     let limit_str = limit.to_string();
     client
         .get(&path, &[("period", period.as_str()), ("limit", &limit_str)])
@@ -168,21 +169,21 @@ pub async fn analyst_estimates(
 /// Fetch analyst stock recommendations.
 pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommendation>> {
     let client = build_client()?;
-    let path = format!("/api/v3/analyst-stock-recommendations/{symbol}");
+    let path = format!("/api/v3/analyst-stock-recommendations/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
 /// Fetch earnings surprises for a symbol.
 pub async fn earnings_surprises(symbol: &str) -> Result<Vec<EarningsSurprise>> {
     let client = build_client()?;
-    let path = format!("/api/v3/earnings-surprises/{symbol}");
+    let path = format!("/api/v3/earnings-surprises/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
 /// Fetch stock grade history for a symbol.
 pub async fn stock_grade(symbol: &str, limit: u32) -> Result<Vec<StockGrade>> {
     let client = build_client()?;
-    let path = format!("/api/v3/grade/{symbol}");
+    let path = format!("/api/v3/grade/{}", encode_path_segment(symbol));
     let limit_str = limit.to_string();
     client.get(&path, &[("limit", &*limit_str)]).await
 }
@@ -197,7 +198,7 @@ pub async fn earnings_transcript(
     year: u32,
 ) -> Result<Vec<EarningsTranscript>> {
     let client = build_client()?;
-    let path = format!("/api/v3/earning_call_transcript/{symbol}");
+    let path = format!("/api/v3/earning_call_transcript/{}", encode_path_segment(symbol));
     let q = quarter.to_string();
     let y = year.to_string();
     client.get(&path, &[("quarter", &*q), ("year", &*y)]).await

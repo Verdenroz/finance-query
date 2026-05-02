@@ -1,5 +1,6 @@
 //! Options aggregate bar endpoints: OHLCV bars, previous close, daily open/close.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -65,7 +66,7 @@ pub async fn options_previous_close(
     adjusted: Option<bool>,
 ) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/ticker/{}/prev", ticker);
+    let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
@@ -88,7 +89,7 @@ pub async fn options_daily_open_close(
     adjusted: Option<bool>,
 ) -> Result<DailyOpenClose> {
     let client = build_client()?;
-    let path = format!("/v1/open-close/{}/{}", ticker, date);
+    let path = format!("/v1/open-close/{}/{}", encode_path_segment(ticker), encode_path_segment(date));
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];

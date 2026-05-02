@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -46,7 +47,7 @@ pub struct CryptoLastTradeResponse {
 /// * `to` - The quote currency (e.g., `"USD"`)
 pub async fn crypto_last_trade(from: &str, to: &str) -> Result<CryptoLastTradeResponse> {
     let client = build_client()?;
-    let path = format!("/v1/last/crypto/{}/{}", from, to);
+    let path = format!("/v1/last/crypto/{}/{}", encode_path_segment(from), encode_path_segment(to));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "crypto_last_trade".to_string(),
@@ -63,7 +64,7 @@ pub async fn crypto_trades(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<Trade>> {
     let client = build_client()?;
-    let path = format!("/v3/trades/{}", ticker);
+    let path = format!("/v3/trades/{}", encode_path_segment(ticker));
     client.get(&path, params).await
 }
 

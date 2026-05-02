@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -117,7 +118,7 @@ pub async fn fmp_articles(page: u32, size: u32) -> Result<FmpArticlesResponse> {
 /// Fetch press releases for a symbol.
 pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressRelease>> {
     let client = build_client()?;
-    let path = format!("/api/v3/press-releases/{symbol}");
+    let path = format!("/api/v3/press-releases/{}", encode_path_segment(symbol));
     let limit_str = limit.to_string();
     client.get(&path, &[("limit", &*limit_str)]).await
 }

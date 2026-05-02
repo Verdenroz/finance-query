@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -58,21 +59,21 @@ pub struct EtfHolding {
 /// Fetch ETF sector weightings.
 pub async fn etf_sector_weightings(symbol: &str) -> Result<Vec<EtfSectorWeighting>> {
     let client = build_client()?;
-    let path = format!("/api/v3/etf-sector-weightings/{symbol}");
+    let path = format!("/api/v3/etf-sector-weightings/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
 /// Fetch ETF country weightings.
 pub async fn etf_country_weightings(symbol: &str) -> Result<Vec<EtfCountryWeighting>> {
     let client = build_client()?;
-    let path = format!("/api/v3/etf-country-weightings/{symbol}");
+    let path = format!("/api/v3/etf-country-weightings/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
 /// Fetch ETF holdings (same endpoint as ETF holder).
 pub async fn etf_holdings(symbol: &str) -> Result<Vec<EtfHolding>> {
     let client = build_client()?;
-    let path = format!("/api/v3/etf-holder/{symbol}");
+    let path = format!("/api/v3/etf-holder/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 

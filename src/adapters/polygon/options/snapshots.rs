@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -143,7 +144,7 @@ pub async fn options_chain_snapshot(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<OptionsSnapshot>> {
     let client = build_client()?;
-    let path = format!("/v3/snapshot/options/{}", underlying);
+    let path = format!("/v3/snapshot/options/{}", encode_path_segment(underlying));
     client.get(&path, params).await
 }
 
@@ -156,7 +157,7 @@ pub async fn options_contract_snapshot(
     contract: &str,
 ) -> Result<OptionsContractSnapshotResponse> {
     let client = build_client()?;
-    let path = format!("/v3/snapshot/options/{}/{}", underlying, contract);
+    let path = format!("/v3/snapshot/options/{}/{}", encode_path_segment(underlying), encode_path_segment(contract));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "options_contract_snapshot".to_string(),

@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -77,7 +78,7 @@ pub async fn options_contracts(
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
 pub async fn options_contract_details(ticker: &str) -> Result<OptionsContractResponse> {
     let client = build_client()?;
-    let path = format!("/v3/reference/options/contracts/{}", ticker);
+    let path = format!("/v3/reference/options/contracts/{}", encode_path_segment(ticker));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "options_contract_details".to_string(),

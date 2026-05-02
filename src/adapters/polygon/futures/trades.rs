@@ -1,5 +1,6 @@
 //! Futures trade and quote endpoints: historical trades, historical quotes.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::super::build_client;
@@ -14,7 +15,7 @@ pub async fn futures_trades(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<Trade>> {
     let client = build_client()?;
-    let path = format!("/v3/trades/{}", ticker);
+    let path = format!("/v3/trades/{}", encode_path_segment(ticker));
     client.get(&path, params).await
 }
 
@@ -27,7 +28,7 @@ pub async fn futures_quotes(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<Quote>> {
     let client = build_client()?;
-    let path = format!("/v3/quotes/{}", ticker);
+    let path = format!("/v3/quotes/{}", encode_path_segment(ticker));
     client.get(&path, params).await
 }
 

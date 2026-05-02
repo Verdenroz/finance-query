@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::super::build_client;
@@ -109,7 +110,7 @@ pub async fn stock_short_interest(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<ShortInterest>> {
     let client = build_client()?;
-    let path = format!("/v3/reference/short-interest/{}", ticker);
+    let path = format!("/v3/reference/short-interest/{}", encode_path_segment(ticker));
     client.get(&path, params).await
 }
 
@@ -119,14 +120,14 @@ pub async fn stock_short_volume(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<ShortVolume>> {
     let client = build_client()?;
-    let path = format!("/v3/reference/short-volume/{}", ticker);
+    let path = format!("/v3/reference/short-volume/{}", encode_path_segment(ticker));
     client.get(&path, params).await
 }
 
 /// Fetch float data for a stock ticker.
 pub async fn stock_float(ticker: &str) -> Result<PaginatedResponse<FloatData>> {
     let client = build_client()?;
-    let path = format!("/v3/reference/float/{}", ticker);
+    let path = format!("/v3/reference/float/{}", encode_path_segment(ticker));
     client.get(&path, &[]).await
 }
 

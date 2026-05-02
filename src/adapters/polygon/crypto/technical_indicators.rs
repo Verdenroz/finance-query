@@ -1,5 +1,6 @@
 //! Crypto technical indicator endpoints: SMA, EMA, MACD, RSI.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -43,7 +44,7 @@ async fn fetch_indicator(
     params: &[(&str, &str)],
 ) -> Result<IndicatorResponse> {
     let client = build_client()?;
-    let path = format!("/v1/indicators/{}/{}", indicator, ticker);
+    let path = format!("/v1/indicators/{}/{}", indicator, encode_path_segment(ticker));
     let json = client.get_raw(&path, params).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: indicator.to_string(),

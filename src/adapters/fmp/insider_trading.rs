@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -155,7 +156,7 @@ pub async fn cik_mapper(name: &str) -> Result<Vec<CikMapping>> {
 /// Fetch CIK mapping by company name/identifier.
 pub async fn cik_mapper_by_company(name: &str) -> Result<Vec<CikMapping>> {
     let client = build_client()?;
-    let path = format!("/api/v4/mapper-cik-company/{name}");
+    let path = format!("/api/v4/mapper-cik-company/{}", encode_path_segment(name));
     client.get(&path, &[]).await
 }
 

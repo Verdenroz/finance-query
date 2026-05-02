@@ -150,6 +150,17 @@ pub(crate) fn build_test_client(base_url: &str) -> Result<client::PolygonClient>
         .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
 }
 
+/// Internal: read the configured API key. Used by the websocket module.
+pub(crate) fn api_key() -> Result<String> {
+    PG_SINGLETON
+        .get()
+        .map(|s| s.api_key.clone())
+        .ok_or_else(|| FinanceError::InvalidParameter {
+            param: "polygon".to_string(),
+            reason: "Polygon not initialized. Call polygon::init(api_key) first.".to_string(),
+        })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

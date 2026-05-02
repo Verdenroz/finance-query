@@ -15,8 +15,6 @@ use super::models::PaginatedResponse;
 
 const PG_BASE: &str = "https://api.polygon.io";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
-#[allow(dead_code)]
-const MAX_PAGES: usize = 100;
 
 pub(crate) struct PolygonClientBuilder {
     api_key: String,
@@ -151,63 +149,5 @@ impl PolygonClient {
             field: "response".to_string(),
             context: format!("Failed to deserialize Polygon response: {e}"),
         })
-    }
-
-    /// GET with automatic cursor pagination. Follows `next_url` until exhausted.
-    #[allow(dead_code)]
-    pub async fn get_all_pages<T: DeserializeOwned>(
-        &self,
-        path: &str,
-        params: &[(&str, &str)],
-    ) -> Result<Vec<T>> {
-        let mut all_results: Vec<T> = Vec::new();
-        let mut page_count = 0;
-
-        let first: PaginatedResponse<T> = self.get(path, params).await?;
-        if let Some(results) = first.results {
-            all_results.extend(results);
-        }
-        let mut next_url = first.next_url;
-        page_count += 1;
-
-        while let Some(ref url) = next_url {
-            if page_count >= MAX_PAGES {
-                break;
-            }
-            self.limiter.acquire().await;
-
-            let fetch_url = self.rewrite_next_url(url);
-
-            debug!("Polygon pagination: page {page_count}");
-            let resp = self.http.get(&fetch_url).send().await?;
-            Self::check_status(resp.status())?;
-
-            let json: Value = resp.json().await?;
-            Self::check_body_error(&json)?;
-
-            let page: PaginatedResponse<T> =
-                serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-                    field: "response".to_string(),
-                    context: format!("Failed to deserialize paginated response: {e}"),
-                })?;
-
-            if let Some(results) = page.results {
-                all_results.extend(results);
-            }
-            next_url = page.next_url;
-            page_count += 1;
-        }
-
-        Ok(all_results)
-    }
-
-    /// Rewrite `next_url` host for test clients.
-    #[allow(dead_code)]
-    fn rewrite_next_url(&self, next_url: &str) -> String {
-        if self.base_url == PG_BASE {
-            next_url.to_string()
-        } else {
-            next_url.replace(PG_BASE, &self.base_url)
-        }
     }
 }

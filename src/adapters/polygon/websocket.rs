@@ -6,11 +6,13 @@
 //! # Example
 //!
 //! ```no_run
+//! use finance_query::adapters::polygon;
 //! use finance_query::adapters::polygon::websocket::*;
 //! use futures::StreamExt;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let mut stream = PolygonStream::builder("YOUR_API_KEY")
+//! polygon::init("YOUR_KEY")?;
+//! let mut stream = PolygonStream::from_singleton()?
 //!     .cluster(Cluster::Stocks)
 //!     .subscribe(&["T.AAPL", "Q.AAPL", "AM.AAPL"])
 //!     .build()
@@ -183,11 +185,8 @@ impl PolygonStreamBuilder {
     pub async fn build(self) -> Result<PolygonStream> {
         let url = format!("wss://socket.polygon.io/{}", self.cluster.as_str());
 
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&url).await.map_err(|_e| {
-            FinanceError::ExternalApiError {
-                api: "Polygon WebSocket".to_string(),
-                status: 0,
-            }
+        let (ws_stream, _) = tokio_tungstenite::connect_async(&url).await.map_err(|e| {
+            FinanceError::ApiError(format!("Polygon WebSocket connect error: {e}"))
         })?;
 
         let (write, read) = futures::StreamExt::split(ws_stream);
@@ -205,10 +204,7 @@ impl PolygonStreamBuilder {
                 .await
                 .send(Message::Text(auth_msg.to_string().into()))
                 .await
-                .map_err(|_e| FinanceError::ExternalApiError {
-                    api: "Polygon WebSocket".to_string(),
-                    status: 0,
-                })?;
+                .map_err(|e| FinanceError::ApiError(format!("Polygon WebSocket auth error: {e}")))?;
         }
 
         // Subscribe
@@ -223,9 +219,8 @@ impl PolygonStreamBuilder {
                 .await
                 .send(Message::Text(sub_msg.to_string().into()))
                 .await
-                .map_err(|_e| FinanceError::ExternalApiError {
-                    api: "Polygon WebSocket".to_string(),
-                    status: 0,
+                .map_err(|e| {
+                    FinanceError::ApiError(format!("Polygon WebSocket subscribe error: {e}"))
                 })?;
         }
 
@@ -260,12 +255,14 @@ pub struct PolygonStream {
 
 impl PolygonStream {
     /// Create a new builder for a Polygon WebSocket stream.
-    pub fn builder(api_key: impl Into<String>) -> PolygonStreamBuilder {
-        PolygonStreamBuilder {
-            api_key: api_key.into(),
+    ///
+    /// Requires [`crate::adapters::polygon::init`] to have been called first.
+    pub fn from_singleton() -> Result<PolygonStreamBuilder> {
+        Ok(PolygonStreamBuilder {
+            api_key: super::api_key()?,
             cluster: Cluster::Stocks,
             subscriptions: Vec::new(),
-        }
+        })
     }
 }
 

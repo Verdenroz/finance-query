@@ -1,5 +1,6 @@
 //! Commodities endpoints for Financial Modeling Prep.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -11,7 +12,7 @@ use super::models::{FmpQuote, HistoricalPriceResponse};
 /// * `symbol` - e.g., `"GCUSD"` (gold)
 pub async fn commodity_quote(symbol: &str) -> Result<Vec<FmpQuote>> {
     let client = build_client()?;
-    let path = format!("/api/v3/quote/{symbol}");
+    let path = format!("/api/v3/quote/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
@@ -32,7 +33,7 @@ pub async fn commodity_historical(
     params: &[(&str, &str)],
 ) -> Result<HistoricalPriceResponse> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-price-full/{symbol}");
+    let path = format!("/api/v3/historical-price-full/{}", encode_path_segment(symbol));
     client.get(&path, params).await
 }
 

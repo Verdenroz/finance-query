@@ -11,7 +11,6 @@ use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
 const AV_BASE: &str = "https://www.alphavantage.co/query";
-const DEFAULT_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub(crate) struct AlphaVantageClientBuilder {
     api_key: String,
@@ -23,7 +22,7 @@ impl AlphaVantageClientBuilder {
     pub fn new(api_key: impl Into<String>) -> Self {
         Self {
             api_key: api_key.into(),
-            timeout: DEFAULT_TIMEOUT,
+            timeout: Duration::from_secs(30),
             base_url: None,
         }
     }
@@ -124,11 +123,8 @@ impl AlphaVantageClient {
                     retry_after: Some(60),
                 });
             }
-            // Premium endpoint or invalid key message
-            return Err(FinanceError::ExternalApiError {
-                api: "AlphaVantage".to_string(),
-                status: 403,
-            });
+            // Premium endpoint, invalid key, or other AV informational message.
+            return Err(FinanceError::ApiError(format!("AlphaVantage: {info}")));
         }
 
         Ok(json)

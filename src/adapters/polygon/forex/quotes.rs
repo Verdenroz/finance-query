@@ -1,5 +1,6 @@
 //! Forex quote endpoints: last quote, historical quotes, currency conversion.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 use serde::{Deserialize, Serialize};
 
@@ -81,7 +82,7 @@ pub struct CurrencyConversion {
 /// * `to` - Quote currency code (e.g., `"USD"`)
 pub async fn forex_last_quote(from: &str, to: &str) -> Result<ForexQuoteResponse> {
     let client = build_client()?;
-    let path = format!("/v1/last_quote/currencies/{}/{}", from, to);
+    let path = format!("/v1/last_quote/currencies/{}/{}", encode_path_segment(from), encode_path_segment(to));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "forex_last_quote".to_string(),
@@ -100,7 +101,7 @@ pub async fn forex_quotes(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<Quote>> {
     let client = build_client()?;
-    let path = format!("/v3/quotes/{}", ticker);
+    let path = format!("/v3/quotes/{}", encode_path_segment(ticker));
     client.get(&path, params).await
 }
 
@@ -113,7 +114,7 @@ pub async fn forex_quotes(
 /// * `amount` - Amount to convert
 pub async fn currency_conversion(from: &str, to: &str, amount: f64) -> Result<CurrencyConversion> {
     let client = build_client()?;
-    let path = format!("/v1/conversion/{}/{}", from, to);
+    let path = format!("/v1/conversion/{}/{}", encode_path_segment(from), encode_path_segment(to));
     let amount_str = amount.to_string();
     let params = [("amount", amount_str.as_str())];
     let json = client.get_raw(&path, &params).await?;

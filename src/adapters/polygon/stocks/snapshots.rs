@@ -1,5 +1,6 @@
 //! Stock snapshot endpoints: full market, single ticker, top movers.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -8,7 +9,7 @@ use super::super::models::*;
 /// Fetch snapshot for a single stock ticker.
 pub async fn stock_snapshot(ticker: &str) -> Result<SingleSnapshotResponse> {
     let client = build_client()?;
-    let path = format!("/v2/snapshot/locale/us/markets/stocks/tickers/{}", ticker);
+    let path = format!("/v2/snapshot/locale/us/markets/stocks/tickers/{}", encode_path_segment(ticker));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "snapshot".to_string(),
@@ -38,7 +39,7 @@ pub async fn stock_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsRespo
 /// * `direction` - `"gainers"` or `"losers"`
 pub async fn stock_top_movers(direction: &str) -> Result<SnapshotsResponse> {
     let client = build_client()?;
-    let path = format!("/v2/snapshot/locale/us/markets/stocks/{}", direction);
+    let path = format!("/v2/snapshot/locale/us/markets/stocks/{}", encode_path_segment(direction));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "top_movers".to_string(),

@@ -1,5 +1,6 @@
 //! Forex aggregate bar endpoints: OHLCV bars, previous close, grouped daily.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -65,7 +66,7 @@ pub async fn forex_previous_close(
     adjusted: Option<bool>,
 ) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/ticker/{}/prev", ticker);
+    let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
@@ -83,7 +84,7 @@ pub async fn forex_previous_close(
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
 pub async fn forex_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/grouped/locale/global/market/fx/{}", date);
+    let path = format!("/v2/aggs/grouped/locale/global/market/fx/{}", encode_path_segment(date));
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];

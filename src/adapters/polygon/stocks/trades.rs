@@ -1,5 +1,6 @@
 //! Stock trade and quote endpoints: last trade, historical trades, last quote, historical quotes.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -8,7 +9,7 @@ use super::super::models::*;
 /// Fetch the most recent trade for a stock ticker.
 pub async fn stock_last_trade(ticker: &str) -> Result<LastTradeResponse> {
     let client = build_client()?;
-    let path = format!("/v2/last/trade/{}", ticker);
+    let path = format!("/v2/last/trade/{}", encode_path_segment(ticker));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "last_trade".to_string(),
@@ -25,14 +26,14 @@ pub async fn stock_trades(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<Trade>> {
     let client = build_client()?;
-    let path = format!("/v3/trades/{}", ticker);
+    let path = format!("/v3/trades/{}", encode_path_segment(ticker));
     client.get(&path, params).await
 }
 
 /// Fetch the most recent NBBO quote for a stock ticker.
 pub async fn stock_last_quote(ticker: &str) -> Result<LastQuoteResponse> {
     let client = build_client()?;
-    let path = format!("/v2/last/nbbo/{}", ticker);
+    let path = format!("/v2/last/nbbo/{}", encode_path_segment(ticker));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "last_quote".to_string(),
@@ -49,7 +50,7 @@ pub async fn stock_quotes(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<Quote>> {
     let client = build_client()?;
-    let path = format!("/v3/quotes/{}", ticker);
+    let path = format!("/v3/quotes/{}", encode_path_segment(ticker));
     client.get(&path, params).await
 }
 

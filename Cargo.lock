@@ -1697,6 +1697,7 @@ dependencies = [
  "futures",
  "mockito",
  "once_cell",
+ "percent-encoding",
  "polars",
  "prost",
  "rayon",

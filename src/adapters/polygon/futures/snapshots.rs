@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -66,7 +67,7 @@ pub struct FuturesSnapshotResponse {
 /// * `ticker` - Futures ticker symbol (e.g., `"ESZ4"`)
 pub async fn futures_snapshot(ticker: &str) -> Result<FuturesSnapshotResponse> {
     let client = build_client()?;
-    let path = format!("/v3/snapshot/futures/{}", ticker);
+    let path = format!("/v3/snapshot/futures/{}", encode_path_segment(ticker));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "futures_snapshot".to_string(),

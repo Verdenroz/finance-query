@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::models::Period;
@@ -419,7 +420,7 @@ pub async fn income_statement(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/income-statement/{symbol}"),
+            &format!("/api/v3/income-statement/{}", encode_path_segment(symbol)),
             &[("period", period.as_str()), ("limit", &limit_str)],
         )
         .await
@@ -435,7 +436,7 @@ pub async fn balance_sheet(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/balance-sheet-statement/{symbol}"),
+            &format!("/api/v3/balance-sheet-statement/{}", encode_path_segment(symbol)),
             &[("period", period.as_str()), ("limit", &limit_str)],
         )
         .await
@@ -447,7 +448,7 @@ pub async fn cash_flow(symbol: &str, period: Period, limit: Option<u32>) -> Resu
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/cash-flow-statement/{symbol}"),
+            &format!("/api/v3/cash-flow-statement/{}", encode_path_segment(symbol)),
             &[("period", period.as_str()), ("limit", &limit_str)],
         )
         .await
@@ -463,7 +464,7 @@ pub async fn income_statement_as_reported(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/income-statement-as-reported/{symbol}"),
+            &format!("/api/v3/income-statement-as-reported/{}", encode_path_segment(symbol)),
             &[("period", period.as_str()), ("limit", &limit_str)],
         )
         .await
@@ -479,7 +480,7 @@ pub async fn balance_sheet_as_reported(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/balance-sheet-statement-as-reported/{symbol}"),
+            &format!("/api/v3/balance-sheet-statement-as-reported/{}", encode_path_segment(symbol)),
             &[("period", period.as_str()), ("limit", &limit_str)],
         )
         .await
@@ -495,7 +496,7 @@ pub async fn cash_flow_as_reported(
     let limit_str = limit.unwrap_or(4).to_string();
     client
         .get(
-            &format!("/api/v3/cash-flow-statement-as-reported/{symbol}"),
+            &format!("/api/v3/cash-flow-statement-as-reported/{}", encode_path_segment(symbol)),
             &[("period", period.as_str()), ("limit", &limit_str)],
         )
         .await
@@ -509,7 +510,7 @@ pub async fn full_financial_statement(
     let client = super::build_client()?;
     client
         .get(
-            &format!("/api/v3/financial-statement-full-as-reported/{symbol}"),
+            &format!("/api/v3/financial-statement-full-as-reported/{}", encode_path_segment(symbol)),
             &[("period", period.as_str())],
         )
         .await

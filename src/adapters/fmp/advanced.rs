@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -149,7 +150,7 @@ pub async fn cot_symbols() -> Result<Vec<CotSymbol>> {
 /// * `symbol` - Trading symbol from the COT report list
 pub async fn cot_report(symbol: &str) -> Result<Vec<CotReport>> {
     let client = build_client()?;
-    let path = format!("/api/v4/commitment_of_traders_report/{symbol}");
+    let path = format!("/api/v4/commitment_of_traders_report/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
@@ -158,7 +159,7 @@ pub async fn cot_report(symbol: &str) -> Result<Vec<CotReport>> {
 /// * `symbol` - Trading symbol from the COT report list
 pub async fn cot_analysis(symbol: &str) -> Result<Vec<CotAnalysis>> {
     let client = build_client()?;
-    let path = format!("/api/v4/commitment_of_traders_report_analysis/{symbol}");
+    let path = format!("/api/v4/commitment_of_traders_report_analysis/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 

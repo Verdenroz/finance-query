@@ -151,15 +151,20 @@ async fn fetch_max_chunked(
             .unwrap_or_else(|| "unknown".to_string())
     );
 
-    // Step 2: Chunk into 10-year periods
+    // Step 2: Chunk into ~10-year periods
     let now = chrono::Utc::now().timestamp();
-    const CHUNK_SIZE: i64 = 10 * 365 * 24 * 60 * 60; // 10 years in seconds
+    // 3650 days (~10 years; ignores leap years for simplicity).
+    // Yahoo Finance truncates max-range daily/weekly responses, so we walk
+    // the full history in chunks of this size. Drift across multi-decade
+    // histories may add 1 extra request; correctness is preserved by the
+    // dedup pass at the end of fetch_max_chunked.
+    const CHUNK_SIZE_SECONDS: i64 = 3650 * 24 * 60 * 60;
 
     let mut period1 = earliest_timestamp;
     let mut merged_result = init_chart_response();
 
     loop {
-        let period2 = (period1 + CHUNK_SIZE).min(now);
+        let period2 = (period1 + CHUNK_SIZE_SECONDS).min(now);
 
         let chunk_data = fetch_with_dates(client, symbol, interval, period1, period2).await?;
         merge_chart_data(&mut merged_result, chunk_data)?;
@@ -171,6 +176,7 @@ async fn fetch_max_chunked(
         period1 = period2 + 1;
     }
 
+    dedup_timestamps_in_place(&mut merged_result)?;
     Ok(merged_result)
 }
 
@@ -358,6 +364,77 @@ fn merge_chart_data(merged: &mut serde_json::Value, chunk: serde_json::Value) ->
     }
 
     Ok(())
+}
+
+/// Remove consecutive-duplicate timestamps (and corresponding entries in all
+/// parallel arrays) after merging chunked responses. Yahoo's daily/weekly
+/// bars are monotonically non-decreasing per chunk, so duplicates only ever
+/// arise at chunk boundaries — a single forward scan is sufficient.
+fn dedup_timestamps_in_place(merged: &mut serde_json::Value) -> Result<()> {
+    let result = merged
+        .get_mut("chart")
+        .and_then(|c| c.get_mut("result"))
+        .and_then(|r| r.as_array_mut())
+        .and_then(|arr| arr.first_mut())
+        .ok_or_else(|| FinanceError::ResponseStructureError {
+            field: "chart.result[0]".to_string(),
+            context: "merged structure missing chart.result[0]".to_string(),
+        })?;
+
+    let timestamps_owned: Vec<i64> = result
+        .get("timestamp")
+        .and_then(|t| t.as_array())
+        .map(|arr| arr.iter().filter_map(|v| v.as_i64()).collect())
+        .unwrap_or_default();
+
+    let mut keep: Vec<usize> = Vec::with_capacity(timestamps_owned.len());
+    let mut last: Option<i64> = None;
+    for (i, &ts) in timestamps_owned.iter().enumerate() {
+        if Some(ts) != last {
+            keep.push(i);
+            last = Some(ts);
+        }
+    }
+
+    if keep.len() == timestamps_owned.len() {
+        return Ok(());
+    }
+
+    // Apply the keep-mask to every parallel array.
+    let arrays_to_filter: &[&[&str]] = &[
+        &["timestamp"],
+        &["indicators", "quote", "0", "open"],
+        &["indicators", "quote", "0", "high"],
+        &["indicators", "quote", "0", "low"],
+        &["indicators", "quote", "0", "close"],
+        &["indicators", "quote", "0", "volume"],
+        &["indicators", "adjclose", "0", "adjclose"],
+    ];
+
+    for path in arrays_to_filter {
+        if let Some(arr) = walk_to_array_mut(result, path) {
+            let kept: Vec<serde_json::Value> =
+                keep.iter().filter_map(|&i| arr.get(i).cloned()).collect();
+            *arr = kept;
+        }
+    }
+
+    Ok(())
+}
+
+fn walk_to_array_mut<'a>(
+    root: &'a mut serde_json::Value,
+    path: &[&str],
+) -> Option<&'a mut Vec<serde_json::Value>> {
+    let mut cur: &mut serde_json::Value = root;
+    for seg in path {
+        cur = if let Ok(idx) = seg.parse::<usize>() {
+            cur.get_mut(idx)?
+        } else {
+            cur.get_mut(*seg)?
+        };
+    }
+    cur.as_array_mut()
 }
 
 /// Fetch chart data for a symbol using absolute date boundaries.
@@ -642,5 +719,70 @@ mod tests {
         assert_eq!(secs, 728 * 24 * 3600);
         assert!(intraday_limit(Interval::OneDay).is_none());
         assert!(intraday_limit(Interval::OneWeek).is_none());
+    }
+
+    #[test]
+    fn test_dedup_timestamps_in_place_removes_overlapping_entries() {
+        let mut acc = init_chart_response();
+        let chunk1 = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "meta": {},
+                    "timestamp": [100, 200, 300],
+                    "indicators": {
+                        "quote": [{
+                            "open": [1.0, 2.0, 3.0],
+                            "high": [1.0, 2.0, 3.0],
+                            "low": [1.0, 2.0, 3.0],
+                            "close": [1.0, 2.0, 3.0],
+                            "volume": [10, 20, 30]
+                        }],
+                        "adjclose": [{ "adjclose": [1.0, 2.0, 3.0] }]
+                    }
+                }]
+            }
+        });
+        let chunk2 = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "meta": {},
+                    "timestamp": [300, 400],
+                    "indicators": {
+                        "quote": [{
+                            "open": [3.0, 4.0],
+                            "high": [3.0, 4.0],
+                            "low": [3.0, 4.0],
+                            "close": [3.0, 4.0],
+                            "volume": [30, 40]
+                        }],
+                        "adjclose": [{ "adjclose": [3.0, 4.0] }]
+                    }
+                }]
+            }
+        });
+
+        merge_chart_data(&mut acc, chunk1).unwrap();
+        merge_chart_data(&mut acc, chunk2).unwrap();
+        dedup_timestamps_in_place(&mut acc).unwrap();
+
+        let timestamps = acc["chart"]["result"][0]["timestamp"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .map(|v| v.as_i64().unwrap())
+            .collect::<Vec<_>>();
+
+        assert_eq!(timestamps, vec![100, 200, 300, 400]);
+
+        // Parallel arrays should be the same length.
+        let opens = acc["chart"]["result"][0]["indicators"]["quote"][0]["open"]
+            .as_array().unwrap().len();
+        let closes = acc["chart"]["result"][0]["indicators"]["quote"][0]["close"]
+            .as_array().unwrap().len();
+        let adjcloses = acc["chart"]["result"][0]["indicators"]["adjclose"][0]["adjclose"]
+            .as_array().unwrap().len();
+        assert_eq!(opens, 4);
+        assert_eq!(closes, 4);
+        assert_eq!(adjcloses, 4);
     }
 }

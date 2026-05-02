@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -64,7 +65,7 @@ async fn fetch_daily_indicator(
     type_: &str,
 ) -> Result<Vec<TechnicalIndicatorValue>> {
     let client = build_client()?;
-    let path = format!("/api/v3/technical_indicator/daily/{symbol}");
+    let path = format!("/api/v3/technical_indicator/daily/{}", encode_path_segment(symbol));
     let period_str = period.to_string();
     client
         .get(
@@ -87,7 +88,7 @@ async fn fetch_intraday_indicator(
     type_: &str,
 ) -> Result<Vec<TechnicalIndicatorValue>> {
     let client = build_client()?;
-    let path = format!("/api/v3/technical_indicator/{interval}/{symbol}");
+    let path = format!("/api/v3/technical_indicator/{}/{}", encode_path_segment(interval), encode_path_segment(symbol));
     let period_str = period.to_string();
     client
         .get(
@@ -138,7 +139,7 @@ pub async fn daily_macd(
     type_: &str,
 ) -> Result<Vec<TechnicalIndicatorValue>> {
     let client = build_client()?;
-    let path = format!("/api/v3/technical_indicator/daily/{symbol}");
+    let path = format!("/api/v3/technical_indicator/daily/{}", encode_path_segment(symbol));
     client
         .get(&path, &[("type", type_), ("indicator", "macd")])
         .await
@@ -232,7 +233,7 @@ pub async fn intraday_macd(
     type_: &str,
 ) -> Result<Vec<TechnicalIndicatorValue>> {
     let client = build_client()?;
-    let path = format!("/api/v3/technical_indicator/{interval}/{symbol}");
+    let path = format!("/api/v3/technical_indicator/{}/{}", encode_path_segment(interval), encode_path_segment(symbol));
     client
         .get(&path, &[("type", type_), ("indicator", "macd")])
         .await

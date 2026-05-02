@@ -1,5 +1,6 @@
 //! Index aggregate bar endpoints: OHLCV bars, previous close, daily open/close.
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
@@ -61,7 +62,7 @@ pub async fn index_aggregates(
 /// * `ticker` - Index ticker symbol with `I:` prefix (e.g., `"I:SPX"`)
 pub async fn index_previous_close(ticker: &str) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/ticker/{}/prev", ticker);
+    let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
@@ -76,7 +77,7 @@ pub async fn index_previous_close(ticker: &str) -> Result<AggregateResponse> {
 /// * `date` - Date as `"YYYY-MM-DD"`
 pub async fn index_daily_open_close(ticker: &str, date: &str) -> Result<DailyOpenClose> {
     let client = build_client()?;
-    let path = format!("/v1/open-close/{}/{}", ticker, date);
+    let path = format!("/v1/open-close/{}/{}", encode_path_segment(ticker), encode_path_segment(date));
 
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {

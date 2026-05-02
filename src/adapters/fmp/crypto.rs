@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use super::build_client;
@@ -30,7 +31,7 @@ pub struct AvailableSymbol {
 /// * `symbol` - e.g., `"BTCUSD"`
 pub async fn crypto_quote(symbol: &str) -> Result<Vec<FmpQuote>> {
     let client = build_client()?;
-    let path = format!("/api/v3/quote/{symbol}");
+    let path = format!("/api/v3/quote/{}", encode_path_segment(symbol));
     client.get(&path, &[]).await
 }
 
@@ -51,7 +52,7 @@ pub async fn crypto_historical(
     params: &[(&str, &str)],
 ) -> Result<HistoricalPriceResponse> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-price-full/{symbol}");
+    let path = format!("/api/v3/historical-price-full/{}", encode_path_segment(symbol));
     client.get(&path, params).await
 }
 
@@ -66,7 +67,7 @@ pub async fn crypto_intraday(
     params: &[(&str, &str)],
 ) -> Result<Vec<IntradayPrice>> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-chart/{interval}/{symbol}");
+    let path = format!("/api/v3/historical-chart/{}/{}", encode_path_segment(interval), encode_path_segment(symbol));
     client.get(&path, params).await
 }
 

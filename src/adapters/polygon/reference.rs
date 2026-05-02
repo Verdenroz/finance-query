@@ -2,6 +2,7 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
 
 use super::build_client;
@@ -219,7 +220,7 @@ pub async fn all_tickers(params: &[(&str, &str)]) -> Result<PaginatedResponse<Ti
 /// Fetch detailed ticker information.
 pub async fn ticker_details(ticker: &str) -> Result<TickerDetailsResponse> {
     let client = build_client()?;
-    let path = format!("/v3/reference/tickers/{}", ticker);
+    let path = format!("/v3/reference/tickers/{}", encode_path_segment(ticker));
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "ticker_details".to_string(),
@@ -236,7 +237,7 @@ pub async fn ticker_types(params: &[(&str, &str)]) -> Result<PaginatedResponse<T
 /// Fetch related tickers.
 pub async fn related_tickers(ticker: &str) -> Result<PaginatedResponse<RelatedTicker>> {
     let client = build_client()?;
-    let path = format!("/v1/related-companies/{}", ticker);
+    let path = format!("/v1/related-companies/{}", encode_path_segment(ticker));
     client.get(&path, &[]).await
 }
 
