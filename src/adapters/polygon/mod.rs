@@ -30,13 +30,13 @@ mod client;
 pub mod models;
 
 mod reference;
-pub mod stocks;
+mod stocks;
 
-pub mod crypto;
-pub mod forex;
-pub mod futures;
-pub mod indices;
-pub mod options;
+mod crypto;
+mod forex;
+mod futures;
+mod indices;
+mod options;
 
 mod alternative;
 mod benzinga;
