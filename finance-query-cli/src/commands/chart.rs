@@ -635,28 +635,24 @@ async fn render_interactive_chart(
                         loading = true;
                     }
                 }
-                KeyCode::BackTab
-                    if !focus_mode && selected_range_idx > 0 => {
-                        selected_range_idx -= 1;
-                        current_range = range_options[selected_range_idx].1;
-                        current_interval = range_options[selected_range_idx].2;
-                        loading = true;
-                    }
-                KeyCode::Tab
-                    if !focus_mode && selected_range_idx < range_options.len() - 1 => {
-                        selected_range_idx += 1;
-                        current_range = range_options[selected_range_idx].1;
-                        current_interval = range_options[selected_range_idx].2;
-                        loading = true;
-                    }
-                KeyCode::Home
-                    if focus_mode => {
-                        focus_index = 0;
-                    }
-                KeyCode::End
-                    if focus_mode => {
-                        focus_index = data_len.saturating_sub(1);
-                    }
+                KeyCode::BackTab if !focus_mode && selected_range_idx > 0 => {
+                    selected_range_idx -= 1;
+                    current_range = range_options[selected_range_idx].1;
+                    current_interval = range_options[selected_range_idx].2;
+                    loading = true;
+                }
+                KeyCode::Tab if !focus_mode && selected_range_idx < range_options.len() - 1 => {
+                    selected_range_idx += 1;
+                    current_range = range_options[selected_range_idx].1;
+                    current_interval = range_options[selected_range_idx].2;
+                    loading = true;
+                }
+                KeyCode::Home if focus_mode => {
+                    focus_index = 0;
+                }
+                KeyCode::End if focus_mode => {
+                    focus_index = data_len.saturating_sub(1);
+                }
                 _ => {}
             }
         }
