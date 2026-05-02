@@ -652,7 +652,8 @@ mod tests {
         let client = super::super::build_test_client(&server.url()).unwrap();
         let result = client.get("OVERVIEW", &[("symbol", "AAPL")]).await;
 
-        let err = result.expect_err("expected an error from a 200 OK with non-rate-limit Information field");
+        let err = result
+            .expect_err("expected an error from a 200 OK with non-rate-limit Information field");
         let msg = format!("{err:?}");
         assert!(
             msg.contains("premium endpoint"),

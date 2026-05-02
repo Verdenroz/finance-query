@@ -95,7 +95,10 @@ pub async fn index_historical(
     params: &[(&str, &str)],
 ) -> Result<HistoricalPriceResponse> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-price-full/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/historical-price-full/{}",
+        encode_path_segment(symbol)
+    );
     client.get(&path, params).await
 }
 

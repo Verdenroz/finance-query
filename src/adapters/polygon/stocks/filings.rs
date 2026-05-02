@@ -86,7 +86,10 @@ pub async fn filing_10k_sections(
     params: &[(&str, &str)],
 ) -> Result<FilingSectionsResponse> {
     let client = build_client()?;
-    let path = format!("/v1/reference/sec/filings/{}/sections", encode_path_segment(accession_number));
+    let path = format!(
+        "/v1/reference/sec/filings/{}/sections",
+        encode_path_segment(accession_number)
+    );
     let json = client.get_raw(&path, params).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "10k_sections".to_string(),
@@ -100,7 +103,10 @@ pub async fn filing_8k_text(
     params: &[(&str, &str)],
 ) -> Result<FilingSectionsResponse> {
     let client = build_client()?;
-    let path = format!("/v1/reference/sec/filings/{}/8k", encode_path_segment(accession_number));
+    let path = format!(
+        "/v1/reference/sec/filings/{}/8k",
+        encode_path_segment(accession_number)
+    );
     let json = client.get_raw(&path, params).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "8k_text".to_string(),

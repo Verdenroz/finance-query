@@ -138,10 +138,7 @@ pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTrade>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
     client
-        .get(
-            "/api/v4/insider-trading-rss-feed",
-            &[("limit", &limit_str)],
-        )
+        .get("/api/v4/insider-trading-rss-feed", &[("limit", &limit_str)])
         .await
 }
 

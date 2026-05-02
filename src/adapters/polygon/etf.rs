@@ -95,7 +95,10 @@ pub async fn etf_constituents(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<EtfConstituent>> {
     let client = build_client()?;
-    let path = format!("/v3/reference/etfs/{}/constituents", encode_path_segment(ticker));
+    let path = format!(
+        "/v3/reference/etfs/{}/constituents",
+        encode_path_segment(ticker)
+    );
     client.get(&path, params).await
 }
 

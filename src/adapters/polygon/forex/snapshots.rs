@@ -44,7 +44,10 @@ pub async fn forex_snapshot(ticker: &str) -> Result<SingleSnapshotResponse> {
 /// * `direction` - `"gainers"` or `"losers"`
 pub async fn forex_top_movers(direction: &str) -> Result<SnapshotsResponse> {
     let client = build_client()?;
-    let path = format!("/v2/snapshot/locale/global/markets/forex/{}", encode_path_segment(direction));
+    let path = format!(
+        "/v2/snapshot/locale/global/markets/forex/{}",
+        encode_path_segment(direction)
+    );
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "forex_top_movers".to_string(),

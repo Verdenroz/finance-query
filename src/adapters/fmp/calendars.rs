@@ -149,10 +149,7 @@ pub async fn ipo_calendar(from: &str, to: &str) -> Result<Vec<IpoCalendarEntry>>
 }
 
 /// Fetch stock split calendar within a date range.
-pub async fn stock_split_calendar(
-    from: &str,
-    to: &str,
-) -> Result<Vec<StockSplitCalendarEntry>> {
+pub async fn stock_split_calendar(from: &str, to: &str) -> Result<Vec<StockSplitCalendarEntry>> {
     let client = build_client()?;
     client
         .get(
@@ -177,10 +174,7 @@ pub async fn dividend_calendar(from: &str, to: &str) -> Result<Vec<DividendCalen
 pub async fn economic_calendar(from: &str, to: &str) -> Result<Vec<EconomicCalendarEntry>> {
     let client = build_client()?;
     client
-        .get(
-            "/api/v3/economic_calendar",
-            &[("from", from), ("to", to)],
-        )
+        .get("/api/v3/economic_calendar", &[("from", from), ("to", to)])
         .await
 }
 

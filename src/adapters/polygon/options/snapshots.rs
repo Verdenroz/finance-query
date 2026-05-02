@@ -157,7 +157,11 @@ pub async fn options_contract_snapshot(
     contract: &str,
 ) -> Result<OptionsContractSnapshotResponse> {
     let client = build_client()?;
-    let path = format!("/v3/snapshot/options/{}/{}", encode_path_segment(underlying), encode_path_segment(contract));
+    let path = format!(
+        "/v3/snapshot/options/{}/{}",
+        encode_path_segment(underlying),
+        encode_path_segment(contract)
+    );
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "options_contract_snapshot".to_string(),

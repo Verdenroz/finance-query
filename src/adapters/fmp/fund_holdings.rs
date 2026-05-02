@@ -59,14 +59,20 @@ pub struct EtfHolding {
 /// Fetch ETF sector weightings.
 pub async fn etf_sector_weightings(symbol: &str) -> Result<Vec<EtfSectorWeighting>> {
     let client = build_client()?;
-    let path = format!("/api/v3/etf-sector-weightings/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/etf-sector-weightings/{}",
+        encode_path_segment(symbol)
+    );
     client.get(&path, &[]).await
 }
 
 /// Fetch ETF country weightings.
 pub async fn etf_country_weightings(symbol: &str) -> Result<Vec<EtfCountryWeighting>> {
     let client = build_client()?;
-    let path = format!("/api/v3/etf-country-weightings/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/etf-country-weightings/{}",
+        encode_path_segment(symbol)
+    );
     client.get(&path, &[]).await
 }
 
@@ -86,9 +92,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/etf-sector-weightings/SPY")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([
@@ -121,9 +128,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/etf-country-weightings/VEU")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([

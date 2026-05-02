@@ -110,7 +110,10 @@ pub async fn stock_short_interest(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponse<ShortInterest>> {
     let client = build_client()?;
-    let path = format!("/v3/reference/short-interest/{}", encode_path_segment(ticker));
+    let path = format!(
+        "/v3/reference/short-interest/{}",
+        encode_path_segment(ticker)
+    );
     client.get(&path, params).await
 }
 

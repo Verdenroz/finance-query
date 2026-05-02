@@ -169,7 +169,10 @@ pub async fn analyst_estimates(
 /// Fetch analyst stock recommendations.
 pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommendation>> {
     let client = build_client()?;
-    let path = format!("/api/v3/analyst-stock-recommendations/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/analyst-stock-recommendations/{}",
+        encode_path_segment(symbol)
+    );
     client.get(&path, &[]).await
 }
 
@@ -198,7 +201,10 @@ pub async fn earnings_transcript(
     year: u32,
 ) -> Result<Vec<EarningsTranscript>> {
     let client = build_client()?;
-    let path = format!("/api/v3/earning_call_transcript/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/earning_call_transcript/{}",
+        encode_path_segment(symbol)
+    );
     let q = quarter.to_string();
     let y = year.to_string();
     client.get(&path, &[("quarter", &*q), ("year", &*y)]).await
@@ -208,10 +214,7 @@ pub async fn earnings_transcript(
 pub async fn earnings_transcript_list(symbol: &str) -> Result<Vec<EarningsTranscriptRef>> {
     let client = build_client()?;
     client
-        .get(
-            "/api/v4/earning_call_transcript",
-            &[("symbol", symbol)],
-        )
+        .get("/api/v4/earning_call_transcript", &[("symbol", symbol)])
         .await
 }
 
@@ -264,9 +267,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/earnings-surprises/AAPL")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([

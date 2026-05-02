@@ -84,7 +84,10 @@ pub async fn forex_previous_close(
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
 pub async fn forex_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/grouped/locale/global/market/fx/{}", encode_path_segment(date));
+    let path = format!(
+        "/v2/aggs/grouped/locale/global/market/fx/{}",
+        encode_path_segment(date)
+    );
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];

@@ -10,11 +10,35 @@ use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
 /// this does NOT apply dot-segment resolution, so `".."` survives as
 /// literal `..` rather than collapsing the URL path.
 const PATH_SEGMENT_ENCODE_SET: &AsciiSet = &CONTROLS
-    .add(b' ').add(b'"').add(b'#').add(b'<').add(b'>').add(b'?').add(b'`')
-    .add(b'{').add(b'}').add(b'/').add(b'%').add(b':').add(b';').add(b'=')
-    .add(b'@').add(b'[').add(b'\\').add(b']').add(b'^').add(b'|')
-    .add(b'!').add(b'$').add(b'&').add(b'\'').add(b'(').add(b')')
-    .add(b'*').add(b'+').add(b',');
+    .add(b' ')
+    .add(b'"')
+    .add(b'#')
+    .add(b'<')
+    .add(b'>')
+    .add(b'?')
+    .add(b'`')
+    .add(b'{')
+    .add(b'}')
+    .add(b'/')
+    .add(b'%')
+    .add(b':')
+    .add(b';')
+    .add(b'=')
+    .add(b'@')
+    .add(b'[')
+    .add(b'\\')
+    .add(b']')
+    .add(b'^')
+    .add(b'|')
+    .add(b'!')
+    .add(b'$')
+    .add(b'&')
+    .add(b'\'')
+    .add(b'(')
+    .add(b')')
+    .add(b'*')
+    .add(b'+')
+    .add(b',');
 
 /// Percent-encode a string for safe inclusion as a URL path segment.
 ///

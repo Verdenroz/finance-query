@@ -175,10 +175,7 @@ mod tests {
 
         let client = super::super::build_test_client(&server.url()).unwrap();
         let resp: Vec<StockNews> = client
-            .get(
-                "/api/v3/stock_news",
-                &[("tickers", "AAPL"), ("limit", "5")],
-            )
+            .get("/api/v3/stock_news", &[("tickers", "AAPL"), ("limit", "5")])
             .await
             .unwrap();
         assert_eq!(resp.len(), 1);
@@ -216,6 +213,9 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(resp.len(), 1);
-        assert_eq!(resp[0].title.as_deref(), Some("Apple Announces New Product"));
+        assert_eq!(
+            resp[0].title.as_deref(),
+            Some("Apple Announces New Product")
+        );
     }
 }

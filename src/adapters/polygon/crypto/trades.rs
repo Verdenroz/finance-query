@@ -47,7 +47,11 @@ pub struct CryptoLastTradeResponse {
 /// * `to` - The quote currency (e.g., `"USD"`)
 pub async fn crypto_last_trade(from: &str, to: &str) -> Result<CryptoLastTradeResponse> {
     let client = build_client()?;
-    let path = format!("/v1/last/crypto/{}/{}", encode_path_segment(from), encode_path_segment(to));
+    let path = format!(
+        "/v1/last/crypto/{}/{}",
+        encode_path_segment(from),
+        encode_path_segment(to)
+    );
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "crypto_last_trade".to_string(),

@@ -114,9 +114,7 @@ pub struct MarketMover {
 /// Fetch sector PE ratios.
 pub async fn sectors_pe() -> Result<Vec<SectorPe>> {
     let client = build_client()?;
-    client
-        .get("/api/v4/sector_price_earning_ratio", &[])
-        .await
+    client.get("/api/v4/sector_price_earning_ratio", &[]).await
 }
 
 /// Fetch industry PE ratios.
@@ -134,9 +132,7 @@ pub async fn sector_performance() -> Result<Vec<SectorPerformance>> {
 }
 
 /// Fetch historical sector performance.
-pub async fn historical_sector_performance(
-    limit: u32,
-) -> Result<Vec<HistoricalSectorPerformance>> {
+pub async fn historical_sector_performance(limit: u32) -> Result<Vec<HistoricalSectorPerformance>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
     client
@@ -174,9 +170,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/sector-performance")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([
@@ -195,10 +192,8 @@ mod tests {
             .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let resp: Vec<SectorPerformance> = client
-            .get("/api/v3/sector-performance", &[])
-            .await
-            .unwrap();
+        let resp: Vec<SectorPerformance> =
+            client.get("/api/v3/sector-performance", &[]).await.unwrap();
         assert_eq!(resp.len(), 2);
         assert_eq!(resp[0].sector.as_deref(), Some("Technology"));
         assert_eq!(resp[0].changes_percentage.as_deref(), Some("1.25%"));
@@ -209,9 +204,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/stock_market/gainers")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([

@@ -409,7 +409,13 @@ pub async fn enterprise_value(
 pub async fn discounted_cash_flow(symbol: &str) -> Result<Vec<DiscountedCashFlow>> {
     let client = super::build_client()?;
     client
-        .get(&format!("/api/v3/discounted-cash-flow/{}", encode_path_segment(symbol)), &[])
+        .get(
+            &format!(
+                "/api/v3/discounted-cash-flow/{}",
+                encode_path_segment(symbol)
+            ),
+            &[],
+        )
         .await
 }
 
@@ -423,7 +429,10 @@ pub async fn historical_dcf(
     let limit_str = limit.unwrap_or(10).to_string();
     client
         .get(
-            &format!("/api/v3/historical-discounted-cash-flow-statement/{}", encode_path_segment(symbol)),
+            &format!(
+                "/api/v3/historical-discounted-cash-flow-statement/{}",
+                encode_path_segment(symbol)
+            ),
             &[("period", period.as_str()), ("limit", &limit_str)],
         )
         .await
@@ -432,7 +441,12 @@ pub async fn historical_dcf(
 /// Fetch company rating for a symbol.
 pub async fn company_rating(symbol: &str) -> Result<Vec<CompanyRating>> {
     let client = super::build_client()?;
-    client.get(&format!("/api/v3/rating/{}", encode_path_segment(symbol)), &[]).await
+    client
+        .get(
+            &format!("/api/v3/rating/{}", encode_path_segment(symbol)),
+            &[],
+        )
+        .await
 }
 
 /// Fetch historical ratings for a symbol.

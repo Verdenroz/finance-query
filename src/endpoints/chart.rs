@@ -776,11 +776,17 @@ mod tests {
 
         // Parallel arrays should be the same length.
         let opens = acc["chart"]["result"][0]["indicators"]["quote"][0]["open"]
-            .as_array().unwrap().len();
+            .as_array()
+            .unwrap()
+            .len();
         let closes = acc["chart"]["result"][0]["indicators"]["quote"][0]["close"]
-            .as_array().unwrap().len();
+            .as_array()
+            .unwrap()
+            .len();
         let adjcloses = acc["chart"]["result"][0]["indicators"]["adjclose"][0]["adjclose"]
-            .as_array().unwrap().len();
+            .as_array()
+            .unwrap()
+            .len();
         assert_eq!(opens, 4);
         assert_eq!(closes, 4);
         assert_eq!(adjcloses, 4);

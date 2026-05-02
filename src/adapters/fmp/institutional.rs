@@ -100,7 +100,10 @@ pub struct Form13F {
 /// Fetch institutional holders of a stock.
 pub async fn institutional_holders(symbol: &str) -> Result<Vec<InstitutionalHolder>> {
     let client = build_client()?;
-    let path = format!("/api/v3/institutional-holder/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/institutional-holder/{}",
+        encode_path_segment(symbol)
+    );
     client.get(&path, &[]).await
 }
 
@@ -137,9 +140,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/institutional-holder/AAPL")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([
@@ -169,9 +173,10 @@ mod tests {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
             .mock("GET", "/api/v3/etf-holder/SPY")
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!([
@@ -189,10 +194,7 @@ mod tests {
             .await;
 
         let client = super::super::build_test_client(&server.url()).unwrap();
-        let resp: Vec<EtfHolder> = client
-            .get("/api/v3/etf-holder/SPY", &[])
-            .await
-            .unwrap();
+        let resp: Vec<EtfHolder> = client.get("/api/v3/etf-holder/SPY", &[]).await.unwrap();
         assert_eq!(resp.len(), 1);
         assert_eq!(resp[0].asset.as_deref(), Some("AAPL"));
         assert!((resp[0].weight_percentage.unwrap() - 7.2).abs() < 0.01);

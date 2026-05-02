@@ -76,14 +76,20 @@ pub struct SplitHistoryResponse {
 /// Fetch historical dividend data for a symbol.
 pub async fn historical_dividends(symbol: &str) -> Result<DividendHistoryResponse> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-price-full/stock_dividend/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/historical-price-full/stock_dividend/{}",
+        encode_path_segment(symbol)
+    );
     client.get(&path, &[]).await
 }
 
 /// Fetch historical stock split data for a symbol.
 pub async fn historical_splits(symbol: &str) -> Result<SplitHistoryResponse> {
     let client = build_client()?;
-    let path = format!("/api/v3/historical-price-full/stock_split/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/historical-price-full/stock_split/{}",
+        encode_path_segment(symbol)
+    );
     client.get(&path, &[]).await
 }
 
@@ -95,13 +101,11 @@ mod tests {
     async fn test_historical_dividends_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock(
-                "GET",
-                "/api/v3/historical-price-full/stock_dividend/AAPL",
-            )
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .mock("GET", "/api/v3/historical-price-full/stock_dividend/AAPL")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!({
@@ -135,13 +139,11 @@ mod tests {
     async fn test_historical_splits_mock() {
         let mut server = mockito::Server::new_async().await;
         let _mock = server
-            .mock(
-                "GET",
-                "/api/v3/historical-price-full/stock_split/AAPL",
-            )
-            .match_query(mockito::Matcher::AllOf(vec![
-                mockito::Matcher::UrlEncoded("apikey".into(), "test-key".into()),
-            ]))
+            .mock("GET", "/api/v3/historical-price-full/stock_split/AAPL")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
             .with_status(200)
             .with_body(
                 serde_json::json!({

@@ -196,14 +196,22 @@ pub struct DelistedCompany {
 /// Fetch company profile for a symbol.
 pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfile>> {
     let client = super::build_client()?;
-    client.get(&format!("/api/v3/profile/{}", encode_path_segment(symbol)), &[]).await
+    client
+        .get(
+            &format!("/api/v3/profile/{}", encode_path_segment(symbol)),
+            &[],
+        )
+        .await
 }
 
 /// Fetch key executives for a symbol.
 pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutive>> {
     let client = super::build_client()?;
     client
-        .get(&format!("/api/v3/key-executives/{}", encode_path_segment(symbol)), &[])
+        .get(
+            &format!("/api/v3/key-executives/{}", encode_path_segment(symbol)),
+            &[],
+        )
         .await
 }
 
@@ -211,7 +219,13 @@ pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutive>> {
 pub async fn market_cap(symbol: &str) -> Result<Vec<MarketCap>> {
     let client = super::build_client()?;
     client
-        .get(&format!("/api/v3/market-capitalization/{}", encode_path_segment(symbol)), &[])
+        .get(
+            &format!(
+                "/api/v3/market-capitalization/{}",
+                encode_path_segment(symbol)
+            ),
+            &[],
+        )
         .await
 }
 
@@ -221,7 +235,10 @@ pub async fn historical_market_cap(symbol: &str, limit: Option<u32>) -> Result<V
     let limit_str = limit.unwrap_or(100).to_string();
     client
         .get(
-            &format!("/api/v3/historical-market-capitalization/{}", encode_path_segment(symbol)),
+            &format!(
+                "/api/v3/historical-market-capitalization/{}",
+                encode_path_segment(symbol)
+            ),
             &[("limit", &limit_str)],
         )
         .await
@@ -357,7 +374,10 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
 
-        assert!(matches!(result, Err(crate::error::FinanceError::RateLimited { .. })));
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::RateLimited { .. })
+        ));
     }
 
     #[tokio::test]
@@ -373,7 +393,10 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
 
-        assert!(matches!(result, Err(crate::error::FinanceError::AuthenticationFailed { .. })));
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::AuthenticationFailed { .. })
+        ));
     }
 
     #[tokio::test]
@@ -408,6 +431,9 @@ mod tests {
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
         let result = client.get_raw("/api/v3/profile/AAPL", &[]).await;
 
-        assert!(matches!(result, Err(crate::error::FinanceError::ServerError { .. })));
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::ServerError { .. })
+        ));
     }
 }

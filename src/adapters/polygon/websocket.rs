@@ -185,9 +185,9 @@ impl PolygonStreamBuilder {
     pub async fn build(self) -> Result<PolygonStream> {
         let url = format!("wss://socket.polygon.io/{}", self.cluster.as_str());
 
-        let (ws_stream, _) = tokio_tungstenite::connect_async(&url).await.map_err(|e| {
-            FinanceError::ApiError(format!("Polygon WebSocket connect error: {e}"))
-        })?;
+        let (ws_stream, _) = tokio_tungstenite::connect_async(&url)
+            .await
+            .map_err(|e| FinanceError::ApiError(format!("Polygon WebSocket connect error: {e}")))?;
 
         let (write, read) = futures::StreamExt::split(ws_stream);
         let write = std::sync::Arc::new(tokio::sync::Mutex::new(write));
@@ -204,7 +204,9 @@ impl PolygonStreamBuilder {
                 .await
                 .send(Message::Text(auth_msg.to_string().into()))
                 .await
-                .map_err(|e| FinanceError::ApiError(format!("Polygon WebSocket auth error: {e}")))?;
+                .map_err(|e| {
+                    FinanceError::ApiError(format!("Polygon WebSocket auth error: {e}"))
+                })?;
         }
 
         // Subscribe

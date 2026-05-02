@@ -77,7 +77,11 @@ pub async fn index_previous_close(ticker: &str) -> Result<AggregateResponse> {
 /// * `date` - Date as `"YYYY-MM-DD"`
 pub async fn index_daily_open_close(ticker: &str, date: &str) -> Result<DailyOpenClose> {
     let client = build_client()?;
-    let path = format!("/v1/open-close/{}/{}", encode_path_segment(ticker), encode_path_segment(date));
+    let path = format!(
+        "/v1/open-close/{}/{}",
+        encode_path_segment(ticker),
+        encode_path_segment(date)
+    );
 
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {

@@ -65,7 +65,10 @@ async fn fetch_daily_indicator(
     type_: &str,
 ) -> Result<Vec<TechnicalIndicatorValue>> {
     let client = build_client()?;
-    let path = format!("/api/v3/technical_indicator/daily/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/technical_indicator/daily/{}",
+        encode_path_segment(symbol)
+    );
     let period_str = period.to_string();
     client
         .get(
@@ -88,7 +91,11 @@ async fn fetch_intraday_indicator(
     type_: &str,
 ) -> Result<Vec<TechnicalIndicatorValue>> {
     let client = build_client()?;
-    let path = format!("/api/v3/technical_indicator/{}/{}", encode_path_segment(interval), encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/technical_indicator/{}/{}",
+        encode_path_segment(interval),
+        encode_path_segment(symbol)
+    );
     let period_str = period.to_string();
     client
         .get(
@@ -134,12 +141,12 @@ pub async fn daily_rsi(
 }
 
 /// Fetch daily MACD.
-pub async fn daily_macd(
-    symbol: &str,
-    type_: &str,
-) -> Result<Vec<TechnicalIndicatorValue>> {
+pub async fn daily_macd(symbol: &str, type_: &str) -> Result<Vec<TechnicalIndicatorValue>> {
     let client = build_client()?;
-    let path = format!("/api/v3/technical_indicator/daily/{}", encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/technical_indicator/daily/{}",
+        encode_path_segment(symbol)
+    );
     client
         .get(&path, &[("type", type_), ("indicator", "macd")])
         .await
@@ -233,7 +240,11 @@ pub async fn intraday_macd(
     type_: &str,
 ) -> Result<Vec<TechnicalIndicatorValue>> {
     let client = build_client()?;
-    let path = format!("/api/v3/technical_indicator/{}/{}", encode_path_segment(interval), encode_path_segment(symbol));
+    let path = format!(
+        "/api/v3/technical_indicator/{}/{}",
+        encode_path_segment(interval),
+        encode_path_segment(symbol)
+    );
     client
         .get(&path, &[("type", type_), ("indicator", "macd")])
         .await
@@ -327,11 +338,7 @@ mod tests {
         let resp: Vec<TechnicalIndicatorValue> = client
             .get(
                 path,
-                &[
-                    ("period", "20"),
-                    ("type", "close"),
-                    ("indicator", "sma"),
-                ],
+                &[("period", "20"), ("type", "close"), ("indicator", "sma")],
             )
             .await
             .unwrap();
@@ -373,11 +380,7 @@ mod tests {
         let resp: Vec<TechnicalIndicatorValue> = client
             .get(
                 path,
-                &[
-                    ("period", "10"),
-                    ("type", "close"),
-                    ("indicator", "ema"),
-                ],
+                &[("period", "10"), ("type", "close"), ("indicator", "ema")],
             )
             .await
             .unwrap();

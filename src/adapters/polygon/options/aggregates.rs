@@ -89,7 +89,11 @@ pub async fn options_daily_open_close(
     adjusted: Option<bool>,
 ) -> Result<DailyOpenClose> {
     let client = build_client()?;
-    let path = format!("/v1/open-close/{}/{}", encode_path_segment(ticker), encode_path_segment(date));
+    let path = format!(
+        "/v1/open-close/{}/{}",
+        encode_path_segment(ticker),
+        encode_path_segment(date)
+    );
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];

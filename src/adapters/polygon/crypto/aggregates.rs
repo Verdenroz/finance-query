@@ -129,7 +129,10 @@ pub async fn crypto_previous_close(
 /// * `adjusted` - Whether results are adjusted (default: true)
 pub async fn crypto_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/grouped/locale/global/market/crypto/{}", encode_path_segment(date));
+    let path = format!(
+        "/v2/aggs/grouped/locale/global/market/crypto/{}",
+        encode_path_segment(date)
+    );
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
@@ -152,7 +155,12 @@ pub async fn crypto_daily_open_close(
     date: &str,
 ) -> Result<CryptoDailyOpenClose> {
     let client = build_client()?;
-    let path = format!("/v1/open-close/crypto/{}/{}/{}", encode_path_segment(from), encode_path_segment(to), encode_path_segment(date));
+    let path = format!(
+        "/v1/open-close/crypto/{}/{}/{}",
+        encode_path_segment(from),
+        encode_path_segment(to),
+        encode_path_segment(date)
+    );
 
     let json = client.get_raw(&path, &[]).await?;
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {

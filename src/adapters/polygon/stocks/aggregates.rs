@@ -83,7 +83,10 @@ pub async fn stock_previous_close(
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
 pub async fn stock_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
     let client = build_client()?;
-    let path = format!("/v2/aggs/grouped/locale/us/market/stocks/{}", encode_path_segment(date));
+    let path = format!(
+        "/v2/aggs/grouped/locale/us/market/stocks/{}",
+        encode_path_segment(date)
+    );
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
@@ -106,7 +109,11 @@ pub async fn stock_daily_open_close(
     adjusted: Option<bool>,
 ) -> Result<DailyOpenClose> {
     let client = build_client()?;
-    let path = format!("/v1/open-close/{}/{}", encode_path_segment(ticker), encode_path_segment(date));
+    let path = format!(
+        "/v1/open-close/{}/{}",
+        encode_path_segment(ticker),
+        encode_path_segment(date)
+    );
 
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
@@ -259,7 +266,10 @@ mod tests {
         let client = crate::adapters::polygon::build_test_client(&server.url()).unwrap();
         let result = client.get_raw("/v2/aggs/ticker/AAPL/prev", &[]).await;
 
-        assert!(matches!(result, Err(crate::error::FinanceError::RateLimited { .. })));
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::RateLimited { .. })
+        ));
     }
 
     #[tokio::test]
@@ -275,7 +285,10 @@ mod tests {
         let client = crate::adapters::polygon::build_test_client(&server.url()).unwrap();
         let result = client.get_raw("/v2/aggs/ticker/AAPL/prev", &[]).await;
 
-        assert!(matches!(result, Err(crate::error::FinanceError::AuthenticationFailed { .. })));
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::AuthenticationFailed { .. })
+        ));
     }
 
     #[tokio::test]
@@ -329,6 +342,9 @@ mod tests {
         let client = crate::adapters::polygon::build_test_client(&server.url()).unwrap();
         let result = client.get_raw("/v2/aggs/ticker/AAPL/prev", &[]).await;
 
-        assert!(matches!(result, Err(crate::error::FinanceError::ServerError { .. })));
+        assert!(matches!(
+            result,
+            Err(crate::error::FinanceError::ServerError { .. })
+        ));
     }
 }
