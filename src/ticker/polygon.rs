@@ -17,6 +17,27 @@ use std::sync::Arc;
 use crate::adapters::polygon;
 use crate::error::Result;
 
+/// Financial report period filter for [`PolygonHandle::financials`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FinancialPeriod {
+    /// Annual filings.
+    Annual,
+    /// Quarterly filings.
+    Quarterly,
+    /// Trailing twelve-month filings.
+    Ttm,
+}
+
+impl FinancialPeriod {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Annual => "annual",
+            Self::Quarterly => "quarterly",
+            Self::Ttm => "ttm",
+        }
+    }
+}
+
 /// Typed accessor for the Polygon.io adapter, scoped to a single ticker.
 ///
 /// Construct via [`crate::Ticker::polygon`]. See the module docs for
@@ -102,19 +123,18 @@ impl PolygonHandle {
         polygon::stock_splits(&[("ticker", &self.symbol)]).await
     }
 
-    /// Quarterly or annual financial statements.
-    ///
-    /// `period` is one of `"annual"`, `"quarterly"`, or `"ttm"`.
+    /// Financial statements filtered by annual, quarterly, or TTM period.
     ///
     /// Wraps [`polygon::stock_financials`].
     pub async fn financials(
         &self,
-        period: &str,
+        period: FinancialPeriod,
         limit: Option<u32>,
     ) -> Result<polygon::PaginatedResponse<polygon::FinancialResult>> {
-        let limit_str = limit.map(|n| n.to_string()).unwrap_or_default();
-        let mut params: Vec<(&str, &str)> = vec![("period_of_report_type", period)];
-        if !limit_str.is_empty() {
+        let mut params: Vec<(&str, &str)> = vec![("period_of_report_type", period.as_str())];
+        let limit_str;
+        if let Some(n) = limit {
+            limit_str = n.to_string();
             params.push(("limit", &limit_str));
         }
         polygon::stock_financials(&self.symbol, &params).await
@@ -161,7 +181,7 @@ mod tests {
         let _ = h.news(10).await;
         let _ = h.dividends().await;
         let _ = h.splits().await;
-        let _ = h.financials("annual", None).await;
+        let _ = h.financials(FinancialPeriod::Annual, None).await;
         let _ = h.details().await;
     }
 }

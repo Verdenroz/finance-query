@@ -100,6 +100,10 @@ pub mod risk;
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
+#[cfg(feature = "polygon")]
+pub use ticker::FinancialPeriod;
+#[cfg(feature = "fmp")]
+pub use ticker::IntradayInterval;
 pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 pub use tickers::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,

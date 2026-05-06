@@ -11,12 +11,12 @@ pub use core::{ClientHandle, Ticker, TickerBuilder};
 #[cfg(feature = "polygon")]
 mod polygon;
 #[cfg(feature = "polygon")]
-pub use polygon::PolygonHandle;
+pub use polygon::{FinancialPeriod, PolygonHandle};
 
 #[cfg(feature = "fmp")]
 mod fmp;
 #[cfg(feature = "fmp")]
-pub use fmp::FmpHandle;
+pub use fmp::{FmpHandle, IntradayInterval};
 
 #[cfg(feature = "alphavantage")]
 mod alphavantage;

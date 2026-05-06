@@ -17,6 +17,36 @@ use std::sync::Arc;
 use crate::adapters::fmp;
 use crate::error::Result;
 
+/// Valid intraday intervals for [`FmpHandle::intraday`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IntradayInterval {
+    /// 1-minute bars.
+    Min1,
+    /// 5-minute bars.
+    Min5,
+    /// 15-minute bars.
+    Min15,
+    /// 30-minute bars.
+    Min30,
+    /// 1-hour bars.
+    Hour1,
+    /// 4-hour bars.
+    Hour4,
+}
+
+impl IntradayInterval {
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Min1 => "1min",
+            Self::Min5 => "5min",
+            Self::Min15 => "15min",
+            Self::Min30 => "30min",
+            Self::Hour1 => "1hour",
+            Self::Hour4 => "4hour",
+        }
+    }
+}
+
 /// Typed accessor for the FMP adapter, scoped to a single ticker.
 #[derive(Clone, Debug)]
 pub struct FmpHandle {
@@ -54,13 +84,12 @@ impl FmpHandle {
         fmp::historical_price_daily(&self.symbol, Some(params)).await
     }
 
-    /// Intraday OHLCV bars at the given interval ("1min" | "5min" |
-    /// "15min" | "30min" | "1hour" | "4hour").
+    /// Intraday OHLCV bars at the given interval.
     ///
     /// Wraps [`fmp::historical_price_intraday`].
     pub async fn intraday(
         &self,
-        interval: &str,
+        interval: IntradayInterval,
         from: Option<&str>,
         to: Option<&str>,
     ) -> Result<Vec<fmp::IntradayPrice>> {
@@ -72,7 +101,7 @@ impl FmpHandle {
         } else {
             None
         };
-        fmp::historical_price_intraday(&self.symbol, interval, params).await
+        fmp::historical_price_intraday(&self.symbol, interval.as_str(), params).await
     }
 
     /// Income statement for the configured period.
@@ -156,7 +185,7 @@ mod tests {
     async fn _fmp_method_signatures_compile(h: &FmpHandle) {
         let _ = h.quote().await;
         let _ = h.historical(None, None).await;
-        let _ = h.intraday("1min", None, None).await;
+        let _ = h.intraday(IntradayInterval::Min1, None, None).await;
         let _ = h.income_statement(fmp::Period::Quarter, Some(4)).await;
         let _ = h.balance_sheet(fmp::Period::Quarter, Some(4)).await;
         let _ = h.cash_flow(fmp::Period::Quarter, Some(4)).await;
