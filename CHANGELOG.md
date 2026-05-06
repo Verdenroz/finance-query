@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.5.1] - 2026-05-06
+
+The `Ticker` adapter handle integration in this release was contributed by [@Johnson-f](https://github.com/Johnson-f) in [#133](https://github.com/Verdenroz/finance-query/pull/133).
+
+### Added
+
+- **Typed adapter handles on `Ticker`** for explicit provider access:
+  - `Ticker::polygon()` → `PolygonHandle` (feature: `polygon`)
+  - `Ticker::fmp()` → `FmpHandle` (feature: `fmp`)
+  - `Ticker::alphavantage()` → `AlphaVantageHandle` (feature: `alphavantage`)
+- **Curated single-symbol adapter methods** on the new handles (28 total):
+  - `PolygonHandle`: `snapshot`, `aggregates`, `previous_close`, `last_trade`, `news`, `dividends`, `splits`, `financials`, `details`
+  - `FmpHandle`: `quote`, `historical`, `intraday`, `income_statement`, `balance_sheet`, `cash_flow`, `key_metrics`, `ratios`, `profile`, `news`
+  - `AlphaVantageHandle`: `quote`, `intraday`, `daily`, `daily_adjusted`, `weekly`, `weekly_adjusted`, `monthly`, `monthly_adjusted`, `overview`
+
+### Changed
+
+- Improved type safety for adapter handle parameters:
+  - `FmpHandle::intraday(...)` now uses `IntradayInterval` instead of a free-form string
+  - `PolygonHandle::financials(...)` now uses `FinancialPeriod` instead of a free-form string
+  - New enums are re-exported from the crate root for downstream use
+
 ## [2.5.0] - 2026-05-02
 
 The adapter additions in this release were contributed by [@Johnson-f](https://github.com/Johnson-f) in [#132](https://github.com/Verdenroz/finance-query/pull/132).
@@ -377,7 +399,8 @@ The adapter additions in this release were contributed by [@Johnson-f](https://g
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.5.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.5.1...HEAD
+[2.5.1]: https://github.com/Verdenroz/finance-query/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/Verdenroz/finance-query/compare/v2.4.3...v2.5.0
 [2.4.3]: https://github.com/Verdenroz/finance-query/compare/v2.4.2...v2.4.3
 [2.4.2]: https://github.com/Verdenroz/finance-query/compare/v2.4.1...v2.4.2
