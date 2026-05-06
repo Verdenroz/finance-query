@@ -259,35 +259,27 @@ fn handle_ensemble_compose_input(app: &mut App, key: KeyCode) {
 
     match key {
         KeyCode::Char('q') | KeyCode::Esc => app.pop_screen(),
-        KeyCode::Up | KeyCode::Char('k') => {
-            if total > 0 {
-                app.ensemble_cursor_idx = (app.ensemble_cursor_idx + total - 1) % total;
-            }
+        KeyCode::Up | KeyCode::Char('k') if total > 0 => {
+            app.ensemble_cursor_idx = (app.ensemble_cursor_idx + total - 1) % total;
         }
-        KeyCode::Down | KeyCode::Char('j') => {
-            if total > 0 {
-                app.ensemble_cursor_idx = (app.ensemble_cursor_idx + 1) % total;
-            }
+        KeyCode::Down | KeyCode::Char('j') if total > 0 => {
+            app.ensemble_cursor_idx = (app.ensemble_cursor_idx + 1) % total;
         }
-        KeyCode::Char(' ') => {
-            if total > 0 {
-                app.toggle_ensemble_selection(app.ensemble_cursor_idx);
-                app.edit_error = None;
-            }
+        KeyCode::Char(' ') if total > 0 => {
+            app.toggle_ensemble_selection(app.ensemble_cursor_idx);
+            app.edit_error = None;
         }
-        KeyCode::Char('a') => {
-            if total > 0 {
-                if app.ensemble_selected.len() == total {
-                    app.ensemble_selected.clear();
-                    app.ensemble_weights.clear();
-                } else {
-                    app.ensemble_selected = (0..total).collect();
-                    for idx in 0..total {
-                        app.ensemble_weights.entry(idx).or_insert(1.0);
-                    }
+        KeyCode::Char('a') if total > 0 => {
+            if app.ensemble_selected.len() == total {
+                app.ensemble_selected.clear();
+                app.ensemble_weights.clear();
+            } else {
+                app.ensemble_selected = (0..total).collect();
+                for idx in 0..total {
+                    app.ensemble_weights.entry(idx).or_insert(1.0);
                 }
-                app.edit_error = None;
             }
+            app.edit_error = None;
         }
         KeyCode::Char('c') => {
             app.ensemble_selected.clear();
@@ -475,21 +467,17 @@ fn handle_strategy_input(app: &mut App, key: KeyCode) {
             app.indicator_idx = 0;
             app.push_screen(Screen::IndicatorBrowser);
         }
-        KeyCode::Char('3') => {
-            if app.config.allow_short {
-                app.condition_target = ConditionTarget::ShortEntry;
-                app.category_idx = 0;
-                app.indicator_idx = 0;
-                app.push_screen(Screen::IndicatorBrowser);
-            }
+        KeyCode::Char('3') if app.config.allow_short => {
+            app.condition_target = ConditionTarget::ShortEntry;
+            app.category_idx = 0;
+            app.indicator_idx = 0;
+            app.push_screen(Screen::IndicatorBrowser);
         }
-        KeyCode::Char('4') => {
-            if app.config.allow_short {
-                app.condition_target = ConditionTarget::ShortExit;
-                app.category_idx = 0;
-                app.indicator_idx = 0;
-                app.push_screen(Screen::IndicatorBrowser);
-            }
+        KeyCode::Char('4') if app.config.allow_short => {
+            app.condition_target = ConditionTarget::ShortExit;
+            app.category_idx = 0;
+            app.indicator_idx = 0;
+            app.push_screen(Screen::IndicatorBrowser);
         }
         // Add to regime filter
         KeyCode::Char('5') | KeyCode::Char('g') => {
@@ -619,10 +607,8 @@ fn handle_strategy_input(app: &mut App, key: KeyCode) {
                 }
             }
         }
-        KeyCode::Char('r') => {
-            if app.can_run() {
-                app.push_screen(Screen::Confirmation);
-            }
+        KeyCode::Char('r') if app.can_run() => {
+            app.push_screen(Screen::Confirmation);
         }
         KeyCode::Char('b') => {
             app.screen = Screen::ConfigEditor;
@@ -645,15 +631,11 @@ fn handle_indicator_browser_input(app: &mut App, key: KeyCode) {
             app.category_idx = (app.category_idx + 1) % cat_len;
             app.indicator_idx = 0;
         }
-        KeyCode::Down | KeyCode::Char('j') => {
-            if ind_len > 0 {
-                app.indicator_idx = (app.indicator_idx + 1) % ind_len;
-            }
+        KeyCode::Down | KeyCode::Char('j') if ind_len > 0 => {
+            app.indicator_idx = (app.indicator_idx + 1) % ind_len;
         }
-        KeyCode::Up | KeyCode::Char('k') => {
-            if ind_len > 0 {
-                app.indicator_idx = (app.indicator_idx + ind_len - 1) % ind_len;
-            }
+        KeyCode::Up | KeyCode::Char('k') if ind_len > 0 => {
+            app.indicator_idx = (app.indicator_idx + ind_len - 1) % ind_len;
         }
         KeyCode::Enter => {
             app.select_indicator();
@@ -778,10 +760,8 @@ fn handle_target_input(app: &mut App, key: KeyCode) {
     match key {
         KeyCode::Char('q') | KeyCode::Esc => app.pop_screen(),
         // Switch between primary and secondary value
-        KeyCode::Tab => {
-            if needs_two_values {
-                app.editing_target_value = !app.editing_target_value;
-            }
+        KeyCode::Tab if needs_two_values => {
+            app.editing_target_value = !app.editing_target_value;
         }
         // Arrow keys for quick adjustment
         KeyCode::Left | KeyCode::Char('h') => {
@@ -955,16 +935,11 @@ fn handle_optimizer_input(app: &mut App, key: KeyCode) {
 
     match key {
         // Navigate params
-        KeyCode::Up | KeyCode::Char('k') => {
-            if n_params > 0 {
-                app.optimizer_param_idx = app.optimizer_param_idx.saturating_sub(1);
-            }
+        KeyCode::Up | KeyCode::Char('k') if n_params > 0 => {
+            app.optimizer_param_idx = app.optimizer_param_idx.saturating_sub(1);
         }
-        KeyCode::Down | KeyCode::Char('j') => {
-            if n_params > 0 {
-                app.optimizer_param_idx =
-                    (app.optimizer_param_idx + 1).min(n_params.saturating_sub(1));
-            }
+        KeyCode::Down | KeyCode::Char('j') if n_params > 0 => {
+            app.optimizer_param_idx = (app.optimizer_param_idx + 1).min(n_params.saturating_sub(1));
         }
         // Switch which field is being edited (start/end/step/in_sample/oos)
         KeyCode::Left | KeyCode::Char('h') => {

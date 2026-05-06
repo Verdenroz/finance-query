@@ -310,10 +310,8 @@ async fn handle_list_keys(app: &mut App, key: event::KeyEvent) -> Result<()> {
         KeyCode::Char('g') => {
             app.selected_idx = 0;
         }
-        KeyCode::Char('G') => {
-            if !app.alerts.is_empty() {
-                app.selected_idx = app.alerts.len() - 1;
-            }
+        KeyCode::Char('G') if !app.alerts.is_empty() => {
+            app.selected_idx = app.alerts.len() - 1;
         }
         KeyCode::Char('a') => {
             app.screen = Screen::Add;
@@ -394,10 +392,8 @@ fn handle_add_keys(app: &mut App, key: event::KeyEvent) -> Result<()> {
             AddField::Symbol => {
                 app.add_symbol.push(c.to_ascii_uppercase());
             }
-            AddField::Threshold => {
-                if c.is_ascii_digit() || c == '.' {
-                    app.add_threshold.push(c);
-                }
+            AddField::Threshold if (c.is_ascii_digit() || c == '.') => {
+                app.add_threshold.push(c);
             }
             _ => {}
         },

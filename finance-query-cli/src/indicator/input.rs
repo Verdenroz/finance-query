@@ -49,15 +49,11 @@ fn handle_indicator_select_input(app: &mut App, key: KeyCode) {
             app.indicator_idx = 0;
         }
         // Indicator navigation (up/down)
-        KeyCode::Up | KeyCode::Char('k') => {
-            if num_indicators > 0 {
-                app.indicator_idx = (app.indicator_idx + num_indicators - 1) % num_indicators;
-            }
+        KeyCode::Up | KeyCode::Char('k') if num_indicators > 0 => {
+            app.indicator_idx = (app.indicator_idx + num_indicators - 1) % num_indicators;
         }
-        KeyCode::Down | KeyCode::Char('j') => {
-            if num_indicators > 0 {
-                app.indicator_idx = (app.indicator_idx + 1) % num_indicators;
-            }
+        KeyCode::Down | KeyCode::Char('j') if num_indicators > 0 => {
+            app.indicator_idx = (app.indicator_idx + 1) % num_indicators;
         }
         // Select indicator
         KeyCode::Enter => {
@@ -68,29 +64,21 @@ fn handle_indicator_select_input(app: &mut App, key: KeyCode) {
             app.category_idx = 0;
             app.indicator_idx = 0;
         }
-        KeyCode::Char('2') => {
-            if num_categories > 1 {
-                app.category_idx = 1;
-                app.indicator_idx = 0;
-            }
+        KeyCode::Char('2') if num_categories > 1 => {
+            app.category_idx = 1;
+            app.indicator_idx = 0;
         }
-        KeyCode::Char('3') => {
-            if num_categories > 2 {
-                app.category_idx = 2;
-                app.indicator_idx = 0;
-            }
+        KeyCode::Char('3') if num_categories > 2 => {
+            app.category_idx = 2;
+            app.indicator_idx = 0;
         }
-        KeyCode::Char('4') => {
-            if num_categories > 3 {
-                app.category_idx = 3;
-                app.indicator_idx = 0;
-            }
+        KeyCode::Char('4') if num_categories > 3 => {
+            app.category_idx = 3;
+            app.indicator_idx = 0;
         }
-        KeyCode::Char('5') => {
-            if num_categories > 4 {
-                app.category_idx = 4;
-                app.indicator_idx = 0;
-            }
+        KeyCode::Char('5') if num_categories > 4 => {
+            app.category_idx = 4;
+            app.indicator_idx = 0;
         }
         _ => {}
     }
@@ -108,15 +96,11 @@ fn handle_param_config_input(app: &mut App, key: KeyCode) {
             app.pop_screen();
         }
         // Parameter navigation
-        KeyCode::Up | KeyCode::Char('k') => {
-            if num_params > 0 {
-                app.param_idx = (app.param_idx + num_params - 1) % num_params;
-            }
+        KeyCode::Up | KeyCode::Char('k') if num_params > 0 => {
+            app.param_idx = (app.param_idx + num_params - 1) % num_params;
         }
-        KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab => {
-            if num_params > 0 {
-                app.param_idx = (app.param_idx + 1) % num_params;
-            }
+        KeyCode::Down | KeyCode::Char('j') | KeyCode::Tab if num_params > 0 => {
+            app.param_idx = (app.param_idx + 1) % num_params;
         }
         // Adjust parameter value
         KeyCode::Left | KeyCode::Char('h') => {
