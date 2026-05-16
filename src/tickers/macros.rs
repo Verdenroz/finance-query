@@ -169,8 +169,7 @@ macro_rules! batch_fetch_cached {
 
         // Concurrent fetch (no lock held during I/O)
         let futures: Vec<_> = $self.symbols.iter().map(|sym_ref| {
-            #[allow(unused_variables)]
-            let $client = std::sync::Arc::clone(&$self.client);
+            let $client = std::sync::Arc::clone(&$self.providers);
             let $symbol = std::sync::Arc::clone(sym_ref);
             async move {
                 let result: crate::error::Result<_> = (async { $fetch_expr }).await;
