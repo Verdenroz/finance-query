@@ -248,6 +248,49 @@ ValueFormat::Both    // Both raw and pretty values
 
 **Note**: This is mainly used by the server's REST API. Library users typically work with raw values directly.
 
+## Provider Configuration
+
+Configure which data providers to use and how they're initialized.
+
+### Provider API Keys
+
+API keys for each provider are read from environment variables:
+
+| Provider | Env var | Feature flag |
+|----------|---------|-------------|
+| Polygon.io | `POLYGON_API_KEY` | `polygon` |
+| FMP | `FMP_API_KEY` | `fmp` |
+| Alpha Vantage | `ALPHA_VANTAGE_API_KEY` | `alphavantage` |
+| FRED | `FRED_API_KEY` | `fred` |
+| CoinGecko | *(keyless)* | `crypto` |
+| Yahoo Finance | *(keyless, automatic)* | *(always available)* |
+
+No manual init calls are needed — `TickerBuilder::build()` reads keys automatically.
+
+```bash
+export POLYGON_API_KEY="your-polygon-key"
+export FMP_API_KEY="your-fmp-key"
+```
+
+### Provider Selection
+
+```rust
+use finance_query::{Ticker, Provider, Fetch, Enrich};
+
+// Default: Yahoo Finance only
+let ticker = Ticker::new("AAPL").await?;
+
+// Custom provider chain with enrichment
+let ticker = Ticker::builder("AAPL")
+    .providers(&[Provider::Polygon, Provider::Yahoo])
+    .fetch(Fetch::All)
+    .merge(Enrich)
+    .build()
+    .await?;
+```
+
+See [Multi-Provider Architecture](providers/index.md) for the complete provider reference.
+
 ## Best Practices
 
 !!! tip "Match Symbols to Regions"

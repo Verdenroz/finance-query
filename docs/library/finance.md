@@ -414,8 +414,8 @@ for currency in &currencies {
 - [Screeners](screeners.md) - Full typed screener query builder with all 80+ `EquityField` variants
 - [Ticker API](ticker.md) - Symbol-specific operations
 - [Batch Tickers](tickers.md) - Efficient multi-symbol operations
-- [FRED & Treasury](fred.md) - Macro-economic data (requires `fred` feature)
-- [Crypto](crypto.md) - CoinGecko cryptocurrency data (requires `crypto` feature)
+- [FRED & Treasury](providers/fred.md) - Macro-economic data (requires `fred` feature)
+- [Crypto](providers/coingecko.md) - CoinGecko cryptocurrency data (requires `crypto` feature)
 - [Feeds](feeds.md) - RSS/Atom news aggregation (requires `rss` feature)
 - [DataFrame Support](dataframe.md) - Convert responses to Polars DataFrames for analysis
 - [Configuration](configuration.md) - Regional settings and network options

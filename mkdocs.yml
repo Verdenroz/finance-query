@@ -64,13 +64,19 @@ nav:
       - Real-time Streaming: library/streaming.md
       - Finance Module: library/finance.md
       - Screeners: library/screeners.md
-      - EDGAR: library/edgar.md
+      - Providers:
+          - Overview: library/providers/index.md
+          - Polygon.io: library/providers/polygon.md
+          - FMP: library/providers/fmp.md
+          - Alpha Vantage: library/providers/alphavantage.md
+          - CoinGecko: library/providers/coingecko.md
+          - EDGAR: library/providers/edgar.md
+          - FRED: library/providers/fred.md
       - Risk Analytics: library/risk.md
-      - FRED & Treasury: library/fred.md
-      - Crypto: library/crypto.md
       - Feeds: library/feeds.md
       - DataFrame Support: library/dataframe.md
       - Configuration: library/configuration.md
+      - Error Handling: library/error-handling.md
       - Indicators: library/indicators.md
       - Backtesting: library/backtesting.md
   - CLI:

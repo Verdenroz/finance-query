@@ -45,7 +45,9 @@ let tickers = Tickers::builder(vec!["AAPL", "MSFT"])
 | `.max_concurrency(n)` | Max concurrent requests for batch ops (default: 10) |
 | `.logo()` | Include company logo URLs in quote responses |
 | `.cache(Duration)` | Enable response caching with TTL (disabled by default) |
-| `.client(ClientHandle)` | Share an existing authenticated session |
+
+!!! note "Provider Configuration"
+    `Tickers` does not yet support multi-provider configuration — it always uses Yahoo Finance. Use individual `Ticker` instances with [providers](providers/index.md) for multi-provider batch needs.
 
 #### `max_concurrency`
 
@@ -57,23 +59,6 @@ use finance_query::Tickers;
 // Conservative: 3 concurrent requests (large lists or strict rate limits)
 let tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL", "TSLA"])
     .max_concurrency(3)
-    .build()
-    .await?;
-```
-
-#### Sharing a Session
-
-Avoid redundant authentication when using `Tickers` alongside individual `Ticker` instances:
-
-```rust
-use finance_query::{Ticker, Tickers};
-
-let aapl = Ticker::new("AAPL").await?;
-let handle = aapl.client_handle();
-
-// Reuses AAPL's authenticated session — no extra auth round-trip
-let tickers = Tickers::builder(["MSFT", "GOOGL"])
-    .client(handle)
     .build()
     .await?;
 ```

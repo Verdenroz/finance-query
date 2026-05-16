@@ -80,5 +80,5 @@ The CoinGecko free tier allows **30 requests per minute**. The client enforces t
 
 ## Next Steps
 
-- [Finance Module](finance.md) - Market-wide financial data
-- [Getting Started](getting-started.md) - Feature flag setup
+- [Finance Module](../finance.md) - Market-wide financial data
+- [Getting Started](../getting-started.md) - Feature flag setup

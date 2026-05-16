@@ -146,5 +146,5 @@ for f in &filings {
 ## Next Steps
 
 - [Finance Module](finance.md) - Financial news via Yahoo Finance
-- [EDGAR](edgar.md) - Structured SEC filing data with XBRL facts
+- [EDGAR](providers/edgar.md) - Structured SEC filing data with XBRL facts
 - [Getting Started](getting-started.md) - Feature flag setup

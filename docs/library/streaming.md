@@ -3,7 +3,7 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — streaming](https://docs.rs/finance-query/latest/finance_query/streaming/index.html)
 
-Subscribe to live price updates from Yahoo Finance via WebSocket. The streaming API uses a Flow-like `Stream` interface compatible with Rust's `futures` ecosystem.
+Subscribe to live price updates via WebSocket. The streaming API uses a Flow-like `Stream` interface compatible with Rust's `futures` ecosystem.
 
 ## Quick Start
 

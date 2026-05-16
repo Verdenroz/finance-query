@@ -142,5 +142,5 @@ for y in yields.iter().rev().take(5) {
 
 ## Next Steps
 
-- [Finance Module](finance.md) - Market-wide data functions
-- [Getting Started](getting-started.md) - Feature flag setup
+- [Finance Module](../finance.md) - Market-wide data functions
+- [Getting Started](../getting-started.md) - Feature flag setup
