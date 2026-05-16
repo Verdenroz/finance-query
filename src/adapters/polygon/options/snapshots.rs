@@ -1,4 +1,5 @@
 //! Options snapshot endpoints: options chain, single contract snapshot.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -11,7 +12,7 @@ use super::super::models::*;
 /// Greeks for an options contract snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsGreeks {
+pub struct OptionsGreeksDTO {
     /// Delta: rate of change of the option price with respect to the underlying.
     pub delta: Option<f64>,
     /// Gamma: rate of change of delta with respect to the underlying.
@@ -25,7 +26,7 @@ pub struct OptionsGreeks {
 /// Contract details within an options snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsSnapshotDetails {
+pub struct OptionsSnapshotDetailsDTO {
     /// Contract type: `"call"` or `"put"`.
     pub contract_type: Option<String>,
     /// Exercise style: `"american"` or `"european"`.
@@ -43,7 +44,7 @@ pub struct OptionsSnapshotDetails {
 /// Underlying asset data within an options snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsUnderlyingAsset {
+pub struct OptionsUnderlyingAssetDTO {
     /// Change in price since previous close.
     pub change_to_break_even: Option<f64>,
     /// Last updated timestamp (nanoseconds).
@@ -59,7 +60,7 @@ pub struct OptionsUnderlyingAsset {
 /// Last quote data within an options snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsSnapshotQuote {
+pub struct OptionsSnapshotQuoteDTO {
     /// Ask price.
     pub ask: Option<f64>,
     /// Ask size.
@@ -79,16 +80,16 @@ pub struct OptionsSnapshotQuote {
 /// Last trade data within an options snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsSnapshotTrade {
+pub struct OptionsSnapshotTradeDTO {
     /// Conditions.
     pub conditions: Option<Vec<i32>>,
     /// Exchange ID.
     pub exchange: Option<i32>,
-    /// Trade price.
+    /// TradeDTO price.
     pub price: Option<f64>,
     /// SIP timestamp (nanoseconds).
     pub sip_timestamp: Option<i64>,
-    /// Trade size.
+    /// TradeDTO size.
     pub size: Option<f64>,
     /// Timeframe of the trade data.
     pub timeframe: Option<String>,
@@ -97,37 +98,37 @@ pub struct OptionsSnapshotTrade {
 /// A single options contract snapshot from the chain or individual lookup.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsSnapshot {
+pub struct OptionsSnapshotDTO {
     /// Break-even price for the contract.
     pub break_even_price: Option<f64>,
     /// Current day aggregate data.
-    pub day: Option<SnapshotAgg>,
+    pub day: Option<SnapshotAggDTO>,
     /// Contract details (strike, expiration, type).
-    pub details: Option<OptionsSnapshotDetails>,
+    pub details: Option<OptionsSnapshotDetailsDTO>,
     /// Option greeks (delta, gamma, theta, vega).
-    pub greeks: Option<OptionsGreeks>,
+    pub greeks: Option<OptionsGreeksDTO>,
     /// Implied volatility.
     pub implied_volatility: Option<f64>,
     /// Last quote for this contract.
-    pub last_quote: Option<OptionsSnapshotQuote>,
+    pub last_quote: Option<OptionsSnapshotQuoteDTO>,
     /// Last trade for this contract.
-    pub last_trade: Option<OptionsSnapshotTrade>,
+    pub last_trade: Option<OptionsSnapshotTradeDTO>,
     /// Open interest.
     pub open_interest: Option<u64>,
     /// Underlying asset data.
-    pub underlying_asset: Option<OptionsUnderlyingAsset>,
+    pub underlying_asset: Option<OptionsUnderlyingAssetDTO>,
 }
 
 /// Response wrapper for a single options contract snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsContractSnapshotResponse {
+pub struct OptionsContractSnapshotResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
     /// Response status.
     pub status: Option<String>,
     /// The snapshot result.
-    pub results: Option<OptionsSnapshot>,
+    pub results: Option<OptionsSnapshotDTO>,
 }
 
 /// Fetch the options chain snapshot for an underlying ticker.
@@ -142,7 +143,7 @@ pub struct OptionsContractSnapshotResponse {
 pub async fn options_chain_snapshot(
     underlying: &str,
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<OptionsSnapshot>> {
+) -> Result<PaginatedResponseDTO<OptionsSnapshotDTO>> {
     let client = build_client()?;
     let path = format!("/v3/snapshot/options/{}", encode_path_segment(underlying));
     client.get(&path, params).await
@@ -155,7 +156,7 @@ pub async fn options_chain_snapshot(
 pub async fn options_contract_snapshot(
     underlying: &str,
     contract: &str,
-) -> Result<OptionsContractSnapshotResponse> {
+) -> Result<OptionsContractSnapshotResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v3/snapshot/options/{}/{}",
@@ -239,7 +240,7 @@ mod tests {
             .await;
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let resp: PaginatedResponse<OptionsSnapshot> =
+        let resp: PaginatedResponseDTO<OptionsSnapshotDTO> =
             client.get("/v3/snapshot/options/AAPL", &[]).await.unwrap();
 
         let results = resp.results.unwrap();
@@ -307,7 +308,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: OptionsContractSnapshotResponse = serde_json::from_value(json).unwrap();
+        let resp: OptionsContractSnapshotResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let snap = resp.results.unwrap();
         assert!((snap.break_even_price.unwrap() - 155.30).abs() < 0.01);

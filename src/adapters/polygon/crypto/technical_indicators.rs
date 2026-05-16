@@ -1,4 +1,5 @@
 //! Crypto technical indicator endpoints: SMA, EMA, MACD, RSI.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -10,7 +11,7 @@ use super::super::models::*;
 ///
 /// * `ticker` - Crypto ticker symbol with `X:` prefix (e.g., `"X:BTCUSD"`)
 /// * `params` - Optional query params: `window`, `timespan`, `series_type`, `order`, `limit`
-pub async fn crypto_sma(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn crypto_sma(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "sma", params).await
 }
 
@@ -18,7 +19,7 @@ pub async fn crypto_sma(ticker: &str, params: &[(&str, &str)]) -> Result<Indicat
 ///
 /// * `ticker` - Crypto ticker symbol with `X:` prefix (e.g., `"X:BTCUSD"`)
 /// * `params` - Optional query params: `window`, `timespan`, `series_type`, `order`, `limit`
-pub async fn crypto_ema(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn crypto_ema(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "ema", params).await
 }
 
@@ -26,7 +27,7 @@ pub async fn crypto_ema(ticker: &str, params: &[(&str, &str)]) -> Result<Indicat
 ///
 /// * `ticker` - Crypto ticker symbol with `X:` prefix (e.g., `"X:BTCUSD"`)
 /// * `params` - Optional query params: `short_window`, `long_window`, `signal_window`, `timespan`, `series_type`, `order`, `limit`
-pub async fn crypto_macd(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn crypto_macd(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "macd", params).await
 }
 
@@ -34,7 +35,7 @@ pub async fn crypto_macd(ticker: &str, params: &[(&str, &str)]) -> Result<Indica
 ///
 /// * `ticker` - Crypto ticker symbol with `X:` prefix (e.g., `"X:BTCUSD"`)
 /// * `params` - Optional query params: `window`, `timespan`, `series_type`, `order`, `limit`
-pub async fn crypto_rsi(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn crypto_rsi(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "rsi", params).await
 }
 
@@ -42,7 +43,7 @@ async fn fetch_indicator(
     ticker: &str,
     indicator: &str,
     params: &[(&str, &str)],
-) -> Result<IndicatorResponse> {
+) -> Result<IndicatorResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/indicators/{}/{}",
@@ -97,7 +98,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndicatorResponse = serde_json::from_value(json).unwrap();
+        let resp: IndicatorResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let values = resp.results.unwrap().values.unwrap();
         assert_eq!(values.len(), 1);

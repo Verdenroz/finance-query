@@ -1,4 +1,5 @@
 //! Shared types for Polygon.io API responses.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -9,7 +10,7 @@ use serde::{Deserialize, Serialize};
 /// Generic paginated response envelope from Polygon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct PaginatedResponse<T> {
+pub struct PaginatedResponseDTO<T> {
     /// Result items (may be absent on empty responses).
     pub results: Option<Vec<T>>,
     /// Response status (e.g., `"OK"`, `"DELAYED"`).
@@ -118,7 +119,7 @@ impl Order {
 /// OHLCV aggregate bar from Polygon.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct AggBar {
+pub struct AggBarDTO {
     /// Open price.
     #[serde(rename = "o")]
     pub open: f64,
@@ -151,7 +152,7 @@ pub struct AggBar {
 /// Aggregate response with ticker metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct AggregateResponse {
+pub struct AggregateResponseDTO {
     /// Ticker symbol.
     pub ticker: Option<String>,
     /// Response status.
@@ -167,7 +168,7 @@ pub struct AggregateResponse {
     /// Request identifier.
     pub request_id: Option<String>,
     /// Aggregate bars.
-    pub results: Option<Vec<AggBar>>,
+    pub results: Option<Vec<AggBarDTO>>,
     /// Next page URL.
     pub next_url: Option<String>,
 }
@@ -175,7 +176,7 @@ pub struct AggregateResponse {
 /// Daily open/close response for a single ticker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct DailyOpenClose {
+pub struct DailyOpenCloseDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Date (YYYY-MM-DD).
@@ -199,20 +200,20 @@ pub struct DailyOpenClose {
 }
 
 // ============================================================================
-// Trade and quote types
+// TradeDTO and quote types
 // ============================================================================
 
 /// A single trade.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct Trade {
-    /// Trade conditions.
+pub struct TradeDTO {
+    /// TradeDTO conditions.
     pub conditions: Option<Vec<i32>>,
-    /// Trade correction indicator.
+    /// TradeDTO correction indicator.
     pub correction: Option<i32>,
     /// Exchange ID.
     pub exchange: Option<i32>,
-    /// Trade ID.
+    /// TradeDTO ID.
     pub id: Option<String>,
     /// Participant timestamp (nanoseconds).
     pub participant_timestamp: Option<i64>,
@@ -222,7 +223,7 @@ pub struct Trade {
     pub sequence_number: Option<i64>,
     /// SIP timestamp (nanoseconds).
     pub sip_timestamp: Option<i64>,
-    /// Trade size.
+    /// TradeDTO size.
     pub size: Option<f64>,
     /// Tape.
     pub tape: Option<i32>,
@@ -235,7 +236,7 @@ pub struct Trade {
 /// A single last-trade response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct LastTrade {
+pub struct LastTradeDTO {
     /// Ticker symbol.
     #[serde(rename = "T")]
     pub ticker: Option<String>,
@@ -245,7 +246,7 @@ pub struct LastTrade {
     pub correction: Option<i32>,
     /// Exchange ID.
     pub exchange: Option<i32>,
-    /// Trade ID.
+    /// TradeDTO ID.
     pub id: Option<String>,
     /// Participant timestamp.
     pub participant_timestamp: Option<i64>,
@@ -268,7 +269,7 @@ pub struct LastTrade {
 /// NBBO quote.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct Quote {
+pub struct QuoteDTO {
     /// Ask exchange.
     pub ask_exchange: Option<i32>,
     /// Ask price.
@@ -300,25 +301,25 @@ pub struct Quote {
 /// Last quote (NBBO) response wrapper.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct LastQuoteResponse {
+pub struct LastQuoteResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
     /// Response status.
     pub status: Option<String>,
     /// The last quote.
-    pub results: Option<Quote>,
+    pub results: Option<QuoteDTO>,
 }
 
 /// Last trade response wrapper.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct LastTradeResponse {
+pub struct LastTradeResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
     /// Response status.
     pub status: Option<String>,
     /// The last trade.
-    pub results: Option<LastTrade>,
+    pub results: Option<LastTradeDTO>,
 }
 
 // ============================================================================
@@ -328,7 +329,7 @@ pub struct LastTradeResponse {
 /// Day aggregate data within a snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct SnapshotAgg {
+pub struct SnapshotAggDTO {
     /// Open price.
     #[serde(rename = "o")]
     pub open: Option<f64>,
@@ -358,7 +359,7 @@ pub struct SnapshotAgg {
 /// A single ticker snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct TickerSnapshot {
+pub struct TickerSnapshotDTO {
     /// Ticker symbol.
     pub ticker: Option<String>,
     /// Today's change amount.
@@ -370,36 +371,36 @@ pub struct TickerSnapshot {
     /// Updated timestamp (nanoseconds).
     pub updated: Option<i64>,
     /// Current day aggregate.
-    pub day: Option<SnapshotAgg>,
+    pub day: Option<SnapshotAggDTO>,
     /// Previous day aggregate.
     #[serde(rename = "prevDay")]
-    pub prev_day: Option<SnapshotAgg>,
+    pub prev_day: Option<SnapshotAggDTO>,
     /// Last trade.
     #[serde(rename = "lastTrade")]
-    pub last_trade: Option<LastTrade>,
+    pub last_trade: Option<LastTradeDTO>,
     /// Last quote.
     #[serde(rename = "lastQuote")]
-    pub last_quote: Option<Quote>,
+    pub last_quote: Option<QuoteDTO>,
     /// Minute aggregate.
-    pub min: Option<SnapshotAgg>,
+    pub min: Option<SnapshotAggDTO>,
 }
 
 /// Snapshot response for a single ticker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct SingleSnapshotResponse {
+pub struct SingleSnapshotResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
     /// Response status.
     pub status: Option<String>,
     /// Snapshot data.
-    pub ticker: Option<TickerSnapshot>,
+    pub ticker: Option<TickerSnapshotDTO>,
 }
 
 /// Snapshot response for multiple tickers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct SnapshotsResponse {
+pub struct SnapshotsResponseDTO {
     /// Response status.
     pub status: Option<String>,
     /// Request ID.
@@ -407,7 +408,7 @@ pub struct SnapshotsResponse {
     /// Number of results.
     pub count: Option<usize>,
     /// Ticker snapshots.
-    pub tickers: Option<Vec<TickerSnapshot>>,
+    pub tickers: Option<Vec<TickerSnapshotDTO>>,
 }
 
 // ============================================================================
@@ -417,7 +418,7 @@ pub struct SnapshotsResponse {
 /// A single technical indicator data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IndicatorValue {
+pub struct IndicatorValueDTO {
     /// Timestamp.
     pub timestamp: Option<i64>,
     /// Indicator value.
@@ -431,13 +432,13 @@ pub struct IndicatorValue {
 /// Technical indicator response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IndicatorResponse {
+pub struct IndicatorResponseDTO {
     /// Response status.
     pub status: Option<String>,
     /// Request ID.
     pub request_id: Option<String>,
     /// Indicator results.
-    pub results: Option<IndicatorResults>,
+    pub results: Option<IndicatorResultsDTO>,
     /// Next page URL.
     pub next_url: Option<String>,
 }
@@ -445,21 +446,21 @@ pub struct IndicatorResponse {
 /// Nested indicator results containing underlying data and values.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IndicatorResults {
+pub struct IndicatorResultsDTO {
     /// Underlying aggregate bars.
-    pub underlying: Option<IndicatorUnderlying>,
+    pub underlying: Option<IndicatorUnderlyingDTO>,
     /// Indicator values.
-    pub values: Option<Vec<IndicatorValue>>,
+    pub values: Option<Vec<IndicatorValueDTO>>,
 }
 
 /// Underlying data for indicator responses.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IndicatorUnderlying {
+pub struct IndicatorUnderlyingDTO {
     /// Underlying aggregate bars URL.
     pub url: Option<String>,
     /// Underlying aggregates.
-    pub aggregates: Option<Vec<AggBar>>,
+    pub aggregates: Option<Vec<AggBarDTO>>,
 }
 
 // ============================================================================

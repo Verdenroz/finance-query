@@ -1,4 +1,5 @@
 //! Options aggregate bar endpoints: OHLCV bars, previous close, daily open/close.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -23,7 +24,7 @@ pub async fn options_aggregates(
     from: &str,
     to: &str,
     params: Option<AggregateParams>,
-) -> Result<AggregateResponse> {
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/aggs/ticker/{}/range/{}/{}/{}/{}",
@@ -64,7 +65,7 @@ pub async fn options_aggregates(
 pub async fn options_previous_close(
     ticker: &str,
     adjusted: Option<bool>,
-) -> Result<AggregateResponse> {
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
@@ -87,7 +88,7 @@ pub async fn options_daily_open_close(
     ticker: &str,
     date: &str,
     adjusted: Option<bool>,
-) -> Result<DailyOpenClose> {
+) -> Result<DailyOpenCloseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/open-close/{}/{}",
@@ -149,7 +150,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: AggregateResponse = serde_json::from_value(json).unwrap();
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.ticker.as_deref(), Some("O:AAPL250117C00150000"));
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 2);
@@ -189,7 +190,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: AggregateResponse = serde_json::from_value(json).unwrap();
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.ticker.as_deref(), Some("O:AAPL250117C00150000"));
         let bar = &resp.results.unwrap()[0];
         assert!((bar.close - 5.30).abs() < 0.01);
@@ -230,7 +231,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: DailyOpenClose = serde_json::from_value(json).unwrap();
+        let resp: DailyOpenCloseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.symbol.as_deref(), Some("O:AAPL250117C00150000"));
         assert!((resp.open.unwrap() - 5.10).abs() < 0.01);
         assert!((resp.after_hours.unwrap() - 5.35).abs() < 0.01);

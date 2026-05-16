@@ -11,7 +11,7 @@ use tracing::debug;
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
-use super::models::PaginatedResponse;
+use super::models::PaginatedResponseDTO;
 
 const PG_BASE: &str = "https://api.polygon.io";
 const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
@@ -138,12 +138,12 @@ impl PolygonClient {
         Ok(json)
     }
 
-    /// GET and deserialize into a `PaginatedResponse<T>`.
+    /// GET and deserialize into a `PaginatedResponseDTO<T>`.
     pub async fn get<T: DeserializeOwned>(
         &self,
         path: &str,
         params: &[(&str, &str)],
-    ) -> Result<PaginatedResponse<T>> {
+    ) -> Result<PaginatedResponseDTO<T>> {
         let json = self.get_raw(path, params).await?;
         serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
             field: "response".to_string(),

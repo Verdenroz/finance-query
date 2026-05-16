@@ -1,4 +1,5 @@
 //! Futures aggregate bar endpoints: OHLCV bars.
+#![allow(dead_code)]
 
 use crate::error::{FinanceError, Result};
 
@@ -22,7 +23,7 @@ pub async fn futures_aggregates(
     from: &str,
     to: &str,
     params: Option<AggregateParams>,
-) -> Result<AggregateResponse> {
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/aggs/ticker/{}/range/{}/{}/{}/{}",
@@ -100,7 +101,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: AggregateResponse = serde_json::from_value(json).unwrap();
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.ticker.as_deref(), Some("ESZ4"));
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 2);

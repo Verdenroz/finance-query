@@ -1,5 +1,6 @@
 //! Crypto aggregate bar endpoints: OHLCV bars, previous close, grouped daily, daily open/close.
 
+#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
@@ -11,7 +12,7 @@ use super::super::models::*;
 /// Daily open/close response for a crypto pair.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CryptoDailyOpenClose {
+pub struct CryptoDailyOpenCloseDTO {
     /// The "from" symbol of the pair (e.g., `BTC`).
     pub symbol: Option<String>,
     /// Whether the response is adjusted.
@@ -25,16 +26,16 @@ pub struct CryptoDailyOpenClose {
     pub close: Option<f64>,
     /// Open trades.
     #[serde(rename = "openTrades")]
-    pub open_trades: Option<Vec<CryptoOpenCloseTrade>>,
+    pub open_trades: Option<Vec<CryptoOpenCloseTradeDTO>>,
     /// Close trades.
     #[serde(rename = "closingTrades")]
-    pub closing_trades: Option<Vec<CryptoOpenCloseTrade>>,
+    pub closing_trades: Option<Vec<CryptoOpenCloseTradeDTO>>,
 }
 
 /// A single trade within a crypto daily open/close response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CryptoOpenCloseTrade {
+pub struct CryptoOpenCloseTradeDTO {
     /// Price of the trade.
     #[serde(rename = "p")]
     pub price: Option<f64>,
@@ -68,7 +69,7 @@ pub async fn crypto_aggregates(
     from: &str,
     to: &str,
     params: Option<AggregateParams>,
-) -> Result<AggregateResponse> {
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/aggs/ticker/{}/range/{}/{}/{}/{}",
@@ -109,7 +110,7 @@ pub async fn crypto_aggregates(
 pub async fn crypto_previous_close(
     ticker: &str,
     adjusted: Option<bool>,
-) -> Result<AggregateResponse> {
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
@@ -127,7 +128,10 @@ pub async fn crypto_previous_close(
 ///
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted (default: true)
-pub async fn crypto_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
+pub async fn crypto_grouped_daily(
+    date: &str,
+    adjusted: Option<bool>,
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/aggs/grouped/locale/global/market/crypto/{}",
@@ -153,7 +157,7 @@ pub async fn crypto_daily_open_close(
     from: &str,
     to: &str,
     date: &str,
-) -> Result<CryptoDailyOpenClose> {
+) -> Result<CryptoDailyOpenCloseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/open-close/crypto/{}/{}/{}",
@@ -213,7 +217,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: AggregateResponse = serde_json::from_value(json).unwrap();
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.ticker.as_deref(), Some("X:BTCUSD"));
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 2);

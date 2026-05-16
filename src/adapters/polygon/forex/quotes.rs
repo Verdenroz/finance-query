@@ -1,4 +1,5 @@
 //! Forex quote endpoints: last quote, historical quotes, currency conversion.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -14,7 +15,7 @@ use super::super::models::*;
 /// Last forex quote data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct ForexLastQuote {
+pub struct ForexLastQuoteDTO {
     /// Bid price.
     pub bid: Option<f64>,
     /// Ask price.
@@ -28,19 +29,19 @@ pub struct ForexLastQuote {
 /// Response for the last forex quote endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct ForexQuoteResponse {
+pub struct ForexQuoteResponseDTO {
     /// Response status.
     pub status: Option<String>,
     /// Request ID.
     pub request_id: Option<String>,
     /// The last quote.
-    pub last: Option<ForexLastQuote>,
+    pub last: Option<ForexLastQuoteDTO>,
 }
 
 /// Currency conversion last price data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct ConversionLast {
+pub struct ConversionLastDTO {
     /// Bid price.
     pub bid: Option<f64>,
     /// Ask price.
@@ -54,7 +55,7 @@ pub struct ConversionLast {
 /// Response for the currency conversion endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CurrencyConversion {
+pub struct CurrencyConversionDTO {
     /// Response status.
     pub status: Option<String>,
     /// The converted amount.
@@ -67,7 +68,7 @@ pub struct CurrencyConversion {
     #[serde(rename = "initialAmount")]
     pub initial_amount: Option<f64>,
     /// Last quote used for conversion.
-    pub last: Option<ConversionLast>,
+    pub last: Option<ConversionLastDTO>,
 }
 
 // ============================================================================
@@ -79,8 +80,8 @@ pub struct CurrencyConversion {
 /// # Arguments
 ///
 /// * `from` - Base currency code (e.g., `"EUR"`)
-/// * `to` - Quote currency code (e.g., `"USD"`)
-pub async fn forex_last_quote(from: &str, to: &str) -> Result<ForexQuoteResponse> {
+/// * `to` - QuoteDTO currency code (e.g., `"USD"`)
+pub async fn forex_last_quote(from: &str, to: &str) -> Result<ForexQuoteResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/last_quote/currencies/{}/{}",
@@ -103,7 +104,7 @@ pub async fn forex_last_quote(from: &str, to: &str) -> Result<ForexQuoteResponse
 pub async fn forex_quotes(
     ticker: &str,
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<Quote>> {
+) -> Result<PaginatedResponseDTO<QuoteDTO>> {
     let client = build_client()?;
     let path = format!("/v3/quotes/{}", encode_path_segment(ticker));
     client.get(&path, params).await
@@ -114,9 +115,13 @@ pub async fn forex_quotes(
 /// # Arguments
 ///
 /// * `from` - Base currency code (e.g., `"EUR"`)
-/// * `to` - Quote currency code (e.g., `"USD"`)
+/// * `to` - QuoteDTO currency code (e.g., `"USD"`)
 /// * `amount` - Amount to convert
-pub async fn currency_conversion(from: &str, to: &str, amount: f64) -> Result<CurrencyConversion> {
+pub async fn currency_conversion(
+    from: &str,
+    to: &str,
+    amount: f64,
+) -> Result<CurrencyConversionDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/conversion/{}/{}",
@@ -169,7 +174,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: ForexQuoteResponse = serde_json::from_value(json).unwrap();
+        let resp: ForexQuoteResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let last = resp.last.unwrap();
         assert!((last.bid.unwrap() - 1.1050).abs() < 0.0001);
@@ -202,7 +207,8 @@ mod tests {
             .await;
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let resp: PaginatedResponse<Quote> = client.get("/v3/quotes/C:EURUSD", &[]).await.unwrap();
+        let resp: PaginatedResponseDTO<QuoteDTO> =
+            client.get("/v3/quotes/C:EURUSD", &[]).await.unwrap();
         let quotes = resp.results.unwrap();
         assert_eq!(quotes.len(), 2);
         assert!((quotes[0].ask_price.unwrap() - 1.1052).abs() < 0.0001);
@@ -245,7 +251,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: CurrencyConversion = serde_json::from_value(json).unwrap();
+        let resp: CurrencyConversionDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         assert!((resp.converted.unwrap() - 110.50).abs() < 0.01);
         assert_eq!(resp.from.as_deref(), Some("EUR"));

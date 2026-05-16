@@ -1,4 +1,5 @@
 //! Crypto trade endpoints: last trade, historical trades.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -11,14 +12,14 @@ use super::super::models::*;
 /// Last trade data for a crypto pair.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CryptoLastTrade {
+pub struct CryptoLastTradeDTO {
     /// Price of the last trade.
     pub price: Option<f64>,
     /// Size of the last trade.
     pub size: Option<f64>,
     /// Exchange where the trade occurred.
     pub exchange: Option<i32>,
-    /// Trade conditions.
+    /// TradeDTO conditions.
     pub conditions: Option<Vec<i32>>,
     /// Timestamp of the trade.
     pub timestamp: Option<i64>,
@@ -27,9 +28,9 @@ pub struct CryptoLastTrade {
 /// Response wrapper for crypto last trade.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CryptoLastTradeResponse {
+pub struct CryptoLastTradeResponseDTO {
     /// The last trade data.
-    pub last: Option<CryptoLastTrade>,
+    pub last: Option<CryptoLastTradeDTO>,
     /// Request identifier.
     pub request_id: Option<String>,
     /// Response status.
@@ -45,7 +46,7 @@ pub struct CryptoLastTradeResponse {
 ///
 /// * `from` - The base currency (e.g., `"BTC"`)
 /// * `to` - The quote currency (e.g., `"USD"`)
-pub async fn crypto_last_trade(from: &str, to: &str) -> Result<CryptoLastTradeResponse> {
+pub async fn crypto_last_trade(from: &str, to: &str) -> Result<CryptoLastTradeResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/last/crypto/{}/{}",
@@ -66,7 +67,7 @@ pub async fn crypto_last_trade(from: &str, to: &str) -> Result<CryptoLastTradeRe
 pub async fn crypto_trades(
     ticker: &str,
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<Trade>> {
+) -> Result<PaginatedResponseDTO<TradeDTO>> {
     let client = build_client()?;
     let path = format!("/v3/trades/{}", encode_path_segment(ticker));
     client.get(&path, params).await
@@ -111,7 +112,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: CryptoLastTradeResponse = serde_json::from_value(json).unwrap();
+        let resp: CryptoLastTradeResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         assert_eq!(resp.symbol.as_deref(), Some("X:BTCUSD"));
         let last = resp.last.unwrap();

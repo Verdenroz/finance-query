@@ -1,4 +1,5 @@
 //! Options technical indicator endpoints: SMA, EMA, MACD, RSI.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -10,7 +11,7 @@ use super::super::models::*;
 ///
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
 /// * `params` - Query params such as `timestamp`, `timespan`, `window`, `series_type`, `order`, `limit`
-pub async fn options_sma(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn options_sma(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "sma", params).await
 }
 
@@ -18,7 +19,7 @@ pub async fn options_sma(ticker: &str, params: &[(&str, &str)]) -> Result<Indica
 ///
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
 /// * `params` - Query params such as `timestamp`, `timespan`, `window`, `series_type`, `order`, `limit`
-pub async fn options_ema(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn options_ema(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "ema", params).await
 }
 
@@ -27,7 +28,7 @@ pub async fn options_ema(ticker: &str, params: &[(&str, &str)]) -> Result<Indica
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
 /// * `params` - Query params such as `timestamp`, `timespan`, `short_window`, `long_window`,
 ///   `signal_window`, `series_type`, `order`, `limit`
-pub async fn options_macd(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn options_macd(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "macd", params).await
 }
 
@@ -35,7 +36,7 @@ pub async fn options_macd(ticker: &str, params: &[(&str, &str)]) -> Result<Indic
 ///
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
 /// * `params` - Query params such as `timestamp`, `timespan`, `window`, `series_type`, `order`, `limit`
-pub async fn options_rsi(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn options_rsi(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "rsi", params).await
 }
 
@@ -43,7 +44,7 @@ async fn fetch_indicator(
     ticker: &str,
     indicator: &str,
     params: &[(&str, &str)],
-) -> Result<IndicatorResponse> {
+) -> Result<IndicatorResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/indicators/{}/{}",
@@ -100,7 +101,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndicatorResponse = serde_json::from_value(json).unwrap();
+        let resp: IndicatorResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let results = resp.results.unwrap();
         let values = results.values.unwrap();
@@ -144,7 +145,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndicatorResponse = serde_json::from_value(json).unwrap();
+        let resp: IndicatorResponseDTO = serde_json::from_value(json).unwrap();
         let values = resp.results.unwrap().values.unwrap();
         assert_eq!(values.len(), 2);
         assert!((values[0].signal.unwrap() - 0.12).abs() < 0.01);
@@ -185,7 +186,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndicatorResponse = serde_json::from_value(json).unwrap();
+        let resp: IndicatorResponseDTO = serde_json::from_value(json).unwrap();
         let values = resp.results.unwrap().values.unwrap();
         assert_eq!(values.len(), 1);
         assert!((values[0].value.unwrap() - 65.4).abs() < 0.1);

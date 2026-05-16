@@ -1,4 +1,5 @@
 //! Futures snapshot endpoints.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -10,7 +11,7 @@ use super::super::build_client;
 /// Session data within a futures snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FuturesSession {
+pub struct FuturesSessionDTO {
     /// Change from previous close.
     pub change: Option<f64>,
     /// Change percent from previous close.
@@ -34,7 +35,7 @@ pub struct FuturesSession {
 /// A single futures snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FuturesSnapshot {
+pub struct FuturesSnapshotDTO {
     /// Ticker symbol.
     pub ticker: Option<String>,
     /// Name of the contract.
@@ -45,7 +46,7 @@ pub struct FuturesSnapshot {
     #[serde(rename = "type")]
     pub snapshot_type: Option<String>,
     /// Session data.
-    pub session: Option<FuturesSession>,
+    pub session: Option<FuturesSessionDTO>,
     /// Last updated timestamp.
     pub last_updated: Option<i64>,
 }
@@ -53,19 +54,19 @@ pub struct FuturesSnapshot {
 /// Response wrapper for futures snapshots.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FuturesSnapshotResponse {
+pub struct FuturesSnapshotResponseDTO {
     /// Response status.
     pub status: Option<String>,
     /// Request identifier.
     pub request_id: Option<String>,
     /// Snapshot results.
-    pub results: Option<Vec<FuturesSnapshot>>,
+    pub results: Option<Vec<FuturesSnapshotDTO>>,
 }
 
 /// Fetch snapshot for a futures ticker.
 ///
 /// * `ticker` - Futures ticker symbol (e.g., `"ESZ4"`)
-pub async fn futures_snapshot(ticker: &str) -> Result<FuturesSnapshotResponse> {
+pub async fn futures_snapshot(ticker: &str) -> Result<FuturesSnapshotResponseDTO> {
     let client = build_client()?;
     let path = format!("/v3/snapshot/futures/{}", encode_path_segment(ticker));
     let json = client.get_raw(&path, &[]).await?;
@@ -126,7 +127,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: FuturesSnapshotResponse = serde_json::from_value(json).unwrap();
+        let resp: FuturesSnapshotResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 1);

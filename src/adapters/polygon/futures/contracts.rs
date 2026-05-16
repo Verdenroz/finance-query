@@ -1,16 +1,17 @@
 //! Futures reference data endpoints: contracts, products, schedules.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
 use crate::error::{FinanceError, Result};
 
 use super::super::build_client;
-use super::super::models::PaginatedResponse;
+use super::super::models::PaginatedResponseDTO;
 
 /// A futures contract from the reference endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FuturesContract {
+pub struct FuturesContractDTO {
     /// Ticker symbol.
     pub ticker: Option<String>,
     /// Name of the contract.
@@ -38,7 +39,7 @@ pub struct FuturesContract {
 /// A futures product from the reference endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FuturesProduct {
+pub struct FuturesProductDTO {
     /// Product ticker.
     pub ticker: Option<String>,
     /// Product name.
@@ -60,7 +61,7 @@ pub struct FuturesProduct {
 /// A futures schedule from the reference endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FuturesSchedule {
+pub struct FuturesScheduleDTO {
     /// Ticker symbol.
     pub ticker: Option<String>,
     /// Session type.
@@ -80,7 +81,7 @@ pub struct FuturesSchedule {
 /// * `params` - Optional query params: `ticker`, `underlying_ticker`, `expiration_date`, `order`, `limit`, `sort`
 pub async fn futures_contracts(
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<FuturesContract>> {
+) -> Result<PaginatedResponseDTO<FuturesContractDTO>> {
     let client = build_client()?;
     let path = "/v3/reference/futures/contracts";
     let json = client.get_raw(path, params).await?;
@@ -95,7 +96,7 @@ pub async fn futures_contracts(
 /// * `params` - Optional query params: `ticker`, `asset_class`, `exchange`, `order`, `limit`, `sort`
 pub async fn futures_products(
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<FuturesProduct>> {
+) -> Result<PaginatedResponseDTO<FuturesProductDTO>> {
     let client = build_client()?;
     let path = "/v3/reference/futures/products";
     let json = client.get_raw(path, params).await?;
@@ -110,7 +111,7 @@ pub async fn futures_products(
 /// * `params` - Optional query params: `ticker`, `session_type`, `order`, `limit`, `sort`
 pub async fn futures_schedules(
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<FuturesSchedule>> {
+) -> Result<PaginatedResponseDTO<FuturesScheduleDTO>> {
     let client = build_client()?;
     let path = "/v3/reference/futures/schedules";
     let json = client.get_raw(path, params).await?;
@@ -166,7 +167,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: PaginatedResponse<FuturesContract> = serde_json::from_value(json).unwrap();
+        let resp: PaginatedResponseDTO<FuturesContractDTO> = serde_json::from_value(json).unwrap();
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].ticker.as_deref(), Some("ESZ4"));

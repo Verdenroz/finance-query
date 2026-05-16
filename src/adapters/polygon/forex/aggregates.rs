@@ -1,4 +1,5 @@
 //! Forex aggregate bar endpoints: OHLCV bars, previous close, grouped daily.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -23,7 +24,7 @@ pub async fn forex_aggregates(
     from: &str,
     to: &str,
     params: Option<AggregateParams>,
-) -> Result<AggregateResponse> {
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/aggs/ticker/{}/range/{}/{}/{}/{}",
@@ -64,7 +65,7 @@ pub async fn forex_aggregates(
 pub async fn forex_previous_close(
     ticker: &str,
     adjusted: Option<bool>,
-) -> Result<AggregateResponse> {
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
@@ -82,7 +83,10 @@ pub async fn forex_previous_close(
 ///
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
-pub async fn forex_grouped_daily(date: &str, adjusted: Option<bool>) -> Result<AggregateResponse> {
+pub async fn forex_grouped_daily(
+    date: &str,
+    adjusted: Option<bool>,
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/aggs/grouped/locale/global/market/fx/{}",
@@ -143,7 +147,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: AggregateResponse = serde_json::from_value(json).unwrap();
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.ticker.as_deref(), Some("C:EURUSD"));
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 2);
@@ -183,7 +187,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: AggregateResponse = serde_json::from_value(json).unwrap();
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.ticker.as_deref(), Some("C:GBPUSD"));
         let bar = &resp.results.unwrap()[0];
         assert!((bar.close - 1.2730).abs() < 0.0001);
@@ -220,7 +224,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: AggregateResponse = serde_json::from_value(json).unwrap();
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let results = resp.results.unwrap();
         assert!(!results.is_empty());

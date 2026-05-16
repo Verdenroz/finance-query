@@ -1,4 +1,5 @@
 //! Forex snapshot endpoints: all tickers, single ticker, top movers.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -9,7 +10,7 @@ use super::super::models::*;
 /// Fetch snapshots for all forex tickers.
 ///
 /// * `tickers` - Optional comma-separated list of tickers to filter
-pub async fn forex_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsResponse> {
+pub async fn forex_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsResponseDTO> {
     let client = build_client()?;
     let path = "/v2/snapshot/locale/global/markets/forex/tickers";
     let params: Vec<(&str, &str)> = match tickers {
@@ -26,7 +27,7 @@ pub async fn forex_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsRespo
 /// Fetch snapshot for a single forex ticker.
 ///
 /// * `ticker` - Forex ticker symbol with `C:` prefix (e.g., `"C:EURUSD"`)
-pub async fn forex_snapshot(ticker: &str) -> Result<SingleSnapshotResponse> {
+pub async fn forex_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/snapshot/locale/global/markets/forex/tickers/{}",
@@ -42,7 +43,7 @@ pub async fn forex_snapshot(ticker: &str) -> Result<SingleSnapshotResponse> {
 /// Fetch top forex movers (gainers or losers).
 ///
 /// * `direction` - `"gainers"` or `"losers"`
-pub async fn forex_top_movers(direction: &str) -> Result<SnapshotsResponse> {
+pub async fn forex_top_movers(direction: &str) -> Result<SnapshotsResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/snapshot/locale/global/markets/forex/{}",
@@ -101,7 +102,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: SingleSnapshotResponse = serde_json::from_value(json).unwrap();
+        let resp: SingleSnapshotResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let snap = resp.ticker.unwrap();
         assert_eq!(snap.ticker.as_deref(), Some("C:EURUSD"));
@@ -147,7 +148,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: SnapshotsResponse = serde_json::from_value(json).unwrap();
+        let resp: SnapshotsResponseDTO = serde_json::from_value(json).unwrap();
         let tickers = resp.tickers.unwrap();
         assert_eq!(tickers.len(), 1);
         assert_eq!(tickers[0].ticker.as_deref(), Some("C:USDJPY"));
@@ -204,7 +205,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: SnapshotsResponse = serde_json::from_value(json).unwrap();
+        let resp: SnapshotsResponseDTO = serde_json::from_value(json).unwrap();
         let tickers = resp.tickers.unwrap();
         assert_eq!(tickers.len(), 2);
         assert_eq!(tickers[0].ticker.as_deref(), Some("C:EURUSD"));

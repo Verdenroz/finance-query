@@ -1,4 +1,5 @@
 //! Shared types and deserialization helpers for Alpha Vantage responses.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -124,7 +125,7 @@ impl OutputSize {
 /// A single OHLCV data point from a time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct TimeSeriesEntry {
+pub struct TimeSeriesEntryDTO {
     /// Timestamp or date string
     pub timestamp: String,
     /// Opening price
@@ -142,7 +143,7 @@ pub struct TimeSeriesEntry {
 /// A single adjusted OHLCV data point including dividend and split information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct AdjustedTimeSeriesEntry {
+pub struct AdjustedTimeSeriesEntryDTO {
     /// Timestamp or date string
     pub timestamp: String,
     /// Opening price
@@ -166,25 +167,25 @@ pub struct AdjustedTimeSeriesEntry {
 /// Time series response containing metadata and OHLCV entries.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct TimeSeries {
+pub struct TimeSeriesDTO {
     /// Symbol (e.g., `"AAPL"`)
     pub symbol: String,
     /// Last refreshed timestamp
     pub last_refreshed: String,
     /// Time series data points
-    pub entries: Vec<TimeSeriesEntry>,
+    pub entries: Vec<TimeSeriesEntryDTO>,
 }
 
 /// Adjusted time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct AdjustedTimeSeries {
+pub struct AdjustedTimeSeriesDTO {
     /// Symbol (e.g., `"AAPL"`)
     pub symbol: String,
     /// Last refreshed timestamp
     pub last_refreshed: String,
     /// Adjusted time series data points
-    pub entries: Vec<AdjustedTimeSeriesEntry>,
+    pub entries: Vec<AdjustedTimeSeriesEntryDTO>,
 }
 
 // ============================================================================
@@ -194,7 +195,7 @@ pub struct AdjustedTimeSeries {
 /// Real-time quote for a single ticker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct GlobalQuote {
+pub struct GlobalQuoteDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Open price
@@ -220,7 +221,7 @@ pub struct GlobalQuote {
 /// A single quote within a bulk quotes response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct BulkQuote {
+pub struct BulkQuoteDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Open price
@@ -250,7 +251,7 @@ pub struct BulkQuote {
 /// A single match result from a symbol search.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct SymbolMatch {
+pub struct SymbolMatchDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Company/security name
@@ -278,7 +279,7 @@ pub struct SymbolMatch {
 /// Status of a single market/exchange.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct MarketStatus {
+pub struct MarketStatusDTO {
     /// Market type (e.g., `"Equity"`, `"Forex"`)
     pub market_type: String,
     /// Region name
@@ -302,7 +303,7 @@ pub struct MarketStatus {
 /// A single options contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionContract {
+pub struct OptionContractDTO {
     /// Contract ID
     pub contractid: String,
     /// Underlying symbol
@@ -346,11 +347,11 @@ pub struct OptionContract {
 /// Options chain response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsChain {
+pub struct OptionsChainDTO {
     /// Underlying symbol
     pub symbol: String,
     /// Option contracts
-    pub contracts: Vec<OptionContract>,
+    pub contracts: Vec<OptionContractDTO>,
 }
 
 // ============================================================================
@@ -360,7 +361,7 @@ pub struct OptionsChain {
 /// A single news article with sentiment data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct NewsArticle {
+pub struct NewsArticleDTO {
     /// Article title
     pub title: String,
     /// Article URL
@@ -376,13 +377,13 @@ pub struct NewsArticle {
     /// Overall sentiment label
     pub overall_sentiment_label: Option<String>,
     /// Per-ticker sentiment
-    pub ticker_sentiment: Vec<TickerSentiment>,
+    pub ticker_sentiment: Vec<TickerSentimentDTO>,
 }
 
 /// Sentiment data for a specific ticker within a news article.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct TickerSentiment {
+pub struct TickerSentimentDTO {
     /// Ticker symbol
     pub ticker: String,
     /// Relevance score (0.0 to 1.0)
@@ -396,7 +397,7 @@ pub struct TickerSentiment {
 /// Earnings call transcript.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct EarningsCallTranscript {
+pub struct EarningsCallTranscriptDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Quarter identifier (e.g., `"2024Q1"`)
@@ -408,7 +409,7 @@ pub struct EarningsCallTranscript {
 /// A top gainer, loser, or most actively traded ticker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct TopMoverTicker {
+pub struct TopMoverTickerDTO {
     /// Ticker symbol
     pub ticker: String,
     /// Current price
@@ -424,15 +425,15 @@ pub struct TopMoverTicker {
 /// Top gainers, losers, and most actively traded tickers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct TopMovers {
+pub struct TopMoversDTO {
     /// Last updated timestamp
     pub last_updated: String,
     /// Top gaining tickers
-    pub top_gainers: Vec<TopMoverTicker>,
+    pub top_gainers: Vec<TopMoverTickerDTO>,
     /// Top losing tickers
-    pub top_losers: Vec<TopMoverTicker>,
+    pub top_losers: Vec<TopMoverTickerDTO>,
     /// Most actively traded tickers
-    pub most_actively_traded: Vec<TopMoverTicker>,
+    pub most_actively_traded: Vec<TopMoverTickerDTO>,
 }
 
 // ============================================================================
@@ -442,7 +443,7 @@ pub struct TopMovers {
 /// Company overview / profile.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CompanyOverview {
+pub struct CompanyOverviewDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Asset type
@@ -526,7 +527,7 @@ pub struct CompanyOverview {
 /// ETF profile and holdings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct EtfProfile {
+pub struct EtfProfileDTO {
     /// ETF symbol
     pub symbol: String,
     /// ETF name
@@ -544,13 +545,13 @@ pub struct EtfProfile {
     /// Inception date
     pub inception_date: Option<String>,
     /// Top holdings
-    pub holdings: Vec<EtfHolding>,
+    pub holdings: Vec<EtfHoldingDTO>,
 }
 
 /// A single ETF holding.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct EtfHolding {
+pub struct EtfHoldingDTO {
     /// Symbol of the held security
     pub symbol: Option<String>,
     /// Description
@@ -562,7 +563,7 @@ pub struct EtfHolding {
 /// A single row in an income statement, balance sheet, or cash flow statement.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FinancialReport {
+pub struct FinancialReportDTO {
     /// Fiscal date ending
     pub fiscal_date_ending: String,
     /// Reported currency
@@ -575,19 +576,19 @@ pub struct FinancialReport {
 /// Financial statements (income statement, balance sheet, or cash flow).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FinancialStatements {
+pub struct FinancialStatementsDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Annual reports
-    pub annual_reports: Vec<FinancialReport>,
+    pub annual_reports: Vec<FinancialReportDTO>,
     /// Quarterly reports
-    pub quarterly_reports: Vec<FinancialReport>,
+    pub quarterly_reports: Vec<FinancialReportDTO>,
 }
 
 /// A single dividend payment event.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct DividendEvent {
+pub struct DividendEventDTO {
     /// Ex-dividend date
     pub ex_dividend_date: Option<String>,
     /// Declaration date
@@ -603,7 +604,7 @@ pub struct DividendEvent {
 /// A single stock split event.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct SplitEvent {
+pub struct SplitEventDTO {
     /// Effective date
     pub effective_date: Option<String>,
     /// Split ratio (e.g., `"4:1"`)
@@ -613,7 +614,7 @@ pub struct SplitEvent {
 /// Earnings data for a single quarter.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct EarningsData {
+pub struct EarningsDataDTO {
     /// Fiscal date ending
     pub fiscal_date_ending: Option<String>,
     /// Reported date
@@ -631,19 +632,19 @@ pub struct EarningsData {
 /// Earnings history with annual and quarterly data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct EarningsHistory {
+pub struct EarningsHistoryDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Annual earnings
-    pub annual_earnings: Vec<EarningsData>,
+    pub annual_earnings: Vec<EarningsDataDTO>,
     /// Quarterly earnings
-    pub quarterly_earnings: Vec<EarningsData>,
+    pub quarterly_earnings: Vec<EarningsDataDTO>,
 }
 
 /// A single earnings calendar entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct EarningsCalendarEntry {
+pub struct EarningsCalendarEntryDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Company name
@@ -661,7 +662,7 @@ pub struct EarningsCalendarEntry {
 /// A single IPO calendar entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IpoCalendarEntry {
+pub struct IpoCalendarEntryDTO {
     /// Ticker symbol
     pub symbol: Option<String>,
     /// Company name
@@ -677,7 +678,7 @@ pub struct IpoCalendarEntry {
 /// Listing status entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct ListingEntry {
+pub struct ListingEntryDTO {
     /// Ticker symbol
     pub symbol: String,
     /// Security name
@@ -701,7 +702,7 @@ pub struct ListingEntry {
 /// Real-time exchange rate between two currencies.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct ExchangeRate {
+pub struct ExchangeRateDTO {
     /// Source currency code
     pub from_currency_code: String,
     /// Source currency name
@@ -723,7 +724,7 @@ pub struct ExchangeRate {
 /// A single forex time series data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct ForexEntry {
+pub struct ForexEntryDTO {
     /// Timestamp or date string
     pub timestamp: String,
     /// Opening price
@@ -739,7 +740,7 @@ pub struct ForexEntry {
 /// Forex time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct ForexTimeSeries {
+pub struct ForexTimeSeriesDTO {
     /// Source currency code
     pub from_symbol: String,
     /// Target currency code
@@ -747,7 +748,7 @@ pub struct ForexTimeSeries {
     /// Last refreshed timestamp
     pub last_refreshed: String,
     /// Data entries
-    pub entries: Vec<ForexEntry>,
+    pub entries: Vec<ForexEntryDTO>,
 }
 
 // ============================================================================
@@ -757,7 +758,7 @@ pub struct ForexTimeSeries {
 /// A single cryptocurrency time series data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CryptoEntry {
+pub struct CryptoEntryDTO {
     /// Timestamp or date string
     pub timestamp: String,
     /// Opening price
@@ -775,7 +776,7 @@ pub struct CryptoEntry {
 /// Cryptocurrency time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CryptoTimeSeries {
+pub struct CryptoTimeSeriesDTO {
     /// Cryptocurrency symbol (e.g., `"BTC"`)
     pub symbol: String,
     /// Market/exchange currency (e.g., `"USD"`)
@@ -783,7 +784,7 @@ pub struct CryptoTimeSeries {
     /// Last refreshed timestamp
     pub last_refreshed: String,
     /// Data entries
-    pub entries: Vec<CryptoEntry>,
+    pub entries: Vec<CryptoEntryDTO>,
 }
 
 // ============================================================================
@@ -793,7 +794,7 @@ pub struct CryptoTimeSeries {
 /// A single commodity data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CommodityDataPoint {
+pub struct CommodityDataPointDTO {
     /// Date string (YYYY-MM-DD)
     pub date: String,
     /// Value
@@ -803,7 +804,7 @@ pub struct CommodityDataPoint {
 /// Commodity time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct CommoditySeries {
+pub struct CommoditySeriesDTO {
     /// Commodity name/identifier
     pub name: String,
     /// Interval
@@ -811,7 +812,7 @@ pub struct CommoditySeries {
     /// Unit
     pub unit: String,
     /// Data points
-    pub data: Vec<CommodityDataPoint>,
+    pub data: Vec<CommodityDataPointDTO>,
 }
 
 // ============================================================================
@@ -821,7 +822,7 @@ pub struct CommoditySeries {
 /// A single economic indicator data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct EconomicDataPoint {
+pub struct EconomicDataPointDTO {
     /// Date string (YYYY-MM-DD)
     pub date: String,
     /// Value
@@ -831,7 +832,7 @@ pub struct EconomicDataPoint {
 /// Economic indicator time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct EconomicSeries {
+pub struct EconomicSeriesDTO {
     /// Indicator name
     pub name: String,
     /// Interval
@@ -839,7 +840,7 @@ pub struct EconomicSeries {
     /// Unit
     pub unit: String,
     /// Data points
-    pub data: Vec<EconomicDataPoint>,
+    pub data: Vec<EconomicDataPointDTO>,
 }
 
 // ============================================================================
@@ -849,7 +850,7 @@ pub struct EconomicSeries {
 /// A single technical indicator data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IndicatorDataPoint {
+pub struct IndicatorDataPointDTO {
     /// Timestamp or date string
     pub timestamp: String,
     /// Indicator values as key-value pairs (keys vary by indicator).
@@ -860,7 +861,7 @@ pub struct IndicatorDataPoint {
 /// Technical indicator response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct TechnicalIndicator {
+pub struct TechnicalIndicatorDTO {
     /// Indicator function name (e.g., `"SMA"`, `"RSI"`, `"MACD"`)
     pub indicator: String,
     /// Symbol
@@ -870,5 +871,5 @@ pub struct TechnicalIndicator {
     /// Interval used
     pub interval: String,
     /// Data points
-    pub data: Vec<IndicatorDataPoint>,
+    pub data: Vec<IndicatorDataPointDTO>,
 }
