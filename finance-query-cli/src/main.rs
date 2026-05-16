@@ -219,7 +219,6 @@
 
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
-#![allow(missing_docs)]
 
 use clap::{Parser, Subcommand};
 use tracing_subscriber::{EnvFilter, layer::SubscriberExt, util::SubscriberInitExt};

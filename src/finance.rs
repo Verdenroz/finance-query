@@ -3,20 +3,20 @@
 //! This module provides functions for operations that don't require a specific stock symbol,
 //! such as searching for symbols and fetching screener data.
 
-use crate::client::{ClientConfig, YahooClient};
+use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::constants::Region;
 use crate::constants::screeners::Screener;
 use crate::constants::sectors::Sector;
 use crate::error::Result;
-use crate::models::industries::IndustryData;
-use crate::models::screeners::ScreenerResults;
-use crate::models::search::SearchResults;
-use crate::models::sectors::SectorData;
-use crate::models::transcript::{Transcript, TranscriptWithMeta};
+use crate::models::corporate::transcript::{Transcript, TranscriptWithMeta};
+use crate::models::discovery::screeners::ScreenerResults;
+use crate::models::discovery::search::SearchResults;
+use crate::models::market::industries::IndustryData;
+use crate::models::market::sectors::SectorData;
 
 // Re-export options for convenience
-pub use crate::endpoints::lookup::{LookupOptions, LookupType};
-pub use crate::endpoints::search::SearchOptions;
+pub use crate::adapters::yahoo::discovery::lookup::{LookupOptions, LookupType};
+pub use crate::adapters::yahoo::discovery::search::SearchOptions;
 
 /// Search for stock symbols and companies
 ///
@@ -86,7 +86,7 @@ pub async fn search(query: &str, options: &SearchOptions) -> Result<SearchResult
 pub async fn lookup(
     query: &str,
     options: &LookupOptions,
-) -> Result<crate::models::lookup::LookupResults> {
+) -> Result<crate::models::discovery::lookup::LookupResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.lookup(query, options).await
 }
@@ -152,8 +152,8 @@ pub async fn screener(screener_type: Screener, count: u32) -> Result<ScreenerRes
 /// # Ok(())
 /// # }
 /// ```
-pub async fn custom_screener<F: crate::models::screeners::ScreenerField>(
-    query: crate::models::screeners::ScreenerQuery<F>,
+pub async fn custom_screener<F: crate::models::discovery::screeners::ScreenerField>(
+    query: crate::models::discovery::screeners::ScreenerQuery<F>,
 ) -> Result<ScreenerResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.custom_screener(query).await
@@ -174,7 +174,7 @@ pub async fn custom_screener<F: crate::models::screeners::ScreenerField>(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn news() -> Result<Vec<crate::models::news::News>> {
+pub async fn news() -> Result<Vec<crate::models::corporate::news::News>> {
     crate::scrapers::stockanalysis::scrape_general_news().await
 }
 
@@ -212,7 +212,8 @@ pub async fn earnings_transcript(
     year: Option<i32>,
 ) -> Result<Transcript> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    crate::endpoints::transcripts::fetch_for_symbol(&client, symbol, quarter, year).await
+    crate::adapters::yahoo::corporate::transcripts::fetch_for_symbol(&client, symbol, quarter, year)
+        .await
 }
 
 /// Get all earnings transcripts for a symbol
@@ -246,7 +247,8 @@ pub async fn earnings_transcripts(
     limit: Option<usize>,
 ) -> Result<Vec<TranscriptWithMeta>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    crate::endpoints::transcripts::fetch_all_for_symbol(&client, symbol, limit).await
+    crate::adapters::yahoo::corporate::transcripts::fetch_all_for_symbol(&client, symbol, limit)
+        .await
 }
 
 /// Get market hours/status
@@ -271,7 +273,7 @@ pub async fn earnings_transcripts(
 /// # Ok(())
 /// # }
 /// ```
-pub async fn hours(region: Option<&str>) -> Result<crate::models::hours::MarketHours> {
+pub async fn hours(region: Option<&str>) -> Result<crate::models::market::hours::MarketHours> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_hours(region).await
 }
@@ -388,7 +390,7 @@ pub async fn industry(industry_key: impl AsRef<str>) -> Result<IndustryData> {
 /// # Ok(())
 /// # }
 /// ```
-pub async fn currencies() -> Result<Vec<crate::models::currencies::Currency>> {
+pub async fn currencies() -> Result<Vec<crate::models::market::currencies::Currency>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_currencies().await
 }
@@ -411,7 +413,7 @@ pub async fn currencies() -> Result<Vec<crate::models::currencies::Currency>> {
 /// # Ok(())
 /// # }
 /// ```
-pub async fn exchanges() -> Result<Vec<crate::models::exchanges::Exchange>> {
+pub async fn exchanges() -> Result<Vec<crate::models::market::exchanges::Exchange>> {
     crate::scrapers::yahoo_exchanges::scrape_exchanges().await
 }
 
@@ -438,7 +440,7 @@ pub async fn exchanges() -> Result<Vec<crate::models::exchanges::Exchange>> {
 /// ```
 pub async fn market_summary(
     region: Option<Region>,
-) -> Result<Vec<crate::models::market_summary::MarketSummaryQuote>> {
+) -> Result<Vec<crate::models::market::market_summary::MarketSummaryQuote>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_market_summary(region).await
 }
@@ -466,7 +468,7 @@ pub async fn market_summary(
 /// ```
 pub async fn trending(
     region: Option<Region>,
-) -> Result<Vec<crate::models::trending::TrendingQuote>> {
+) -> Result<Vec<crate::models::discovery::trending::TrendingQuote>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
     client.get_trending(region).await
 }
@@ -487,5 +489,5 @@ pub async fn trending(
 /// # }
 /// ```
 pub async fn fear_and_greed() -> Result<crate::models::sentiment::FearAndGreed> {
-    crate::endpoints::fear_and_greed::fetch().await
+    crate::adapters::yahoo::market::fear_and_greed::fetch().await
 }

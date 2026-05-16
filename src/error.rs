@@ -115,6 +115,22 @@ pub enum FinanceError {
         /// Error context
         context: String,
     },
+
+    /// The requested operation is not supported by this provider.
+    #[error("{provider} does not support {operation}")]
+    NotSupported {
+        /// Provider identifier
+        provider: &'static str,
+        /// Operation name
+        operation: &'static str,
+    },
+
+    /// No configured provider supports this operation or all providers failed.
+    #[error("no provider available for {operation}")]
+    NoProviderAvailable {
+        /// Operation name
+        operation: &'static str,
+    },
 }
 
 /// Error category for logging and metrics
@@ -137,9 +153,6 @@ pub enum ErrorCategory {
     /// Other errors
     Other,
 }
-
-/// Type alias for Error (for consistency with common Rust patterns)
-pub type Error = FinanceError;
 
 /// Result type alias for library operations
 pub type Result<T> = std::result::Result<T, FinanceError>;
@@ -188,6 +201,9 @@ impl FinanceError {
             Self::SymbolNotFound { .. } => ErrorCategory::NotFound,
             Self::InvalidParameter { .. } => ErrorCategory::Validation,
             Self::JsonParseError(_) | Self::ResponseStructureError { .. } => ErrorCategory::Parsing,
+            Self::NotSupported { .. } | Self::NoProviderAvailable { .. } => {
+                ErrorCategory::Validation
+            }
             _ => ErrorCategory::Other,
         }
     }
@@ -229,19 +245,6 @@ impl FinanceError {
             _ => {}
         }
         self
-    }
-}
-
-// Backward compatibility: Allow ParseError to be created from String
-impl FinanceError {
-    /// Create a ParseError from a string (for backward compatibility)
-    #[deprecated(since = "2.0.0", note = "Use ResponseStructureError instead")]
-    pub fn parse_error(msg: impl Into<String>) -> Self {
-        let msg = msg.into();
-        Self::ResponseStructureError {
-            field: "unknown".to_string(),
-            context: msg,
-        }
     }
 }
 
