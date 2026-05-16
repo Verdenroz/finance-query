@@ -398,6 +398,7 @@ mod tests {
             close: price,
             volume: 1000,
             adj_close: None,
+            provider_id: None,
         }
     }
 

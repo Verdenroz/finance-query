@@ -1182,6 +1182,7 @@ mod tests {
                 close: p,
                 volume: 1_000,
                 adj_close: Some(p),
+                provider_id: None,
             })
             .collect()
     }
@@ -1198,6 +1199,7 @@ mod tests {
                 close: p,
                 volume: 1_000,
                 adj_close: Some(p),
+                provider_id: None,
             })
             .collect()
     }
@@ -1321,10 +1323,12 @@ mod tests {
             Dividend {
                 timestamp: 20 * 86400,
                 amount: 1.0,
+                provider_id: None,
             },
             Dividend {
                 timestamp: 40 * 86400,
                 amount: 1.0,
+                provider_id: None,
             },
         ];
         let symbol_data =
@@ -1370,6 +1374,7 @@ mod tests {
         let dividends = vec![Dividend {
             timestamp: candles[1].timestamp,
             amount: 1.0,
+            provider_id: None,
         }];
         let symbol_data = vec![SymbolData::new("DIVS", candles).with_dividends(dividends)];
 

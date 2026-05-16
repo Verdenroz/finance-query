@@ -381,6 +381,7 @@ mod tests {
                 close: 100.0,
                 volume: 1000,
                 adj_close: None,
+                provider_id: None,
             },
             Candle {
                 timestamp: 2,
@@ -390,6 +391,7 @@ mod tests {
                 close: 101.0,
                 volume: 1000,
                 adj_close: None,
+                provider_id: None,
             },
         ];
 

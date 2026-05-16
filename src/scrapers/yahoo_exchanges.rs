@@ -4,7 +4,7 @@
 //! with their suffixes and data providers.
 
 use crate::error::{FinanceError, Result};
-use crate::models::exchanges::Exchange;
+use crate::models::market::exchanges::Exchange;
 use scraper::{Html, Selector};
 use tracing::info;
 

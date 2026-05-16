@@ -121,7 +121,7 @@ pub use tickers::BatchIndicatorsResponse;
 // ============================================================================
 // Error types and results
 // ============================================================================
-pub use error::{FinanceError, Result};
+pub use error::{ErrorCategory, FinanceError, Result};
 
 // ============================================================================
 // Options - Configure API requests

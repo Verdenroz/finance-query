@@ -564,6 +564,7 @@ mod tests {
             close,
             volume: 0,
             adj_close: None,
+            provider_id: None,
         }
     }
 
