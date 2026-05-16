@@ -203,8 +203,12 @@ Detailed provider-specific documentation:
 | FRED | [FRED & Treasury](fred.md) |
 | SEC EDGAR | [EDGAR SEC Filings](edgar.md) |
 
+## Tickers and Providers
+
+[`Tickers`](../tickers.md) supports the same `.providers()`, `.fetch()`, and `.merge()` builder methods as `Ticker`. Provider dispatch applies to every batch operation (quotes, charts, financials, etc.). `spark()` is the only exception — it uses a Yahoo-specific batch endpoint with no equivalent in other providers.
+
 ## Limitations
 
-- `Tickers` batch API does not yet support multi-provider configuration — it always uses Yahoo Finance
 - Custom `Merge` implementations are not possible — only the built-in `Prefer` and `Enrich` policies are available
 - Provider-specific fields not in the shared intermediate types are accessible via `.extras` fields (untyped)
+- `Tickers.spark()` is Yahoo-only — no `fetch_spark` in `ProviderAdapter`

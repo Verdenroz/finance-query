@@ -42,16 +42,16 @@ let tickers = Tickers::builder(vec!["AAPL", "MSFT"])
 | `.region_code(str)` | Set region code directly (e.g., `"US"`, `"JP"`) |
 | `.timeout(Duration)` | Set HTTP request timeout |
 | `.proxy(str)` | Set proxy URL |
-| `.max_concurrency(n)` | Max concurrent requests for batch ops (default: 10) |
+| `.providers(&[Provider])` | Providers in priority order (default: `[Yahoo]`) |
+| `.fetch(Fetch)` | Dispatch strategy: `Sequential`, `Parallel`, or `All` (default: `Sequential`) |
+| `.merge(policy)` | Result merge policy: `Prefer` or `Enrich` (default: `Prefer`) |
+| `.max_concurrency(n)` | Max concurrent requests for per-symbol batch ops (default: 10) |
 | `.logo()` | Include company logo URLs in quote responses |
 | `.cache(Duration)` | Enable response caching with TTL (disabled by default) |
 
-!!! note "Provider Configuration"
-    `Tickers` does not yet support multi-provider configuration — it always uses Yahoo Finance. Use individual `Ticker` instances with [providers](providers/index.md) for multi-provider batch needs.
-
 #### `max_concurrency`
 
-Controls parallelism for methods that fetch per-symbol (charts, financials, news, etc.). Lower values reduce the risk of rate limiting from Yahoo Finance; higher values increase throughput for large symbol lists.
+Controls parallelism for methods that fetch per-symbol (charts, financials, news, etc.). Lower values reduce the risk of rate limiting; higher values increase throughput for large symbol lists.
 
 ```rust
 use finance_query::Tickers;
@@ -62,6 +62,38 @@ let tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL", "TSLA"])
     .build()
     .await?;
 ```
+
+## Provider Configuration
+
+`Tickers` supports the same multi-provider configuration as [`Ticker`](ticker.md). Provider dispatch and merge policies apply to every batch operation.
+
+```rust
+use finance_query::{Tickers, Provider, Fetch};
+
+// Explicit Yahoo-only configuration (same as the default)
+let tickers = Tickers::builder(vec!["AAPL", "NVDA"])
+    .providers(&[Provider::Yahoo])
+    .fetch(Fetch::Sequential)
+    .build()
+    .await?;
+let response = tickers.quotes().await?;
+```
+
+With multiple providers enabled (e.g. `polygon` feature), fall back automatically if the primary fails:
+
+```rust
+#[cfg(feature = "polygon")]
+let tickers = Tickers::builder(vec!["AAPL", "NVDA"])
+    .providers(&[Provider::Polygon, Provider::Yahoo])
+    .fetch(Fetch::Sequential)
+    .build()
+    .await?;
+```
+
+!!! note "Spark is Yahoo-only"
+    `spark()` uses a Yahoo-specific batch endpoint with no equivalent in other providers. It will always use the Yahoo client regardless of the configured provider set.
+
+See [Multi-Provider Architecture](providers/index.md) for full details on providers, fetch strategies, and merge policies.
 
 ## Batch Quotes
 

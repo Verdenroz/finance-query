@@ -3,11 +3,10 @@
 //! Optimizes data fetching by using batch endpoints and concurrent requests.
 
 use super::macros::{batch_fetch_cached, define_batch_response};
-use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
+use crate::adapters::yahoo::client::ClientConfig;
 use crate::constants::{Frequency, Interval, StatementType, TimeRange};
 use crate::error::{FinanceError, Result};
 use crate::models::chart::events::ChartEvents;
-use crate::models::chart::response::ChartResponse;
 use crate::models::chart::spark::Spark;
 use crate::models::chart::spark::response::SparkResponse;
 use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
@@ -16,6 +15,7 @@ use crate::models::corporate::recommendation::Recommendation;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::Quote;
+use crate::providers::{Capability, Fetch, Merge, Prefer, Provider, ProviderSet, build_providers};
 use crate::utils::{CacheEntry, EVICTION_THRESHOLD, filter_by_range};
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
@@ -110,6 +110,9 @@ const DEFAULT_MAX_CONCURRENCY: usize = 10;
 pub struct TickersBuilder {
     symbols: Vec<Arc<str>>,
     config: ClientConfig,
+    provider_ids: Option<Vec<Provider>>,
+    fetch: Fetch,
+    merge: Option<Arc<dyn Merge>>,
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
@@ -124,6 +127,9 @@ impl TickersBuilder {
         Self {
             symbols: symbols.into_iter().map(|s| s.into().into()).collect(),
             config: ClientConfig::default(),
+            provider_ids: None,
+            fetch: Fetch::Sequential,
+            merge: None,
             max_concurrency: DEFAULT_MAX_CONCURRENCY,
             cache_ttl: None,
             include_logo: false,
@@ -214,13 +220,40 @@ impl TickersBuilder {
         self
     }
 
+    /// Configure which providers to use, in priority order. Default: `[Yahoo]`.
+    pub fn providers(mut self, ids: &[Provider]) -> Self {
+        self.provider_ids = Some(ids.to_vec());
+        self
+    }
+
+    /// Configure how providers are queried. Default: `Sequential`.
+    pub fn fetch(mut self, mode: Fetch) -> Self {
+        self.fetch = mode;
+        self
+    }
+
+    /// Configure how results from multiple providers are combined. Default: `Prefer`.
+    pub fn merge(mut self, policy: impl Merge + 'static) -> Self {
+        self.merge = Some(Arc::new(policy));
+        self
+    }
+
     /// Build the Tickers instance
     pub async fn build(self) -> Result<Tickers> {
-        let client = Arc::new(YahooClient::new(self.config).await?);
+        let ids = self.provider_ids.unwrap_or_else(|| vec![Provider::Yahoo]);
+        let providers = Arc::new(
+            build_providers(
+                &ids,
+                &self.config,
+                self.fetch,
+                self.merge.unwrap_or_else(|| Arc::new(Prefer)),
+            )
+            .await?,
+        );
 
         Ok(Tickers {
             symbols: self.symbols,
-            client,
+            providers,
             max_concurrency: self.max_concurrency,
             cache_ttl: self.cache_ttl,
             include_logo: self.include_logo,
@@ -281,7 +314,7 @@ impl TickersBuilder {
 /// ```
 pub struct Tickers {
     symbols: Vec<Arc<str>>,
-    client: Arc<YahooClient>,
+    providers: Arc<ProviderSet>,
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
@@ -407,8 +440,8 @@ impl Tickers {
 
     /// Batch fetch quotes for all symbols.
     ///
-    /// Uses /v7/finance/quote endpoint - fetches all symbols in a single API call.
-    /// When logos are enabled, makes a parallel call for logo URLs.
+    /// Dispatches through the configured provider set. When logos are enabled,
+    /// fetches logo URLs in parallel via the Yahoo client.
     ///
     /// Use [`TickersBuilder::logo()`](TickersBuilder::logo) to enable logo fetching
     /// for this tickers instance.
@@ -429,7 +462,6 @@ impl Tickers {
             }
         }
 
-        // Slow path: acquire fetch guard to prevent duplicate concurrent requests
         let _fetch_guard = self.quotes_fetch.lock().await;
 
         // Double-check: another task may have fetched while we waited
@@ -448,117 +480,120 @@ impl Tickers {
             }
         }
 
-        // Fetch batch quotes (no lock held during HTTP I/O)
-        let symbols_ref: Vec<&str> = self.symbols.iter().map(|s| &**s).collect();
+        // Convert symbols to owned strings for async closure capture
+        let symbol_strings: Vec<String> = self.symbols.iter().map(|s| s.to_string()).collect();
 
-        // Yahoo requires separate calls for quotes vs logos
-        // When include_logo=true, fetch both in parallel
-        let (json, logos) = if self.include_logo {
-            let quote_future = crate::adapters::yahoo::quote::quotes::fetch_with_fields(
-                &self.client,
-                &symbols_ref,
-                None,  // all fields
-                true,  // formatted
-                false, // no logo params for main call
-            );
-            let logo_future = crate::adapters::yahoo::quote::quotes::fetch_with_fields(
-                &self.client,
-                &symbols_ref,
-                Some(&["logoUrl", "companyLogoUrl"]), // only logo fields
-                true,
-                true, // include logo params
-            );
+        let (quote_data, logos) = if self.include_logo {
+            // Logo fetching is Yahoo-specific — fire in parallel with the provider quote fetch
+            let providers_logo = Arc::clone(&self.providers);
+            let syms_logo = symbol_strings.clone();
+            let logo_future = async move {
+                if let Ok(client) = providers_logo.first_yahoo() {
+                    let syms_ref: Vec<&str> = syms_logo.iter().map(String::as_str).collect();
+                    crate::adapters::yahoo::quote::quotes::fetch_with_fields(
+                        &client,
+                        &syms_ref,
+                        Some(&["logoUrl", "companyLogoUrl"]),
+                        true,
+                        true,
+                    )
+                    .await
+                    .ok()
+                } else {
+                    None
+                }
+            };
+
+            let providers_quote = Arc::clone(&self.providers);
+            let syms_quote = symbol_strings.clone();
+            let quote_future = async move {
+                providers_quote
+                    .try_fetch(Capability::QUOTE, |p| {
+                        let syms = syms_quote.clone();
+                        let p = p.clone();
+                        async move {
+                            let syms_ref: Vec<&str> = syms.iter().map(String::as_str).collect();
+                            p.fetch_quotes_batch(&syms_ref).await
+                        }
+                    })
+                    .await
+            };
+
             let (quote_result, logo_result) = tokio::join!(quote_future, logo_future);
-            (quote_result?, logo_result.ok())
+            (quote_result?, logo_result)
         } else {
-            let json = crate::adapters::yahoo::quote::quotes::fetch_with_fields(
-                &self.client,
-                &symbols_ref,
-                None,
-                true,
-                false,
-            )
-            .await?;
-            (json, None)
+            let providers = Arc::clone(&self.providers);
+            let syms = symbol_strings.clone();
+            let data = providers
+                .try_fetch(Capability::QUOTE, |p| {
+                    let syms = syms.clone();
+                    let p = p.clone();
+                    async move {
+                        let syms_ref: Vec<&str> = syms.iter().map(String::as_str).collect();
+                        p.fetch_quotes_batch(&syms_ref).await
+                    }
+                })
+                .await?;
+            (data, None)
         };
 
-        // Build logo lookup map if we have logos
-        let logo_map: std::collections::HashMap<String, (Option<String>, Option<String>)> = logos
+        // Build logo lookup map
+        let logo_map: HashMap<String, (Option<String>, Option<String>)> = logos
             .and_then(|l| l.get("quoteResponse")?.get("result")?.as_array().cloned())
             .map(|results| {
                 results
                     .iter()
                     .filter_map(|r| {
                         let symbol = r.get("symbol")?.as_str()?.to_string();
-                        let logo_url = r
-                            .get("logoUrl")
-                            .and_then(|v| v.as_str())
-                            .map(|s| s.to_string());
+                        let logo_url = r.get("logoUrl").and_then(|v| v.as_str()).map(String::from);
                         let company_logo_url = r
                             .get("companyLogoUrl")
                             .and_then(|v| v.as_str())
-                            .map(|s| s.to_string());
+                            .map(String::from);
                         Some((symbol, (logo_url, company_logo_url)))
                     })
                     .collect()
             })
             .unwrap_or_default();
 
-        // Parse response
         let mut response = BatchQuotesResponse::with_capacity(self.symbols.len());
+        let mut parsed_quotes: Vec<(String, Quote)> = Vec::new();
 
-        if let Some(quote_response) = json.get("quoteResponse") {
-            if let Some(results) = quote_response.get("result").and_then(|r| r.as_array()) {
-                // Parse all quotes first (no lock held)
-                let mut parsed_quotes: Vec<(String, Quote)> = Vec::new();
-
-                for result in results {
-                    if let Some(symbol) = result.get("symbol").and_then(|s| s.as_str()) {
-                        match Quote::from_batch_response(result) {
-                            Ok(mut quote) => {
-                                // Merge logo URLs if we have them
-                                if let Some((logo_url, company_logo_url)) = logo_map.get(symbol) {
-                                    if quote.logo_url.is_none() {
-                                        quote.logo_url = logo_url.clone();
-                                    }
-                                    if quote.company_logo_url.is_none() {
-                                        quote.company_logo_url = company_logo_url.clone();
-                                    }
-                                }
-                                parsed_quotes.push((symbol.to_string(), quote));
-                            }
-                            Err(e) => {
-                                response.errors.insert(symbol.to_string(), e.to_string());
-                            }
-                        }
-                    }
-                }
-
-                // Now acquire write lock briefly for batch cache insertion
-                if self.cache_ttl.is_some() {
-                    let mut cache = self.quote_cache.write().await;
-                    for (symbol, quote) in &parsed_quotes {
-                        self.cache_insert(&mut cache, symbol.as_str().into(), quote.clone());
-                    }
-                }
-
-                // Populate response (no lock needed)
-                for (symbol, quote) in parsed_quotes {
-                    response.quotes.insert(symbol, quote);
-                }
+        for mut data in quote_data {
+            let symbol = data.symbol.clone();
+            if let Some((logo_url, _)) = logo_map.get(&symbol)
+                && data.logo_url.is_none()
+            {
+                data.logo_url = logo_url.clone();
             }
+            let mut quote = data.into_quote();
+            if let Some((_, company_logo_url)) = logo_map.get(&symbol)
+                && quote.company_logo_url.is_none()
+            {
+                quote.company_logo_url = company_logo_url.clone();
+            }
+            parsed_quotes.push((symbol, quote));
+        }
 
-            // Track missing symbols
-            for symbol in &self.symbols {
-                let symbol_str = &**symbol;
-                if !response.quotes.contains_key(symbol_str)
-                    && !response.errors.contains_key(symbol_str)
-                {
-                    response.errors.insert(
-                        symbol.to_string(),
-                        "Symbol not found in response".to_string(),
-                    );
-                }
+        if self.cache_ttl.is_some() {
+            let mut cache = self.quote_cache.write().await;
+            for (symbol, quote) in &parsed_quotes {
+                self.cache_insert(&mut cache, symbol.as_str().into(), quote.clone());
+            }
+        }
+
+        for (symbol, quote) in parsed_quotes {
+            response.quotes.insert(symbol, quote);
+        }
+
+        // Track missing symbols
+        for symbol in &self.symbols {
+            let s = &**symbol;
+            if !response.quotes.contains_key(s) && !response.errors.contains_key(s) {
+                response.errors.insert(
+                    symbol.to_string(),
+                    "Symbol not found in response".to_string(),
+                );
             }
         }
 
@@ -666,15 +701,22 @@ impl Tickers {
             }
         }
 
-        // Fetch all charts concurrently (no lock held during HTTP I/O)
+        // Fetch all charts concurrently via provider dispatch (no lock held during I/O)
         let futures: Vec<_> = self
             .symbols
             .iter()
             .map(|symbol| {
-                let client = Arc::clone(&self.client);
+                let providers = Arc::clone(&self.providers);
                 let symbol = Arc::clone(symbol);
                 async move {
-                    let result = client.get_chart(&symbol, interval, range).await;
+                    let sym = symbol.to_string();
+                    let result = providers
+                        .try_fetch(Capability::CHART, |p| {
+                            let sym = sym.clone();
+                            let p = p.clone();
+                            async move { p.fetch_chart(&sym, interval, range).await }
+                        })
+                        .await;
                     (symbol, result)
                 }
             })
@@ -686,47 +728,14 @@ impl Tickers {
             .await;
 
         let mut response = BatchChartsResponse::with_capacity(self.symbols.len());
-
-        // Parse all charts first (no locks held)
         let mut parsed_charts: Vec<(Arc<str>, Chart)> = Vec::new();
-        let mut parsed_events: Vec<(Arc<str>, ChartEvents)> = Vec::new();
 
         for (symbol, result) in results {
             match result {
-                Ok(json) => match ChartResponse::from_json(json) {
-                    Ok(chart_response) => {
-                        if let Some(mut chart_results) = chart_response.chart.result {
-                            if let Some(mut chart_result) = chart_results.pop() {
-                                // Collect events for later caching
-                                if let Some(events) = chart_result.events.take() {
-                                    parsed_events.push((Arc::clone(&symbol), events));
-                                }
-
-                                let chart = Chart {
-                                    symbol: symbol.to_string(),
-                                    meta: chart_result.meta.clone(),
-                                    candles: chart_result.to_candles(),
-                                    interval: Some(interval),
-                                    range: Some(range),
-                                    provider_id: None,
-                                };
-                                parsed_charts.push((symbol, chart));
-                            } else {
-                                response
-                                    .errors
-                                    .insert(symbol.to_string(), "Empty chart response".to_string());
-                            }
-                        } else {
-                            response.errors.insert(
-                                symbol.to_string(),
-                                "No chart data in response".to_string(),
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        response.errors.insert(symbol.to_string(), e.to_string());
-                    }
-                },
+                Ok(data) => {
+                    let chart = data.into_chart(Some(interval), Some(range));
+                    parsed_charts.push((symbol, chart));
+                }
                 Err(e) => {
                     response.errors.insert(symbol.to_string(), e.to_string());
                 }
@@ -736,8 +745,6 @@ impl Tickers {
         // Move into cache, then clone for response — avoids double-clone
         if self.cache_ttl.is_some() {
             let mut cache = self.chart_cache.write().await;
-
-            // Cache all charts (consuming parsed_charts) and collect keys
             let cache_keys: Vec<_> = parsed_charts
                 .into_iter()
                 .map(|(symbol, chart)| {
@@ -745,8 +752,6 @@ impl Tickers {
                     symbol
                 })
                 .collect();
-
-            // Clone from cache into response (convert Arc<str> → String)
             for symbol in cache_keys {
                 if let Some(cached) = cache.get(&(symbol.clone(), interval, range)) {
                     response
@@ -755,19 +760,8 @@ impl Tickers {
                 }
             }
         } else {
-            // No caching: directly populate response (convert Arc<str> → String)
             for (symbol, chart) in parsed_charts {
                 response.charts.insert(symbol.to_string(), chart);
-            }
-        }
-
-        // Always store events — they are derived data, not TTL-bounded cache
-        if !parsed_events.is_empty() {
-            let mut events_cache = self.events_cache.write().await;
-            for (symbol, events) in parsed_events {
-                events_cache
-                    .entry(symbol)
-                    .or_insert_with(|| CacheEntry::new(events));
             }
         }
 
@@ -823,10 +817,17 @@ impl Tickers {
             .symbols
             .iter()
             .map(|symbol| {
-                let client = Arc::clone(&self.client);
+                let providers = Arc::clone(&self.providers);
                 let symbol = Arc::clone(symbol);
                 async move {
-                    let result = client.get_chart_range(&symbol, interval, start, end).await;
+                    let sym = symbol.to_string();
+                    let result = providers
+                        .try_fetch(Capability::CHART, |p| {
+                            let sym = sym.clone();
+                            let p = p.clone();
+                            async move { p.fetch_chart_range(&sym, interval, start, end).await }
+                        })
+                        .await;
                     (symbol, result)
                 }
             })
@@ -838,57 +839,16 @@ impl Tickers {
             .await;
 
         let mut response = BatchChartsResponse::with_capacity(self.symbols.len());
-        let mut parsed_events: Vec<(Arc<str>, ChartEvents)> = Vec::new();
 
         for (symbol, result) in results {
             match result {
-                Ok(json) => match ChartResponse::from_json(json) {
-                    Ok(chart_response) => {
-                        if let Some(mut chart_results) = chart_response.chart.result {
-                            if let Some(mut chart_result) = chart_results.pop() {
-                                // Collect events for later caching
-                                if let Some(events) = chart_result.events.take() {
-                                    parsed_events.push((Arc::clone(&symbol), events));
-                                }
-
-                                let chart = Chart {
-                                    symbol: symbol.to_string(),
-                                    meta: chart_result.meta.clone(),
-                                    candles: chart_result.to_candles(),
-                                    interval: Some(interval),
-                                    range: None,
-                                    provider_id: None,
-                                };
-                                response.charts.insert(symbol.to_string(), chart);
-                            } else {
-                                response
-                                    .errors
-                                    .insert(symbol.to_string(), "Empty chart response".to_string());
-                            }
-                        } else {
-                            response.errors.insert(
-                                symbol.to_string(),
-                                "No chart data in response".to_string(),
-                            );
-                        }
-                    }
-                    Err(e) => {
-                        response.errors.insert(symbol.to_string(), e.to_string());
-                    }
-                },
+                Ok(data) => {
+                    let chart = data.into_chart(Some(interval), None);
+                    response.charts.insert(symbol.to_string(), chart);
+                }
                 Err(e) => {
                     response.errors.insert(symbol.to_string(), e.to_string());
                 }
-            }
-        }
-
-        // Always store events — they are derived data, not TTL-bounded cache
-        if !parsed_events.is_empty() {
-            let mut events_cache = self.events_cache.write().await;
-            for (symbol, events) in parsed_events {
-                events_cache
-                    .entry(symbol)
-                    .or_insert_with(|| CacheEntry::new(events));
             }
         }
 
@@ -919,20 +879,21 @@ impl Tickers {
             return Ok(());
         }
 
-        // Fetch events concurrently for all symbols that need it
+        // Fetch events concurrently for all symbols that need it via provider dispatch
         let futures: Vec<_> = symbols_to_fetch
             .iter()
             .map(|symbol| {
-                let client = Arc::clone(&self.client);
+                let providers = Arc::clone(&self.providers);
                 let symbol = Arc::clone(symbol);
                 async move {
-                    let result = crate::adapters::yahoo::chart::fetch(
-                        &client,
-                        &symbol,
-                        Interval::OneDay,
-                        TimeRange::Max,
-                    )
-                    .await;
+                    let sym = symbol.to_string();
+                    let result = providers
+                        .try_fetch(Capability::CORPORATE, |p| {
+                            let sym = sym.clone();
+                            let p = p.clone();
+                            async move { p.fetch_events(&sym).await }
+                        })
+                        .await;
                     (symbol, result)
                 }
             })
@@ -943,17 +904,11 @@ impl Tickers {
             .collect()
             .await;
 
-        // Parse and cache events
         let mut parsed_events: Vec<(Arc<str>, ChartEvents)> = Vec::new();
 
         for (symbol, result) in results {
-            if let Ok(json) = result
-                && let Ok(chart_response) = ChartResponse::from_json(json)
-                && let Some(mut chart_results) = chart_response.chart.result
-                && let Some(chart_result) = chart_results.pop()
-                && let Some(events) = chart_result.events
-            {
-                parsed_events.push((symbol, events));
+            if let Ok(events_data) = result {
+                parsed_events.push((symbol, events_data.into_chart_events()));
             }
         }
 
@@ -1039,15 +994,12 @@ impl Tickers {
             }
         }
 
-        // Fetch (single batch API call, no lock held during I/O)
+        // Spark is a Yahoo-specific batch endpoint with no provider abstraction equivalent
+        let client = self.providers.first_yahoo()?;
         let symbols_ref: Vec<&str> = self.symbols.iter().map(|s| &**s).collect();
-        let json = crate::adapters::yahoo::quote::spark::fetch(
-            &self.client,
-            &symbols_ref,
-            interval,
-            range,
-        )
-        .await?;
+        let json =
+            crate::adapters::yahoo::quote::spark::fetch(&client, &symbols_ref, interval, range)
+                .await?;
 
         let mut response = BatchSparksResponse::with_capacity(self.symbols.len());
 
@@ -1294,7 +1246,18 @@ impl Tickers {
             guard: map(financials_fetch, (statement_type, frequency)),
             key: |s| (s.clone(), statement_type, frequency),
             response: BatchFinancialsResponse.financials,
-            fetch: |client, symbol| client.get_financials(&symbol, statement_type, frequency).await,
+            fetch: |providers, symbol| {
+                let sym = symbol.to_string();
+                providers.try_fetch(Capability::FUNDAMENTALS, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move {
+                        p.fetch_financials(&sym, statement_type, frequency)
+                            .await
+                            .map(|d| d.into_financial_statement())
+                    }
+                }).await
+            },
         )
     }
 
@@ -1327,7 +1290,18 @@ impl Tickers {
             guard: simple(news_fetch),
             key: |s| s.clone(),
             response: BatchNewsResponse.news,
-            fetch: |_client, symbol| crate::scrapers::stockanalysis::scrape_symbol_news(&symbol).await,
+            fetch: |providers, symbol| {
+                let sym = symbol.to_string();
+                providers.try_fetch(Capability::CORPORATE, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move {
+                        p.fetch_news(&sym)
+                            .await
+                            .map(|data| data.into_iter().map(Into::into).collect::<Vec<News>>())
+                    }
+                }).await
+            },
         )
     }
 
@@ -1365,21 +1339,21 @@ impl Tickers {
             guard: map(recommendations_fetch, limit),
             key: |s| (s.clone(), limit),
             response: BatchRecommendationsResponse.recommendations,
-            fetch: |client, symbol| {
-                let json = client.get_recommendations(&symbol, limit).await?;
-                let rec_response =
-                    crate::models::corporate::recommendation::response::RecommendationResponse::from_json(json)?;
-                Ok(Recommendation {
-                    symbol: symbol.to_string(),
-                    recommendations: rec_response
-                        .finance
-                        .result
-                        .iter()
-                        .flat_map(|r| &r.recommended_symbols)
-                        .cloned()
-                        .collect(),
-                    provider_id: None,
-                })
+            fetch: |providers, symbol| {
+                let sym = symbol.to_string();
+                providers.try_fetch(Capability::CORPORATE, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move {
+                        let items = p.fetch_similar_symbols(&sym, limit).await?;
+                        Ok(crate::providers::types::recommendation_from_similar(
+                            sym,
+                            Some(p.id().into()),
+                            items,
+                            Some(limit),
+                        ))
+                    }
+                }).await
             },
         )
     }
@@ -1414,9 +1388,15 @@ impl Tickers {
             guard: map(options_fetch, date),
             key: |s| (s.clone(), date),
             response: BatchOptionsResponse.options,
-            fetch: |client, symbol| {
-                let json = client.get_options(&symbol, date).await?;
-                Ok(serde_json::from_value::<Options>(json)?)
+            fetch: |providers, symbol| {
+                let sym = symbol.to_string();
+                providers.try_fetch(Capability::OPTIONS, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move {
+                        p.fetch_options(&sym, date).await.map(|d| d.into_options())
+                    }
+                }).await
             },
         )
     }
