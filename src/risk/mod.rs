@@ -121,6 +121,7 @@ mod tests {
             close,
             volume: 1_000_000,
             adj_close: None,
+            provider_id: None,
         }
     }
 

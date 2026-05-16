@@ -3,19 +3,19 @@
 //! Optimizes data fetching by using batch endpoints and concurrent requests.
 
 use super::macros::{batch_fetch_cached, define_batch_response};
-use crate::client::{ClientConfig, YahooClient};
+use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::constants::{Frequency, Interval, StatementType, TimeRange};
 use crate::error::{FinanceError, Result};
 use crate::models::chart::events::ChartEvents;
 use crate::models::chart::response::ChartResponse;
+use crate::models::chart::spark::Spark;
+use crate::models::chart::spark::response::SparkResponse;
 use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
-use crate::models::financials::FinancialStatement;
-use crate::models::news::News;
+use crate::models::corporate::news::News;
+use crate::models::corporate::recommendation::Recommendation;
+use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::Quote;
-use crate::models::recommendation::Recommendation;
-use crate::models::spark::Spark;
-use crate::models::spark::response::SparkResponse;
 use crate::utils::{CacheEntry, EVICTION_THRESHOLD, filter_by_range};
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
@@ -110,7 +110,6 @@ const DEFAULT_MAX_CONCURRENCY: usize = 10;
 pub struct TickersBuilder {
     symbols: Vec<Arc<str>>,
     config: ClientConfig,
-    shared_client: Option<crate::ticker::ClientHandle>,
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
@@ -125,7 +124,6 @@ impl TickersBuilder {
         Self {
             symbols: symbols.into_iter().map(|s| s.into().into()).collect(),
             config: ClientConfig::default(),
-            shared_client: None,
             max_concurrency: DEFAULT_MAX_CONCURRENCY,
             cache_ttl: None,
             include_logo: false,
@@ -182,38 +180,6 @@ impl TickersBuilder {
         self
     }
 
-    /// Share an existing authenticated session instead of creating a new one.
-    ///
-    /// This avoids redundant authentication when you have multiple `Tickers`
-    /// instances or want to share a session with individual [`crate::Ticker`] instances.
-    ///
-    /// Obtain a [`ClientHandle`](crate::ClientHandle) from any existing
-    /// [`Ticker`](crate::Ticker) via [`Ticker::client_handle()`](crate::Ticker::client_handle).
-    ///
-    /// When set, the builder's `config`, `timeout`, `proxy`, `lang`, and `region`
-    /// settings are ignored (the shared session's configuration is used instead).
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::{Ticker, Tickers};
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let aapl = Ticker::new("AAPL").await?;
-    /// let handle = aapl.client_handle();
-    ///
-    /// let tickers = Tickers::builder(["MSFT", "GOOGL"])
-    ///     .client(handle)
-    ///     .build()
-    ///     .await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn client(mut self, handle: crate::ticker::ClientHandle) -> Self {
-        self.shared_client = Some(handle);
-        self
-    }
-
     /// Enable response caching with a time-to-live.
     ///
     /// By default caching is **disabled** — every call fetches fresh data.
@@ -250,10 +216,7 @@ impl TickersBuilder {
 
     /// Build the Tickers instance
     pub async fn build(self) -> Result<Tickers> {
-        let client = match self.shared_client {
-            Some(handle) => handle.0,
-            None => Arc::new(YahooClient::new(self.config).await?),
-        };
+        let client = Arc::new(YahooClient::new(self.config).await?);
 
         Ok(Tickers {
             symbols: self.symbols,
@@ -404,14 +367,6 @@ impl Tickers {
         self.symbols.is_empty()
     }
 
-    /// Returns a shareable handle to this instance's authenticated session.
-    ///
-    /// Pass the handle to [`Ticker`](crate::Ticker) or other `Tickers` builders
-    /// via `.client()` to reuse the same session without re-authenticating.
-    pub fn client_handle(&self) -> crate::ticker::ClientHandle {
-        crate::ticker::ClientHandle(Arc::clone(&self.client))
-    }
-
     /// Returns `true` if a cache entry exists and has not exceeded the TTL.
     #[inline]
     fn is_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
@@ -499,14 +454,14 @@ impl Tickers {
         // Yahoo requires separate calls for quotes vs logos
         // When include_logo=true, fetch both in parallel
         let (json, logos) = if self.include_logo {
-            let quote_future = crate::endpoints::quotes::fetch_with_fields(
+            let quote_future = crate::adapters::yahoo::quote::quotes::fetch_with_fields(
                 &self.client,
                 &symbols_ref,
                 None,  // all fields
                 true,  // formatted
                 false, // no logo params for main call
             );
-            let logo_future = crate::endpoints::quotes::fetch_with_fields(
+            let logo_future = crate::adapters::yahoo::quote::quotes::fetch_with_fields(
                 &self.client,
                 &symbols_ref,
                 Some(&["logoUrl", "companyLogoUrl"]), // only logo fields
@@ -516,7 +471,7 @@ impl Tickers {
             let (quote_result, logo_result) = tokio::join!(quote_future, logo_future);
             (quote_result?, logo_result.ok())
         } else {
-            let json = crate::endpoints::quotes::fetch_with_fields(
+            let json = crate::adapters::yahoo::quote::quotes::fetch_with_fields(
                 &self.client,
                 &symbols_ref,
                 None,
@@ -753,6 +708,7 @@ impl Tickers {
                                     candles: chart_result.to_candles(),
                                     interval: Some(interval),
                                     range: Some(range),
+                                    provider_id: None,
                                 };
                                 parsed_charts.push((symbol, chart));
                             } else {
@@ -901,6 +857,7 @@ impl Tickers {
                                     candles: chart_result.to_candles(),
                                     interval: Some(interval),
                                     range: None,
+                                    provider_id: None,
                                 };
                                 response.charts.insert(symbol.to_string(), chart);
                             } else {
@@ -969,7 +926,7 @@ impl Tickers {
                 let client = Arc::clone(&self.client);
                 let symbol = Arc::clone(symbol);
                 async move {
-                    let result = crate::endpoints::chart::fetch(
+                    let result = crate::adapters::yahoo::chart::fetch(
                         &client,
                         &symbol,
                         Interval::OneDay,
@@ -1084,8 +1041,13 @@ impl Tickers {
 
         // Fetch (single batch API call, no lock held during I/O)
         let symbols_ref: Vec<&str> = self.symbols.iter().map(|s| &**s).collect();
-        let json =
-            crate::endpoints::spark::fetch(&self.client, &symbols_ref, interval, range).await?;
+        let json = crate::adapters::yahoo::quote::spark::fetch(
+            &self.client,
+            &symbols_ref,
+            interval,
+            range,
+        )
+        .await?;
 
         let mut response = BatchSparksResponse::with_capacity(self.symbols.len());
 
@@ -1406,7 +1368,7 @@ impl Tickers {
             fetch: |client, symbol| {
                 let json = client.get_recommendations(&symbol, limit).await?;
                 let rec_response =
-                    crate::models::recommendation::response::RecommendationResponse::from_json(json)?;
+                    crate::models::corporate::recommendation::response::RecommendationResponse::from_json(json)?;
                 Ok(Recommendation {
                     symbol: symbol.to_string(),
                     recommendations: rec_response
@@ -1416,6 +1378,7 @@ impl Tickers {
                         .flat_map(|r| &r.recommended_symbols)
                         .cloned()
                         .collect(),
+                    provider_id: None,
                 })
             },
         )

@@ -247,6 +247,7 @@ mod tests {
                 close: p,
                 volume: 1000,
                 adj_close: Some(p),
+                provider_id: None,
             })
             .collect()
     }

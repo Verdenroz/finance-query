@@ -98,6 +98,7 @@ fn aggregate(group: &[Candle]) -> Candle {
         close: last.close,
         volume: group.iter().map(|c| c.volume).sum(),
         adj_close: last.adj_close,
+        provider_id: None,
     }
 }
 
@@ -177,6 +178,7 @@ mod tests {
             close: c,
             volume: v,
             adj_close: None,
+            provider_id: None,
         }
     }
 

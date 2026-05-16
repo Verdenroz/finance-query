@@ -505,6 +505,7 @@ mod tests {
                 close: p,
                 volume: 1_000,
                 adj_close: Some(p),
+                provider_id: None,
             })
             .collect()
     }

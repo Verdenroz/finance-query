@@ -3,7 +3,7 @@
 //! Scrapes news from stockanalysis.com
 
 use crate::error::{FinanceError, Result};
-use crate::models::news::News;
+use crate::models::corporate::news::News;
 use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
 use std::collections::HashMap;

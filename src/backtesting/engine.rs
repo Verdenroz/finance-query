@@ -1780,6 +1780,7 @@ mod tests {
                 close: p,
                 volume: 1000,
                 adj_close: Some(p),
+                provider_id: None,
             })
             .collect()
     }
@@ -1796,6 +1797,7 @@ mod tests {
                 close: p,
                 volume: 1000,
                 adj_close: Some(p),
+                provider_id: None,
             })
             .collect()
     }
@@ -2004,6 +2006,7 @@ mod tests {
         let dividends = vec![Dividend {
             timestamp: mid_ts,
             amount: 1.0,
+            provider_id: None,
         }];
 
         let config = BacktestConfig::builder()
@@ -2088,10 +2091,12 @@ mod tests {
             Dividend {
                 timestamp: 20,
                 amount: 1.0,
+                provider_id: None,
             },
             Dividend {
                 timestamp: 10,
                 amount: 1.0,
+                provider_id: None,
             },
         ];
 
@@ -2114,6 +2119,7 @@ mod tests {
         let dividends = vec![Dividend {
             timestamp: candles[1].timestamp,
             amount: 1.0,
+            provider_id: None,
         }];
 
         let config = BacktestConfig::builder()
@@ -2142,6 +2148,7 @@ mod tests {
         let dividends = vec![Dividend {
             timestamp: candles[1].timestamp,
             amount: 1.0,
+            provider_id: None,
         }];
 
         let config = BacktestConfig::builder()
@@ -2203,6 +2210,7 @@ mod tests {
             close,
             volume: 1000,
             adj_close: Some(close),
+            provider_id: None,
         }
     }
 
