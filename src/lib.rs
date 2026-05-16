@@ -56,19 +56,26 @@
 
 // === Modules ===
 // Public modules
-/// SEC EDGAR API client for filing history, XBRL data, and full-text search.
-pub mod edgar;
+/// External data source adapters (internal — use the public API modules).
+pub(crate) mod adapters;
 /// Error types and result definitions.
 pub mod error;
 /// Non-symbol-specific operations (search, lookup, screeners, market data, etc.).
 pub mod finance;
+pub mod edgar {
+    //! SEC EDGAR API client (keyless — always available, no feature flag needed).
+    //!
+    //!
+    //! Requires a one-time [`init`] call with a contact email address.
+    pub use crate::adapters::edgar::{
+        company_facts, filing_index, init, init_with_config, resolve_cik, search, submissions,
+    };
+}
 
 // Internal modules
-mod auth;
-mod client;
 mod constants;
-mod endpoints;
 mod models;
+mod providers;
 pub(crate) mod rate_limiter;
 mod scrapers;
 mod ticker;
@@ -77,19 +84,19 @@ mod utils;
 
 // Feature-gated external data source modules
 #[cfg(feature = "fred")]
-pub mod fred;
+pub mod fred {
+    //! FRED economic data API (requires `fred` feature).
+    //!
+    //! Access 800k+ macroeconomic time series and US Treasury yield curve data.
+    pub use crate::adapters::fred::{init, init_with_timeout, series, treasury_yields};
+    pub use crate::models::economic::{MacroObservation, MacroSeries, TreasuryYield};
+}
 
 #[cfg(feature = "crypto")]
 pub mod crypto {
     //! CoinGecko cryptocurrency data (requires `crypto` feature).
-    pub use crate::coingecko::{CoinQuote, coin, coins};
+    pub use crate::adapters::coingecko::{CoinQuote, coin, coins};
 }
-
-#[cfg(feature = "crypto")]
-mod coingecko;
-
-#[cfg(any(feature = "alphavantage", feature = "polygon", feature = "fmp"))]
-pub mod adapters;
 
 #[cfg(feature = "rss")]
 pub mod feeds;
@@ -100,11 +107,8 @@ pub mod risk;
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
-#[cfg(feature = "polygon")]
-pub use ticker::FinancialPeriod;
-#[cfg(feature = "fmp")]
-pub use ticker::IntradayInterval;
-pub use ticker::{ClientHandle, Ticker, TickerBuilder};
+pub use providers::{Enrich, Fetch, Prefer, Provider};
+pub use ticker::{Ticker, TickerBuilder};
 pub use tickers::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
     BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
@@ -137,26 +141,25 @@ pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, Value
 // ============================================================================
 pub use models::{
     chart::Chart,
-    currencies::Currency,
-    edgar::{CompanyFacts, EdgarSearchResults, EdgarSubmissions},
-    exchanges::Exchange,
-    financials::FinancialStatement,
-    hours::MarketHours,
-    industries::IndustryData,
-    lookup::LookupResults,
-    market_summary::MarketSummaryQuote,
-    news::News,
+    chart::spark::Spark,
+    corporate::news::News,
+    corporate::recommendation::Recommendation,
+    corporate::transcript::{Transcript, TranscriptWithMeta},
+    discovery::lookup::LookupResults,
+    discovery::screeners::ScreenerResults,
+    discovery::search::SearchResults,
+    discovery::trending::TrendingQuote,
+    filings::{CompanyFacts, EdgarSearchResults, EdgarSubmissions},
+    fundamentals::FinancialStatement,
+    market::currencies::Currency,
+    market::exchanges::Exchange,
+    market::hours::MarketHours,
+    market::industries::IndustryData,
+    market::market_summary::MarketSummaryQuote,
+    market::sectors::SectorData,
     options::Options,
     quote::Quote,
-    recommendation::Recommendation,
-    screeners::ScreenerResults,
-    search::SearchResults,
-    sectors::SectorData,
     sentiment::{FearAndGreed, FearGreedLabel},
-    spark::Spark,
-    transcript::Transcript,
-    transcript::TranscriptWithMeta,
-    trending::TrendingQuote,
 };
 
 // ============================================================================
@@ -164,22 +167,22 @@ pub use models::{
 // ============================================================================
 pub use models::{
     chart::{Candle, CapitalGain, ChartMeta, Dividend, DividendAnalytics, Split},
-    edgar::filing_index::{EdgarFilingIndex, EdgarFilingIndexItem},
-    edgar::{
+    corporate::recommendation::SimilarSymbol,
+    discovery::lookup::LookupQuote,
+    discovery::screeners::ScreenerQuote,
+    discovery::search::{
+        ResearchReport, ResearchReports, SearchNews, SearchNewsList, SearchQuote, SearchQuotes,
+    },
+    filings::filing_index::{EdgarFilingIndex, EdgarFilingIndexItem},
+    filings::{
         CikEntry, EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSearchHit,
         EdgarSearchHitsContainer, EdgarSearchSource, EdgarSearchTotal, FactConcept, FactUnit,
         FactsByTaxonomy,
     },
-    hours::MarketTime,
-    lookup::LookupQuote,
-    market_summary::SparkData,
+    market::hours::MarketTime,
+    market::market_summary::SparkData,
     options::{Contracts, OptionChain, OptionContract, OptionsQuote},
     quote::FormattedValue,
-    recommendation::SimilarSymbol,
-    screeners::ScreenerQuote,
-    search::{
-        ResearchReport, ResearchReports, SearchNews, SearchNewsList, SearchQuote, SearchQuotes,
-    },
 };
 
 // ============================================================================
@@ -187,7 +190,7 @@ pub use models::{
 // ============================================================================
 pub use constants::exchange_codes::ExchangeCode;
 pub use constants::industries::Industry;
-pub use models::screeners::{
+pub use models::discovery::screeners::{
     ConditionValue, EquityField, EquityScreenerQuery, FundField, FundScreenerQuery,
     LogicalOperator, Operator, QueryCondition, QueryGroup, QueryOperand, QuoteType, ScreenerField,
     ScreenerFieldExt, ScreenerFundCategory, ScreenerPeerGroup, ScreenerQuery, SortType,
