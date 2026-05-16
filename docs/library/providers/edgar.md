@@ -373,6 +373,6 @@ async fn analyze_company(ticker: &str) -> Result<(), Box<dyn std::error::Error>>
 
 ## Next Steps
 
-- [Ticker API](ticker.md) - Yahoo Finance data for real-time quotes and charts
-- [Finance Module](finance.md) - Market-wide data (screeners, trending, news)
-- [Configuration](configuration.md) - Network and timeout settings
+- [Ticker API](../ticker.md) - Yahoo Finance data for real-time quotes and charts
+- [Finance Module](../finance.md) - Market-wide data (screeners, trending, news)
+- [Configuration](../configuration.md) - Network and timeout settings

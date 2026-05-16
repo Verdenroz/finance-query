@@ -3,7 +3,7 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — Ticker](https://docs.rs/finance-query/latest/finance_query/struct.Ticker.html)
 
-The `Ticker` struct is the primary interface for fetching symbol-specific data from Yahoo Finance. It provides lazy-loaded, cached access to quotes, charts, financials, and more.
+The `Ticker` struct is the primary interface for fetching financial data for a single symbol. It provides lazy-loaded, cached access to quotes, charts, financials, and more from your configured data providers (Yahoo Finance by default).
 
 !!! tip "Multiple Symbols"
     Need to fetch data for multiple symbols? Use the [`Tickers`](tickers.md) struct for efficient batch operations.
@@ -57,10 +57,29 @@ let ticker = Ticker::builder("AAPL")
 - `.region_code(String)` - Set region code (e.g., "US", "JP")
 - `.timeout(Duration)` - Set HTTP request timeout
 - `.proxy(String)` - Set proxy URL
+- `.providers(&[Provider])` - Configure data providers in priority order (default: `[Yahoo]`)
+- `.fetch(Fetch)` - Provider dispatch strategy: `Sequential`, `Parallel`, or `All`
+- `.merge(MergePolicy)` - Result merge policy: `Prefer` (default) or `Enrich`
+- `.format(ValueFormat)` - Value format: `Raw` (default), `Pretty`, or `Both`
 - `.logo()` - Fetch company logo URLs alongside quote data
 - `.cache(Duration)` - Enable in-memory caching with the given TTL (time-to-live)
 
 See [Configuration](configuration.md) for details on available regions and settings.
+See [Multi-Provider Architecture](providers/index.md) for provider configuration.
+
+### Provider Builder Example
+
+```rust
+use finance_query::{Ticker, Provider, Fetch, Enrich};
+
+// Polygon as primary, Yahoo as fallback, enrich missing fields
+let ticker = Ticker::builder("AAPL")
+    .providers(&[Provider::Polygon, Provider::Yahoo])
+    .fetch(Fetch::All)
+    .merge(Enrich)
+    .build()
+    .await?;
+```
 
 ## Quote Data
 

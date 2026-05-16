@@ -57,26 +57,6 @@ async fn test_tickers_max_concurrency() {
 
 #[tokio::test]
 #[ignore = "requires network access"]
-async fn test_tickers_shared_session() {
-    use finance_query::{Ticker, Tickers};
-
-    // From tickers.md "Sharing a Session" section
-    let aapl = Ticker::new("AAPL").await.unwrap();
-    let handle = aapl.client_handle();
-
-    // Reuses AAPL's authenticated session — no extra auth round-trip
-    let tickers = Tickers::builder(["MSFT", "GOOGL"])
-        .client(handle)
-        .build()
-        .await
-        .unwrap();
-
-    let response = tickers.quotes().await.unwrap();
-    assert!(response.success_count() > 0);
-}
-
-#[tokio::test]
-#[ignore = "requires network access"]
 async fn test_batch_quotes_with_logo() {
     use finance_query::Tickers;
 

@@ -22,6 +22,11 @@ finance-query = { version = "2.0", features = ["dataframe", "backtesting"] }
 
 | Feature | Description |
 |---------|-------------|
+| `polygon` | Polygon.io API (5 req/sec free) |
+| `fmp` | Financial Modeling Prep API (250 req/day free) |
+| `alphavantage` | Alpha Vantage API (25 req/day free) |
+| `crypto` | CoinGecko cryptocurrency data (keyless, 30 req/min) |
+| `fred` | FRED macro-economic data (120 req/min, free API key) |
 | `dataframe` | Polars DataFrame integration for data analysis |
 | `backtesting` | Strategy backtesting engine (includes `indicators`) |
 | `indicators` | 52+ technical indicators (auto-enabled with `backtesting`) |
@@ -29,15 +34,22 @@ finance-query = { version = "2.0", features = ["dataframe", "backtesting"] }
 ## Quick Example
 
 ```rust
-use finance_query::{Ticker, Interval, TimeRange};
+use finance_query::{Ticker, Provider, Fetch, Enrich, Interval, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    // Default: Yahoo Finance (no API key required)
     let ticker = Ticker::builder("AAPL").logo().build().await?;
+
+    // Or with multiple providers:
+    // let ticker = Ticker::builder("AAPL")
+    //     .providers(&[Provider::Polygon, Provider::Yahoo])
+    //     .build().await?;
 
     // Get quote
     let quote = ticker.quote().await?;
-    println!("{}: ${:.2}", quote.symbol, quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0));
+    println!("{}: ${:.2}", quote.symbol,
+        quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0));
 
     // Get chart
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
@@ -46,6 +58,28 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 ```
+
+## Multi-Provider Data Sources
+
+Finance Query supports multiple data providers through feature flags:
+
+```bash
+export POLYGON_API_KEY="your-key"
+export FMP_API_KEY="your-key"
+```
+
+```rust
+use finance_query::{Ticker, Provider, Fetch, Enrich};
+
+// Primary: Polygon, Fallback: Yahoo
+let ticker = Ticker::builder("AAPL")
+    .providers(&[Provider::Polygon, Provider::Yahoo])
+    .fetch(Fetch::Sequential)
+    .build()
+    .await?;
+```
+
+→ [Multi-Provider Architecture](providers/index.md) for all providers and strategies
 
 ## Key Features
 
@@ -167,7 +201,7 @@ if let Some(recent) = submissions.filings.as_ref().and_then(|f| f.recent.as_ref(
 let facts = edgar::company_facts(cik).await?;
 ```
 
-→ [EDGAR Module](edgar.md) for SEC filing data
+→ [EDGAR Module](providers/edgar.md) for SEC filing data
 
 ### ⚠️ Risk Analytics
 
@@ -188,6 +222,7 @@ println!("Beta vs SPY:  {:.2}", summary.beta.unwrap_or(0.0));
 **Start Here:**
 
 - [Ticker API](ticker.md) - Single symbol operations
+- [Multi-Provider Architecture](providers/index.md) - Configure and combine data providers
 - [Technical Indicators](indicators.md) - RSI, MACD, Bollinger Bands, and more
 - [Backtesting](backtesting.md) - Test trading strategies
 
@@ -198,5 +233,5 @@ println!("Beta vs SPY:  {:.2}", summary.beta.unwrap_or(0.0));
 - [DataFrame Support](dataframe.md) - Data analysis with Polars
 - [Configuration](configuration.md) - Regional settings and customization
 - [Real-time Streaming](streaming.md) - WebSocket price feeds
-- [SEC EDGAR](edgar.md) - SEC filings and XBRL data
+- [SEC EDGAR](providers/edgar.md) - SEC filings and XBRL data
 - [Risk Analytics](risk.md) - Portfolio risk metrics

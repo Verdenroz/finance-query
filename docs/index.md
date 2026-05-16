@@ -9,7 +9,7 @@
 [![Build Status](https://github.com/Verdenroz/finance-query/workflows/CI/badge.svg)](https://github.com/Verdenroz/finance-query/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Finance Query** is a Rust library, CLI, and server for financial data, inspired by the popular `yfinance` Python library. It provides access to real-time quotes, historical charts, technical analysis, and financial statements primarily from Yahoo Finance.
+**Finance Query** is a Rust library, CLI, and server for financial data, inspired by the popular `yfinance` Python library. It provides access to real-time quotes, historical charts, technical analysis, and financial statements from Yahoo Finance (default) and additional providers via a multi-provider architecture.
 
 A free hosted API is available at **[finance-query.com](https://finance-query.com)** — no setup required!
 
@@ -34,10 +34,19 @@ It is designed to be used in three ways:
     *   [Ticker API](library/ticker.md)
     *   [Batch Tickers](library/tickers.md)
     *   [Finance Module](library/finance.md)
+    *   [Multi-Provider Architecture](library/providers/index.md)
+    *   [Real-time Streaming](library/streaming.md)
     *   [Technical Indicators](library/indicators.md)
     *   [Backtesting](library/backtesting.md)
+    *   [Screeners](library/screeners.md)
+    *   [Risk Analytics](library/risk.md)
+    *   [EDGAR SEC Filings](library/providers/edgar.md)
+    *   [FRED & Treasury](library/providers/fred.md)
+    *   [Crypto (CoinGecko)](library/providers/coingecko.md)
+    *   [RSS/Atom Feeds](library/feeds.md)
     *   [DataFrame Support](library/dataframe.md)
     *   [Configuration](library/configuration.md)
+    *   [Error Handling](library/error-handling.md)
 
 === "CLI"
 
