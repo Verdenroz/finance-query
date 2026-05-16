@@ -27,23 +27,28 @@
 //! ```
 
 mod client;
-pub mod models;
+pub(crate) mod models;
 
-mod reference;
-mod stocks;
+// Capability-mapped subdirectory modules
+mod chart; // CHART
+mod corporate; // CORPORATE
+mod discovery; // DISCOVERY
+mod economic; // ECONOMIC
+mod filings; // FILINGS
+mod fundamentals; // FUNDAMENTALS
+mod market; // MARKET
+mod quote; // QUOTE
+mod sentiment; // SENTIMENT
+mod technicals; // TECHNICALS
 
-mod crypto;
-mod forex;
-mod futures;
-mod indices;
-mod options;
+// Asset-class subdirectory modules
+mod crypto; // CRYPTO
+mod forex; // FOREX
+mod futures; // FUTURES
+mod indices; // INDICES
+mod options; // OPTIONS
 
-mod alternative;
-mod benzinga;
-mod corporate_events;
-mod economy;
-mod etf;
-pub mod websocket;
+pub(crate) mod websocket;
 
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
@@ -51,46 +56,15 @@ use client::PolygonClientBuilder;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-pub use alternative::*;
-pub use benzinga::*;
-pub use corporate_events::*;
-pub use economy::*;
-pub use etf::*;
 pub use models::*;
-pub use reference::*;
 
-// Re-export items explicitly for modules with overlapping submodule names
-// to avoid ambiguous glob re-exports (aggregates, snapshots, etc.).
-pub use crypto::{
-    CryptoDailyOpenClose, CryptoLastTrade, CryptoLastTradeResponse, CryptoOpenCloseTrade,
-    crypto_aggregates, crypto_daily_open_close, crypto_ema, crypto_grouped_daily,
-    crypto_last_trade, crypto_macd, crypto_previous_close, crypto_rsi, crypto_sma, crypto_snapshot,
-    crypto_snapshots_all, crypto_top_movers, crypto_trades,
-};
-pub use forex::{
-    ConversionLast, CurrencyConversion, ForexLastQuote, ForexQuoteResponse, currency_conversion,
-    forex_aggregates, forex_ema, forex_grouped_daily, forex_last_quote, forex_macd,
-    forex_previous_close, forex_quotes, forex_rsi, forex_sma, forex_snapshot, forex_snapshots_all,
-    forex_top_movers,
-};
-pub use futures::{
-    FuturesContract, FuturesProduct, FuturesSchedule, FuturesSession, FuturesSnapshot,
-    FuturesSnapshotResponse, futures_aggregates, futures_contracts, futures_products,
-    futures_quotes, futures_schedules, futures_snapshot, futures_trades,
-};
-pub use indices::{
-    IndexSession, IndexSnapshot, IndexSnapshotResponse, index_aggregates, index_daily_open_close,
-    index_ema, index_macd, index_previous_close, index_rsi, index_sma, index_snapshot,
-};
-pub use options::{
-    AdditionalUnderlying, OptionsContract, OptionsContractResponse,
-    OptionsContractSnapshotResponse, OptionsGreeks, OptionsSnapshot, OptionsSnapshotDetails,
-    OptionsSnapshotQuote, OptionsSnapshotTrade, OptionsUnderlyingAsset, options_aggregates,
-    options_chain_snapshot, options_contract_details, options_contract_snapshot, options_contracts,
-    options_daily_open_close, options_ema, options_last_trade, options_macd,
-    options_previous_close, options_quotes, options_rsi, options_sma, options_trades,
-};
-pub use stocks::*;
+// Capability modules
+pub use chart::*;
+pub use corporate::*;
+pub use discovery::*;
+pub use fundamentals::*;
+pub use options::contracts::{OptionsContractDTO, options_contracts};
+pub use quote::*;
 
 /// Polygon.io free-tier rate limit: 5 req/sec.
 const PG_RATE_PER_SEC: f64 = 5.0;
@@ -110,11 +84,13 @@ static PG_SINGLETON: OnceLock<PolygonSingleton> = OnceLock::new();
 /// # Errors
 ///
 /// Returns [`FinanceError::InvalidParameter`] if already initialized.
+#[allow(dead_code)]
 pub fn init(api_key: impl Into<String>) -> Result<()> {
     init_with_timeout(api_key, Duration::from_secs(30))
 }
 
 /// Initialize the Polygon client with a custom timeout.
+#[allow(dead_code)]
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
     PG_SINGLETON
         .set(PolygonSingleton {
@@ -130,11 +106,22 @@ pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Resul
 
 /// Build a fresh client from the singleton state.
 pub(crate) fn build_client() -> Result<client::PolygonClient> {
+    if PG_SINGLETON.get().is_none()
+        && let Ok(key) = std::env::var("POLYGON_API_KEY")
+    {
+        let _ = PG_SINGLETON.set(PolygonSingleton {
+            api_key: key,
+            timeout: Duration::from_secs(30),
+            limiter: Arc::new(RateLimiter::new(PG_RATE_PER_SEC)),
+        });
+    }
     let s = PG_SINGLETON
         .get()
         .ok_or_else(|| FinanceError::InvalidParameter {
             param: "polygon".to_string(),
-            reason: "Polygon not initialized. Call polygon::init(api_key) first.".to_string(),
+            reason:
+                "POLYGON_API_KEY not set. Call polygon::init(key) or set POLYGON_API_KEY env var."
+                    .to_string(),
         })?;
     PolygonClientBuilder::new(&s.api_key)
         .timeout(s.timeout)

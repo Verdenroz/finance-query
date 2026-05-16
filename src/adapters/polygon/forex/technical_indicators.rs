@@ -1,4 +1,5 @@
 //! Forex technical indicator endpoints: SMA, EMA, MACD, RSI.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -10,7 +11,7 @@ use super::super::models::*;
 ///
 /// * `ticker` - Forex ticker symbol with `C:` prefix (e.g., `"C:EURUSD"`)
 /// * `params` - Optional query params: `window`, `timespan`, `series_type`, `order`, `limit`
-pub async fn forex_sma(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn forex_sma(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "sma", params).await
 }
 
@@ -18,7 +19,7 @@ pub async fn forex_sma(ticker: &str, params: &[(&str, &str)]) -> Result<Indicato
 ///
 /// * `ticker` - Forex ticker symbol with `C:` prefix (e.g., `"C:EURUSD"`)
 /// * `params` - Optional query params: `window`, `timespan`, `series_type`, `order`, `limit`
-pub async fn forex_ema(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn forex_ema(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "ema", params).await
 }
 
@@ -26,7 +27,7 @@ pub async fn forex_ema(ticker: &str, params: &[(&str, &str)]) -> Result<Indicato
 ///
 /// * `ticker` - Forex ticker symbol with `C:` prefix (e.g., `"C:EURUSD"`)
 /// * `params` - Optional query params: `short_window`, `long_window`, `signal_window`, `timespan`, `series_type`, `order`, `limit`
-pub async fn forex_macd(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn forex_macd(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "macd", params).await
 }
 
@@ -34,7 +35,7 @@ pub async fn forex_macd(ticker: &str, params: &[(&str, &str)]) -> Result<Indicat
 ///
 /// * `ticker` - Forex ticker symbol with `C:` prefix (e.g., `"C:EURUSD"`)
 /// * `params` - Optional query params: `window`, `timespan`, `series_type`, `order`, `limit`
-pub async fn forex_rsi(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponse> {
+pub async fn forex_rsi(ticker: &str, params: &[(&str, &str)]) -> Result<IndicatorResponseDTO> {
     fetch_indicator(ticker, "rsi", params).await
 }
 
@@ -42,7 +43,7 @@ async fn fetch_indicator(
     ticker: &str,
     indicator: &str,
     params: &[(&str, &str)],
-) -> Result<IndicatorResponse> {
+) -> Result<IndicatorResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/indicators/{}/{}",
@@ -98,7 +99,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndicatorResponse = serde_json::from_value(json).unwrap();
+        let resp: IndicatorResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let results = resp.results.unwrap();
         let values = results.values.unwrap();
@@ -138,7 +139,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndicatorResponse = serde_json::from_value(json).unwrap();
+        let resp: IndicatorResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let values = resp.results.unwrap().values.unwrap();
         assert_eq!(values.len(), 1);
@@ -176,7 +177,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndicatorResponse = serde_json::from_value(json).unwrap();
+        let resp: IndicatorResponseDTO = serde_json::from_value(json).unwrap();
         let values = resp.results.unwrap().values.unwrap();
         assert_eq!(values.len(), 1);
         assert!((values[0].value.unwrap() - 0.25).abs() < 0.01);
@@ -217,7 +218,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndicatorResponse = serde_json::from_value(json).unwrap();
+        let resp: IndicatorResponseDTO = serde_json::from_value(json).unwrap();
         let values = resp.results.unwrap().values.unwrap();
         assert_eq!(values.len(), 2);
         assert!((values[0].value.unwrap() - 62.5).abs() < 0.1);

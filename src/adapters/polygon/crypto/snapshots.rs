@@ -1,4 +1,5 @@
 //! Crypto snapshot endpoints: all tickers, single ticker, top movers.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -9,7 +10,7 @@ use super::super::models::*;
 /// Fetch snapshots for all crypto tickers.
 ///
 /// * `tickers` - Optional comma-separated list of tickers to filter (e.g., `"X:BTCUSD,X:ETHUSD"`)
-pub async fn crypto_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsResponse> {
+pub async fn crypto_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsResponseDTO> {
     let client = build_client()?;
     let path = "/v2/snapshot/locale/global/markets/crypto/tickers";
     let params: Vec<(&str, &str)> = match tickers {
@@ -26,7 +27,7 @@ pub async fn crypto_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsResp
 /// Fetch snapshot for a single crypto ticker.
 ///
 /// * `ticker` - Crypto ticker symbol with `X:` prefix (e.g., `"X:BTCUSD"`)
-pub async fn crypto_snapshot(ticker: &str) -> Result<SingleSnapshotResponse> {
+pub async fn crypto_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/snapshot/locale/global/markets/crypto/tickers/{}",
@@ -42,7 +43,7 @@ pub async fn crypto_snapshot(ticker: &str) -> Result<SingleSnapshotResponse> {
 /// Fetch top gainers or losers for crypto.
 ///
 /// * `direction` - `"gainers"` or `"losers"`
-pub async fn crypto_top_movers(direction: &str) -> Result<SnapshotsResponse> {
+pub async fn crypto_top_movers(direction: &str) -> Result<SnapshotsResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/snapshot/locale/global/markets/crypto/{}",
@@ -101,7 +102,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: SingleSnapshotResponse = serde_json::from_value(json).unwrap();
+        let resp: SingleSnapshotResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let snap = resp.ticker.unwrap();
         assert_eq!(snap.ticker.as_deref(), Some("X:BTCUSD"));

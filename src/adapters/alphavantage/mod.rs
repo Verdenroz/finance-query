@@ -36,17 +36,17 @@
 //! ```
 
 mod client;
-pub mod models;
+pub(crate) mod models;
 
-mod commodities;
-mod core_stocks;
-mod crypto;
-mod economic_indicators;
-mod forex;
-mod fundamentals;
-mod intelligence;
-mod options;
-mod technical_indicators;
+pub(crate) mod commodities;
+pub(crate) mod corporate;
+pub(crate) mod crypto;
+pub(crate) mod economic;
+pub(crate) mod forex;
+pub(crate) mod fundamentals;
+pub(crate) mod options;
+pub(crate) mod quote;
+pub(crate) mod technicals;
 
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
@@ -54,17 +54,12 @@ use client::AlphaVantageClientBuilder;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-// Re-export all public query functions
-pub use commodities::*;
-pub use core_stocks::*;
-pub use crypto::*;
-pub use economic_indicators::*;
-pub use forex::*;
+// Re-export public query functions (used by alphavantage provider)
+pub use corporate::*;
 pub use fundamentals::*;
-pub use intelligence::*;
-pub use options::*;
-pub use technical_indicators::*;
+pub use quote::*;
 
+// Re-export public models
 pub use models::*;
 
 /// Alpha Vantage free-tier rate limit: 25 requests/day.
@@ -91,11 +86,13 @@ static AV_SINGLETON: OnceLock<AlphaVantageSingleton> = OnceLock::new();
 /// # Errors
 ///
 /// Returns [`FinanceError::InvalidParameter`] if already initialized.
+#[allow(dead_code)]
 pub fn init(api_key: impl Into<String>) -> Result<()> {
     init_with_timeout(api_key, Duration::from_secs(30))
 }
 
 /// Initialize the Alpha Vantage client with a custom timeout.
+#[allow(dead_code)]
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
     AV_SINGLETON
         .set(AlphaVantageSingleton {
@@ -113,13 +110,22 @@ pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Resul
 ///
 /// Used internally by all query functions.
 pub(crate) fn build_client() -> Result<client::AlphaVantageClient> {
-    let s = AV_SINGLETON
-        .get()
-        .ok_or_else(|| FinanceError::InvalidParameter {
-            param: "alphavantage".to_string(),
-            reason: "Alpha Vantage not initialized. Call alphavantage::init(api_key) first."
-                .to_string(),
+    if AV_SINGLETON.get().is_none() {
+        let key = std::env::var("ALPHAVANTAGE_API_KEY").map_err(|_| {
+            FinanceError::InvalidParameter {
+                param: "alphavantage".to_string(),
+                reason: "ALPHAVANTAGE_API_KEY not set. Call alphavantage::init(key) or set ALPHAVANTAGE_API_KEY env var."
+                    .to_string(),
+            }
         })?;
+        // init() may have raced ahead; if set fails, use the init()-provided value
+        let _ = AV_SINGLETON.set(AlphaVantageSingleton {
+            api_key: key,
+            timeout: Duration::from_secs(30),
+            limiter: Arc::new(RateLimiter::new(AV_RATE_PER_SEC)),
+        });
+    }
+    let s = AV_SINGLETON.get().unwrap(); // SAFETY: set above or init() already called
     AlphaVantageClientBuilder::new(&s.api_key)
         .timeout(s.timeout)
         .build_with_limiter(Arc::clone(&s.limiter))

@@ -27,30 +27,19 @@
 //! ```
 
 mod client;
-pub mod models;
+pub(crate) mod models;
 
-mod advanced;
-mod analysis;
-mod bulk;
-mod calendars;
-mod commodities;
-mod company;
-mod crypto;
-mod dividends_splits;
-mod estimates;
-mod etf_mutual_funds;
-mod forex;
-mod fund_holdings;
-mod fundamentals;
-mod indexes;
-mod insider_trading;
-mod institutional;
-mod market_performance;
-mod news;
-mod prices;
-mod screener;
-mod stock_list;
-mod technical_indicators;
+// Capability-mapped subdirectory modules
+pub(crate) mod commodities; // COMMODITIES
+pub(crate) mod corporate; // CORPORATE
+pub(crate) mod crypto; // CRYPTO
+pub(crate) mod discovery; // DISCOVERY
+pub(crate) mod forex; // FOREX
+pub(crate) mod fundamentals; // FUNDAMENTALS
+pub(crate) mod indices; // INDICES
+pub(crate) mod market;
+pub(crate) mod quote; // QUOTE
+pub(crate) mod technicals; // TECHNICALS // MARKET
 
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
@@ -58,29 +47,10 @@ use client::FmpClientBuilder;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-pub use advanced::*;
-pub use analysis::*;
-pub use bulk::*;
-pub use calendars::*;
-pub use commodities::*;
-pub use company::*;
-pub use crypto::*;
-pub use dividends_splits::*;
-pub use estimates::*;
-pub use etf_mutual_funds::*;
-pub use forex::*;
-pub use fund_holdings::*;
+pub use corporate::*;
 pub use fundamentals::*;
-pub use indexes::*;
-pub use insider_trading::*;
-pub use institutional::*;
-pub use market_performance::*;
 pub use models::*;
-pub use news::*;
-pub use prices::*;
-pub use screener::*;
-pub use stock_list::*;
-pub use technical_indicators::*;
+pub use quote::*;
 
 /// FMP default rate limit: 5 req/sec.
 const FMP_RATE_PER_SEC: f64 = 5.0;
@@ -100,11 +70,13 @@ static FMP_SINGLETON: OnceLock<FmpSingleton> = OnceLock::new();
 /// # Errors
 ///
 /// Returns [`FinanceError::InvalidParameter`] if already initialized.
+#[allow(dead_code)]
 pub fn init(api_key: impl Into<String>) -> Result<()> {
     init_with_timeout(api_key, Duration::from_secs(30))
 }
 
 /// Initialize the FMP client with a custom timeout.
+#[allow(dead_code)]
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
     FMP_SINGLETON
         .set(FmpSingleton {
@@ -120,12 +92,20 @@ pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Resul
 
 /// Build a fresh client from the singleton state.
 pub(crate) fn build_client() -> Result<client::FmpClient> {
-    let s = FMP_SINGLETON
-        .get()
-        .ok_or_else(|| FinanceError::InvalidParameter {
+    if FMP_SINGLETON.get().is_none() {
+        let key = std::env::var("FMP_API_KEY").map_err(|_| FinanceError::InvalidParameter {
             param: "fmp".to_string(),
-            reason: "FMP not initialized. Call fmp::init(api_key) first.".to_string(),
+            reason: "FMP_API_KEY not set. Call fmp::init(key) or set FMP_API_KEY env var."
+                .to_string(),
         })?;
+        // init() may have raced ahead; if set fails, use the init()-provided value
+        let _ = FMP_SINGLETON.set(FmpSingleton {
+            api_key: key,
+            timeout: Duration::from_secs(30),
+            limiter: Arc::new(RateLimiter::new(FMP_RATE_PER_SEC)),
+        });
+    }
+    let s = FMP_SINGLETON.get().unwrap(); // SAFETY: set above or init() already called
     FmpClientBuilder::new(&s.api_key)
         .timeout(s.timeout)
         .build_with_limiter(Arc::clone(&s.limiter))

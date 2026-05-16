@@ -1,4 +1,5 @@
 //! Futures trade and quote endpoints: historical trades, historical quotes.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
@@ -13,7 +14,7 @@ use super::super::models::*;
 pub async fn futures_trades(
     ticker: &str,
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<Trade>> {
+) -> Result<PaginatedResponseDTO<TradeDTO>> {
     let client = build_client()?;
     let path = format!("/v3/trades/{}", encode_path_segment(ticker));
     client.get(&path, params).await
@@ -26,7 +27,7 @@ pub async fn futures_trades(
 pub async fn futures_quotes(
     ticker: &str,
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<Quote>> {
+) -> Result<PaginatedResponseDTO<QuoteDTO>> {
     let client = build_client()?;
     let path = format!("/v3/quotes/{}", encode_path_segment(ticker));
     client.get(&path, params).await
@@ -61,7 +62,8 @@ mod tests {
             .await;
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let resp: PaginatedResponse<Trade> = client.get("/v3/trades/ESZ4", &[]).await.unwrap();
+        let resp: PaginatedResponseDTO<TradeDTO> =
+            client.get("/v3/trades/ESZ4", &[]).await.unwrap();
         let trades = resp.results.unwrap();
         assert_eq!(trades.len(), 2);
         assert!((trades[0].price.unwrap() - 4770.0).abs() < 0.01);
@@ -99,7 +101,8 @@ mod tests {
             .await;
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let resp: PaginatedResponse<Quote> = client.get("/v3/quotes/ESZ4", &[]).await.unwrap();
+        let resp: PaginatedResponseDTO<QuoteDTO> =
+            client.get("/v3/quotes/ESZ4", &[]).await.unwrap();
         let quotes = resp.results.unwrap();
         assert_eq!(quotes.len(), 1);
         assert!((quotes[0].ask_price.unwrap() - 4770.50).abs() < 0.01);

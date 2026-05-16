@@ -1,4 +1,5 @@
 //! Polygon.io WebSocket streaming for real-time market data.
+#![allow(dead_code)]
 //!
 //! Provides real-time trades, quotes, and aggregate bars for stocks, options, forex,
 //! crypto, futures, and indices.
@@ -13,7 +14,7 @@
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! polygon::init("YOUR_KEY")?;
 //! let mut stream = PolygonStream::from_singleton()?
-//!     .cluster(Cluster::Stocks)
+//!     .cluster(ClusterDTO::Stocks)
 //!     .subscribe(&["T.AAPL", "Q.AAPL", "AM.AAPL"])
 //!     .build()
 //!     .await?;
@@ -36,7 +37,7 @@ use crate::error::{FinanceError, Result};
 
 /// WebSocket cluster (asset class).
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Cluster {
+pub enum ClusterDTO {
     /// Real-time stock data.
     Stocks,
     /// Real-time options data.
@@ -51,7 +52,7 @@ pub enum Cluster {
     Indices,
 }
 
-impl Cluster {
+impl ClusterDTO {
     fn as_str(&self) -> &'static str {
         match self {
             Self::Stocks => "stocks",
@@ -157,13 +158,13 @@ pub enum PolygonMessage {
 /// Builder for a Polygon WebSocket stream.
 pub struct PolygonStreamBuilder {
     api_key: String,
-    cluster: Cluster,
+    cluster: ClusterDTO,
     subscriptions: Vec<String>,
 }
 
 impl PolygonStreamBuilder {
     /// Set the cluster (asset class) to connect to.
-    pub fn cluster(mut self, cluster: Cluster) -> Self {
+    pub fn cluster(mut self, cluster: ClusterDTO) -> Self {
         self.cluster = cluster;
         self
     }
@@ -262,7 +263,7 @@ impl PolygonStream {
     pub fn from_singleton() -> Result<PolygonStreamBuilder> {
         Ok(PolygonStreamBuilder {
             api_key: super::api_key()?,
-            cluster: Cluster::Stocks,
+            cluster: ClusterDTO::Stocks,
             subscriptions: Vec::new(),
         })
     }
@@ -387,10 +388,10 @@ mod tests {
 
     #[test]
     fn test_cluster_as_str() {
-        assert_eq!(Cluster::Stocks.as_str(), "stocks");
-        assert_eq!(Cluster::Options.as_str(), "options");
-        assert_eq!(Cluster::Crypto.as_str(), "crypto");
-        assert_eq!(Cluster::Futures.as_str(), "futures");
-        assert_eq!(Cluster::Indices.as_str(), "indices");
+        assert_eq!(ClusterDTO::Stocks.as_str(), "stocks");
+        assert_eq!(ClusterDTO::Options.as_str(), "options");
+        assert_eq!(ClusterDTO::Crypto.as_str(), "crypto");
+        assert_eq!(ClusterDTO::Futures.as_str(), "futures");
+        assert_eq!(ClusterDTO::Indices.as_str(), "indices");
     }
 }

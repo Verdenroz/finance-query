@@ -1,4 +1,5 @@
 //! Index snapshot endpoints.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -9,7 +10,7 @@ use super::super::build_client;
 /// Session data within an index snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IndexSession {
+pub struct IndexSessionDTO {
     /// Change from previous close.
     pub change: Option<f64>,
     /// Change percent from previous close.
@@ -29,7 +30,7 @@ pub struct IndexSession {
 /// A single index snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IndexSnapshot {
+pub struct IndexSnapshotDTO {
     /// Current index value.
     pub value: Option<f64>,
     /// Name of the index.
@@ -42,25 +43,25 @@ pub struct IndexSnapshot {
     /// Market status.
     pub market_status: Option<String>,
     /// Session data.
-    pub session: Option<IndexSession>,
+    pub session: Option<IndexSessionDTO>,
 }
 
 /// Response wrapper for index snapshots.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IndexSnapshotResponse {
+pub struct IndexSnapshotResponseDTO {
     /// Response status.
     pub status: Option<String>,
     /// Request identifier.
     pub request_id: Option<String>,
     /// Index snapshot results.
-    pub results: Option<Vec<IndexSnapshot>>,
+    pub results: Option<Vec<IndexSnapshotDTO>>,
 }
 
 /// Fetch snapshot for a single index ticker.
 ///
 /// * `ticker` - Index ticker symbol with `I:` prefix (e.g., `"I:SPX"`)
-pub async fn index_snapshot(ticker: &str) -> Result<IndexSnapshotResponse> {
+pub async fn index_snapshot(ticker: &str) -> Result<IndexSnapshotResponseDTO> {
     let client = build_client()?;
     let path = "/v3/snapshot/indices";
     let params = [("ticker.any_of", ticker)];
@@ -120,7 +121,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: IndexSnapshotResponse = serde_json::from_value(json).unwrap();
+        let resp: IndexSnapshotResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 1);

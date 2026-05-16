@@ -1,4 +1,5 @@
 //! Index aggregate bar endpoints: OHLCV bars, previous close, daily open/close.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -23,7 +24,7 @@ pub async fn index_aggregates(
     from: &str,
     to: &str,
     params: Option<AggregateParams>,
-) -> Result<AggregateResponse> {
+) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v2/aggs/ticker/{}/range/{}/{}/{}/{}",
@@ -60,7 +61,7 @@ pub async fn index_aggregates(
 /// Fetch the previous day's OHLCV bar for an index ticker.
 ///
 /// * `ticker` - Index ticker symbol with `I:` prefix (e.g., `"I:SPX"`)
-pub async fn index_previous_close(ticker: &str) -> Result<AggregateResponse> {
+pub async fn index_previous_close(ticker: &str) -> Result<AggregateResponseDTO> {
     let client = build_client()?;
     let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
@@ -75,7 +76,7 @@ pub async fn index_previous_close(ticker: &str) -> Result<AggregateResponse> {
 ///
 /// * `ticker` - Index ticker symbol with `I:` prefix (e.g., `"I:SPX"`)
 /// * `date` - Date as `"YYYY-MM-DD"`
-pub async fn index_daily_open_close(ticker: &str, date: &str) -> Result<DailyOpenClose> {
+pub async fn index_daily_open_close(ticker: &str, date: &str) -> Result<DailyOpenCloseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v1/open-close/{}/{}",
@@ -134,7 +135,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: AggregateResponse = serde_json::from_value(json).unwrap();
+        let resp: AggregateResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.ticker.as_deref(), Some("I:SPX"));
         let results = resp.results.unwrap();
         assert_eq!(results.len(), 2);

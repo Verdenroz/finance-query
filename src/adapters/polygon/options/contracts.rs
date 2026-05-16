@@ -11,7 +11,7 @@ use super::super::models::*;
 /// An additional underlying asset for a contract.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct AdditionalUnderlying {
+pub struct AdditionalUnderlyingDTO {
     /// The type of the additional underlying (e.g., `"equity"`, `"index"`).
     #[serde(rename = "type")]
     pub underlying_type: Option<String>,
@@ -24,7 +24,7 @@ pub struct AdditionalUnderlying {
 /// An options contract from the Polygon reference API.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsContract {
+pub struct OptionsContractDTO {
     /// The options ticker symbol (e.g., `"O:AAPL250117C00150000"`).
     pub ticker: Option<String>,
     /// The underlying stock ticker (e.g., `"AAPL"`).
@@ -42,7 +42,7 @@ pub struct OptionsContract {
     /// Number of shares per contract (typically 100).
     pub shares_per_contract: Option<u32>,
     /// Additional underlying assets, if any.
-    pub additional_underlyings: Option<Vec<AdditionalUnderlying>>,
+    pub additional_underlyings: Option<Vec<AdditionalUnderlyingDTO>>,
     /// Primary exchange.
     pub primary_exchange: Option<String>,
 }
@@ -50,13 +50,14 @@ pub struct OptionsContract {
 /// Response wrapper for a single options contract detail.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct OptionsContractResponse {
+#[allow(dead_code)]
+pub struct OptionsContractResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
     /// Response status.
     pub status: Option<String>,
     /// The contract result.
-    pub results: Option<OptionsContract>,
+    pub results: Option<OptionsContractDTO>,
 }
 
 /// Fetch a list of options contracts matching the given query parameters.
@@ -67,7 +68,7 @@ pub struct OptionsContractResponse {
 ///   `expiration_date`, `strike_price`, `expired`, `order`, `limit`, `sort`
 pub async fn options_contracts(
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<OptionsContract>> {
+) -> Result<PaginatedResponseDTO<OptionsContractDTO>> {
     let client = build_client()?;
     let path = "/v3/reference/options/contracts";
     client.get(path, params).await
@@ -76,7 +77,8 @@ pub async fn options_contracts(
 /// Fetch details for a single options contract.
 ///
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
-pub async fn options_contract_details(ticker: &str) -> Result<OptionsContractResponse> {
+#[allow(dead_code)]
+pub async fn options_contract_details(ticker: &str) -> Result<OptionsContractResponseDTO> {
     let client = build_client()?;
     let path = format!(
         "/v3/reference/options/contracts/{}",
@@ -140,7 +142,7 @@ mod tests {
             .await;
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let resp: PaginatedResponse<OptionsContract> = client
+        let resp: PaginatedResponseDTO<OptionsContractDTO> = client
             .get(
                 "/v3/reference/options/contracts",
                 &[("underlying_ticker", "AAPL")],
@@ -200,7 +202,7 @@ mod tests {
             .await
             .unwrap();
 
-        let resp: OptionsContractResponse = serde_json::from_value(json).unwrap();
+        let resp: OptionsContractResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let contract = resp.results.unwrap();
         assert_eq!(contract.ticker.as_deref(), Some("O:AAPL250117C00150000"));

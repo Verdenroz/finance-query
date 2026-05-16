@@ -1,4 +1,5 @@
 //! Options trade and quote endpoints: last trade, historical trades, historical quotes.
+#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
@@ -9,7 +10,7 @@ use super::super::models::*;
 /// Fetch the most recent trade for an options contract.
 ///
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
-pub async fn options_last_trade(ticker: &str) -> Result<LastTradeResponse> {
+pub async fn options_last_trade(ticker: &str) -> Result<LastTradeResponseDTO> {
     let client = build_client()?;
     let path = format!("/v2/last/trade/{}", encode_path_segment(ticker));
     let json = client.get_raw(&path, &[]).await?;
@@ -26,7 +27,7 @@ pub async fn options_last_trade(ticker: &str) -> Result<LastTradeResponse> {
 pub async fn options_trades(
     ticker: &str,
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<Trade>> {
+) -> Result<PaginatedResponseDTO<TradeDTO>> {
     let client = build_client()?;
     let path = format!("/v3/trades/{}", encode_path_segment(ticker));
     client.get(&path, params).await
@@ -39,7 +40,7 @@ pub async fn options_trades(
 pub async fn options_quotes(
     ticker: &str,
     params: &[(&str, &str)],
-) -> Result<PaginatedResponse<Quote>> {
+) -> Result<PaginatedResponseDTO<QuoteDTO>> {
     let client = build_client()?;
     let path = format!("/v3/quotes/{}", encode_path_segment(ticker));
     client.get(&path, params).await
@@ -87,7 +88,7 @@ mod tests {
             .get_raw("/v2/last/trade/O:AAPL250117C00150000", &[])
             .await
             .unwrap();
-        let resp: LastTradeResponse = serde_json::from_value(json).unwrap();
+        let resp: LastTradeResponseDTO = serde_json::from_value(json).unwrap();
 
         assert_eq!(resp.status.as_deref(), Some("OK"));
         let trade = resp.results.unwrap();
@@ -121,7 +122,7 @@ mod tests {
             .await;
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let resp: PaginatedResponse<Trade> = client
+        let resp: PaginatedResponseDTO<TradeDTO> = client
             .get("/v3/trades/O:AAPL250117C00150000", &[])
             .await
             .unwrap();
@@ -163,7 +164,7 @@ mod tests {
             .await;
 
         let client = super::super::super::build_test_client(&server.url()).unwrap();
-        let resp: PaginatedResponse<Quote> = client
+        let resp: PaginatedResponseDTO<QuoteDTO> = client
             .get("/v3/quotes/O:AAPL250117C00150000", &[])
             .await
             .unwrap();

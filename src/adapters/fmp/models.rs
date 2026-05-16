@@ -32,7 +32,7 @@ impl Period {
 /// Real-time quote from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct FmpQuote {
+pub struct FmpQuoteDTO {
     /// Ticker symbol.
     pub symbol: String,
     /// Company name.
@@ -89,7 +89,7 @@ pub struct FmpQuote {
 /// A single historical daily price point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct HistoricalPrice {
+pub struct HistoricalPriceDTO {
     /// Date (YYYY-MM-DD).
     pub date: Option<String>,
     /// Open price.
@@ -125,17 +125,17 @@ pub struct HistoricalPrice {
 /// Historical price response wrapper (FMP wraps daily history in this).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct HistoricalPriceResponse {
+pub struct HistoricalPriceResponseDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
     /// Historical price data points.
-    pub historical: Vec<HistoricalPrice>,
+    pub historical: Vec<HistoricalPriceDTO>,
 }
 
 /// A single intraday price point (1min, 5min, 15min, 30min, 1hour, 4hour).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-pub struct IntradayPrice {
+pub struct IntradayPriceDTO {
     /// Datetime string.
     pub date: Option<String>,
     /// Open price.
