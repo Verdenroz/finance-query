@@ -2,36 +2,10 @@
 //!
 //! Contains all data structures and enums for Yahoo Finance's quoteSummary endpoint.
 
-// Internal modules - used for from_response() parsing.
-pub(crate) mod asset_profile;
-pub(crate) mod balance_sheet_history;
-pub(crate) mod calendar_events;
-pub(crate) mod cashflow_statement_history;
-pub(crate) mod default_key_statistics;
-pub(crate) mod earnings;
-pub(crate) mod earnings_history;
-pub(crate) mod earnings_trend;
-pub(crate) mod equity_performance;
-pub(crate) mod financial_data;
-pub(crate) mod fund_ownership;
-pub(crate) mod fund_performance;
-pub(crate) mod fund_profile;
-pub(crate) mod income_statement_history;
-pub(crate) mod index_trend;
-pub(crate) mod insider_holders;
-pub(crate) mod insider_transactions;
-pub(crate) mod institution_ownership;
-pub(crate) mod major_holders_breakdown;
-pub(crate) mod net_share_purchase_activity;
+// Internal modules that remain in quote/
 pub(crate) mod price;
 pub(crate) mod quote_type;
-pub(crate) mod recommendation_trend;
 pub(crate) mod response;
-pub(crate) mod sec_filings;
-pub(crate) mod summary_detail;
-pub(crate) mod summary_profile;
-pub(crate) mod top_holdings;
-pub(crate) mod upgrade_downgrade_history;
 
 // Public modules
 pub mod data;
@@ -42,40 +16,30 @@ pub mod formatted_value;
 pub use data::Quote;
 pub use formatted_value::FormattedValue;
 
+// ── Re-exports from new canonical locations (backward compat within crate) ───
+
+// From fundamentals/
+pub(crate) use crate::models::fundamentals::{
+    BalanceSheetHistory, BalanceSheetHistoryQuarterly, CashflowStatementHistory,
+    CashflowStatementHistoryQuarterly, DefaultKeyStatistics, FinancialData, IncomeStatementHistory,
+    IncomeStatementHistoryQuarterly, SummaryDetail,
+};
+
+// From corporate/
+pub(crate) use crate::models::corporate::{
+    AssetProfile, CalendarEvents, CompanyOfficer, Earnings, EarningsHistory, EarningsTrend,
+    EquityPerformance, FundOwnership, FundPerformance, FundProfile, InsiderHolders,
+    InsiderTransactions, InstitutionOwnership, MajorHoldersBreakdown, NetSharePurchaseActivity,
+    RecommendationTrend, SecFilings, SummaryProfile, TopHoldings, UpgradeDowngradeHistory,
+};
+
+// From market/
+pub(crate) use crate::models::market::{IndexTrend, IndustryTrend, SectorTrend};
+
 // Internal re-exports for crate use
-pub(crate) use asset_profile::{AssetProfile, CompanyOfficer};
-pub(crate) use balance_sheet_history::{BalanceSheetHistory, BalanceSheetHistoryQuarterly};
-pub(crate) use calendar_events::CalendarEvents;
-pub(crate) use cashflow_statement_history::{
-    CashflowStatementHistory, CashflowStatementHistoryQuarterly,
-};
-pub(crate) use default_key_statistics::DefaultKeyStatistics;
-pub(crate) use earnings::Earnings;
-pub(crate) use earnings_history::EarningsHistory;
-pub(crate) use earnings_trend::EarningsTrend;
-pub(crate) use equity_performance::EquityPerformance;
-pub(crate) use financial_data::FinancialData;
-pub(crate) use fund_ownership::FundOwnership;
-pub(crate) use fund_performance::FundPerformance;
-pub(crate) use fund_profile::FundProfile;
-pub(crate) use income_statement_history::{
-    IncomeStatementHistory, IncomeStatementHistoryQuarterly,
-};
-pub(crate) use index_trend::{IndexTrend, IndustryTrend, SectorTrend};
-pub(crate) use insider_holders::InsiderHolders;
-pub(crate) use insider_transactions::InsiderTransactions;
-pub(crate) use institution_ownership::InstitutionOwnership;
-pub(crate) use major_holders_breakdown::MajorHoldersBreakdown;
-pub(crate) use net_share_purchase_activity::NetSharePurchaseActivity;
 pub(crate) use price::Price;
 pub(crate) use quote_type::QuoteTypeData;
-pub(crate) use recommendation_trend::RecommendationTrend;
 pub(crate) use response::QuoteSummaryResponse;
-pub(crate) use sec_filings::SecFilings;
-pub(crate) use summary_detail::SummaryDetail;
-pub(crate) use summary_profile::SummaryProfile;
-pub(crate) use top_holdings::TopHoldings;
-pub(crate) use upgrade_downgrade_history::UpgradeDowngradeHistory;
 
 /// All available modules from Yahoo Finance's quoteSummary endpoint
 ///

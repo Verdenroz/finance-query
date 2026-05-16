@@ -2,6 +2,7 @@
 //!
 //! Contains dividend, split, and capital gain data structures.
 
+use crate::Provider;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
@@ -70,13 +71,17 @@ pub(crate) struct CapitalGainEvent {
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::dividends()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct Dividend {
     /// Timestamp (Unix)
     pub timestamp: i64,
     /// Dividend amount per share
     pub amount: f64,
+
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub provider_id: Option<Provider>,
 }
 
 /// Public stock split data
@@ -94,19 +99,27 @@ pub struct Split {
     pub denominator: f64,
     /// Split ratio as string (e.g., "2:1", "10:1")
     pub ratio: String,
+
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub provider_id: Option<Provider>,
 }
 
 /// Public capital gain data
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::capital_gains()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 pub struct CapitalGain {
     /// Timestamp (Unix)
     pub timestamp: i64,
     /// Capital gain amount per share
     pub amount: f64,
+
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub provider_id: Option<Provider>,
 }
 
 impl Clone for ChartEvents {
@@ -142,6 +155,7 @@ impl ChartEvents {
                     .map(|d| Dividend {
                         timestamp: d.date,
                         amount: d.amount,
+                        provider_id: None,
                     })
                     .collect();
                 dividends.sort_by_key(|d| d.timestamp);
@@ -162,6 +176,7 @@ impl ChartEvents {
                         numerator: s.numerator,
                         denominator: s.denominator,
                         ratio: s.split_ratio.clone(),
+                        provider_id: None,
                     })
                     .collect();
                 splits.sort_by_key(|s| s.timestamp);
@@ -180,6 +195,7 @@ impl ChartEvents {
                     .map(|g| CapitalGain {
                         timestamp: g.date,
                         amount: g.amount,
+                        provider_id: None,
                     })
                     .collect();
                 gains.sort_by_key(|g| g.timestamp);

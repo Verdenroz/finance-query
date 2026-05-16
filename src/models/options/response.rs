@@ -1,4 +1,5 @@
 use super::contract::{Contracts, OptionContract};
+use crate::Provider;
 /// Options Response module
 ///
 /// Handles parsing of Yahoo Finance options API responses.
@@ -14,6 +15,10 @@ use serde::{Deserialize, Serialize};
 pub struct Options {
     /// Option chain container
     pub(crate) option_chain: OptionChainContainer,
+
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub provider_id: Option<Provider>,
 }
 
 /// Container for option chain results
@@ -153,7 +158,7 @@ impl Options {
     /// For separate DataFrames, use `options.calls.to_dataframe()` or
     /// `options.puts.to_dataframe()`.
     pub fn to_dataframe(&self) -> ::polars::prelude::PolarsResult<::polars::prelude::DataFrame> {
-        use ::polars::prelude::*;
+        use polars::prelude::*;
 
         let calls = self.calls();
         let puts = self.puts();

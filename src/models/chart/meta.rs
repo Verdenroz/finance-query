@@ -1,3 +1,4 @@
+use crate::Provider;
 /// Chart Metadata module
 ///
 /// Contains metadata about chart data including symbol, exchange, timezone, and price information.
@@ -7,7 +8,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
 #[non_exhaustive]
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase")]
 pub struct ChartMeta {
@@ -55,4 +56,8 @@ pub struct ChartMeta {
     pub data_granularity: Option<String>,
     /// Range
     pub range: Option<String>,
+
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub provider_id: Option<Provider>,
 }

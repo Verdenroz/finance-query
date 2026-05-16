@@ -44,8 +44,8 @@ impl DividendAnalytics {
         let payment_count = dividends.len();
         let average_payment = total_paid / payment_count as f64;
 
-        let first = dividends.first().copied();
-        let last = dividends.last().copied();
+        let first = dividends.first().cloned();
+        let last = dividends.last().cloned();
 
         let cagr = compute_cagr(&first, &last);
 
@@ -84,7 +84,11 @@ mod tests {
     use super::*;
 
     fn div(timestamp: i64, amount: f64) -> Dividend {
-        Dividend { timestamp, amount }
+        Dividend {
+            timestamp,
+            amount,
+            provider_id: None,
+        }
     }
 
     #[test]

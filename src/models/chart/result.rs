@@ -65,6 +65,7 @@ impl ChartResult {
                     close,
                     volume,
                     adj_close,
+                    provider_id: None,
                 })
             })
             .collect()
