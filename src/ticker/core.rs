@@ -1,227 +1,151 @@
-//! Ticker implementation for accessing symbol-specific data from Yahoo Finance.
-//!
-//! Provides async interface for fetching quotes, charts, financials, and news.
+//! Symbol-specific data access from multiple providers.
 
-use super::macros;
-use crate::client::{ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
-use crate::error::Result;
+use crate::error::{FinanceError, Result};
+use crate::models::chart::Chart;
 use crate::models::chart::events::ChartEvents;
-use crate::models::chart::response::ChartResponse;
-use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
-use crate::models::financials::FinancialStatement;
+use crate::models::chart::{CapitalGain, Dividend, Split};
+use crate::models::corporate::recommendation::Recommendation;
+use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
+use crate::models::quote::Module;
 use crate::models::quote::{
     AssetProfile, CalendarEvents, DefaultKeyStatistics, Earnings, EarningsHistory, EarningsTrend,
     EquityPerformance, FinancialData, FundOwnership, FundPerformance, FundProfile, IndexTrend,
     IndustryTrend, InsiderHolders, InsiderTransactions, InstitutionOwnership,
-    MajorHoldersBreakdown, Module, NetSharePurchaseActivity, Price, Quote, QuoteSummaryResponse,
+    MajorHoldersBreakdown, NetSharePurchaseActivity, Price, Quote, QuoteSummaryResponse,
     QuoteTypeData, RecommendationTrend, SecFilings, SectorTrend, SummaryDetail, SummaryProfile,
     TopHoldings, UpgradeDowngradeHistory,
 };
-use crate::models::recommendation::Recommendation;
-use crate::models::recommendation::response::RecommendationResponse;
+use crate::providers::{Capability, Fetch, Merge, Prefer, Provider, ProviderSet, build_providers};
 use crate::utils::{CacheEntry, EVICTION_THRESHOLD, filter_by_range};
 use std::collections::HashMap;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::RwLock;
 
-// Type aliases to keep struct definitions readable.
 type Cache<T> = Arc<RwLock<Option<CacheEntry<T>>>>;
 type MapCache<K, V> = Arc<RwLock<HashMap<K, CacheEntry<V>>>>;
-
-/// Opaque handle to a shared Yahoo Finance client session.
+/// Builder for constructing a [`Ticker`] with optional configuration.
 ///
-/// Allows multiple [`Ticker`] and [`Tickers`](crate::Tickers) instances to share
-/// a single authenticated session, avoiding redundant authentication handshakes.
-///
-/// Obtain a handle from an existing `Ticker` via [`Ticker::client_handle()`],
-/// then pass it to other builders via `.client()`.
-///
-/// # Example
-///
-/// ```no_run
-/// use finance_query::Ticker;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let aapl = Ticker::new("AAPL").await?;
-/// let handle = aapl.client_handle();
-///
-/// // Share the same session — no additional auth
-/// let msft = Ticker::builder("MSFT").client(handle.clone()).build().await?;
-/// let googl = Ticker::builder("GOOGL").client(handle).build().await?;
-/// # Ok(())
-/// # }
-/// ```
-#[derive(Clone)]
-pub struct ClientHandle(pub(crate) Arc<YahooClient>);
-
-/// Builder for Ticker
-///
-/// Provides a fluent API for constructing Ticker instances.
+/// Construct via [`Ticker::builder`]. All builder methods are optional;
+/// call [`build`](TickerBuilder::build) to finalize.
 pub struct TickerBuilder {
     symbol: Arc<str>,
-    config: ClientConfig,
-    shared_client: Option<ClientHandle>,
+    config: crate::adapters::yahoo::client::ClientConfig,
+    provider_ids: Option<Vec<Provider>>,
+    fetch: Fetch,
+    merge: Option<Arc<dyn Merge>>,
     cache_ttl: Option<Duration>,
     include_logo: bool,
+    value_format: crate::constants::ValueFormat,
 }
 
 impl TickerBuilder {
     fn new(symbol: impl Into<String>) -> Self {
         Self {
             symbol: symbol.into().into(),
-            config: ClientConfig::default(),
-            shared_client: None,
+            config: crate::adapters::yahoo::client::ClientConfig::default(),
+            provider_ids: None,
+            fetch: Fetch::Sequential,
+            merge: None,
             cache_ttl: None,
             include_logo: false,
+            value_format: crate::constants::ValueFormat::default(),
         }
     }
-
-    /// Set the region (automatically sets correct lang and region)
-    ///
-    /// This is the recommended way to configure regional settings as it ensures
-    /// lang and region are correctly paired.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::{Ticker, Region};
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let ticker = Ticker::builder("2330.TW")
-    ///     .region(Region::Taiwan)
-    ///     .build()
-    ///     .await?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Set the region (automatically sets correct lang and region).
     pub fn region(mut self, region: crate::constants::Region) -> Self {
         self.config.lang = region.lang().to_string();
         self.config.region = region.region().to_string();
         self
     }
-
-    /// Set the language code (e.g., "en-US", "ja-JP", "de-DE")
-    ///
-    /// For standard regions, prefer using `.region()` instead to ensure
-    /// correct lang/region pairing.
+    /// Set the language code (e.g., "en-US", "ja-JP").
     pub fn lang(mut self, lang: impl Into<String>) -> Self {
         self.config.lang = lang.into();
         self
     }
-
-    /// Set the region code (e.g., "US", "JP", "DE")
-    ///
-    /// For standard regions, prefer using `.region()` instead to ensure
-    /// correct lang/region pairing.
-    pub fn region_code(mut self, region: impl Into<String>) -> Self {
-        self.config.region = region.into();
+    /// Set the region code (e.g., "US", "JP").
+    pub fn region_code(mut self, r: impl Into<String>) -> Self {
+        self.config.region = r.into();
         self
     }
-
-    /// Set the HTTP request timeout
-    pub fn timeout(mut self, timeout: Duration) -> Self {
-        self.config.timeout = timeout;
+    /// Set the HTTP request timeout.
+    pub fn timeout(mut self, t: Duration) -> Self {
+        self.config.timeout = t;
         self
     }
-
-    /// Set the proxy URL
-    pub fn proxy(mut self, proxy: impl Into<String>) -> Self {
-        self.config.proxy = Some(proxy.into());
+    /// Set the proxy URL.
+    pub fn proxy(mut self, p: impl Into<String>) -> Self {
+        self.config.proxy = Some(p.into());
         self
     }
-
-    /// Set a complete ClientConfig (overrides any previously set individual config fields)
-    pub fn config(mut self, config: ClientConfig) -> Self {
-        self.config = config;
+    #[allow(dead_code)]
+    pub(crate) fn config(mut self, c: crate::adapters::yahoo::client::ClientConfig) -> Self {
+        self.config = c;
         self
     }
-
-    /// Share an existing authenticated session instead of creating a new one.
-    ///
-    /// This avoids redundant authentication when you need multiple `Ticker`
-    /// instances or want to share a session between `Ticker` and [`crate::Tickers`].
-    ///
-    /// Obtain a [`ClientHandle`] from any existing `Ticker` via
-    /// [`Ticker::client_handle()`].
-    ///
-    /// When set, the builder's `config`, `timeout`, `proxy`, `lang`, and `region`
-    /// settings are ignored (the shared session's configuration is used instead).
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::Ticker;
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let aapl = Ticker::new("AAPL").await?;
-    /// let handle = aapl.client_handle();
-    ///
-    /// let msft = Ticker::builder("MSFT").client(handle.clone()).build().await?;
-    /// let googl = Ticker::builder("GOOGL").client(handle).build().await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn client(mut self, handle: ClientHandle) -> Self {
-        self.shared_client = Some(handle);
+    /// Configure which providers to use, in priority order. Default: `[Yahoo]`.
+    pub fn providers(mut self, ids: &[Provider]) -> Self {
+        self.provider_ids = Some(ids.to_vec());
         self
     }
-
+    /// Configure how providers are queried. Default: `Sequential`.
+    pub fn fetch(mut self, mode: Fetch) -> Self {
+        self.fetch = mode;
+        self
+    }
+    /// Configure how results from multiple providers are combined. Default: `Prefer`.
+    pub fn merge(mut self, policy: impl Merge + 'static) -> Self {
+        self.merge = Some(Arc::new(policy));
+        self
+    }
     /// Enable response caching with a time-to-live.
-    ///
-    /// By default caching is **disabled** — every call fetches fresh data.
-    /// When enabled, responses are reused until the TTL expires, then
-    /// automatically re-fetched. Expired entries in map-based caches
-    /// (chart, options, financials) are evicted on the next write to
-    /// limit memory growth.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::Ticker;
-    /// use std::time::Duration;
-    ///
-    /// let ticker = Ticker::builder("AAPL")
-    ///     .cache(Duration::from_secs(30))
-    ///     .build()
-    ///     .await?;
-    /// # Ok(())
-    /// # }
-    /// ```
     pub fn cache(mut self, ttl: Duration) -> Self {
         self.cache_ttl = Some(ttl);
         self
     }
-
     /// Include company logo URLs in quote responses.
-    ///
-    /// When enabled, `quote()` will fetch logo URLs in parallel with the
-    /// quote summary, adding a small extra request.
     pub fn logo(mut self) -> Self {
         self.include_logo = true;
         self
     }
 
-    /// Build the Ticker instance
-    pub async fn build(self) -> Result<Ticker> {
-        let client = match self.shared_client {
-            Some(handle) => handle.0,
-            None => Arc::new(YahooClient::new(self.config).await?),
-        };
+    /// Set the value format for [`quote_value`](Ticker::quote_value) responses.
+    ///
+    /// Controls how [`FormattedValue`](crate::FormattedValue) fields are
+    /// serialized in the returned JSON:
+    /// - [`ValueFormat::Raw`] — plain numeric values **(default)**; best for
+    ///   programmatic use and calculations
+    /// - [`ValueFormat::Pretty`] — formatted strings (e.g. `"$123.45"`, `"14.78B"`)
+    /// - [`ValueFormat::Both`] — full `{ raw, fmt, longFmt }` object
+    pub fn format(mut self, format: crate::constants::ValueFormat) -> Self {
+        self.value_format = format;
+        self
+    }
 
+    /// Build the Ticker instance.
+    pub async fn build(self) -> Result<Ticker> {
+        let ids = self.provider_ids.unwrap_or_else(|| vec![Provider::Yahoo]);
+        let providers = Arc::new(
+            build_providers(
+                &ids,
+                &self.config,
+                self.fetch,
+                self.merge.unwrap_or_else(|| Arc::new(Prefer)),
+            )
+            .await?,
+        );
         Ok(Ticker {
             symbol: self.symbol,
-            client,
+            providers,
             cache_ttl: self.cache_ttl,
             include_logo: self.include_logo,
-            quote_summary: Default::default(),
-            quote_summary_fetch: Arc::new(tokio::sync::Mutex::new(())),
+            value_format: self.value_format,
+            quote_cache: Default::default(),
+            quote_fetch: Arc::new(tokio::sync::Mutex::new(())),
             chart_cache: Default::default(),
             events_cache: Default::default(),
-            recommendations_cache: Default::default(),
             news_cache: Default::default(),
             options_cache: Default::default(),
             financials_cache: Default::default(),
@@ -233,42 +157,21 @@ impl TickerBuilder {
     }
 }
 
-/// Ticker for fetching symbol-specific data.
+/// The primary entry point for querying financial data for a single symbol.
 ///
-/// Provides access to quotes, charts, financials, news, and other data for a specific symbol.
-/// Uses smart lazy loading - quote data is fetched once and cached.
-///
-/// # Example
-///
-/// ```no_run
-/// use finance_query::Ticker;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let ticker = Ticker::new("AAPL").await?;
-///
-/// // Get quote data
-/// let quote = ticker.quote().await?;
-/// println!("Price: {:?}", quote.regular_market_price);
-///
-/// // Get chart data
-/// use finance_query::{Interval, TimeRange};
-/// let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-/// println!("Candles: {}", chart.candles.len());
-/// # Ok(())
-/// # }
-/// ```
-#[derive(Clone)]
+/// Data is fetched on first access and cached. Use the builder pattern
+/// via [`Ticker::builder`] for custom configuration.
 pub struct Ticker {
     symbol: Arc<str>,
-    client: Arc<YahooClient>,
+    providers: Arc<ProviderSet>,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    quote_summary: Cache<QuoteSummaryResponse>,
-    quote_summary_fetch: Arc<tokio::sync::Mutex<()>>,
+    value_format: crate::constants::ValueFormat,
+    quote_cache: Cache<QuoteSummaryResponse>,
+    quote_fetch: Arc<tokio::sync::Mutex<()>>,
     chart_cache: MapCache<(Interval, TimeRange), Chart>,
     events_cache: Cache<ChartEvents>,
-    recommendations_cache: Cache<RecommendationResponse>,
-    news_cache: Cache<Vec<crate::models::news::News>>,
+    news_cache: Cache<Vec<crate::models::corporate::news::News>>,
     options_cache: MapCache<Option<i64>, Options>,
     financials_cache: MapCache<
         (crate::constants::StatementType, crate::constants::Frequency),
@@ -276,101 +179,31 @@ pub struct Ticker {
     >,
     #[cfg(feature = "indicators")]
     indicators_cache: MapCache<(Interval, TimeRange), crate::indicators::IndicatorsSummary>,
-    edgar_submissions_cache: Cache<crate::models::edgar::EdgarSubmissions>,
-    edgar_facts_cache: Cache<crate::models::edgar::CompanyFacts>,
+    edgar_submissions_cache: Cache<crate::models::filings::EdgarSubmissions>,
+    edgar_facts_cache: Cache<crate::models::filings::CompanyFacts>,
 }
 
 impl Ticker {
-    /// Creates a new ticker with default configuration
-    ///
-    /// # Arguments
-    ///
-    /// * `symbol` - Stock symbol (e.g., "AAPL", "MSFT")
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use finance_query::Ticker;
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let ticker = Ticker::new("AAPL").await?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Creates a new ticker with default configuration.
     pub async fn new(symbol: impl Into<String>) -> Result<Self> {
         Self::builder(symbol).build().await
     }
-
-    /// Creates a new builder for Ticker
-    ///
-    /// Use this for custom configuration (language, region, timeout, proxy).
-    ///
-    /// # Arguments
-    ///
-    /// * `symbol` - Stock symbol (e.g., "AAPL", "MSFT")
-    ///
-    /// # Examples
-    ///
-    /// ```no_run
-    /// use finance_query::Ticker;
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// // Simple case with defaults (same as new())
-    /// let ticker = Ticker::builder("AAPL").build().await?;
-    ///
-    /// // With custom configuration
-    /// let ticker = Ticker::builder("AAPL")
-    ///     .lang("ja-JP")
-    ///     .region_code("JP")
-    ///     .build()
-    ///     .await?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Creates a new builder for Ticker.
     pub fn builder(symbol: impl Into<String>) -> TickerBuilder {
         TickerBuilder::new(symbol)
     }
-
-    /// Returns the ticker symbol
+    /// Returns the ticker symbol.
     pub fn symbol(&self) -> &str {
         &self.symbol
     }
-
-    /// Returns a shareable handle to this ticker's authenticated session.
-    ///
-    /// Pass the handle to other [`Ticker`] or [`Tickers`](crate::Tickers) builders
-    /// via `.client()` to reuse the same session without re-authenticating.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::Ticker;
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let aapl = Ticker::new("AAPL").await?;
-    /// let handle = aapl.client_handle();
-    ///
-    /// let msft = Ticker::builder("MSFT").client(handle).build().await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub fn client_handle(&self) -> ClientHandle {
-        ClientHandle(Arc::clone(&self.client))
+    #[allow(dead_code)]
+    pub(crate) fn provider_set(&self) -> &Arc<ProviderSet> {
+        &self.providers
     }
 
-    /// Returns `true` if a cache entry exists and has not exceeded the TTL.
-    ///
-    /// Returns `false` when caching is disabled (`cache_ttl` is `None`).
-    #[inline]
     fn is_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
         CacheEntry::is_fresh_with_ttl(entry, self.cache_ttl)
     }
-
-    /// Insert into a map cache, amortizing stale-entry eviction.
-    ///
-    /// Only sweeps stale entries when the map exceeds [`EVICTION_THRESHOLD`],
-    /// avoiding O(n) scans on every write.
-    #[inline]
     fn cache_insert<K: Eq + std::hash::Hash, V>(
         &self,
         map: &mut HashMap<K, CacheEntry<V>>,
@@ -385,239 +218,81 @@ impl Ticker {
         }
     }
 
-    /// Helper to construct Recommendation from RecommendationResponse with limit
-    fn build_recommendation_with_limit(
-        &self,
-        response: &RecommendationResponse,
-        limit: u32,
-    ) -> Recommendation {
-        Recommendation {
-            symbol: self.symbol.to_string(),
-            recommendations: response
-                .finance
-                .result
-                .iter()
-                .flat_map(|r| &r.recommended_symbols)
-                .take(limit as usize)
-                .cloned()
-                .collect(),
-        }
-    }
-
-    /// Builds the quote summary URL with all modules.
-    ///
-    /// The module list is computed once and reused across all Ticker instances.
-    fn build_quote_summary_url(&self) -> String {
-        static MODULES_PARAM: OnceLock<String> = OnceLock::new();
-        let modules = MODULES_PARAM.get_or_init(|| {
+    fn quote_summary_url(&self) -> String {
+        format!(
+            "{}?modules={}",
+            crate::adapters::yahoo::endpoints::api::quote_summary(&self.symbol),
             Module::all()
                 .iter()
                 .map(|m| m.as_str())
                 .collect::<Vec<_>>()
                 .join(",")
-        });
-        let url = crate::endpoints::urls::api::quote_summary(&self.symbol);
-        format!("{}?modules={}", url, modules)
+        )
     }
 
-    /// Ensures quote summary is loaded and returns a read guard.
-    ///
-    /// Fast path: read lock only.
-    /// Slow path: serialized fetch (mutex), HTTP I/O with no lock held, brief write lock update.
-    async fn ensure_and_read_quote_summary(
-        &self,
-    ) -> Result<tokio::sync::RwLockReadGuard<'_, Option<CacheEntry<QuoteSummaryResponse>>>> {
-        // Fast path: cache hit
-        {
-            let cache = self.quote_summary.read().await;
-            if self.is_cache_fresh(cache.as_ref()) {
-                return Ok(cache);
-            }
-        }
-
-        // Slow path: serialize fetch operations to prevent duplicate requests
-        let _fetch_guard = self.quote_summary_fetch.lock().await;
-
-        // Double-check: another task may have fetched while we waited on mutex
-        {
-            let cache = self.quote_summary.read().await;
-            if self.is_cache_fresh(cache.as_ref()) {
-                return Ok(cache);
-            }
-        }
-
-        // HTTP I/O with NO lock held — critical for concurrent readers
-        let url = self.build_quote_summary_url();
-        let http_response = self.client.request_with_crumb(&url).await?;
-        let json = http_response.json::<serde_json::Value>().await?;
-        let response = QuoteSummaryResponse::from_json(json, &self.symbol)?;
-
-        // Brief write lock to update cache
-        {
-            let mut cache = self.quote_summary.write().await;
-            *cache = Some(CacheEntry::new(response));
-        }
-
-        // Fetch mutex released automatically, return read guard
-        Ok(self.quote_summary.read().await)
+    /// Get full quote data, optionally including logo URLs.
+    pub async fn quote(&self) -> Result<Quote> {
+        let (cache, logo_pair) = if self.include_logo {
+            let sym = self.symbol.clone();
+            let yahoo = self.providers.first_yahoo().ok();
+            let logo_future = async move {
+                if let Some(y) = yahoo {
+                    Some(y.get_logo_url(&sym).await)
+                } else {
+                    None
+                }
+            };
+            let (cache_result, logos) = tokio::join!(self.ensure_quote_summary(), logo_future);
+            (cache_result?, logos.unwrap_or((None, None)))
+        } else {
+            (self.ensure_quote_summary().await?, (None, None))
+        };
+        let entry = cache.as_ref().ok_or_else(|| FinanceError::SymbolNotFound {
+            symbol: Some(self.symbol.to_string()),
+            context: "Quote summary not loaded".into(),
+        })?;
+        let mut q = Quote::from_response(&entry.value, logo_pair.0, logo_pair.1);
+        q.provider_id = Some(Provider::Yahoo);
+        Ok(q)
     }
-}
 
-// Generate quote summary accessor methods using macro to eliminate duplication.
-macros::define_quote_accessors! {
-    /// Get price information
-    price -> Price, price,
-
-    /// Get summary detail
-    summary_detail -> SummaryDetail, summary_detail,
-
-    /// Get financial data
-    financial_data -> FinancialData, financial_data,
-
-    /// Get key statistics
-    key_stats -> DefaultKeyStatistics, default_key_statistics,
-
-    /// Get asset profile
-    asset_profile -> AssetProfile, asset_profile,
-
-    /// Get calendar events
-    calendar_events -> CalendarEvents, calendar_events,
-
-    /// Get earnings
-    earnings -> Earnings, earnings,
-
-    /// Get earnings trend
-    earnings_trend -> EarningsTrend, earnings_trend,
-
-    /// Get earnings history
-    earnings_history -> EarningsHistory, earnings_history,
-
-    /// Get recommendation trend
-    recommendation_trend -> RecommendationTrend, recommendation_trend,
-
-    /// Get insider holders
-    insider_holders -> InsiderHolders, insider_holders,
-
-    /// Get insider transactions
-    insider_transactions -> InsiderTransactions, insider_transactions,
-
-    /// Get institution ownership
-    institution_ownership -> InstitutionOwnership, institution_ownership,
-
-    /// Get fund ownership
-    fund_ownership -> FundOwnership, fund_ownership,
-
-    /// Get major holders breakdown
-    major_holders -> MajorHoldersBreakdown, major_holders_breakdown,
-
-    /// Get net share purchase activity
-    share_purchase_activity -> NetSharePurchaseActivity, net_share_purchase_activity,
-
-    /// Get quote type
-    quote_type -> QuoteTypeData, quote_type,
-
-    /// Get summary profile
-    summary_profile -> SummaryProfile, summary_profile,
-
-    /// Get SEC filings (limited Yahoo Finance data)
+    /// Get quote data as a flat JSON value, with [`FormattedValue`](crate::FormattedValue)
+    /// fields transformed according to the format configured via
+    /// [`TickerBuilder::format`].
     ///
-    /// **DEPRECATED:** This method returns limited SEC filing metadata from Yahoo Finance.
-    /// For comprehensive filing data directly from SEC EDGAR, use `edgar_submissions()` instead.
+    /// By default (`Raw`), every `FormattedValue` field is flattened to its
+    /// plain numeric value — no `.raw`/`.fmt` unwrapping needed. Use
+    /// [`ValueFormat::Pretty`] for human-readable strings or
+    /// [`ValueFormat::Both`] to preserve the full object.
     ///
-    /// To use EDGAR methods:
+    /// # Example
+    ///
     /// ```no_run
-    /// # use finance_query::{Ticker, edgar};
+    /// use finance_query::{Ticker, ValueFormat};
+    ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// edgar::init("user@example.com")?;
     /// let ticker = Ticker::new("AAPL").await?;
-    /// let submissions = ticker.edgar_submissions().await?;  // Comprehensive EDGAR data
+    /// let json = ticker.quote_value().await?;
+    /// // json["regularMarketPrice"] == 182.63  (plain f64, no unwrapping)
     /// # Ok(())
     /// # }
     /// ```
-    #[deprecated(
-        since = "2.2.0",
-        note = "Use `edgar_submissions()` for comprehensive SEC EDGAR data instead of limited Yahoo Finance metadata"
-    )]
-    sec_filings -> SecFilings, sec_filings,
-
-    /// Get upgrade/downgrade history
-    grading_history -> UpgradeDowngradeHistory, upgrade_downgrade_history,
-
-    /// Get fund performance data (returns, trailing returns, risk statistics)
-    ///
-    /// Primarily relevant for ETFs and mutual funds. Returns `None` for equities.
-    fund_performance -> FundPerformance, fund_performance,
-
-    /// Get fund profile (category, family, fees, legal type)
-    ///
-    /// Primarily relevant for ETFs and mutual funds. Returns `None` for equities.
-    fund_profile -> FundProfile, fund_profile,
-
-    /// Get top holdings for ETFs and mutual funds
-    ///
-    /// Includes top stock/bond holdings with weights and sector weightings.
-    /// Returns `None` for equities.
-    top_holdings -> TopHoldings, top_holdings,
-
-    /// Get index trend data (P/E estimates and growth rates)
-    ///
-    /// Contains trend data for the symbol's associated index.
-    index_trend -> IndexTrend, index_trend,
-
-    /// Get industry trend data
-    ///
-    /// Contains P/E and growth estimates for the symbol's industry.
-    industry_trend -> IndustryTrend, industry_trend,
-
-    /// Get sector trend data
-    ///
-    /// Contains P/E and growth estimates for the symbol's sector.
-    sector_trend -> SectorTrend, sector_trend,
-
-    /// Get equity performance vs benchmark
-    ///
-    /// Performance comparison across multiple time periods.
-    equity_performance -> EquityPerformance, equity_performance,
-}
-
-impl Ticker {
-    /// Get full quote data, optionally including logo URLs.
-    ///
-    /// Use [`TickerBuilder::logo()`](TickerBuilder::logo) to enable logo fetching
-    /// for this ticker instance.
-    ///
-    /// When logos are enabled, fetches both quote summary and logo URL in parallel
-    /// using tokio::join! for minimal latency impact (~0-100ms overhead).
-    pub async fn quote(&self) -> Result<Quote> {
-        let not_found = || crate::error::FinanceError::SymbolNotFound {
-            symbol: Some(self.symbol.to_string()),
-            context: "Quote summary not loaded".to_string(),
-        };
-
-        if self.include_logo {
-            // Ensure quote summary is loaded in background while we fetch logos
-            let (cache_result, logo_result) = tokio::join!(
-                self.ensure_and_read_quote_summary(),
-                self.client.get_logo_url(&self.symbol)
-            );
-            let cache = cache_result?;
-            let entry = cache.as_ref().ok_or_else(not_found)?;
-            let (logo_url, company_logo_url) = logo_result;
-            Ok(Quote::from_response(
-                &entry.value,
-                logo_url,
-                company_logo_url,
-            ))
-        } else {
-            let cache = self.ensure_and_read_quote_summary().await?;
-            let entry = cache.as_ref().ok_or_else(not_found)?;
-            Ok(Quote::from_response(&entry.value, None, None))
-        }
+    pub async fn quote_value(&self) -> crate::error::Result<serde_json::Value> {
+        let quote = self.quote().await?;
+        let json = serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
+        Ok(self.value_format.transform(json))
     }
 
-    /// Get historical chart data
+    fn chart_from_provider_data(
+        data: crate::providers::types::ChartData,
+        interval: Option<Interval>,
+        range: Option<TimeRange>,
+    ) -> Chart {
+        data.into_chart(interval, range)
+    }
+
+    /// Get historical OHLCV chart data.
     pub async fn chart(&self, interval: Interval, range: TimeRange) -> Result<Chart> {
-        // Fast path: return cached Chart directly (no re-parsing)
         {
             let cache = self.chart_cache.read().await;
             if let Some(entry) = cache.get(&(interval, range))
@@ -626,1022 +301,378 @@ impl Ticker {
                 return Ok(entry.value.clone());
             }
         }
-
-        // For intraday intervals with ranges that exceed Yahoo's native support, bypass
-        // get_chart entirely and use chart_range so chunking is applied automatically.
-        if let Some((max_secs, native_ranges)) = crate::endpoints::chart::intraday_limit(interval)
-            && !native_ranges.contains(&range)
-        {
-            // Small buffer so the request window is strictly inside the hard limit.
-            const RANGE_BOUNDARY_BUFFER_SECS: i64 = 5;
-            let end = crate::utils::now_unix_secs();
-            let start = end - max_secs + RANGE_BOUNDARY_BUFFER_SECS;
-            return self.chart_range(interval, start, end).await;
-        }
-
-        // Fetch from Yahoo
-        let json = self.client.get_chart(&self.symbol, interval, range).await?;
-        let chart_result = Self::parse_chart_result(json, &self.symbol)?;
-
-        // Always update events when we have fresh data from Yahoo
-        if let Some(events) = &chart_result.events {
-            let mut events_cache = self.events_cache.write().await;
-            *events_cache = Some(CacheEntry::new(events.clone()));
-        }
-
-        // Materialize Chart from raw result — this is the only place to_candles() runs
-        let chart = Chart {
-            symbol: self.symbol.to_string(),
-            meta: chart_result.meta.clone(),
-            candles: chart_result.to_candles(),
-            interval: Some(interval),
-            range: Some(range),
+        let sym = self.symbol.clone();
+        let data = if self.providers.merger().wants_all() {
+            let mut results = self
+                .providers
+                .try_fetch_all(Capability::CHART, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move { p.fetch_chart(&sym, interval, range).await }
+                })
+                .await?;
+            let primary = results.remove(0);
+            results.into_iter().fold(primary, |acc, fb| {
+                self.providers.merger().merge_chart(acc, fb)
+            })
+        } else {
+            self.providers
+                .try_fetch(Capability::CHART, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move { p.fetch_chart(&sym, interval, range).await }
+                })
+                .await?
         };
-
-        // Only clone when caching is enabled to avoid unnecessary allocations
+        let chart = Self::chart_from_provider_data(data, Some(interval), Some(range));
         if self.cache_ttl.is_some() {
             let mut cache = self.chart_cache.write().await;
             self.cache_insert(&mut cache, (interval, range), chart.clone());
-            Ok(chart)
-        } else {
-            Ok(chart)
         }
+        Ok(chart)
     }
 
-    /// Parse a ChartResult from raw JSON, returning a descriptive error on failure.
-    fn parse_chart_result(
-        json: serde_json::Value,
-        symbol: &str,
-    ) -> Result<crate::models::chart::result::ChartResult> {
-        let response = ChartResponse::from_json(json).map_err(|e| {
-            crate::error::FinanceError::ResponseStructureError {
-                field: "chart".to_string(),
-                context: e.to_string(),
-            }
-        })?;
-
-        let results =
-            response
-                .chart
-                .result
-                .ok_or_else(|| crate::error::FinanceError::SymbolNotFound {
-                    symbol: Some(symbol.to_string()),
-                    context: "Chart data not found".to_string(),
-                })?;
-
-        results
-            .into_iter()
-            .next()
-            .ok_or_else(|| crate::error::FinanceError::SymbolNotFound {
-                symbol: Some(symbol.to_string()),
-                context: "Chart data empty".to_string(),
-            })
-    }
-
-    /// Get historical chart data for a custom date range.
-    ///
-    /// Unlike [`chart()`](Self::chart) which uses predefined time ranges,
-    /// this method accepts absolute start/end timestamps for precise date control.
-    ///
-    /// Results are **not cached** since custom ranges have unbounded key space.
-    /// For intraday intervals whose span exceeds Yahoo's per-request limit, the
-    /// range is automatically split into parallel chunks and merged transparently.
-    ///
-    /// # Arguments
-    ///
-    /// * `interval` - Time interval between data points
-    /// * `start` - Start date as Unix timestamp (seconds since epoch)
-    /// * `end` - End date as Unix timestamp (seconds since epoch)
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::{Ticker, Interval};
-    /// use chrono::NaiveDate;
-    ///
-    /// let ticker = Ticker::new("AAPL").await?;
-    ///
-    /// // Q3 2024
-    /// let start = NaiveDate::from_ymd_opt(2024, 7, 1).unwrap()
-    ///     .and_hms_opt(0, 0, 0).unwrap().and_utc().timestamp();
-    /// let end = NaiveDate::from_ymd_opt(2024, 9, 30).unwrap()
-    ///     .and_hms_opt(23, 59, 59).unwrap().and_utc().timestamp();
-    ///
-    /// let chart = ticker.chart_range(Interval::OneDay, start, end).await?;
-    /// println!("Q3 2024 candles: {}", chart.candles.len());
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Get chart data for a custom start/end timestamp range.
     pub async fn chart_range(&self, interval: Interval, start: i64, end: i64) -> Result<Chart> {
         if start >= end {
-            return Err(crate::error::FinanceError::InvalidParameter {
-                param: "end".to_string(),
-                reason: format!("`end` ({end}) must be greater than `start` ({start})"),
+            return Err(FinanceError::InvalidParameter {
+                param: "end".into(),
+                reason: format!("end ({end}) must be > start ({start})"),
             });
         }
-
-        // Auto-chunk when the span exceeds Yahoo's per-request limit for this interval
-        if let Some(chunk_secs) = crate::endpoints::chart::intraday_chunk_secs(interval)
-            && end - start > chunk_secs
-        {
-            return self
-                .chart_range_chunked(interval, start, end, chunk_secs)
-                .await;
-        }
-
-        let json = self
-            .client
-            .get_chart_range(&self.symbol, interval, start, end)
+        let sym = self.symbol.clone();
+        let data = self
+            .providers
+            .try_fetch(Capability::CHART, move |p| {
+                let sym = sym.clone();
+                let p = p.clone();
+                async move { p.fetch_chart_range(&sym, interval, start, end).await }
+            })
             .await?;
-        let chart_result = Self::parse_chart_result(json, &self.symbol)?;
-
-        // Always update events when we have fresh data from Yahoo
-        if let Some(events) = &chart_result.events {
-            let mut events_cache = self.events_cache.write().await;
-            *events_cache = Some(CacheEntry::new(events.clone()));
-        }
-
-        Ok(Chart {
-            symbol: self.symbol.to_string(),
-            meta: chart_result.meta.clone(),
-            candles: chart_result.to_candles(),
-            interval: Some(interval),
-            range: None,
-        })
+        Ok(Self::chart_from_provider_data(data, Some(interval), None))
     }
 
-    /// Fetch a large intraday date range by splitting it into parallel chunks.
-    ///
-    /// Yahoo Finance rejects requests with a span > ~8 days for sub-hour intervals.
-    /// This splits the window into `chunk_secs`-sized slices, fetches them concurrently,
-    /// and merges the candles (sorted, deduplicated by timestamp).
-    async fn chart_range_chunked(
-        &self,
-        interval: Interval,
-        start: i64,
-        end: i64,
-        chunk_secs: i64,
-    ) -> Result<Chart> {
-        // Build chunk boundaries
-        let mut chunks: Vec<(i64, i64)> = Vec::new();
-        let mut s = start;
-        while s < end {
-            chunks.push((s, (s + chunk_secs).min(end)));
-            s += chunk_secs;
-        }
-
-        // Fetch all chunks in parallel
-        let fetches: Vec<_> = chunks
-            .iter()
-            .map(|&(s, e)| self.client.get_chart_range(&self.symbol, interval, s, e))
-            .collect();
-
-        let results = futures::future::join_all(fetches).await;
-
-        // Parse and merge
-        let mut all_candles: Vec<crate::models::chart::Candle> = Vec::new();
-        let mut base_meta: Option<crate::models::chart::ChartMeta> = None;
-        let mut accumulated_events: Option<crate::models::chart::events::ChartEvents> = None;
-
-        for result in results {
-            // Skip empty chunks (e.g. weekend/holiday windows) rather than failing the whole call
-            let json = match result {
-                Ok(j) => j,
-                Err(e) => {
-                    tracing::warn!("Skipping failed chunk for {}: {}", self.symbol, e);
-                    continue;
-                }
-            };
-            let chart_result = match Self::parse_chart_result(json, &self.symbol) {
-                Ok(r) => r,
-                Err(e) => {
-                    tracing::warn!("Skipping unparseable chunk for {}: {}", self.symbol, e);
-                    continue;
-                }
-            };
-
-            if base_meta.is_none() {
-                base_meta = Some(chart_result.meta.clone());
-            }
-
-            // Accumulate events across all chunks — each chunk covers only its own window,
-            // so events (dividends, splits) may appear in any chunk.
-            let candles = chart_result.to_candles();
-            if let Some(events) = chart_result.events {
-                match &mut accumulated_events {
-                    None => accumulated_events = Some(events),
-                    Some(acc) => {
-                        acc.dividends.extend(events.dividends);
-                        acc.splits.extend(events.splits);
-                        acc.capital_gains.extend(events.capital_gains);
-                    }
-                }
-            }
-            all_candles.extend(candles);
-        }
-
-        // Write merged events cache once after all chunks are processed
-        if let Some(events) = accumulated_events {
-            let mut events_cache = self.events_cache.write().await;
-            *events_cache = Some(CacheEntry::new(events));
-        }
-
-        // Sort and deduplicate (chunk boundaries may overlap by one candle)
-        all_candles.sort_unstable_by_key(|c| c.timestamp);
-        all_candles.dedup_by_key(|c| c.timestamp);
-
-        let meta = base_meta.ok_or_else(|| crate::error::FinanceError::SymbolNotFound {
-            symbol: Some(self.symbol.to_string()),
-            context: "No chart data returned across all chunks".to_string(),
-        })?;
-
-        Ok(Chart {
-            symbol: self.symbol.to_string(),
-            meta,
-            candles: all_candles,
-            interval: Some(interval),
-            range: None,
-        })
-    }
-
-    /// Ensures events data is loaded (fetches events only if not cached)
-    async fn ensure_events_loaded(&self) -> Result<()> {
-        // Quick read check
+    async fn ensure_events(&self) -> Result<()> {
         {
             let cache = self.events_cache.read().await;
             if self.is_cache_fresh(cache.as_ref()) {
                 return Ok(());
             }
         }
-
-        // Fetch events using max range with 1d interval to get all historical events
-        // Using 1d interval minimizes candle count compared to shorter intervals
-        let json = crate::endpoints::chart::fetch(
-            &self.client,
-            &self.symbol,
-            Interval::OneDay,
-            TimeRange::Max,
-        )
-        .await?;
-        let chart_result = Self::parse_chart_result(json, &self.symbol)?;
-
-        // Write to events cache unconditionally for temporary storage during this method
-        // Note: when cache_ttl is None, is_cache_fresh() returns false, so this will
-        // be refetched on the next call to dividends()/splits()/capital_gains().
-        // Cache empty ChartEvents when Yahoo returns no events to prevent infinite refetch loops
-        let mut events_cache = self.events_cache.write().await;
-        *events_cache = Some(CacheEntry::new(chart_result.events.unwrap_or_default()));
-
+        let sym = self.symbol.clone();
+        let events = self
+            .providers
+            .try_fetch(Capability::CORPORATE, move |p| {
+                let sym = sym.clone();
+                let p = p.clone();
+                async move { p.fetch_events(&sym).await }
+            })
+            .await?;
+        let mut cache = self.events_cache.write().await;
+        *cache = Some(CacheEntry::new(events.into_chart_events()));
         Ok(())
     }
 
-    /// Get dividend history
-    ///
-    /// Returns historical dividend payments sorted by date.
-    /// Events are lazily loaded (fetched once, then filtered by range).
-    ///
-    /// # Arguments
-    ///
-    /// * `range` - Time range to filter dividends
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::{Ticker, TimeRange};
-    ///
-    /// let ticker = Ticker::new("AAPL").await?;
-    ///
-    /// // Get all dividends
-    /// let all = ticker.dividends(TimeRange::Max).await?;
-    ///
-    /// // Get last year's dividends
-    /// let recent = ticker.dividends(TimeRange::OneYear).await?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Get dividend history.
     pub async fn dividends(&self, range: TimeRange) -> Result<Vec<Dividend>> {
-        self.ensure_events_loaded().await?;
-
+        self.ensure_events().await?;
         let cache = self.events_cache.read().await;
         let all = cache
             .as_ref()
             .map(|e| e.value.to_dividends())
             .unwrap_or_default();
-
         Ok(filter_by_range(all, range))
     }
-
     /// Compute dividend analytics for the requested time range.
-    ///
-    /// Calculates statistics on the dividend history: total paid, payment count,
-    /// average payment, and Compound Annual Growth Rate (CAGR).
-    ///
-    /// **CAGR note:** requires at least two payments spanning at least one calendar year.
-    ///
-    /// # Arguments
-    ///
-    /// * `range` - Time range to analyse
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::{Ticker, TimeRange};
-    ///
-    /// let ticker = Ticker::new("AAPL").await?;
-    /// let analytics = ticker.dividend_analytics(TimeRange::FiveYears).await?;
-    ///
-    /// println!("Total paid: ${:.2}", analytics.total_paid);
-    /// println!("Payments:   {}", analytics.payment_count);
-    /// if let Some(cagr) = analytics.cagr {
-    ///     println!("CAGR:       {:.1}%", cagr * 100.0);
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
     pub async fn dividend_analytics(
         &self,
         range: TimeRange,
     ) -> Result<crate::models::chart::DividendAnalytics> {
-        let dividends = self.dividends(range).await?;
+        let divs = self.dividends(range).await?;
         Ok(crate::models::chart::DividendAnalytics::from_dividends(
-            &dividends,
+            &divs,
         ))
     }
-
-    /// Get stock split history
-    ///
-    /// Returns historical stock splits sorted by date.
-    /// Events are lazily loaded (fetched once, then filtered by range).
-    ///
-    /// # Arguments
-    ///
-    /// * `range` - Time range to filter splits
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::{Ticker, TimeRange};
-    ///
-    /// let ticker = Ticker::new("NVDA").await?;
-    ///
-    /// // Get all splits
-    /// let all = ticker.splits(TimeRange::Max).await?;
-    ///
-    /// // Get last 5 years
-    /// let recent = ticker.splits(TimeRange::FiveYears).await?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Get stock split history.
     pub async fn splits(&self, range: TimeRange) -> Result<Vec<Split>> {
-        self.ensure_events_loaded().await?;
-
+        self.ensure_events().await?;
         let cache = self.events_cache.read().await;
         let all = cache
             .as_ref()
             .map(|e| e.value.to_splits())
             .unwrap_or_default();
-
         Ok(filter_by_range(all, range))
     }
-
-    /// Get capital gains distribution history
-    ///
-    /// Returns historical capital gain distributions sorted by date.
-    /// This is primarily relevant for mutual funds and ETFs.
-    /// Events are lazily loaded (fetched once, then filtered by range).
-    ///
-    /// # Arguments
-    ///
-    /// * `range` - Time range to filter capital gains
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::{Ticker, TimeRange};
-    ///
-    /// let ticker = Ticker::new("VFIAX").await?;
-    ///
-    /// // Get all capital gains
-    /// let all = ticker.capital_gains(TimeRange::Max).await?;
-    ///
-    /// // Get last 2 years
-    /// let recent = ticker.capital_gains(TimeRange::TwoYears).await?;
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Get capital gains distribution history.
     pub async fn capital_gains(&self, range: TimeRange) -> Result<Vec<CapitalGain>> {
-        self.ensure_events_loaded().await?;
-
+        self.ensure_events().await?;
         let cache = self.events_cache.read().await;
         let all = cache
             .as_ref()
             .map(|e| e.value.to_capital_gains())
             .unwrap_or_default();
-
         Ok(filter_by_range(all, range))
     }
 
-    /// Calculate all technical indicators from chart data
-    ///
-    /// # Arguments
-    ///
-    /// * `interval` - The time interval for each candle
-    /// * `range` - The time range to fetch data for
-    ///
-    /// # Returns
-    ///
-    /// Returns `IndicatorsSummary` containing all calculated indicators.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::{Ticker, Interval, TimeRange};
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let ticker = Ticker::new("AAPL").await?;
-    /// let indicators = ticker.indicators(Interval::OneDay, TimeRange::OneYear).await?;
-    ///
-    /// println!("RSI(14): {:?}", indicators.rsi_14);
-    /// println!("MACD: {:?}", indicators.macd);
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Get analyst recommendations and similar symbols.
+    pub async fn recommendations(&self, limit: u32) -> Result<Recommendation> {
+        if limit == 0 {
+            return Err(FinanceError::InvalidParameter {
+                param: "limit".into(),
+                reason: "limit must be > 0".into(),
+            });
+        }
+        let sym = self.symbol.clone();
+        let (provider_id, items) = self
+            .providers
+            .try_fetch(Capability::CORPORATE, move |p| {
+                let sym = sym.clone();
+                let p = p.clone();
+                async move {
+                    let r = p.fetch_similar_symbols(&sym, limit).await?;
+                    Ok((p.id(), r))
+                }
+            })
+            .await?;
+        Ok(crate::providers::types::recommendation_from_similar(
+            self.symbol.to_string(),
+            Some(provider_id.into()),
+            items,
+            Some(limit),
+        ))
+    }
+
+    /// Get news articles for this symbol.
+    pub async fn news(&self) -> Result<Vec<crate::models::corporate::news::News>> {
+        {
+            let cache = self.news_cache.read().await;
+            if let Some(e) = cache.as_ref()
+                && self.is_cache_fresh(Some(e))
+            {
+                return Ok(e.value.clone());
+            }
+        }
+        let sym = self.symbol.clone();
+        let data = self
+            .providers
+            .try_fetch(Capability::CORPORATE, move |p| {
+                let sym = sym.clone();
+                let p = p.clone();
+                async move { p.fetch_news(&sym).await }
+            })
+            .await?;
+        let news: Vec<crate::models::corporate::news::News> =
+            data.into_iter().map(Into::into).collect();
+        if self.cache_ttl.is_some() {
+            let mut c = self.news_cache.write().await;
+            *c = Some(CacheEntry::new(news.clone()));
+        }
+        Ok(news)
+    }
+
+    /// Get the options chain.
+    pub async fn options(&self, date: Option<i64>) -> Result<Options> {
+        {
+            let cache = self.options_cache.read().await;
+            if let Some(e) = cache.get(&date)
+                && self.is_cache_fresh(Some(e))
+            {
+                return Ok(e.value.clone());
+            }
+        }
+        let sym = self.symbol.clone();
+        let opts = if self.providers.merger().wants_all() {
+            let mut results = self
+                .providers
+                .try_fetch_all(Capability::OPTIONS, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move { p.fetch_options(&sym, date).await }
+                })
+                .await?;
+            let primary = results.remove(0);
+            results
+                .into_iter()
+                .fold(primary, |acc, fb| {
+                    self.providers.merger().merge_options(acc, fb)
+                })
+                .into_options()
+        } else {
+            self.providers
+                .try_fetch(Capability::OPTIONS, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move { p.fetch_options(&sym, date).await }
+                })
+                .await?
+                .into_options()
+        };
+        if self.cache_ttl.is_some() {
+            let mut c = self.options_cache.write().await;
+            self.cache_insert(&mut c, date, opts.clone());
+        }
+        Ok(opts)
+    }
+
+    /// Get financial statements.
+    pub async fn financials(
+        &self,
+        stmt_type: crate::constants::StatementType,
+        frequency: crate::constants::Frequency,
+    ) -> Result<FinancialStatement> {
+        let key = (stmt_type, frequency);
+        {
+            let cache = self.financials_cache.read().await;
+            if let Some(e) = cache.get(&key)
+                && self.is_cache_fresh(Some(e))
+            {
+                return Ok(e.value.clone());
+            }
+        }
+        let sym = self.symbol.clone();
+        let stmt = if self.providers.merger().wants_all() {
+            let mut results = self
+                .providers
+                .try_fetch_all(Capability::FUNDAMENTALS, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move { p.fetch_financials(&sym, stmt_type, frequency).await }
+                })
+                .await?;
+            let primary = results.remove(0);
+            results
+                .into_iter()
+                .fold(primary, |acc, fb| {
+                    self.providers.merger().merge_financials(acc, fb)
+                })
+                .into_financial_statement()
+        } else {
+            self.providers
+                .try_fetch(Capability::FUNDAMENTALS, move |p| {
+                    let sym = sym.clone();
+                    let p = p.clone();
+                    async move { p.fetch_financials(&sym, stmt_type, frequency).await }
+                })
+                .await?
+                .into_financial_statement()
+        };
+        if self.cache_ttl.is_some() {
+            let mut c = self.financials_cache.write().await;
+            self.cache_insert(&mut c, key, stmt.clone());
+        }
+        Ok(stmt)
+    }
+
     #[cfg(feature = "indicators")]
+    /// Calculate all technical indicators from chart data.
     pub async fn indicators(
         &self,
         interval: Interval,
         range: TimeRange,
     ) -> Result<crate::indicators::IndicatorsSummary> {
-        // Check cache first (read lock)
         {
             let cache = self.indicators_cache.read().await;
-            if let Some(entry) = cache.get(&(interval, range))
-                && self.is_cache_fresh(Some(entry))
+            if let Some(e) = cache.get(&(interval, range))
+                && self.is_cache_fresh(Some(e))
             {
-                return Ok(entry.value.clone());
+                return Ok(e.value.clone());
             }
         }
-
-        // Fetch chart data (this is also cached!)
         let chart = self.chart(interval, range).await?;
-
-        // Calculate indicators from candles
-        let indicators = crate::indicators::summary::calculate_indicators(&chart.candles);
-
-        // Only clone when caching is enabled
+        let ind = crate::indicators::summary::calculate_indicators(&chart.candles);
         if self.cache_ttl.is_some() {
-            let mut cache = self.indicators_cache.write().await;
-            self.cache_insert(&mut cache, (interval, range), indicators.clone());
-            Ok(indicators)
-        } else {
-            Ok(indicators)
+            let mut c = self.indicators_cache.write().await;
+            self.cache_insert(&mut c, (interval, range), ind.clone());
         }
+        Ok(ind)
     }
 
-    /// Calculate a specific technical indicator over a time range.
-    ///
-    /// Returns the full time series for the requested indicator, not just the latest value.
-    /// This is useful when you need historical indicator values for analysis or charting.
-    ///
-    /// # Arguments
-    ///
-    /// * `indicator` - The indicator to calculate (from `crate::indicators::Indicator`)
-    /// * `interval` - Time interval for candles (1d, 1h, etc.)
-    /// * `range` - Time range for historical data
-    ///
-    /// # Returns
-    ///
-    /// An `IndicatorResult` containing the full time series. Access the data using match:
-    /// - `IndicatorResult::Series(values)` - for simple indicators (SMA, EMA, RSI, ATR, OBV, VWAP, WMA)
-    /// - `IndicatorResult::Macd(data)` - for MACD (macd_line, signal_line, histogram)
-    /// - `IndicatorResult::Bollinger(data)` - for Bollinger Bands (upper, middle, lower)
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::{Ticker, Interval, TimeRange};
-    /// use finance_query::indicators::{Indicator, IndicatorResult};
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let ticker = Ticker::new("AAPL").await?;
-    ///
-    /// // Calculate 14-period RSI
-    /// let result = ticker.indicator(
-    ///     Indicator::Rsi(14),
-    ///     Interval::OneDay,
-    ///     TimeRange::ThreeMonths
-    /// ).await?;
-    ///
-    /// match result {
-    ///     IndicatorResult::Series(values) => {
-    ///         println!("Latest RSI: {:?}", values.last());
-    ///     }
-    ///     _ => {}
-    /// }
-    ///
-    /// // Calculate MACD
-    /// let macd_result = ticker.indicator(
-    ///     Indicator::Macd { fast: 12, slow: 26, signal: 9 },
-    ///     Interval::OneDay,
-    ///     TimeRange::SixMonths
-    /// ).await?;
-    ///
-    /// # Ok(())
-    /// # }
-    /// ```
+    /// Get SEC EDGAR filing history for this symbol.
+    pub async fn edgar_submissions(&self) -> Result<crate::models::filings::EdgarSubmissions> {
+        {
+            let cache = self.edgar_submissions_cache.read().await;
+            if let Some(e) = cache.as_ref()
+                && self.is_cache_fresh(Some(e))
+            {
+                return Ok(e.value.clone());
+            }
+        }
+        let cik = crate::edgar::resolve_cik(&self.symbol).await?;
+        let subs = crate::edgar::submissions(cik).await?;
+        if self.cache_ttl.is_some() {
+            let mut c = self.edgar_submissions_cache.write().await;
+            *c = Some(CacheEntry::new(subs.clone()));
+        }
+        Ok(subs)
+    }
+
+    /// Get SEC EDGAR company facts (structured XBRL financial data).
+    pub async fn edgar_company_facts(&self) -> Result<crate::models::filings::CompanyFacts> {
+        {
+            let cache = self.edgar_facts_cache.read().await;
+            if let Some(e) = cache.as_ref()
+                && self.is_cache_fresh(Some(e))
+            {
+                return Ok(e.value.clone());
+            }
+        }
+        let cik = crate::edgar::resolve_cik(&self.symbol).await?;
+        let facts = crate::edgar::company_facts(cik).await?;
+        if self.cache_ttl.is_some() {
+            let mut c = self.edgar_facts_cache.write().await;
+            *c = Some(CacheEntry::new(facts.clone()));
+        }
+        Ok(facts)
+    }
+
     #[cfg(feature = "indicators")]
+    /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(
         &self,
         indicator: crate::indicators::Indicator,
         interval: Interval,
         range: TimeRange,
     ) -> Result<crate::indicators::IndicatorResult> {
-        use crate::indicators::{Indicator, IndicatorResult};
-
-        // Fetch chart data
         let chart = self.chart(interval, range).await?;
-
-        // Calculate the requested indicator
-        // Note: Price vectors are extracted lazily within each arm to avoid waste
-        let result = match indicator {
-            Indicator::Sma(period) => IndicatorResult::Series(chart.sma(period)),
-            Indicator::Ema(period) => IndicatorResult::Series(chart.ema(period)),
-            Indicator::Rsi(period) => IndicatorResult::Series(chart.rsi(period)?),
+        use crate::indicators::{Indicator, IndicatorResult};
+        Ok(match indicator {
+            Indicator::Sma(p) => IndicatorResult::Series(chart.sma(p)),
+            Indicator::Ema(p) => IndicatorResult::Series(chart.ema(p)),
+            Indicator::Rsi(p) => IndicatorResult::Series(chart.rsi(p)?),
             Indicator::Macd { fast, slow, signal } => {
                 IndicatorResult::Macd(chart.macd(fast, slow, signal)?)
             }
             Indicator::Bollinger { period, std_dev } => {
                 IndicatorResult::Bollinger(chart.bollinger_bands(period, std_dev)?)
             }
-            Indicator::Atr(period) => IndicatorResult::Series(chart.atr(period)?),
-            Indicator::Obv => {
-                let closes = chart.close_prices();
-                let volumes = chart.volumes();
-                IndicatorResult::Series(crate::indicators::obv(&closes, &volumes)?)
-            }
+            Indicator::Atr(p) => IndicatorResult::Series(chart.atr(p)?),
             Indicator::Vwap => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                let volumes = chart.volumes();
-                IndicatorResult::Series(crate::indicators::vwap(&highs, &lows, &closes, &volumes)?)
+                let (h, l, c, v) = (
+                    chart.high_prices(),
+                    chart.low_prices(),
+                    chart.close_prices(),
+                    chart.volumes(),
+                );
+                IndicatorResult::Series(crate::indicators::vwap(&h, &l, &c, &v)?)
             }
-            Indicator::Wma(period) => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::wma(&closes, period)?)
+            Indicator::Wma(p) => {
+                IndicatorResult::Series(crate::indicators::wma(&chart.close_prices(), p)?)
             }
-            Indicator::Dema(period) => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::dema(&closes, period)?)
+            Indicator::Obv => IndicatorResult::Series(crate::indicators::obv(
+                &chart.close_prices(),
+                &chart.volumes(),
+            )?),
+            _ => {
+                return Err(FinanceError::NotSupported {
+                    provider: "ticker",
+                    operation: "indicator",
+                });
             }
-            Indicator::Tema(period) => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::tema(&closes, period)?)
-            }
-            Indicator::Hma(period) => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::hma(&closes, period)?)
-            }
-            Indicator::Vwma(period) => {
-                let closes = chart.close_prices();
-                let volumes = chart.volumes();
-                IndicatorResult::Series(crate::indicators::vwma(&closes, &volumes, period)?)
-            }
-            Indicator::Alma {
-                period,
-                offset,
-                sigma,
-            } => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::alma(&closes, period, offset, sigma)?)
-            }
-            Indicator::McginleyDynamic(period) => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::mcginley_dynamic(&closes, period)?)
-            }
-            Indicator::Stochastic {
-                k_period,
-                k_slow,
-                d_period,
-            } => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Stochastic(crate::indicators::stochastic(
-                    &highs, &lows, &closes, k_period, k_slow, d_period,
-                )?)
-            }
-            Indicator::StochasticRsi {
-                rsi_period,
-                stoch_period,
-                k_period,
-                d_period,
-            } => {
-                let closes = chart.close_prices();
-                IndicatorResult::Stochastic(crate::indicators::stochastic_rsi(
-                    &closes,
-                    rsi_period,
-                    stoch_period,
-                    k_period,
-                    d_period,
-                )?)
-            }
-            Indicator::Cci(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::cci(&highs, &lows, &closes, period)?)
-            }
-            Indicator::WilliamsR(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::williams_r(
-                    &highs, &lows, &closes, period,
-                )?)
-            }
-            Indicator::Roc(period) => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::roc(&closes, period)?)
-            }
-            Indicator::Momentum(period) => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::momentum(&closes, period)?)
-            }
-            Indicator::Cmo(period) => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::cmo(&closes, period)?)
-            }
-            Indicator::AwesomeOscillator { fast, slow } => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                IndicatorResult::Series(crate::indicators::awesome_oscillator(
-                    &highs, &lows, fast, slow,
-                )?)
-            }
-            Indicator::CoppockCurve {
-                wma_period,
-                long_roc,
-                short_roc,
-            } => {
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::coppock_curve(
-                    &closes, long_roc, short_roc, wma_period,
-                )?)
-            }
-            Indicator::Adx(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::adx(&highs, &lows, &closes, period)?)
-            }
-            Indicator::Aroon(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                IndicatorResult::Aroon(crate::indicators::aroon(&highs, &lows, period)?)
-            }
-            Indicator::Supertrend { period, multiplier } => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::SuperTrend(crate::indicators::supertrend(
-                    &highs, &lows, &closes, period, multiplier,
-                )?)
-            }
-            Indicator::Ichimoku {
-                conversion,
-                base,
-                lagging,
-                displacement,
-            } => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Ichimoku(crate::indicators::ichimoku(
-                    &highs,
-                    &lows,
-                    &closes,
-                    conversion,
-                    base,
-                    lagging,
-                    displacement,
-                )?)
-            }
-            Indicator::ParabolicSar { step, max } => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::parabolic_sar(
-                    &highs, &lows, &closes, step, max,
-                )?)
-            }
-            Indicator::BullBearPower(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::BullBearPower(crate::indicators::bull_bear_power(
-                    &highs, &lows, &closes, period,
-                )?)
-            }
-            Indicator::ElderRay(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::ElderRay(crate::indicators::elder_ray(
-                    &highs, &lows, &closes, period,
-                )?)
-            }
-            Indicator::KeltnerChannels {
-                period,
-                multiplier,
-                atr_period,
-            } => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Keltner(crate::indicators::keltner_channels(
-                    &highs, &lows, &closes, period, atr_period, multiplier,
-                )?)
-            }
-            Indicator::DonchianChannels(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                IndicatorResult::Donchian(crate::indicators::donchian_channels(
-                    &highs, &lows, period,
-                )?)
-            }
-            Indicator::TrueRange => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::true_range(&highs, &lows, &closes)?)
-            }
-            Indicator::ChoppinessIndex(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::choppiness_index(
-                    &highs, &lows, &closes, period,
-                )?)
-            }
-            Indicator::Mfi(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                let volumes = chart.volumes();
-                IndicatorResult::Series(crate::indicators::mfi(
-                    &highs, &lows, &closes, &volumes, period,
-                )?)
-            }
-            Indicator::Cmf(period) => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                let volumes = chart.volumes();
-                IndicatorResult::Series(crate::indicators::cmf(
-                    &highs, &lows, &closes, &volumes, period,
-                )?)
-            }
-            Indicator::ChaikinOscillator => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                let volumes = chart.volumes();
-                IndicatorResult::Series(crate::indicators::chaikin_oscillator(
-                    &highs, &lows, &closes, &volumes,
-                )?)
-            }
-            Indicator::AccumulationDistribution => {
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                let volumes = chart.volumes();
-                IndicatorResult::Series(crate::indicators::accumulation_distribution(
-                    &highs, &lows, &closes, &volumes,
-                )?)
-            }
-            Indicator::BalanceOfPower(period) => {
-                let opens = chart.open_prices();
-                let highs = chart.high_prices();
-                let lows = chart.low_prices();
-                let closes = chart.close_prices();
-                IndicatorResult::Series(crate::indicators::balance_of_power(
-                    &opens, &highs, &lows, &closes, period,
-                )?)
-            }
-        };
-
-        Ok(result)
+        })
     }
 
-    /// Get analyst recommendations
-    pub async fn recommendations(&self, limit: u32) -> Result<Recommendation> {
-        // Check cache (always fetches max from server, truncated to limit on return)
-        {
-            let cache = self.recommendations_cache.read().await;
-            if let Some(entry) = cache.as_ref()
-                && self.is_cache_fresh(Some(entry))
-            {
-                return Ok(self.build_recommendation_with_limit(&entry.value, limit));
-            }
-        }
-
-        // Always fetch server maximum (no limit restriction to maximize cache utility)
-        let json = self.client.get_recommendations(&self.symbol, 15).await?;
-        let response = RecommendationResponse::from_json(json).map_err(|e| {
-            crate::error::FinanceError::ResponseStructureError {
-                field: "finance".to_string(),
-                context: e.to_string(),
-            }
-        })?;
-
-        // Cache full response, return truncated result
-        if self.cache_ttl.is_some() {
-            let mut cache = self.recommendations_cache.write().await;
-            *cache = Some(CacheEntry::new(response));
-            let entry = cache.as_ref().expect("just inserted");
-            return Ok(self.build_recommendation_with_limit(&entry.value, limit));
-        }
-
-        Ok(self.build_recommendation_with_limit(&response, limit))
-    }
-
-    /// Get financial statements
-    ///
-    /// # Arguments
-    ///
-    /// * `statement_type` - Type of statement (Income, Balance, CashFlow)
-    /// * `frequency` - Annual or Quarterly
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::{Ticker, Frequency, StatementType};
-    ///
-    /// let ticker = Ticker::new("AAPL").await?;
-    /// let income = ticker.financials(StatementType::Income, Frequency::Annual).await?;
-    /// println!("Revenue: {:?}", income.statement.get("TotalRevenue"));
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn financials(
-        &self,
-        statement_type: crate::constants::StatementType,
-        frequency: crate::constants::Frequency,
-    ) -> Result<FinancialStatement> {
-        let cache_key = (statement_type, frequency);
-
-        // Check cache
-        {
-            let cache = self.financials_cache.read().await;
-            if let Some(entry) = cache.get(&cache_key)
-                && self.is_cache_fresh(Some(entry))
-            {
-                return Ok(entry.value.clone());
-            }
-        }
-
-        // Fetch financials
-        let financials = self
-            .client
-            .get_financials(&self.symbol, statement_type, frequency)
-            .await?;
-
-        // Only clone when caching is enabled
-        if self.cache_ttl.is_some() {
-            let mut cache = self.financials_cache.write().await;
-            self.cache_insert(&mut cache, cache_key, financials.clone());
-            Ok(financials)
-        } else {
-            Ok(financials)
-        }
-    }
-
-    /// Get news articles for this symbol
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::Ticker;
-    ///
-    /// let ticker = Ticker::new("AAPL").await?;
-    /// let news = ticker.news().await?;
-    /// for article in news {
-    ///     println!("{}: {}", article.source, article.title);
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn news(&self) -> Result<Vec<crate::models::news::News>> {
-        // Check cache
-        {
-            let cache = self.news_cache.read().await;
-            if let Some(entry) = cache.as_ref()
-                && self.is_cache_fresh(Some(entry))
-            {
-                return Ok(entry.value.clone());
-            }
-        }
-
-        // Fetch news
-        let news = crate::scrapers::stockanalysis::scrape_symbol_news(&self.symbol).await?;
-
-        // Only clone when caching is enabled
-        if self.cache_ttl.is_some() {
-            let mut cache = self.news_cache.write().await;
-            *cache = Some(CacheEntry::new(news.clone()));
-            Ok(news)
-        } else {
-            Ok(news)
-        }
-    }
-
-    /// Get options chain
-    pub async fn options(&self, date: Option<i64>) -> Result<Options> {
-        // Check cache
-        {
-            let cache = self.options_cache.read().await;
-            if let Some(entry) = cache.get(&date)
-                && self.is_cache_fresh(Some(entry))
-            {
-                return Ok(entry.value.clone());
-            }
-        }
-
-        // Fetch options
-        let json = self.client.get_options(&self.symbol, date).await?;
-        let options: Options = serde_json::from_value(json).map_err(|e| {
-            crate::error::FinanceError::ResponseStructureError {
-                field: "options".to_string(),
-                context: e.to_string(),
-            }
-        })?;
-
-        // Only clone when caching is enabled
-        if self.cache_ttl.is_some() {
-            let mut cache = self.options_cache.write().await;
-            self.cache_insert(&mut cache, date, options.clone());
-            Ok(options)
-        } else {
-            Ok(options)
-        }
-    }
-
-    /// Run a backtest with the given strategy and configuration.
-    ///
-    /// # Arguments
-    ///
-    /// * `strategy` - Trading strategy implementing the Strategy trait
-    /// * `interval` - Candle interval (1d, 1h, etc.)
-    /// * `range` - Time range for historical data
-    /// * `config` - Backtest configuration (optional, uses defaults if None)
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::{Ticker, Interval, TimeRange};
-    /// use finance_query::backtesting::{SmaCrossover, BacktestConfig};
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let ticker = Ticker::new("AAPL").await?;
-    ///
-    /// // Simple backtest with defaults
-    /// let strategy = SmaCrossover::new(10, 20);
-    /// let result = ticker.backtest(
-    ///     strategy,
-    ///     Interval::OneDay,
-    ///     TimeRange::OneYear,
-    ///     None,
-    /// ).await?;
-    ///
-    /// println!("{}", result.summary());
-    /// println!("Total trades: {}", result.trades.len());
-    ///
-    /// // With custom config
-    /// let config = BacktestConfig::builder()
-    ///     .initial_capital(50_000.0)
-    ///     .commission_pct(0.001)
-    ///     .stop_loss_pct(0.05)
-    ///     .allow_short(true)
-    ///     .build()?;
-    ///
-    /// let result = ticker.backtest(
-    ///     SmaCrossover::new(5, 20),
-    ///     Interval::OneDay,
-    ///     TimeRange::TwoYears,
-    ///     Some(config),
-    /// ).await?;
-    /// # Ok(())
-    /// # }
-    /// ```
     #[cfg(feature = "backtesting")]
+    /// Run a backtest with the given strategy and configuration.
     pub async fn backtest<S: crate::backtesting::Strategy>(
         &self,
         strategy: S,
@@ -1649,41 +680,23 @@ impl Ticker {
         range: TimeRange,
         config: Option<crate::backtesting::BacktestConfig>,
     ) -> crate::backtesting::Result<crate::backtesting::BacktestResult> {
-        use crate::backtesting::BacktestEngine;
-
         let config = config.unwrap_or_default();
         config.validate()?;
-
-        // Fetch chart data — also populates the events cache used by dividends()
         let chart = self
             .chart(interval, range)
             .await
             .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
-
-        // Fetch dividends from the events cache (no extra network request after chart())
         let dividends = self.dividends(range).await.unwrap_or_default();
-
-        // Run backtest engine with dividend data
-        let engine = BacktestEngine::new(config);
-        engine.run_with_dividends(&self.symbol, &chart.candles, strategy, &dividends)
+        crate::backtesting::BacktestEngine::new(config).run_with_dividends(
+            &self.symbol,
+            &chart.candles,
+            strategy,
+            &dividends,
+        )
     }
 
-    /// Run a backtest and compare performance against a benchmark symbol.
-    ///
-    /// Fetches both the symbol chart and the benchmark chart concurrently, then
-    /// runs the backtest and populates [`BacktestResult::benchmark`] with
-    /// comparison metrics (alpha, beta, information ratio, buy-and-hold return).
-    ///
-    /// Requires the **`backtesting`** feature flag.
-    ///
-    /// # Arguments
-    ///
-    /// * `strategy` - The strategy to backtest
-    /// * `interval` - Candle interval
-    /// * `range` - Historical range
-    /// * `config` - Optional backtest configuration (uses defaults if `None`)
-    /// * `benchmark` - Symbol to use as benchmark (e.g. `"SPY"`)
     #[cfg(feature = "backtesting")]
+    /// Run a backtest and compare performance against a benchmark symbol.
     pub async fn backtest_with_benchmark<S: crate::backtesting::Strategy>(
         &self,
         strategy: S,
@@ -1692,27 +705,18 @@ impl Ticker {
         config: Option<crate::backtesting::BacktestConfig>,
         benchmark: &str,
     ) -> crate::backtesting::Result<crate::backtesting::BacktestResult> {
-        use crate::backtesting::BacktestEngine;
-
         let config = config.unwrap_or_default();
         config.validate()?;
-
-        // Fetch the symbol chart and benchmark chart concurrently
-        let benchmark_ticker = crate::Ticker::new(benchmark)
+        let bench_ticker = Ticker::new(benchmark)
             .await
             .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
-
         let (chart, bench_chart) = tokio::try_join!(
             self.chart(interval, range),
-            benchmark_ticker.chart(interval, range),
+            bench_ticker.chart(interval, range)
         )
         .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
-
-        // Fetch dividends from events cache (no extra network request after chart())
         let dividends = self.dividends(range).await.unwrap_or_default();
-
-        let engine = BacktestEngine::new(config);
-        engine.run_with_benchmark(
+        crate::backtesting::BacktestEngine::new(config).run_with_benchmark(
             &self.symbol,
             &chart.candles,
             strategy,
@@ -1722,43 +726,8 @@ impl Ticker {
         )
     }
 
-    // ========================================================================
-    // Risk Analytics
-    // ========================================================================
-
-    /// Compute a risk summary for this symbol.
-    ///
-    /// Requires the **`risk`** feature flag.
-    ///
-    /// Calculates Value at Risk, Sharpe/Sortino/Calmar ratios, and maximum drawdown
-    /// from close-to-close returns derived from the requested chart data.
-    ///
-    /// # Arguments
-    ///
-    /// * `interval` - Candle interval (use `Interval::OneDay` for daily risk metrics)
-    /// * `range` - Historical range to analyse
-    /// * `benchmark` - Optional symbol to use as the benchmark for beta calculation
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::{Ticker, Interval, TimeRange};
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let ticker = Ticker::new("AAPL").await?;
-    ///
-    /// // Risk vs no benchmark
-    /// let summary = ticker.risk(Interval::OneDay, TimeRange::OneYear, None).await?;
-    /// println!("VaR 95%:      {:.2}%", summary.var_95 * 100.0);
-    /// println!("Max drawdown: {:.2}%", summary.max_drawdown * 100.0);
-    ///
-    /// // Risk with S&P 500 as benchmark
-    /// let summary = ticker.risk(Interval::OneDay, TimeRange::OneYear, Some("^GSPC")).await?;
-    /// println!("Beta: {:?}", summary.beta);
-    /// # Ok(())
-    /// # }
-    /// ```
     #[cfg(feature = "risk")]
+    /// Compute a risk summary for this symbol.
     pub async fn risk(
         &self,
         interval: Interval,
@@ -1766,245 +735,74 @@ impl Ticker {
         benchmark: Option<&str>,
     ) -> Result<crate::risk::RiskSummary> {
         let chart = self.chart(interval, range).await?;
-
-        let benchmark_returns = if let Some(sym) = benchmark {
-            let bench_ticker = Ticker::new(sym).await?;
-            let bench_chart = bench_ticker.chart(interval, range).await?;
-            Some(crate::risk::candles_to_returns(&bench_chart.candles))
+        let bench_returns = if let Some(sym) = benchmark {
+            let bt = Ticker::new(sym).await?;
+            Some(crate::risk::candles_to_returns(
+                &bt.chart(interval, range).await?.candles,
+            ))
         } else {
             None
         };
-
         Ok(crate::risk::compute_risk_summary(
             &chart.candles,
-            benchmark_returns.as_deref(),
+            bench_returns.as_deref(),
         ))
     }
 
-    // ========================================================================
-    // SEC EDGAR
-    // ========================================================================
-
-    /// Get SEC EDGAR filing history for this symbol.
-    ///
-    /// Returns company metadata and recent filings. Results are cached for
-    /// the lifetime of this `Ticker` instance.
-    ///
-    /// Requires EDGAR to be initialized via `edgar::init(email)`.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::{Ticker, edgar};
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// edgar::init("user@example.com")?;
-    /// let ticker = Ticker::new("AAPL").await?;
-    ///
-    /// let submissions = ticker.edgar_submissions().await?;
-    /// println!("Company: {:?}", submissions.name);
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn edgar_submissions(&self) -> Result<crate::models::edgar::EdgarSubmissions> {
-        // Check cache
+    async fn ensure_quote_summary(
+        &self,
+    ) -> Result<tokio::sync::RwLockReadGuard<'_, Option<CacheEntry<QuoteSummaryResponse>>>> {
         {
-            let cache = self.edgar_submissions_cache.read().await;
-            if let Some(entry) = cache.as_ref()
-                && self.is_cache_fresh(Some(entry))
-            {
-                return Ok(entry.value.clone());
+            let cache = self.quote_cache.read().await;
+            if self.is_cache_fresh(cache.as_ref()) {
+                return Ok(cache);
             }
         }
-
-        // Fetch using singleton
-        let cik = crate::edgar::resolve_cik(&self.symbol).await?;
-        let submissions = crate::edgar::submissions(cik).await?;
-
-        // Only clone when caching is enabled
-        if self.cache_ttl.is_some() {
-            let mut cache = self.edgar_submissions_cache.write().await;
-            *cache = Some(CacheEntry::new(submissions.clone()));
-            Ok(submissions)
-        } else {
-            Ok(submissions)
-        }
-    }
-
-    /// Get SEC EDGAR company facts (structured XBRL financial data) for this symbol.
-    ///
-    /// Returns all extracted XBRL facts organized by taxonomy. Results are cached
-    /// for the lifetime of this `Ticker` instance.
-    ///
-    /// Requires EDGAR to be initialized via `edgar::init(email)`.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::{Ticker, edgar};
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// edgar::init("user@example.com")?;
-    /// let ticker = Ticker::new("AAPL").await?;
-    ///
-    /// let facts = ticker.edgar_company_facts().await?;
-    /// if let Some(revenue) = facts.get_us_gaap_fact("Revenue") {
-    ///     println!("Revenue data points: {:?}", revenue.units.keys().collect::<Vec<_>>());
-    /// }
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn edgar_company_facts(&self) -> Result<crate::models::edgar::CompanyFacts> {
-        // Check cache
+        let _guard = self.quote_fetch.lock().await;
         {
-            let cache = self.edgar_facts_cache.read().await;
-            if let Some(entry) = cache.as_ref()
-                && self.is_cache_fresh(Some(entry))
-            {
-                return Ok(entry.value.clone());
+            let cache = self.quote_cache.read().await;
+            if self.is_cache_fresh(cache.as_ref()) {
+                return Ok(cache);
             }
         }
-
-        // Fetch using singleton
-        let cik = crate::edgar::resolve_cik(&self.symbol).await?;
-        let facts = crate::edgar::company_facts(cik).await?;
-
-        // Only clone when caching is enabled
-        if self.cache_ttl.is_some() {
-            let mut cache = self.edgar_facts_cache.write().await;
-            *cache = Some(CacheEntry::new(facts.clone()));
-            Ok(facts)
-        } else {
-            Ok(facts)
+        let yahoo = self.providers.first_yahoo()?;
+        let resp = yahoo.request_with_crumb(&self.quote_summary_url()).await?;
+        let json = resp.json::<serde_json::Value>().await?;
+        let summary = QuoteSummaryResponse::from_json(json, &self.symbol)?;
+        {
+            let mut cache = self.quote_cache.write().await;
+            *cache = Some(CacheEntry::new(summary));
         }
+        Ok(self.quote_cache.read().await)
     }
+}
 
-    // ========================================================================
-    // Cache Management
-    // ========================================================================
-
-    /// Clear all cached data, forcing fresh fetches on next access.
-    ///
-    /// Use this when you need up-to-date data from a long-lived `Ticker` instance.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// use finance_query::Ticker;
-    ///
-    /// let ticker = Ticker::new("AAPL").await?;
-    /// let quote = ticker.quote().await?; // fetches from API
-    ///
-    /// // ... some time later ...
-    /// ticker.clear_cache().await;
-    /// let fresh_quote = ticker.quote().await?; // fetches again
-    /// # Ok(())
-    /// # }
-    /// ```
-    pub async fn clear_cache(&self) {
-        // Acquire all independent write locks in parallel
-        tokio::join!(
-            async {
-                *self.quote_summary.write().await = None;
-            },
-            async {
-                self.chart_cache.write().await.clear();
-            },
-            async {
-                *self.events_cache.write().await = None;
-            },
-            async {
-                *self.recommendations_cache.write().await = None;
-            },
-            async {
-                *self.news_cache.write().await = None;
-            },
-            async {
-                self.options_cache.write().await.clear();
-            },
-            async {
-                self.financials_cache.write().await.clear();
-            },
-            async {
-                *self.edgar_submissions_cache.write().await = None;
-            },
-            async {
-                *self.edgar_facts_cache.write().await = None;
-            },
-            async {
-                #[cfg(feature = "indicators")]
-                self.indicators_cache.write().await.clear();
-            },
-        );
-    }
-
-    /// Clear only the cached quote summary data.
-    ///
-    /// The next call to any quote accessor (e.g., `price()`, `financial_data()`)
-    /// will re-fetch all quote modules from the API.
-    pub async fn clear_quote_cache(&self) {
-        *self.quote_summary.write().await = None;
-    }
-
-    /// Clear only the cached chart and events data.
-    ///
-    /// The next call to `chart()`, `dividends()`, `splits()`, or `capital_gains()`
-    /// will re-fetch from the API.
-    pub async fn clear_chart_cache(&self) {
-        tokio::join!(
-            async {
-                self.chart_cache.write().await.clear();
-            },
-            async {
-                *self.events_cache.write().await = None;
-            },
-            async {
-                #[cfg(feature = "indicators")]
-                self.indicators_cache.write().await.clear();
-            }
-        );
-    }
-
-    /// Polygon.io adapter handle scoped to this ticker.
-    ///
-    /// Requires [`crate::adapters::polygon::init`] to have been called once
-    /// before any handle method is invoked. Methods return Polygon-native
-    /// types — no translation or fallback.
-    ///
-    /// # Example
-    ///
-    /// ```no_run
-    /// use finance_query::Ticker;
-    /// use finance_query::adapters::polygon;
-    ///
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// polygon::init("YOUR_KEY")?;
-    /// let aapl = Ticker::new("AAPL").await?;
-    /// let snap = aapl.polygon().snapshot().await?;
-    /// # Ok(())
-    /// # }
-    /// ```
-    #[cfg(feature = "polygon")]
-    pub fn polygon(&self) -> crate::ticker::PolygonHandle {
-        crate::ticker::PolygonHandle::new(std::sync::Arc::clone(&self.symbol))
-    }
-
-    /// Financial Modeling Prep (FMP) adapter handle scoped to this ticker.
-    ///
-    /// Requires [`crate::adapters::fmp::init`] to have been called once
-    /// before any handle method is invoked.
-    #[cfg(feature = "fmp")]
-    pub fn fmp(&self) -> crate::ticker::FmpHandle {
-        crate::ticker::FmpHandle::new(std::sync::Arc::clone(&self.symbol))
-    }
-
-    /// Alpha Vantage adapter handle scoped to this ticker.
-    ///
-    /// Requires [`crate::adapters::alphavantage::init`] to have been called
-    /// once before any handle method is invoked.
-    #[cfg(feature = "alphavantage")]
-    pub fn alphavantage(&self) -> crate::ticker::AlphaVantageHandle {
-        crate::ticker::AlphaVantageHandle::new(std::sync::Arc::clone(&self.symbol))
-    }
+super::macros::define_quote_accessors! {
+    price -> Price, price,
+    summary_detail -> SummaryDetail, summary_detail,
+    financial_data -> FinancialData, financial_data,
+    key_stats -> DefaultKeyStatistics, default_key_statistics,
+    asset_profile -> AssetProfile, asset_profile,
+    calendar_events -> CalendarEvents, calendar_events,
+    earnings -> Earnings, earnings,
+    earnings_trend -> EarningsTrend, earnings_trend,
+    earnings_history -> EarningsHistory, earnings_history,
+    recommendation_trend -> RecommendationTrend, recommendation_trend,
+    insider_holders -> InsiderHolders, insider_holders,
+    insider_transactions -> InsiderTransactions, insider_transactions,
+    institution_ownership -> InstitutionOwnership, institution_ownership,
+    fund_ownership -> FundOwnership, fund_ownership,
+    major_holders -> MajorHoldersBreakdown, major_holders_breakdown,
+    share_purchase_activity -> NetSharePurchaseActivity, net_share_purchase_activity,
+    quote_type -> QuoteTypeData, quote_type,
+    summary_profile -> SummaryProfile, summary_profile,
+    sec_filings -> SecFilings, sec_filings,
+    grading_history -> UpgradeDowngradeHistory, upgrade_downgrade_history,
+    fund_performance -> FundPerformance, fund_performance,
+    fund_profile -> FundProfile, fund_profile,
+    top_holdings -> TopHoldings, top_holdings,
+    index_trend -> IndexTrend, index_trend,
+    industry_trend -> IndustryTrend, industry_trend,
+    sector_trend -> SectorTrend, sector_trend,
+    equity_performance -> EquityPerformance, equity_performance,
 }
