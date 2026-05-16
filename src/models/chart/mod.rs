@@ -10,6 +10,8 @@ pub(crate) mod indicators;
 mod meta;
 pub(crate) mod response;
 pub(crate) mod result;
+/// Spark / sparkline submodule.
+pub mod spark;
 
 pub use candle::Candle;
 pub use data::Chart;

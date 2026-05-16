@@ -2,6 +2,7 @@
 ///
 /// Contains the fully typed Chart structure for historical data.
 use super::{Candle, ChartMeta};
+use crate::Provider;
 use crate::constants::{Interval, TimeRange};
 use serde::{Deserialize, Serialize};
 
@@ -31,6 +32,10 @@ pub struct Chart {
     /// Time range used (e.g., `TimeRange::OneYear`)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub range: Option<TimeRange>,
+
+    /// Which data provider served this data (e.g., "yahoo", "polygon").
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub provider_id: Option<Provider>,
 }
 
 #[cfg(feature = "dataframe")]

@@ -1,45 +1,51 @@
-//! Data models for Yahoo Finance responses.
+//! Data models for finance-query responses.
 //!
-//! This module contains all the data structures returned by the library's API methods.
-//! Types are organized by category (chart, quote, options, etc.).
+//! This module contains all the data structures returned by the library's API
+//! methods. Types are organized by capability. Yahoo-backed capabilities
+//! compile unconditionally; provider-specific capabilities are gated behind
+//! the corresponding feature flag.
 
-/// Chart/historical data models.
+// ── Capability directories ──────────────────────────────────────────────────
+
+// Yahoo-backed (always available)
+/// Chart/historical data models, including spark sparklines.
 pub mod chart;
-/// Currency models.
-pub mod currencies;
-/// SEC EDGAR data models for filing history, XBRL financial data, and full-text search.
-pub mod edgar;
-/// Exchange models for supported markets.
-pub mod exchanges;
-/// Financials (fundamentals-timeseries) models.
-pub mod financials;
-/// Market hours models.
-pub mod hours;
-/// Industry models for market industry data.
-pub mod industries;
-/// Lookup models for type-filtered symbol discovery.
-pub mod lookup;
-/// Market summary models.
-pub mod market_summary;
-/// News models.
-pub mod news;
-/// Options models.
+/// Corporate data: profiles, officers, ownership, news, transcripts, recommendations.
+pub mod corporate;
+/// Discovery: search, lookup, screeners, trending.
+pub mod discovery;
+/// SEC EDGAR filing data models.
+pub mod filings;
+/// Fundamental financial statement models (income, balance sheet, cash flow).
+pub mod fundamentals;
+/// Market-level data: summary, sectors, industries, hours, currencies, exchanges.
+pub mod market;
+/// Options contract models.
 pub mod options;
 /// Quote models for detailed stock information.
 pub mod quote;
-/// Recommendation models.
-pub mod recommendation;
-/// Screener models for predefined Yahoo Finance screeners.
-pub mod screeners;
-/// Search models.
-pub mod search;
-/// Sector models for market sector data.
-pub mod sectors;
 /// Market sentiment models (Fear & Greed Index).
 pub mod sentiment;
-/// Spark models for batch sparkline data.
-pub mod spark;
-/// Earnings call transcript models.
-pub mod transcript;
-/// Trending tickers models.
-pub mod trending;
+
+// Provider-specific (gated on the provider feature that supplies them)
+/// Commodities market data (gold, silver, oil, etc.) — FMP / Alpha Vantage.
+#[cfg(any(feature = "fmp", feature = "alphavantage"))]
+pub mod commodities;
+/// Cryptocurrency market data — CoinGecko.
+#[cfg(feature = "crypto")]
+pub mod crypto;
+/// Macro-economic data — FRED, US Treasury yields.
+#[cfg(feature = "fred")]
+pub mod economic;
+/// Forex (foreign exchange) data models — Polygon / FMP / Alpha Vantage.
+#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+pub mod forex;
+/// Futures market data models — Polygon.
+#[cfg(feature = "polygon")]
+pub mod futures;
+/// Stock market index data models — Polygon / FMP.
+#[cfg(any(feature = "polygon", feature = "fmp"))]
+pub mod indices;
+/// Technical analysis indicator models (SMA, EMA, RSI, MACD, etc.).
+#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+pub mod technicals;

@@ -2,7 +2,7 @@
 //!
 //! Handles parsing of Yahoo Finance quoteSummary API responses
 
-use crate::error::{Error, Result};
+use crate::error::{FinanceError, Result};
 use crate::models::quote::*;
 use serde_json::Value;
 
@@ -77,7 +77,7 @@ impl QuoteSummaryResponse {
 
         let quote_summary =
             json.get("quoteSummary")
-                .ok_or_else(|| Error::ResponseStructureError {
+                .ok_or_else(|| FinanceError::ResponseStructureError {
                     field: "quoteSummary".to_string(),
                     context: "Missing quoteSummary field".to_string(),
                 })?;
@@ -86,19 +86,19 @@ impl QuoteSummaryResponse {
         if let Some(error) = quote_summary.get("error")
             && !error.is_null()
         {
-            return Err(Error::ApiError(format!("API error: {}", error)));
+            return Err(FinanceError::ApiError(format!("API error: {}", error)));
         }
 
         let result = quote_summary
             .get("result")
             .and_then(|r| r.as_array())
-            .ok_or_else(|| Error::ResponseStructureError {
+            .ok_or_else(|| FinanceError::ResponseStructureError {
                 field: "result".to_string(),
                 context: "Missing or invalid result field".to_string(),
             })?;
 
         if result.is_empty() {
-            return Err(Error::ApiError(format!(
+            return Err(FinanceError::ApiError(format!(
                 "No data found for symbol: {}",
                 symbol
             )));
