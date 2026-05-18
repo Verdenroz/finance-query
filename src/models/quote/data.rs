@@ -14,6 +14,61 @@ use super::{
     UpgradeDowngradeHistory,
 };
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
+// PyModel-generated wrapper types for nested fields. These are emitted in the
+// same modules as their inner types; we import them here so that PyQuote's
+// getters (which call them by their unqualified name) resolve.
+#[cfg(feature = "python")]
+use super::asset_profile::PyCompanyOfficer;
+#[cfg(feature = "python")]
+use super::balance_sheet_history::{PyBalanceSheetHistory, PyBalanceSheetHistoryQuarterly};
+#[cfg(feature = "python")]
+use super::calendar_events::PyCalendarEvents;
+#[cfg(feature = "python")]
+use super::cashflow_statement_history::{
+    PyCashflowStatementHistory, PyCashflowStatementHistoryQuarterly,
+};
+#[cfg(feature = "python")]
+use super::earnings::PyEarnings;
+#[cfg(feature = "python")]
+use super::earnings_history::PyEarningsHistory;
+#[cfg(feature = "python")]
+use super::earnings_trend::PyEarningsTrend;
+#[cfg(feature = "python")]
+use super::equity_performance::PyEquityPerformance;
+#[cfg(feature = "python")]
+use super::fund_ownership::PyFundOwnership;
+#[cfg(feature = "python")]
+use super::fund_performance::PyFundPerformance;
+#[cfg(feature = "python")]
+use super::fund_profile::PyFundProfile;
+#[cfg(feature = "python")]
+use super::income_statement_history::{
+    PyIncomeStatementHistory, PyIncomeStatementHistoryQuarterly,
+};
+#[cfg(feature = "python")]
+use super::index_trend::{PyIndexTrend, PyIndustryTrend, PySectorTrend};
+#[cfg(feature = "python")]
+use super::insider_holders::PyInsiderHolders;
+#[cfg(feature = "python")]
+use super::insider_transactions::PyInsiderTransactions;
+#[cfg(feature = "python")]
+use super::institution_ownership::PyInstitutionOwnership;
+#[cfg(feature = "python")]
+use super::major_holders_breakdown::PyMajorHoldersBreakdown;
+#[cfg(feature = "python")]
+use super::net_share_purchase_activity::PyNetSharePurchaseActivity;
+#[cfg(feature = "python")]
+use super::recommendation_trend::PyRecommendationTrend;
+#[cfg(feature = "python")]
+use super::sec_filings::PySecFilings;
+#[cfg(feature = "python")]
+use super::top_holdings::PyTopHoldings;
+#[cfg(feature = "python")]
+use super::upgrade_downgrade_history::PyUpgradeDowngradeHistory;
+
 /// Flattened quote data with deduplicated fields
 ///
 /// This is the primary data structure for stock quotes. It flattens scalar fields
@@ -50,6 +105,7 @@ use super::{
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct Quote {

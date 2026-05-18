@@ -8,4 +8,6 @@ pub(crate) mod result;
 mod symbol;
 
 pub use data::Recommendation;
+#[cfg(feature = "python")]
+pub use data::PyRecommendation;
 pub use symbol::SimilarSymbol;

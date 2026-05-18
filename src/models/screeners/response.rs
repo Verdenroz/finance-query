@@ -1,6 +1,11 @@
 use super::quote::ScreenerQuote;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+#[cfg(feature = "python")]
+use super::quote::PyScreenerQuote;
+
 /// Raw response structure from Yahoo Finance screener API (predefined screeners)
 ///
 /// This matches Yahoo's nested response format with finance.result[] wrapper.
@@ -68,6 +73,7 @@ struct RawCustomResult {
 ///
 /// This removes Yahoo Finance's nested wrapper structure and internal metadata.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenerResults {
     /// Array of quotes matching the screener criteria

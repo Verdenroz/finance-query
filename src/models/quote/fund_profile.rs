@@ -2,8 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use super::FormattedValue;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Fund profile information including management, fees, and expenses
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct FundProfile {
     /// Maximum age of the data in seconds
@@ -45,6 +49,7 @@ pub struct FundProfile {
 
 /// Fund management information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct ManagementInfo {
     /// Name of the fund manager
@@ -58,6 +63,7 @@ pub struct ManagementInfo {
 
 /// Fees and expenses for a fund
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct FeesExpenses {
     /// Annual expense ratio from the latest report
@@ -79,6 +85,7 @@ pub struct FeesExpenses {
 
 /// Average fees and expenses for funds in the same category
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct FeesExpensesCat {
     /// Category average annual expense ratio

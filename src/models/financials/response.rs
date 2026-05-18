@@ -7,6 +7,9 @@ use crate::error::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Raw response structure from Yahoo Finance fundamentals-timeseries API
 #[derive(Debug, Clone, Deserialize)]
 struct RawTimeseriesResponse {
@@ -50,6 +53,7 @@ struct RawMeta {
 ///
 /// This matches the Python finance-query API response format.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct FinancialStatement {
     /// Stock symbol

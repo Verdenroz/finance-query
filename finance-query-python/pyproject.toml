@@ -1,0 +1,52 @@
+[build-system]
+requires = ["maturin>=1.7"]
+build-backend = "maturin"
+
+[project]
+name = "finance-query-py"
+version = "2.5.1"
+description = "Python bindings for finance-query — fast, type-safe financial data"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Harvey Tseng", email = "harveytseng2@gmail.com" }]
+readme = "README.md"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Rust",
+    "Topic :: Office/Business :: Financial",
+    "License :: OSI Approved :: MIT License",
+]
+# polars is required at runtime by `Chart.to_dataframe()` and friends —
+# `pyo3-polars` constructs a `polars.DataFrame` Python object, which fails at
+# call time if polars isn't installed.
+dependencies = ["polars>=0.20"]
+
+[project.optional-dependencies]
+pandas = ["pandas>=2.0", "pyarrow>=14"]
+polars = ["polars>=0.20"]
+all = ["pandas>=2.0", "pyarrow>=14", "polars>=0.20"]
+dev = ["pytest>=8", "pytest-asyncio>=0.23", "nbmake>=1.5", "mypy>=1.8"]
+
+[tool.maturin]
+features = ["pyo3/extension-module"]
+python-source = "."
+module-name = "finance_query._finance_query"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "network: tests that require network access to Yahoo Finance",
+]
+
+[tool.mypy]
+strict = true
+files = ["finance_query"]
+ignore_missing_imports = true
+warn_unused_ignores = false
+disallow_subclassing_any = false

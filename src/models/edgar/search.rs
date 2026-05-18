@@ -5,8 +5,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Full-text search results from SEC EDGAR.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct EdgarSearchResults {
     /// The search query that was executed (Elasticsearch query DSL, stored as raw JSON)
@@ -52,6 +56,7 @@ impl EdgarSearchResults {
 
 /// Container for search hits with metadata.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct EdgarSearchHitsContainer {
     /// Total number of matching results
@@ -69,6 +74,7 @@ pub struct EdgarSearchHitsContainer {
 
 /// Total count information for search results.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct EdgarSearchTotal {
     /// Total number of matching documents
@@ -82,6 +88,7 @@ pub struct EdgarSearchTotal {
 
 /// A single search result hit from EDGAR full-text search (Elasticsearch format).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct EdgarSearchHit {
     /// Elasticsearch index name
@@ -104,6 +111,8 @@ pub struct EdgarSearchHit {
 /// Source data for a search hit containing the actual filing information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[non_exhaustive]
 pub struct EdgarSearchSource {
     /// CIK numbers (as strings)

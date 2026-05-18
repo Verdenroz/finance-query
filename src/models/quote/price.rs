@@ -5,10 +5,14 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Detailed pricing data for a stock
 ///
 /// Includes current price, pre/post market data, volume, market cap, and exchange information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 #[derive(Default)]
 pub struct Price {

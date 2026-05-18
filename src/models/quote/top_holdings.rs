@@ -2,6 +2,9 @@ use serde::{Deserialize, Deserializer, Serialize};
 
 use super::FormattedValue;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Custom deserializer that flattens Yahoo's array of single-sector objects into one struct
 fn deserialize_sector_weightings<'de, D>(
     deserializer: D,
@@ -15,6 +18,7 @@ where
 
 /// Fund holdings including asset allocation, top holdings, and sector weightings
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct TopHoldings {
     /// Maximum age of the data in seconds
@@ -69,6 +73,7 @@ pub struct TopHoldings {
 
 /// Individual holding in the fund
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct Holding {
     /// Stock symbol
@@ -86,6 +91,7 @@ pub struct Holding {
 
 /// Equity holdings valuation metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EquityHoldings {
     /// Price to earnings ratio
@@ -107,6 +113,7 @@ pub struct EquityHoldings {
 
 /// Bond rating distribution
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 pub struct BondRating {
     /// US Government bonds percentage
     #[serde(default)]
@@ -151,6 +158,7 @@ pub struct BondRating {
 
 /// Sector weighting distribution (single sector from Yahoo's array format)
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 pub struct SectorWeighting {
     /// Real estate sector percentage
     #[serde(default, skip_serializing_if = "Option::is_none")]

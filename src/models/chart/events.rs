@@ -6,6 +6,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Chart events containing dividends, splits, and capital gains
 ///
 /// Events are deserialized from HashMaps, then lazily converted to sorted vectors
@@ -72,6 +75,8 @@ pub(crate) struct CapitalGainEvent {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 pub struct Dividend {
     /// Timestamp (Unix)
     pub timestamp: i64,
@@ -85,6 +90,8 @@ pub struct Dividend {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 pub struct Split {
     /// Timestamp (Unix)
     pub timestamp: i64,
@@ -102,6 +109,8 @@ pub struct Split {
 #[non_exhaustive]
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 pub struct CapitalGain {
     /// Timestamp (Unix)
     pub timestamp: i64,

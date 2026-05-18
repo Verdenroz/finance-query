@@ -1,8 +1,12 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Income statement history (annual statements)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct IncomeStatementHistory {
     /// List of annual income statements
@@ -16,6 +20,7 @@ pub struct IncomeStatementHistory {
 
 /// Income statement history (quarterly statements)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct IncomeStatementHistoryQuarterly {
     /// List of quarterly income statements

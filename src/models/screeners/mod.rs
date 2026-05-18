@@ -43,4 +43,9 @@ pub use fields::{EquityField, FundField};
 pub use query::{EquityScreenerQuery, FundScreenerQuery, QuoteType, ScreenerQuery, SortType};
 pub use quote::ScreenerQuote;
 pub use response::ScreenerResults;
+
+#[cfg(feature = "python")]
+pub use quote::PyScreenerQuote;
+#[cfg(feature = "python")]
+pub use response::PyScreenerResults;
 pub use values::{ScreenerFundCategory, ScreenerPeerGroup};

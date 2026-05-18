@@ -208,6 +208,92 @@ pub mod streaming;
 pub use finance_query_derive::ToDataFrame;
 
 // ============================================================================
+// PyO3 bindings support (requires "python" feature)
+// ============================================================================
+// Concrete Py wrappers around the generic `FormattedValue<T>`. PyO3 cannot
+// expose generic types, so we emit one wrapper per concrete instantiation.
+#[cfg(feature = "python")]
+pub use models::quote::formatted_value::{
+    PyFormattedValueF64, PyFormattedValueI64, PyFormattedValueString,
+    PyFormattedValueU64,
+};
+
+// PyModel-generated wrapper for `Quote`. Re-exported so the python-bindings
+// crate (and consumers) can reach it without traversing the private `models`
+// module.
+#[cfg(feature = "python")]
+pub use models::quote::data::PyQuote;
+
+#[cfg(feature = "python")]
+pub use models::chart::PyChart;
+
+#[cfg(feature = "python")]
+pub use models::chart::{PyCapitalGain, PyDividend, PySplit};
+
+#[cfg(feature = "python")]
+pub use models::financials::PyFinancialStatement;
+
+#[cfg(feature = "python")]
+pub use models::news::PyNews;
+
+#[cfg(feature = "python")]
+pub use models::recommendation::PyRecommendation;
+
+#[cfg(feature = "python")]
+pub use models::edgar::PyEdgarSubmissions;
+
+#[cfg(feature = "python")]
+pub use models::sentiment::{PyFearAndGreed, PyFearGreedLabel};
+
+#[cfg(feature = "python")]
+pub use models::search::PySearchQuote;
+
+#[cfg(feature = "python")]
+pub use models::screeners::{PyScreenerQuote, PyScreenerResults};
+
+#[cfg(feature = "python")]
+pub use models::trending::PyTrendingQuote;
+
+#[cfg(feature = "python")]
+pub use models::lookup::{PyLookupQuote, PyLookupResults};
+
+#[cfg(feature = "python")]
+pub use models::market_summary::{PyMarketSummaryQuote, PySparkData};
+
+#[cfg(feature = "python")]
+pub use models::hours::{PyMarketHours, PyMarketTime};
+
+#[cfg(feature = "python")]
+pub use models::sectors::PySectorData;
+
+#[cfg(feature = "python")]
+pub use models::currencies::PyCurrency;
+
+#[cfg(feature = "python")]
+pub use models::industries::PyIndustryData;
+
+#[cfg(feature = "python")]
+pub use models::exchanges::PyExchange;
+
+// Python-facing mirrors of the constants enums. Defined here so the
+// `PyModel` derive macro can resolve `PyInterval` / `PyTimeRange` etc. via
+// `use crate::{...}` from inside model files.
+#[cfg(feature = "python")]
+mod constants_py;
+
+#[cfg(feature = "python")]
+pub use constants_py::{
+    PyExchangeCode, PyFrequency, PyIndustry, PyInterval, PyRegion,
+    PyScreener, PySector, PyStatementType, PyTimeRange, PyValueFormat,
+};
+
+// The `PyModel` derive macro emits absolute paths like `::finance_query::PyFormattedValueF64`.
+// To allow the derive to be used from within this crate itself, expose `finance_query` as
+// an alias for `self` so the absolute path resolves locally.
+#[cfg(feature = "python")]
+extern crate self as finance_query;
+
+// ============================================================================
 // Technical Indicators (requires "indicators" feature)
 // ============================================================================
 // Technical analysis indicators for price data (SMA, EMA, RSI, MACD, Bollinger Bands).
