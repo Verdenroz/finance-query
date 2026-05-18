@@ -172,6 +172,39 @@ make docker-compose  # Starts v1 (port 8002), v2 (port 8001), Redis, and Nginx
 
 The v2 server provides REST endpoints at `/v2/*` and WebSocket streaming at `/v2/stream`.
 
+## Available in Python
+
+A native Python extension is available on PyPI via PyO3 + maturin:
+
+```bash
+pip install finance-query-py
+```
+
+```python
+import asyncio
+from finance_query import Ticker, Interval, TimeRange
+
+async def main():
+    ticker = await Ticker.new("AAPL")
+    quote = await ticker.quote()
+    print(f"{quote.symbol}: {quote.short_name}")
+
+    chart = await ticker.chart(Interval.OneDay, TimeRange.OneMonth)
+    df = chart.to_dataframe()       # polars.DataFrame
+    print(df.head())
+
+asyncio.run(main())
+```
+
+- Async-first API with full type stubs (`mypy --strict` clean).
+- Polars zero-copy DataFrames for tabular returns.
+- Typed exceptions: `NetworkError`, `RateLimitError`, `SymbolNotFound`, `ParseError`, `ConfigError`.
+- Pre-built wheels for Linux (x86_64 + aarch64), macOS (Intel + Apple Silicon), Windows x86_64.
+
+See [`finance-query-python/README.md`](finance-query-python/README.md) for the crate-level
+details and [`docs/migration-from-yfinance.md`](docs/migration-from-yfinance.md) for an
+API-mapping cheat sheet.
+
 ## Documentation
 
 **Package guides:**

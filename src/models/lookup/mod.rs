@@ -8,3 +8,8 @@ mod response;
 
 pub use quote::LookupQuote;
 pub use response::LookupResults;
+
+#[cfg(feature = "python")]
+pub use quote::PyLookupQuote;
+#[cfg(feature = "python")]
+pub use response::PyLookupResults;

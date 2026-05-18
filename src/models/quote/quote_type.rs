@@ -3,6 +3,9 @@
 /// Contains metadata about the symbol including exchange, type, and timezone information.
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Response wrapper for quote type endpoint
 #[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -58,6 +61,7 @@ pub(crate) struct QuoteTypeResult {
 ///
 /// Contains exchange information, company names, timezone data, and other metadata.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct QuoteTypeData {
     /// Exchange code (e.g., "NMS", "NYQ")

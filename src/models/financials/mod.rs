@@ -6,3 +6,5 @@
 mod response;
 
 pub use response::FinancialStatement;
+#[cfg(feature = "python")]
+pub use response::PyFinancialStatement;

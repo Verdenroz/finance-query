@@ -6,6 +6,11 @@ use super::thumbnail::NewsThumbnail;
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+#[cfg(feature = "python")]
+use super::thumbnail::PyNewsThumbnail;
+
 /// A collection of search news with DataFrame support.
 ///
 /// This wrapper allows `search_results.news.to_dataframe()` syntax while still
@@ -54,6 +59,8 @@ impl SearchNewsList {
 /// to a DataFrame. Complex fields (thumbnail, related_tickers) are automatically skipped.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct SearchNews {

@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Insider transaction history
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct InsiderTransactions {
     /// Maximum age of this data in seconds
@@ -19,6 +23,7 @@ pub struct InsiderTransactions {
 
 /// Individual insider transaction
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct InsiderTransaction {
     /// Maximum age of this data in seconds

@@ -5,8 +5,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Equity performance data comparing stock returns to benchmark
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EquityPerformance {
     /// Maximum age of the data in seconds
@@ -28,6 +32,7 @@ pub struct EquityPerformance {
 
 /// Benchmark information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct Benchmark {
     /// Benchmark symbol (e.g., "^GSPC" for S&P 500)
@@ -41,6 +46,8 @@ pub struct Benchmark {
 
 /// Performance metrics across multiple time periods
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(rename = "EquityPerformanceOverview"))]
 #[serde(rename_all = "camelCase")]
 pub struct PerformanceOverview {
     /// Date the performance data is as of (Unix timestamp)

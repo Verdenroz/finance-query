@@ -1,5 +1,5 @@
 [workspace]
-members = ["server", "finance-query-derive", "finance-query-cli", "finance-query-mcp"]
+members = ["server", "finance-query-derive", "finance-query-cli", "finance-query-mcp", "finance-query-python", "tools/record-parity-fixtures"]
 resolver = "2"
 
 [package]
@@ -85,6 +85,11 @@ base64 = "0.22"
 polars = { version = "0.53", optional = true, default-features = false, features = ["lazy"] }
 finance-query-derive = { version = "2.5.1", path = "finance-query-derive", optional = true }
 
+# Optional: PyO3 bindings support for Python wrapper crate
+pyo3 = { version = "0.27", features = ["abi3-py39"], optional = true }
+pyo3-polars = { version = "0.26", optional = true }
+pythonize = { version = "0.27", optional = true }
+
 # Optional: CSV parsing for macro-economic data (Treasury yields)
 csv = { version = "1", optional = true }
 
@@ -116,6 +121,8 @@ polygon = []
 fmp = []
 # Enable standalone risk analytics: VaR, Sharpe/Sortino/Calmar ratios, beta, drawdown
 risk = ["indicators"]
+# Enable PyO3 binding annotations on model types (used by finance-query-python)
+python = ["dep:pyo3", "dep:pyo3-polars", "dep:pythonize", "dep:finance-query-derive", "finance-query-derive/python", "dataframe"]
 
 [package.metadata.docs.rs]
 all-features = true

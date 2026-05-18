@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Earnings data including charts and forecasts
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct Earnings {
     /// Default methodology (e.g., "gaap")
@@ -23,6 +27,7 @@ pub struct Earnings {
 
 /// Earnings chart showing quarterly data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsChart {
     /// Quarterly earnings data
@@ -60,6 +65,7 @@ pub struct EarningsChart {
 
 /// Quarterly earnings entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct QuarterlyEarnings {
     /// Date/quarter identifier
@@ -93,6 +99,7 @@ pub struct QuarterlyEarnings {
 
 /// Financial chart showing revenue and earnings over time
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct FinancialsChart {
     /// Yearly financial data
@@ -106,6 +113,7 @@ pub struct FinancialsChart {
 
 /// Yearly financial data entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct YearlyFinancials {
     /// Date
@@ -123,6 +131,7 @@ pub struct YearlyFinancials {
 
 /// Quarterly financial data entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct QuarterlyFinancials {
     /// Date

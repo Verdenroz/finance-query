@@ -5,10 +5,14 @@ use super::formatted_value::FormattedValue;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Summary detail trading and valuation metrics
 ///
 /// Contains detailed information about price, volume, market cap, and other trading data.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct SummaryDetail {
     /// Algorithm (for crypto/special assets)

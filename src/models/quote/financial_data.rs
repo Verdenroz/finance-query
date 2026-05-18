@@ -4,10 +4,14 @@ use super::formatted_value::FormattedValue;
 /// Contains key financial metrics and ratios for the company.
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Financial data and key metrics
 ///
 /// Contains financial ratios, margins, cash flow, and analyst recommendations.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct FinancialData {
     /// Current stock price

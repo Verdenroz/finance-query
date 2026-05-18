@@ -19,3 +19,7 @@ pub use search::{
 pub use submissions::{
     EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSubmissions,
 };
+#[cfg(feature = "python")]
+pub use submissions::{
+    PyEdgarFiling, PyEdgarFilingFile, PyEdgarFilingRecent, PyEdgarFilings, PyEdgarSubmissions,
+};

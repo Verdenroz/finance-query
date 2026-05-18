@@ -2,8 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use super::FormattedValue;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Calendar events including earnings and dividend dates
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct CalendarEvents {
     /// Maximum age of the data in seconds
@@ -25,6 +29,7 @@ pub struct CalendarEvents {
 
 /// Earnings calendar information
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsCalendar {
     /// List of earnings dates (usually contains 1-2 dates)

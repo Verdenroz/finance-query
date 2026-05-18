@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Historical earnings data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsHistory {
     /// Default methodology (e.g., "gaap")
@@ -19,6 +23,7 @@ pub struct EarningsHistory {
 
 /// Single historical earnings entry
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsHistoryEntry {
     /// Maximum age of this data in seconds

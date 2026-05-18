@@ -9,6 +9,7 @@ attic/
 .claude/
 IDEAS.md
 *.py
+!finance-query-python/**/*.py
 flamegraph.svg
 *.data
 /CLAUDE.md
@@ -73,3 +74,6 @@ v1/.pytest_cache/
 # OS files
 .DS_Store
 Thumbs.db
+
+# remember plugin (claude-plugins-official) — runtime logs and tmp
+.remember/

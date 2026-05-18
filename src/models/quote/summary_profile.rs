@@ -4,10 +4,14 @@
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Company profile information
 ///
 /// Contains address, contact information, sector, industry, and business description.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct SummaryProfile {
     /// Street address line 1

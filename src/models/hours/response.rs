@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 // ============================================================================
 // Raw Yahoo Finance response structures (internal)
 // ============================================================================
@@ -61,6 +64,8 @@ struct RawTimezone {
 /// Market time information for a specific market
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MarketTime {
@@ -108,6 +113,7 @@ pub struct MarketTime {
 
 /// Flattened response for market hours
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MarketHours {

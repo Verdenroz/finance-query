@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// SEC filings data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct SecFilings {
     /// Maximum age of this data in seconds
@@ -19,6 +23,7 @@ pub struct SecFilings {
 
 /// Individual SEC filing
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct SecFiling {
     /// Maximum age of this data in seconds
@@ -53,6 +58,7 @@ pub struct SecFiling {
 
 /// SEC filing exhibit
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct SecExhibit {
     /// Type/number of exhibit (e.g., "EX-21.1", "10-K")

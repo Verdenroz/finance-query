@@ -5,3 +5,6 @@
 pub(crate) mod response;
 
 pub use response::{FearAndGreed, FearGreedLabel};
+
+#[cfg(feature = "python")]
+pub use response::{PyFearAndGreed, PyFearGreedLabel};

@@ -1,6 +1,9 @@
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// A collection of option contracts with DataFrame support.
 ///
 /// This wrapper allows `options.calls.to_dataframe()` syntax while still
@@ -49,6 +52,8 @@ impl Contracts {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 pub struct OptionContract {
     /// Contract symbol (e.g., "AAPL250117C00150000")
