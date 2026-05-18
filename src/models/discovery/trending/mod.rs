@@ -5,3 +5,6 @@
 mod response;
 
 pub use response::TrendingQuote;
+
+#[cfg(feature = "python")]
+pub use response::PyTrendingQuote;

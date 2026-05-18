@@ -7,6 +7,9 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::OnceLock;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Chart events containing dividends, splits, and capital gains
 ///
 /// Events are deserialized from HashMaps, then lazily converted to sorted vectors
@@ -73,6 +76,8 @@ pub(crate) struct CapitalGainEvent {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 pub struct Dividend {
     /// Timestamp (Unix)
     pub timestamp: i64,
@@ -81,6 +86,7 @@ pub struct Dividend {
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<Provider>,
 }
 
@@ -90,6 +96,8 @@ pub struct Dividend {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 pub struct Split {
     /// Timestamp (Unix)
     pub timestamp: i64,
@@ -102,6 +110,7 @@ pub struct Split {
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<Provider>,
 }
 
@@ -111,6 +120,8 @@ pub struct Split {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 pub struct CapitalGain {
     /// Timestamp (Unix)
     pub timestamp: i64,
@@ -119,6 +130,7 @@ pub struct CapitalGain {
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<Provider>,
 }
 

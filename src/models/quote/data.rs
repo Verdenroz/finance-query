@@ -16,6 +16,61 @@ use super::{
     UpgradeDowngradeHistory,
 };
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
+// PyModel-generated wrapper types for nested fields. These are emitted in the
+// same modules as their inner types; we import them here so that PyQuote's
+// getters (which call them by their unqualified name) resolve.
+#[cfg(feature = "python")]
+use crate::models::corporate::asset_profile::PyCompanyOfficer;
+#[cfg(feature = "python")]
+use crate::models::fundamentals::balance_sheet_history::{PyBalanceSheetHistory, PyBalanceSheetHistoryQuarterly};
+#[cfg(feature = "python")]
+use crate::models::corporate::calendar_events::PyCalendarEvents;
+#[cfg(feature = "python")]
+use crate::models::fundamentals::cashflow_statement_history::{
+    PyCashflowStatementHistory, PyCashflowStatementHistoryQuarterly,
+};
+#[cfg(feature = "python")]
+use crate::models::corporate::earnings::PyEarnings;
+#[cfg(feature = "python")]
+use crate::models::corporate::earnings_history::PyEarningsHistory;
+#[cfg(feature = "python")]
+use crate::models::corporate::earnings_trend::PyEarningsTrend;
+#[cfg(feature = "python")]
+use crate::models::corporate::equity_performance::PyEquityPerformance;
+#[cfg(feature = "python")]
+use crate::models::corporate::fund_ownership::PyFundOwnership;
+#[cfg(feature = "python")]
+use crate::models::corporate::fund_performance::PyFundPerformance;
+#[cfg(feature = "python")]
+use crate::models::corporate::fund_profile::PyFundProfile;
+#[cfg(feature = "python")]
+use crate::models::fundamentals::income_statement_history::{
+    PyIncomeStatementHistory, PyIncomeStatementHistoryQuarterly,
+};
+#[cfg(feature = "python")]
+use crate::models::market::index_trend::{PyIndexTrend, PyIndustryTrend, PySectorTrend};
+#[cfg(feature = "python")]
+use crate::models::corporate::insider_holders::PyInsiderHolders;
+#[cfg(feature = "python")]
+use crate::models::corporate::insider_transactions::PyInsiderTransactions;
+#[cfg(feature = "python")]
+use crate::models::corporate::institution_ownership::PyInstitutionOwnership;
+#[cfg(feature = "python")]
+use crate::models::corporate::major_holders_breakdown::PyMajorHoldersBreakdown;
+#[cfg(feature = "python")]
+use crate::models::corporate::net_share_purchase_activity::PyNetSharePurchaseActivity;
+#[cfg(feature = "python")]
+use crate::models::corporate::recommendation_trend::PyRecommendationTrend;
+#[cfg(feature = "python")]
+use crate::models::corporate::sec_filings::PySecFilings;
+#[cfg(feature = "python")]
+use crate::models::corporate::top_holdings::PyTopHoldings;
+#[cfg(feature = "python")]
+use crate::models::corporate::upgrade_downgrade_history::PyUpgradeDowngradeHistory;
+
 /// Flattened quote data with deduplicated fields
 ///
 /// This is the primary data structure for stock quotes. It flattens scalar fields
@@ -52,6 +107,7 @@ use super::{
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, FormatConvert)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct Quote<F: Format = Both> {

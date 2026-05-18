@@ -5,6 +5,9 @@
 
 use serde::{Deserialize, Deserializer, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Deserialize empty strings as None
 fn deserialize_empty_string_as_none<'de, D>(deserializer: D) -> Result<Option<String>, D::Error>
 where
@@ -28,6 +31,7 @@ where
 /// Contains company metadata and filing history. The `filings` field holds
 /// the most recent ~1000 filings inline, with links to older history files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarSubmissions {
@@ -94,6 +98,7 @@ pub struct EdgarSubmissions {
 
 /// Container for recent filings and links to older filing history files.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarFilings {
@@ -108,6 +113,7 @@ pub struct EdgarFilings {
 
 /// Reference to an additional filing history file for older filings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarFilingFile {
@@ -133,6 +139,7 @@ pub struct EdgarFilingFile {
 /// EDGAR returns filing data as parallel arrays (each field is a `Vec` of the same length).
 /// Use [`to_filings()`](EdgarFilingRecent::to_filings) to convert to a `Vec<EdgarFiling>`.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct EdgarFilingRecent {
@@ -251,6 +258,8 @@ impl EdgarFilingRecent {
 /// [`to_filings()`](EdgarFilingRecent::to_filings).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[non_exhaustive]
 pub struct EdgarFiling {
     /// Accession number (unique filing identifier, e.g., "0000320193-24-000123")

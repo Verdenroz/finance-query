@@ -593,3 +593,19 @@ fn get_option_inner_type(type_path: &TypePath) -> Option<&Type> {
         _ => None,
     }
 }
+
+#[cfg(feature = "python")]
+mod py_model;
+
+/// Derive macro for generating a Python wrapper struct (`PyFoo`) from a Rust
+/// struct (`Foo`), exposing fields as `#[getter]`s and providing `From`
+/// conversions in both directions.
+///
+/// Only available when the `python` feature is enabled. Task 5 of the Phase 1
+/// Python bindings plan handles primitive fields only; later tasks extend it
+/// to collections, nested types, `to_dict`, `__eq__`, and `to_dataframe`.
+#[cfg(feature = "python")]
+#[proc_macro_derive(PyModel, attributes(py_model))]
+pub fn derive_py_model(input: proc_macro::TokenStream) -> proc_macro::TokenStream {
+    py_model::expand(input)
+}

@@ -1,6 +1,9 @@
 use crate::models::quote::FormattedValue;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Quote data from a Yahoo Finance screener
 ///
 /// This struct contains the fields returned by Yahoo Finance's predefined
@@ -8,6 +11,8 @@ use serde::{Deserialize, Serialize};
 /// and displaying screened stocks/funds.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 pub struct ScreenerQuote {
     // Core identification

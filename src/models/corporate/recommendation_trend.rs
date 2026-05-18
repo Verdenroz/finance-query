@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Analyst recommendation trends
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct RecommendationTrend {
     /// List of recommendation trends by period
@@ -19,6 +23,7 @@ pub struct RecommendationTrend {
 
 /// Recommendations for a specific time period
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct RecommendationPeriod {
     /// Time period (e.g., "0m", "-1m", "-2m")

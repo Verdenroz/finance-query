@@ -4,6 +4,11 @@ use super::SimilarSymbol;
 /// Contains the fully typed Recommendation structure for similar/recommended symbols.
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+#[cfg(feature = "python")]
+use super::symbol::PySimilarSymbol;
+
 /// Fully typed recommendation data
 ///
 /// Aggregates the queried symbol and its recommendations into a single
@@ -13,6 +18,7 @@ use serde::{Deserialize, Serialize};
 /// Note: This struct cannot be manually constructed - use `Ticker::recommendations()` to obtain recommendations.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 pub struct Recommendation {
     /// Symbol that was queried
     pub symbol: String,
@@ -21,6 +27,7 @@ pub struct Recommendation {
     pub recommendations: Vec<SimilarSymbol>,
 
     /// Which provider supplied this data (None = Yahoo Finance default)
+    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<crate::providers::Provider>,
 }
 

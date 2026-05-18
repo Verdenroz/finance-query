@@ -5,9 +5,14 @@
 use crate::models::quote::FormattedValue;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// A single market summary quote (index, currency, commodity, etc.)
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct MarketSummaryQuote {
@@ -45,6 +50,7 @@ pub struct MarketSummaryQuote {
 
 /// Spark chart mini-data for market summary
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct SparkData {
     /// Close prices

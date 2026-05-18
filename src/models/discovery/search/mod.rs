@@ -10,3 +10,6 @@ pub use news::{SearchNews, SearchNewsList};
 pub use quote::{SearchQuote, SearchQuotes};
 pub use research::{ResearchReport, ResearchReports};
 pub use response::SearchResults;
+
+#[cfg(feature = "python")]
+pub use quote::PySearchQuote;

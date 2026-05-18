@@ -6,6 +6,8 @@
 // FinancialStatement (timeseries endpoint)
 mod response;
 pub use response::FinancialStatement;
+#[cfg(feature = "python")]
+pub use response::PyFinancialStatement;
 
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod balance_sheet_history;

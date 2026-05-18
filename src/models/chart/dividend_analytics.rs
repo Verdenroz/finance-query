@@ -4,10 +4,17 @@ use serde::{Deserialize, Serialize};
 
 use super::events::Dividend;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
+#[cfg(feature = "python")]
+use super::events::PyDividend;
+
 /// Computed analytics derived from a symbol's dividend history.
 ///
 /// Obtain via [`Ticker::dividend_analytics`](crate::Ticker::dividend_analytics).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct DividendAnalytics {
     /// Total dividends paid in the requested range

@@ -1,0 +1,195 @@
+name: Python wheels
+
+on:
+  pull_request:
+    paths:
+      - "finance-query-python/**"
+      - "finance-query-derive/**"
+      - "src/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/python-wheels.yml"
+  push:
+    branches: [master]
+    tags:
+      - "finance-query-py-v*"
+
+jobs:
+  # ─────────────────────────────────────────────────────────────────────────
+  # Task 24: test + parity on a single dev runner
+  # ─────────────────────────────────────────────────────────────────────────
+
+  test:
+    name: Test (linux x86_64, Python 3.11)
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install maturin pytest pytest-asyncio polars mypy
+      - name: Cargo tests (bindings + derive)
+        run: |
+          cargo test -p finance-query-python
+          cargo test -p finance-query-derive --features python
+      - name: maturin develop
+        working-directory: finance-query-python
+        run: maturin develop --release
+      - name: pytest (no network)
+        working-directory: finance-query-python
+        run: python -m pytest -v -m "not network" --ignore=tests/parity --ignore=tests/smoke
+      - name: mypy --strict
+        working-directory: finance-query-python
+        run: python -m mypy
+
+  parity:
+    name: Parity (linux x86_64, Python 3.11)
+    runs-on: ubuntu-22.04
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install maturin pytest pytest-asyncio polars
+      - name: Record parity fixtures via Rust binary
+        run: cargo run -p record-parity-fixtures -- AAPL MSFT NVDA TSLA SPY BTC-USD ETH-USD EURUSD=X GBPUSD=X GC=F
+      - name: maturin develop + parity tests
+        working-directory: finance-query-python
+        run: |
+          maturin develop --release
+          python -m pytest tests/parity -v
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Task 25: build wheels for 5 platforms
+  # ─────────────────────────────────────────────────────────────────────────
+
+  build-linux:
+    name: Build wheel (linux ${{ matrix.target }})
+    runs-on: ubuntu-22.04
+    needs: test
+    strategy:
+      matrix:
+        target: [x86_64, aarch64]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          working-directory: finance-query-python
+          args: --release --strip --out dist
+          manylinux: "2_28"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-linux-${{ matrix.target }}
+          path: finance-query-python/dist/*.whl
+
+  build-macos:
+    name: Build wheel (macos ${{ matrix.target }})
+    runs-on: ${{ matrix.runner }}
+    needs: test
+    strategy:
+      matrix:
+        include:
+          - target: x86_64
+            runner: macos-13
+          - target: aarch64
+            runner: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: ${{ matrix.target }}
+          working-directory: finance-query-python
+          args: --release --strip --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-macos-${{ matrix.target }}
+          path: finance-query-python/dist/*.whl
+
+  build-windows:
+    name: Build wheel (windows x86_64)
+    runs-on: windows-2022
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: x86_64
+          working-directory: finance-query-python
+          args: --release --strip --out dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheel-windows-x86_64
+          path: finance-query-python/dist/*.whl
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Task 26: smoke test on each wheel × each Python version
+  # ─────────────────────────────────────────────────────────────────────────
+
+  smoke:
+    name: Smoke (${{ matrix.os }} / Python ${{ matrix.python }})
+    runs-on: ${{ matrix.os }}
+    needs: [build-linux, build-macos, build-windows]
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, macos-13, macos-14, windows-2022]
+        python: ["3.9", "3.10", "3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheel-*
+          merge-multiple: true
+          path: dist
+      - name: Install matching wheel and run smoke tests
+        shell: bash
+        run: |
+          python -m pip install --upgrade pip pytest
+          # pip resolves the right wheel for our (os, arch, abi3) automatically
+          pip install --find-links dist finance-query-py
+          python -m pytest finance-query-python/tests/smoke -v
+
+  # ─────────────────────────────────────────────────────────────────────────
+  # Task 27: publish to PyPI on tag (trusted publishing)
+  # ─────────────────────────────────────────────────────────────────────────
+
+  publish:
+    name: Publish to PyPI
+    runs-on: ubuntu-22.04
+    needs: smoke
+    if: startsWith(github.ref, 'refs/tags/finance-query-py-v')
+    environment:
+      name: pypi
+      url: https://pypi.org/p/finance-query-py
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: wheel-*
+          merge-multiple: true
+          path: dist
+      - name: Publish via trusted publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: dist
+          skip-existing: true

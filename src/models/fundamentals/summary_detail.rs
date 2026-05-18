@@ -6,6 +6,9 @@ use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Summary detail trading and valuation metrics
 ///
 /// Contains detailed information about price, volume, market cap, and other trading data.
@@ -18,6 +21,7 @@ use serde_json::Value;
 /// Obtain converted views via [`Quote::as_raw`](crate::Quote::as_raw) or call
 /// `.as_raw()` / `.into_raw()` on a `SummaryDetail<Both>` directly.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase", bound = "")]
 pub struct SummaryDetail<F: Format = Both> {
     /// Algorithm (for crypto/special assets)

@@ -9,6 +9,9 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Deserialize CIK that may come as a number or a zero-padded string.
 fn deserialize_cik<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
     #[derive(Deserialize)]
@@ -98,6 +101,10 @@ pub struct FactsByTaxonomy(pub HashMap<String, FactConcept>);
 /// A single XBRL concept (e.g., "Revenue") with all reported values.
 ///
 /// Values are organized by unit of measure (e.g., "USD", "shares", "pure").
+//
+// PyModel derive skipped: the macro does not currently support
+// `HashMap<K, Vec<T>>` where `T` is a nested PyModel struct (would need
+// `Vec<FactUnit>: Into<Vec<PyFactUnit>>`, which isn't auto-implemented).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct FactConcept {
@@ -201,6 +208,8 @@ impl FactConcept {
 /// Represents one reported value from a specific filing and period.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[non_exhaustive]
 pub struct FactUnit {
     /// Start date of the reporting period (for duration facts, e.g., revenue)

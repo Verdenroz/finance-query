@@ -31,3 +31,6 @@ pub struct SymbolSentiment {
     /// Human-readable label (e.g., "Bullish", "Bearish", "Neutral").
     pub label: Option<String>,
 }
+
+#[cfg(feature = "python")]
+pub use response::{PyFearAndGreed, PyFearGreedLabel};

@@ -4,12 +4,16 @@ use crate::Provider;
 /// Contains metadata about chart data including symbol, exchange, timezone, and price information.
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Metadata for chart data
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct ChartMeta {
     /// Stock symbol
@@ -59,5 +63,6 @@ pub struct ChartMeta {
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
+    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<Provider>,
 }
