@@ -31,18 +31,3 @@ pub struct Candle {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub provider_id: Option<Provider>,
 }
-
-impl From<crate::providers::types::CandleData> for Candle {
-    fn from(c: crate::providers::types::CandleData) -> Self {
-        Self {
-            timestamp: c.timestamp,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-            volume: c.volume as i64,
-            adj_close: None,
-            provider_id: None,
-        }
-    }
-}

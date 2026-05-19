@@ -2,15 +2,12 @@
 //!
 //! Canonical public types for futures contracts and quotes,
 //! shared across Polygon and other futures data providers.
-//!
-//! Most types are scaffolding for upcoming provider implementations.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
 /// A futures contract quote.
 ///
-/// Obtain via [`Ticker::futures`](crate::Ticker::futures) (future).
+/// Obtain via [`Ticker::quote`](crate::Ticker::quote) using the futures symbol (e.g., `"GC=F"`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct FuturesQuote {

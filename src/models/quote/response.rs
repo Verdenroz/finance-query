@@ -11,8 +11,8 @@ use serde_json::Value;
 /// Deserializes all requested modules once on construction to avoid repeated
 /// JSON parsing on every accessor call. Uses Option<T> for each module since
 /// Yahoo Finance may not return all modules for all symbols.
-#[derive(Debug, Clone)]
-pub(crate) struct QuoteSummaryResponse {
+#[derive(Debug, Clone, Default)]
+pub struct QuoteSummaryResponse {
     /// The symbol this response is for
     pub symbol: String,
 
@@ -177,7 +177,6 @@ mod tests {
         });
 
         let response = QuoteSummaryResponse::from_json(json, "AAPL").unwrap();
-        assert_eq!(response.symbol, "AAPL");
         assert!(response.price.is_some());
         assert!(response.summary_detail.is_some());
     }

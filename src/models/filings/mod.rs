@@ -6,12 +6,14 @@
 mod cik;
 mod company_facts;
 pub mod filing_index;
+mod provider;
 mod search;
 mod submissions;
 
 pub use cik::CikEntry;
 pub use company_facts::{CompanyFacts, FactConcept, FactUnit, FactsByTaxonomy};
 pub use filing_index::EdgarFilingIndex;
+pub use provider::{ProviderFiling, ProviderFilings};
 pub use search::{
     EdgarSearchHit, EdgarSearchHitsContainer, EdgarSearchResults, EdgarSearchSource,
     EdgarSearchTotal,

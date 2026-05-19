@@ -2,15 +2,12 @@
 //!
 //! Canonical public types for commodity quotes (gold, silver, oil, etc.),
 //! shared across FMP and Alpha Vantage providers.
-//!
-//! Most types are scaffolding for upcoming provider implementations.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
 /// A commodity price quote (e.g., gold, silver, crude oil).
 ///
-/// Obtain via [`Ticker::commodity`](crate::Ticker::commodity) (future).
+/// Obtain via [`Ticker::quote`](crate::Ticker::quote) using the commodity symbol (e.g., `"GC=F"` for gold).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CommodityQuote {

@@ -4,6 +4,25 @@
 
 use serde::{Deserialize, Serialize};
 
+/// A provider-agnostic economic data series with metadata.
+///
+/// Obtain via [`Ticker::economic_series`](crate::Ticker::economic_series). Supported providers:
+/// Alpha Vantage, Polygon, FRED.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct EconomicSeries {
+    /// Series identifier (e.g., `"REAL_GDP"`, `"FEDFUNDS"`, `"inflation"`)
+    pub series_id: String,
+    /// Human-readable series title
+    pub title: Option<String>,
+    /// Unit of measurement (e.g., `"Billions of Dollars"`, `"Percent"`)
+    pub units: Option<String>,
+    /// Reporting frequency (e.g., `"Annual"`, `"Monthly"`)
+    pub frequency: Option<String>,
+    /// Chronologically ordered observations
+    pub observations: Vec<MacroObservation>,
+}
+
 /// A single observation in a FRED data series.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]

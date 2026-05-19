@@ -1,8 +1,39 @@
 //! Cryptocurrency data models.
 //!
-//! Canonical public types for CoinGecko cryptocurrency data.
+//! Canonical public types for cryptocurrency quotes from multiple providers.
 
 use serde::{Deserialize, Serialize};
+
+/// A provider-agnostic cryptocurrency quote.
+///
+/// Obtain via [`Ticker::crypto_quote`](crate::Ticker::crypto_quote). Supported providers:
+/// Alpha Vantage, CoinGecko, FMP, Polygon.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct CryptoQuote {
+    /// Coin identifier (e.g., `"bitcoin"` for CoinGecko, `"BTC"` for others)
+    pub id: String,
+    /// Ticker symbol in uppercase (e.g., `"BTC"`, `"ETH"`)
+    pub symbol: String,
+    /// Full coin name (e.g., `"Bitcoin"`)
+    pub name: String,
+    /// Current price in the requested currency
+    pub price: Option<f64>,
+    /// Market capitalisation
+    pub market_cap: Option<f64>,
+    /// 24-hour trading volume
+    pub volume_24h: Option<f64>,
+    /// 24-hour absolute price change
+    pub change_24h: Option<f64>,
+    /// 24-hour price change percentage
+    pub change_percent_24h: Option<f64>,
+    /// 24-hour high
+    pub high_24h: Option<f64>,
+    /// 24-hour low
+    pub low_24h: Option<f64>,
+    /// Circulating supply
+    pub circulating_supply: Option<f64>,
+}
 
 /// A cryptocurrency quote from CoinGecko.
 ///
