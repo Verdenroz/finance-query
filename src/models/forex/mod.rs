@@ -2,15 +2,12 @@
 //!
 //! Canonical public types for currency pair quotes and exchange rates,
 //! shared across Polygon, FMP, and Alpha Vantage providers.
-//!
-//! Most types are scaffolding for upcoming provider implementations.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
 /// A forex currency pair quote (e.g., EUR/USD).
 ///
-/// Obtain via [`Ticker::forex`](crate::Ticker::forex) (future).
+/// Obtain via [`Ticker::forex_quote`](crate::Ticker::forex_quote).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct ForexQuote {

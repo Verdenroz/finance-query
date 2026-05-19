@@ -28,7 +28,7 @@ pub struct DividendAnalytics {
 
 impl DividendAnalytics {
     /// Compute analytics from a pre-filtered, chronologically sorted slice of dividends.
-    pub(crate) fn from_dividends(dividends: &[Dividend]) -> Self {
+    pub fn from_dividends(dividends: &[Dividend]) -> Self {
         if dividends.is_empty() {
             return Self {
                 total_paid: 0.0,

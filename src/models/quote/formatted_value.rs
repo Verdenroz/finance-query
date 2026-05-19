@@ -21,13 +21,13 @@
 ///   "raw": 14776353000
 /// }
 /// ```
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 /// A generic type representing Yahoo Finance's formatted value pattern
 ///
 /// Contains the raw numeric value along with optional formatted representations.
 /// Note: `raw` is optional because Yahoo sometimes returns empty objects `{}` for unavailable data.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Default)]
 #[serde(rename_all = "camelCase")]
 pub struct FormattedValue<T> {
     /// Human-readable formatted string
@@ -42,6 +42,43 @@ pub struct FormattedValue<T> {
     #[serde(default)]
     #[serde(skip_serializing_if = "Option::is_none")]
     pub raw: Option<T>,
+}
+
+// Custom Deserialize that accepts both full objects AND bare values.
+// Bare values (from ValueFormat::Raw transform) become FormattedValue { raw: Some(v), .. }.
+impl<'de, T: serde::Deserialize<'de>> serde::Deserialize<'de> for FormattedValue<T> {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        #[derive(serde::Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Full<T> {
+            fmt: Option<String>,
+            long_fmt: Option<String>,
+            raw: Option<T>,
+        }
+
+        #[derive(serde::Deserialize)]
+        #[serde(untagged)]
+        enum Helper<T> {
+            Full(Full<T>),
+            Bare(T),
+        }
+
+        match Helper::<T>::deserialize(deserializer)? {
+            Helper::Full(f) => Ok(FormattedValue {
+                fmt: f.fmt,
+                long_fmt: f.long_fmt,
+                raw: f.raw,
+            }),
+            Helper::Bare(v) => Ok(FormattedValue {
+                fmt: None,
+                long_fmt: None,
+                raw: Some(v),
+            }),
+        }
+    }
 }
 
 impl<T> FormattedValue<T> {

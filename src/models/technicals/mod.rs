@@ -2,15 +2,13 @@
 //!
 //! Canonical public types for technical indicators (SMA, EMA, RSI, MACD, etc.),
 //! shared across Polygon, FMP, and Alpha Vantage providers.
-//!
-//! Most types are scaffolding for upcoming provider implementations.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
 /// The type of technical indicator.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)]
 pub enum IndicatorType {
     /// Simple Moving Average
     Sma,
@@ -38,6 +36,7 @@ pub enum IndicatorType {
 
 impl IndicatorType {
     /// Human-readable indicator name.
+    #[allow(dead_code)]
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Sma => "SMA",
@@ -60,6 +59,7 @@ impl IndicatorType {
 /// Obtain via [`Ticker::indicator`](crate::Ticker::indicator) (future).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)]
 pub struct IndicatorValue {
     /// Date of the data point as YYYY-MM-DD
     pub date: String,

@@ -2,15 +2,12 @@
 //!
 //! Canonical public types for index quotes and constituents,
 //! shared across Polygon and FMP providers.
-//!
-//! Most types are scaffolding for upcoming provider implementations.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
 /// A stock market index quote (e.g., S&P 500, NASDAQ, Dow Jones).
 ///
-/// Obtain via [`Ticker::index`](crate::Ticker::index) (future).
+/// Obtain via [`Ticker::quote`](crate::Ticker::quote) using the index symbol (e.g., `"^GSPC"`).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct IndexQuote {
@@ -31,6 +28,7 @@ pub struct IndexQuote {
 /// A constituent (member) of a major stock market index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)]
 pub struct IndexConstituent {
     /// Ticker symbol of the constituent company
     pub symbol: String,

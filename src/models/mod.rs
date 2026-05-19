@@ -31,11 +31,16 @@ pub mod sentiment;
 /// Commodities market data (gold, silver, oil, etc.) — FMP / Alpha Vantage.
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub mod commodities;
-/// Cryptocurrency market data — CoinGecko.
-#[cfg(feature = "crypto")]
+/// Cryptocurrency market data — CoinGecko, Alpha Vantage, FMP, Polygon.
+#[cfg(any(
+    feature = "crypto",
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "polygon"
+))]
 pub mod crypto;
-/// Macro-economic data — FRED, US Treasury yields.
-#[cfg(feature = "fred")]
+/// Macro-economic data — FRED, Alpha Vantage, Polygon.
+#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
 pub mod economic;
 /// Forex (foreign exchange) data models — Polygon / FMP / Alpha Vantage.
 #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
