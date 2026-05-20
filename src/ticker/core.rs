@@ -1,11 +1,18 @@
 //! Symbol-specific data access from multiple providers.
 
-use crate::constants::{Interval, TimeRange};
+use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
+#[cfg(feature = "backtesting")]
+use crate::backtesting;
+use crate::constants::{Frequency, Interval, Region, StatementType, TimeRange, ValueFormat};
+use crate::edgar;
 use crate::error::{FinanceError, Result};
-use crate::models::chart::Chart;
+#[cfg(any(feature = "backtesting", feature = "indicators"))]
+use crate::indicators;
 use crate::models::chart::events::ChartEvents;
-use crate::models::chart::{CapitalGain, Dividend, Split};
+use crate::models::chart::{CapitalGain, Chart, Dividend, DividendAnalytics, Split};
+use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::Recommendation;
+use crate::models::filings::{CompanyFacts, EdgarSubmissions, ProviderFilings};
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::{
@@ -16,7 +23,13 @@ use crate::models::quote::{
     QuoteTypeData, RecommendationTrend, SecFilings, SectorTrend, SummaryDetail, SummaryProfile,
     TopHoldings, UpgradeDowngradeHistory,
 };
-use crate::providers::{Capability, Fetch, ProviderSet, Routes, build_providers};
+use crate::providers::types::recommendation_from_similar;
+use crate::providers::yahoo::YahooProvider;
+use crate::providers::{
+    Capability, Fetch, Provider, ProviderAdapter, ProviderSet, Routes, build_providers,
+};
+#[cfg(feature = "risk")]
+use crate::risk;
 use crate::utils::{CacheEntry, EVICTION_THRESHOLD, filter_by_range};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -49,35 +62,35 @@ type MapCache<K, V> = Arc<RwLock<HashMap<K, CacheEntry<V>>>>;
 /// # }
 /// ```
 #[derive(Clone)]
-pub struct ClientHandle(pub(crate) Arc<crate::adapters::yahoo::client::YahooClient>);
+pub struct ClientHandle(pub(crate) Arc<YahooClient>);
 /// Builder for constructing a [`Ticker`] with optional configuration.
 ///
 /// Construct via [`Ticker::builder`]. All builder methods are optional;
 /// call [`build`](TickerBuilder::build) to finalize.
 pub struct TickerBuilder {
     symbol: Arc<str>,
-    config: crate::adapters::yahoo::client::ClientConfig,
+    config: ClientConfig,
     shared_client: Option<ClientHandle>,
     injected_providers: Option<Arc<ProviderSet>>,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    value_format: crate::constants::ValueFormat,
+    value_format: ValueFormat,
 }
 
 impl TickerBuilder {
     fn new(symbol: impl Into<String>) -> Self {
         Self {
             symbol: symbol.into().into(),
-            config: crate::adapters::yahoo::client::ClientConfig::default(),
+            config: ClientConfig::default(),
             shared_client: None,
             injected_providers: None,
             cache_ttl: None,
             include_logo: false,
-            value_format: crate::constants::ValueFormat::default(),
+            value_format: ValueFormat::default(),
         }
     }
     /// Set the region (automatically sets correct lang and region).
-    pub fn region(mut self, region: crate::constants::Region) -> Self {
+    pub fn region(mut self, region: Region) -> Self {
         self.config.lang = region.lang().to_string();
         self.config.region = region.region().to_string();
         self
@@ -103,7 +116,7 @@ impl TickerBuilder {
         self
     }
     #[allow(dead_code)]
-    pub(crate) fn config(mut self, c: crate::adapters::yahoo::client::ClientConfig) -> Self {
+    pub(crate) fn config(mut self, c: ClientConfig) -> Self {
         self.config = c;
         self
     }
@@ -142,7 +155,7 @@ impl TickerBuilder {
     /// - [`ValueFormat::Both`] — full `{ raw, fmt, longFmt }` object preserved.
     /// - [`ValueFormat::Pretty`] — returns the typed `Quote` unchanged (use
     ///   [`ValueFormat::transform`] for string-only JSON output).
-    pub fn format(mut self, format: crate::constants::ValueFormat) -> Self {
+    pub fn format(mut self, format: ValueFormat) -> Self {
         self.value_format = format;
         self
     }
@@ -152,17 +165,17 @@ impl TickerBuilder {
         let providers = if let Some(set) = self.injected_providers {
             set
         } else if let Some(handle) = self.shared_client {
-            let yahoo = crate::providers::yahoo::YahooProvider::from_client(handle.0);
+            let yahoo = YahooProvider::from_client(handle.0);
             let client = yahoo.client_arc();
             Arc::new(ProviderSet::new(
-                vec![Arc::new(yahoo) as Arc<dyn crate::providers::ProviderAdapter>],
+                vec![Arc::new(yahoo) as Arc<dyn ProviderAdapter>],
                 Some(client),
                 Routes::new(Fetch::Sequential),
             ))
         } else {
             Arc::new(
                 build_providers(
-                    &[crate::providers::Provider::Yahoo],
+                    &[Provider::Yahoo],
                     &self.config,
                     Routes::new(Fetch::Sequential),
                 )
@@ -199,21 +212,18 @@ pub struct Ticker {
     providers: Arc<ProviderSet>,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    value_format: crate::constants::ValueFormat,
+    value_format: ValueFormat,
     quote_cache: Cache<QuoteSummaryResponse>,
     quote_fetch: Arc<tokio::sync::Mutex<()>>,
     chart_cache: MapCache<(Interval, TimeRange), Chart>,
     events_cache: Cache<ChartEvents>,
-    news_cache: Cache<Vec<crate::models::corporate::news::News>>,
+    news_cache: Cache<Vec<News>>,
     options_cache: MapCache<Option<i64>, Options>,
-    financials_cache: MapCache<
-        (crate::constants::StatementType, crate::constants::Frequency),
-        FinancialStatement,
-    >,
+    financials_cache: MapCache<(StatementType, Frequency), FinancialStatement>,
     #[cfg(feature = "indicators")]
-    indicators_cache: MapCache<(Interval, TimeRange), crate::indicators::IndicatorsSummary>,
-    edgar_submissions_cache: Cache<crate::models::filings::EdgarSubmissions>,
-    edgar_facts_cache: Cache<crate::models::filings::CompanyFacts>,
+    indicators_cache: MapCache<(Interval, TimeRange), indicators::IndicatorsSummary>,
+    edgar_submissions_cache: Cache<EdgarSubmissions>,
+    edgar_facts_cache: Cache<CompanyFacts>,
 }
 
 impl Ticker {
@@ -257,13 +267,13 @@ impl Ticker {
         CacheEntry::is_fresh_with_ttl(entry, self.cache_ttl)
     }
 
-    /// Like `is_cache_fresh`, but treats any populated entry as fresh when no TTL is configured.
-    /// Used for shared caches (quote, events) that serve multiple callers from one request.
+    /// Like `is_cache_fresh`, but works on the shared-cache pattern
+    /// where the entry is populated on first fetch.
+    /// When no TTL is configured, never treats entries as fresh.
     fn is_shared_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
         match (self.cache_ttl, entry) {
             (Some(ttl), Some(e)) => e.is_fresh(ttl),
-            (None, Some(_)) => true,
-            (_, None) => false,
+            _ => false,
         }
     }
     fn cache_insert<K: Eq + std::hash::Hash, V>(
@@ -302,14 +312,12 @@ impl Ticker {
         // Pretty / Both: typed Quote returned as-is (use quote_value() for
         // string-only / full JSON output).
         match self.value_format {
-            crate::constants::ValueFormat::Raw => {
+            ValueFormat::Raw => {
                 let json = serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
                 let transformed = self.value_format.transform(json);
                 serde_json::from_value(transformed).map_err(FinanceError::JsonParseError)
             }
-            crate::constants::ValueFormat::Pretty | crate::constants::ValueFormat::Both => {
-                Ok(quote)
-            }
+            ValueFormat::Pretty | ValueFormat::Both => Ok(quote),
         }
     }
 
@@ -328,7 +336,7 @@ impl Ticker {
     }
 
     fn chart_from_provider_data(
-        mut data: crate::models::chart::Chart,
+        mut data: Chart,
         interval: Option<Interval>,
         range: Option<TimeRange>,
     ) -> Chart {
@@ -400,8 +408,10 @@ impl Ticker {
                 async move { p.fetch_events(&sym).await }
             })
             .await?;
-        let mut cache = self.events_cache.write().await;
-        *cache = Some(CacheEntry::new(events));
+        if self.cache_ttl.is_some() {
+            let mut cache = self.events_cache.write().await;
+            *cache = Some(CacheEntry::new(events));
+        }
         Ok(())
     }
 
@@ -416,14 +426,9 @@ impl Ticker {
         Ok(filter_by_range(all, range))
     }
     /// Compute dividend analytics for the requested time range.
-    pub async fn dividend_analytics(
-        &self,
-        range: TimeRange,
-    ) -> Result<crate::models::chart::DividendAnalytics> {
+    pub async fn dividend_analytics(&self, range: TimeRange) -> Result<DividendAnalytics> {
         let divs = self.dividends(range).await?;
-        Ok(crate::models::chart::DividendAnalytics::from_dividends(
-            &divs,
-        ))
+        Ok(DividendAnalytics::from_dividends(&divs))
     }
     /// Get stock split history.
     pub async fn splits(&self, range: TimeRange) -> Result<Vec<Split>> {
@@ -462,14 +467,14 @@ impl Ticker {
                 let p = p.clone();
                 async move {
                     let r = p.fetch_similar_symbols(&sym, limit).await?;
-                    let provider = crate::providers::Provider::from_id_str(p.id()).ok_or_else(|| {
+                    let provider = Provider::from_id_str(p.id()).ok_or_else(|| {
                         FinanceError::InternalError(format!("unknown provider id: {}", p.id()))
                     })?;
                     Ok((provider, r))
                 }
             })
             .await?;
-        Ok(crate::providers::types::recommendation_from_similar(
+        Ok(recommendation_from_similar(
             self.symbol.to_string(),
             Some(provider_id),
             items,
@@ -478,7 +483,7 @@ impl Ticker {
     }
 
     /// Get news articles for this symbol.
-    pub async fn news(&self) -> Result<Vec<crate::models::corporate::news::News>> {
+    pub async fn news(&self) -> Result<Vec<News>> {
         {
             let cache = self.news_cache.read().await;
             if let Some(e) = cache.as_ref()
@@ -533,8 +538,8 @@ impl Ticker {
     /// Get financial statements.
     pub async fn financials(
         &self,
-        stmt_type: crate::constants::StatementType,
-        frequency: crate::constants::Frequency,
+        stmt_type: StatementType,
+        frequency: Frequency,
     ) -> Result<FinancialStatement> {
         let key = (stmt_type, frequency);
         {
@@ -567,7 +572,7 @@ impl Ticker {
         &self,
         interval: Interval,
         range: TimeRange,
-    ) -> Result<crate::indicators::IndicatorsSummary> {
+    ) -> Result<indicators::IndicatorsSummary> {
         {
             let cache = self.indicators_cache.read().await;
             if let Some(e) = cache.get(&(interval, range))
@@ -577,7 +582,7 @@ impl Ticker {
             }
         }
         let chart = self.chart(interval, range).await?;
-        let ind = crate::indicators::summary::calculate_indicators(&chart.candles);
+        let ind = indicators::summary::calculate_indicators(&chart.candles);
         if self.cache_ttl.is_some() {
             let mut c = self.indicators_cache.write().await;
             self.cache_insert(&mut c, (interval, range), ind.clone());
@@ -590,7 +595,7 @@ impl Ticker {
     /// Always uses EDGAR directly — this is an EDGAR-specific API (CIK-based submission
     /// history and XBRL company facts) that no other provider replicates. For routable
     /// provider-agnostic filing data use [`filings`](Self::filings) instead.
-    pub async fn edgar_submissions(&self) -> Result<crate::models::filings::EdgarSubmissions> {
+    pub async fn edgar_submissions(&self) -> Result<EdgarSubmissions> {
         {
             let cache = self.edgar_submissions_cache.read().await;
             if let Some(e) = cache.as_ref()
@@ -599,8 +604,8 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let cik = crate::edgar::resolve_cik(&self.symbol).await?;
-        let subs = crate::edgar::submissions(cik).await?;
+        let cik = edgar::resolve_cik(&self.symbol).await?;
+        let subs = edgar::submissions(cik).await?;
         if self.cache_ttl.is_some() {
             let mut c = self.edgar_submissions_cache.write().await;
             *c = Some(CacheEntry::new(subs.clone()));
@@ -612,7 +617,7 @@ impl Ticker {
     ///
     /// Always uses EDGAR directly — XBRL `us-gaap`/`ifrs`/`dei` fact data is unique
     /// to the SEC's EDGAR API. For routable filing data use [`filings`](Self::filings).
-    pub async fn edgar_company_facts(&self) -> Result<crate::models::filings::CompanyFacts> {
+    pub async fn edgar_company_facts(&self) -> Result<CompanyFacts> {
         {
             let cache = self.edgar_facts_cache.read().await;
             if let Some(e) = cache.as_ref()
@@ -621,8 +626,8 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let cik = crate::edgar::resolve_cik(&self.symbol).await?;
-        let facts = crate::edgar::company_facts(cik).await?;
+        let cik = edgar::resolve_cik(&self.symbol).await?;
+        let facts = edgar::company_facts(cik).await?;
         if self.cache_ttl.is_some() {
             let mut c = self.edgar_facts_cache.write().await;
             *c = Some(CacheEntry::new(facts.clone()));
@@ -638,10 +643,10 @@ impl Ticker {
     ///
     /// For the full EDGAR submissions response or structured XBRL data, use
     /// [`edgar_submissions`](Self::edgar_submissions) / [`edgar_company_facts`](Self::edgar_company_facts).
-    pub async fn filings(&self) -> Result<crate::models::filings::ProviderFilings> {
+    pub async fn filings(&self) -> Result<ProviderFilings> {
         let symbol = self.symbol.clone();
         self.providers
-            .fetch(crate::providers::Capability::FILINGS, move |p| {
+            .fetch(Capability::FILINGS, move |p| {
                 let symbol = symbol.clone();
                 let p = p.clone();
                 async move { p.fetch_filings(&symbol).await }
@@ -653,17 +658,17 @@ impl Ticker {
     /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(
         &self,
-        indicator: crate::indicators::Indicator,
+        indicator: indicators::Indicator,
         interval: Interval,
         range: TimeRange,
-    ) -> Result<crate::indicators::IndicatorResult> {
+    ) -> Result<indicators::IndicatorResult> {
         let chart = self.chart(interval, range).await?;
         let o = chart.open_prices();
         let h = chart.high_prices();
         let l = chart.low_prices();
         let c = chart.close_prices();
         let v = chart.volumes();
-        use crate::indicators::{Indicator, IndicatorResult};
+        use indicators::{Indicator, IndicatorResult};
         Ok(match indicator {
             Indicator::Sma(p) => IndicatorResult::Series(chart.sma(p)),
             Indicator::Ema(p) => IndicatorResult::Series(chart.ema(p)),
@@ -682,78 +687,85 @@ impl Ticker {
             Indicator::Tema(p) => IndicatorResult::Series(crate::indicators::tema(&c, p)?),
             Indicator::Hma(p) => IndicatorResult::Series(crate::indicators::hma(&c, p)?),
             Indicator::Vwma(p) => IndicatorResult::Series(crate::indicators::vwma(&c, &v, p)?),
-            Indicator::Alma { period, offset, sigma } => {
-                IndicatorResult::Series(crate::indicators::alma(&c, period, offset, sigma)?)
-            }
+            Indicator::Alma {
+                period,
+                offset,
+                sigma,
+            } => IndicatorResult::Series(crate::indicators::alma(&c, period, offset, sigma)?),
             Indicator::McginleyDynamic(p) => {
                 IndicatorResult::Series(crate::indicators::mcginley_dynamic(&c, p)?)
             }
-            Indicator::Stochastic { k_period, k_slow, d_period } => IndicatorResult::Stochastic(
-                crate::indicators::stochastic(&h, &l, &c, k_period, k_slow, d_period)?,
-            ),
-            Indicator::StochasticRsi { rsi_period, stoch_period, k_period, d_period } => {
-                IndicatorResult::Stochastic(crate::indicators::stochastic_rsi(
-                    &c,
-                    rsi_period,
-                    stoch_period,
-                    k_period,
-                    d_period,
-                )?)
-            }
-            Indicator::Cci(p) => {
-                IndicatorResult::Series(crate::indicators::cci(&h, &l, &c, p)?)
-            }
+            Indicator::Stochastic {
+                k_period,
+                k_slow,
+                d_period,
+            } => IndicatorResult::Stochastic(crate::indicators::stochastic(
+                &h, &l, &c, k_period, k_slow, d_period,
+            )?),
+            Indicator::StochasticRsi {
+                rsi_period,
+                stoch_period,
+                k_period,
+                d_period,
+            } => IndicatorResult::Stochastic(crate::indicators::stochastic_rsi(
+                &c,
+                rsi_period,
+                stoch_period,
+                k_period,
+                d_period,
+            )?),
+            Indicator::Cci(p) => IndicatorResult::Series(crate::indicators::cci(&h, &l, &c, p)?),
             Indicator::WilliamsR(p) => {
                 IndicatorResult::Series(crate::indicators::williams_r(&h, &l, &c, p)?)
             }
             Indicator::Roc(p) => IndicatorResult::Series(crate::indicators::roc(&c, p)?),
-            Indicator::Momentum(p) => {
-                IndicatorResult::Series(crate::indicators::momentum(&c, p)?)
-            }
+            Indicator::Momentum(p) => IndicatorResult::Series(crate::indicators::momentum(&c, p)?),
             Indicator::Cmo(p) => IndicatorResult::Series(crate::indicators::cmo(&c, p)?),
             Indicator::AwesomeOscillator { fast, slow } => {
                 IndicatorResult::Series(crate::indicators::awesome_oscillator(&h, &l, fast, slow)?)
             }
-            Indicator::CoppockCurve { long_roc, short_roc, wma_period } => {
-                IndicatorResult::Series(crate::indicators::coppock_curve(
-                    &c,
-                    long_roc,
-                    short_roc,
-                    wma_period,
-                )?)
-            }
-            Indicator::Adx(p) => {
-                IndicatorResult::Series(crate::indicators::adx(&h, &l, &c, p)?)
-            }
+            Indicator::CoppockCurve {
+                long_roc,
+                short_roc,
+                wma_period,
+            } => IndicatorResult::Series(crate::indicators::coppock_curve(
+                &c, long_roc, short_roc, wma_period,
+            )?),
+            Indicator::Adx(p) => IndicatorResult::Series(crate::indicators::adx(&h, &l, &c, p)?),
             Indicator::Aroon(p) => IndicatorResult::Aroon(crate::indicators::aroon(&h, &l, p)?),
             Indicator::Supertrend { period, multiplier } => IndicatorResult::SuperTrend(
                 crate::indicators::supertrend(&h, &l, &c, period, multiplier)?,
             ),
-            Indicator::Ichimoku { conversion, base, lagging, displacement } => {
-                IndicatorResult::Ichimoku(crate::indicators::ichimoku(
-                    &h,
-                    &l,
-                    &c,
-                    conversion,
-                    base,
-                    lagging,
-                    displacement,
-                )?)
-            }
+            Indicator::Ichimoku {
+                conversion,
+                base,
+                lagging,
+                displacement,
+            } => IndicatorResult::Ichimoku(crate::indicators::ichimoku(
+                &h,
+                &l,
+                &c,
+                conversion,
+                base,
+                lagging,
+                displacement,
+            )?),
             Indicator::ParabolicSar { step, max } => {
                 IndicatorResult::Series(crate::indicators::parabolic_sar(&h, &l, &c, step, max)?)
             }
-            Indicator::BullBearPower(p) => IndicatorResult::BullBearPower(
-                crate::indicators::bull_bear_power(&h, &l, &c, p)?,
-            ),
+            Indicator::BullBearPower(p) => {
+                IndicatorResult::BullBearPower(crate::indicators::bull_bear_power(&h, &l, &c, p)?)
+            }
             Indicator::ElderRay(p) => {
                 IndicatorResult::ElderRay(crate::indicators::elder_ray(&h, &l, &c, p)?)
             }
-            Indicator::KeltnerChannels { period, multiplier, atr_period } => {
-                IndicatorResult::Keltner(crate::indicators::keltner_channels(
-                    &h, &l, &c, period, atr_period, multiplier,
-                )?)
-            }
+            Indicator::KeltnerChannels {
+                period,
+                multiplier,
+                atr_period,
+            } => IndicatorResult::Keltner(crate::indicators::keltner_channels(
+                &h, &l, &c, period, atr_period, multiplier,
+            )?),
             Indicator::DonchianChannels(p) => {
                 IndicatorResult::Donchian(crate::indicators::donchian_channels(&h, &l, p)?)
             }
@@ -772,11 +784,9 @@ impl Ticker {
             Indicator::ChaikinOscillator => {
                 IndicatorResult::Series(crate::indicators::chaikin_oscillator(&h, &l, &c, &v)?)
             }
-            Indicator::AccumulationDistribution => {
-                IndicatorResult::Series(crate::indicators::accumulation_distribution(
-                    &h, &l, &c, &v,
-                )?)
-            }
+            Indicator::AccumulationDistribution => IndicatorResult::Series(
+                crate::indicators::accumulation_distribution(&h, &l, &c, &v)?,
+            ),
             Indicator::BalanceOfPower(p) => {
                 IndicatorResult::Series(crate::indicators::balance_of_power(&o, &h, &l, &c, p)?)
             }
@@ -785,21 +795,21 @@ impl Ticker {
 
     #[cfg(feature = "backtesting")]
     /// Run a backtest with the given strategy and configuration.
-    pub async fn backtest<S: crate::backtesting::Strategy>(
+    pub async fn backtest<S: backtesting::Strategy>(
         &self,
         strategy: S,
         interval: Interval,
         range: TimeRange,
-        config: Option<crate::backtesting::BacktestConfig>,
-    ) -> crate::backtesting::Result<crate::backtesting::BacktestResult> {
+        config: Option<backtesting::BacktestConfig>,
+    ) -> backtesting::Result<backtesting::BacktestResult> {
         let config = config.unwrap_or_default();
         config.validate()?;
         let chart = self
             .chart(interval, range)
             .await
-            .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
+            .map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
         let dividends = self.dividends(range).await.unwrap_or_default();
-        crate::backtesting::BacktestEngine::new(config).run_with_dividends(
+        backtesting::BacktestEngine::new(config).run_with_dividends(
             &self.symbol,
             &chart.candles,
             strategy,
@@ -809,26 +819,26 @@ impl Ticker {
 
     #[cfg(feature = "backtesting")]
     /// Run a backtest and compare performance against a benchmark symbol.
-    pub async fn backtest_with_benchmark<S: crate::backtesting::Strategy>(
+    pub async fn backtest_with_benchmark<S: backtesting::Strategy>(
         &self,
         strategy: S,
         interval: Interval,
         range: TimeRange,
-        config: Option<crate::backtesting::BacktestConfig>,
+        config: Option<backtesting::BacktestConfig>,
         benchmark: &str,
-    ) -> crate::backtesting::Result<crate::backtesting::BacktestResult> {
+    ) -> backtesting::Result<backtesting::BacktestResult> {
         let config = config.unwrap_or_default();
         config.validate()?;
         let bench_ticker = Ticker::new(benchmark)
             .await
-            .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
+            .map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
         let (chart, bench_chart) = tokio::try_join!(
             self.chart(interval, range),
             bench_ticker.chart(interval, range)
         )
-        .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
+        .map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
         let dividends = self.dividends(range).await.unwrap_or_default();
-        crate::backtesting::BacktestEngine::new(config).run_with_benchmark(
+        backtesting::BacktestEngine::new(config).run_with_benchmark(
             &self.symbol,
             &chart.candles,
             strategy,
@@ -845,17 +855,17 @@ impl Ticker {
         interval: Interval,
         range: TimeRange,
         benchmark: Option<&str>,
-    ) -> Result<crate::risk::RiskSummary> {
+    ) -> Result<risk::RiskSummary> {
         let chart = self.chart(interval, range).await?;
         let bench_returns = if let Some(sym) = benchmark {
             let bt = Ticker::new(sym).await?;
-            Some(crate::risk::candles_to_returns(
+            Some(risk::candles_to_returns(
                 &bt.chart(interval, range).await?.candles,
             ))
         } else {
             None
         };
-        Ok(crate::risk::compute_risk_summary(
+        Ok(risk::compute_risk_summary(
             &chart.candles,
             bench_returns.as_deref(),
         ))
@@ -886,7 +896,7 @@ impl Ticker {
                 async move { p.fetch_quote(&sym).await }
             })
             .await?;
-        {
+        if self.cache_ttl.is_some() {
             let mut cache = self.quote_cache.write().await;
             *cache = Some(CacheEntry::new(summary));
         }
