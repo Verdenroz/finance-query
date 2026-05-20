@@ -1,8 +1,12 @@
 //! Stock aggregate bar endpoints: OHLCV bars, daily summary, previous close.
 #![allow(dead_code)]
 
+use crate::Provider;
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
+use crate::models::chart::{Candle, Chart};
+use crate::{Interval, TimeRange};
+use chrono::Datelike;
 
 use super::build_client;
 use super::models::*;
@@ -55,6 +59,111 @@ pub async fn stock_aggregates(
     serde_json::from_value(json).map_err(|e| crate::error::FinanceError::ResponseStructureError {
         field: "aggregates".to_string(),
         context: format!("Failed to parse aggregate response: {e}"),
+    })
+}
+
+/// Helper: convert interval to (multiplier, timespan).
+fn interval_to_polygon(interval: Interval) -> (u32, Timespan) {
+    match interval {
+        Interval::OneMinute => (1, Timespan::Minute),
+        Interval::FiveMinutes => (5, Timespan::Minute),
+        Interval::FifteenMinutes => (15, Timespan::Minute),
+        Interval::ThirtyMinutes => (30, Timespan::Minute),
+        Interval::OneHour => (1, Timespan::Hour),
+        Interval::OneDay => (1, Timespan::Day),
+        Interval::OneWeek => (1, Timespan::Week),
+        Interval::OneMonth => (1, Timespan::Month),
+        Interval::ThreeMonths => (3, Timespan::Month),
+    }
+}
+
+/// Helper: convert TimeRange to (from, to) date strings.
+fn range_to_dates(range: TimeRange) -> (String, String) {
+    let now = chrono::Utc::now();
+    let from = match range {
+        TimeRange::OneDay => now - chrono::Duration::days(1),
+        TimeRange::FiveDays => now - chrono::Duration::days(5),
+        TimeRange::OneMonth => now - chrono::Duration::days(30),
+        TimeRange::ThreeMonths => now - chrono::Duration::days(90),
+        TimeRange::SixMonths => now - chrono::Duration::days(180),
+        TimeRange::OneYear | TimeRange::TwoYears => now - chrono::Duration::days(365),
+        TimeRange::YearToDate => chrono::Utc::now()
+            .with_day(1)
+            .and_then(|d| d.with_month(1))
+            .unwrap_or(now - chrono::Duration::days(365)),
+        TimeRange::FiveYears | TimeRange::TenYears => now - chrono::Duration::days(1825),
+        TimeRange::Max => chrono::DateTime::from_timestamp(0, 0).unwrap_or(now),
+    };
+    (
+        from.format("%Y-%m-%d").to_string(),
+        now.format("%Y-%m-%d").to_string(),
+    )
+}
+
+/// Helper: convert a Unix timestamp to "YYYY-MM-DD".
+fn timestamp_to_date(ts: i64) -> String {
+    chrono::DateTime::from_timestamp(ts, 0)
+        .map(|dt| dt.format("%Y-%m-%d").to_string())
+        .unwrap_or_else(|| "1970-01-01".to_string())
+}
+
+/// Convert aggregate DTO results into canonical candles.
+fn aggs_to_candles(aggs: AggregateResponseDTO) -> Vec<Candle> {
+    aggs.results
+        .into_iter()
+        .flatten()
+        .map(|r| Candle {
+            timestamp: r.timestamp,
+            open: r.open,
+            high: r.high,
+            low: r.low,
+            close: r.close,
+            volume: r.volume as i64,
+            adj_close: None,
+            provider_id: Some(Provider::Polygon),
+        })
+        .collect()
+}
+
+/// Fetch chart data (canonical) for a stock ticker by interval and time range.
+pub async fn fetch_chart_response(
+    symbol: &str,
+    interval: Interval,
+    range: TimeRange,
+) -> Result<Chart> {
+    let (from, to) = range_to_dates(range);
+    let (mult, timespan) = interval_to_polygon(interval);
+    let aggs = stock_aggregates(symbol, mult, timespan, &from, &to, None).await?;
+    let candles = aggs_to_candles(aggs);
+    Ok(Chart {
+        symbol: symbol.to_string(),
+        meta: Default::default(),
+        candles,
+        interval: Some(interval),
+        range: Some(range),
+        provider_id: Some(Provider::Polygon),
+    })
+}
+
+/// Fetch chart data (canonical) for a stock ticker by explicit date range.
+pub async fn fetch_chart_range_response(
+    symbol: &str,
+    interval: Interval,
+    start: i64,
+    end: i64,
+) -> Result<Chart> {
+    let from = timestamp_to_date(start);
+    let to = timestamp_to_date(end);
+    let (mult, timespan) = interval_to_polygon(interval);
+    let aggs = stock_aggregates(symbol, mult, timespan, &from, &to, None).await?;
+    let candles = aggs_to_candles(aggs);
+    Ok(Chart {
+        symbol: symbol.to_string(),
+        meta: Default::default(),
+        candles,
+        interval: None,
+        range: None,
+        provider_id: Some(Provider::Polygon),
     })
 }
 

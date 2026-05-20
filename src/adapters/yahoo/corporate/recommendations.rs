@@ -2,38 +2,14 @@
 ///
 /// Fetches similar/recommended quotes for a given symbol.
 use crate::adapters::yahoo::client::YahooClient;
-use crate::adapters::yahoo::endpoints::api;
 use crate::error::Result;
-use tracing::info;
+use crate::models::corporate::recommendation::SimilarSymbol;
 
-/// Get similar/recommended quotes for a symbol
+/// Fetch recommendations and convert to canonical `SimilarSymbol` models.
 ///
-/// # Arguments
-///
-/// * `client` - The Yahoo Finance client
-/// * `symbol` - Stock symbol to get recommendations for
-/// * `limit` - Maximum number of recommendations to return
-///
-/// # Example
-///
-/// ```ignore
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::api::recommendations;
-/// let similar = recommendations::fetch(&client, "AAPL", 5).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn fetch(client: &YahooClient, symbol: &str, limit: u32) -> Result<serde_json::Value> {
-    crate::adapters::yahoo::common::validate_symbol(symbol)?;
-
-    info!("Fetching similar quotes for: {}", symbol);
-
-    let url = api::recommendations(symbol);
-    let params = [("count", limit.to_string())];
-    let response = client.request_with_params(&url, &params).await?;
-
-    Ok(response.json().await?)
+/// Delegates to [`YahooClient::get_recommendations`] for the typed result.
+pub async fn fetch(client: &YahooClient, symbol: &str, limit: u32) -> Result<Vec<SimilarSymbol>> {
+    client.get_recommendations(symbol, limit).await
 }
 
 #[cfg(test)]
@@ -47,8 +23,8 @@ mod tests {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = fetch(&client, "AAPL", 5).await;
         assert!(result.is_ok());
-        let json = result.unwrap();
-        assert!(json.get("finance").is_some());
+        let sims = result.unwrap();
+        assert!(!sims.is_empty(), "Should have at least one similar symbol");
     }
 
     #[tokio::test]

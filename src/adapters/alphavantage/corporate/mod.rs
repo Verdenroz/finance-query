@@ -184,3 +184,88 @@ pub async fn top_gainers_losers() -> Result<TopMoversDTO> {
         most_actively_traded: parse_movers(&json, "most_actively_traded"),
     })
 }
+
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical news articles for a symbol.
+pub async fn fetch_news_response(
+    symbol: &str,
+) -> Result<Vec<crate::models::corporate::news::News>> {
+    let articles = news_sentiment(Some(&[symbol]), None, Some(50)).await?;
+    Ok(articles
+        .into_iter()
+        .map(|a| crate::models::corporate::news::News {
+            title: a.title,
+            link: a.url,
+            source: a.source,
+            img: String::new(),
+            time: a.time_published,
+            provider_id: Some(crate::Provider::AlphaVantage),
+        })
+        .collect())
+}
+
+/// Fetch canonical chart events (dividends + splits) for a symbol.
+pub async fn fetch_events_response(
+    symbol: &str,
+) -> Result<crate::models::chart::events::ChartEvents> {
+    let divs = super::fundamentals::dividends(symbol).await?;
+    let splits = super::fundamentals::splits(symbol).await?;
+
+    let mut chart_events = crate::models::chart::events::ChartEvents::default();
+    chart_events.dividends = divs
+        .into_iter()
+        .filter_map(|d| {
+            let ts = parse_av_date(d.ex_dividend_date.as_deref()?)?;
+            Some((
+                ts.to_string(),
+                crate::models::chart::events::DividendEvent {
+                    date: ts,
+                    amount: d.amount.unwrap_or(0.0),
+                },
+            ))
+        })
+        .collect();
+    chart_events.splits = splits
+        .into_iter()
+        .filter_map(|s| {
+            let ts = parse_av_date(s.effective_date.as_deref()?)?;
+            let (num, den) = parse_split_ratio(s.split_ratio.as_deref().unwrap_or("1:1"));
+            Some((
+                ts.to_string(),
+                crate::models::chart::events::SplitEvent {
+                    date: ts,
+                    numerator: num as f64,
+                    denominator: den as f64,
+                    split_ratio: format!("{}:{}", num, den),
+                },
+            ))
+        })
+        .collect();
+    Ok(chart_events)
+}
+
+/// Parse an Alpha Vantage date string (YYYY-MM-DD) to a Unix timestamp.
+fn parse_av_date(date_str: &str) -> Option<i64> {
+    if date_str.is_empty() {
+        return None;
+    }
+    chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+        .ok()
+        .and_then(|d| d.and_hms_opt(0, 0, 0))
+        .map(|dt| dt.and_utc().timestamp())
+}
+
+/// Parse a split ratio string like "4:1" into (numerator, denominator).
+fn parse_split_ratio(ratio: &str) -> (u32, u32) {
+    let parts: Vec<&str> = ratio.split(':').collect();
+    if parts.len() == 2 {
+        let num = parts[0].parse::<u32>().unwrap_or(1);
+        let den = parts[1].parse::<u32>().unwrap_or(1);
+        (num, den)
+    } else {
+        (1, 1)
+    }
+}

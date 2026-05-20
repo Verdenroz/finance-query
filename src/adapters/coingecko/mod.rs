@@ -68,3 +68,28 @@ pub async fn coins(vs_currency: &str, count: usize) -> Result<Vec<CoinQuote>> {
 pub async fn coin(id: &str, vs_currency: &str) -> Result<CoinQuote> {
     client()?.coin(id, vs_currency).await
 }
+
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical CryptoQuote for a CoinGecko coin.
+pub async fn fetch_crypto_quote_response(
+    id: &str,
+    vs_currency: &str,
+) -> Result<crate::models::crypto::CryptoQuote> {
+    let quote = coin(id, vs_currency).await?;
+    Ok(crate::models::crypto::CryptoQuote {
+        id: quote.id,
+        symbol: quote.symbol,
+        name: quote.name,
+        price: quote.current_price,
+        market_cap: quote.market_cap,
+        volume_24h: quote.total_volume,
+        change_24h: None,
+        change_percent_24h: quote.price_change_percentage_24h,
+        high_24h: None,
+        low_24h: None,
+        circulating_supply: quote.circulating_supply,
+    })
+}

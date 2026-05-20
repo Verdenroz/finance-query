@@ -182,3 +182,42 @@ pub async fn fx_monthly(from_symbol: &str, to_symbol: &str) -> Result<ForexTimeS
         .await?;
     parse_fx_series(&json, from_symbol, to_symbol)
 }
+
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical ForexQuote for a currency pair.
+pub async fn fetch_forex_quote_response(
+    from: &str,
+    to: &str,
+) -> Result<crate::models::forex::ForexQuote> {
+    let rate = exchange_rate(from, to).await?;
+    let timestamp = parse_av_datetime(&rate.last_refreshed);
+    let symbol = format!(
+        "{}{}",
+        rate.from_currency_code.to_uppercase(),
+        rate.to_currency_code.to_uppercase()
+    );
+    Ok(crate::models::forex::ForexQuote {
+        symbol,
+        base_currency: Some(rate.from_currency_code),
+        quote_currency: Some(rate.to_currency_code),
+        bid: Some(rate.bid_price),
+        ask: Some(rate.ask_price),
+        price: Some(rate.bid_price),
+        change: None,
+        change_percent: None,
+        timestamp,
+    })
+}
+
+/// Parse an Alpha Vantage datetime string (e.g. "2024-01-15 14:30:00") to a Unix timestamp.
+fn parse_av_datetime(dt_str: &str) -> Option<i64> {
+    if dt_str.is_empty() {
+        return None;
+    }
+    chrono::NaiveDateTime::parse_from_str(dt_str, "%Y-%m-%d %H:%M:%S")
+        .ok()
+        .map(|dt| dt.and_utc().timestamp())
+}

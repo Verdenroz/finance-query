@@ -131,6 +131,31 @@ pub async fn treasury_yields(year: u32) -> Result<Vec<TreasuryYield>> {
     economic::treasury::fetch_yields(year).await
 }
 
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical EconomicSeries for a FRED series ID.
+pub async fn fetch_economic_series_response(
+    series_id: &str,
+) -> Result<crate::models::economic::EconomicSeries> {
+    let series = crate::adapters::fred::series(series_id).await?;
+    Ok(crate::models::economic::EconomicSeries {
+        series_id: series.id,
+        title: None,
+        units: None,
+        frequency: None,
+        observations: series
+            .observations
+            .into_iter()
+            .map(|o| crate::models::economic::MacroObservation {
+                date: o.date,
+                value: o.value,
+            })
+            .collect(),
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

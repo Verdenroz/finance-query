@@ -8,6 +8,31 @@ use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::crypto::AvailableSymbolDTO;
 use crate::adapters::fmp::models::{FmpQuoteDTO, HistoricalPriceResponseDTO};
 
+/// Convert FMP quote DTOs into a canonical CommodityQuote.
+fn commodity_quote_to_canonical(
+    symbol: &str,
+    quotes: &[FmpQuoteDTO],
+) -> crate::models::commodities::CommodityQuote {
+    let q = quotes.first();
+    crate::models::commodities::CommodityQuote {
+        symbol: symbol.to_string(),
+        name: q.and_then(|q| q.name.clone()),
+        unit: None,
+        price: q.and_then(|q| q.price),
+        change: q.and_then(|q| q.change),
+        change_percent: q.and_then(|q| q.changes_percentage),
+        timestamp: None,
+    }
+}
+
+/// Fetch a canonical commodity quote.
+pub async fn fetch_canonical_commodity_quote(
+    symbol: &str,
+) -> Result<crate::models::commodities::CommodityQuote> {
+    let quotes = commodity_quote(symbol).await?;
+    Ok(commodity_quote_to_canonical(symbol, &quotes))
+}
+
 /// Fetch a real-time commodity quote.
 ///
 /// * `symbol` - e.g., `"GCUSD"` (gold)

@@ -3,6 +3,7 @@
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
+use crate::models::crypto::CryptoQuote;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -37,6 +38,40 @@ pub async fn crypto_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> 
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "crypto_snapshot".to_string(),
         context: format!("Failed to parse crypto snapshot response: {e}"),
+    })
+}
+
+/// Fetch crypto quote (canonical) for a currency pair.
+pub async fn fetch_crypto_quote_response(from: &str, to: &str) -> Result<CryptoQuote> {
+    let ticker = format!("X:{}{}", from.to_uppercase(), to.to_uppercase());
+    let resp = crypto_snapshot(&ticker).await?;
+    let snap = resp.ticker;
+    let day = snap.as_ref().and_then(|s| s.day.as_ref());
+    Ok(CryptoQuote {
+        id: snap
+            .as_ref()
+            .and_then(|s| s.ticker.clone())
+            .unwrap_or_else(|| ticker.clone()),
+        symbol: snap
+            .as_ref()
+            .and_then(|s| s.ticker.clone())
+            .unwrap_or_else(|| ticker.clone()),
+        name: snap
+            .as_ref()
+            .and_then(|s| s.ticker.clone())
+            .unwrap_or(ticker),
+        price: day.and_then(|d| d.close).or_else(|| {
+            snap.as_ref()
+                .and_then(|s| s.last_trade.as_ref())
+                .and_then(|t| t.price)
+        }),
+        market_cap: None,
+        volume_24h: day.and_then(|d| d.volume),
+        change_24h: snap.as_ref().and_then(|s| s.todays_change),
+        change_percent_24h: snap.as_ref().and_then(|s| s.todays_change_perc),
+        high_24h: day.and_then(|d| d.high),
+        low_24h: day.and_then(|d| d.low),
+        circulating_supply: None,
     })
 }
 

@@ -1,5 +1,4 @@
 use crate::adapters::yahoo::client::YahooClient;
-use crate::adapters::yahoo::endpoints::api;
 use crate::error::Result;
 use crate::models::market::hours::MarketHours;
 
@@ -25,30 +24,7 @@ use crate::models::market::hours::MarketHours;
 /// # Ok(())
 /// # }
 /// ```
+/// Delegates to [`YahooClient::get_hours`] for the typed result.
 pub async fn fetch(client: &YahooClient, region: Option<&str>) -> Result<MarketHours> {
-    let config = client.config();
-    let region = region.unwrap_or(&config.region);
-
-    let params = [
-        ("formatted", "true"),
-        ("key", "finance"),
-        ("region", region),
-    ];
-
-    let response = client
-        .request_with_params(api::MARKET_TIME, &params)
-        .await?;
-    let json: serde_json::Value = response.json().await?;
-
-    parse_hours_response(&json)
-}
-
-/// Parse Yahoo Finance hours response into clean MarketHours
-fn parse_hours_response(json: &serde_json::Value) -> Result<MarketHours> {
-    MarketHours::from_response(json).map_err(|e| {
-        crate::error::FinanceError::ResponseStructureError {
-            field: "hours".to_string(),
-            context: e,
-        }
-    })
+    client.get_hours(region).await
 }

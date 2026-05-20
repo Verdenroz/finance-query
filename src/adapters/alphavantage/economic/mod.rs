@@ -133,3 +133,54 @@ pub async fn unemployment() -> Result<EconomicSeriesDTO> {
 pub async fn nonfarm_payroll() -> Result<EconomicSeriesDTO> {
     fetch_indicator("NONFARM_PAYROLL", None).await
 }
+
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical EconomicSeries by series_id.
+pub async fn fetch_economic_series_response(
+    series_id: &str,
+) -> Result<crate::models::economic::EconomicSeries> {
+    let (dto, func_name) = match series_id.to_uppercase().as_str() {
+        "REAL_GDP" => (real_gdp(None).await?, "REAL_GDP"),
+        "REAL_GDP_PER_CAPITA" => (real_gdp_per_capita().await?, "REAL_GDP_PER_CAPITA"),
+        "TREASURY_YIELD" => (treasury_yield(None, None).await?, "TREASURY_YIELD"),
+        "FEDERAL_FUNDS_RATE" => (federal_funds_rate(None).await?, "FEDERAL_FUNDS_RATE"),
+        "CPI" => (cpi(None).await?, "CPI"),
+        "INFLATION" => (inflation().await?, "INFLATION"),
+        "RETAIL_SALES" => (retail_sales().await?, "RETAIL_SALES"),
+        "DURABLES" => (durables().await?, "DURABLES"),
+        "UNEMPLOYMENT" => (unemployment().await?, "UNEMPLOYMENT"),
+        "NONFARM_PAYROLL" => (nonfarm_payroll().await?, "NONFARM_PAYROLL"),
+        _ => {
+            return Err(crate::error::FinanceError::InvalidParameter {
+                param: "series_id".to_string(),
+                reason: format!("Unknown Alpha Vantage economic series: {series_id}"),
+            });
+        }
+    };
+
+    Ok(crate::models::economic::EconomicSeries {
+        series_id: func_name.to_string(),
+        title: Some(dto.name),
+        units: if dto.unit.is_empty() {
+            None
+        } else {
+            Some(dto.unit)
+        },
+        frequency: if dto.interval.is_empty() {
+            None
+        } else {
+            Some(dto.interval)
+        },
+        observations: dto
+            .data
+            .into_iter()
+            .map(|dp| crate::models::economic::MacroObservation {
+                date: dp.date,
+                value: dp.value,
+            })
+            .collect(),
+    })
+}

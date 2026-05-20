@@ -1,4 +1,9 @@
 //! Options contract reference endpoints: list contracts, contract details.
+//!
+//! Scaffolding — metadata-only endpoint. For live pricing, use
+//! `options::snapshots::options_chain_snapshot` which is wired through
+//! the Polygon provider's `fetch_options`.
+#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

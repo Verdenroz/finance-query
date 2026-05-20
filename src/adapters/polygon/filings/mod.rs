@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
+use crate::models::filings::{ProviderFiling, ProviderFilings};
 
 use super::build_client;
 use super::models::PaginatedResponseDTO;
@@ -81,6 +82,28 @@ pub async fn sec_edgar_index(
 ) -> Result<PaginatedResponseDTO<FilingEntryDTO>> {
     let client = build_client()?;
     client.get("/v1/reference/sec/filings", params).await
+}
+
+/// Fetch filings (canonical) for a stock ticker.
+pub async fn fetch_filings_response(symbol: &str) -> Result<ProviderFilings> {
+    let paginated = sec_edgar_index(&[("ticker", symbol)]).await?;
+    let filings = paginated
+        .results
+        .unwrap_or_default()
+        .into_iter()
+        .map(|f| ProviderFiling {
+            accession_number: f.accession_number,
+            filing_date: f.filing_date,
+            filing_type: f.filing_type,
+            filing_url: f.filing_url,
+            company_name: f.company_name,
+            cik: f.cik,
+        })
+        .collect();
+    Ok(ProviderFilings {
+        symbol: symbol.to_string(),
+        filings,
+    })
 }
 
 /// Fetch 10-K filing section content.

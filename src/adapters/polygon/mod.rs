@@ -56,15 +56,23 @@ use client::PolygonClientBuilder;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-pub use models::*;
-
 // Capability modules
 pub use chart::*;
 pub use corporate::*;
 pub use discovery::*;
 pub use fundamentals::*;
-pub use options::contracts::{OptionsContractDTO, options_contracts};
+pub use options::snapshots::fetch_options_response;
 pub use quote::*;
+
+// Asset-class modules
+pub use crypto::snapshots::*;
+pub use forex::quotes::*;
+pub use futures::snapshots::*;
+pub use indices::snapshots::*;
+
+// Other capability modules
+pub use economic::*;
+pub use filings::*;
 
 /// Polygon.io free-tier rate limit: 5 req/sec.
 const PG_RATE_PER_SEC: f64 = 5.0;

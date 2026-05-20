@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
+use crate::models::corporate::recommendation::SimilarSymbol;
 
 use super::build_client;
 use super::models::PaginatedResponseDTO;
@@ -240,6 +241,23 @@ pub async fn related_tickers(ticker: &str) -> Result<PaginatedResponseDTO<Relate
     let client = build_client()?;
     let path = format!("/v1/related-companies/{}", encode_path_segment(ticker));
     client.get(&path, &[]).await
+}
+
+/// Fetch similar/recommended symbols (canonical) for a stock ticker.
+pub async fn fetch_similar_symbols_response(
+    symbol: &str,
+    _limit: u32,
+) -> Result<Vec<SimilarSymbol>> {
+    let paginated = related_tickers(symbol).await?;
+    Ok(paginated
+        .results
+        .unwrap_or_default()
+        .into_iter()
+        .map(|r| SimilarSymbol {
+            symbol: r.ticker.unwrap_or_default(),
+            score: 0.0,
+        })
+        .collect())
 }
 
 /// Fetch exchanges list.

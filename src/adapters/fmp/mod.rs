@@ -47,10 +47,7 @@ use client::FmpClientBuilder;
 use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
-pub use corporate::*;
-pub use fundamentals::*;
 pub use models::*;
-pub use quote::*;
 
 /// FMP default rate limit: 5 req/sec.
 const FMP_RATE_PER_SEC: f64 = 5.0;

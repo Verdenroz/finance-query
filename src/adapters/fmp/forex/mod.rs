@@ -8,6 +8,38 @@ use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::crypto::AvailableSymbolDTO;
 use crate::adapters::fmp::models::{FmpQuoteDTO, HistoricalPriceResponseDTO, IntradayPriceDTO};
 
+/// Convert FMP quote DTOs into a canonical ForexQuote.
+fn forex_quote_to_canonical(
+    pair: &str,
+    from: &str,
+    to: &str,
+    quotes: &[FmpQuoteDTO],
+) -> crate::models::forex::ForexQuote {
+    let q = quotes.first();
+    let price = q.and_then(|q| q.price);
+    crate::models::forex::ForexQuote {
+        symbol: pair.to_string(),
+        base_currency: Some(from.to_uppercase()),
+        quote_currency: Some(to.to_uppercase()),
+        bid: price,
+        ask: None,
+        price,
+        change: None,
+        change_percent: None,
+        timestamp: q.and_then(|q| q.timestamp),
+    }
+}
+
+/// Fetch a canonical forex quote.
+pub async fn fetch_canonical_forex_quote(
+    from: &str,
+    to: &str,
+) -> Result<crate::models::forex::ForexQuote> {
+    let pair = format!("{}{}", from.to_uppercase(), to.to_uppercase());
+    let quotes = forex_quote(&pair).await?;
+    Ok(forex_quote_to_canonical(&pair, from, to, &quotes))
+}
+
 /// Fetch a real-time forex quote.
 ///
 /// * `symbol` - e.g., `"EURUSD"`

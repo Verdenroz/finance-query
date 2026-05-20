@@ -144,3 +144,61 @@ pub async fn crypto_monthly(symbol: &str, market: &str) -> Result<CryptoTimeSeri
         .await?;
     parse_crypto_series(&json, symbol, market)
 }
+
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical CryptoQuote for a symbol/market pair.
+pub async fn fetch_crypto_quote_response(
+    symbol: &str,
+    market: &str,
+) -> Result<crate::models::crypto::CryptoQuote> {
+    let series = crypto_daily(symbol, market).await?;
+
+    let (price, change_24h, change_percent_24h, high_24h, low_24h, volume_24h) =
+        if series.entries.len() >= 2 {
+            let latest = &series.entries[0];
+            let prev = &series.entries[1];
+            let chg = latest.close - prev.close;
+            let pct = if prev.close != 0.0 {
+                (chg / prev.close) * 100.0
+            } else {
+                0.0
+            };
+            (
+                Some(latest.close),
+                Some(chg),
+                Some(pct),
+                Some(latest.high),
+                Some(latest.low),
+                Some(latest.volume),
+            )
+        } else if series.entries.len() == 1 {
+            let latest = &series.entries[0];
+            (
+                Some(latest.close),
+                None,
+                None,
+                Some(latest.high),
+                Some(latest.low),
+                Some(latest.volume),
+            )
+        } else {
+            (None, None, None, None, None, None)
+        };
+
+    Ok(crate::models::crypto::CryptoQuote {
+        id: series.symbol.clone(),
+        symbol: series.symbol,
+        name: String::new(),
+        price,
+        market_cap: None,
+        volume_24h,
+        change_24h,
+        change_percent_24h,
+        high_24h,
+        low_24h,
+        circulating_supply: None,
+    })
+}

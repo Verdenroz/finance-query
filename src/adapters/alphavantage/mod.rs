@@ -55,12 +55,14 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 // Re-export public query functions (used by alphavantage provider)
+pub use commodities::*;
 pub use corporate::*;
+pub use crypto::*;
+pub use economic::*;
+pub use forex::*;
 pub use fundamentals::*;
+pub use options::*;
 pub use quote::*;
-
-// Re-export public models
-pub use models::*;
 
 /// Alpha Vantage free-tier rate limit: 25 requests/day.
 /// Premium: 75 req/min = 1.25 req/sec.

@@ -9,6 +9,40 @@ use crate::error::Result;
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::models::{FmpQuoteDTO, HistoricalPriceResponseDTO, IntradayPriceDTO};
 
+/// Convert FMP quote DTOs into a canonical CryptoQuote.
+fn crypto_quote_to_canonical(
+    id: &str,
+    _vs_currency: &str,
+    quotes: &[FmpQuoteDTO],
+) -> crate::models::crypto::CryptoQuote {
+    let q = quotes.first();
+    crate::models::crypto::CryptoQuote {
+        id: id.to_string(),
+        symbol: q
+            .map(|q| q.symbol.clone())
+            .unwrap_or_else(|| id.to_uppercase()),
+        name: q.and_then(|q| q.name.clone()).unwrap_or_default(),
+        price: q.and_then(|q| q.price),
+        market_cap: q.and_then(|q| q.market_cap),
+        volume_24h: q.and_then(|q| q.volume),
+        change_24h: q.and_then(|q| q.change),
+        change_percent_24h: q.and_then(|q| q.changes_percentage),
+        high_24h: q.and_then(|q| q.day_high),
+        low_24h: q.and_then(|q| q.day_low),
+        circulating_supply: None,
+    }
+}
+
+/// Fetch a canonical crypto quote.
+pub async fn fetch_canonical_crypto_quote(
+    id: &str,
+    vs_currency: &str,
+) -> Result<crate::models::crypto::CryptoQuote> {
+    let pair = format!("{}{}", id.to_uppercase(), vs_currency.to_uppercase());
+    let quotes = crypto_quote(&pair).await?;
+    Ok(crypto_quote_to_canonical(id, vs_currency, &quotes))
+}
+
 /// An available cryptocurrency or forex/commodity symbol.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]

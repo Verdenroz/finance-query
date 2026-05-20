@@ -331,6 +331,59 @@ pub async fn search(
         .await
 }
 
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical ProviderFilings for a ticker symbol.
+pub async fn fetch_filings_response(
+    symbol: &str,
+) -> Result<crate::models::filings::ProviderFilings> {
+    use crate::models::filings::{ProviderFiling, ProviderFilings};
+
+    let cik_num = resolve_cik(symbol).await?;
+    let subs = submissions(cik_num).await?;
+
+    let cik = subs.cik.clone().unwrap_or_default();
+    let company_name = subs.name.clone();
+    let filings = subs
+        .filings
+        .and_then(|f| f.recent)
+        .map(|r| r.to_filings())
+        .unwrap_or_default()
+        .into_iter()
+        .map(|f| {
+            let accession_no_dashes = f.accession_number.replace('-', "");
+            let url = if !cik.is_empty()
+                && !accession_no_dashes.is_empty()
+                && !f.primary_document.is_empty()
+            {
+                Some(format!(
+                    "https://www.sec.gov/Archives/edgar/data/{}/{}/{}",
+                    cik.trim_start_matches('0'),
+                    accession_no_dashes,
+                    f.primary_document
+                ))
+            } else {
+                None
+            };
+            ProviderFiling {
+                accession_number: Some(f.accession_number),
+                filing_date: Some(f.filing_date),
+                filing_type: Some(f.form),
+                filing_url: url,
+                company_name: company_name.clone(),
+                cik: Some(cik.clone()),
+            }
+        })
+        .collect();
+
+    Ok(ProviderFilings {
+        symbol: symbol.to_string(),
+        filings,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

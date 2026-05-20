@@ -406,6 +406,81 @@ pub struct CashFlowDTO {
 }
 
 // ============================================================================
+// Canonical conversion functions
+// ============================================================================
+
+/// Pivot a Vec of serde-serializable financial statements into the canonical
+/// `HashMap<String, HashMap<String, serde_json::Value>>` format used by
+/// `FinancialStatementData`.
+///
+/// Each statement should have a `date` field and arbitrary numeric metric fields.
+pub fn pivot_financials<T: serde::Serialize>(
+    stmts: Vec<T>,
+) -> std::collections::HashMap<String, std::collections::HashMap<String, serde_json::Value>> {
+    let mut data: std::collections::HashMap<
+        String,
+        std::collections::HashMap<String, serde_json::Value>,
+    > = std::collections::HashMap::new();
+
+    for stmt in stmts {
+        let val = match serde_json::to_value(&stmt) {
+            Ok(v) => v,
+            Err(_) => continue,
+        };
+        let obj = match val.as_object() {
+            Some(o) => o,
+            None => continue,
+        };
+
+        let date = match obj.get("date").and_then(|v| v.as_str()) {
+            Some(d) if !d.is_empty() => d.to_string(),
+            _ => continue,
+        };
+
+        for (key, value) in obj {
+            if key == "date" {
+                continue;
+            }
+            // Only include numeric values
+            match &value {
+                serde_json::Value::Number(_) => {}
+                _ => continue,
+            }
+            data.entry(key.clone())
+                .or_default()
+                .insert(date.clone(), value.clone());
+        }
+    }
+
+    data
+}
+
+/// Fetch canonical financial statement data for a symbol.
+pub async fn fetch_financials_data(
+    symbol: &str,
+    stmt_type: crate::StatementType,
+    period: Period,
+    limit: Option<u32>,
+) -> Result<std::collections::HashMap<String, std::collections::HashMap<String, serde_json::Value>>>
+{
+    let data = match stmt_type {
+        crate::StatementType::Income => {
+            let stmts = income_statement(symbol, period, limit).await?;
+            pivot_financials(stmts)
+        }
+        crate::StatementType::Balance => {
+            let stmts = balance_sheet(symbol, period, limit).await?;
+            pivot_financials(stmts)
+        }
+        crate::StatementType::CashFlow => {
+            let stmts = cash_flow(symbol, period, limit).await?;
+            pivot_financials(stmts)
+        }
+    };
+    Ok(data)
+}
+
+// ============================================================================
 // Query functions
 // ============================================================================
 

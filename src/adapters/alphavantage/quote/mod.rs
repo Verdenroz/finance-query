@@ -2,6 +2,8 @@
 #![allow(dead_code)]
 
 use crate::error::{FinanceError, Result};
+use crate::models::chart::{Candle, Chart};
+use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 
 use super::build_client;
 use super::models::*;
@@ -407,6 +409,176 @@ pub async fn market_status() -> Result<Vec<MarketStatusDTO>> {
             })
         })
         .collect())
+}
+
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical QuoteSummaryResponse from a stock symbol.
+pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> {
+    let gq = global_quote(symbol).await?;
+    let price = Price {
+        regular_market_price: Some(FormattedValue {
+            raw: Some(gq.price),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_change: Some(FormattedValue {
+            raw: Some(gq.change),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_change_percent: gq.change_percent.trim_end_matches('%').parse().ok().map(
+            |v| FormattedValue {
+                raw: Some(v),
+                fmt: None,
+                long_fmt: None,
+            },
+        ),
+        regular_market_volume: Some(FormattedValue {
+            raw: Some(gq.volume as i64),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_previous_close: Some(FormattedValue {
+            raw: Some(gq.previous_close),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_open: Some(FormattedValue {
+            raw: Some(gq.open),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_day_high: Some(FormattedValue {
+            raw: Some(gq.high),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_day_low: Some(FormattedValue {
+            raw: Some(gq.low),
+            fmt: None,
+            long_fmt: None,
+        }),
+        ..Default::default()
+    };
+    Ok(QuoteSummaryResponse {
+        symbol: symbol.to_string(),
+        price: Some(price),
+        ..Default::default()
+    })
+}
+
+/// Fetch canonical Chart from a symbol with interval/range.
+pub async fn fetch_chart_response(
+    symbol: &str,
+    interval: crate::Interval,
+    _range: crate::TimeRange,
+) -> Result<Chart> {
+    let ts = match interval {
+        crate::Interval::OneMinute => {
+            time_series_intraday(symbol, AvInterval::OneMin, None).await?
+        }
+        crate::Interval::FiveMinutes => {
+            time_series_intraday(symbol, AvInterval::FiveMin, None).await?
+        }
+        crate::Interval::FifteenMinutes => {
+            time_series_intraday(symbol, AvInterval::FifteenMin, None).await?
+        }
+        crate::Interval::ThirtyMinutes => {
+            time_series_intraday(symbol, AvInterval::ThirtyMin, None).await?
+        }
+        crate::Interval::OneHour => {
+            time_series_intraday(symbol, AvInterval::SixtyMin, None).await?
+        }
+        _ => time_series_daily(symbol, None).await?,
+    };
+
+    let candles: Vec<Candle> = ts
+        .entries
+        .into_iter()
+        .map(|bar| {
+            let ts_val = chrono::NaiveDateTime::parse_from_str(
+                &format!("{} 00:00:00", bar.timestamp),
+                "%Y-%m-%d %H:%M:%S",
+            )
+            .ok()
+            .map(|dt| dt.and_utc().timestamp())
+            .unwrap_or(0);
+            Candle {
+                timestamp: ts_val,
+                open: bar.open,
+                high: bar.high,
+                low: bar.low,
+                close: bar.close,
+                volume: bar.volume as i64,
+                adj_close: None,
+                provider_id: Some(crate::Provider::AlphaVantage),
+            }
+        })
+        .collect();
+
+    Ok(Chart {
+        symbol: symbol.to_string(),
+        meta: Default::default(),
+        candles,
+        interval: None,
+        range: None,
+        provider_id: Some(crate::Provider::AlphaVantage),
+    })
+}
+
+/// Fetch canonical Chart from a symbol with explicit date range.
+pub async fn fetch_chart_range_response(
+    symbol: &str,
+    _interval: crate::Interval,
+    start: i64,
+    end: i64,
+) -> Result<Chart> {
+    let from_date = timestamp_to_date_string(start);
+    let to_date = timestamp_to_date_string(end);
+
+    let ts = time_series_daily(symbol, Some(super::models::OutputSize::Full)).await?;
+
+    let candles: Vec<Candle> = ts
+        .entries
+        .into_iter()
+        .filter(|bar| bar.timestamp >= from_date && bar.timestamp <= to_date)
+        .map(|bar| {
+            let ts_val = chrono::NaiveDate::parse_from_str(&bar.timestamp, "%Y-%m-%d")
+                .ok()
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+                .map(|dt| dt.and_utc().timestamp())
+                .unwrap_or(0);
+            Candle {
+                timestamp: ts_val,
+                open: bar.open,
+                high: bar.high,
+                low: bar.low,
+                close: bar.close,
+                volume: bar.volume as i64,
+                adj_close: None,
+                provider_id: Some(crate::Provider::AlphaVantage),
+            }
+        })
+        .collect();
+
+    Ok(Chart {
+        symbol: symbol.to_string(),
+        meta: Default::default(),
+        candles,
+        interval: None,
+        range: None,
+        provider_id: Some(crate::Provider::AlphaVantage),
+    })
+}
+
+/// Convert a Unix timestamp to a YYYY-MM-DD date string.
+fn timestamp_to_date_string(ts: i64) -> String {
+    chrono::DateTime::from_timestamp(ts, 0)
+        .map(|dt| dt.format("%Y-%m-%d").to_string())
+        .unwrap_or_else(|| "1970-01-01".to_string())
 }
 
 #[cfg(test)]
