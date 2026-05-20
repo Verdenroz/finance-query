@@ -1,9 +1,6 @@
-//! Symbol-specific data access.
+//! Symbol-specific and market-level query handles.
 #![allow(missing_docs)]
-//!
-//! Provides [`Ticker`] for fetching quotes, charts, financials, and news
-//! for specific symbols from all configured data providers.
 
 mod core;
 mod macros;
-pub use core::{Ticker, TickerBuilder};
+pub use core::{ClientHandle, Ticker, TickerBuilder};
