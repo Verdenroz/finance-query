@@ -12,7 +12,7 @@ macro_rules! define_quote_accessors {
             $(
                 $(#[$meta])*
                 pub async fn $method_name(&self) -> crate::error::Result<Option<$return_type>> {
-                    let cache = self.ensure_quote_summary().await?;
+                    let cache = self.ensure_quote().await?;
                     Ok(cache.as_ref().and_then(|e| e.value.$field_name.clone()))
                 }
             )*

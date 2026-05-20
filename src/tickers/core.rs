@@ -15,7 +15,7 @@ use crate::models::corporate::recommendation::Recommendation;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::Quote;
-use crate::providers::{Capability, Fetch, Merge, Prefer, Provider, ProviderSet, build_providers};
+use crate::providers::{Capability, Fetch, ProviderSet, Routes, build_providers};
 use crate::utils::{CacheEntry, EVICTION_THRESHOLD, filter_by_range};
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
@@ -110,12 +110,11 @@ const DEFAULT_MAX_CONCURRENCY: usize = 10;
 pub struct TickersBuilder {
     symbols: Vec<Arc<str>>,
     config: ClientConfig,
-    provider_ids: Option<Vec<Provider>>,
-    fetch: Fetch,
-    merge: Option<Arc<dyn Merge>>,
+    shared_client: Option<crate::ticker::ClientHandle>,
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
+    value_format: crate::constants::ValueFormat,
 }
 
 impl TickersBuilder {
@@ -127,12 +126,11 @@ impl TickersBuilder {
         Self {
             symbols: symbols.into_iter().map(|s| s.into().into()).collect(),
             config: ClientConfig::default(),
-            provider_ids: None,
-            fetch: Fetch::Sequential,
-            merge: None,
+            shared_client: None,
             max_concurrency: DEFAULT_MAX_CONCURRENCY,
             cache_ttl: None,
             include_logo: false,
+            value_format: crate::constants::ValueFormat::default(),
         }
     }
 
@@ -220,36 +218,49 @@ impl TickersBuilder {
         self
     }
 
-    /// Configure which providers to use, in priority order. Default: `[Yahoo]`.
-    pub fn providers(mut self, ids: &[Provider]) -> Self {
-        self.provider_ids = Some(ids.to_vec());
+    /// Set how [`FormattedValue`](crate::FormattedValue) fields are represented
+    /// in the [`Quote`](crate::Quote) returned by [`Tickers::quotes`].
+    ///
+    /// - [`ValueFormat::Raw`] — only `.raw` is populated **(default)**; `.fmt`
+    ///   and `.long_fmt` are stripped. Best for programmatic use and calculations.
+    /// - [`ValueFormat::Both`] — full `{ raw, fmt, longFmt }` object preserved.
+    /// - [`ValueFormat::Pretty`] — returns the typed `Quote` unchanged (use
+    ///   [`ValueFormat::transform`] for string-only JSON output).
+    pub fn format(mut self, format: crate::constants::ValueFormat) -> Self {
+        self.value_format = format;
         self
     }
 
-    /// Configure how providers are queried. Default: `Sequential`.
-    pub fn fetch(mut self, mode: Fetch) -> Self {
-        self.fetch = mode;
-        self
-    }
-
-    /// Configure how results from multiple providers are combined. Default: `Prefer`.
-    pub fn merge(mut self, policy: impl Merge + 'static) -> Self {
-        self.merge = Some(Arc::new(policy));
+    /// Share an existing authenticated session instead of creating a new one.
+    ///
+    /// Avoids redundant auth handshakes when combining `Tickers` with other
+    /// `Ticker` instances. Obtain a handle from any existing `Ticker` or
+    /// `Tickers` via `.client_handle()`.
+    pub fn client(mut self, handle: crate::ticker::ClientHandle) -> Self {
+        self.shared_client = Some(handle);
         self
     }
 
     /// Build the Tickers instance
     pub async fn build(self) -> Result<Tickers> {
-        let ids = self.provider_ids.unwrap_or_else(|| vec![Provider::Yahoo]);
-        let providers = Arc::new(
-            build_providers(
-                &ids,
-                &self.config,
-                self.fetch,
-                self.merge.unwrap_or_else(|| Arc::new(Prefer)),
+        let providers = if let Some(handle) = self.shared_client {
+            let yahoo = crate::providers::yahoo::YahooProvider::from_client(handle.0);
+            let client = yahoo.client_arc();
+            Arc::new(ProviderSet::new(
+                vec![Arc::new(yahoo) as Arc<dyn crate::providers::ProviderAdapter>],
+                Some(client),
+                Routes::new(Fetch::Sequential),
+            ))
+        } else {
+            Arc::new(
+                build_providers(
+                    &[crate::providers::Provider::Yahoo],
+                    &self.config,
+                    Routes::new(Fetch::Sequential),
+                )
+                .await?,
             )
-            .await?,
-        );
+        };
 
         Ok(Tickers {
             symbols: self.symbols,
@@ -257,6 +268,7 @@ impl TickersBuilder {
             max_concurrency: self.max_concurrency,
             cache_ttl: self.cache_ttl,
             include_logo: self.include_logo,
+            value_format: self.value_format,
             quote_cache: Default::default(),
             chart_cache: Default::default(),
             events_cache: Default::default(),
@@ -318,6 +330,7 @@ pub struct Tickers {
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
+    value_format: crate::constants::ValueFormat,
     quote_cache: QuoteCache,
     chart_cache: ChartCache,
     events_cache: EventsCache,
@@ -400,6 +413,19 @@ impl Tickers {
         self.symbols.is_empty()
     }
 
+    /// Returns a handle to the underlying Yahoo Finance session.
+    ///
+    /// Pass to [`Ticker::builder`](crate::Ticker::builder) or other
+    /// [`Tickers::builder`] calls via `.client(handle)` to share the
+    /// authenticated session without a new auth handshake.
+    pub fn client_handle(&self) -> crate::ticker::ClientHandle {
+        crate::ticker::ClientHandle(
+            self.providers
+                .first_yahoo()
+                .expect("Tickers always uses a Yahoo session"),
+        )
+    }
+
     /// Returns `true` if a cache entry exists and has not exceeded the TTL.
     #[inline]
     fn is_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
@@ -480,11 +506,11 @@ impl Tickers {
             }
         }
 
-        // Convert symbols to owned strings for async closure capture
         let symbol_strings: Vec<String> = self.symbols.iter().map(|s| s.to_string()).collect();
+        let mut response = BatchQuotesResponse::with_capacity(self.symbols.len());
 
         let (quote_data, logos) = if self.include_logo {
-            // Logo fetching is Yahoo-specific — fire in parallel with the provider quote fetch
+            // Fire logo fetch in parallel with quote fetch; logos are Yahoo-only
             let providers_logo = Arc::clone(&self.providers);
             let syms_logo = symbol_strings.clone();
             let logo_future = async move {
@@ -508,7 +534,7 @@ impl Tickers {
             let syms_quote = symbol_strings.clone();
             let quote_future = async move {
                 providers_quote
-                    .try_fetch(Capability::QUOTE, |p| {
+                    .fetch(Capability::QUOTE, |p| {
                         let syms = syms_quote.clone();
                         let p = p.clone();
                         async move {
@@ -519,13 +545,20 @@ impl Tickers {
                     .await
             };
 
-            let (quote_result, logo_result) = tokio::join!(quote_future, logo_future);
-            (quote_result?, logo_result)
+            let (batch_result, logo_result) = tokio::join!(quote_future, logo_future);
+            let quote_data = match batch_result {
+                Ok(data) => data,
+                Err(_) => {
+                    self.fetch_quotes_per_symbol(&symbol_strings, &mut response)
+                        .await
+                }
+            };
+            (quote_data, logo_result)
         } else {
             let providers = Arc::clone(&self.providers);
             let syms = symbol_strings.clone();
-            let data = providers
-                .try_fetch(Capability::QUOTE, |p| {
+            let batch_result = providers
+                .fetch(Capability::QUOTE, |p| {
                     let syms = syms.clone();
                     let p = p.clone();
                     async move {
@@ -533,11 +566,17 @@ impl Tickers {
                         p.fetch_quotes_batch(&syms_ref).await
                     }
                 })
-                .await?;
+                .await;
+            let data = match batch_result {
+                Ok(data) => data,
+                Err(_) => {
+                    self.fetch_quotes_per_symbol(&symbol_strings, &mut response)
+                        .await
+                }
+            };
             (data, None)
         };
 
-        // Build logo lookup map
         let logo_map: HashMap<String, (Option<String>, Option<String>)> = logos
             .and_then(|l| l.get("quoteResponse")?.get("result")?.as_array().cloned())
             .map(|results| {
@@ -556,22 +595,23 @@ impl Tickers {
             })
             .unwrap_or_default();
 
-        let mut response = BatchQuotesResponse::with_capacity(self.symbols.len());
         let mut parsed_quotes: Vec<(String, Quote)> = Vec::new();
 
-        for mut data in quote_data {
-            let symbol = data.symbol.clone();
-            if let Some((logo_url, _)) = logo_map.get(&symbol)
-                && data.logo_url.is_none()
-            {
-                data.logo_url = logo_url.clone();
-            }
-            let mut quote = data.into_quote();
-            if let Some((_, company_logo_url)) = logo_map.get(&symbol)
-                && quote.company_logo_url.is_none()
-            {
-                quote.company_logo_url = company_logo_url.clone();
-            }
+        for (symbol, summary) in quote_data {
+            let logo_url = logo_map.get(&symbol).and_then(|(l, _)| l.clone());
+            let company_logo_url = logo_map.get(&symbol).and_then(|(_, c)| c.clone());
+            let quote = Quote::from_response(&summary, logo_url, company_logo_url);
+            let quote = match self.value_format {
+                crate::constants::ValueFormat::Raw => {
+                    let json =
+                        serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
+                    let transformed = self.value_format.transform(json);
+                    serde_json::from_value(transformed).map_err(FinanceError::JsonParseError)?
+                }
+                crate::constants::ValueFormat::Pretty | crate::constants::ValueFormat::Both => {
+                    quote
+                }
+            };
             parsed_quotes.push((symbol, quote));
         }
 
@@ -600,6 +640,48 @@ impl Tickers {
         Ok(response)
     }
 
+    /// Fallback for when no provider supports `fetch_quotes_batch`.
+    /// Fetches each symbol individually; failures go into `response.errors`.
+    async fn fetch_quotes_per_symbol(
+        &self,
+        symbols: &[String],
+        response: &mut BatchQuotesResponse,
+    ) -> Vec<(String, crate::models::quote::QuoteSummaryResponse)> {
+        let futures: Vec<_> = symbols
+            .iter()
+            .map(|sym| {
+                let providers = Arc::clone(&self.providers);
+                let sym = sym.clone();
+                async move {
+                    let result = providers
+                        .fetch(Capability::QUOTE, |p| {
+                            let sym = sym.clone();
+                            let p = p.clone();
+                            async move { p.fetch_quote(&sym).await }
+                        })
+                        .await;
+                    (sym, result)
+                }
+            })
+            .collect();
+
+        let results: Vec<_> = stream::iter(futures)
+            .buffer_unordered(self.max_concurrency)
+            .collect()
+            .await;
+
+        let mut successes = Vec::new();
+        for (sym, result) in results {
+            match result {
+                Ok(resp) => successes.push((sym, resp)),
+                Err(e) => {
+                    response.errors.insert(sym, e.to_string());
+                }
+            }
+        }
+        successes
+    }
+
     /// Get a specific quote by symbol (from cache or fetch all)
     pub async fn quote(&self, symbol: &str) -> Result<Quote> {
         {
@@ -625,6 +707,15 @@ impl Tickers {
                     .cloned()
                     .unwrap_or_else(|| "Symbol not found".to_string()),
             })
+    }
+
+    /// Get a specific quote by symbol as a JSON value, with [`FormattedValue`](crate::FormattedValue)
+    /// fields transformed according to the format configured via
+    /// [`TickersBuilder::format`].
+    pub async fn quote_value(&self, symbol: &str) -> Result<serde_json::Value> {
+        let quote = self.quote(symbol).await?;
+        let json = serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
+        Ok(self.value_format.transform(json))
     }
 
     /// Helper to get or create a fetch guard for a given key.
@@ -711,7 +802,7 @@ impl Tickers {
                 async move {
                     let sym = symbol.to_string();
                     let result = providers
-                        .try_fetch(Capability::CHART, |p| {
+                        .fetch(Capability::CHART, |p| {
                             let sym = sym.clone();
                             let p = p.clone();
                             async move { p.fetch_chart(&sym, interval, range).await }
@@ -733,7 +824,7 @@ impl Tickers {
         for (symbol, result) in results {
             match result {
                 Ok(data) => {
-                    let chart = data.into_chart(Some(interval), Some(range));
+                    let chart = data;
                     parsed_charts.push((symbol, chart));
                 }
                 Err(e) => {
@@ -822,7 +913,7 @@ impl Tickers {
                 async move {
                     let sym = symbol.to_string();
                     let result = providers
-                        .try_fetch(Capability::CHART, |p| {
+                        .fetch(Capability::CHART, |p| {
                             let sym = sym.clone();
                             let p = p.clone();
                             async move { p.fetch_chart_range(&sym, interval, start, end).await }
@@ -843,7 +934,7 @@ impl Tickers {
         for (symbol, result) in results {
             match result {
                 Ok(data) => {
-                    let chart = data.into_chart(Some(interval), None);
+                    let chart = data;
                     response.charts.insert(symbol.to_string(), chart);
                 }
                 Err(e) => {
@@ -888,7 +979,7 @@ impl Tickers {
                 async move {
                     let sym = symbol.to_string();
                     let result = providers
-                        .try_fetch(Capability::CORPORATE, |p| {
+                        .fetch(Capability::CORPORATE, |p| {
                             let sym = sym.clone();
                             let p = p.clone();
                             async move { p.fetch_events(&sym).await }
@@ -908,7 +999,7 @@ impl Tickers {
 
         for (symbol, result) in results {
             if let Ok(events_data) = result {
-                parsed_events.push((symbol, events_data.into_chart_events()));
+                parsed_events.push((symbol, events_data));
             }
         }
 
@@ -1248,13 +1339,12 @@ impl Tickers {
             response: BatchFinancialsResponse.financials,
             fetch: |providers, symbol| {
                 let sym = symbol.to_string();
-                providers.try_fetch(Capability::FUNDAMENTALS, move |p| {
+                providers.fetch(Capability::FUNDAMENTALS, move |p| {
                     let sym = sym.clone();
                     let p = p.clone();
                     async move {
                         p.fetch_financials(&sym, statement_type, frequency)
                             .await
-                            .map(|d| d.into_financial_statement())
                     }
                 }).await
             },
@@ -1292,13 +1382,13 @@ impl Tickers {
             response: BatchNewsResponse.news,
             fetch: |providers, symbol| {
                 let sym = symbol.to_string();
-                providers.try_fetch(Capability::CORPORATE, move |p| {
+                providers.fetch(Capability::CORPORATE, move |p| {
                     let sym = sym.clone();
                     let p = p.clone();
                     async move {
                         p.fetch_news(&sym)
                             .await
-                            .map(|data| data.into_iter().map(Into::into).collect::<Vec<News>>())
+                            .map(|data| data.into_iter().collect::<Vec<News>>())
                     }
                 }).await
             },
@@ -1341,14 +1431,16 @@ impl Tickers {
             response: BatchRecommendationsResponse.recommendations,
             fetch: |providers, symbol| {
                 let sym = symbol.to_string();
-                providers.try_fetch(Capability::CORPORATE, move |p| {
+                providers.fetch(Capability::CORPORATE, move |p| {
                     let sym = sym.clone();
                     let p = p.clone();
                     async move {
                         let items = p.fetch_similar_symbols(&sym, limit).await?;
                         Ok(crate::providers::types::recommendation_from_similar(
                             sym,
-                            Some(p.id().into()),
+                            Some(crate::providers::Provider::from_id_str(p.id()).ok_or_else(|| {
+                                FinanceError::InternalError(format!("unknown provider id: {}", p.id()))
+                            })?),
                             items,
                             Some(limit),
                         ))
@@ -1390,11 +1482,11 @@ impl Tickers {
             response: BatchOptionsResponse.options,
             fetch: |providers, symbol| {
                 let sym = symbol.to_string();
-                providers.try_fetch(Capability::OPTIONS, move |p| {
+                providers.fetch(Capability::OPTIONS, move |p| {
                     let sym = sym.clone();
                     let p = p.clone();
                     async move {
-                        p.fetch_options(&sym, date).await.map(|d| d.into_options())
+                        p.fetch_options(&sym, date).await
                     }
                 }).await
             },

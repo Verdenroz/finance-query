@@ -9,7 +9,8 @@ mod macros;
 pub use core::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
     BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
-    BatchRecommendationsResponse, BatchSparksResponse, Tickers, TickersBuilder,
+    BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse, Tickers,
+    TickersBuilder,
 };
 
 #[cfg(feature = "indicators")]
