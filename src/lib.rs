@@ -107,12 +107,50 @@ pub mod risk;
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
-pub use providers::{Enrich, Fetch, Prefer, Provider};
-pub use ticker::{Ticker, TickerBuilder};
+pub mod domains;
+pub use providers::config::{Providers, ProvidersBuilder};
+pub use providers::{Capability, Fetch, Provider};
+pub use ticker::{ClientHandle, Ticker, TickerBuilder};
+
+// Domain-specific query handles — constructable via Providers factory methods.
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "crypto",
+    feature = "fmp",
+    feature = "polygon"
+))]
+pub use domains::CryptoCoin;
+#[cfg(any(feature = "alphavantage", feature = "polygon", feature = "fred"))]
+pub use domains::EconomicIndicator;
+#[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
+pub use domains::ForexPair;
+
+// Remaining Capability handles — indices, futures, commodities, filings
+#[cfg(any(feature = "fmp", feature = "alphavantage"))]
+pub use domains::Commodity;
+pub use domains::Filings;
+#[cfg(feature = "polygon")]
+pub use domains::FuturesContract;
+#[cfg(any(feature = "polygon", feature = "fmp"))]
+pub use domains::Index;
+
+// Provider-specific financial data functions
+// (FMP, Polygon, Alpha Vantage — defined in the finance module)
+#[cfg(feature = "polygon")]
+pub use finance::symbol_sentiment;
+#[cfg(feature = "fmp")]
+pub use finance::{
+    AnalystEstimate, AnalystRecommendation, InsiderTransaction, Period, analyst_estimates,
+    analyst_recommendations, insider_trading,
+};
+#[cfg(feature = "alphavantage")]
+pub use finance::{EarningsCalendarEntry, IpoCalendarEntry, earnings_calendar, ipo_calendar};
+
 pub use tickers::{
     BatchCapitalGainsResponse, BatchChartsResponse, BatchDividendsResponse,
     BatchFinancialsResponse, BatchNewsResponse, BatchOptionsResponse, BatchQuotesResponse,
-    BatchRecommendationsResponse, BatchSparksResponse, Tickers, TickersBuilder,
+    BatchRecommendationsResponse, BatchSparksResponse, BatchSplitsResponse, Tickers,
+    TickersBuilder,
 };
 
 #[cfg(feature = "indicators")]
@@ -149,7 +187,9 @@ pub use models::{
     discovery::screeners::ScreenerResults,
     discovery::search::SearchResults,
     discovery::trending::TrendingQuote,
-    filings::{CompanyFacts, EdgarSearchResults, EdgarSubmissions},
+    filings::{
+        CompanyFacts, EdgarSearchResults, EdgarSubmissions, ProviderFiling, ProviderFilings,
+    },
     fundamentals::FinancialStatement,
     market::currencies::Currency,
     market::exchanges::Exchange,
@@ -159,8 +199,26 @@ pub use models::{
     market::sectors::SectorData,
     options::Options,
     quote::Quote,
-    sentiment::{FearAndGreed, FearGreedLabel},
+    sentiment::{FearAndGreed, FearGreedLabel, SymbolSentiment},
 };
+// Multi-provider capability response types (feature-gated)
+#[cfg(any(feature = "fmp", feature = "alphavantage"))]
+pub use models::commodities::CommodityQuote;
+#[cfg(any(
+    feature = "crypto",
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "polygon"
+))]
+pub use models::crypto::CryptoQuote;
+#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+pub use models::economic::EconomicSeries;
+#[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
+pub use models::forex::ForexQuote;
+#[cfg(feature = "polygon")]
+pub use models::futures::FuturesQuote;
+#[cfg(any(feature = "polygon", feature = "fmp"))]
+pub use models::indices::IndexQuote;
 
 // ============================================================================
 // Nested types - Commonly accessed fields within response types
