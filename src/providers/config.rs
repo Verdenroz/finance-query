@@ -46,6 +46,19 @@ impl Providers {
         crate::Ticker::builder(symbol).with_provider_set(Arc::clone(&self.set))
     }
 
+    /// Create a [`TickersBuilder`](crate::TickersBuilder) pre-wired to this provider set.
+    ///
+    /// The returned builder accepts the same optional configuration as
+    /// [`Tickers::builder`](crate::Tickers::builder) (`.cache()`,
+    /// `.max_concurrency()`, `.logo()`, `.format()`) before calling `.build()`.
+    pub fn tickers<S, I>(&self, symbols: I) -> crate::TickersBuilder
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
+        crate::Tickers::builder(symbols).with_provider_set(Arc::clone(&self.set))
+    }
+
     /// Create a [`CryptoCoin`](crate::CryptoCoin) handle backed by this provider set.
     #[cfg(any(
         feature = "alphavantage",
