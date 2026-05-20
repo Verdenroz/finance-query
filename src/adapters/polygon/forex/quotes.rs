@@ -3,6 +3,7 @@
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
+use crate::models::forex::ForexQuote;
 use serde::{Deserialize, Serialize};
 
 use super::super::build_client;
@@ -92,6 +93,25 @@ pub async fn forex_last_quote(from: &str, to: &str) -> Result<ForexQuoteResponse
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "forex_last_quote".to_string(),
         context: format!("Failed to parse forex last quote response: {e}"),
+    })
+}
+
+/// Fetch forex quote (canonical) for a currency pair.
+pub async fn fetch_forex_quote_response(from: &str, to: &str) -> Result<ForexQuote> {
+    let resp = forex_last_quote(from, to).await?;
+    let last = resp.last;
+    let bid = last.as_ref().and_then(|l| l.bid);
+    let ask = last.as_ref().and_then(|l| l.ask);
+    Ok(ForexQuote {
+        symbol: format!("{}{}", from.to_uppercase(), to.to_uppercase()),
+        base_currency: Some(from.to_string()),
+        quote_currency: Some(to.to_string()),
+        bid,
+        ask,
+        price: bid.or(ask),
+        change: None,
+        change_percent: None,
+        timestamp: last.as_ref().and_then(|l| l.timestamp),
     })
 }
 

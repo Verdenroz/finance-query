@@ -53,7 +53,10 @@ fn parse_commodity_series(json: &serde_json::Value) -> Result<CommoditySeriesDTO
 }
 
 /// Fetch a commodity series by function name and optional interval.
-async fn fetch_commodity(function: &str, interval: Option<&str>) -> Result<CommoditySeriesDTO> {
+pub(crate) async fn fetch_commodity(
+    function: &str,
+    interval: Option<&str>,
+) -> Result<CommoditySeriesDTO> {
     let client = build_client()?;
     let params: Vec<(&str, &str)> = match interval {
         Some(i) => vec![("interval", i)],
@@ -118,6 +121,43 @@ pub async fn commodity_coffee(interval: Option<&str>) -> Result<CommoditySeriesD
 /// Fetch the global commodities index.
 pub async fn commodity_all_commodities(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("ALL_COMMODITIES", interval).await
+}
+
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical CommodityQuote for a commodity symbol.
+pub async fn fetch_commodities_quote_response(
+    symbol: &str,
+) -> Result<crate::models::commodities::CommodityQuote> {
+    let series = fetch_commodity(symbol, Some("daily")).await?;
+    let (price, change, change_percent) = match series.data.len() {
+        0 => (None, None, None),
+        1 => (series.data[0].value, None, None),
+        _ => {
+            let latest = series.data[0].value;
+            let prev = series.data[1].value;
+            match (latest, prev) {
+                (Some(l), Some(p)) if p != 0.0 => {
+                    let chg = l - p;
+                    let pct = (chg / p) * 100.0;
+                    (Some(l), Some(chg), Some(pct))
+                }
+                (Some(l), _) => (Some(l), None, None),
+                _ => (None, None, None),
+            }
+        }
+    };
+    Ok(crate::models::commodities::CommodityQuote {
+        symbol: symbol.to_string(),
+        name: Some(series.name),
+        unit: Some(series.unit),
+        price,
+        change,
+        change_percent,
+        timestamp: None,
+    })
 }
 
 #[cfg(test)]

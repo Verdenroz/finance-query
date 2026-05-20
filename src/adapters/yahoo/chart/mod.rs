@@ -24,6 +24,7 @@ const CHART_EVENTS: &str = "div|split|capitalGain";
 /// - 5m/15m/30m: max age 58d, max span/request 8d → chunked into 7d windows
 /// - 1h:         max age 728d, single request covers full window
 /// - 1d+:        no restriction
+// Test-only infrastructure — validates empirically determined Yahoo API limits.
 #[allow(dead_code)]
 pub(crate) fn intraday_limit(interval: Interval) -> Option<(i64, &'static [TimeRange])> {
     match interval {
@@ -45,22 +46,6 @@ pub(crate) fn intraday_limit(interval: Interval) -> Option<(i64, &'static [TimeR
                 TimeRange::YearToDate,
             ],
         )),
-        _ => None,
-    }
-}
-
-/// Maximum span (seconds) per single period1/period2 request for intraday intervals.
-///
-/// Yahoo returns 422 if the span exceeds this. 7 days is a safe margin below the
-/// empirically observed 8-day hard limit. 1h covers its full 728-day window in
-/// a single request and returns `None`.
-#[allow(dead_code)]
-pub(crate) fn intraday_chunk_secs(interval: Interval) -> Option<i64> {
-    match interval {
-        Interval::OneMinute
-        | Interval::FiveMinutes
-        | Interval::FifteenMinutes
-        | Interval::ThirtyMinutes => Some(7 * 24 * 3600),
         _ => None,
     }
 }
@@ -479,6 +464,121 @@ pub async fn fetch_with_dates(
     let response = client.request_with_params(&url, &params).await?;
 
     Ok(response.json().await?)
+}
+
+/// Convert raw chart JSON into a canonical `Chart` model.
+///
+/// Parses the JSON response, extracts meta, candles, and constructs
+/// a fully typed `Chart` struct with provider_id set.
+pub(crate) fn parse_chart_data(
+    json: serde_json::Value,
+    symbol: &str,
+) -> Result<crate::models::chart::Chart> {
+    use crate::Provider;
+
+    let chart_response = crate::models::chart::response::ChartResponse::from_json(json)
+        .map_err(FinanceError::JsonParseError)?;
+    let results = chart_response
+        .chart
+        .result
+        .ok_or_else(|| FinanceError::SymbolNotFound {
+            symbol: Some(symbol.to_string()),
+            context: "no chart result".into(),
+        })?;
+    let result = results
+        .first()
+        .ok_or_else(|| FinanceError::SymbolNotFound {
+            symbol: Some(symbol.to_string()),
+            context: "empty chart results".into(),
+        })?;
+
+    let meta = &result.meta;
+    let candles: Vec<crate::models::chart::Candle> = result
+        .to_candles()
+        .into_iter()
+        .map(|c| crate::models::chart::Candle {
+            timestamp: c.timestamp,
+            open: c.open,
+            high: c.high,
+            low: c.low,
+            close: c.close,
+            volume: c.volume.max(0),
+            adj_close: None,
+            provider_id: Some(Provider::Yahoo),
+        })
+        .collect();
+
+    let chart_meta = crate::models::chart::ChartMeta {
+        symbol: meta.symbol.clone(),
+        currency: meta.currency.clone(),
+        exchange_name: meta.exchange_name.clone(),
+        instrument_type: meta.instrument_type.clone(),
+        previous_close: meta.previous_close,
+        regular_market_price: meta.regular_market_price,
+        chart_previous_close: meta.chart_previous_close,
+        data_granularity: meta.data_granularity.clone(),
+        provider_id: Some(Provider::Yahoo),
+        ..Default::default()
+    };
+
+    Ok(crate::models::chart::Chart {
+        symbol: symbol.to_string(),
+        meta: chart_meta,
+        candles,
+        interval: None,
+        range: None,
+        provider_id: Some(Provider::Yahoo),
+    })
+}
+
+/// Fetch chart data and return a canonical `Chart` model.
+///
+/// Delegates to [`YahooClient::get_chart`] for non-max ranges. For max-range
+/// daily/weekly requests, falls back to chunked fetching since Yahoo truncates
+/// those responses.
+pub async fn fetch_chart(
+    client: &YahooClient,
+    symbol: &str,
+    interval: Interval,
+    range: TimeRange,
+) -> Result<crate::models::chart::Chart> {
+    // Max range with daily/weekly intervals requires chunking
+    if matches!(range, TimeRange::Max) && matches!(interval, Interval::OneDay | Interval::OneWeek) {
+        let json = fetch(client, symbol, interval, range).await?;
+        return parse_chart_data(json, symbol);
+    }
+    client.get_chart(symbol, interval, range).await
+}
+
+/// Fetch chart data with absolute date boundaries and return a canonical `Chart` model.
+pub async fn fetch_chart_with_dates(
+    client: &YahooClient,
+    symbol: &str,
+    interval: Interval,
+    start: i64,
+    end: i64,
+) -> Result<crate::models::chart::Chart> {
+    client.get_chart_range(symbol, interval, start, end).await
+}
+
+/// Fetch chart events (dividends, splits, capital gains) for a symbol.
+///
+/// Returns the canonical `ChartEvents` model extracted from the chart data.
+pub async fn fetch_events(
+    client: &YahooClient,
+    symbol: &str,
+) -> Result<crate::models::chart::events::ChartEvents> {
+    use crate::models::chart::response::ChartResponse;
+
+    let json = fetch(client, symbol, Interval::OneDay, TimeRange::Max).await?;
+    let chart_response = ChartResponse::from_json(json).map_err(FinanceError::JsonParseError)?;
+    let events = chart_response
+        .chart
+        .result
+        .and_then(|mut r| r.pop())
+        .and_then(|r| r.events)
+        .unwrap_or_default();
+    Ok(events)
 }
 
 #[cfg(test)]

@@ -1,5 +1,4 @@
 use crate::adapters::yahoo::client::YahooClient;
-use crate::adapters::yahoo::endpoints::builders;
 use crate::error::Result;
 use crate::models::market::industries::IndustryData;
 
@@ -27,20 +26,7 @@ use crate::models::market::industries::IndustryData;
 /// # Ok(())
 /// # }
 /// ```
+/// Delegates to [`YahooClient::get_industry`] for the typed result.
 pub async fn fetch(client: &YahooClient, industry_key: &str) -> Result<IndustryData> {
-    let url = builders::industry(industry_key);
-    let response = client.request_with_crumb(&url).await?;
-    let json: serde_json::Value = response.json().await?;
-
-    parse_industry_response(&json)
-}
-
-/// Parse Yahoo Finance industry response into clean IndustryData
-fn parse_industry_response(json: &serde_json::Value) -> Result<IndustryData> {
-    IndustryData::from_response(json).map_err(|e| {
-        crate::error::FinanceError::ResponseStructureError {
-            field: "industry".to_string(),
-            context: e,
-        }
-    })
+    client.get_industry(industry_key).await
 }

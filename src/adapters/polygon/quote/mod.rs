@@ -2,6 +2,7 @@
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
+use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 
 use super::build_client;
 use super::models::*;
@@ -9,6 +10,7 @@ use super::models::*;
 pub mod trades;
 
 /// Fetch snapshot for a single stock ticker.
+#[allow(dead_code)] // called from fetch_quote_response; single-ticker quote routing pending
 pub async fn stock_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
     let client = build_client()?;
     let path = format!(
@@ -19,6 +21,46 @@ pub async fn stock_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
     serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
         field: "snapshot".to_string(),
         context: format!("Failed to parse snapshot response: {e}"),
+    })
+}
+
+/// Fetch quote summary response (canonical) for a stock ticker.
+#[allow(dead_code)] // called from providers::polygon::fetch_quote; single-ticker quote routing pending
+pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> {
+    let snap = stock_snapshot(symbol).await?;
+    let day = snap.ticker.as_ref().and_then(|t| t.day.as_ref());
+    let price = Price {
+        regular_market_price: day.and_then(|d| d.close).map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_open: day.and_then(|d| d.open).map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_day_high: day.and_then(|d| d.high).map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_day_low: day.and_then(|d| d.low).map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_volume: day.and_then(|d| d.volume).map(|v| FormattedValue {
+            raw: Some(v as i64),
+            fmt: None,
+            long_fmt: None,
+        }),
+        ..Default::default()
+    };
+    Ok(QuoteSummaryResponse {
+        symbol: symbol.to_string(),
+        price: Some(price),
+        ..Default::default()
     })
 }
 

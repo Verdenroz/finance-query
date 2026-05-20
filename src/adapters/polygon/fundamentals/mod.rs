@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
+use crate::models::fundamentals::FinancialStatement;
+use crate::providers::build_financial_statement;
+use crate::{Frequency, Provider, StatementType};
 
 use super::build_client;
 use super::models::PaginatedResponseDTO;
@@ -103,6 +106,62 @@ pub async fn stock_financials(
     let mut query: Vec<(&str, &str)> = vec![("ticker", ticker)];
     query.extend_from_slice(params);
     client.get(&path, &query).await
+}
+
+/// Fetch financial statements (canonical) for a stock ticker.
+pub async fn fetch_financials_response(
+    symbol: &str,
+    stmt_type: StatementType,
+    frequency: Frequency,
+) -> Result<FinancialStatement> {
+    let poly_type = match frequency {
+        Frequency::Annual => "Y",
+        Frequency::Quarterly => "Q",
+    };
+    let paginated = stock_financials(symbol, &[("type", poly_type), ("limit", "100")]).await?;
+    let results = paginated.results.unwrap_or_default();
+
+    let statement_key = match stmt_type {
+        StatementType::Income => "income_statement",
+        StatementType::Balance => "balance_sheet",
+        StatementType::CashFlow => "cash_flow_statement",
+    };
+
+    let mut data: std::collections::HashMap<
+        String,
+        std::collections::HashMap<String, serde_json::Value>,
+    > = std::collections::HashMap::new();
+
+    for result in &results {
+        let period = result
+            .period_of_report_date
+            .as_deref()
+            .or(result.filing_date.as_deref())
+            .unwrap_or("unknown");
+
+        if let Some(ref financials) = result.financials
+            && let Some(stmt_section) = financials.get(statement_key)
+            && let Some(section_obj) = stmt_section.as_object()
+        {
+            for (metric, metric_obj) in section_obj {
+                let metric_value = metric_obj
+                    .get("value")
+                    .cloned()
+                    .unwrap_or_else(|| metric_obj.clone());
+                data.entry(metric.clone())
+                    .or_default()
+                    .insert(period.to_string(), metric_value);
+            }
+        }
+    }
+
+    Ok(build_financial_statement(
+        symbol.to_string(),
+        stmt_type.as_str().to_string(),
+        frequency.as_str().to_string(),
+        Provider::Polygon,
+        data,
+    ))
 }
 
 /// Fetch short interest data for a stock ticker.

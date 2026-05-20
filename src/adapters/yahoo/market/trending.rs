@@ -2,49 +2,15 @@
 ///
 /// Fetch trending tickers for a region from Yahoo Finance.
 use crate::adapters::yahoo::client::YahooClient;
-use crate::adapters::yahoo::endpoints::api;
 use crate::constants::Region;
 use crate::error::Result;
-use tracing::info;
+use crate::models::discovery::trending::TrendingQuote;
 
-/// Fetch trending tickers for a region from Yahoo Finance
+/// Fetch trending tickers for a region from Yahoo Finance.
 ///
-/// # Arguments
-///
-/// * `client` - The Yahoo Finance client
-/// * `region` - Optional region for localization. If None, uses client's configured lang/region.
-///
-/// # Example
-///
-/// ```ignore
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::{api::trending, Region};
-/// // Use client's default config
-/// let result = trending::fetch(&client, None).await?;
-/// // Or specify a region
-/// let result = trending::fetch(&client, Some(Region::Japan)).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn fetch(client: &YahooClient, region: Option<Region>) -> Result<serde_json::Value> {
-    let config = client.config();
-    let (lang, region) = match region {
-        Some(r) => (r.lang(), r.region()),
-        None => (config.lang.as_str(), config.region.as_str()),
-    };
-
-    info!(
-        "Fetching trending tickers (lang={}, region={})",
-        lang, region
-    );
-
-    let url = api::trending(region);
-    let params = [("lang", lang), ("region", region)];
-
-    let response = client.request_with_params(&url, &params).await?;
-
-    Ok(response.json().await?)
+/// Delegates to [`YahooClient::get_trending`] for the typed result.
+pub async fn fetch(client: &YahooClient, region: Option<Region>) -> Result<Vec<TrendingQuote>> {
+    client.get_trending(region).await
 }
 
 #[cfg(test)]
@@ -58,7 +24,5 @@ mod tests {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = fetch(&client, None).await;
         assert!(result.is_ok());
-        let json = result.unwrap();
-        assert!(json.get("finance").is_some());
     }
 }

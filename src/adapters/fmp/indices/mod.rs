@@ -9,6 +9,30 @@ use crate::error::Result;
 use crate::adapters::fmp::build_client;
 use crate::adapters::fmp::models::{FmpQuoteDTO, HistoricalPriceResponseDTO};
 
+/// Convert FMP quote DTOs into a canonical IndexQuote.
+fn index_quote_to_canonical(
+    symbol: &str,
+    quotes: &[FmpQuoteDTO],
+) -> crate::models::indices::IndexQuote {
+    let q = quotes.first();
+    crate::models::indices::IndexQuote {
+        symbol: symbol.to_string(),
+        name: q.and_then(|q| q.name.clone()),
+        price: q.and_then(|q| q.price),
+        change: q.and_then(|q| q.change),
+        change_percent: q.and_then(|q| q.changes_percentage),
+        timestamp: None,
+    }
+}
+
+/// Fetch a canonical index quote.
+pub async fn fetch_canonical_index_quote(
+    symbol: &str,
+) -> Result<crate::models::indices::IndexQuote> {
+    let quotes = crate::adapters::fmp::quote::quote(symbol).await?;
+    Ok(index_quote_to_canonical(symbol, &quotes))
+}
+
 /// A constituent of a major index (S&P 500, Nasdaq, Dow Jones).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]

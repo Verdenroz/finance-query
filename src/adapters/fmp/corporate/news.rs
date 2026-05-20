@@ -82,6 +82,36 @@ pub struct PressReleaseDTO {
 }
 
 // ============================================================================
+// Canonical conversion functions
+// ============================================================================
+
+/// Convert stock news DTOs into canonical News items.
+fn stock_news_to_canonical(
+    articles: Vec<StockNewsDTO>,
+) -> Vec<crate::models::corporate::news::News> {
+    articles
+        .into_iter()
+        .map(|a| crate::models::corporate::news::News {
+            title: a.title.unwrap_or_default(),
+            link: a.url.unwrap_or_default(),
+            source: a.site.unwrap_or_default(),
+            img: String::new(),
+            time: a.published_date.unwrap_or_default(),
+            provider_id: Some(crate::providers::Provider::Fmp),
+        })
+        .collect()
+}
+
+/// Fetch canonical news for a symbol.
+pub async fn fetch_canonical_news(
+    symbol: &str,
+    limit: u32,
+) -> Result<Vec<crate::models::corporate::news::News>> {
+    let articles = stock_news(symbol, limit).await?;
+    Ok(stock_news_to_canonical(articles))
+}
+
+// ============================================================================
 // Public API
 // ============================================================================
 

@@ -245,6 +245,35 @@ pub async fn historical_market_cap(symbol: &str, limit: Option<u32>) -> Result<V
         .await
 }
 
+/// Convert stock peers DTOs into canonical SimilarSymbol items.
+fn stock_peers_to_canonical(
+    peers: Vec<StockPeersDTO>,
+    limit: usize,
+) -> Vec<crate::models::corporate::recommendation::SimilarSymbol> {
+    let mut symbols: Vec<crate::models::corporate::recommendation::SimilarSymbol> = peers
+        .into_iter()
+        .filter_map(|p| p.peers_list)
+        .flatten()
+        .map(
+            |s| crate::models::corporate::recommendation::SimilarSymbol {
+                symbol: s,
+                score: 0.0,
+            },
+        )
+        .collect();
+    symbols.truncate(limit);
+    symbols
+}
+
+/// Fetch canonical similar symbols for a ticker.
+pub async fn fetch_canonical_similar_symbols(
+    symbol: &str,
+    limit: u32,
+) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
+    let peers = stock_peers(symbol).await?;
+    Ok(stock_peers_to_canonical(peers, limit as usize))
+}
+
 /// Fetch company outlook for a symbol (v4 endpoint).
 pub async fn company_outlook(symbol: &str) -> Result<CompanyOutlookDTO> {
     let client = crate::adapters::fmp::build_client()?;

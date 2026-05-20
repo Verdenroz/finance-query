@@ -70,6 +70,69 @@ pub struct SplitHistoryResponseDTO {
 }
 
 // ============================================================================
+// Canonical conversion functions
+// ============================================================================
+
+/// Convert dividend and split DTOs into a canonical ChartEvents.
+fn dividends_splits_to_events(
+    divs: DividendHistoryResponseDTO,
+    splits: SplitHistoryResponseDTO,
+) -> crate::models::chart::events::ChartEvents {
+    use crate::models::chart::events::{ChartEvents, DividendEvent, SplitEvent};
+    let mut chart_events = ChartEvents::default();
+    chart_events.dividends = divs
+        .historical
+        .into_iter()
+        .filter_map(|d| {
+            let ts = chrono::NaiveDate::parse_from_str(d.date.as_deref()?, "%Y-%m-%d")
+                .ok()?
+                .and_hms_opt(0, 0, 0)?
+                .and_utc()
+                .timestamp();
+            Some((
+                ts.to_string(),
+                DividendEvent {
+                    date: ts,
+                    amount: d.adj_dividend.or(d.dividend).unwrap_or(0.0),
+                },
+            ))
+        })
+        .collect();
+    chart_events.splits = splits
+        .historical
+        .into_iter()
+        .filter_map(|s| {
+            let ts = chrono::NaiveDate::parse_from_str(s.date.as_deref()?, "%Y-%m-%d")
+                .ok()?
+                .and_hms_opt(0, 0, 0)?
+                .and_utc()
+                .timestamp();
+            let numerator = s.numerator.unwrap_or(1.0);
+            let denominator = s.denominator.unwrap_or(1.0);
+            Some((
+                ts.to_string(),
+                SplitEvent {
+                    date: ts,
+                    numerator,
+                    denominator,
+                    split_ratio: format!("{}:{}", numerator, denominator),
+                },
+            ))
+        })
+        .collect();
+    chart_events
+}
+
+/// Fetch canonical chart events (dividends + splits) for a symbol.
+pub async fn fetch_canonical_events(
+    symbol: &str,
+) -> Result<crate::models::chart::events::ChartEvents> {
+    let divs = historical_dividends(symbol).await?;
+    let splits = historical_splits(symbol).await?;
+    Ok(dividends_splits_to_events(divs, splits))
+}
+
+// ============================================================================
 // Public API
 // ============================================================================
 

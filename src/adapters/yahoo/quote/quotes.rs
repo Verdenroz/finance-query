@@ -6,6 +6,7 @@
 use crate::adapters::yahoo::client::YahooClient;
 use crate::adapters::yahoo::endpoints::api;
 use crate::error::Result;
+use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 use tracing::info;
 
 /// Fetch batch quotes for multiple symbols
@@ -133,6 +134,65 @@ pub(crate) async fn fetch_with_fields(
     let response = client.request_with_params(api::QUOTES, &params).await?;
 
     Ok(response.json().await?)
+}
+
+/// Fetch batch quotes and convert to canonical `(symbol, QuoteSummaryResponse)` pairs.
+///
+/// The batch endpoint returns basic fields only (price module), not full quoteSummary data.
+/// This function constructs partial `QuoteSummaryResponse` objects from the batch response.
+pub(crate) async fn fetch_quotes_batch(
+    client: &YahooClient,
+    symbols: &[&str],
+) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+    let json = fetch(client, symbols).await?;
+    let result = json
+        .get("quoteResponse")
+        .and_then(|qr| qr.get("result"))
+        .and_then(|r| r.as_array());
+
+    let mut quotes = Vec::new();
+    if let Some(results) = result {
+        for item in results {
+            let symbol = item["symbol"].as_str().unwrap_or("").to_string();
+            let price = Price {
+                short_name: item["shortName"].as_str().map(String::from),
+                long_name: item["longName"].as_str().map(String::from),
+                exchange_name: item["fullExchangeName"].as_str().map(String::from),
+                exchange: item["exchange"].as_str().map(String::from),
+                quote_type: item["quoteType"].as_str().map(String::from),
+                currency: item["currency"].as_str().map(String::from),
+                market_state: item["marketState"].as_str().map(String::from),
+                regular_market_price: item["regularMarketPrice"].as_f64().map(FormattedValue::new),
+                regular_market_change: item["regularMarketChange"]
+                    .as_f64()
+                    .map(FormattedValue::new),
+                regular_market_change_percent: item["regularMarketChangePercent"]
+                    .as_f64()
+                    .map(FormattedValue::new),
+                regular_market_volume: item["regularMarketVolume"]
+                    .as_i64()
+                    .map(FormattedValue::new),
+                regular_market_previous_close: item["regularMarketPreviousClose"]
+                    .as_f64()
+                    .map(FormattedValue::new),
+                regular_market_open: item["regularMarketOpen"].as_f64().map(FormattedValue::new),
+                regular_market_day_high: item["regularMarketDayHigh"]
+                    .as_f64()
+                    .map(FormattedValue::new),
+                regular_market_day_low: item["regularMarketDayLow"]
+                    .as_f64()
+                    .map(FormattedValue::new),
+                market_cap: item["marketCap"].as_i64().map(FormattedValue::new),
+                ..Default::default()
+            };
+            let response = QuoteSummaryResponse {
+                price: Some(price),
+                ..Default::default()
+            };
+            quotes.push((symbol, response));
+        }
+    }
+    Ok(quotes)
 }
 
 #[cfg(test)]

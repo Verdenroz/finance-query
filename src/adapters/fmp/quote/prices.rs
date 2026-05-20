@@ -6,7 +6,9 @@ use serde::{Deserialize, Serialize};
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
-use crate::adapters::fmp::models::{FmpQuoteDTO, HistoricalPriceResponseDTO, IntradayPriceDTO};
+use crate::adapters::fmp::models::{
+    FmpQuoteDTO, HistoricalPriceDTO, HistoricalPriceResponseDTO, IntradayPriceDTO,
+};
 
 // ============================================================================
 // Additional response types
@@ -63,6 +65,158 @@ pub struct HistoricalPriceParams {
 // ============================================================================
 // Query functions
 // ============================================================================
+
+/// Convert FMP quote DTOs into a canonical QuoteSummaryResponse.
+fn quote_to_canonical(
+    symbol: &str,
+    quotes: &[FmpQuoteDTO],
+) -> crate::models::quote::QuoteSummaryResponse {
+    use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
+    let q = quotes.first();
+    let price = Price {
+        regular_market_price: q.and_then(|q| q.price).map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_change_percent: q.and_then(|q| q.changes_percentage).map(|v| {
+            FormattedValue {
+                raw: Some(v),
+                fmt: None,
+                long_fmt: None,
+            }
+        }),
+        regular_market_volume: q
+            .and_then(|q| q.volume.map(|v| v as i64))
+            .map(|v| FormattedValue {
+                raw: Some(v),
+                fmt: None,
+                long_fmt: None,
+            }),
+        regular_market_day_high: q.and_then(|q| q.day_high).map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_day_low: q.and_then(|q| q.day_low).map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        }),
+        market_cap: q
+            .and_then(|q| q.market_cap.map(|v| v as i64))
+            .map(|v| FormattedValue {
+                raw: Some(v),
+                fmt: None,
+                long_fmt: None,
+            }),
+        exchange: q.and_then(|q| q.exchange.clone()),
+        ..Default::default()
+    };
+    QuoteSummaryResponse {
+        symbol: symbol.to_string(),
+        price: Some(price),
+        ..Default::default()
+    }
+}
+
+/// Fetch a canonical quote summary for a symbol.
+pub async fn fetch_canonical_quote(
+    symbol: &str,
+) -> Result<crate::models::quote::QuoteSummaryResponse> {
+    let quotes = quote(symbol).await?;
+    Ok(quote_to_canonical(symbol, &quotes))
+}
+
+/// Convert historical daily price DTOs into canonical Chart candles.
+fn historical_to_candles(historical: Vec<HistoricalPriceDTO>) -> Vec<crate::models::chart::Candle> {
+    historical
+        .into_iter()
+        .filter_map(|r| {
+            let ts = chrono::NaiveDate::parse_from_str(r.date.as_deref()?, "%Y-%m-%d")
+                .ok()?
+                .and_hms_opt(0, 0, 0)?
+                .and_utc()
+                .timestamp();
+            Some(crate::models::chart::Candle {
+                timestamp: ts,
+                open: r.open?,
+                high: r.high?,
+                low: r.low?,
+                close: r.close?,
+                volume: r.volume.map(|v| v as i64).unwrap_or(0),
+                adj_close: None,
+                provider_id: Some(crate::providers::Provider::Fmp),
+            })
+        })
+        .collect()
+}
+
+/// Convert intraday price DTOs into canonical Chart candles.
+fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::chart::Candle> {
+    intraday
+        .into_iter()
+        .filter_map(|r| {
+            let ts = chrono::NaiveDateTime::parse_from_str(r.date.as_deref()?, "%Y-%m-%d %H:%M:%S")
+                .ok()?
+                .and_utc()
+                .timestamp();
+            Some(crate::models::chart::Candle {
+                timestamp: ts,
+                open: r.open?,
+                high: r.high?,
+                low: r.low?,
+                close: r.close?,
+                volume: r.volume.map(|v| v as i64).unwrap_or(0),
+                adj_close: None,
+                provider_id: Some(crate::providers::Provider::Fmp),
+            })
+        })
+        .collect()
+}
+
+/// Fetch canonical daily chart data with date range.
+pub async fn fetch_daily_chart_canonical(
+    symbol: &str,
+    from: Option<&str>,
+    to: Option<&str>,
+) -> Result<crate::models::chart::Chart> {
+    let params = from.and_then(|f| {
+        to.map(|t| HistoricalPriceParams {
+            from: Some(f.to_string()),
+            to: Some(t.to_string()),
+        })
+    });
+    let resp = historical_price_daily(symbol, params).await?;
+    let candles = historical_to_candles(resp.historical);
+    Ok(crate::models::chart::Chart {
+        symbol: symbol.to_string(),
+        meta: Default::default(),
+        candles,
+        interval: None,
+        range: None,
+        provider_id: Some(crate::providers::Provider::Fmp),
+    })
+}
+
+/// Fetch canonical chart candles from daily historical price data.
+pub async fn fetch_daily_chart_candles(
+    symbol: &str,
+    params: Option<HistoricalPriceParams>,
+) -> Result<Vec<crate::models::chart::Candle>> {
+    let resp = historical_price_daily(symbol, params).await?;
+    Ok(historical_to_candles(resp.historical))
+}
+
+/// Fetch canonical chart candles from intraday price data.
+pub async fn fetch_intraday_chart_candles(
+    symbol: &str,
+    interval: &str,
+    params: Option<HistoricalPriceParams>,
+) -> Result<Vec<crate::models::chart::Candle>> {
+    let points = historical_price_intraday(symbol, interval, params).await?;
+    Ok(intraday_to_candles(points))
+}
 
 /// Fetch real-time quote for a symbol.
 pub async fn quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {

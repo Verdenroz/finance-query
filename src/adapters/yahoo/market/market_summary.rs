@@ -2,47 +2,18 @@
 ///
 /// Fetch market summary from Yahoo Finance.
 use crate::adapters::yahoo::client::YahooClient;
-use crate::adapters::yahoo::endpoints::api;
 use crate::constants::Region;
 use crate::error::Result;
-use tracing::info;
+use crate::models::market::market_summary::MarketSummaryQuote;
 
-/// Fetch market summary from Yahoo Finance
+/// Fetch market summary from Yahoo Finance.
 ///
-/// # Arguments
-///
-/// * `client` - The Yahoo Finance client
-/// * `region` - Optional region for localization. If None, uses client's configured lang/region.
-///
-/// # Example
-///
-/// ```ignore
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::{endpoints::market_summary, Region};
-/// // Use client's default config
-/// let result = market_summary::fetch(&client, None).await?;
-/// // Or specify a region
-/// let result = market_summary::fetch(&client, Some(Region::Japan)).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn fetch(client: &YahooClient, region: Option<Region>) -> Result<serde_json::Value> {
-    let config = client.config();
-    let (lang, region) = match region {
-        Some(r) => (r.lang(), r.region()),
-        None => (config.lang.as_str(), config.region.as_str()),
-    };
-
-    info!("Fetching market summary (lang={}, region={})", lang, region);
-
-    let params = [("lang", lang), ("region", region)];
-
-    let response = client
-        .request_with_params(api::MARKET_SUMMARY, &params)
-        .await?;
-
-    Ok(response.json().await?)
+/// Delegates to [`YahooClient::get_market_summary`] for the typed result.
+pub async fn fetch(
+    client: &YahooClient,
+    region: Option<Region>,
+) -> Result<Vec<MarketSummaryQuote>> {
+    client.get_market_summary(region).await
 }
 
 #[cfg(test)]
@@ -56,7 +27,7 @@ mod tests {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let result = fetch(&client, None).await;
         assert!(result.is_ok());
-        let json = result.unwrap();
-        assert!(json.get("marketSummaryResponse").is_some());
+        let quotes = result.unwrap();
+        assert!(!quotes.is_empty(), "Should have at least one quote");
     }
 }

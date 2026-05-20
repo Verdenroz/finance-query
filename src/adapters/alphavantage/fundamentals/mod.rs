@@ -2,6 +2,7 @@
 #![allow(dead_code)]
 
 use crate::error::{FinanceError, Result};
+use std::collections::HashMap;
 
 use super::build_client;
 use super::models::*;
@@ -358,6 +359,61 @@ pub async fn ipo_calendar() -> Result<Vec<IpoCalendarEntryDTO>> {
         }
     }
     Ok(entries)
+}
+
+// ============================================================================
+// Canonical model conversion functions
+// ============================================================================
+
+/// Fetch canonical FinancialStatement for a symbol.
+pub async fn fetch_financials_response(
+    symbol: &str,
+    stmt_type: crate::StatementType,
+    frequency: crate::Frequency,
+) -> Result<crate::models::fundamentals::FinancialStatement> {
+    let stmts = match stmt_type {
+        crate::StatementType::Income => income_statement(symbol).await?,
+        crate::StatementType::Balance => balance_sheet(symbol).await?,
+        crate::StatementType::CashFlow => cash_flow(symbol).await?,
+    };
+
+    let reports = match frequency {
+        crate::Frequency::Annual => &stmts.annual_reports,
+        crate::Frequency::Quarterly => &stmts.quarterly_reports,
+    };
+
+    let data = pivot_av_reports(reports);
+
+    Ok(crate::providers::build_financial_statement(
+        symbol.to_string(),
+        stmt_type.as_str().to_string(),
+        frequency.as_str().to_string(),
+        crate::Provider::AlphaVantage,
+        data,
+    ))
+}
+
+/// Pivot Alpha Vantage FinancialReportDTO entries into the canonical
+/// `HashMap<String, HashMap<String, serde_json::Value>>` format.
+fn pivot_av_reports(
+    reports: &[FinancialReportDTO],
+) -> HashMap<String, HashMap<String, serde_json::Value>> {
+    let mut data: HashMap<String, HashMap<String, serde_json::Value>> = HashMap::new();
+
+    for report in reports {
+        let date = &report.fiscal_date_ending;
+        for (key, value) in &report.fields {
+            // Only include numeric values
+            if !value.is_number() {
+                continue;
+            }
+            data.entry(key.clone())
+                .or_default()
+                .insert(date.clone(), value.clone());
+        }
+    }
+
+    data
 }
 
 #[cfg(test)]

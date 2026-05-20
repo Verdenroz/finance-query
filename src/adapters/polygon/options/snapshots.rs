@@ -3,8 +3,12 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::Provider;
 use crate::adapters::common::encode_path_segment;
 use crate::error::{FinanceError, Result};
+use crate::models::options::OptionContract;
+use crate::models::options::Options;
+use crate::providers::build_options;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -147,6 +151,104 @@ pub async fn options_chain_snapshot(
     let client = build_client()?;
     let path = format!("/v3/snapshot/options/{}", encode_path_segment(underlying));
     client.get(&path, params).await
+}
+
+/// Helper: parse a "YYYY-MM-DD" date string into a Unix timestamp.
+fn parse_date(d: &Option<String>) -> i64 {
+    d.as_ref()
+        .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
+        .and_then(|dt| dt.and_hms_opt(0, 0, 0))
+        .map(|dt| dt.and_utc().timestamp())
+        .unwrap_or(0)
+}
+
+/// Helper: convert a Unix timestamp to "YYYY-MM-DD" date string.
+fn timestamp_to_date(ts: i64) -> String {
+    chrono::DateTime::from_timestamp(ts, 0)
+        .map(|dt| dt.format("%Y-%m-%d").to_string())
+        .unwrap_or_else(|| "1970-01-01".to_string())
+}
+
+/// Map a single options snapshot DTO to a canonical OptionContract.
+fn map_snapshot_to_contract(s: &OptionsSnapshotDTO) -> OptionContract {
+    let details = s.details.as_ref();
+    let day = s.day.as_ref();
+    let last_trade = s.last_trade.as_ref();
+    let last_quote = s.last_quote.as_ref();
+    OptionContract {
+        contract_symbol: details.and_then(|d| d.ticker.clone()).unwrap_or_default(),
+        strike: details.and_then(|d| d.strike_price).unwrap_or(0.0),
+        currency: None,
+        last_price: last_trade
+            .and_then(|t| t.price)
+            .or_else(|| day.and_then(|d| d.close)),
+        change: last_trade
+            .and_then(|t| t.price)
+            .zip(day.and_then(|d| d.open))
+            .map(|(price, open)| price - open),
+        percent_change: None,
+        volume: day.and_then(|d| d.volume).map(|v| v as i64),
+        open_interest: s.open_interest.map(|v| v as i64),
+        bid: last_quote.and_then(|q| q.bid),
+        ask: last_quote.and_then(|q| q.ask),
+        contract_size: None,
+        expiration: details
+            .as_ref()
+            .and_then(|d| d.expiration_date.as_ref())
+            .map(|s| Some(parse_date(&Some(s.clone()))))
+            .unwrap_or(None),
+        last_trade_date: None,
+        implied_volatility: s.implied_volatility,
+        in_the_money: None,
+    }
+}
+
+/// Fetch options chain (canonical) for a stock ticker.
+pub async fn fetch_options_response(symbol: &str, date: Option<i64>) -> Result<Options> {
+    let date_str_opt = date.map(timestamp_to_date);
+    let mut params: Vec<(&str, &str)> = vec![("limit", "1000")];
+    if let Some(ref ds) = date_str_opt {
+        params.push(("expiration_date", ds.as_str()));
+    }
+
+    let paginated = options_chain_snapshot(symbol, &params).await?;
+    let snapshots = paginated.results.unwrap_or_default();
+
+    // Collect unique expiration dates (sorted).
+    let expiration_dates: Vec<i64> = snapshots
+        .iter()
+        .filter_map(|s| {
+            let ts = s
+                .details
+                .as_ref()
+                .and_then(|d| d.expiration_date.as_ref())
+                .map(|s| parse_date(&Some(s.clone())))
+                .unwrap_or(0);
+            if ts > 0 { Some(ts) } else { None }
+        })
+        .collect::<std::collections::BTreeSet<_>>()
+        .into_iter()
+        .collect();
+
+    let calls: Vec<OptionContract> = snapshots
+        .iter()
+        .filter(|s| s.details.as_ref().and_then(|d| d.contract_type.as_deref()) == Some("call"))
+        .map(map_snapshot_to_contract)
+        .collect();
+
+    let puts: Vec<OptionContract> = snapshots
+        .iter()
+        .filter(|s| s.details.as_ref().and_then(|d| d.contract_type.as_deref()) == Some("put"))
+        .map(map_snapshot_to_contract)
+        .collect();
+
+    Ok(build_options(
+        symbol.to_string(),
+        Provider::Polygon,
+        expiration_dates,
+        calls,
+        puts,
+    ))
 }
 
 /// Fetch a snapshot for a single options contract.

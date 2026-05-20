@@ -1,5 +1,4 @@
 use crate::adapters::yahoo::client::YahooClient;
-use crate::adapters::yahoo::endpoints::builders;
 use crate::constants::sectors::Sector;
 use crate::error::Result;
 use crate::models::market::sectors::SectorData;
@@ -29,20 +28,7 @@ use crate::models::market::sectors::SectorData;
 /// # Ok(())
 /// # }
 /// ```
+/// Delegates to [`YahooClient::get_sector`] for the typed result.
 pub async fn fetch(client: &YahooClient, sector_type: Sector) -> Result<SectorData> {
-    let url = builders::sector(sector_type.as_api_path());
-    let response = client.request_with_crumb(&url).await?;
-    let json: serde_json::Value = response.json().await?;
-
-    parse_sector_response(&json)
-}
-
-/// Parse Yahoo Finance sector response into clean SectorData
-fn parse_sector_response(json: &serde_json::Value) -> Result<SectorData> {
-    SectorData::from_response(json).map_err(|e| {
-        crate::error::FinanceError::ResponseStructureError {
-            field: "sector".to_string(),
-            context: e,
-        }
-    })
+    client.get_sector(sector_type).await
 }
