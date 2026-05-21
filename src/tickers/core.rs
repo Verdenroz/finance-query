@@ -4,8 +4,12 @@
 
 use super::macros::{batch_fetch_cached, define_batch_response};
 use crate::adapters::yahoo::client::ClientConfig;
-use crate::constants::{Frequency, Interval, StatementType, TimeRange};
+#[cfg(feature = "backtesting")]
+use crate::backtesting;
+use crate::constants::{Frequency, Interval, Region, StatementType, TimeRange, ValueFormat};
 use crate::error::{FinanceError, Result};
+#[cfg(any(feature = "backtesting", feature = "indicators"))]
+use crate::indicators;
 use crate::models::chart::events::ChartEvents;
 use crate::models::chart::spark::Spark;
 use crate::models::chart::spark::response::SparkResponse;
@@ -14,8 +18,13 @@ use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::Recommendation;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
-use crate::models::quote::Quote;
-use crate::providers::{Capability, Fetch, ProviderSet, Routes, build_providers};
+use crate::models::quote::{Quote, QuoteSummaryResponse};
+use crate::providers::types::recommendation_from_similar;
+use crate::providers::yahoo::YahooProvider;
+use crate::providers::{
+    Capability, Fetch, Provider, ProviderAdapter, ProviderSet, Routes, build_providers,
+};
+use crate::ticker::ClientHandle;
 use crate::utils::{CacheEntry, EVICTION_THRESHOLD, filter_by_range};
 use futures::stream::{self, StreamExt};
 use std::collections::HashMap;
@@ -36,8 +45,7 @@ type OptionsCache = MapCache<(Arc<str>, Option<i64>), Options>;
 type SparkCacheKey = (Arc<str>, Interval, TimeRange);
 type SparkCache = MapCache<SparkCacheKey, Spark>;
 #[cfg(feature = "indicators")]
-type IndicatorsCache =
-    MapCache<(Arc<str>, Interval, TimeRange), crate::indicators::IndicatorsSummary>;
+type IndicatorsCache = MapCache<(Arc<str>, Interval, TimeRange), indicators::IndicatorsSummary>;
 
 // Fetch guards for request deduplication — prevent concurrent duplicate fetches
 type FetchGuard = Arc<tokio::sync::Mutex<()>>;
@@ -100,7 +108,7 @@ define_batch_response! {
 #[cfg(feature = "indicators")]
 define_batch_response! {
     /// Response containing technical indicators for multiple symbols.
-    BatchIndicatorsResponse => indicators: crate::indicators::IndicatorsSummary
+    BatchIndicatorsResponse => indicators: indicators::IndicatorsSummary
 }
 
 /// Default maximum concurrent requests for batch operations.
@@ -110,11 +118,12 @@ const DEFAULT_MAX_CONCURRENCY: usize = 10;
 pub struct TickersBuilder {
     symbols: Vec<Arc<str>>,
     config: ClientConfig,
-    shared_client: Option<crate::ticker::ClientHandle>,
+    shared_client: Option<ClientHandle>,
+    injected_providers: Option<Arc<ProviderSet>>,
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    value_format: crate::constants::ValueFormat,
+    value_format: ValueFormat,
 }
 
 impl TickersBuilder {
@@ -127,15 +136,16 @@ impl TickersBuilder {
             symbols: symbols.into_iter().map(|s| s.into().into()).collect(),
             config: ClientConfig::default(),
             shared_client: None,
+            injected_providers: None,
             max_concurrency: DEFAULT_MAX_CONCURRENCY,
             cache_ttl: None,
             include_logo: false,
-            value_format: crate::constants::ValueFormat::default(),
+            value_format: ValueFormat::default(),
         }
     }
 
     /// Set the region (automatically sets correct lang and region code)
-    pub fn region(mut self, region: crate::constants::Region) -> Self {
+    pub fn region(mut self, region: Region) -> Self {
         self.config.lang = region.lang().to_string();
         self.config.region = region.region().to_string();
         self
@@ -226,8 +236,13 @@ impl TickersBuilder {
     /// - [`ValueFormat::Both`] — full `{ raw, fmt, longFmt }` object preserved.
     /// - [`ValueFormat::Pretty`] — returns the typed `Quote` unchanged (use
     ///   [`ValueFormat::transform`] for string-only JSON output).
-    pub fn format(mut self, format: crate::constants::ValueFormat) -> Self {
+    pub fn format(mut self, format: ValueFormat) -> Self {
         self.value_format = format;
+        self
+    }
+    /// Pre-inject a shared provider set (used by [`Providers::tickers`]).
+    pub(crate) fn with_provider_set(mut self, set: Arc<ProviderSet>) -> Self {
+        self.injected_providers = Some(set);
         self
     }
 
@@ -236,25 +251,27 @@ impl TickersBuilder {
     /// Avoids redundant auth handshakes when combining `Tickers` with other
     /// `Ticker` instances. Obtain a handle from any existing `Ticker` or
     /// `Tickers` via `.client_handle()`.
-    pub fn client(mut self, handle: crate::ticker::ClientHandle) -> Self {
+    pub fn client(mut self, handle: ClientHandle) -> Self {
         self.shared_client = Some(handle);
         self
     }
 
     /// Build the Tickers instance
     pub async fn build(self) -> Result<Tickers> {
-        let providers = if let Some(handle) = self.shared_client {
-            let yahoo = crate::providers::yahoo::YahooProvider::from_client(handle.0);
+        let providers = if let Some(set) = self.injected_providers {
+            set
+        } else if let Some(handle) = self.shared_client {
+            let yahoo = YahooProvider::from_client(handle.0);
             let client = yahoo.client_arc();
             Arc::new(ProviderSet::new(
-                vec![Arc::new(yahoo) as Arc<dyn crate::providers::ProviderAdapter>],
+                vec![Arc::new(yahoo) as Arc<dyn ProviderAdapter>],
                 Some(client),
                 Routes::new(Fetch::Sequential),
             ))
         } else {
             Arc::new(
                 build_providers(
-                    &[crate::providers::Provider::Yahoo],
+                    &[Provider::Yahoo],
                     &self.config,
                     Routes::new(Fetch::Sequential),
                 )
@@ -330,7 +347,7 @@ pub struct Tickers {
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    value_format: crate::constants::ValueFormat,
+    value_format: ValueFormat,
     quote_cache: QuoteCache,
     chart_cache: ChartCache,
     events_cache: EventsCache,
@@ -418,8 +435,8 @@ impl Tickers {
     /// Pass to [`Ticker::builder`](crate::Ticker::builder) or other
     /// [`Tickers::builder`] calls via `.client(handle)` to share the
     /// authenticated session without a new auth handshake.
-    pub fn client_handle(&self) -> crate::ticker::ClientHandle {
-        crate::ticker::ClientHandle(
+    pub fn client_handle(&self) -> ClientHandle {
+        ClientHandle(
             self.providers
                 .first_yahoo()
                 .expect("Tickers always uses a Yahoo session"),
@@ -602,15 +619,13 @@ impl Tickers {
             let company_logo_url = logo_map.get(&symbol).and_then(|(_, c)| c.clone());
             let quote = Quote::from_response(&summary, logo_url, company_logo_url);
             let quote = match self.value_format {
-                crate::constants::ValueFormat::Raw => {
+                ValueFormat::Raw => {
                     let json =
                         serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
                     let transformed = self.value_format.transform(json);
                     serde_json::from_value(transformed).map_err(FinanceError::JsonParseError)?
                 }
-                crate::constants::ValueFormat::Pretty | crate::constants::ValueFormat::Both => {
-                    quote
-                }
+                ValueFormat::Pretty | ValueFormat::Both => quote,
             };
             parsed_quotes.push((symbol, quote));
         }
@@ -646,7 +661,7 @@ impl Tickers {
         &self,
         symbols: &[String],
         response: &mut BatchQuotesResponse,
-    ) -> Vec<(String, crate::models::quote::QuoteSummaryResponse)> {
+    ) -> Vec<(String, QuoteSummaryResponse)> {
         let futures: Vec<_> = symbols
             .iter()
             .map(|sym| {
@@ -1436,9 +1451,9 @@ impl Tickers {
                     let p = p.clone();
                     async move {
                         let items = p.fetch_similar_symbols(&sym, limit).await?;
-                        Ok(crate::providers::types::recommendation_from_similar(
+                        Ok(recommendation_from_similar(
                             sym,
-                            Some(crate::providers::Provider::from_id_str(p.id()).ok_or_else(|| {
+                            Some(Provider::from_id_str(p.id()).ok_or_else(|| {
                                 FinanceError::InternalError(format!("unknown provider id: {}", p.id()))
                             })?),
                             items,
@@ -1568,11 +1583,10 @@ impl Tickers {
         let mut response = BatchIndicatorsResponse::with_capacity(self.symbols.len());
 
         // Calculate all indicators first (no lock held)
-        let mut calculated_indicators: Vec<(String, crate::indicators::IndicatorsSummary)> =
-            Vec::new();
+        let mut calculated_indicators: Vec<(String, indicators::IndicatorsSummary)> = Vec::new();
 
         for (symbol, chart) in &charts_response.charts {
-            let indicators = crate::indicators::summary::calculate_indicators(&chart.candles);
+            let indicators = indicators::summary::calculate_indicators(&chart.candles);
             calculated_indicators.push((symbol.to_string(), indicators));
         }
 
@@ -1670,17 +1684,17 @@ impl Tickers {
     /// # }
     /// ```
     ///
-    /// [`PortfolioConfig`]: crate::backtesting::portfolio::PortfolioConfig
+    /// [`PortfolioConfig`]: backtesting::portfolio::PortfolioConfig
     #[cfg(feature = "backtesting")]
     pub async fn backtest<S, F>(
         &self,
         interval: Interval,
         range: TimeRange,
-        config: Option<crate::backtesting::portfolio::PortfolioConfig>,
+        config: Option<backtesting::portfolio::PortfolioConfig>,
         factory: F,
-    ) -> crate::backtesting::Result<crate::backtesting::portfolio::PortfolioResult>
+    ) -> backtesting::Result<backtesting::portfolio::PortfolioResult>
     where
-        S: crate::backtesting::Strategy,
+        S: backtesting::Strategy,
         F: Fn(&str) -> S,
     {
         use crate::backtesting::portfolio::{PortfolioEngine, SymbolData};
@@ -1692,7 +1706,7 @@ impl Tickers {
         let charts = self
             .charts(interval, range)
             .await
-            .map_err(|e| crate::backtesting::BacktestError::ChartError(e.to_string()))?;
+            .map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
 
         // Fetch dividends for all symbols (events cache is already warm after charts())
         // Treat errors as "no dividends" — dividend processing is best-effort

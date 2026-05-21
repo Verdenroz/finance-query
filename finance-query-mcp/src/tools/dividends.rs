@@ -11,7 +11,7 @@ pub async fn get_dividends(
     let r = parse_range(range.as_deref().unwrap_or("max"));
     let ticker = Ticker::new(&symbol).await.map_err(finance_err)?;
     let dividends = ticker.dividends(r).await.map_err(finance_err)?;
-    let analytics = ticker.dividend_analytics(r).await.map_err(finance_err)?;
+    let analytics = finance_query::DividendAnalytics::from_dividends(&dividends);
     let combined = serde_json::json!({
         "dividends": dividends,
         "analytics": analytics,
