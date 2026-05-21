@@ -242,3 +242,20 @@ fn test_with_context() {
         _ => panic!("Expected AuthenticationFailed"),
     }
 }
+
+/// Verifies Tickers batch error-handling pattern compiles (error-handling.md Block 5).
+#[allow(dead_code)]
+fn _verify_batch_error_handling() {
+    use finance_query::Tickers;
+    let _check = |tickers: Tickers| async move {
+        let response = tickers.quotes().await;
+        if let Ok(response) = response {
+            for (symbol, error_str) in &response.errors {
+                eprintln!("{}: {}", symbol, error_str);
+            }
+            let _ = response.success_count();
+            let _ = response.error_count();
+            let _ = response.all_successful();
+        }
+    };
+}

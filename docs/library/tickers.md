@@ -42,10 +42,7 @@ let tickers = Tickers::builder(vec!["AAPL", "MSFT"])
 | `.region_code(str)` | Set region code directly (e.g., `"US"`, `"JP"`) |
 | `.timeout(Duration)` | Set HTTP request timeout |
 | `.proxy(str)` | Set proxy URL |
-| `.providers(&[Provider])` | Providers in priority order (default: `[Yahoo]`) |
-| `.fetch(Fetch)` | Dispatch strategy: `Sequential`, `Parallel`, or `All` (default: `Sequential`) |
-| `.merge(policy)` | Result merge policy: `Prefer` or `Enrich` (default: `Prefer`) |
-| `.max_concurrency(n)` | Max concurrent requests for per-symbol batch ops (default: 10) |
+|| `.max_concurrency(n)` | Max concurrent requests for per-symbol batch ops (default: 10) |
 | `.logo()` | Include company logo URLs in quote responses |
 | `.cache(Duration)` | Enable response caching with TTL (disabled by default) |
 
@@ -65,35 +62,37 @@ let tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL", "TSLA"])
 
 ## Provider Configuration
 
-`Tickers` supports the same multi-provider configuration as [`Ticker`](ticker.md). Provider dispatch and merge policies apply to every batch operation.
+`Tickers` supports the same multi-provider configuration as [`Ticker`](ticker.md). Provider routing is configured through `Providers::builder()` (see [Multi-Provider Architecture](providers/index.md)), then passed to `Tickers` via `providers.tickers()`:
 
 ```rust
-use finance_query::{Tickers, Provider, Fetch};
+use finance_query::{Capability, Fetch, Provider, Providers};
 
-// Explicit Yahoo-only configuration (same as the default)
-let tickers = Tickers::builder(vec!["AAPL", "NVDA"])
-    .providers(&[Provider::Yahoo])
+let providers = Providers::builder()
+    .route(Capability::QUOTE, &[Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
+let tickers = providers.tickers(["AAPL", "NVDA"]).build().await?;
 let response = tickers.quotes().await?;
 ```
 
-With multiple providers enabled (e.g. `polygon` feature), fall back automatically if the primary fails:
+With multiple providers enabled (e.g. `polygon` feature), route capabilities to specific providers:
 
 ```rust
 #[cfg(feature = "polygon")]
-let tickers = Tickers::builder(vec!["AAPL", "NVDA"])
-    .providers(&[Provider::Polygon, Provider::Yahoo])
+let providers = Providers::builder()
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
+#[cfg(feature = "polygon")]
+let tickers = providers.tickers(["AAPL", "NVDA"]).build().await?;
 ```
 
 !!! note "Spark is Yahoo-only"
     `spark()` uses a Yahoo-specific batch endpoint with no equivalent in other providers. It will always use the Yahoo client regardless of the configured provider set.
 
-See [Multi-Provider Architecture](providers/index.md) for full details on providers, fetch strategies, and merge policies.
+See [Multi-Provider Architecture](providers/index.md) for full details on providers and fetch strategies.
 
 ## Batch Quotes
 

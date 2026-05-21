@@ -83,10 +83,8 @@ async fn test_dividend_analytics() {
     use finance_query::{Ticker, TimeRange};
 
     let ticker = Ticker::new("AAPL").await.unwrap();
-    let analytics = ticker
-        .dividend_analytics(TimeRange::FiveYears)
-        .await
-        .unwrap();
+    let dividends = ticker.dividends(TimeRange::FiveYears).await.unwrap();
+    let analytics = finance_query::DividendAnalytics::from_dividends(&dividends);
 
     println!("Total paid:      ${:.2}", analytics.total_paid);
     println!("Payments:        {}", analytics.payment_count);

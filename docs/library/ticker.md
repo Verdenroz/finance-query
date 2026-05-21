@@ -57,9 +57,8 @@ let ticker = Ticker::builder("AAPL")
 - `.region_code(String)` - Set region code (e.g., "US", "JP")
 - `.timeout(Duration)` - Set HTTP request timeout
 - `.proxy(String)` - Set proxy URL
-- `.providers(&[Provider])` - Configure data providers in priority order (default: `[Yahoo]`)
-- `.fetch(Fetch)` - Provider dispatch strategy: `Sequential`, `Parallel`, or `All`
-- `.merge(MergePolicy)` - Result merge policy: `Prefer` (default) or `Enrich`
+- `.route(Capability, &[Provider])` - Route a capability to specific providers (e.g., `Capability::QUOTE`)
+- `.fetch(Fetch)` - Provider dispatch strategy: `Sequential` (default) or `Parallel`
 - `.format(ValueFormat)` - Value format: `Raw` (default), `Pretty`, or `Both`
 - `.logo()` - Fetch company logo URLs alongside quote data
 - `.cache(Duration)` - Enable in-memory caching with the given TTL (time-to-live)
@@ -70,13 +69,13 @@ See [Multi-Provider Architecture](providers/index.md) for provider configuration
 ### Provider Builder Example
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Enrich};
+use finance_query::{Ticker, Provider, Fetch, Capability};
 
-// Polygon as primary, Yahoo as fallback, enrich missing fields
+// Route quote to Polygon (fallback Yahoo), fundamentals to FMP (fallback Yahoo)
 let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::Polygon, Provider::Yahoo])
-    .fetch(Fetch::All)
-    .merge(Enrich)
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
+    .fetch(Fetch::Sequential)
     .build()
     .await?;
 ```
@@ -311,7 +310,8 @@ for gain in &gains {
 Compute analytics from the dividend history (pure calculation, no extra network request):
 
 ```rust
-let analytics = ticker.dividend_analytics(TimeRange::FiveYears).await?;
+let dividends = ticker.dividends(TimeRange::FiveYears).await?;
+let analytics = finance_query::DividendAnalytics::from_dividends(&dividends);
 
 println!("Total paid:      ${:.2}", analytics.total_paid);
 println!("Payments:        {}", analytics.payment_count);
