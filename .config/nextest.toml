@@ -1,0 +1,3 @@
+[profile.ci-network]
+retries = { backoff = "exponential", count = 3, delay = "30s", max-delay = "120s", jitter = true }
+test-threads = 2
