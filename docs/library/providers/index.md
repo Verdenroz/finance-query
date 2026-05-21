@@ -3,212 +3,194 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — providers](https://docs.rs/finance-query/latest/finance_query/providers/index.html)
 
-Finance Query v2.6 introduces a multi-provider architecture that lets you swap financial data providers through a single `TickerBuilder` API. Configure priority, dispatch strategy, and result merging without changing your data access code.
+Finance Query v2.6 introduces a provider abstraction layer that lets you route each data capability (quotes, charts, fundamentals, etc.) to a different provider through a single builder API. The system automatically falls back to the next provider in the list on failure.
 
 ## Why Multiple Providers?
 
-- **Redundancy** — if one provider fails, the next one in line takes over
-- **Enrichment** — combine data from multiple providers (e.g., Polygon for price, FMP for financials)
-- **Flexibility** — choose the provider that best fits your rate limits, coverage needs, and budget
+- **Redundancy** — if one provider fails or rate-limits you, the next one takes over
+- **Capability coverage** — route each data type to the provider with the best coverage for it
+- **Flexibility** — pick providers based on rate limits, data quality, and budget
 
 ## Available Providers
 
-All providers are optional except Yahoo Finance (always available, keyless). Enable them via feature flags:
+Yahoo Finance is always available with no configuration. All others are opt-in via feature flags:
 
-| Provider | Feature flag | Free tier | Env var for API key |
-|----------|-------------|-----------|---------------------|
+| Provider | Feature flag | Free tier | Env var |
+|----------|-------------|-----------|---------|
 | **Yahoo Finance** | *(always available)* | Keyless | — |
 | **Polygon.io** | `polygon` | 5 req/sec | `POLYGON_API_KEY` |
 | **FMP** | `fmp` | 250 req/day | `FMP_API_KEY` |
-| **Alpha Vantage** | `alphavantage` | 25 req/day | `ALPHA_VANTAGE_API_KEY` |
+| **Alpha Vantage** | `alphavantage` | 25 req/day | `ALPHAVANTAGE_API_KEY` |
 | **CoinGecko** | `crypto` | 30 req/min | *(keyless)* |
 | **FRED** | `fred` | 120 req/min | `FRED_API_KEY` |
-
-Add features in `Cargo.toml`:
+| **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 
 ```toml
 [dependencies]
 finance-query = { version = "2.6", features = ["polygon", "fmp"] }
 ```
 
-## Configuring Providers
+## Provider Initialization
 
-Use `TickerBuilder` to configure which providers to use, how they're queried, and how results are combined:
+API keys are read from environment variables automatically during `build()`. No manual init calls are needed:
 
-```rust
-use finance_query::{Ticker, Provider, Fetch, Enrich};
-
-let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::Polygon, Provider::Fmp, Provider::Yahoo])
-    .fetch(Fetch::Sequential)
-    .merge(Enrich)
-    .build()
-    .await?;
-
-// Data now comes from your configured provider chain
-let quote = ticker.quote().await?;
-let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+```bash
+export POLYGON_API_KEY="your-polygon-key"
+export FMP_API_KEY="your-fmp-key"
+export ALPHAVANTAGE_API_KEY="your-av-key"
+export FRED_API_KEY="your-fred-key"
 ```
 
-### Builder Methods
+!!! info "EDGAR requires a one-time init"
+    The SEC EDGAR module requires `edgar::init("user@example.com")?` once per process (SEC policy requires contact info for rate limiting). See [EDGAR](edgar.md).
 
-| Method | Default | Description |
-|--------|---------|-------------|
-| `.providers(&[Provider])` | `[Yahoo]` | Providers in priority order (first = primary) |
-| `.fetch(Fetch)` | `Sequential` | How providers are queried |
-| `.merge(MergePolicy)` | `Prefer` | How results from multiple providers are combined |
+## Capability Routing
+
+Use `.route(Capability, &[Provider])` to assign providers to specific data capabilities. Providers are tried in order — the first success wins.
+
+```rust
+use finance_query::{Ticker, Provider, Fetch, Capability};
+
+let ticker = Ticker::builder("AAPL")
+    // Route quotes to Polygon first, Yahoo as fallback
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    // Route fundamentals to FMP first, Yahoo as fallback
+    .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
+    // Route news to Polygon only
+    .route(Capability::CORPORATE, &[Provider::Polygon])
+    .fetch(Fetch::Sequential)
+    .build()
+    .await?;
+```
+
+If no `.route()` is set for a capability, Yahoo Finance is used by default. EDGAR is auto-injected for `FILINGS` when no other provider is configured.
+
+### Available Capabilities
+
+| Capability | Constant | Description |
+|------------|----------|-------------|
+| Quote | `Capability::QUOTE` | Price, volume, market cap |
+| Chart | `Capability::CHART` | Historical OHLCV data |
+| Fundamentals | `Capability::FUNDAMENTALS` | Financial statements |
+| Corporate | `Capability::CORPORATE` | News, recommendations, SEC metadata |
+| Options | `Capability::OPTIONS` | Options chains |
+| Crypto | `Capability::CRYPTO` | Cryptocurrency quotes |
+| Economic | `Capability::ECONOMIC` | Macro series (GDP, CPI, etc.) |
+| Forex | `Capability::FOREX` | FX currency pair rates |
+| Indices | `Capability::INDICES` | Market index quotes |
+| Futures | `Capability::FUTURES` | Futures contract quotes |
+| Commodities | `Capability::COMMODITIES` | Commodity price quotes |
+| Filings | `Capability::FILINGS` | SEC EDGAR filing data |
 
 ## Fetch Strategies
 
-`Fetch` controls how the provider chain is queried:
-
-```rust
-use finance_query::Fetch;
-```
+`Fetch` controls how the provider list is queried:
 
 | Strategy | Behavior | Best for |
 |----------|----------|----------|
-| `Fetch::Sequential` | Try providers in priority order; first success wins | Minimizing API calls, respecting rate limits |
-| `Fetch::Parallel` | Fire all providers concurrently; first success wins | Lowest latency for real-time data |
-| `Fetch::All` | Query all providers; collect all successes | Using `Merge` policies like `Enrich` |
+| `Fetch::Sequential` | Try in priority order; first success wins **(default)** | Respecting rate limits, minimizing API calls |
+| `Fetch::Parallel` | Fire all concurrently; first success wins | Lowest latency for real-time data |
 
 ```rust
-// Fast failover: try Polygon first, fall back to Yahoo
+use finance_query::Fetch;
+
+// Sequential: try Polygon, then Yahoo if Polygon fails
 let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
 
-// Low latency: race Polygon against Yahoo, use whichever responds first
+// Parallel: race Polygon against Yahoo, use whichever responds first
 let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Parallel)
     .build()
     .await?;
 ```
 
-!!! tip "Fetch::All"
-    Use `Fetch::All` with `Enrich` to fill gaps. When all providers are queried, the merge policy can backfill missing fields rather than taking the first success.
+## Provider Capabilities Matrix
 
-## Merge Policies
+Capabilities supported by each provider. Providers that don't support a given capability are automatically skipped during dispatch.
 
-`Merge` controls how results are combined when multiple providers succeed (relevant with `Fetch::All`):
+| Capability | Yahoo | Polygon | FMP | Alpha Vantage | CoinGecko | FRED | EDGAR |
+|------------|:-----:|:-------:|:---:|:-------------:|:---------:|:----:|:-----:|
+| Quote | ✓ | ✓ | ✓ | ✓ | — | — | — |
+| Chart | ✓ | ✓ | ✓ | ✓ | — | — | — |
+| Fundamentals | ✓ | ✓ | ✓ | ✓ | — | — | — |
+| Corporate | ✓ | ✓ | ✓ | ✓ | — | — | — |
+| Options | ✓ | ✓ | — | ✓ | — | — | — |
+| Crypto | — | ✓ | ✓ | ✓ | ✓ | — | — |
+| Economic | — | ✓ | — | ✓ | — | ✓ | — |
+| Forex | — | ✓ | ✓ | ✓ | — | — | — |
+| Indices | — | ✓ | ✓ | — | — | — | — |
+| Futures | — | ✓ | — | — | — | — | — |
+| Commodities | — | — | ✓ | ✓ | — | — | — |
+| Filings | — | ✓ | — | — | — | — | ✓ |
+| Sentiment | — | ✓ | — | — | — | — | — |
 
-| Policy | Behavior |
-|--------|----------|
-| `Prefer` | Use the primary (first-listed) provider's result; discard fallbacks (default) |
-| `Enrich` | Primary wins; fallbacks fill in any `None` fields the primary didn't provide |
+## Providers Factory (Shared Connections)
+
+For non-equity asset classes, use the `Providers` factory to create domain handles that share the same provider connections and configuration:
 
 ```rust
-use finance_query::{Enrich, Prefer};
+use finance_query::{Providers, Provider, Capability, Fetch};
 
-// Default: first provider always wins
-let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::Polygon, Provider::Yahoo])
-    .merge(Prefer)
+let providers = Providers::builder()
+    .route(Capability::FOREX, &[Provider::AlphaVantage])
+    .route(Capability::ECONOMIC, &[Provider::Fred])
+    .fetch(Fetch::Sequential)
     .build()
     .await?;
 
-// Enrich: Polygon primary, Yahoo fills missing fields
-let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::Polygon, Provider::Yahoo])
-    .fetch(Fetch::All)
-    .merge(Enrich)
-    .build()
-    .await?;
+// All handles share the same provider connections
+let aapl  = providers.ticker("AAPL").logo().build().await?;   // → Ticker
+let pair  = providers.forex("USD", "EUR");                    // → ForexPair
+let btc   = providers.crypto("bitcoin");                      // → CryptoCoin
+let gdp   = providers.economic("REAL_GDP");                   // → EconomicIndicator
+let spy   = providers.index("SPY");                           // → Index
+let cl    = providers.futures("CL=F");                        // → FuturesContract
+let wheat = providers.commodity("WHEAT");                     // → Commodity
+let sec   = providers.filings("AAPL");                        // → Filings
 ```
 
-!!! note "Merge is only meaningful with Fetch::All"
-    `Prefer` and `Enrich` behave identically unless `Fetch::All` is used. With `Sequential` or `Parallel`, the first successful result is always returned and merge is never invoked.
+### Domain Handle Methods
 
-## Provider Initialization
+| Handle | Method | Returns |
+|--------|--------|---------|
+| `ForexPair` | `.quote()` | `ForexQuote` |
+| `CryptoCoin` | `.quote(vs_currency)` | `CryptoQuote` |
+| `EconomicIndicator` | `.series()` | `EconomicSeries` |
+| `Index` | `.quote()` | `IndexQuote` |
+| `FuturesContract` | `.quote()` | `FuturesQuote` |
+| `Commodity` | `.quote()` | `CommodityQuote` |
+| `Filings` | `.get()` | `ProviderFilings` |
 
-API keys are read from environment variables automatically during `TickerBuilder::build()`. No manual init calls needed for providers:
+## Tickers and Providers
 
-```bash
-export POLYGON_API_KEY="your-polygon-key"
-export FMP_API_KEY="your-fmp-key"
-export ALPHA_VANTAGE_API_KEY="your-av-key"
-export FRED_API_KEY="your-fred-key"
-```
-
-If a provider's API key is missing, `build()` returns an error. Yahoo and CoinGecko are keyless and need no setup.
-
-!!! info "EDGAR init still required"
-    The SEC EDGAR module (`edgar::init()` / `edgar::init_with_config()`) is separate from the provider system and still requires a one-time init call. See [EDGAR](edgar.md).
-
-## Provider Capabilities
-
-Each provider supports a different set of data types. When you call `ticker.quote()` or `ticker.options()`, the system automatically dispatches to providers that support that operation. Providers that don't support a given operation are silently skipped during fetch.
-
-| Capability | Yahoo | Polygon | FMP | Alpha Vantage |
-|------------|-------|---------|-----|---------------|
-| Quote | ✓ | ✓ | ✓ | ✓ |
-| Chart | ✓ | ✓ | ✓ | ✓ |
-| Fundamentals | ✓ | ✓ | ✓ | ✓ |
-| Corporate | ✓ | ✓ | ✓ | ✓ |
-| Options | ✓ | ✓ | — | ✓ |
-| Market | ✓ | ✓ | ✓ | — |
-| Discovery | ✓ | ✓ | ✓ | — |
-| Indices | — | ✓ | ✓ | — |
-| Commodities | — | — | ✓ | ✓ |
-| Forex | — | ✓ | ✓ | ✓ |
-| Crypto | — | ✓ | ✓ | ✓ |
-| Futures | — | ✓ | — | — |
-| Technicals | — | ✓ | ✓ | ✓ |
-| Economic | — | ✓ | — | ✓ |
-| Filings | — | ✓ | — | — |
-| Sentiment | — | ✓ | — | — |
-
-CoinGecko supports only Crypto. FRED supports only Economic.
-
-## Complete Example
+[`Tickers`](../tickers.md) supports the same multi-provider configuration as `Ticker`. Routing is configured through `Providers::builder()` and passed to `Tickers` via `providers.tickers()`:
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Enrich, Interval, TimeRange};
+use finance_query::{Capability, Fetch, Provider, Providers};
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    // Polygon as primary, FMP and Yahoo as fallbacks
-    let ticker = Ticker::builder("AAPL")
-        .providers(&[Provider::Polygon, Provider::Fmp, Provider::Yahoo])
-        .fetch(Fetch::All)
-        .merge(Enrich)
-        .build()
-        .await?;
-
-    let quote = ticker.quote().await?;
-    println!("{}: ${:.2}", quote.symbol,
-        quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0));
-
-    let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-    println!("{} candles from provider {:?}", chart.candles.len(), chart.provider_id);
-
-    Ok(())
-}
+let providers = Providers::builder()
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .fetch(Fetch::Sequential)
+    .build()
+    .await?;
+let tickers = providers.tickers(["AAPL", "NVDA"]).build().await?;
 ```
+
+!!! note "Spark is Yahoo-only"
+    `spark()` uses a Yahoo-specific batch endpoint with no equivalent in other providers. It always uses the Yahoo client regardless of provider configuration.
 
 ## Provider Pages
 
-Detailed provider-specific documentation:
-
 | Provider | Documentation |
 |----------|--------------|
-| Yahoo Finance | *(default, always available)* |
 | Polygon.io | [Polygon.io](polygon.md) |
 | FMP | [Financial Modeling Prep](fmp.md) |
 | Alpha Vantage | [Alpha Vantage](alphavantage.md) |
 | CoinGecko | [Crypto (CoinGecko)](coingecko.md) |
 | FRED | [FRED & Treasury](fred.md) |
 | SEC EDGAR | [EDGAR SEC Filings](edgar.md) |
-
-## Tickers and Providers
-
-[`Tickers`](../tickers.md) supports the same `.providers()`, `.fetch()`, and `.merge()` builder methods as `Ticker`. Provider dispatch applies to every batch operation (quotes, charts, financials, etc.). `spark()` is the only exception — it uses a Yahoo-specific batch endpoint with no equivalent in other providers.
-
-## Limitations
-
-- Custom `Merge` implementations are not possible — only the built-in `Prefer` and `Enrich` policies are available
-- Provider-specific fields not in the shared intermediate types are accessible via `.extras` fields (untyped)
-- `Tickers.spark()` is Yahoo-only — no `fetch_spark` in `ProviderAdapter`

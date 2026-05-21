@@ -6,8 +6,7 @@
 //! Run with: `cargo test --test doc_providers`
 //! Run network tests: `cargo test --test doc_providers -- --ignored`
 
-use finance_query::{Enrich, Fetch, Prefer, Provider};
-use std::time::Duration;
+use finance_query::{Fetch, Provider};
 
 // ---------------------------------------------------------------------------
 // Provider enum — compile-time variant verification
@@ -30,71 +29,39 @@ fn _verify_provider_enum() {
 }
 
 // ---------------------------------------------------------------------------
-// Fetch & Merge — compile-time type checks
+// Fetch — compile-time type checks
 // ---------------------------------------------------------------------------
 
 /// Verifies Fetch variants exist with correct type.
-#[allow(dead_code)]
+#[allow(dead_code, deprecated)]
 fn _verify_fetch_variants() {
     let _: Fetch = Fetch::Sequential;
     let _: Fetch = Fetch::Parallel;
     let _: Fetch = Fetch::All;
 }
 
-/// Verifies Merge policy types exist.
-#[allow(dead_code)]
-fn _verify_merge_types() {
-    let _prefer = Prefer;
-    let _enrich = Enrich;
-}
-
-// ---------------------------------------------------------------------------
-// TickerBuilder provider configuration — compile-time check
-// ---------------------------------------------------------------------------
-
-/// Verifies builder compiles with providers, fetch, and merge.
-#[allow(dead_code)]
-fn _verify_ticker_builder_providers() {
-    use finance_query::Ticker;
-
-    fn assert_send<T: Send>(_: &T) {}
-    fn assert_sync<T: Sync>(_: &T) {}
-
-    let _ = Ticker::builder("AAPL")
-        .providers(&[Provider::Yahoo])
-        .fetch(Fetch::Sequential)
-        .merge(Enrich)
-        .timeout(Duration::from_secs(30));
-
-    // Verify Fetch values pass type checks
-    let _ = Fetch::Sequential;
-    let _ = Fetch::Parallel;
-    let _ = Fetch::All;
-    let _ = Enrich;
-    let _ = Prefer;
-}
-
 // ---------------------------------------------------------------------------
 // Network tests — require providers + API keys
 // ---------------------------------------------------------------------------
 
-/// Verifies multi-provider Ticker construction.
-/// Requires POLYGON_API_KEY or runs with Yahoo fallback.
+/// Verifies multi-provider Ticker construction via Providers::builder().
+/// Requires POLYGON_API_KEY.
 #[cfg(feature = "polygon")]
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_provider_builder_builds() {
-    use finance_query::Ticker;
+    use finance_query::{Capability, Providers};
 
-    let result = Ticker::builder("AAPL")
-        .providers(&[Provider::Polygon, Provider::Yahoo])
+    let result = Providers::builder()
+        .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential)
-        .merge(Prefer)
         .build()
         .await;
 
-    // May fail if POLYGON_API_KEY is not set, but should compile
-    let _ = result;
+    if let Ok(providers) = result {
+        let ticker = providers.ticker("AAPL").build().await;
+        let _ = ticker;
+    }
 }
 
 /// Verifies default (Yahoo-only) Ticker still works.

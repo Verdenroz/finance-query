@@ -15,7 +15,7 @@ Alpha Vantage provides financial data with best-in-class technical indicator cov
 Set the API key via environment variable:
 
 ```bash
-export ALPHA_VANTAGE_API_KEY="your-alphavantage-key"
+export ALPHAVANTAGE_API_KEY="your-alphavantage-key"
 ```
 
 No manual init call needed — the provider reads the key during `TickerBuilder::build()`.
@@ -23,14 +23,14 @@ No manual init call needed — the provider reads the key during `TickerBuilder:
 ## Usage
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch};
+use finance_query::{Capability, Fetch, Provider, Providers};
 
-let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::AlphaVantage, Provider::Yahoo])
+let providers = Providers::builder()
+    .route(Capability::QUOTE, &[Provider::AlphaVantage, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
-
+let ticker = providers.ticker("AAPL").build().await?;
 let quote = ticker.quote().await?;
 ```
 

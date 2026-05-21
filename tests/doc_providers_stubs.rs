@@ -4,44 +4,49 @@
 //! Run with: `cargo test --test doc_providers_stubs`
 //! Run network tests: `cargo test --test doc_providers_stubs -- --ignored`
 
-#[allow(unused_imports)]
-use finance_query::{Fetch, Provider, Ticker};
+use finance_query::Ticker;
 
 // ---------------------------------------------------------------------------
 // Compile-time: verify builder patterns from all three stubs compile
 // ---------------------------------------------------------------------------
 
-/// Polygon builder from polygon.md
+/// Polygon builder from polygon.md — routing through Providers API
 #[allow(dead_code)]
 #[cfg(feature = "polygon")]
 fn _verify_polygon_builder() {
-    let _ = Ticker::builder("AAPL")
-        .providers(&[Provider::Polygon, Provider::Yahoo])
+    use finance_query::{Capability, Fetch, Provider, Providers};
+    let _providers = Providers::builder()
+        .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential);
 }
 
-/// FMP builder from fmp.md
+/// FMP builder from fmp.md — routing through Providers API
 #[allow(dead_code)]
 #[cfg(feature = "fmp")]
 fn _verify_fmp_builder() {
-    let _ = Ticker::builder("AAPL")
-        .providers(&[Provider::Fmp, Provider::Yahoo])
+    use finance_query::{Capability, Fetch, Provider, Providers};
+    let _providers = Providers::builder()
+        .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
         .fetch(Fetch::Sequential);
 }
 
-/// Alpha Vantage builder from alphavantage.md
+/// Alpha Vantage builder from alphavantage.md — routing through Providers API
 #[allow(dead_code)]
 #[cfg(feature = "alphavantage")]
 fn _verify_alphavantage_builder() {
-    let _ = Ticker::builder("AAPL")
-        .providers(&[Provider::AlphaVantage, Provider::Yahoo])
+    use finance_query::{Capability, Fetch, Provider, Providers};
+    let _providers = Providers::builder()
+        .route(
+            Capability::QUOTE,
+            &[Provider::AlphaVantage, Provider::Yahoo],
+        )
         .fetch(Fetch::Sequential);
 }
 
 /// Yahoo default builder (always available)
 #[allow(dead_code)]
 fn _verify_yahoo_default() {
-    let _ = Ticker::builder("AAPL").providers(&[Provider::Yahoo]);
+    let _ = Ticker::builder("AAPL");
 }
 
 // ---------------------------------------------------------------------------
@@ -52,12 +57,14 @@ fn _verify_yahoo_default() {
 #[tokio::test]
 #[ignore = "requires network access and POLYGON_API_KEY"]
 async fn test_polygon_quote() {
-    let ticker = Ticker::builder("AAPL")
-        .providers(&[Provider::Polygon, Provider::Yahoo])
+    use finance_query::{Capability, Fetch, Provider, Providers};
+    let providers = Providers::builder()
+        .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential)
         .build()
         .await
         .unwrap();
+    let ticker = providers.ticker("AAPL").build().await.unwrap();
     let quote = ticker.quote().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }
@@ -66,12 +73,14 @@ async fn test_polygon_quote() {
 #[tokio::test]
 #[ignore = "requires network access and FMP_API_KEY"]
 async fn test_fmp_quote() {
-    let ticker = Ticker::builder("AAPL")
-        .providers(&[Provider::Fmp, Provider::Yahoo])
+    use finance_query::{Capability, Fetch, Provider, Providers};
+    let providers = Providers::builder()
+        .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
         .fetch(Fetch::Sequential)
         .build()
         .await
         .unwrap();
+    let ticker = providers.ticker("AAPL").build().await.unwrap();
     let quote = ticker.quote().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }
@@ -80,12 +89,17 @@ async fn test_fmp_quote() {
 #[tokio::test]
 #[ignore = "requires network access and ALPHA_VANTAGE_API_KEY"]
 async fn test_alphavantage_quote() {
-    let ticker = Ticker::builder("AAPL")
-        .providers(&[Provider::AlphaVantage, Provider::Yahoo])
+    use finance_query::{Capability, Fetch, Provider, Providers};
+    let providers = Providers::builder()
+        .route(
+            Capability::QUOTE,
+            &[Provider::AlphaVantage, Provider::Yahoo],
+        )
         .fetch(Fetch::Sequential)
         .build()
         .await
         .unwrap();
+    let ticker = providers.ticker("AAPL").build().await.unwrap();
     let quote = ticker.quote().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }

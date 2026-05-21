@@ -511,12 +511,10 @@ async fn test_tickers_best_practices() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_tickers_explicit_provider_config() {
-    use finance_query::{Fetch, Provider, Tickers};
+    use finance_query::Tickers;
 
-    // From tickers.md "Provider Configuration" — explicit Yahoo-only config
+    // From tickers.md "Provider Configuration" — Yahoo-only (default)
     let tickers = Tickers::builder(vec!["AAPL", "NVDA"])
-        .providers(&[Provider::Yahoo])
-        .fetch(Fetch::Sequential)
         .build()
         .await
         .unwrap();
@@ -528,15 +526,16 @@ async fn test_tickers_explicit_provider_config() {
 #[ignore = "requires network access"]
 #[cfg(feature = "polygon")]
 async fn test_tickers_polygon_yahoo_fallback() {
-    use finance_query::{Fetch, Provider, Tickers};
+    use finance_query::{Capability, Fetch, Provider, Providers};
 
-    // From tickers.md "Provider Configuration" — Polygon with Yahoo fallback
-    let tickers = Tickers::builder(vec!["AAPL", "NVDA"])
-        .providers(&[Provider::Polygon, Provider::Yahoo])
+    // From tickers.md "Provider Configuration" — Polygon with Yahoo fallback via Providers
+    let providers = Providers::builder()
+        .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential)
         .build()
         .await
         .unwrap();
+    let tickers = providers.tickers(["AAPL", "NVDA"]).build().await.unwrap();
     let response = tickers.quotes().await.unwrap();
     assert!(response.success_count() > 0);
 }

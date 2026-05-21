@@ -260,7 +260,7 @@ API keys for each provider are read from environment variables:
 |----------|---------|-------------|
 | Polygon.io | `POLYGON_API_KEY` | `polygon` |
 | FMP | `FMP_API_KEY` | `fmp` |
-| Alpha Vantage | `ALPHA_VANTAGE_API_KEY` | `alphavantage` |
+| Alpha Vantage | `ALPHAVANTAGE_API_KEY` | `alphavantage` |
 | FRED | `FRED_API_KEY` | `fred` |
 | CoinGecko | *(keyless)* | `crypto` |
 | Yahoo Finance | *(keyless, automatic)* | *(always available)* |
@@ -275,16 +275,16 @@ export FMP_API_KEY="your-fmp-key"
 ### Provider Selection
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Enrich};
+use finance_query::{Ticker, Provider, Fetch, Capability};
 
 // Default: Yahoo Finance only
 let ticker = Ticker::new("AAPL").await?;
 
-// Custom provider chain with enrichment
+// Route specific capabilities to preferred providers
 let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::Polygon, Provider::Yahoo])
-    .fetch(Fetch::All)
-    .merge(Enrich)
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
+    .fetch(Fetch::Sequential)
     .build()
     .await?;
 ```

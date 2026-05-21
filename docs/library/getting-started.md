@@ -34,17 +34,12 @@ finance-query = { version = "2.0", features = ["dataframe", "backtesting"] }
 ## Quick Example
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Enrich, Interval, TimeRange};
+use finance_query::{Ticker, Interval, TimeRange};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Default: Yahoo Finance (no API key required)
     let ticker = Ticker::builder("AAPL").logo().build().await?;
-
-    // Or with multiple providers:
-    // let ticker = Ticker::builder("AAPL")
-    //     .providers(&[Provider::Polygon, Provider::Yahoo])
-    //     .build().await?;
 
     // Get quote
     let quote = ticker.quote().await?;
@@ -69,11 +64,11 @@ export FMP_API_KEY="your-key"
 ```
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Enrich};
+use finance_query::{Ticker, Provider, Fetch, Capability};
 
-// Primary: Polygon, Fallback: Yahoo
+// Route quote to Polygon, fall back to Yahoo
 let ticker = Ticker::builder("AAPL")
-    .providers(&[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
