@@ -186,6 +186,7 @@ pub(crate) async fn fetch_quotes_batch(
                 ..Default::default()
             };
             let response = QuoteSummaryResponse {
+                symbol: symbol.clone(),
                 price: Some(price),
                 ..Default::default()
             };

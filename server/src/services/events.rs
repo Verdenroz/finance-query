@@ -21,7 +21,7 @@ pub async fn get_dividends(
             || async move {
                 let ticker = Ticker::new(&symbol).await?;
                 let dividends = ticker.dividends(range).await?;
-                let analytics = ticker.dividend_analytics(range).await?;
+                let analytics = finance_query::DividendAnalytics::from_dividends(&dividends);
                 let json = serde_json::json!({
                     "dividends": dividends,
                     "analytics": analytics,

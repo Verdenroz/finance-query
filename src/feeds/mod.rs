@@ -73,12 +73,12 @@ fn feed_user_agent() -> &'static str {
     })
 }
 
-fn build_feed_client() -> reqwest::Client {
+fn build_feed_client() -> Result<reqwest::Client> {
     reqwest::Client::builder()
         .user_agent(feed_user_agent())
         .timeout(Duration::from_secs(FEED_TIMEOUT_SECONDS))
         .build()
-        .expect("failed to build feeds HTTP client")
+        .map_err(crate::error::FinanceError::HttpError)
 }
 
 /// A named or custom RSS/Atom feed source.
@@ -261,7 +261,7 @@ pub struct FeedEntry {
 ///
 /// Returns an empty `Vec` (not an error) when the feed is reachable but empty.
 pub async fn fetch(source: FeedSource) -> Result<Vec<FeedEntry>> {
-    let client = build_feed_client();
+    let client = build_feed_client()?;
     fetch_with_client(&client, &source.url(), &source.name()).await
 }
 
@@ -273,7 +273,7 @@ pub async fn fetch(source: FeedSource) -> Result<Vec<FeedEntry>> {
 /// A single `reqwest::Client` is shared across all concurrent fetches within
 /// this call, reusing connection pools and TLS state.
 pub async fn fetch_all(sources: &[FeedSource]) -> Result<Vec<FeedEntry>> {
-    let client = build_feed_client();
+    let client = build_feed_client()?;
     let pairs: Vec<(String, String)> = sources.iter().map(|s| (s.url(), s.name())).collect();
     let futures: Vec<_> = pairs
         .iter()

@@ -294,19 +294,6 @@ impl YahooClient {
     /// }
     /// # Ok(())
     /// # }
-    /// Fetch logo URLs for a symbol
-    ///
-    /// Returns a tuple of (logo_url, company_logo_url).
-    /// Both may be None if the symbol is not found.
-    ///
-    /// # Example
-    ///
-    /// ```ignore
-    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// # let client = finance_query::YahooClient::new(Default::default()).await?;
-    /// let (logo_url, company_logo_url) = client.get_logo_url("AAPL").await;
-    /// # Ok(())
-    /// # }
     /// ```
     pub async fn get_logo_url(&self, symbol: &str) -> (Option<String>, Option<String>) {
         let json = match crate::adapters::yahoo::quote::quotes::fetch_with_fields(

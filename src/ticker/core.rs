@@ -408,10 +408,8 @@ impl Ticker {
                 async move { p.fetch_events(&sym).await }
             })
             .await?;
-        if self.cache_ttl.is_some() {
-            let mut cache = self.events_cache.write().await;
-            *cache = Some(CacheEntry::new(events));
-        }
+        let mut cache = self.events_cache.write().await;
+        *cache = Some(CacheEntry::new(events));
         Ok(())
     }
 
@@ -896,7 +894,7 @@ impl Ticker {
                 async move { p.fetch_quote(&sym).await }
             })
             .await?;
-        if self.cache_ttl.is_some() {
+        {
             let mut cache = self.quote_cache.write().await;
             *cache = Some(CacheEntry::new(summary));
         }
