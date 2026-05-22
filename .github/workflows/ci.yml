@@ -65,10 +65,12 @@ jobs:
       - uses: taiki-e/install-action@65851e10cd6c377f11a60e600abc07cb08643468 # v2.79.3
         with:
           tool: nextest
-      - name: Run tests
-        run: cargo nextest run --workspace --profile ci-network --run-ignored all
+      - name: Run unit tests (all features)
+        run: cargo nextest run --workspace --all-features
+      - name: Run network integration tests
+        run: cargo nextest run --workspace --profile ci-network --run-ignored ignored-only
       - name: Run doctests
-        run: cargo test --workspace --doc
+        run: cargo test --workspace --doc --all-features
 
   # Check compilation
   check:
