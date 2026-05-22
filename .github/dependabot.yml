@@ -8,6 +8,9 @@ updates:
       time: "09:00"
       timezone: "UTC"
     target-branch: "master"
+    # Wait before adopting brand-new releases (dodges the compromised-republish window).
+    cooldown:
+      default-days: 7
     assignees:
       - "Verdenroz"
     commit-message:
@@ -33,6 +36,9 @@ updates:
       time: "09:00"
       timezone: "UTC"
     target-branch: "master"
+    # Wait before adopting brand-new releases (dodges the compromised-republish window).
+    cooldown:
+      default-days: 7
     assignees:
       - "Verdenroz"
     commit-message:
@@ -52,6 +58,9 @@ updates:
       time: "09:00"
       timezone: "UTC"
     target-branch: "master"
+    # Wait before adopting brand-new releases (dodges the compromised-republish window).
+    cooldown:
+      default-days: 7
     assignees:
       - "Verdenroz"
     commit-message:
