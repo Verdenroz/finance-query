@@ -7,6 +7,61 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.0] - 2026-05-21
+
+Introduces a multi-provider data-aggregation architecture. **This is a breaking change to the public API** — see Migration below.
+
+### Added
+
+- **`Providers` / `ProvidersBuilder`** (`finance_query::Providers`) — central entry point: configure providers once, then create many domain handles that share the same connections.
+  - Capability routing: `.route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])`
+  - Fetch strategies: `.fetch(Fetch::Sequential)` (try in order, first success wins) or `Fetch::Parallel` (race concurrently)
+  - Shared knobs: `.timeout(...)`, `.proxy(...)`, etc.
+- **New public types:** `Provider`, `Fetch`, `Capability`, `Providers`, `ProvidersBuilder`.
+- **Domain handles**, all constructed via the `Providers` factory and feature-gated:
+  - `ForexPair` (`providers.forex("USD", "EUR")`) → `ForexQuote`
+  - `CryptoCoin` (`providers.crypto("bitcoin")`) → `CryptoQuote`
+  - `EconomicIndicator` (`providers.economic("REAL_GDP")`) → `EconomicSeries`
+  - `Index` (`providers.index("SPY")`) → `IndexQuote`
+  - `FuturesContract` (`providers.futures("NQ=F")`) → `FuturesQuote`
+  - `Commodity` (`providers.commodity("WHEAT")`) → `CommodityQuote`
+  - `Filings` (`providers.filings("AAPL")`) → `ProviderFilings` (SEC EDGAR, always available)
+- **Multi-provider batch API** via `providers.tickers([...])`.
+- `Ticker::financials()` for financial statements through provider dispatch.
+- Automatic EDGAR routing for the `FILINGS` capability when no other provider is configured.
+
+### Changed
+
+- **Provider routing now lives on `ProvidersBuilder`.** `Ticker`/`Tickers` builders are the Yahoo-only fast path; routed instances are created with `providers.ticker(symbol)` / `providers.tickers([...])`.
+- Adapters reorganized into capability subdirectories (`src/adapters/<provider>/<capability>/`) and are now `pub(crate)` — they are no longer part of the public API.
+- Public models reorganized into capability-based directories.
+- `quote()` returns a single unified `Quote` instead of provider-specific result types.
+- Quotes, charts, events, financials, and indicators are lazily fetched and cached through the provider layer.
+
+### Removed
+
+- **Per-provider `Ticker` handles introduced in 2.5.1**: `Ticker::polygon()`, `Ticker::fmp()`, `Ticker::alphavantage()` and the `PolygonHandle` / `FmpHandle` / `AlphaVantageHandle` types. Provider selection is now declared via capability routing on `ProvidersBuilder`.
+- Direct public access to adapter modules (adapters are now `pub(crate)`).
+- Legacy client modules and provider-specific public types, replaced by the unified provider layer.
+
+### Migration
+
+```rust
+// Before (2.5.x): per-provider handle on Ticker
+let ticker = Ticker::new("AAPL").await?;
+let snapshot = ticker.polygon().snapshot().await?;
+
+// After (2.6.0): route capabilities on Providers, then create the ticker
+let providers = Providers::builder()
+    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .fetch(Fetch::Sequential)
+    .build().await?;
+let ticker = providers.ticker("AAPL").build().await?;
+let quote = ticker.quote().await?;
+```
+
+The Yahoo-only fast path is unchanged: `Ticker::new("AAPL")` and `Ticker::builder("AAPL")` still work without configuring providers.
+
 ## [2.5.1] - 2026-05-06
 
 The `Ticker` adapter handle integration in this release was contributed by [@Johnson-f](https://github.com/Johnson-f) in [#133](https://github.com/Verdenroz/finance-query/pull/133).
@@ -399,7 +454,8 @@ The adapter additions in this release were contributed by [@Johnson-f](https://g
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.5.1...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.6.0...HEAD
+[2.6.0]: https://github.com/Verdenroz/finance-query/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/Verdenroz/finance-query/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/Verdenroz/finance-query/compare/v2.4.3...v2.5.0
 [2.4.3]: https://github.com/Verdenroz/finance-query/compare/v2.4.2...v2.4.3
