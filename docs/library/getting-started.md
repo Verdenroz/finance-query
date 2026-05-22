@@ -64,14 +64,15 @@ export FMP_API_KEY="your-key"
 ```
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Capability};
+use finance_query::{Capability, Fetch, Provider, Providers};
 
-// Route quote to Polygon, fall back to Yahoo
-let ticker = Ticker::builder("AAPL")
+// Route quote to Polygon, fall back to Yahoo (routing lives on Providers::builder)
+let providers = Providers::builder()
     .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
+let ticker = providers.ticker("AAPL").build().await?;
 ```
 
 → [Multi-Provider Architecture](providers/index.md) for all providers and strategies

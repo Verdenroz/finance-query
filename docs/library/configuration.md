@@ -275,18 +275,19 @@ export FMP_API_KEY="your-fmp-key"
 ### Provider Selection
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Capability};
+use finance_query::{Capability, Fetch, Provider, Providers, Ticker};
 
 // Default: Yahoo Finance only
 let ticker = Ticker::new("AAPL").await?;
 
-// Route specific capabilities to preferred providers
-let ticker = Ticker::builder("AAPL")
+// Route specific capabilities to preferred providers (routing lives on Providers::builder)
+let providers = Providers::builder()
     .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
+let ticker = providers.ticker("AAPL").build().await?;
 ```
 
 See [Multi-Provider Architecture](providers/index.md) for the complete provider reference.
