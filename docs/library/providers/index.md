@@ -46,21 +46,22 @@ export FRED_API_KEY="your-fred-key"
 
 ## Capability Routing
 
-Use `.route(Capability, &[Provider])` to assign providers to specific data capabilities. Providers are tried in order — the first success wins.
+Use `.route(Capability, &[Provider])` on `Providers::builder()` to assign providers to specific data capabilities, then create handles via `providers.ticker()`. Providers are tried in order — the first success wins.
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Capability};
+use finance_query::{Capability, Fetch, Provider, Providers};
 
-let ticker = Ticker::builder("AAPL")
+let providers = Providers::builder()
     // Route quotes to Polygon first, Yahoo as fallback
     .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     // Route fundamentals to FMP first, Yahoo as fallback
     .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
-    // Route news to Polygon only
+    // Route corporate (news, recommendations) to Polygon only
     .route(Capability::CORPORATE, &[Provider::Polygon])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
+let ticker = providers.ticker("AAPL").build().await?;
 ```
 
 If no `.route()` is set for a capability, Yahoo Finance is used by default. EDGAR is auto-injected for `FILINGS` when no other provider is configured.
@@ -92,21 +93,23 @@ If no `.route()` is set for a capability, Yahoo Finance is used by default. EDGA
 | `Fetch::Parallel` | Fire all concurrently; first success wins | Lowest latency for real-time data |
 
 ```rust
-use finance_query::Fetch;
+use finance_query::{Capability, Fetch, Provider, Providers};
 
 // Sequential: try Polygon, then Yahoo if Polygon fails
-let ticker = Ticker::builder("AAPL")
+let providers = Providers::builder()
     .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
+let ticker = providers.ticker("AAPL").build().await?;
 
 // Parallel: race Polygon against Yahoo, use whichever responds first
-let ticker = Ticker::builder("AAPL")
+let providers = Providers::builder()
     .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Parallel)
     .build()
     .await?;
+let ticker = providers.ticker("AAPL").build().await?;
 ```
 
 ## Provider Capabilities Matrix

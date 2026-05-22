@@ -57,8 +57,6 @@ let ticker = Ticker::builder("AAPL")
 - `.region_code(String)` - Set region code (e.g., "US", "JP")
 - `.timeout(Duration)` - Set HTTP request timeout
 - `.proxy(String)` - Set proxy URL
-- `.route(Capability, &[Provider])` - Route a capability to specific providers (e.g., `Capability::QUOTE`)
-- `.fetch(Fetch)` - Provider dispatch strategy: `Sequential` (default) or `Parallel`
 - `.format(ValueFormat)` - Value format: `Raw` (default), `Pretty`, or `Both`
 - `.logo()` - Fetch company logo URLs alongside quote data
 - `.cache(Duration)` - Enable in-memory caching with the given TTL (time-to-live)
@@ -66,19 +64,30 @@ let ticker = Ticker::builder("AAPL")
 See [Configuration](configuration.md) for details on available regions and settings.
 See [Multi-Provider Architecture](providers/index.md) for provider configuration.
 
-### Provider Builder Example
+### Multi-Provider Configuration
+
+Multi-provider routing (Polygon, FMP, Alpha Vantage, etc.) is configured through
+[`ProvidersBuilder`](providers/index.md), not `TickerBuilder`. Pass the configured
+`Providers` to `providers.ticker()`:
 
 ```rust
-use finance_query::{Ticker, Provider, Fetch, Capability};
+use finance_query::{Capability, Fetch, Provider, Providers};
 
 // Route quote to Polygon (fallback Yahoo), fundamentals to FMP (fallback Yahoo)
-let ticker = Ticker::builder("AAPL")
+let providers = Providers::builder()
     .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
     .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
+
+// All tickers from this Providers share the same connections
+let aapl = providers.ticker("AAPL").build().await?;
+let msft = providers.ticker("MSFT").build().await?;
 ```
+
+For simple Yahoo-only usage, `Ticker::new` / `Ticker::builder` work unchanged —
+no `Providers` setup needed.
 
 ## Quote Data
 
