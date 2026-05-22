@@ -19,3 +19,6 @@ hosting = "github"
 install-updater = false
 # A prefix git tags must include for dist to care about them
 tag-namespace = "finance-query-cli"
+# Allow manual edits to the generated workflow file
+# (we pin GitHub Actions to commit SHAs for supply-chain security)
+allow-dirty = ["ci"]
