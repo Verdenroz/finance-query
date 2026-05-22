@@ -1,0 +1,55 @@
+# cargo-deny configuration — supply-chain policy for the workspace.
+# Run locally with: cargo deny check
+# Docs: https://embarkstudios.github.io/cargo-deny/
+
+[graph]
+# Evaluate the full dependency graph across all feature flags.
+all-features = true
+
+[advisories]
+# Fail on any crate with a known security advisory or that has been yanked.
+yanked = "deny"
+# Add advisory IDs here (with a justification) only to consciously accept a risk.
+ignore = []
+
+[bans]
+# Duplicate versions bloat the tree and widen the attack surface; warn for now.
+multiple-versions = "warn"
+# Wildcard ("*") version requirements are a supply-chain risk — disallow them.
+wildcards = "deny"
+allow-wildcard-paths = true
+# Explicitly banned crates go here, e.g. { crate = "openssl", reason = "..." }.
+deny = []
+
+[licenses]
+# Allow-list of licenses acceptable for an MIT-licensed project.
+# A dependency whose license is not listed here fails the check.
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "Apache-2.0 WITH LLVM-exception",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "Zlib",
+    "MPL-2.0",
+    "Unicode-DFS-2016",
+    "Unicode-3.0",
+    "CC0-1.0",
+    "BSL-1.0",
+    "Unlicense",
+    "OpenSSL",
+    "CDLA-Permissive-2.0",
+]
+confidence-threshold = 0.8
+# Keep a forward-looking allow-list without warning about not-yet-used entries.
+unused-allowed-license = "allow"
+# Per-crate license exceptions go here when a crate needs a license not in `allow`.
+exceptions = []
+
+[sources]
+# Only allow crates from the official crates.io registry; reject unknown
+# registries and git sources
+unknown-registry = "deny"
+unknown-git = "deny"
+allow-registry = ["https://github.com/rust-lang/crates.io-index"]

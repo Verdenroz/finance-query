@@ -3,14 +3,14 @@ name: Publish to crates.io
 on:
   push:
     tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-      - 'v[0-9]+.[0-9]+.[0-9]+-*'
+      - "v[0-9]+.[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+-*"
 
 env:
   CARGO_TERM_COLOR: always
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   # Run tests before publishing
@@ -18,21 +18,34 @@ jobs:
     name: Pre-publish Tests
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
-      - uses: dtolnay/rust-toolchain@stable
-      - uses: Swatinem/rust-cache@v2
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@e18b497796c12c097a38f9edb9d0641fb99eee32 # v2
       - name: Run tests
         run: cargo test --all-features --verbose
 
-  # Publish to crates.io
+  # Publish to crates.io via OIDC trusted publishing (no long-lived token).
   publish:
     name: Publish to crates.io
     runs-on: ubuntu-latest
     needs: [test]
+    permissions:
+      id-token: write # mint a short-lived crates.io token via OIDC
+      contents: write # create the GitHub Release
     steps:
-      - uses: actions/checkout@v6
+      - uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6
+        with:
+          persist-credentials: false
 
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
 
       - name: Verify version matches tag
         run: |
@@ -44,14 +57,22 @@ jobs:
           fi
           echo "Version verified: $TAG_VERSION"
 
+      - name: Authenticate to crates.io (OIDC)
+        id: auth
+        uses: rust-lang/crates-io-auth-action@b7e9a28eded4986ec6b1fa40eeee8f8f165559ec # v1
+
       - name: Publish finance-query-derive
-        run: cargo publish -p finance-query-derive --token ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish -p finance-query-derive
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
       - name: Wait for crates.io to index
         run: sleep 30
 
       - name: Publish finance-query
-        run: cargo publish -p finance-query --token ${{ secrets.CRATES_IO_TOKEN }}
+        run: cargo publish -p finance-query
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ steps.auth.outputs.token }}
 
       - name: Extract CHANGELOG for this version
         id: changelog
@@ -68,7 +89,7 @@ jobs:
           fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
         with:
           body_path: ${{ steps.changelog.outputs.use_auto == 'false' && '/tmp/release_notes.md' || '' }}
           generate_release_notes: ${{ steps.changelog.outputs.use_auto == 'true' }}

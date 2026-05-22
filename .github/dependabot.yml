@@ -1,187 +1,61 @@
-# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
 version: 2
 updates:
-  # Rust dependencies
   - package-ecosystem: "cargo"
     directory: "/"
     schedule:
       interval: "weekly"
-      day: "tuesday"
-      time: "02:00"
+      day: "monday"
+      time: "09:00"
       timezone: "UTC"
-    target-branch: "staging"
-    reviewers:
-      - "Verdenroz"
+    target-branch: "master"
     assignees:
       - "Verdenroz"
     commit-message:
       prefix: "deps"
-      include: "scope"
     labels:
       - "dependencies"
-      - "rust"
-    versioning-strategy: "auto"
-    rebase-strategy: "auto"
-    pull-request-branch-name:
-      separator: "/"
-    # Group related updates to reduce PR noise
+    open-pull-requests-limit: 10
     groups:
-      # Production dependencies grouped by function
-      axum-ecosystem:
+      all-dependencies:
         patterns:
-          - "axum*"
-          - "tower*"
-          - "hyper*"
+          - "*"
         update-types:
           - "minor"
           - "patch"
-
-      async-runtime:
-        patterns:
-          - "tokio*"
-          - "futures*"
-          - "async-trait*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      database:
-        patterns:
-          - "redis*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      serialization:
-        patterns:
-          - "serde*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      http-client:
-        patterns:
-          - "reqwest*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      web-scraping:
-        patterns:
-          - "scraper*"
-          - "select*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      tracing:
-        patterns:
-          - "tracing*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      utilities:
-        patterns:
-          - "chrono*"
-          - "uuid*"
-          - "url*"
-          - "regex*"
-          - "anyhow*"
-          - "thiserror*"
-          - "dotenvy*"
-          - "once_cell*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      websockets:
-        patterns:
-          - "tokio-tungstenite*"
-          - "tungstenite*"
-        update-types:
-          - "minor"
-          - "patch"
-
-      rate-limiting:
-        patterns:
-          - "governor*"
-        update-types:
-          - "minor"
-          - "patch"
-    # Ignore specific crates that require manual review
     ignore:
-      # Major version updates may have breaking changes
-      - dependency-name: "axum"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "tokio"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "serde"
+      - dependency-name: "*"
         update-types: ["version-update:semver-major"]
 
-  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "monthly"
-      day: "tuesday"
-      time: "02:00"
+      time: "09:00"
       timezone: "UTC"
-    target-branch: "staging"
-    open-pull-requests-limit: 3
-    reviewers:
-      - "Verdenroz"
+    target-branch: "master"
     assignees:
       - "Verdenroz"
     commit-message:
       prefix: "ci"
-      include: "scope"
     labels:
       - "dependencies"
-      - "github-actions"
       - "ci"
 
-  # Docker dependencies
+  # Keep the digest-pinned base images in the Rust Dockerfiles current.
   - package-ecosystem: "docker"
-    directory: "/"
+    directories:
+      - "/server"
+      - "/finance-query-mcp"
     schedule:
-      interval: "monthly"
-      day: "tuesday"
-      time: "02:00"
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
       timezone: "UTC"
-    target-branch: "staging"
-    open-pull-requests-limit: 2
-    reviewers:
-      - "Verdenroz"
+    target-branch: "master"
     assignees:
       - "Verdenroz"
     commit-message:
-      prefix: "docker"
-      include: "scope"
+      prefix: "deps"
     labels:
       - "dependencies"
       - "docker"
-    rebase-strategy: "auto"
-    pull-request-branch-name:
-      separator: "/"
-    # Group Docker images
-    groups:
-      rust-images:
-        patterns:
-          - "rust*"
-        update-types:
-          - "minor"
-          - "patch"
-      debian-images:
-        patterns:
-          - "debian*"
-        update-types:
-          - "minor"
-          - "patch"
-    # Only patch and minor updates for base images
-    ignore:
-      - dependency-name: "rust"
-        update-types: ["version-update:semver-major"]
-      - dependency-name: "debian"
-        update-types: ["version-update:semver-major"]
