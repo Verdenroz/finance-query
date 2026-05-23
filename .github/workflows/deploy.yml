@@ -90,9 +90,10 @@ jobs:
         with:
           python-version: "3.x"
           cache: "pip"
+          cache-dependency-path: "docs/requirements.txt"
 
       - name: Install docs dependencies
-        run: pip install .
+        run: pip install --require-hashes -r docs/requirements.txt
 
       - name: Deploy to GitHub Pages
         run: mkdocs gh-deploy --force

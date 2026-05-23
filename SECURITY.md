@@ -11,8 +11,8 @@ version, the fix is to upgrade.
 
 | Component                   | Version          | Supported          |
 | --------------------------- | ---------------- | ------------------ |
-| `finance-query` (library)   | 2.5.x (latest)   | :white_check_mark: |
-| `finance-query` (library)   | < 2.5            | :x:                |
+| `finance-query` (library)   | 2.6.x (latest)   | :white_check_mark: |
+| `finance-query` (library)   | < 2.6            | :x:                |
 | `fq` (CLI)                  | 0.3.x (latest)   | :white_check_mark: |
 | Server / MCP server         | latest `master` + published image | :white_check_mark: |
 | v1 (legacy Python, `v1/`)   | all              | :x: (unmaintained) |
