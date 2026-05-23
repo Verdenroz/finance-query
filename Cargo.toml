@@ -46,7 +46,7 @@ serde_json = "1"
 serde_repr = "0.1"
 
 # Error handling
-thiserror = "2.0.17"
+thiserror = "2.0.18"
 anyhow = "1"
 
 # Date and time
@@ -78,7 +78,7 @@ scraper = "0.25.0"
 # WebSocket streaming support
 tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
 tokio-stream = { version = "0.1", features = ["sync"] }
-prost = "0.14.1"
+prost = "0.14.3"
 base64 = "0.22"
 
 # Optional: DataFrame support

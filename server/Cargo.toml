@@ -24,17 +24,17 @@ async-graphql = { version = "7", features = ["graphiql"] }
 async-graphql-axum = "7"
 
 # Web framework
-axum = { version = "0.8.7", features = ["ws", "macros"] }
+axum = { version = "0.8.9", features = ["ws", "macros"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
-tower-http = { version = "0.6.6", features = ["fs", "trace", "cors", "timeout", "limit", "compression-full"] }
+tower-http = { version = "0.6.10", features = ["fs", "trace", "cors", "timeout", "limit", "compression-full"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
 # Redis caching (optional)
-redis = { version = "1.0.2", features = ["tokio-comp", "connection-manager"], optional = true }
+redis = { version = "1.2.1", features = ["tokio-comp", "connection-manager"], optional = true }
 
 # WebSocket
 tokio-tungstenite = "0.28"
@@ -46,7 +46,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
 
 # Error handling
 anyhow = "1"
-thiserror = "2.0.17"
+thiserror = "2.0.18"
 
 # Environment and configuration
 dotenvy = "0.15"
@@ -56,7 +56,7 @@ chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 
 # Rate limiting
-governor = "0.10.2"
+governor = "0.10.4"
 
 # UUID for request IDs
 uuid = { version = "1", features = ["v4", "serde"] }
