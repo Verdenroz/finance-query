@@ -55,7 +55,7 @@ RUN touch src/lib.rs finance-query-mcp/src/main.rs && \
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
 FROM debian:bookworm-slim@sha256:0104b334637a5f19aa9c983a91b54c89887c0984081f2068983107a6f6c21eeb
 
-RUN apt-get update && apt-get install -y \
+RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     ca-certificates \
     libssl3 \
     curl \
