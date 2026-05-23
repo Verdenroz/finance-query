@@ -8,20 +8,18 @@
 //! # Quick Start
 //!
 //! ```no_run
-//! use finance_query::adapters::fmp;
-//! use finance_query::adapters::fmp::Period;
+//! use finance_query::{Providers, Provider, Capability, StatementType, Frequency};
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! fmp::init("YOUR_API_KEY")?;
+//! // Route fundamentals and quote data to FMP with Yahoo as fallback
+//! let providers = Providers::builder()
+//!     .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
+//!     .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
+//!     .build().await?;
 //!
-//! // Real-time quote
-//! let quotes = fmp::quote("AAPL").await?;
-//!
-//! // Income statement
-//! let income = fmp::income_statement("AAPL", Period::Quarter, Some(4)).await?;
-//!
-//! // Company profile
-//! let profile = fmp::company_profile("AAPL").await?;
+//! let ticker = providers.ticker("AAPL").build().await?;
+//! let quote = ticker.quote().await?;
+//! let income = ticker.financials(StatementType::Income, Frequency::Quarterly).await?;
 //! # Ok(())
 //! # }
 //! ```

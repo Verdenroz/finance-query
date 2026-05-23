@@ -8,20 +8,18 @@
 //! # Quick Start
 //!
 //! ```no_run
-//! use finance_query::adapters::polygon;
-//! use finance_query::adapters::polygon::Timespan;
+//! use finance_query::{Providers, Provider, Capability, Interval, TimeRange};
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! polygon::init("YOUR_API_KEY")?;
+//! // Route chart and quote data to Polygon with Yahoo as fallback
+//! let providers = Providers::builder()
+//!     .route(Capability::CHART, &[Provider::Polygon, Provider::Yahoo])
+//!     .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+//!     .build().await?;
 //!
-//! // Stock aggregate bars
-//! let bars = polygon::stock_aggregates("AAPL", 1, Timespan::Day, "2024-01-01", "2024-01-31", None).await?;
-//!
-//! // Snapshot
-//! let snap = polygon::stock_snapshot("AAPL").await?;
-//!
-//! // Last trade
-//! let trade = polygon::stock_last_trade("AAPL").await?;
+//! let ticker = providers.ticker("AAPL").build().await?;
+//! let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+//! let quote = ticker.quote().await?;
 //! # Ok(())
 //! # }
 //! ```

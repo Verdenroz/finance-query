@@ -8,29 +8,21 @@
 //! # Quick Start
 //!
 //! ```no_run
-//! use finance_query::adapters::alphavantage;
+//! use finance_query::{Providers, Provider, Capability, Interval, TimeRange};
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! alphavantage::init("YOUR_API_KEY")?;
+//! // Route capabilities to Alpha Vantage with Yahoo as fallback
+//! let providers = Providers::builder()
+//!     .route(Capability::QUOTE, &[Provider::AlphaVantage, Provider::Yahoo])
+//!     .route(Capability::CHART, &[Provider::AlphaVantage, Provider::Yahoo])
+//!     .route(Capability::ECONOMIC, &[Provider::AlphaVantage])
+//!     .build().await?;
 //!
-//! // Core stocks
-//! let quote = alphavantage::global_quote("AAPL").await?;
-//! let daily = alphavantage::time_series_daily("MSFT", None).await?;
+//! let ticker = providers.ticker("AAPL").build().await?;
+//! let quote = ticker.quote().await?;
+//! let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 //!
-//! // Fundamentals
-//! let overview = alphavantage::company_overview("AAPL").await?;
-//!
-//! // Forex & Crypto
-//! let rate = alphavantage::exchange_rate("USD", "EUR").await?;
-//! let btc = alphavantage::crypto_daily("BTC", "USD").await?;
-//!
-//! // Commodities & Economic indicators
-//! let oil = alphavantage::commodity_wti(None).await?;
-//! let gdp = alphavantage::real_gdp(None).await?;
-//!
-//! // Technical indicators
-//! use finance_query::adapters::alphavantage::models::{AvInterval, SeriesType};
-//! let sma = alphavantage::sma("AAPL", AvInterval::Daily, 20, SeriesType::Close).await?;
+//! let gdp = providers.economic("REAL_GDP").series().await?;
 //! # Ok(())
 //! # }
 //! ```

@@ -1,26 +1,20 @@
-//! Polygon.io WebSocket streaming for real-time market data.
+//! Polygon.io WebSocket streaming for real-time market data (internal).
 #![allow(dead_code)]
 //!
 //! Provides real-time trades, quotes, and aggregate bars for stocks, options, forex,
-//! crypto, futures, and indices.
+//! crypto, futures, and indices. This module is an internal adapter — use the public
+//! [`finance_query::streaming::PriceStream`] API for real-time price streaming.
 //!
 //! # Example
 //!
 //! ```no_run
-//! use finance_query::adapters::polygon;
-//! use finance_query::adapters::polygon::websocket::*;
+//! use finance_query::streaming::PriceStream;
 //! use futures::StreamExt;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! polygon::init("YOUR_KEY")?;
-//! let mut stream = PolygonStream::from_singleton()?
-//!     .cluster(ClusterDTO::Stocks)
-//!     .subscribe(&["T.AAPL", "Q.AAPL", "AM.AAPL"])
-//!     .build()
-//!     .await?;
-//!
-//! while let Some(msg) = stream.next().await {
-//!     println!("{:?}", msg);
+//! let mut stream = PriceStream::subscribe(&["AAPL", "NVDA"]).await?;
+//! while let Some(update) = stream.next().await {
+//!     println!("{:?}", update);
 //! }
 //! # Ok(())
 //! # }
