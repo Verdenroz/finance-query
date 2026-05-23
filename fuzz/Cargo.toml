@@ -1,0 +1,76 @@
+[package]
+name = "finance-query-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2021"
+
+[package.metadata]
+cargo-fuzz = true
+
+# Isolate from parent workspace so `cargo` commands at the root
+# don't try to resolve this package's nightly-only dependencies.
+[workspace]
+
+[dependencies]
+libfuzzer-sys = "0.4"
+arbitrary = { version = "1", features = ["derive"] }
+serde_json = "1"
+finance-query = { path = "..", features = ["indicators"] }
+
+[[bin]]
+name = "fuzz_quote"
+path = "fuzz_targets/fuzz_quote.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_chart"
+path = "fuzz_targets/fuzz_chart.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_atr"
+path = "fuzz_targets/fuzz_atr.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_indicators_series"
+path = "fuzz_targets/fuzz_indicators_series.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_indicators_ohlcv"
+path = "fuzz_targets/fuzz_indicators_ohlcv.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_patterns"
+path = "fuzz_targets/fuzz_patterns.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_options"
+path = "fuzz_targets/fuzz_options.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_financials"
+path = "fuzz_targets/fuzz_financials.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_edgar"
+path = "fuzz_targets/fuzz_edgar.rs"
+doc = false
+
+[[bin]]
+name = "fuzz_discovery"
+path = "fuzz_targets/fuzz_discovery.rs"
+doc = false
+
+# libfuzzer requires panic=abort
+[profile.release]
+panic = "abort"
+
+[profile.dev]
+panic = "abort"
+debug-assertions = true

@@ -13,45 +13,25 @@ assignees: Verdenroz
 A clear and concise description of the bug.
 
 ## Environment
-- **Operating system and Rust version**: [e.g. Ubuntu 22.04 with Rust 1.83.0]
-- **Deployment**: [e.g. Local, Docker, Render, Cloud Platform]
+- **Component**: [library / server / CLI (`fq`) / MCP server]
+- **Version**: [e.g. `finance-query 2.6.0`, `fq 0.3.0`]
+- **OS and Rust version**: [e.g. Ubuntu 24.04, rustc 1.87.0]
 
 ## Steps to Reproduce
-1. [First Step]
-2. [Second Step]
-3. [Third Step]
+1. [First step]
+2. [Second step]
+3. [Third step]
 
 ## Expected Behavior
-A clear description of what you expected to see.
+What you expected to happen.
 
 ## Actual Behavior
-A clear description of what you saw instead.
+What happened instead. Include any error messages or stack traces.
 
-## Test Case/Code Example
-```bash
-# A minimal example that reproduces the issue
-# e.g., curl command or reproduction steps
-curl -X GET 'http://localhost:8000/health'
+## Minimal Reproduction
+```rust
+// Minimal code example that reproduces the issue
 ```
-
-## API Response (if applicable)
-```
-// Include any relevant API response here
-```
-
-## Error Logs
-```
-// Include any console errors or stack traces
-```
-
-## Screenshots
-If applicable, add screenshots to help explain your problem.
-
-## Configuration Details
-- Are you using Redis for caching? [Yes/No]
-- Are you bypassing cache (BYPASS_CACHE=True)? [Yes/No]
-- Are you using proxies (USE_PROXY=True)? [Yes/No]
-- Have you modified any other configurations? [Describe any changes]
 
 ## Additional Context
-Add any other context about the problem here.
+Any other relevant context (network conditions, provider API keys present/absent, etc.).

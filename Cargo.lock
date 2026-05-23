@@ -1700,7 +1700,6 @@ dependencies = [
  "finance-query-derive",
  "futures",
  "mockito",
- "once_cell",
  "percent-encoding",
  "polars",
  "prost",

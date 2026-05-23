@@ -4,13 +4,13 @@
 
 use crate::error::{FinanceError, Result};
 use crate::models::corporate::news::News;
-use once_cell::sync::Lazy;
 use scraper::{Html, Selector};
 use std::collections::HashMap;
+use std::sync::LazyLock;
 use tracing::info;
 
 /// Yahoo Finance exchange code to StockAnalysis exchange code mapping
-static EXCHANGE_MAPPING: Lazy<HashMap<&'static str, &'static str>> = Lazy::new(|| {
+static EXCHANGE_MAPPING: LazyLock<HashMap<&'static str, &'static str>> = LazyLock::new(|| {
     HashMap::from([
         // Americas
         ("OTC", "OTC"), // US OTC
