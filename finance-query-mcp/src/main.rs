@@ -68,11 +68,9 @@ async fn start_http(addr: String, _handler: FinanceTools) -> Result<()> {
     let service = StreamableHttpService::new(
         || Ok(FinanceTools::new()),
         LocalSessionManager::default().into(),
-        StreamableHttpServerConfig {
-            stateful_mode: false,
-            json_response: true,
-            ..Default::default()
-        },
+        StreamableHttpServerConfig::default()
+            .with_stateful_mode(false)
+            .with_json_response(true),
     );
 
     let router = Router::new()
