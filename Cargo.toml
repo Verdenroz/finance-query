@@ -20,6 +20,7 @@ exclude = [
     ".github/",
     "v1/",
     "docs/",
+    "fuzz/",
     "*.md",
     "!README.md",
     ".env*",
