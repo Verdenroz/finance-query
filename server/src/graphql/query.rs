@@ -167,9 +167,14 @@ impl GqlTicker {
         #[graphql(default)] format: GqlValueFormat,
     ) -> Result<super::types::quote::GqlQuote> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::quote::get_quote(&state.cache, &self.symbol, logo)
-            .await
-            .map_err(to_gql_error)?;
+        let json = crate::services::quote::get_quote(
+            &state.cache,
+            &self.symbol,
+            logo,
+            finance_query::ValueFormat::Both,
+        )
+        .await
+        .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }

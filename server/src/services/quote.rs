@@ -1,12 +1,20 @@
 use crate::cache::{self, Cache};
-use finance_query::{Ticker, Tickers};
+use finance_query::{Ticker, Tickers, ValueFormat};
 use tracing::info;
 
 use super::{ServiceError, ServiceResult};
 
-pub async fn get_quote(cache: &Cache, symbol: &str, logo: bool) -> ServiceResult {
+pub async fn get_quote(
+    cache: &Cache,
+    symbol: &str,
+    logo: bool,
+    format: ValueFormat,
+) -> ServiceResult {
     let logo_str = if logo { "1" } else { "0" };
-    let cache_key = Cache::key("quote", &[&symbol.to_uppercase(), logo_str]);
+    let cache_key = Cache::key(
+        "quote",
+        &[&symbol.to_uppercase(), logo_str, format.as_str()],
+    );
     let symbol = symbol.to_string();
 
     cache
@@ -15,7 +23,7 @@ pub async fn get_quote(cache: &Cache, symbol: &str, logo: bool) -> ServiceResult
             cache::ttl::QUOTES,
             cache::is_market_open(),
             || async move {
-                let builder = Ticker::builder(&symbol);
+                let builder = Ticker::builder(&symbol).format(format);
                 let builder = if logo { builder.logo() } else { builder };
                 let ticker = builder.build().await?;
                 let quote = ticker.quote().await?;
@@ -26,12 +34,17 @@ pub async fn get_quote(cache: &Cache, symbol: &str, logo: bool) -> ServiceResult
         .await
 }
 
-pub async fn get_quotes(cache: &Cache, symbols: Vec<&str>, logo: bool) -> ServiceResult {
+pub async fn get_quotes(
+    cache: &Cache,
+    symbols: Vec<&str>,
+    logo: bool,
+    format: ValueFormat,
+) -> ServiceResult {
     let mut symbols = symbols;
     symbols.sort();
     let logo_str = if logo { "1" } else { "0" };
     let symbols_key = symbols.join(",").to_uppercase();
-    let cache_key = Cache::key("quotes", &[&symbols_key, logo_str]);
+    let cache_key = Cache::key("quotes", &[&symbols_key, logo_str, format.as_str()]);
 
     cache
         .get_or_fetch(
@@ -39,7 +52,7 @@ pub async fn get_quotes(cache: &Cache, symbols: Vec<&str>, logo: bool) -> Servic
             cache::ttl::QUOTES,
             cache::is_market_open(),
             || async move {
-                let builder = Tickers::builder(symbols);
+                let builder = Tickers::builder(symbols).format(format);
                 let builder = if logo { builder.logo() } else { builder };
                 let tickers = builder.build().await?;
                 let batch_response = tickers.quotes().await?;
