@@ -86,7 +86,8 @@ use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
 use syn::{
-    Data, DeriveInput, Fields, GenericArgument, PathArguments, Type, TypePath, parse_macro_input,
+    Data, DeriveInput, Fields, GenericArgument, GenericParam, Ident, PathArguments, Type,
+    TypeParam, TypeParamBound, TypePath, parse_macro_input,
 };
 
 /// Derive macro for automatic DataFrame conversion.
@@ -360,6 +361,196 @@ fn is_primitive(type_path: &TypePath) -> bool {
             )
         })
         .unwrap_or(false)
+}
+
+/// Derive macro for format-typed struct conversions.
+///
+/// For structs generic over `F: Format` (e.g. `SummaryDetail<F: Format = Both>`), generates:
+///
+/// - `impl From<Struct<Both>> for Struct<Raw>` — extracts `.raw` from each `FormattedValue` field
+/// - `impl From<Struct<Both>> for Struct<Pretty>` — extracts `.fmt` (or `.long_fmt`) instead
+/// - Convenience methods on `Struct<Both>`: `into_raw()`, `as_raw()`, `into_pretty()`, `as_pretty()`
+///
+/// Field classification:
+/// - `Option<F::Value<T>>` (any 2-segment path ending in `::Value`) → formatted field
+/// - Everything else → plain field, copied as-is
+#[proc_macro_derive(FormatConvert)]
+pub fn derive_format_convert(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let name = &input.ident;
+
+    let fields = match &input.data {
+        Data::Struct(data) => match &data.fields {
+            Fields::Named(fields) => &fields.named,
+            _ => {
+                return syn::Error::new_spanned(
+                    &input,
+                    "FormatConvert only supports structs with named fields",
+                )
+                .to_compile_error()
+                .into();
+            }
+        },
+        _ => {
+            return syn::Error::new_spanned(&input, "FormatConvert only supports structs")
+                .to_compile_error()
+                .into();
+        }
+    };
+
+    // Find the format type param: a generic param with a bound path ending in "Format"
+    let format_param: Option<&Ident> = input.generics.params.iter().find_map(|param| {
+        if let GenericParam::Type(TypeParam { ident, bounds, .. }) = param {
+            let has_format = bounds.iter().any(|b| {
+                if let TypeParamBound::Trait(tb) = b {
+                    tb.path
+                        .segments
+                        .last()
+                        .map(|s| s.ident == "Format")
+                        .unwrap_or(false)
+                } else {
+                    false
+                }
+            });
+            if has_format { Some(ident) } else { None }
+        } else {
+            None
+        }
+    });
+
+    let Some(format_param) = format_param else {
+        return syn::Error::new_spanned(
+            &input,
+            "FormatConvert requires a generic param bounded by Format (e.g. <F: Format = Both>)",
+        )
+        .to_compile_error()
+        .into();
+    };
+
+    // Collect all generic params except the format param for the impl headers
+    let other_generics: Vec<_> = input
+        .generics
+        .params
+        .iter()
+        .filter(|p| {
+            if let GenericParam::Type(tp) = p {
+                tp.ident != *format_param
+            } else {
+                true
+            }
+        })
+        .collect();
+
+    let (other_impl_generics, other_ty_generics, other_where) = if other_generics.is_empty() {
+        (quote! {}, quote! {}, quote! {})
+    } else {
+        // Simplified: just re-emit the other params as-is
+        let params = &other_generics;
+        (
+            quote! { <#(#params),*> },
+            quote! { <#(#params),*> },
+            quote! {},
+        )
+    };
+    let _ = (other_impl_generics, other_ty_generics, other_where);
+
+    // Build field classification: (field_ident, is_formatted)
+    let classified: Vec<(&syn::Field, bool)> = fields
+        .iter()
+        .map(|f| (f, is_format_value_field(&f.ty, format_param)))
+        .collect();
+
+    // Generate field conversion expressions for Raw and Pretty
+    let raw_field_exprs: Vec<_> = classified
+        .iter()
+        .map(|(f, is_fmt)| {
+            let ident = f.ident.as_ref().unwrap();
+            if *is_fmt {
+                quote! { #ident: v.#ident.and_then(|fv| fv.raw) }
+            } else {
+                quote! { #ident: v.#ident }
+            }
+        })
+        .collect();
+
+    let pretty_field_exprs: Vec<_> = classified
+        .iter()
+        .map(|(f, is_fmt)| {
+            let ident = f.ident.as_ref().unwrap();
+            if *is_fmt {
+                quote! { #ident: v.#ident.and_then(|fv| fv.fmt.or(fv.long_fmt)) }
+            } else {
+                quote! { #ident: v.#ident }
+            }
+        })
+        .collect();
+
+    let expanded = quote! {
+        impl From<#name<crate::Both>> for #name<crate::Raw> {
+            fn from(v: #name<crate::Both>) -> Self {
+                #name {
+                    #(#raw_field_exprs,)*
+                }
+            }
+        }
+
+        impl From<#name<crate::Both>> for #name<crate::Pretty> {
+            fn from(v: #name<crate::Both>) -> Self {
+                #name {
+                    #(#pretty_field_exprs,)*
+                }
+            }
+        }
+
+        impl #name<crate::Both> {
+            /// Convert into a [`Raw`](crate::Raw) view, extracting `.raw` from each `FormattedValue` field.
+            pub fn into_raw(self) -> #name<crate::Raw> { self.into() }
+            /// Clone and convert into a [`Raw`](crate::Raw) view.
+            pub fn as_raw(&self) -> #name<crate::Raw> { self.clone().into() }
+            /// Convert into a [`Pretty`](crate::Pretty) view, extracting `.fmt` from each `FormattedValue` field.
+            pub fn into_pretty(self) -> #name<crate::Pretty> { self.into() }
+            /// Clone and convert into a [`Pretty`](crate::Pretty) view.
+            pub fn as_pretty(&self) -> #name<crate::Pretty> { self.clone().into() }
+        }
+    };
+
+    TokenStream::from(expanded)
+}
+
+/// Returns true if `ty` is `Option<PARAM::Value<T>>` for the given format param name.
+fn is_format_value_field(ty: &Type, format_param: &Ident) -> bool {
+    let inner = match get_option_inner(ty) {
+        Some(t) => t,
+        None => return false,
+    };
+    // Check for PARAM::Value<T>
+    if let Type::Path(tp) = inner {
+        let segs = &tp.path.segments;
+        if segs.len() == 2 {
+            return segs[0].ident == *format_param && segs[1].ident == "Value";
+        }
+    }
+    false
+}
+
+/// Extracts the inner type T from Option<T>, returning None if the type isn't Option<…>.
+fn get_option_inner(ty: &Type) -> Option<&Type> {
+    if let Type::Path(tp) = ty {
+        let seg = tp.path.segments.last()?;
+        if seg.ident != "Option" {
+            return None;
+        }
+        if let PathArguments::AngleBracketed(args) = &seg.arguments {
+            return args.args.first().and_then(|a| {
+                if let GenericArgument::Type(t) = a {
+                    Some(t)
+                } else {
+                    None
+                }
+            });
+        }
+    }
+    None
 }
 
 /// Extracts the inner type from Option<T>.

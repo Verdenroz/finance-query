@@ -2,6 +2,8 @@
 //!
 //! Contains the fully typed Quote struct for serialization and API responses.
 
+use crate::models::format::{Both, Format};
+use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 
 use super::{
@@ -48,11 +50,10 @@ use super::{
 /// ```ignore
 /// let df = quote.to_dataframe()?;
 /// ```
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Serialize, Deserialize, FormatConvert)]
+#[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
-pub struct Quote {
+pub struct Quote<F: Format = Both> {
     /// Stock symbol
     pub symbol: String,
 
@@ -108,15 +109,15 @@ pub struct Quote {
     // ===== REAL-TIME PRICE DATA =====
     /// Current regular market price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_price: Option<super::FormattedValue<f64>>,
+    pub regular_market_price: Option<F::Value<f64>>,
 
     /// Regular market change value
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_change: Option<super::FormattedValue<f64>>,
+    pub regular_market_change: Option<F::Value<f64>>,
 
     /// Regular market change percentage
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_change_percent: Option<super::FormattedValue<f64>>,
+    pub regular_market_change_percent: Option<F::Value<f64>>,
 
     /// Regular market time as Unix timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -124,23 +125,23 @@ pub struct Quote {
 
     /// Regular market day high
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_day_high: Option<super::FormattedValue<f64>>,
+    pub regular_market_day_high: Option<F::Value<f64>>,
 
     /// Regular market day low
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_day_low: Option<super::FormattedValue<f64>>,
+    pub regular_market_day_low: Option<F::Value<f64>>,
 
     /// Regular market open price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_open: Option<super::FormattedValue<f64>>,
+    pub regular_market_open: Option<F::Value<f64>>,
 
     /// Regular market previous close
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_previous_close: Option<super::FormattedValue<f64>>,
+    pub regular_market_previous_close: Option<F::Value<f64>>,
 
     /// Regular market volume
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_volume: Option<super::FormattedValue<i64>>,
+    pub regular_market_volume: Option<F::Value<i64>>,
 
     /// Current market state (e.g., "REGULAR", "POST", "PRE")
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -149,45 +150,45 @@ pub struct Quote {
     // ===== ALTERNATIVE TRADING METRICS (from summaryDetail) =====
     /// Day's high price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub day_high: Option<super::FormattedValue<f64>>,
+    pub day_high: Option<F::Value<f64>>,
 
     /// Day's low price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub day_low: Option<super::FormattedValue<f64>>,
+    pub day_low: Option<F::Value<f64>>,
 
     /// Opening price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub open: Option<super::FormattedValue<f64>>,
+    pub open: Option<F::Value<f64>>,
 
     /// Previous close price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub previous_close: Option<super::FormattedValue<f64>>,
+    pub previous_close: Option<F::Value<f64>>,
 
     /// Trading volume
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub volume: Option<super::FormattedValue<i64>>,
+    pub volume: Option<F::Value<i64>>,
 
     // ===== PRICE HISTORY =====
     /// All-time high price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub all_time_high: Option<super::FormattedValue<f64>>,
+    pub all_time_high: Option<F::Value<f64>>,
 
     /// All-time low price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub all_time_low: Option<super::FormattedValue<f64>>,
+    pub all_time_low: Option<F::Value<f64>>,
 
     // ===== PRE/POST MARKET DATA =====
     /// Pre-market price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pre_market_price: Option<super::FormattedValue<f64>>,
+    pub pre_market_price: Option<F::Value<f64>>,
 
     /// Pre-market change value
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pre_market_change: Option<super::FormattedValue<f64>>,
+    pub pre_market_change: Option<F::Value<f64>>,
 
     /// Pre-market change percentage
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub pre_market_change_percent: Option<super::FormattedValue<f64>>,
+    pub pre_market_change_percent: Option<F::Value<f64>>,
 
     /// Pre-market time as Unix timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -195,15 +196,15 @@ pub struct Quote {
 
     /// Post-market price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub post_market_price: Option<super::FormattedValue<f64>>,
+    pub post_market_price: Option<F::Value<f64>>,
 
     /// Post-market change value
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub post_market_change: Option<super::FormattedValue<f64>>,
+    pub post_market_change: Option<F::Value<f64>>,
 
     /// Post-market change percentage
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub post_market_change_percent: Option<super::FormattedValue<f64>>,
+    pub post_market_change_percent: Option<F::Value<f64>>,
 
     /// Post-market time as Unix timestamp
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -212,207 +213,207 @@ pub struct Quote {
     // ===== VOLUME DATA =====
     /// Average daily volume over 10 days
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_daily_volume10_day: Option<super::FormattedValue<i64>>,
+    pub average_daily_volume10_day: Option<F::Value<i64>>,
 
     /// Average daily volume over 3 months
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_daily_volume3_month: Option<super::FormattedValue<i64>>,
+    pub average_daily_volume3_month: Option<F::Value<i64>>,
 
     /// Average trading volume
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_volume: Option<super::FormattedValue<i64>>,
+    pub average_volume: Option<F::Value<i64>>,
 
     /// Average trading volume (10 days)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_volume10days: Option<super::FormattedValue<i64>>,
+    pub average_volume10days: Option<F::Value<i64>>,
 
     // ===== VALUATION METRICS =====
     /// Market capitalization
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub market_cap: Option<super::FormattedValue<i64>>,
+    pub market_cap: Option<F::Value<i64>>,
 
     /// Total enterprise value
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enterprise_value: Option<super::FormattedValue<i64>>,
+    pub enterprise_value: Option<F::Value<i64>>,
 
     /// Enterprise value to revenue ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enterprise_to_revenue: Option<super::FormattedValue<f64>>,
+    pub enterprise_to_revenue: Option<F::Value<f64>>,
 
     /// Enterprise value to EBITDA ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enterprise_to_ebitda: Option<super::FormattedValue<f64>>,
+    pub enterprise_to_ebitda: Option<F::Value<f64>>,
 
     /// Price to book value ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_to_book: Option<super::FormattedValue<f64>>,
+    pub price_to_book: Option<F::Value<f64>>,
 
     /// Price to sales ratio (trailing 12 months)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_to_sales_trailing12_months: Option<super::FormattedValue<f64>>,
+    pub price_to_sales_trailing12_months: Option<F::Value<f64>>,
 
     // ===== PE RATIOS =====
     /// Forward price-to-earnings ratio
     #[serde(rename = "forwardPE", skip_serializing_if = "Option::is_none")]
-    pub forward_pe: Option<super::FormattedValue<f64>>,
+    pub forward_pe: Option<F::Value<f64>>,
 
     /// Trailing price-to-earnings ratio
     #[serde(rename = "trailingPE", skip_serializing_if = "Option::is_none")]
-    pub trailing_pe: Option<super::FormattedValue<f64>>,
+    pub trailing_pe: Option<F::Value<f64>>,
 
     // ===== RISK METRICS =====
     /// Beta coefficient (volatility vs market)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub beta: Option<super::FormattedValue<f64>>,
+    pub beta: Option<F::Value<f64>>,
 
     // ===== 52-WEEK RANGE & MOVING AVERAGES =====
     /// 52-week high price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fifty_two_week_high: Option<super::FormattedValue<f64>>,
+    pub fifty_two_week_high: Option<F::Value<f64>>,
 
     /// 52-week low price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fifty_two_week_low: Option<super::FormattedValue<f64>>,
+    pub fifty_two_week_low: Option<F::Value<f64>>,
 
     /// 50-day moving average
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fifty_day_average: Option<super::FormattedValue<f64>>,
+    pub fifty_day_average: Option<F::Value<f64>>,
 
     /// 200-day moving average
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub two_hundred_day_average: Option<super::FormattedValue<f64>>,
+    pub two_hundred_day_average: Option<F::Value<f64>>,
 
     /// 52-week price change percentage
     #[serde(rename = "52WeekChange", skip_serializing_if = "Option::is_none")]
-    pub week_52_change: Option<super::FormattedValue<f64>>,
+    pub week_52_change: Option<F::Value<f64>>,
 
     /// S&P 500 52-week change percentage
     #[serde(rename = "SandP52WeekChange", skip_serializing_if = "Option::is_none")]
-    pub sand_p_52_week_change: Option<super::FormattedValue<f64>>,
+    pub sand_p_52_week_change: Option<F::Value<f64>>,
 
     // ===== DIVIDENDS =====
     /// Annual dividend rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dividend_rate: Option<super::FormattedValue<f64>>,
+    pub dividend_rate: Option<F::Value<f64>>,
 
     /// Dividend yield percentage
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dividend_yield: Option<super::FormattedValue<f64>>,
+    pub dividend_yield: Option<F::Value<f64>>,
 
     /// Trailing annual dividend rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trailing_annual_dividend_rate: Option<super::FormattedValue<f64>>,
+    pub trailing_annual_dividend_rate: Option<F::Value<f64>>,
 
     /// Trailing annual dividend yield
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trailing_annual_dividend_yield: Option<super::FormattedValue<f64>>,
+    pub trailing_annual_dividend_yield: Option<F::Value<f64>>,
 
     /// 5-year average dividend yield
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub five_year_avg_dividend_yield: Option<super::FormattedValue<f64>>,
+    pub five_year_avg_dividend_yield: Option<F::Value<f64>>,
 
     /// Ex-dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ex_dividend_date: Option<super::FormattedValue<i64>>,
+    pub ex_dividend_date: Option<F::Value<i64>>,
 
     /// Dividend payout ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub payout_ratio: Option<super::FormattedValue<f64>>,
+    pub payout_ratio: Option<F::Value<f64>>,
 
     /// Last dividend value
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_dividend_value: Option<super::FormattedValue<f64>>,
+    pub last_dividend_value: Option<F::Value<f64>>,
 
     /// Last dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_dividend_date: Option<super::FormattedValue<i64>>,
+    pub last_dividend_date: Option<F::Value<i64>>,
 
     // ===== BID/ASK =====
     /// Current bid price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bid: Option<super::FormattedValue<f64>>,
+    pub bid: Option<F::Value<f64>>,
 
     /// Bid size (shares)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bid_size: Option<super::FormattedValue<i64>>,
+    pub bid_size: Option<F::Value<i64>>,
 
     /// Current ask price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ask: Option<super::FormattedValue<f64>>,
+    pub ask: Option<F::Value<f64>>,
 
     /// Ask size (shares)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ask_size: Option<super::FormattedValue<i64>>,
+    pub ask_size: Option<F::Value<i64>>,
 
     // ===== SHARES & OWNERSHIP =====
     /// Number of shares outstanding
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_outstanding: Option<super::FormattedValue<i64>>,
+    pub shares_outstanding: Option<F::Value<i64>>,
 
     /// Number of floating shares
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub float_shares: Option<super::FormattedValue<i64>>,
+    pub float_shares: Option<F::Value<i64>>,
 
     /// Implied shares outstanding
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub implied_shares_outstanding: Option<super::FormattedValue<i64>>,
+    pub implied_shares_outstanding: Option<F::Value<i64>>,
 
     /// Percentage of shares held by insiders
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub held_percent_insiders: Option<super::FormattedValue<f64>>,
+    pub held_percent_insiders: Option<F::Value<f64>>,
 
     /// Percentage of shares held by institutions
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub held_percent_institutions: Option<super::FormattedValue<f64>>,
+    pub held_percent_institutions: Option<F::Value<f64>>,
 
     /// Number of shares short
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_short: Option<super::FormattedValue<i64>>,
+    pub shares_short: Option<F::Value<i64>>,
 
     /// Number of shares short (prior month)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_short_prior_month: Option<super::FormattedValue<i64>>,
+    pub shares_short_prior_month: Option<F::Value<i64>>,
 
     /// Short ratio (days to cover)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub short_ratio: Option<super::FormattedValue<f64>>,
+    pub short_ratio: Option<F::Value<f64>>,
 
     /// Short interest as percentage of float
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub short_percent_of_float: Option<super::FormattedValue<f64>>,
+    pub short_percent_of_float: Option<F::Value<f64>>,
 
     /// Short interest as percentage of shares outstanding
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_percent_shares_out: Option<super::FormattedValue<f64>>,
+    pub shares_percent_shares_out: Option<F::Value<f64>>,
 
     /// Date of short interest data
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub date_short_interest: Option<super::FormattedValue<i64>>,
+    pub date_short_interest: Option<F::Value<i64>>,
 
     // ===== FINANCIAL METRICS =====
     /// Current stock price (from financial data)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_price: Option<super::FormattedValue<f64>>,
+    pub current_price: Option<F::Value<f64>>,
 
     /// Highest analyst price target
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_high_price: Option<super::FormattedValue<f64>>,
+    pub target_high_price: Option<F::Value<f64>>,
 
     /// Lowest analyst price target
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_low_price: Option<super::FormattedValue<f64>>,
+    pub target_low_price: Option<F::Value<f64>>,
 
     /// Mean analyst price target
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_mean_price: Option<super::FormattedValue<f64>>,
+    pub target_mean_price: Option<F::Value<f64>>,
 
     /// Median analyst price target
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub target_median_price: Option<super::FormattedValue<f64>>,
+    pub target_median_price: Option<F::Value<f64>>,
 
     /// Mean analyst recommendation (1.0 = strong buy, 5.0 = sell)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub recommendation_mean: Option<super::FormattedValue<f64>>,
+    pub recommendation_mean: Option<F::Value<f64>>,
 
     /// Recommendation key (e.g., "buy", "hold", "sell")
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -420,111 +421,111 @@ pub struct Quote {
 
     /// Number of analyst opinions
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub number_of_analyst_opinions: Option<super::FormattedValue<i64>>,
+    pub number_of_analyst_opinions: Option<F::Value<i64>>,
 
     /// Total cash and cash equivalents
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_cash: Option<super::FormattedValue<i64>>,
+    pub total_cash: Option<F::Value<i64>>,
 
     /// Total cash per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_cash_per_share: Option<super::FormattedValue<f64>>,
+    pub total_cash_per_share: Option<F::Value<f64>>,
 
     /// EBITDA (Earnings Before Interest, Taxes, Depreciation, and Amortization)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ebitda: Option<super::FormattedValue<i64>>,
+    pub ebitda: Option<F::Value<i64>>,
 
     /// Total debt
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_debt: Option<super::FormattedValue<i64>>,
+    pub total_debt: Option<F::Value<i64>>,
 
     /// Total revenue
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_revenue: Option<super::FormattedValue<i64>>,
+    pub total_revenue: Option<F::Value<i64>>,
 
     /// Net income to common shareholders
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub net_income_to_common: Option<super::FormattedValue<i64>>,
+    pub net_income_to_common: Option<F::Value<i64>>,
 
     /// Debt to equity ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub debt_to_equity: Option<super::FormattedValue<f64>>,
+    pub debt_to_equity: Option<F::Value<f64>>,
 
     /// Revenue per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub revenue_per_share: Option<super::FormattedValue<f64>>,
+    pub revenue_per_share: Option<F::Value<f64>>,
 
     /// Return on assets (ROA)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_on_assets: Option<super::FormattedValue<f64>>,
+    pub return_on_assets: Option<F::Value<f64>>,
 
     /// Return on equity (ROE)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub return_on_equity: Option<super::FormattedValue<f64>>,
+    pub return_on_equity: Option<F::Value<f64>>,
 
     /// Free cash flow
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub free_cashflow: Option<super::FormattedValue<i64>>,
+    pub free_cashflow: Option<F::Value<i64>>,
 
     /// Operating cash flow
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub operating_cashflow: Option<super::FormattedValue<i64>>,
+    pub operating_cashflow: Option<F::Value<i64>>,
 
     // ===== MARGINS =====
     /// Profit margins
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub profit_margins: Option<super::FormattedValue<f64>>,
+    pub profit_margins: Option<F::Value<f64>>,
 
     /// Gross profit margins
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub gross_margins: Option<super::FormattedValue<f64>>,
+    pub gross_margins: Option<F::Value<f64>>,
 
     /// EBITDA margins
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ebitda_margins: Option<super::FormattedValue<f64>>,
+    pub ebitda_margins: Option<F::Value<f64>>,
 
     /// Operating margins
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub operating_margins: Option<super::FormattedValue<f64>>,
+    pub operating_margins: Option<F::Value<f64>>,
 
     /// Total gross profits
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub gross_profits: Option<super::FormattedValue<i64>>,
+    pub gross_profits: Option<F::Value<i64>>,
 
     // ===== GROWTH RATES =====
     /// Earnings growth rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub earnings_growth: Option<super::FormattedValue<f64>>,
+    pub earnings_growth: Option<F::Value<f64>>,
 
     /// Revenue growth rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub revenue_growth: Option<super::FormattedValue<f64>>,
+    pub revenue_growth: Option<F::Value<f64>>,
 
     /// Quarterly earnings growth rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub earnings_quarterly_growth: Option<super::FormattedValue<f64>>,
+    pub earnings_quarterly_growth: Option<F::Value<f64>>,
 
     // ===== RATIOS =====
     /// Current ratio (current assets / current liabilities)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub current_ratio: Option<super::FormattedValue<f64>>,
+    pub current_ratio: Option<F::Value<f64>>,
 
     /// Quick ratio (quick assets / current liabilities)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub quick_ratio: Option<super::FormattedValue<f64>>,
+    pub quick_ratio: Option<F::Value<f64>>,
 
     // ===== EPS & BOOK VALUE =====
     /// Trailing earnings per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trailing_eps: Option<super::FormattedValue<f64>>,
+    pub trailing_eps: Option<F::Value<f64>>,
 
     /// Forward earnings per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub forward_eps: Option<super::FormattedValue<f64>>,
+    pub forward_eps: Option<F::Value<f64>>,
 
     /// Book value per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub book_value: Option<super::FormattedValue<f64>>,
+    pub book_value: Option<F::Value<f64>>,
 
     // ===== COMPANY PROFILE =====
     /// Sector
@@ -648,15 +649,15 @@ pub struct Quote {
     // ===== FUND-SPECIFIC =====
     /// Net asset value price (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub nav_price: Option<super::FormattedValue<f64>>,
+    pub nav_price: Option<F::Value<f64>>,
 
     /// Total assets (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_assets: Option<super::FormattedValue<i64>>,
+    pub total_assets: Option<F::Value<i64>>,
 
     /// Yield (for bonds/funds)
     #[serde(rename = "yield", skip_serializing_if = "Option::is_none")]
-    pub yield_value: Option<super::FormattedValue<f64>>,
+    pub yield_value: Option<F::Value<f64>>,
 
     // ===== STOCK SPLITS & DATES =====
     /// Last stock split factor
@@ -665,24 +666,24 @@ pub struct Quote {
 
     /// Last stock split date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_split_date: Option<super::FormattedValue<i64>>,
+    pub last_split_date: Option<F::Value<i64>>,
 
     /// Last fiscal year end date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_fiscal_year_end: Option<super::FormattedValue<i64>>,
+    pub last_fiscal_year_end: Option<F::Value<i64>>,
 
     /// Next fiscal year end date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub next_fiscal_year_end: Option<super::FormattedValue<i64>>,
+    pub next_fiscal_year_end: Option<F::Value<i64>>,
 
     /// Most recent quarter date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub most_recent_quarter: Option<super::FormattedValue<i64>>,
+    pub most_recent_quarter: Option<F::Value<i64>>,
 
     // ===== MISC =====
     /// Price hint for decimal places
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_hint: Option<super::FormattedValue<i64>>,
+    pub price_hint: Option<F::Value<i64>>,
 
     /// Whether the security is tradeable
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -820,7 +821,7 @@ pub struct Quote {
     pub top_holdings: Option<TopHoldings>,
 }
 
-impl Quote {
+impl Quote<Both> {
     /// Creates a Quote from a QuoteSummaryResponse
     ///
     /// Extracts and flattens all typed modules from the raw response.

@@ -26,9 +26,9 @@ pub async fn get_quote(
                 let builder = Ticker::builder(&symbol).format(format);
                 let builder = if logo { builder.logo() } else { builder };
                 let ticker = builder.build().await?;
-                let quote = ticker.quote().await?;
+                let quote = ticker.quote_value().await?;
                 info!("Successfully fetched quote for {}", symbol);
-                serde_json::to_value(&quote).map_err(|e| Box::new(e) as ServiceError)
+                Ok(quote)
             },
         )
         .await
@@ -61,7 +61,9 @@ pub async fn get_quotes(
                     batch_response.success_count(),
                     batch_response.error_count()
                 );
-                serde_json::to_value(&batch_response).map_err(|e| Box::new(e) as ServiceError)
+                let json = serde_json::to_value(&batch_response)
+                    .map_err(|e| Box::new(e) as ServiceError)?;
+                Ok(format.transform(json))
             },
         )
         .await

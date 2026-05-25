@@ -261,6 +261,12 @@ pub use models::discovery::screeners::{
 pub mod streaming;
 
 // ============================================================================
+// Format type parameters — phantom types for compile-time format selection
+// ============================================================================
+pub use finance_query_derive::FormatConvert;
+pub use models::format::{Both, Format, Pretty, Raw};
+
+// ============================================================================
 // DataFrame support (requires "dataframe" feature)
 // ============================================================================
 // When enabled, structs with #[derive(ToDataFrame)] get a to_dataframe() method.

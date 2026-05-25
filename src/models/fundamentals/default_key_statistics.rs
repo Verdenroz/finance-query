@@ -1,23 +1,26 @@
-use crate::models::quote::FormattedValue;
-/// Default Key Statistics module
-///
-/// Contains key financial statistics and metrics for the company.
+use crate::models::format::{Both, Format};
+use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
 /// Default key statistics for a symbol
 ///
 /// Contains extensive statistical data including valuation metrics, share data, and financial ratios.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DefaultKeyStatistics {
+///
+/// The type parameter `F` controls how numeric fields are represented:
+/// - `DefaultKeyStatistics` / `DefaultKeyStatistics<Both>` — default; fields hold `FormattedValue<T>`
+/// - `DefaultKeyStatistics<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
+/// - `DefaultKeyStatistics<Pretty>` — fields hold `Option<String>` (human-readable)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[serde(rename_all = "camelCase", bound = "")]
+pub struct DefaultKeyStatistics<F: Format = Both> {
     /// 52-week price change percentage
     #[serde(rename = "52WeekChange", skip_serializing_if = "Option::is_none")]
-    pub week_52_change: Option<FormattedValue<f64>>,
+    pub week_52_change: Option<F::Value<f64>>,
 
     /// S&P 500 52-week change percentage
     #[serde(rename = "SandP52WeekChange", skip_serializing_if = "Option::is_none")]
-    pub sand_p_52_week_change: Option<FormattedValue<f64>>,
+    pub sand_p_52_week_change: Option<F::Value<f64>>,
 
     /// Annual holdings turnover (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -29,7 +32,7 @@ pub struct DefaultKeyStatistics {
 
     /// Beta coefficient (volatility vs market)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub beta: Option<FormattedValue<f64>>,
+    pub beta: Option<F::Value<f64>>,
 
     /// 3-year beta (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -37,7 +40,7 @@ pub struct DefaultKeyStatistics {
 
     /// Book value per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub book_value: Option<FormattedValue<f64>>,
+    pub book_value: Option<F::Value<f64>>,
 
     /// Fund category
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -45,23 +48,23 @@ pub struct DefaultKeyStatistics {
 
     /// Date of short interest data
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub date_short_interest: Option<FormattedValue<i64>>,
+    pub date_short_interest: Option<F::Value<i64>>,
 
     /// Quarterly earnings growth rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub earnings_quarterly_growth: Option<FormattedValue<f64>>,
+    pub earnings_quarterly_growth: Option<F::Value<f64>>,
 
     /// Enterprise value to EBITDA ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enterprise_to_ebitda: Option<FormattedValue<f64>>,
+    pub enterprise_to_ebitda: Option<F::Value<f64>>,
 
     /// Enterprise value to revenue ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enterprise_to_revenue: Option<FormattedValue<f64>>,
+    pub enterprise_to_revenue: Option<F::Value<f64>>,
 
     /// Total enterprise value
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub enterprise_value: Option<FormattedValue<i64>>,
+    pub enterprise_value: Option<F::Value<i64>>,
 
     /// 5-year average return (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -69,15 +72,15 @@ pub struct DefaultKeyStatistics {
 
     /// Number of floating shares
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub float_shares: Option<FormattedValue<i64>>,
+    pub float_shares: Option<F::Value<i64>>,
 
     /// Forward earnings per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub forward_eps: Option<FormattedValue<f64>>,
+    pub forward_eps: Option<F::Value<f64>>,
 
     /// Forward price-to-earnings ratio
     #[serde(rename = "forwardPE", skip_serializing_if = "Option::is_none")]
-    pub forward_pe: Option<FormattedValue<f64>>,
+    pub forward_pe: Option<F::Value<f64>>,
 
     /// Fund family name
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -93,15 +96,15 @@ pub struct DefaultKeyStatistics {
 
     /// Percentage of shares held by insiders
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub held_percent_insiders: Option<FormattedValue<f64>>,
+    pub held_percent_insiders: Option<F::Value<f64>>,
 
     /// Percentage of shares held by institutions
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub held_percent_institutions: Option<FormattedValue<f64>>,
+    pub held_percent_institutions: Option<F::Value<f64>>,
 
     /// Implied shares outstanding
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub implied_shares_outstanding: Option<FormattedValue<i64>>,
+    pub implied_shares_outstanding: Option<F::Value<i64>>,
 
     /// Last capital gain (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -109,19 +112,19 @@ pub struct DefaultKeyStatistics {
 
     /// Last dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_dividend_date: Option<FormattedValue<i64>>,
+    pub last_dividend_date: Option<F::Value<i64>>,
 
     /// Last dividend value per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_dividend_value: Option<FormattedValue<f64>>,
+    pub last_dividend_value: Option<F::Value<f64>>,
 
     /// Last fiscal year end date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_fiscal_year_end: Option<FormattedValue<i64>>,
+    pub last_fiscal_year_end: Option<F::Value<i64>>,
 
     /// Last stock split date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_split_date: Option<FormattedValue<i64>>,
+    pub last_split_date: Option<F::Value<i64>>,
 
     /// Last stock split factor (e.g., "4:1")
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -165,15 +168,15 @@ pub struct DefaultKeyStatistics {
 
     /// Most recent quarter end date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub most_recent_quarter: Option<FormattedValue<i64>>,
+    pub most_recent_quarter: Option<F::Value<i64>>,
 
     /// Net income to common shareholders
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub net_income_to_common: Option<FormattedValue<i64>>,
+    pub net_income_to_common: Option<F::Value<i64>>,
 
     /// Next fiscal year end date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub next_fiscal_year_end: Option<FormattedValue<i64>>,
+    pub next_fiscal_year_end: Option<F::Value<i64>>,
 
     /// PEG ratio (Price/Earnings to Growth)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -181,11 +184,11 @@ pub struct DefaultKeyStatistics {
 
     /// Price hint (decimal places)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_hint: Option<FormattedValue<i64>>,
+    pub price_hint: Option<F::Value<i64>>,
 
     /// Price to book ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_to_book: Option<FormattedValue<f64>>,
+    pub price_to_book: Option<F::Value<f64>>,
 
     /// Price to sales ratio (trailing 12 months)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -193,7 +196,7 @@ pub struct DefaultKeyStatistics {
 
     /// Profit margins percentage
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub profit_margins: Option<FormattedValue<f64>>,
+    pub profit_margins: Option<F::Value<f64>>,
 
     /// Quarter-to-date return (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -205,31 +208,31 @@ pub struct DefaultKeyStatistics {
 
     /// Total shares outstanding
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_outstanding: Option<FormattedValue<i64>>,
+    pub shares_outstanding: Option<F::Value<i64>>,
 
     /// Short interest as percentage of shares outstanding
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_percent_shares_out: Option<FormattedValue<f64>>,
+    pub shares_percent_shares_out: Option<F::Value<f64>>,
 
     /// Number of shares short
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_short: Option<FormattedValue<i64>>,
+    pub shares_short: Option<F::Value<i64>>,
 
     /// Previous month date for short interest
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_short_previous_month_date: Option<FormattedValue<i64>>,
+    pub shares_short_previous_month_date: Option<F::Value<i64>>,
 
     /// Shares short in prior month
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub shares_short_prior_month: Option<FormattedValue<i64>>,
+    pub shares_short_prior_month: Option<F::Value<i64>>,
 
     /// Short interest as percentage of float
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub short_percent_of_float: Option<FormattedValue<f64>>,
+    pub short_percent_of_float: Option<F::Value<f64>>,
 
     /// Short ratio (days to cover)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub short_ratio: Option<FormattedValue<f64>>,
+    pub short_ratio: Option<F::Value<f64>>,
 
     /// 3-year average return (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -245,7 +248,7 @@ pub struct DefaultKeyStatistics {
 
     /// Trailing earnings per share
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trailing_eps: Option<FormattedValue<f64>>,
+    pub trailing_eps: Option<F::Value<f64>>,
 
     /// Yield percentage (for bonds/funds)
     #[serde(rename = "yield", skip_serializing_if = "Option::is_none")]
@@ -287,5 +290,33 @@ mod tests {
             stats.shares_outstanding.as_ref().map(|v| v.raw),
             Some(Some(14776353000))
         );
+    }
+
+    #[test]
+    fn test_into_raw() {
+        let json = r#"{
+            "beta": {"fmt": "1.11", "raw": 1.109},
+            "trailingEps": {"fmt": "7.45", "raw": 7.45},
+            "lastSplitFactor": "4:1"
+        }"#;
+
+        let stats: DefaultKeyStatistics = serde_json::from_str(json).unwrap();
+        let raw = stats.into_raw();
+        assert_eq!(raw.beta, Some(1.109));
+        assert_eq!(raw.trailing_eps, Some(7.45));
+        assert_eq!(raw.last_split_factor.as_deref(), Some("4:1"));
+    }
+
+    #[test]
+    fn test_into_pretty() {
+        let json = r#"{
+            "beta": {"fmt": "1.11", "raw": 1.109},
+            "enterpriseValue": {"fmt": "4.13T", "longFmt": "4,134,771,359,744", "raw": 4134771359744}
+        }"#;
+
+        let stats: DefaultKeyStatistics = serde_json::from_str(json).unwrap();
+        let pretty = stats.into_pretty();
+        assert_eq!(pretty.beta.as_deref(), Some("1.11"));
+        assert_eq!(pretty.enterprise_value.as_deref(), Some("4.13T"));
     }
 }

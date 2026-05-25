@@ -81,7 +81,7 @@ base64 = "0.22"
 
 # Optional: DataFrame support
 polars = { version = "0.53", optional = true, default-features = false, features = ["lazy"] }
-finance-query-derive = { version = "2.6.0", path = "finance-query-derive", optional = true }
+finance-query-derive = { version = "2.6.0", path = "finance-query-derive" }
 
 # Optional: CSV parsing for macro-economic data (Treasury yields)
 csv = { version = "1", optional = true }
@@ -95,7 +95,7 @@ feed-rs = { version = "2", optional = true }
 [features]
 default = []
 # Enable DataFrame conversions with polars
-dataframe = ["dep:polars", "dep:finance-query-derive"]
+dataframe = ["dep:polars"]
 # Enable technical analysis indicators
 indicators = []
 # Enable backtesting engine for strategy simulation (requires indicators)

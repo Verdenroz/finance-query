@@ -306,19 +306,11 @@ impl Ticker {
         } else {
             (None, None)
         };
-        let quote = Quote::from_response(&summary.value, logo_url, company_logo_url);
-        // Raw: serde round-trip through ValueFormat::transform to flatten
-        // FormattedValue{raw: v, fmt, longFmt} down to bare primitives.
-        // Pretty / Both: typed Quote returned as-is (use quote_value() for
-        // string-only / full JSON output).
-        match self.value_format {
-            ValueFormat::Raw => {
-                let json = serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
-                let transformed = self.value_format.transform(json);
-                serde_json::from_value(transformed).map_err(FinanceError::JsonParseError)
-            }
-            ValueFormat::Pretty | ValueFormat::Both => Ok(quote),
-        }
+        Ok(Quote::from_response(
+            &summary.value,
+            logo_url,
+            company_logo_url,
+        ))
     }
 
     /// Get quote data as a JSON value, with [`FormattedValue`](crate::FormattedValue)
