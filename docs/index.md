@@ -111,14 +111,14 @@ Finance Query is ready to use out of the box. Here's how to get stock data:
 === "Rust Library"
 
     ```rust
-    use finance_query::{Ticker, Interval, TimeRange};
+    use finance_query::{Ticker, Interval, TimeRange, Raw};
 
     #[tokio::main]
     async fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Get detailed quote for Apple
         let ticker = Ticker::builder("AAPL").logo().build().await?;
-        let quote = ticker.quote().await?;
-        println!("{} price: ${:?}", quote.symbol, quote.regular_market_price);
+        let quote = ticker.quote::<Raw>().await?;
+        println!("{} price: ${:.2}", quote.symbol, quote.regular_market_price.unwrap_or(0.0));
 
         // Get historical charts
         let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;

@@ -148,6 +148,51 @@ pub fn derive_to_dataframe(input: TokenStream) -> TokenStream {
         }
     };
 
+    // If the struct is generic over F: Format, generate impl for <Both> specifically.
+    let has_format_param = input.generics.params.iter().any(|param| {
+        if let GenericParam::Type(TypeParam { bounds, .. }) = param {
+            bounds.iter().any(|b| {
+                if let TypeParamBound::Trait(tb) = b {
+                    tb.path
+                        .segments
+                        .last()
+                        .map(|s| s.ident == "Format")
+                        .unwrap_or(false)
+                } else {
+                    false
+                }
+            })
+        } else {
+            false
+        }
+    });
+
+    let impl_ty = if has_format_param {
+        quote! { #name<crate::format::Both> }
+    } else {
+        quote! { #name }
+    };
+
+    // Detect the format type parameter name (e.g. `F`) to scope is_format_assoc_value correctly.
+    let format_param_ident: Option<&Ident> = input.generics.params.iter().find_map(|param| {
+        if let GenericParam::Type(TypeParam { ident, bounds, .. }) = param {
+            let is_format = bounds.iter().any(|b| {
+                if let TypeParamBound::Trait(tb) = b {
+                    tb.path
+                        .segments
+                        .last()
+                        .map(|s| s.ident == "Format")
+                        .unwrap_or(false)
+                } else {
+                    false
+                }
+            });
+            if is_format { Some(ident) } else { None }
+        } else {
+            None
+        }
+    });
+
     let mut column_names: Vec<String> = Vec::new();
     let mut column_values: Vec<TokenStream2> = Vec::new();
 
@@ -156,27 +201,28 @@ pub fn derive_to_dataframe(input: TokenStream) -> TokenStream {
         let field_name_str = to_snake_case(&field_name.to_string());
         let field_type = &field.ty;
 
-        if let Some(value_expr) = generate_column_value(field_name, field_type) {
+        if let Some(value_expr) = generate_column_value(field_name, field_type, format_param_ident)
+        {
             column_names.push(field_name_str);
             column_values.push(value_expr);
         }
-        // Skip fields that return None (complex nested types)
     }
 
-    // Generate vec column value expressions (for vec_to_dataframe)
     let mut vec_column_values: Vec<TokenStream2> = Vec::new();
     for field in fields.iter() {
         let field_name = field.ident.as_ref().unwrap();
         let field_type = &field.ty;
 
-        if let Some(value_expr) = generate_vec_column_value(field_name, field_type) {
+        if let Some(value_expr) =
+            generate_vec_column_value(field_name, field_type, format_param_ident)
+        {
             vec_column_values.push(value_expr);
         }
     }
 
     let expanded = quote! {
         #[cfg(feature = "dataframe")]
-        impl #name {
+        impl #impl_ty {
             /// Converts this struct to a single-row polars DataFrame.
             ///
             /// All scalar fields are included as columns. Nested objects
@@ -216,28 +262,23 @@ fn to_snake_case(s: &str) -> String {
 /// Generates the value expression for a DataFrame column based on field type.
 ///
 /// Returns `None` for complex types that should be skipped.
-fn generate_column_value(field_name: &syn::Ident, field_type: &Type) -> Option<TokenStream2> {
+fn generate_column_value(
+    field_name: &syn::Ident,
+    field_type: &Type,
+    fmt_param: Option<&Ident>,
+) -> Option<TokenStream2> {
     match field_type {
-        // Direct String
         Type::Path(type_path) if is_string(type_path) => {
             Some(quote! { [self.#field_name.as_str()] })
         }
-
-        // Direct FormattedValue<T> - extract .raw
         Type::Path(type_path) if is_formatted_value(type_path) => {
             Some(quote! { [self.#field_name.raw] })
         }
-
-        // Option<T>
         Type::Path(type_path) if is_option(type_path) => {
             let inner_type = get_option_inner_type(type_path)?;
-            generate_option_value(field_name, inner_type)
+            generate_option_value(field_name, inner_type, fmt_param)
         }
-
-        // Direct primitives: i32, i64, f64, bool
         Type::Path(type_path) if is_primitive(type_path) => Some(quote! { [self.#field_name] }),
-
-        // Skip all other types (Vec, nested structs, etc.)
         _ => None,
     }
 }
@@ -245,74 +286,71 @@ fn generate_column_value(field_name: &syn::Ident, field_type: &Type) -> Option<T
 /// Generates the value expression for a DataFrame column when iterating over a Vec.
 ///
 /// Returns `None` for complex types that should be skipped.
-fn generate_vec_column_value(field_name: &syn::Ident, field_type: &Type) -> Option<TokenStream2> {
+fn generate_vec_column_value(
+    field_name: &syn::Ident,
+    field_type: &Type,
+    fmt_param: Option<&Ident>,
+) -> Option<TokenStream2> {
     match field_type {
-        // Direct String
         Type::Path(type_path) if is_string(type_path) => {
             Some(quote! { items.iter().map(|item| item.#field_name.as_str()).collect::<Vec<_>>() })
         }
-
-        // Direct FormattedValue<T> - extract .raw
         Type::Path(type_path) if is_formatted_value(type_path) => {
             Some(quote! { items.iter().map(|item| item.#field_name.raw).collect::<Vec<_>>() })
         }
-
-        // Option<T>
         Type::Path(type_path) if is_option(type_path) => {
             let inner_type = get_option_inner_type(type_path)?;
-            generate_vec_option_value(field_name, inner_type)
+            generate_vec_option_value(field_name, inner_type, fmt_param)
         }
-
-        // Direct primitives: i32, i64, f64, bool
         Type::Path(type_path) if is_primitive(type_path) => {
             Some(quote! { items.iter().map(|item| item.#field_name).collect::<Vec<_>>() })
         }
-
-        // Skip all other types (Vec, nested structs, etc.)
         _ => None,
     }
 }
 
 /// Generates value expression for Option<T> fields when iterating over a Vec.
-fn generate_vec_option_value(field_name: &syn::Ident, inner_type: &Type) -> Option<TokenStream2> {
+fn generate_vec_option_value(
+    field_name: &syn::Ident,
+    inner_type: &Type,
+    fmt_param: Option<&Ident>,
+) -> Option<TokenStream2> {
     match inner_type {
-        // Option<String>
         Type::Path(type_path) if is_string(type_path) => Some(
             quote! { items.iter().map(|item| item.#field_name.as_deref()).collect::<Vec<_>>() },
         ),
-
-        // Option<FormattedValue<T>> - extract .raw
-        Type::Path(type_path) if is_formatted_value(type_path) => Some(
-            quote! { items.iter().map(|item| item.#field_name.as_ref().and_then(|v| v.raw)).collect::<Vec<_>>() },
-        ),
-
-        // Option<primitive>
+        // Option<FormattedValue<T>> or Option<F::Value<T>> — extract .raw
+        Type::Path(type_path)
+            if is_formatted_value(type_path) || is_format_assoc_value(type_path, fmt_param) =>
+        {
+            Some(
+                quote! { items.iter().map(|item| item.#field_name.as_ref().and_then(|v| v.raw)).collect::<Vec<_>>() },
+            )
+        }
         Type::Path(type_path) if is_primitive(type_path) => {
             Some(quote! { items.iter().map(|item| item.#field_name).collect::<Vec<_>>() })
         }
-
-        // Skip complex Option<T> types
         _ => None,
     }
 }
 
 /// Generates value expression for Option<T> fields.
-fn generate_option_value(field_name: &syn::Ident, inner_type: &Type) -> Option<TokenStream2> {
+fn generate_option_value(
+    field_name: &syn::Ident,
+    inner_type: &Type,
+    fmt_param: Option<&Ident>,
+) -> Option<TokenStream2> {
     match inner_type {
-        // Option<String>
         Type::Path(type_path) if is_string(type_path) => {
             Some(quote! { [self.#field_name.as_deref()] })
         }
-
-        // Option<FormattedValue<T>> - extract .raw
-        Type::Path(type_path) if is_formatted_value(type_path) => {
+        // Option<FormattedValue<T>> or Option<F::Value<T>> — extract .raw
+        Type::Path(type_path)
+            if is_formatted_value(type_path) || is_format_assoc_value(type_path, fmt_param) =>
+        {
             Some(quote! { [self.#field_name.as_ref().and_then(|v| v.raw)] })
         }
-
-        // Option<primitive>
         Type::Path(type_path) if is_primitive(type_path) => Some(quote! { [self.#field_name] }),
-
-        // Skip complex Option<T> types
         _ => None,
     }
 }
@@ -345,6 +383,17 @@ fn is_formatted_value(type_path: &TypePath) -> bool {
         .last()
         .map(|seg| seg.ident == "FormattedValue")
         .unwrap_or(false)
+}
+
+/// Checks if a type path is `PARAM::Value<T>` — the associated type form used by `F: Format`.
+///
+/// Only matches when `fmt_param` is known and the first segment equals it exactly
+/// (e.g. `F::Value<f64>` where `F` is the detected format type parameter).
+/// This prevents false-positive matches on unrelated 2-segment paths like `serde_json::Value`.
+fn is_format_assoc_value(type_path: &TypePath, fmt_param: Option<&Ident>) -> bool {
+    let Some(param) = fmt_param else { return false };
+    let segs = &type_path.path.segments;
+    segs.len() == 2 && segs[0].ident == *param && segs[1].ident == "Value"
 }
 
 /// Checks if a type path is a primitive type (i32, i64, f64, bool).
@@ -427,33 +476,6 @@ pub fn derive_format_convert(input: TokenStream) -> TokenStream {
         .into();
     };
 
-    // Collect all generic params except the format param for the impl headers
-    let other_generics: Vec<_> = input
-        .generics
-        .params
-        .iter()
-        .filter(|p| {
-            if let GenericParam::Type(tp) = p {
-                tp.ident != *format_param
-            } else {
-                true
-            }
-        })
-        .collect();
-
-    let (other_impl_generics, other_ty_generics, other_where) = if other_generics.is_empty() {
-        (quote! {}, quote! {}, quote! {})
-    } else {
-        // Simplified: just re-emit the other params as-is
-        let params = &other_generics;
-        (
-            quote! { <#(#params),*> },
-            quote! { <#(#params),*> },
-            quote! {},
-        )
-    };
-    let _ = (other_impl_generics, other_ty_generics, other_where);
-
     // Build field classification: (field_ident, is_formatted)
     let classified: Vec<(&syn::Field, bool)> = fields
         .iter()
@@ -486,31 +508,31 @@ pub fn derive_format_convert(input: TokenStream) -> TokenStream {
         .collect();
 
     let expanded = quote! {
-        impl From<#name<crate::Both>> for #name<crate::Raw> {
-            fn from(v: #name<crate::Both>) -> Self {
+        impl From<#name<crate::format::Both>> for #name<crate::format::Raw> {
+            fn from(v: #name<crate::format::Both>) -> Self {
                 #name {
                     #(#raw_field_exprs,)*
                 }
             }
         }
 
-        impl From<#name<crate::Both>> for #name<crate::Pretty> {
-            fn from(v: #name<crate::Both>) -> Self {
+        impl From<#name<crate::format::Both>> for #name<crate::format::Pretty> {
+            fn from(v: #name<crate::format::Both>) -> Self {
                 #name {
                     #(#pretty_field_exprs,)*
                 }
             }
         }
 
-        impl #name<crate::Both> {
-            /// Convert into a [`Raw`](crate::Raw) view, extracting `.raw` from each `FormattedValue` field.
-            pub fn into_raw(self) -> #name<crate::Raw> { self.into() }
-            /// Clone and convert into a [`Raw`](crate::Raw) view.
-            pub fn as_raw(&self) -> #name<crate::Raw> { self.clone().into() }
-            /// Convert into a [`Pretty`](crate::Pretty) view, extracting `.fmt` from each `FormattedValue` field.
-            pub fn into_pretty(self) -> #name<crate::Pretty> { self.into() }
-            /// Clone and convert into a [`Pretty`](crate::Pretty) view.
-            pub fn as_pretty(&self) -> #name<crate::Pretty> { self.clone().into() }
+        impl #name<crate::format::Both> {
+            /// Convert into a [`Raw`](crate::format::Raw) view, extracting `.raw` from each `FormattedValue` field.
+            pub fn into_raw(self) -> #name<crate::format::Raw> { self.into() }
+            /// Clone and convert into a [`Raw`](crate::format::Raw) view.
+            pub fn as_raw(&self) -> #name<crate::format::Raw> { self.clone().into() }
+            /// Convert into a [`Pretty`](crate::format::Pretty) view, extracting `.fmt` from each `FormattedValue` field.
+            pub fn into_pretty(self) -> #name<crate::format::Pretty> { self.into() }
+            /// Clone and convert into a [`Pretty`](crate::format::Pretty) view.
+            pub fn as_pretty(&self) -> #name<crate::format::Pretty> { self.clone().into() }
         }
     };
 

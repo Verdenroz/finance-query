@@ -8,7 +8,7 @@ use serde_json::Value;
 /// Contains extensive statistical data including valuation metrics, share data, and financial ratios.
 ///
 /// The type parameter `F` controls how numeric fields are represented:
-/// - `DefaultKeyStatistics` / `DefaultKeyStatistics<Both>` — default; fields hold `FormattedValue<T>`
+/// - `DefaultKeyStatistics` / `DefaultKeyStatistics<Both>` — **default**; fields hold `FormattedValue<T>`
 /// - `DefaultKeyStatistics<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `DefaultKeyStatistics<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]

@@ -6,8 +6,9 @@ use super::macros::{batch_fetch_cached, define_batch_response};
 use crate::adapters::yahoo::client::ClientConfig;
 #[cfg(feature = "backtesting")]
 use crate::backtesting;
-use crate::constants::{Frequency, Interval, Region, StatementType, TimeRange, ValueFormat};
+use crate::constants::{Frequency, Interval, Region, StatementType, TimeRange};
 use crate::error::{FinanceError, Result};
+use crate::format::Both;
 #[cfg(any(feature = "backtesting", feature = "indicators"))]
 use crate::indicators;
 use crate::models::chart::events::ChartEvents;
@@ -16,9 +17,11 @@ use crate::models::chart::spark::response::SparkResponse;
 use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
 use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::Recommendation;
+use crate::models::format::Format;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::{Quote, QuoteSummaryResponse};
+
 use crate::providers::types::recommendation_from_similar;
 use crate::providers::yahoo::YahooProvider;
 use crate::providers::{
@@ -123,7 +126,6 @@ pub struct TickersBuilder {
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    value_format: ValueFormat,
 }
 
 impl TickersBuilder {
@@ -140,7 +142,6 @@ impl TickersBuilder {
             max_concurrency: DEFAULT_MAX_CONCURRENCY,
             cache_ttl: None,
             include_logo: false,
-            value_format: ValueFormat::default(),
         }
     }
 
@@ -228,18 +229,6 @@ impl TickersBuilder {
         self
     }
 
-    /// Set how [`FormattedValue`](crate::FormattedValue) fields are represented
-    /// in the [`Quote`](crate::Quote) returned by [`Tickers::quotes`].
-    ///
-    /// - [`ValueFormat::Raw`] — only `.raw` is populated **(default)**; `.fmt`
-    ///   and `.long_fmt` are stripped. Best for programmatic use and calculations.
-    /// - [`ValueFormat::Both`] — full `{ raw, fmt, longFmt }` object preserved.
-    /// - [`ValueFormat::Pretty`] — returns the typed `Quote` unchanged (use
-    ///   [`ValueFormat::transform`] for string-only JSON output).
-    pub fn format(mut self, format: ValueFormat) -> Self {
-        self.value_format = format;
-        self
-    }
     /// Pre-inject a shared provider set (used by [`Providers::tickers`]).
     pub(crate) fn with_provider_set(mut self, set: Arc<ProviderSet>) -> Self {
         self.injected_providers = Some(set);
@@ -285,7 +274,6 @@ impl TickersBuilder {
             max_concurrency: self.max_concurrency,
             cache_ttl: self.cache_ttl,
             include_logo: self.include_logo,
-            value_format: self.value_format,
             quote_cache: Default::default(),
             chart_cache: Default::default(),
             events_cache: Default::default(),
@@ -347,7 +335,6 @@ pub struct Tickers {
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    value_format: ValueFormat,
     quote_cache: QuoteCache,
     chart_cache: ChartCache,
     events_cache: EventsCache,
@@ -618,15 +605,6 @@ impl Tickers {
             let logo_url = logo_map.get(&symbol).and_then(|(l, _)| l.clone());
             let company_logo_url = logo_map.get(&symbol).and_then(|(_, c)| c.clone());
             let quote = Quote::from_response(&summary, logo_url, company_logo_url);
-            let quote = match self.value_format {
-                ValueFormat::Raw => {
-                    let json =
-                        serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
-                    let transformed = self.value_format.transform(json);
-                    serde_json::from_value(transformed).map_err(FinanceError::JsonParseError)?
-                }
-                ValueFormat::Pretty | ValueFormat::Both => quote,
-            };
             parsed_quotes.push((symbol, quote));
         }
 
@@ -698,13 +676,17 @@ impl Tickers {
     }
 
     /// Get a specific quote by symbol (from cache or fetch all)
-    pub async fn quote(&self, symbol: &str) -> Result<Quote> {
+    pub async fn quote<F>(&self, symbol: &str) -> Result<Quote<F>>
+    where
+        F: Format,
+        Quote<Both>: Into<Quote<F>>,
+    {
         {
             let cache = self.quote_cache.read().await;
             if let Some(entry) = cache.get(symbol)
                 && self.is_cache_fresh(Some(entry))
             {
-                return Ok(entry.value.clone());
+                return Ok(entry.value.clone().into());
             }
         }
 
@@ -714,6 +696,7 @@ impl Tickers {
             .quotes
             .get(symbol)
             .cloned()
+            .map(Into::into)
             .ok_or_else(|| FinanceError::SymbolNotFound {
                 symbol: Some(symbol.to_string()),
                 context: response
@@ -722,15 +705,6 @@ impl Tickers {
                     .cloned()
                     .unwrap_or_else(|| "Symbol not found".to_string()),
             })
-    }
-
-    /// Get a specific quote by symbol as a JSON value, with [`FormattedValue`](crate::FormattedValue)
-    /// fields transformed according to the format configured via
-    /// [`TickersBuilder::format`].
-    pub async fn quote_value(&self, symbol: &str) -> Result<serde_json::Value> {
-        let quote = self.quote(symbol).await?;
-        let json = serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
-        Ok(self.value_format.transform(json))
     }
 
     /// Helper to get or create a fetch guard for a given key.

@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 /// Includes current price, pre/post market data, volume, market cap, and exchange information.
 ///
 /// The type parameter `F` controls how numeric fields are represented:
-/// - `Price` / `Price<Both>` — default; fields hold `FormattedValue<T>`
+/// - `Price` / `Price<Both>` — **default**; fields hold `FormattedValue<T>`
 /// - `Price<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `Price<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert, Default)]

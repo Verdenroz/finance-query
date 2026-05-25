@@ -9,6 +9,7 @@
 //!
 //! ```no_run
 //! use finance_query::{Providers, Provider, Capability, Interval, TimeRange};
+//! use finance_query::format::Raw;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Route capabilities to Alpha Vantage with Yahoo as fallback
@@ -19,7 +20,7 @@
 //!     .build().await?;
 //!
 //! let ticker = providers.ticker("AAPL").build().await?;
-//! let quote = ticker.quote().await?;
+//! let quote = ticker.quote::<Raw>().await?;
 //! let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 //!
 //! let gdp = providers.economic("REAL_GDP").series().await?;

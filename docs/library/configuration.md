@@ -235,18 +235,17 @@ let income_quarterly = ticker.financials(
 
 ## Value Formatting
 
-Some server endpoints support value formatting. This is primarily a server feature, but the library defines the `ValueFormat` enum:
+`quote()` is generic over the output format, so you can choose the representation you want at call sites.
 
 ```rust
-use finance_query::ValueFormat;
+use finance_query::{Both, Pretty, Raw};
 
-// For display purposes
-ValueFormat::Raw     // Raw numbers (default)
-ValueFormat::Pretty  // Formatted strings (e.g., "1.2M", "$45.67")
-ValueFormat::Both    // Both raw and pretty values
+let raw = ticker.quote::<Raw>().await?;       // numeric fields (Option<f64>, Option<i64>)
+let pretty = ticker.quote::<Pretty>().await?; // formatted strings (Option<String>)
+let both = ticker.quote::<Both>().await?;     // raw + formatted pair
 ```
 
-**Note**: This is mainly used by the server's REST API. Library users typically work with raw values directly.
+For quote sub-modules (like `financial_data()` or `key_stats()`), the return type is still the Both format, so use `.raw` to access the numeric values.
 
 ## Provider Configuration
 
@@ -302,7 +301,7 @@ See [Multi-Provider Architecture](providers/index.md) for the complete provider 
         - UK stocks (`HSBA.L`): `Region::UnitedKingdom`
 
     ```rust
-    use finance_query::{Ticker, Region};
+    use finance_query::{Raw, Region, Ticker};
 
     // US stock
     let apple = Ticker::builder("AAPL")
@@ -327,9 +326,9 @@ See [Multi-Provider Architecture](providers/index.md) for the complete provider 
 
     // Fetch quotes in parallel
     let (apple_quote, tsmc_quote, sap_quote) = tokio::join!(
-        apple.quote(),
-        tsmc.quote(),
-        sap.quote()
+        apple.quote::<Raw>(),
+        tsmc.quote::<Raw>(),
+        sap.quote::<Raw>()
     );
     ```
 

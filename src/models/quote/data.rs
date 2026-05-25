@@ -28,7 +28,7 @@ use super::{
 /// # use finance_query::Ticker;
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let ticker = Ticker::builder("AAPL").logo().build().await?;
-/// let quote = ticker.quote().await?;
+/// let quote: finance_query::Quote = ticker.quote().await?;
 /// println!("Price: {:?}", quote.regular_market_price);
 /// # Ok(())
 /// # }
@@ -51,6 +51,7 @@ use super::{
 /// let df = quote.to_dataframe()?;
 /// ```
 #[derive(Debug, Clone, Serialize, Deserialize, FormatConvert)]
+#[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
 #[serde(rename_all = "camelCase", bound = "")]
 #[non_exhaustive]
 pub struct Quote<F: Format = Both> {

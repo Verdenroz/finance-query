@@ -11,7 +11,7 @@ use serde_json::Value;
 /// Contains detailed information about price, volume, market cap, and other trading data.
 ///
 /// The type parameter `F` controls how numeric fields are represented:
-/// - `SummaryDetail` / `SummaryDetail<Both>` — default; fields hold `FormattedValue<T>`
+/// - `SummaryDetail` / `SummaryDetail<Both>` — **default**; fields hold `FormattedValue<T>`
 /// - `SummaryDetail<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `SummaryDetail<Pretty>` — fields hold `Option<String>` (human-readable)
 ///

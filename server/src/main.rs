@@ -1426,7 +1426,7 @@ async fn get_quote(
         params.fields
     );
 
-    match services::quote::get_quote(&state.cache, &symbol, params.logo, format).await {
+    match services::quote::get_quote(&state.cache, &symbol, params.logo).await {
         Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
@@ -1532,7 +1532,7 @@ async fn get_quotes(
         params.fields
     );
 
-    match services::quote::get_quotes(&state.cache, symbols, params.logo, format).await {
+    match services::quote::get_quotes(&state.cache, symbols, params.logo).await {
         Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()

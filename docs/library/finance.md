@@ -103,9 +103,9 @@ let summary = finance::market_summary(None).await?;
 let summary = finance::market_summary(Some(Region::Canada)).await?;
 
 for quote in &summary {
-    let price = quote.regular_market_price.as_ref().and_then(|v| v.raw);
+    let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
     let change_pct = quote.regular_market_change_percent.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
-    println!("{}: ${:?} ({:+.2}%)", quote.symbol, price, change_pct);
+    println!("{}: ${:.2} ({:+.2}%)", quote.symbol, price, change_pct);
 }
 ```
 

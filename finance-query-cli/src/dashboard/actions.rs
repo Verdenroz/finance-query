@@ -78,7 +78,7 @@ impl App {
 
         self.status_message = format!("Fetching quote for {}...", symbol);
         match Ticker::new(&symbol).await {
-            Ok(ticker) => match ticker.quote().await {
+            Ok(ticker) => match ticker.quote::<finance_query::format::Both>().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
                     self.status_message = format!("Added {} to watchlist", symbol);
@@ -145,7 +145,7 @@ impl App {
         self.status_message = format!("Added {} to watchlist", symbol);
 
         match Ticker::new(&symbol).await {
-            Ok(ticker) => match ticker.quote().await {
+            Ok(ticker) => match ticker.quote::<finance_query::format::Both>().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
                     self.status_message = format!("Added {} to watchlist", symbol);
@@ -206,7 +206,7 @@ impl App {
         self.status_message = format!("Added {} to watchlist", symbol);
 
         match Ticker::new(&symbol).await {
-            Ok(ticker) => match ticker.quote().await {
+            Ok(ticker) => match ticker.quote::<finance_query::format::Both>().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
                     self.status_message = format!("Added {} to watchlist", symbol);

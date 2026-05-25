@@ -14,20 +14,16 @@
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_quick_example() {
-    use finance_query::{Interval, Ticker, TimeRange};
+    use finance_query::{Interval, Ticker, TimeRange, format::Raw};
 
     let ticker = Ticker::builder("AAPL").logo().build().await.unwrap();
 
     // Get quote
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     println!(
         "{}: ${:.2}",
         quote.symbol,
-        quote
-            .regular_market_price
-            .as_ref()
-            .and_then(|v| v.raw)
-            .unwrap_or(0.0)
+        quote.regular_market_price.unwrap_or(0.0)
     );
 
     // Get chart
@@ -48,11 +44,11 @@ async fn test_quick_example() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_stock_data_and_analysis() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
 
     // Quotes, financials, options, news
     let ticker = Ticker::builder("MSFT").logo().build().await.unwrap();
-    let quote = ticker.quote().await.unwrap(); // fetch quote with logo if available
+    let quote = ticker.quote::<Raw>().await.unwrap(); // fetch quote with logo if available
     let financials = ticker.financial_data().await.unwrap();
     let options = ticker.options(None).await.unwrap();
 

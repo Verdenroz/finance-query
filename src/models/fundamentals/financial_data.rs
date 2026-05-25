@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 /// Contains financial ratios, margins, cash flow, and analyst recommendations.
 ///
 /// The type parameter `F` controls how numeric fields are represented:
-/// - `FinancialData` / `FinancialData<Both>` — default; fields hold `FormattedValue<T>`
+/// - `FinancialData` / `FinancialData<Both>` — **default**; fields hold `FormattedValue<T>`
 /// - `FinancialData<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `FinancialData<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]

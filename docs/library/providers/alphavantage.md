@@ -23,7 +23,7 @@ No manual init call needed — the provider reads the key during `TickerBuilder:
 ## Usage
 
 ```rust
-use finance_query::{Capability, Fetch, Provider, Providers};
+use finance_query::{Capability, Fetch, Provider, Providers, Raw};
 
 let providers = Providers::builder()
     .route(Capability::QUOTE, &[Provider::AlphaVantage, Provider::Yahoo])
@@ -31,7 +31,7 @@ let providers = Providers::builder()
     .build()
     .await?;
 let ticker = providers.ticker("AAPL").build().await?;
-let quote = ticker.quote().await?;
+let quote = ticker.quote::<Raw>().await?;
 ```
 
 ## Capabilities

@@ -54,11 +54,11 @@ async fn test_chart_to_dataframe() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_quote_to_dataframe() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Both};
 
     // From dataframe.md "Quote Data" section
     let ticker = Ticker::new("NVDA").await.unwrap();
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Both>().await.unwrap();
 
     // Convert to single-row DataFrame
     let df = quote.to_dataframe().unwrap();
@@ -545,11 +545,11 @@ async fn test_vec_to_dataframe() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_single_item_to_dataframe() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Both};
 
     // From dataframe.md "Single Item to DataFrame" section
     let ticker = Ticker::new("AAPL").await.unwrap();
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Both>().await.unwrap();
     let df = quote.to_dataframe().unwrap(); // 1 row, 30+ columns
 
     assert_eq!(df.height(), 1);

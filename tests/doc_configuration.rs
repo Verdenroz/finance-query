@@ -6,7 +6,7 @@
 //! Run with: `cargo test --test doc_configuration`
 //! Run network tests: `cargo test --test doc_configuration -- --ignored`
 
-use finance_query::{Interval, Region, TimeRange, ValueFormat};
+use finance_query::{Interval, Region, TimeRange, format::Raw};
 use std::time::Duration;
 
 // ---------------------------------------------------------------------------
@@ -101,14 +101,14 @@ fn test_time_range_variants_compile() {
 }
 
 // ---------------------------------------------------------------------------
-// ValueFormat enum — all variants documented in configuration.md
+// Format types — Raw/Pretty/Both
 // ---------------------------------------------------------------------------
 
 #[test]
-fn test_value_format_variants_compile() {
-    let _ = ValueFormat::Raw;
-    let _ = ValueFormat::Pretty;
-    let _ = ValueFormat::Both;
+fn test_format_types_compile() {
+    let _ = finance_query::format::Raw;
+    let _ = finance_query::format::Pretty;
+    let _ = finance_query::format::Both;
 }
 
 // ---------------------------------------------------------------------------
@@ -123,7 +123,7 @@ fn test_ticker_builder_proxy_compiles() {
     let _builder = Ticker::builder("AAPL").proxy("http://proxy.example.com:8080");
 
     // With authentication
-    let _builder = Ticker::builder("AAPL").proxy("http://user:pass@proxy.example.com:8080");
+    let _builder = Ticker::builder("AAPL").proxy("http://user:***@proxy.example.com:8080");
 }
 
 #[test]
@@ -143,7 +143,7 @@ fn test_ticker_builder_proxy_and_timeout_compiles() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_ticker_builder_region_france() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
 
     // From configuration.md "Using Regions" section
     let ticker = Ticker::builder("MC.PA")
@@ -152,14 +152,14 @@ async fn test_ticker_builder_region_france() {
         .await
         .unwrap();
 
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "MC.PA");
 }
 
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_ticker_builder_region_germany() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
 
     let ticker = Ticker::builder("SAP.DE")
         .region(Region::Germany)
@@ -167,14 +167,14 @@ async fn test_ticker_builder_region_germany() {
         .await
         .unwrap();
 
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "SAP.DE");
 }
 
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_ticker_builder_manual_lang_region() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
 
     // From configuration.md "Manual Language and Region" section
     let ticker = Ticker::builder("AAPL")
@@ -184,14 +184,14 @@ async fn test_ticker_builder_manual_lang_region() {
         .await
         .unwrap();
 
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }
 
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_ticker_builder_timeout() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
 
     // From configuration.md "Timeout" section
     let ticker = Ticker::builder("AAPL")
@@ -200,7 +200,7 @@ async fn test_ticker_builder_timeout() {
         .await
         .unwrap();
 
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert!(!quote.symbol.is_empty());
 }
 
@@ -255,7 +255,7 @@ async fn test_ticker_builder_region_uk() {
         .await
         .unwrap();
 
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "HSBA.L");
 }
 
@@ -287,8 +287,11 @@ async fn test_best_practices_logo_and_join() {
         .unwrap();
 
     // Fetch quotes in parallel
-    let (apple_quote, tsmc_quote, sap_quote) =
-        tokio::join!(apple.quote(), tsmc.quote(), sap.quote());
+    let (apple_quote, tsmc_quote, sap_quote) = tokio::join!(
+        apple.quote::<Raw>(),
+        tsmc.quote::<Raw>(),
+        sap.quote::<Raw>()
+    );
 
     assert_eq!(apple_quote.unwrap().symbol, "AAPL");
     assert_eq!(tsmc_quote.unwrap().symbol, "2330.TW");

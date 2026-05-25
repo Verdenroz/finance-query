@@ -5,19 +5,19 @@
 //!
 //! | `F`      | `F::Value<f64>`         | Access pattern            |
 //! |----------|-------------------------|---------------------------|
-//! | [`Both`] | `FormattedValue<f64>`   | `.raw` / `.fmt` / `.long_fmt` (default) |
-//! | [`Raw`]  | `f64`                   | direct — no unwrapping    |
+//! | [`Both`] | `FormattedValue<f64>`   | `.raw` / `.fmt` / `.long_fmt` |
+//! | [`Raw`]  | `f64`                   | direct — no unwrapping (**default**) |
 //! | [`Pretty`] | `String`              | human-readable string     |
 //!
 //! # Quick start
 //!
 //! ```no_run
-//! use finance_query::{Ticker, Raw};
+//! use finance_query::{Ticker, format};
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let quote = Ticker::new("AAPL").await?.quote().await?;
-//! let raw   = quote.as_raw();                   // Quote<Raw>
-//! let price: Option<f64> = raw.regular_market_price;
+//! // quote() returns Quote<Raw> by default — fields are plain f64/i64
+//! let quote: finance_query::Quote<format::Raw> = Ticker::new("AAPL").await?.quote().await?;
+//! let price: Option<f64> = quote.regular_market_price;
 //! # Ok(())
 //! # }
 //! ```
@@ -52,14 +52,15 @@ pub trait Format: sealed::Sealed + Clone + std::fmt::Debug + PartialEq + 'static
 
 /// Full format — fields hold `FormattedValue<T>` with `raw`, `fmt`, and `long_fmt`.
 ///
-/// This is the **default** format returned by [`Ticker::quote()`](crate::Ticker::quote)
-/// and is the only form that can be deserialized directly from Yahoo Finance JSON.
+/// Obtain via [`Quote::into_formatted`](crate::Quote::into_formatted).
+/// This is the form that can be deserialized directly from Yahoo Finance JSON.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Both;
 
-/// Raw format — fields hold `T` directly (e.g. `f64`, `i64`).
+/// Raw format — fields hold `T` directly (e.g. `f64`, `i64`). **This is the default.**
 ///
-/// Obtain via [`Quote::into_raw`](crate::Quote::into_raw) or
+/// Obtain via [`Ticker::quote()`](crate::Ticker::quote) (the default return type),
+/// [`Quote::into_raw`](crate::Quote::into_raw), or
 /// [`Quote::as_raw`](crate::Quote::as_raw). No `Option`-wrapping of the value itself;
 /// the `Option` at the field level reflects missing data from the API.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]

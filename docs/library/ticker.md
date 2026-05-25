@@ -57,7 +57,6 @@ let ticker = Ticker::builder("AAPL")
 - `.region_code(String)` - Set region code (e.g., "US", "JP")
 - `.timeout(Duration)` - Set HTTP request timeout
 - `.proxy(String)` - Set proxy URL
-- `.format(ValueFormat)` - Value format: `Raw` (default), `Pretty`, or `Both`
 - `.logo()` - Fetch company logo URLs alongside quote data
 - `.cache(Duration)` - Enable in-memory caching with the given TTL (time-to-live)
 
@@ -96,18 +95,20 @@ no `Providers` setup needed.
 Get a comprehensive quote with all key metrics:
 
 ```rust
+use finance_query::format::Raw;
+
 // Enable logo fetching via builder
 let ticker = Ticker::builder("AAPL").logo().build().await?;
-let quote = ticker.quote().await?;
+let quote = ticker.quote::<Raw>().await?;
 
 println!("Symbol: {}", quote.symbol);
 println!("Name: {}", quote.short_name.as_deref().unwrap_or("N/A"));
-let price = quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+let price = quote.regular_market_price.unwrap_or(0.0);
 println!("Price: ${:.2}", price);
-let change = quote.regular_market_change.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
-let change_pct = quote.regular_market_change_percent.as_ref().and_then(|v| v.raw).unwrap_or(0.0);
+let change = quote.regular_market_change.unwrap_or(0.0);
+let change_pct = quote.regular_market_change_percent.unwrap_or(0.0);
 println!("Change: {:+.2} ({:+.2}%)", change, change_pct);
-let market_cap = quote.market_cap.as_ref().and_then(|v| v.raw).unwrap_or(0);
+let market_cap = quote.market_cap.unwrap_or(0);
 println!("Market Cap: ${}", market_cap);
 // Logo URLs (only populated when .logo() is used on the builder)
 println!("Logo: {:?}", quote.logo_url);
@@ -115,6 +116,22 @@ println!("Company Logo: {:?}", quote.company_logo_url);
 ```
 
 The `Quote` struct aggregates data from multiple `quote modules` into a single structure.
+
+### Value Formats
+
+`quote()` is generic over the output format:
+
+- `Raw` returns numeric fields as plain numbers (e.g., `Option<f64>`).
+- `Pretty` returns formatted strings (e.g., `Option<String>` like `"1.2M"`).
+- `Both` returns the raw + formatted pair (the default for sub-module accessors like `financial_data()` or `key_stats()`).
+
+```rust
+use finance_query::format::{Both, Pretty, Raw};
+
+let raw = ticker.quote::<Raw>().await?;       // numeric fields
+let pretty = ticker.quote::<Pretty>().await?; // formatted strings
+let both = ticker.quote::<Both>().await?;     // raw + formatted
+```
 
 ### Quote Modules
 
@@ -775,16 +792,18 @@ let recs_again = ticker.recommendations(10).await?;  // cached
     - **Be strategic with chart requests** - each new `(interval, range)` pair triggers a new request
 
     ```rust
+    use finance_query::format::Raw;
+
     // Good: Reuse ticker for multiple operations
     let ticker = Ticker::builder("AAPL").logo().build().await?;
-    let quote = ticker.quote().await?;
+    let quote = ticker.quote::<Raw>().await?;
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     let profile = ticker.asset_profile().await?;
 
     // Less efficient: Creating new tickers each time
     // (loses caching benefits, re-authenticates with Yahoo each time)
     let ticker1 = Ticker::builder("AAPL").logo().build().await?;
-    let quote = ticker1.quote().await?;
+    let quote = ticker1.quote::<Raw>().await?;
     let ticker2 = Ticker::new("AAPL").await?;
     let chart = ticker2.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     ```
