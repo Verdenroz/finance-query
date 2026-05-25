@@ -27,7 +27,7 @@ async-graphql-axum = "7"
 axum = { version = "0.8.9", features = ["ws", "macros"] }
 tokio = { version = "1", features = ["full"] }
 tower = "0.5"
-tower-http = { version = "0.6.10", features = ["fs", "trace", "cors", "timeout", "limit", "compression-full"] }
+tower-http = { version = "0.6.11", features = ["fs", "trace", "cors", "timeout", "limit", "compression-full"] }
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
