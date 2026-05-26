@@ -9,6 +9,7 @@
 //!
 //! ```no_run
 //! use finance_query::{Providers, Provider, Capability, Interval, TimeRange};
+//! use finance_query::format::Raw;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Route chart and quote data to Polygon with Yahoo as fallback
@@ -19,7 +20,7 @@
 //!
 //! let ticker = providers.ticker("AAPL").build().await?;
 //! let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
-//! let quote = ticker.quote().await?;
+//! let quote = ticker.quote::<Raw>().await?;
 //! # Ok(())
 //! # }
 //! ```

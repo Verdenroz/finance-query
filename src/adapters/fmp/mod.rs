@@ -9,6 +9,7 @@
 //!
 //! ```no_run
 //! use finance_query::{Providers, Provider, Capability, StatementType, Frequency};
+//! use finance_query::format::Raw;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Route fundamentals and quote data to FMP with Yahoo as fallback
@@ -18,7 +19,7 @@
 //!     .build().await?;
 //!
 //! let ticker = providers.ticker("AAPL").build().await?;
-//! let quote = ticker.quote().await?;
+//! let quote = ticker.quote::<Raw>().await?;
 //! let income = ticker.financials(StatementType::Income, Frequency::Quarterly).await?;
 //! # Ok(())
 //! # }

@@ -5,6 +5,9 @@
 //! compile unconditionally; provider-specific capabilities are gated behind
 //! the corresponding feature flag.
 
+// ── Format type parameter ──────────────────────────────────────────────────
+pub mod format;
+
 // ── Capability directories ──────────────────────────────────────────────────
 
 // Yahoo-backed (always available)

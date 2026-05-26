@@ -18,7 +18,7 @@ pub async fn get_quote(cache: &Cache, symbol: &str, logo: bool) -> ServiceResult
                 let builder = Ticker::builder(&symbol);
                 let builder = if logo { builder.logo() } else { builder };
                 let ticker = builder.build().await?;
-                let quote = ticker.quote().await?;
+                let quote = ticker.quote::<finance_query::format::Both>().await?;
                 info!("Successfully fetched quote for {}", symbol);
                 serde_json::to_value(&quote).map_err(|e| Box::new(e) as ServiceError)
             },

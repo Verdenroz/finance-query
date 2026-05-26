@@ -136,7 +136,7 @@ impl OptionsApp {
         match Ticker::new(&self.symbol).await {
             Ok(ticker) => {
                 // Get quote for underlying price
-                if let Ok(quote) = ticker.quote().await {
+                if let Ok(quote) = ticker.quote::<finance_query::format::Both>().await {
                     self.underlying_price = quote.regular_market_price.as_ref().and_then(|v| v.raw);
                 }
 

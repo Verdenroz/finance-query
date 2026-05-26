@@ -78,8 +78,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 Single quote to DataFrame:
 
 ```rust
+use finance_query::format::Both;
+
 let ticker = Ticker::new("NVDA").await?;
-let quote = ticker.quote().await?;
+let quote = ticker.quote::<Both>().await?;
 
 // Convert to single-row DataFrame
 let df = quote.to_dataframe()?;
@@ -453,7 +455,9 @@ let df = results.quotes.to_dataframe()?;
 Individual structs create single-row DataFrames:
 
 ```rust
-let quote = ticker.quote().await?;
+use finance_query::format::Both;
+
+let quote = ticker.quote::<Both>().await?;
 let df = quote.to_dataframe()?;  // 1 row, 30+ columns
 ```
 

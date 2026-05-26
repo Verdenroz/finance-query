@@ -437,16 +437,16 @@ async fn test_tickers_caching() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_individual_access() {
-    use finance_query::{Interval, Tickers, TimeRange};
+    use finance_query::{Interval, Tickers, TimeRange, format::Raw};
 
     // From tickers.md "Individual Access" section
     let tickers = Tickers::new(vec!["AAPL", "MSFT"]).await.unwrap();
 
     // Get single quote (uses cache if available)
-    let aapl = tickers.quote("AAPL").await.unwrap();
+    let aapl = tickers.quote::<Raw>("AAPL").await.unwrap();
     println!(
-        "AAPL price: {:?}",
-        aapl.regular_market_price.as_ref().and_then(|v| v.raw)
+        "AAPL price: {:.2}",
+        aapl.regular_market_price.unwrap_or(0.0)
     );
 
     // Get single chart (uses cache if available)

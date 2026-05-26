@@ -57,7 +57,7 @@ fn _verify_yahoo_default() {
 #[tokio::test]
 #[ignore = "requires network access and POLYGON_API_KEY"]
 async fn test_polygon_quote() {
-    use finance_query::{Capability, Fetch, Provider, Providers};
+    use finance_query::{Capability, Fetch, Provider, Providers, format::Raw};
     let providers = Providers::builder()
         .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential)
@@ -65,7 +65,7 @@ async fn test_polygon_quote() {
         .await
         .unwrap();
     let ticker = providers.ticker("AAPL").build().await.unwrap();
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }
 
@@ -73,7 +73,7 @@ async fn test_polygon_quote() {
 #[tokio::test]
 #[ignore = "requires network access and FMP_API_KEY"]
 async fn test_fmp_quote() {
-    use finance_query::{Capability, Fetch, Provider, Providers};
+    use finance_query::{Capability, Fetch, Provider, Providers, format::Raw};
     let providers = Providers::builder()
         .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
         .fetch(Fetch::Sequential)
@@ -81,7 +81,7 @@ async fn test_fmp_quote() {
         .await
         .unwrap();
     let ticker = providers.ticker("AAPL").build().await.unwrap();
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }
 
@@ -89,7 +89,7 @@ async fn test_fmp_quote() {
 #[tokio::test]
 #[ignore = "requires network access and ALPHA_VANTAGE_API_KEY"]
 async fn test_alphavantage_quote() {
-    use finance_query::{Capability, Fetch, Provider, Providers};
+    use finance_query::{Capability, Fetch, Provider, Providers, format::Raw};
     let providers = Providers::builder()
         .route(
             Capability::QUOTE,
@@ -100,6 +100,6 @@ async fn test_alphavantage_quote() {
         .await
         .unwrap();
     let ticker = providers.ticker("AAPL").build().await.unwrap();
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }

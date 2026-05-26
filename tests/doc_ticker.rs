@@ -62,17 +62,13 @@ fn _verify_builder_manual_methods() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_ticker_quote() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
 
     let ticker = Ticker::new("AAPL").await.unwrap();
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
 
     assert_eq!(quote.symbol, "AAPL");
-    let price = quote
-        .regular_market_price
-        .as_ref()
-        .and_then(|v| v.raw)
-        .unwrap_or(0.0);
+    let price = quote.regular_market_price.unwrap_or(0.0);
     assert!(price > 0.0, "price should be positive");
     println!("AAPL price: ${:.2}", price);
 }
@@ -229,18 +225,17 @@ async fn test_ticker_builder_with_region() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_ticker_builder_with_logo_and_cache() {
-    use finance_query::Ticker;
-    use std::time::Duration;
+    use finance_query::{Ticker, format::Raw};
 
     // From ticker.md "Builder Pattern" — logo + cache
     let ticker = Ticker::builder("AAPL")
         .logo()
-        .cache(Duration::from_secs(300))
+        .cache(std::time::Duration::from_secs(30))
         .build()
         .await
         .unwrap();
 
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     println!("Logo: {:?}", quote.logo_url);
     println!("Company Logo: {:?}", quote.company_logo_url);
     assert_eq!(quote.symbol, "AAPL");
@@ -249,7 +244,7 @@ async fn test_ticker_builder_with_logo_and_cache() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_ticker_builder_manual_config() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
     use std::time::Duration;
 
     // From ticker.md "Builder Pattern" — manual lang/region_code/timeout
@@ -262,7 +257,7 @@ async fn test_ticker_builder_manual_config() {
         .await
         .unwrap();
 
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }
 
@@ -273,32 +268,20 @@ async fn test_ticker_builder_manual_config() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_ticker_quote_full_fields() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
 
     // From ticker.md "Aggregated Quote" section — full field access pattern
     let ticker = Ticker::builder("AAPL").logo().build().await.unwrap();
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
 
     println!("Symbol: {}", quote.symbol);
     println!("Name: {}", quote.short_name.as_deref().unwrap_or("N/A"));
-    let price = quote
-        .regular_market_price
-        .as_ref()
-        .and_then(|v| v.raw)
-        .unwrap_or(0.0);
+    let price = quote.regular_market_price.unwrap_or(0.0);
     println!("Price: ${:.2}", price);
-    let change = quote
-        .regular_market_change
-        .as_ref()
-        .and_then(|v| v.raw)
-        .unwrap_or(0.0);
-    let change_pct = quote
-        .regular_market_change_percent
-        .as_ref()
-        .and_then(|v| v.raw)
-        .unwrap_or(0.0);
+    let change = quote.regular_market_change.unwrap_or(0.0);
+    let change_pct = quote.regular_market_change_percent.unwrap_or(0.0);
     println!("Change: {:+.2} ({:+.2}%)", change, change_pct);
-    let market_cap = quote.market_cap.as_ref().and_then(|v| v.raw).unwrap_or(0);
+    let market_cap = quote.market_cap.unwrap_or(0);
     println!("Market Cap: ${}", market_cap);
     println!("Logo: {:?}", quote.logo_url);
     println!("Company Logo: {:?}", quote.company_logo_url);

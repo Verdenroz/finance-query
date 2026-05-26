@@ -3,26 +3,32 @@
 //! Contains detailed pricing data for a stock including pre/post market data,
 //! exchange information, and market state.
 
+use crate::models::format::{Both, Format};
+use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 
 /// Detailed pricing data for a stock
 ///
 /// Includes current price, pre/post market data, volume, market cap, and exchange information.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-#[derive(Default)]
-pub struct Price {
+///
+/// The type parameter `F` controls how numeric fields are represented:
+/// - `Price` / `Price<Both>` — **default**; fields hold `FormattedValue<T>`
+/// - `Price<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
+/// - `Price<Pretty>` — fields hold `Option<String>` (human-readable)
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert, Default)]
+#[serde(rename_all = "camelCase", bound = "")]
+pub struct Price<F: Format = Both> {
     /// Maximum age of the data in seconds
     #[serde(default)]
     pub max_age: Option<i64>,
 
     /// Pre-market change percentage
     #[serde(default)]
-    pub pre_market_change_percent: Option<super::FormattedValue<f64>>,
+    pub pre_market_change_percent: Option<F::Value<f64>>,
 
     /// Pre-market change value
     #[serde(default)]
-    pub pre_market_change: Option<super::FormattedValue<f64>>,
+    pub pre_market_change: Option<F::Value<f64>>,
 
     /// Pre-market time as Unix timestamp
     #[serde(default)]
@@ -30,7 +36,7 @@ pub struct Price {
 
     /// Pre-market price
     #[serde(default)]
-    pub pre_market_price: Option<super::FormattedValue<f64>>,
+    pub pre_market_price: Option<F::Value<f64>>,
 
     /// Pre-market data source
     #[serde(default)]
@@ -38,11 +44,11 @@ pub struct Price {
 
     /// Post-market change percentage
     #[serde(default)]
-    pub post_market_change_percent: Option<super::FormattedValue<f64>>,
+    pub post_market_change_percent: Option<F::Value<f64>>,
 
     /// Post-market change value
     #[serde(default)]
-    pub post_market_change: Option<super::FormattedValue<f64>>,
+    pub post_market_change: Option<F::Value<f64>>,
 
     /// Post-market time as Unix timestamp
     #[serde(default)]
@@ -50,7 +56,7 @@ pub struct Price {
 
     /// Post-market price
     #[serde(default)]
-    pub post_market_price: Option<super::FormattedValue<f64>>,
+    pub post_market_price: Option<F::Value<f64>>,
 
     /// Post-market data source
     #[serde(default)]
@@ -58,11 +64,11 @@ pub struct Price {
 
     /// Regular market change percentage
     #[serde(default)]
-    pub regular_market_change_percent: Option<super::FormattedValue<f64>>,
+    pub regular_market_change_percent: Option<F::Value<f64>>,
 
     /// Regular market change value
     #[serde(default)]
-    pub regular_market_change: Option<super::FormattedValue<f64>>,
+    pub regular_market_change: Option<F::Value<f64>>,
 
     /// Regular market time as Unix timestamp
     #[serde(default)]
@@ -70,35 +76,35 @@ pub struct Price {
 
     /// Price hint for decimal places
     #[serde(default)]
-    pub price_hint: Option<super::FormattedValue<i64>>,
+    pub price_hint: Option<F::Value<i64>>,
 
     /// Current regular market price
     #[serde(default)]
-    pub regular_market_price: Option<super::FormattedValue<f64>>,
+    pub regular_market_price: Option<F::Value<f64>>,
 
     /// Regular market day high
     #[serde(default)]
-    pub regular_market_day_high: Option<super::FormattedValue<f64>>,
+    pub regular_market_day_high: Option<F::Value<f64>>,
 
     /// Regular market day low
     #[serde(default)]
-    pub regular_market_day_low: Option<super::FormattedValue<f64>>,
+    pub regular_market_day_low: Option<F::Value<f64>>,
 
     /// Regular market volume
     #[serde(default)]
-    pub regular_market_volume: Option<super::FormattedValue<i64>>,
+    pub regular_market_volume: Option<F::Value<i64>>,
 
     /// Average daily volume over 10 days
     #[serde(default)]
-    pub average_daily_volume10_day: Option<super::FormattedValue<i64>>,
+    pub average_daily_volume10_day: Option<F::Value<i64>>,
 
     /// Average daily volume over 3 months
     #[serde(default)]
-    pub average_daily_volume3_month: Option<super::FormattedValue<i64>>,
+    pub average_daily_volume3_month: Option<F::Value<i64>>,
 
     /// Regular market previous close
     #[serde(default)]
-    pub regular_market_previous_close: Option<super::FormattedValue<f64>>,
+    pub regular_market_previous_close: Option<F::Value<f64>>,
 
     /// Regular market data source
     #[serde(default)]
@@ -106,7 +112,7 @@ pub struct Price {
 
     /// Regular market open price
     #[serde(default)]
-    pub regular_market_open: Option<super::FormattedValue<f64>>,
+    pub regular_market_open: Option<F::Value<f64>>,
 
     /// Exchange code (e.g., "NMS" for NASDAQ)
     #[serde(default)]
@@ -170,13 +176,11 @@ pub struct Price {
 
     /// Market capitalization
     #[serde(default)]
-    pub market_cap: Option<super::FormattedValue<i64>>,
+    pub market_cap: Option<F::Value<i64>>,
 }
 
-impl Price {
+impl Price<Both> {
     /// Returns the current price (regular market price)
-    ///
-    /// This is the most commonly used price value.
     pub fn current_price(&self) -> Option<f64> {
         self.regular_market_price.as_ref()?.raw
     }
@@ -301,5 +305,20 @@ mod tests {
 
         assert_eq!(price.live_price(), Some(101.0));
         assert!(price.is_post_market());
+    }
+
+    #[test]
+    fn test_into_raw() {
+        use super::super::FormattedValue;
+
+        let price = Price {
+            regular_market_price: Some(FormattedValue::new(100.0)),
+            market_state: Some("REGULAR".to_string()),
+            ..Default::default()
+        };
+
+        let raw = price.into_raw();
+        assert_eq!(raw.regular_market_price, Some(100.0));
+        assert_eq!(raw.market_state.as_deref(), Some("REGULAR"));
     }
 }

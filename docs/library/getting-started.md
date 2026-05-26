@@ -34,7 +34,7 @@ finance-query = { version = "2.0", features = ["dataframe", "backtesting"] }
 ## Quick Example
 
 ```rust
-use finance_query::{Ticker, Interval, TimeRange};
+use finance_query::{Ticker, Interval, TimeRange, Raw};
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -42,9 +42,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let ticker = Ticker::builder("AAPL").logo().build().await?;
 
     // Get quote
-    let quote = ticker.quote().await?;
+    let quote = ticker.quote::<Raw>().await?;
     println!("{}: ${:.2}", quote.symbol,
-        quote.regular_market_price.as_ref().and_then(|v| v.raw).unwrap_or(0.0));
+        quote.regular_market_price.unwrap_or(0.0));
 
     // Get chart
     let chart = ticker.chart(Interval::OneDay, TimeRange::OneMonth).await?;
@@ -82,9 +82,11 @@ let ticker = providers.ticker("AAPL").build().await?;
 ### 📊 Stock Data & Analysis
 
 ```rust
+use finance_query::format::Raw;
+
 // Quotes, financials, options, news
 let ticker = Ticker::builder("MSFT").logo().build().await?;
-let quote = ticker.quote().await?; // fetch quote with logo if available
+let quote = ticker.quote::<Raw>().await?; // fetch quote with logo if available
 let financials = ticker.financial_data().await?;
 let options = ticker.options(None).await?;
 ```

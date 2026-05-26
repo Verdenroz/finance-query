@@ -261,6 +261,31 @@ pub use models::discovery::screeners::{
 pub mod streaming;
 
 // ============================================================================
+// Format type parameters — phantom types for compile-time format selection
+// ============================================================================
+
+/// Compile-time format type parameters for [`Quote`](crate::Quote) and other
+/// `FormattedValue`-bearing structs.
+///
+/// | Marker | `F::Value<f64>` | Access pattern |
+/// |---|---|---|
+/// | [`format::Both`]  | `FormattedValue<f64>` | `.raw` / `.fmt` / `.long_fmt` |
+/// | [`format::Raw`]   | `f64`                 | direct (no unwrapping) |
+/// | [`format::Pretty`] | `String`             | human-readable string |
+///
+/// ```no_run
+/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+/// use finance_query::{format, Ticker};
+/// let ticker = Ticker::new("AAPL").await?;
+/// let quote: finance_query::Quote<format::Raw> = ticker.quote().await?;
+/// # Ok(())
+/// # }
+/// ```
+pub mod format {
+    pub use crate::models::format::{Both, Pretty, Raw};
+}
+
+// ============================================================================
 // DataFrame support (requires "dataframe" feature)
 // ============================================================================
 // When enabled, structs with #[derive(ToDataFrame)] get a to_dataframe() method.

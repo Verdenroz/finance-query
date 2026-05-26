@@ -1,4 +1,5 @@
-use crate::models::quote::FormattedValue;
+use crate::models::format::{Both, Format};
+use finance_query_derive::FormatConvert;
 /// Summary Detail module
 ///
 /// Contains detailed trading and valuation metrics for the symbol.
@@ -8,52 +9,60 @@ use serde_json::Value;
 /// Summary detail trading and valuation metrics
 ///
 /// Contains detailed information about price, volume, market cap, and other trading data.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SummaryDetail {
+///
+/// The type parameter `F` controls how numeric fields are represented:
+/// - `SummaryDetail` / `SummaryDetail<Both>` — **default**; fields hold `FormattedValue<T>`
+/// - `SummaryDetail<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
+/// - `SummaryDetail<Pretty>` — fields hold `Option<String>` (human-readable)
+///
+/// Obtain converted views via [`Quote::as_raw`](crate::Quote::as_raw) or call
+/// `.as_raw()` / `.into_raw()` on a `SummaryDetail<Both>` directly.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[serde(rename_all = "camelCase", bound = "")]
+pub struct SummaryDetail<F: Format = Both> {
     /// Algorithm (for crypto/special assets)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub algorithm: Option<Value>,
 
     /// All-time high price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub all_time_high: Option<FormattedValue<f64>>,
+    pub all_time_high: Option<F::Value<f64>>,
 
     /// All-time low price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub all_time_low: Option<FormattedValue<f64>>,
+    pub all_time_low: Option<F::Value<f64>>,
 
     /// Current ask price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ask: Option<FormattedValue<f64>>,
+    pub ask: Option<F::Value<f64>>,
 
     /// Ask size (shares)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ask_size: Option<FormattedValue<i64>>,
+    pub ask_size: Option<F::Value<i64>>,
 
     /// Average daily trading volume (10 day)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_daily_volume10_day: Option<FormattedValue<i64>>,
+    pub average_daily_volume10_day: Option<F::Value<i64>>,
 
     /// Average trading volume
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_volume: Option<FormattedValue<i64>>,
+    pub average_volume: Option<F::Value<i64>>,
 
     /// Average trading volume (10 days)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub average_volume10days: Option<FormattedValue<i64>>,
+    pub average_volume10days: Option<F::Value<i64>>,
 
     /// Beta coefficient (volatility vs market)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub beta: Option<FormattedValue<f64>>,
+    pub beta: Option<F::Value<f64>>,
 
     /// Current bid price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bid: Option<FormattedValue<f64>>,
+    pub bid: Option<F::Value<f64>>,
 
     /// Bid size (shares)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub bid_size: Option<FormattedValue<i64>>,
+    pub bid_size: Option<F::Value<i64>>,
 
     /// Circulating supply (for crypto)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -69,23 +78,23 @@ pub struct SummaryDetail {
 
     /// Day's high price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub day_high: Option<FormattedValue<f64>>,
+    pub day_high: Option<F::Value<f64>>,
 
     /// Day's low price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub day_low: Option<FormattedValue<f64>>,
+    pub day_low: Option<F::Value<f64>>,
 
     /// Annual dividend rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dividend_rate: Option<FormattedValue<f64>>,
+    pub dividend_rate: Option<F::Value<f64>>,
 
     /// Dividend yield percentage
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub dividend_yield: Option<FormattedValue<f64>>,
+    pub dividend_yield: Option<F::Value<f64>>,
 
     /// Ex-dividend date
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub ex_dividend_date: Option<FormattedValue<i64>>,
+    pub ex_dividend_date: Option<F::Value<i64>>,
 
     /// Expiration date (for options/futures)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -93,23 +102,23 @@ pub struct SummaryDetail {
 
     /// 50-day moving average
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fifty_day_average: Option<FormattedValue<f64>>,
+    pub fifty_day_average: Option<F::Value<f64>>,
 
     /// 52-week high price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fifty_two_week_high: Option<FormattedValue<f64>>,
+    pub fifty_two_week_high: Option<F::Value<f64>>,
 
     /// 52-week low price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub fifty_two_week_low: Option<FormattedValue<f64>>,
+    pub fifty_two_week_low: Option<F::Value<f64>>,
 
     /// 5-year average dividend yield
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub five_year_avg_dividend_yield: Option<FormattedValue<f64>>,
+    pub five_year_avg_dividend_yield: Option<F::Value<f64>>,
 
     /// Forward price-to-earnings ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub forward_pe: Option<FormattedValue<f64>>,
+    pub forward_pe: Option<F::Value<f64>>,
 
     /// From currency (for currency pairs)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -121,7 +130,7 @@ pub struct SummaryDetail {
 
     /// Market capitalization
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub market_cap: Option<FormattedValue<i64>>,
+    pub market_cap: Option<F::Value<i64>>,
 
     /// Maximum age of data in seconds
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -133,11 +142,11 @@ pub struct SummaryDetail {
 
     /// Net asset value price (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub nav_price: Option<FormattedValue<f64>>,
+    pub nav_price: Option<F::Value<f64>>,
 
     /// Opening price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub open: Option<FormattedValue<f64>>,
+    pub open: Option<F::Value<f64>>,
 
     /// Open interest (for options/futures)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -145,19 +154,19 @@ pub struct SummaryDetail {
 
     /// Dividend payout ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub payout_ratio: Option<FormattedValue<f64>>,
+    pub payout_ratio: Option<F::Value<f64>>,
 
     /// Previous closing price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub previous_close: Option<FormattedValue<f64>>,
+    pub previous_close: Option<F::Value<f64>>,
 
     /// Price hint (decimal places)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_hint: Option<FormattedValue<i64>>,
+    pub price_hint: Option<F::Value<i64>>,
 
     /// Price to sales ratio (trailing 12 months)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub price_to_sales_trailing12_months: Option<FormattedValue<f64>>,
+    pub price_to_sales_trailing12_months: Option<F::Value<f64>>,
 
     /// Quarter-to-date return
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -165,23 +174,23 @@ pub struct SummaryDetail {
 
     /// Regular market day high
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_day_high: Option<FormattedValue<f64>>,
+    pub regular_market_day_high: Option<F::Value<f64>>,
 
     /// Regular market day low
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_day_low: Option<FormattedValue<f64>>,
+    pub regular_market_day_low: Option<F::Value<f64>>,
 
     /// Regular market opening price
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_open: Option<FormattedValue<f64>>,
+    pub regular_market_open: Option<F::Value<f64>>,
 
     /// Regular market previous close
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_previous_close: Option<FormattedValue<f64>>,
+    pub regular_market_previous_close: Option<F::Value<f64>>,
 
     /// Regular market trading volume
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub regular_market_volume: Option<FormattedValue<i64>>,
+    pub regular_market_volume: Option<F::Value<i64>>,
 
     /// Start date (for funds/special assets)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -197,7 +206,7 @@ pub struct SummaryDetail {
 
     /// Total assets (for funds)
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub total_assets: Option<FormattedValue<i64>>,
+    pub total_assets: Option<F::Value<i64>>,
 
     /// Whether the security is tradeable
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -205,23 +214,23 @@ pub struct SummaryDetail {
 
     /// Trailing annual dividend rate
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trailing_annual_dividend_rate: Option<FormattedValue<f64>>,
+    pub trailing_annual_dividend_rate: Option<F::Value<f64>>,
 
     /// Trailing annual dividend yield
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trailing_annual_dividend_yield: Option<FormattedValue<f64>>,
+    pub trailing_annual_dividend_yield: Option<F::Value<f64>>,
 
     /// Trailing price-to-earnings ratio
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub trailing_pe: Option<FormattedValue<f64>>,
+    pub trailing_pe: Option<F::Value<f64>>,
 
     /// 200-day moving average
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub two_hundred_day_average: Option<FormattedValue<f64>>,
+    pub two_hundred_day_average: Option<F::Value<f64>>,
 
     /// Trading volume
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub volume: Option<FormattedValue<i64>>,
+    pub volume: Option<F::Value<i64>>,
 
     /// 24-hour trading volume (for crypto)
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -233,7 +242,7 @@ pub struct SummaryDetail {
 
     /// Yield (for bonds/funds)
     #[serde(rename = "yield", skip_serializing_if = "Option::is_none")]
-    pub yield_value: Option<FormattedValue<f64>>,
+    pub yield_value: Option<F::Value<f64>>,
 
     /// Year-to-date return
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -265,5 +274,33 @@ mod tests {
             Some(Some(4090000000000))
         );
         assert_eq!(detail.tradeable, Some(true));
+    }
+
+    #[test]
+    fn test_into_raw() {
+        let json = r#"{
+            "currency": "USD",
+            "previousClose": {"fmt": "275.00", "raw": 275.0},
+            "beta": {"fmt": "1.11", "raw": 1.109}
+        }"#;
+
+        let detail: SummaryDetail = serde_json::from_str(json).unwrap();
+        let raw = detail.into_raw();
+        assert_eq!(raw.currency.as_deref(), Some("USD"));
+        assert_eq!(raw.previous_close, Some(275.0));
+        assert_eq!(raw.beta, Some(1.109));
+    }
+
+    #[test]
+    fn test_into_pretty() {
+        let json = r#"{
+            "previousClose": {"fmt": "275.00", "raw": 275.0},
+            "marketCap": {"fmt": "4.09T", "longFmt": "4,090,000,000,000", "raw": 4090000000000}
+        }"#;
+
+        let detail: SummaryDetail = serde_json::from_str(json).unwrap();
+        let pretty = detail.into_pretty();
+        assert_eq!(pretty.previous_close.as_deref(), Some("275.00"));
+        assert_eq!(pretty.market_cap.as_deref(), Some("4.09T"));
     }
 }

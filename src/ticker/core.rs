@@ -3,9 +3,10 @@
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 #[cfg(feature = "backtesting")]
 use crate::backtesting;
-use crate::constants::{Frequency, Interval, Region, StatementType, TimeRange, ValueFormat};
+use crate::constants::{Frequency, Interval, Region, StatementType, TimeRange};
 use crate::edgar;
 use crate::error::{FinanceError, Result};
+use crate::format::Both;
 #[cfg(any(feature = "backtesting", feature = "indicators"))]
 use crate::indicators;
 use crate::models::chart::events::ChartEvents;
@@ -13,6 +14,7 @@ use crate::models::chart::{CapitalGain, Chart, Dividend, DividendAnalytics, Spli
 use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::Recommendation;
 use crate::models::filings::{CompanyFacts, EdgarSubmissions, ProviderFilings};
+use crate::models::format::Format;
 use crate::models::fundamentals::FinancialStatement;
 use crate::models::options::Options;
 use crate::models::quote::{
@@ -23,6 +25,7 @@ use crate::models::quote::{
     QuoteTypeData, RecommendationTrend, SecFilings, SectorTrend, SummaryDetail, SummaryProfile,
     TopHoldings, UpgradeDowngradeHistory,
 };
+
 use crate::providers::types::recommendation_from_similar;
 use crate::providers::yahoo::YahooProvider;
 use crate::providers::{
@@ -74,7 +77,6 @@ pub struct TickerBuilder {
     injected_providers: Option<Arc<ProviderSet>>,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    value_format: ValueFormat,
 }
 
 impl TickerBuilder {
@@ -86,7 +88,6 @@ impl TickerBuilder {
             injected_providers: None,
             cache_ttl: None,
             include_logo: false,
-            value_format: ValueFormat::default(),
         }
     }
     /// Set the region (automatically sets correct lang and region).
@@ -147,19 +148,6 @@ impl TickerBuilder {
         self
     }
 
-    /// Set how [`FormattedValue`](crate::FormattedValue) fields are represented
-    /// in the [`Quote`](crate::Quote) returned by [`Ticker::quote`].
-    ///
-    /// - [`ValueFormat::Raw`] — only `.raw` is populated **(default)**; `.fmt`
-    ///   and `.long_fmt` are stripped. Best for programmatic use and calculations.
-    /// - [`ValueFormat::Both`] — full `{ raw, fmt, longFmt }` object preserved.
-    /// - [`ValueFormat::Pretty`] — returns the typed `Quote` unchanged (use
-    ///   [`ValueFormat::transform`] for string-only JSON output).
-    pub fn format(mut self, format: ValueFormat) -> Self {
-        self.value_format = format;
-        self
-    }
-
     /// Build the Ticker instance.
     pub async fn build(self) -> Result<Ticker> {
         let providers = if let Some(set) = self.injected_providers {
@@ -187,7 +175,6 @@ impl TickerBuilder {
             providers,
             cache_ttl: self.cache_ttl,
             include_logo: self.include_logo,
-            value_format: self.value_format,
             quote_cache: Default::default(),
             quote_fetch: Arc::new(tokio::sync::Mutex::new(())),
             chart_cache: Default::default(),
@@ -212,7 +199,6 @@ pub struct Ticker {
     providers: Arc<ProviderSet>,
     cache_ttl: Option<Duration>,
     include_logo: bool,
-    value_format: ValueFormat,
     quote_cache: Cache<QuoteSummaryResponse>,
     quote_fetch: Arc<tokio::sync::Mutex<()>>,
     chart_cache: MapCache<(Interval, TimeRange), Chart>,
@@ -291,7 +277,11 @@ impl Ticker {
     }
 
     /// Get full quote data, optionally including logo URLs.
-    pub async fn quote(&self) -> Result<Quote> {
+    pub async fn quote<F>(&self) -> Result<Quote<F>>
+    where
+        F: Format,
+        Quote<Both>: Into<Quote<F>>,
+    {
         let cache = self.ensure_quote().await?;
         let summary = cache.as_ref().ok_or_else(|| {
             FinanceError::ApiError("Quote summary cache was empty after fetch".to_string())
@@ -307,32 +297,7 @@ impl Ticker {
             (None, None)
         };
         let quote = Quote::from_response(&summary.value, logo_url, company_logo_url);
-        // Raw: serde round-trip through ValueFormat::transform to flatten
-        // FormattedValue{raw: v, fmt, longFmt} down to bare primitives.
-        // Pretty / Both: typed Quote returned as-is (use quote_value() for
-        // string-only / full JSON output).
-        match self.value_format {
-            ValueFormat::Raw => {
-                let json = serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
-                let transformed = self.value_format.transform(json);
-                serde_json::from_value(transformed).map_err(FinanceError::JsonParseError)
-            }
-            ValueFormat::Pretty | ValueFormat::Both => Ok(quote),
-        }
-    }
-
-    /// Get quote data as a JSON value, with [`FormattedValue`](crate::FormattedValue)
-    /// fields transformed according to the format configured via
-    /// [`TickerBuilder::format`].
-    ///
-    /// By default (`Raw`), every `FormattedValue` field is flattened to its
-    /// plain numeric value — no `.raw`/`.fmt` unwrapping needed. Use
-    /// [`ValueFormat::Pretty`] for human-readable strings or
-    /// [`ValueFormat::Both`] to preserve the full object.
-    pub async fn quote_value(&self) -> Result<serde_json::Value> {
-        let quote = self.quote().await?;
-        let json = serde_json::to_value(&quote).map_err(FinanceError::JsonParseError)?;
-        Ok(self.value_format.transform(json))
+        Ok(quote.into())
     }
 
     fn chart_from_provider_data(

@@ -533,8 +533,10 @@ let response = tickers.quotes().await?;
 You can also access individual symbols from the `Tickers` instance. If the data is already cached from a batch operation, it returns immediately. If not, it triggers a batch fetch (for quotes) or single fetch (for charts).
 
 ```rust
+use finance_query::format::Raw;
+
 // Get single quote (uses cache if available)
-let aapl = tickers.quote("AAPL").await?;
+let aapl = tickers.quote::<Raw>("AAPL").await?;
 
 // Get single chart (uses cache if available)
 let msft_chart = tickers.chart("MSFT", Interval::OneDay, TimeRange::OneMonth).await?;

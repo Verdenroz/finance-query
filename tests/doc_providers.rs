@@ -68,9 +68,9 @@ async fn test_provider_builder_builds() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_provider_default_yahoo() {
-    use finance_query::Ticker;
+    use finance_query::{Ticker, format::Raw};
 
     let ticker = Ticker::new("AAPL").await.unwrap();
-    let quote = ticker.quote().await.unwrap();
+    let quote = ticker.quote::<Raw>().await.unwrap();
     assert_eq!(quote.symbol, "AAPL");
 }
