@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.6.1] - 2026-05-27
+
+### Added
+
+- **Fuzz testing suite** (`fuzz/`): 10 fuzz targets covering core library types and indicators
+  - `fuzz_quote`, `fuzz_chart`, `fuzz_financials`, `fuzz_options`, `fuzz_edgar`, `fuzz_discovery` — deserialization fuzzing for all major response types
+  - `fuzz_indicators_ohlcv`, `fuzz_indicators_series`, `fuzz_patterns`, `fuzz_atr` — indicator computation fuzzing with arbitrary OHLCV inputs
+- **`CONTRIBUTING.md`**: contribution guide covering bug reports, feature requests, dev setup, code style, and PR process
+
+### Changed
+
+- **`Quote<F: Format>`** — `Quote` (and the `FinancialData`, `DefaultKeyStatistics`, and `Price` sub-structs) is now generic over a compile-time `Format` type parameter (`Raw`, `Pretty`, or `Both`). Format selection moves from a runtime builder method to a type parameter at the call site: `ticker.quote::<Raw>()`, `ticker.quote::<Pretty>()`, `ticker.quote::<Both>()`.
+  - Default format changed from `Both` to `Raw`
+  - `finance-query-derive` is now a direct (non-optional) dependency; the `dataframe` feature no longer re-enables it
+- Updated `SECURITY.md` supported version table: `2.5.x` → `2.6.x`
+
+### Security
+
+No publicly known run-time vulnerabilities with a CVE or RUSTSEC assignment were fixed in the library or its direct dependencies in this release. The following supply-chain and infrastructure hardening changes were made:
+
+- Docker runtime stages now run `apt-get upgrade` on every image build so OS-level packages (including `libgnutls30`, `libkrb5support0`, `libgcrypt20`) receive available security patches regardless of the pinned base image digest
+- All GitHub Actions workflow steps pinned to exact release-tag SHAs (`harden-runner` → v2.19.3, `actions/checkout` → v6.0.2, `docker/setup-buildx-action` → v3.12.0, `actions/upload-artifact` → v6.0.0, `codeql-action/upload-sarif` → v3.36.0, `cargo-deny-action` → v2.0.19, `rust-cache` → v2.9.1) so `zizmor` ref-version-mismatch checks pass
+- `once_cell` replaced with `std::LazyLock` from the standard library, removing the external dependency for lazy initialization
+- Documentation build pinned with `pip install --require-hashes` from `docs/requirements.txt` (generated with `pip-compile --generate-hashes`), closing a Scorecard Pinned-Dependencies finding
+
 ## [2.6.0] - 2026-05-21
 
 Introduces a multi-provider data-aggregation architecture. **This is a breaking change to the public API** — see Migration below.
@@ -454,7 +479,8 @@ The adapter additions in this release were contributed by [@Johnson-f](https://g
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.6.0...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.6.1...HEAD
+[2.6.1]: https://github.com/Verdenroz/finance-query/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/Verdenroz/finance-query/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/Verdenroz/finance-query/compare/v2.5.0...v2.5.1
 [2.5.0]: https://github.com/Verdenroz/finance-query/compare/v2.4.3...v2.5.0
