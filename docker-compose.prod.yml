@@ -194,9 +194,13 @@ services:
       - /tmp
     volumes:
       - redis-data:/data
+    # Redis is used purely as a cache (data is reconstructable from upstream APIs),
+    # so persistence is disabled. This prevents the AOF/RDB from growing unbounded
+    # or blocking writes (stop-writes-on-bgsave-error) when disk is low.
     command: >
       sh -c "redis-server
-      --appendonly yes
+      --appendonly no
+      --save ''
       --requirepass ${REDIS_PASSWORD}
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru"
@@ -286,6 +290,7 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=8GB'
       - '--web.console.libraries=/usr/share/prometheus/console_libraries'
       - '--web.console.templates=/usr/share/prometheus/consoles'
     depends_on:

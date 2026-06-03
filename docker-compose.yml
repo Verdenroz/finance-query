@@ -90,8 +90,10 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
     depends_on:
-      - finance-query-v1
-      - finance-query-v2
+      finance-query-v1:
+        condition: service_healthy
+      finance-query-v2:
+        condition: service_healthy
     networks:
       - finance-query-network
 
