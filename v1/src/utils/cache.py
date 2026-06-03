@@ -87,6 +87,9 @@ class RedisCacheHandler(BaseCacheHandler):
         try:
             request = request_context.get()
             redis = request.app.state.redis
+            if redis is None:
+                # Redis unavailable (failed to connect at startup) -> treat as cache miss
+                return None
             if not redis.exists(key):
                 return None
             kt = redis.type(key)
@@ -99,13 +102,17 @@ class RedisCacheHandler(BaseCacheHandler):
                 item_type = get_args(return_type)[0] if hasattr(return_type, "__args__") else Any
                 return [self.deserialize_data(item, item_type) for item in items]
             return None
-        except (RedisError, orjson.JSONDecodeError):
+        except (RedisError, orjson.JSONDecodeError, AttributeError):
             return None
 
     async def set(self, key: str, result: Any, expire_time: int) -> None:
         try:
             request = request_context.get()
-            pipe = request.app.state.redis.pipeline()
+            redis = request.app.state.redis
+            if redis is None:
+                # Redis unavailable -> skip caching, behave as a no-op
+                return
+            pipe = redis.pipeline()
             if isinstance(result, dict):
                 pipe.set(key, self.serialize_data(result))
             elif isinstance(result, BaseModel):
@@ -124,7 +131,7 @@ class RedisCacheHandler(BaseCacheHandler):
                     pipe.rpush(key, self.serialize_data(item))
             pipe.expire(key, expire_time)
             pipe.execute()
-        except RedisError:
+        except (RedisError, AttributeError):
             pass
 
 

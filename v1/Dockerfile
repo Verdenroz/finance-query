@@ -4,6 +4,7 @@ FROM python:3.14.0-slim
 # Install system dependencies
 RUN apt-get update && apt-get install -y \
     ca-certificates \
+    curl \
     libkrb5-dev \
     libicu-dev \
     zlib1g-dev \
