@@ -73,6 +73,7 @@ nav:
           - EDGAR: library/providers/edgar.md
           - FRED: library/providers/fred.md
       - Risk Analytics: library/risk.md
+      - Translations: library/translation.md
       - Feeds: library/feeds.md
       - DataFrame Support: library/dataframe.md
       - Configuration: library/configuration.md
