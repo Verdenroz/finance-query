@@ -53,7 +53,7 @@ pub(crate) fn active_backend() -> Option<Arc<dyn TranslationBackend>> {
     }
     #[cfg(feature = "translation-offline")]
     {
-        return Some(super::offline::shared());
+        Some(super::offline::shared())
     }
     #[cfg(not(feature = "translation-offline"))]
     None
