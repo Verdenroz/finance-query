@@ -13,7 +13,17 @@ macro_rules! define_quote_accessors {
                 $(#[$meta])*
                 pub async fn $method_name(&self) -> crate::error::Result<Option<$return_type>> {
                     let cache = self.ensure_quote().await?;
-                    Ok(cache.as_ref().and_then(|e| e.value.$field_name.clone()))
+                    let value = cache.as_ref().and_then(|e| e.value.$field_name.clone());
+                    #[cfg(feature = "translation")]
+                    let value = match value {
+                        Some(mut v) => {
+                            drop(cache);
+                            self.translate_response(&mut v).await?;
+                            Some(v)
+                        }
+                        None => None,
+                    };
+                    Ok(value)
                 }
             )*
         }

@@ -131,6 +131,14 @@ pub enum FinanceError {
         /// Operation name
         operation: &'static str,
     },
+
+    /// Translation backend failure (model download, load, or inference)
+    #[cfg(feature = "translation")]
+    #[error("Translation error: {context}")]
+    TranslationError {
+        /// Error context
+        context: String,
+    },
 }
 
 /// Error category for logging and metrics

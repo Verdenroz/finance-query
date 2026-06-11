@@ -247,6 +247,11 @@ impl TickersBuilder {
 
     /// Build the Tickers instance
     pub async fn build(self) -> Result<Tickers> {
+        #[cfg(feature = "translation")]
+        let translate_lang = {
+            let lang = crate::translation::Lang::parse(&self.config.lang)?;
+            (!lang.is_english()).then_some(lang)
+        };
         let providers = if let Some(set) = self.injected_providers {
             set
         } else if let Some(handle) = self.shared_client {
@@ -274,6 +279,8 @@ impl TickersBuilder {
             max_concurrency: self.max_concurrency,
             cache_ttl: self.cache_ttl,
             include_logo: self.include_logo,
+            #[cfg(feature = "translation")]
+            translate_lang,
             quote_cache: Default::default(),
             chart_cache: Default::default(),
             events_cache: Default::default(),
@@ -335,6 +342,8 @@ pub struct Tickers {
     max_concurrency: usize,
     cache_ttl: Option<Duration>,
     include_logo: bool,
+    #[cfg(feature = "translation")]
+    translate_lang: Option<crate::translation::Lang>,
     quote_cache: QuoteCache,
     chart_cache: ChartCache,
     events_cache: EventsCache,
@@ -434,6 +443,19 @@ impl Tickers {
     #[inline]
     fn is_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
         CacheEntry::is_fresh_with_ttl(entry, self.cache_ttl)
+    }
+
+    /// Translate a response value when a non-English language is configured
+    /// (no-op otherwise).
+    #[cfg(feature = "translation")]
+    pub(crate) async fn translate_response<T: crate::translation::Translatable>(
+        &self,
+        value: &mut T,
+    ) -> Result<()> {
+        if let Some(lang) = &self.translate_lang {
+            crate::translation::translate_with(value, lang).await?;
+        }
+        Ok(())
     }
 
     /// Returns `true` if all keys are present and fresh in a map cache.
@@ -608,15 +630,20 @@ impl Tickers {
             parsed_quotes.push((symbol, quote));
         }
 
-        if self.cache_ttl.is_some() {
-            let mut cache = self.quote_cache.write().await;
-            for (symbol, quote) in &parsed_quotes {
-                self.cache_insert(&mut cache, symbol.as_str().into(), quote.clone());
-            }
-        }
-
         for (symbol, quote) in parsed_quotes {
             response.quotes.insert(symbol, quote);
+        }
+
+        // Translate before caching so cached quotes are already localized
+        // and repeat reads don't re-run the translation backend.
+        #[cfg(feature = "translation")]
+        self.translate_response(&mut response).await?;
+
+        if self.cache_ttl.is_some() {
+            let mut cache = self.quote_cache.write().await;
+            for (symbol, quote) in &response.quotes {
+                self.cache_insert(&mut cache, symbol.as_str().into(), quote.clone());
+            }
         }
 
         // Track missing symbols

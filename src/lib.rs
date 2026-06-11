@@ -104,6 +104,9 @@ pub mod feeds;
 #[cfg(feature = "risk")]
 pub mod risk;
 
+#[cfg(feature = "translation")]
+pub mod translation;
+
 // ============================================================================
 // High-level API - Primary interface for most use cases
 // ============================================================================
