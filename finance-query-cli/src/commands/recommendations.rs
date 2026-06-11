@@ -1,7 +1,6 @@
 use crate::error::Result;
 use crate::output;
 use clap::Parser;
-use finance_query::Ticker;
 
 #[derive(Parser)]
 pub struct RecommendationsArgs {
@@ -15,7 +14,7 @@ pub struct RecommendationsArgs {
 }
 
 pub async fn execute(args: RecommendationsArgs) -> Result<()> {
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
     let recommendations = ticker.recommendations(args.limit).await?;
 
     if recommendations.recommendations.is_empty() {

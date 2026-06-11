@@ -27,8 +27,9 @@ pub struct TranscriptArgs {
 }
 
 pub async fn execute(args: TranscriptArgs) -> Result<()> {
-    let transcript =
+    let mut transcript =
         finance::earnings_transcript(&args.symbol, args.quarter.as_deref(), args.year).await?;
+    crate::lang::translate(&mut transcript).await?;
 
     // Print metadata
     output::print_success(&format!(

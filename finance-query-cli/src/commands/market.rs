@@ -43,7 +43,8 @@ pub async fn execute(args: MarketArgs) -> Result<()> {
     let region = args.region.as_deref().and_then(parse_region);
 
     // Fetch market summary
-    let markets = finance_query::finance::market_summary(region).await?;
+    let mut markets = finance_query::finance::market_summary(region).await?;
+    crate::lang::translate(&mut markets).await?;
 
     let mut market_items = Vec::new();
     for quote in &markets {

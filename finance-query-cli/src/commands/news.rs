@@ -6,7 +6,6 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use finance_query::Ticker;
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
@@ -253,15 +252,15 @@ fn open_url(url: &str) -> Result<()> {
 }
 
 pub async fn execute(args: NewsArgs) -> Result<()> {
-    // Fetch news - general market news or symbol-specific
+    // Fetch news - general market news or symbol-specific.
+    // The ticker path translates via the library; general news is translated here.
     let (news, title) = if let Some(ref symbol) = args.symbol {
-        let ticker = Ticker::new(symbol).await?;
+        let ticker = crate::lang::ticker(symbol).await?;
         (ticker.news().await?, symbol.clone())
     } else {
-        (
-            finance_query::finance::news().await?,
-            "Market News".to_string(),
-        )
+        let mut news = finance_query::finance::news().await?;
+        crate::lang::translate(&mut news).await?;
+        (news, "Market News".to_string())
     };
 
     // Limit news items

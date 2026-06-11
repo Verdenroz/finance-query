@@ -5,7 +5,6 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use finance_query::Tickers;
 use ratatui::{
     Frame, Terminal,
     backend::CrosstermBackend,
@@ -174,7 +173,7 @@ impl App {
 
         self.status_message = "Checking alerts...".to_string();
 
-        match Tickers::new(&unique_symbols).await {
+        match crate::lang::tickers(&unique_symbols).await {
             Ok(tickers) => match tickers.quotes().await {
                 Ok(response) => {
                     let mut triggered_count = 0;

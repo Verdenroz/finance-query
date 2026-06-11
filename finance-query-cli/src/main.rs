@@ -231,6 +231,7 @@ mod dashboard;
 mod edgar;
 mod error;
 mod indicator;
+pub(crate) mod lang;
 pub(crate) mod options;
 mod output;
 pub(crate) mod portfolio;
@@ -254,6 +255,10 @@ struct Cli {
     /// Disable colored output
     #[arg(long, global = true)]
     no_color: bool,
+
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant")
+    #[arg(long, global = true, env = "FQ_LANG")]
+    lang: Option<String>,
 
     #[command(subcommand)]
     command: Commands,
@@ -372,6 +377,9 @@ async fn main() -> Result<()> {
     if cli.no_color {
         colored::control::set_override(false);
     }
+
+    // Resolve the target translation language (--lang / FQ_LANG)
+    lang::init(cli.lang.as_deref());
 
     // Execute the appropriate command
     match cli.command {

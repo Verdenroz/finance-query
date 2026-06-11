@@ -2,7 +2,6 @@ use crate::error::Result;
 use crate::output::{self, OutputFormat};
 use clap::Parser;
 use colored::Colorize;
-use finance_query::Ticker;
 use serde::Serialize;
 
 #[derive(Parser)]
@@ -47,7 +46,7 @@ struct InsiderJson {
 
 pub async fn execute(args: HoldersArgs) -> Result<()> {
     let format = OutputFormat::from_str(&args.output)?;
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
 
     // Fetch all holder data in parallel
     let (major_holders, institutions, insiders) = tokio::join!(

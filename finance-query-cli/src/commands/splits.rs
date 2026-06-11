@@ -1,7 +1,7 @@
 use crate::error::Result;
 use crate::output;
 use clap::Parser;
-use finance_query::{Ticker, TimeRange};
+use finance_query::TimeRange;
 
 #[derive(Parser)]
 pub struct SplitsArgs {
@@ -16,7 +16,7 @@ pub struct SplitsArgs {
 
 pub async fn execute(args: SplitsArgs) -> Result<()> {
     let range = parse_range(&args.range)?;
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
     let mut splits = ticker.splits(range).await?;
 
     if splits.is_empty() {

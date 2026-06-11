@@ -2,7 +2,6 @@ use crate::error::Result;
 use crate::output::{self, OutputFormat};
 use clap::Parser;
 use colored::Colorize;
-use finance_query::Ticker;
 use serde::Serialize;
 
 #[derive(Parser)]
@@ -52,7 +51,7 @@ struct ExecutiveJson {
 
 pub async fn execute(args: ProfileArgs) -> Result<()> {
     let format = OutputFormat::from_str(&args.output)?;
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
 
     let profile = ticker.asset_profile().await?;
 

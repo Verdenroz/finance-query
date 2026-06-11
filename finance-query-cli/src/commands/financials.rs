@@ -7,7 +7,7 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use finance_query::{Frequency, StatementType, Ticker};
+use finance_query::{Frequency, StatementType};
 use std::collections::HashMap;
 use std::io;
 use std::time::Duration;
@@ -43,7 +43,7 @@ pub async fn execute(args: FinancialsArgs) -> Result<()> {
     let statement_type = parse_statement_type(&args.statement_type)?;
     let frequency = parse_frequency(&args.period)?;
 
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
     let financials = ticker.financials(statement_type, frequency).await?;
 
     if financials.statement.is_empty() {
