@@ -1,11 +1,13 @@
-use finance_query::{Ticker, Tickers, TimeRange};
+use finance_query::{Ticker, TimeRange};
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::{finance_err, ser_err};
 use crate::tools::helpers::parse_range;
 
-pub async fn get_quote(symbol: String) -> Result<CallToolResult, McpError> {
-    let ticker = Ticker::new(&symbol).await.map_err(finance_err)?;
+pub async fn get_quote(symbol: String, lang: Option<String>) -> Result<CallToolResult, McpError> {
+    let ticker = crate::lang::ticker(&symbol, lang.as_deref())
+        .await
+        .map_err(finance_err)?;
     let quote = ticker
         .quote::<finance_query::format::Raw>()
         .await
@@ -16,9 +18,11 @@ pub async fn get_quote(symbol: String) -> Result<CallToolResult, McpError> {
     )]))
 }
 
-pub async fn get_quotes(symbols: String) -> Result<CallToolResult, McpError> {
+pub async fn get_quotes(symbols: String, lang: Option<String>) -> Result<CallToolResult, McpError> {
     let syms: Vec<&str> = symbols.split(',').map(str::trim).collect();
-    let tickers = Tickers::new(syms).await.map_err(finance_err)?;
+    let tickers = crate::lang::tickers(syms, lang.as_deref())
+        .await
+        .map_err(finance_err)?;
     let batch = tickers.quotes().await.map_err(finance_err)?;
     let json = serde_json::to_value(&batch).map_err(ser_err)?;
     let raw = finance_query::ValueFormat::Raw.transform(json);

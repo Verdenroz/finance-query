@@ -4,10 +4,14 @@
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
 FROM rust:1-slim-bookworm@sha256:b5f842fac1e3b4ff718a652a8e0173b62d9403ec826ef4998880b9347db30684 AS builder
 
+# cmake/g++/make compile CTranslate2 for the translation-offline feature
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     ca-certificates \
+    cmake \
+    g++ \
+    make \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -36,7 +40,7 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
     for b in indicators backtesting ticker tickers finance stream; do \
         echo "fn main() {}" > benches/$b.rs; \
     done && \
-    cargo build --release -p finance-query-mcp && \
+    cargo build --release -p finance-query-mcp --features translation-offline && \
     rm -rf src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches
 
 # Copy actual source code
@@ -47,7 +51,7 @@ COPY benches ./benches
 
 # Build the actual application
 RUN touch src/lib.rs finance-query-mcp/src/main.rs && \
-    cargo auditable build --release -p finance-query-mcp
+    cargo auditable build --release -p finance-query-mcp --features translation-offline
 
 # ==============================================================================
 # Runtime Stage: Minimal runtime image
@@ -55,10 +59,13 @@ RUN touch src/lib.rs finance-query-mcp/src/main.rs && \
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
 FROM debian:bookworm-slim@sha256:0104b334637a5f19aa9c983a91b54c89887c0984081f2068983107a6f6c21eeb
 
+# libstdc++6/libgomp1 are required by the CTranslate2 translation backend
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     ca-certificates \
     libssl3 \
     curl \
+    libstdc++6 \
+    libgomp1 \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 

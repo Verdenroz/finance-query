@@ -1,4 +1,5 @@
 mod error;
+mod lang;
 mod tools;
 
 use anyhow::Result;

@@ -32,9 +32,19 @@ pub struct SymbolParams {
 }
 
 #[derive(Deserialize, JsonSchema)]
+pub struct QuoteParams {
+    /// Stock ticker symbol (e.g., "AAPL", "MSFT", "TSLA")
+    pub symbol: String,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
 pub struct SymbolsParams {
     /// Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOG")
     pub symbols: String,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -75,6 +85,8 @@ pub struct IndicatorsParams {
 pub struct SearchParams {
     /// Search query string (company name or ticker symbol)
     pub query: String,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -93,12 +105,16 @@ pub struct ScreenerParams {
 pub struct NewsParams {
     /// Stock ticker symbol (optional; omit for general market news)
     pub symbol: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct MarketSummaryParams {
     /// Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)
     pub region: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -176,12 +192,16 @@ pub struct SectorParams {
     /// Sector slug: technology|financial-services|consumer-cyclical|communication-services|
     /// healthcare|industrials|consumer-defensive|energy|basic-materials|real-estate|utilities
     pub sector: String,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct IndustryParams {
     /// Industry slug (e.g., semiconductors, biotechnology, banks-diversified)
     pub industry: String,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -218,6 +238,8 @@ pub struct TranscriptsParams {
     pub symbol: String,
     /// Maximum number of transcripts to return (default: all)
     pub limit: Option<u32>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -236,6 +258,8 @@ pub struct LookupParams {
     pub query: String,
     /// Filter by type: equity|etf|mutualfund|index|future|currency|cryptocurrency (default: all)
     pub query_type: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
+    pub lang: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -299,13 +323,13 @@ impl FinanceTools {
     #[tool(
         description = "Get current quote and company data for a stock symbol (price, market cap, PE ratio, 52-week range, etc.)"
     )]
-    async fn get_quote(&self, p: Parameters<SymbolParams>) -> Result<CallToolResult, McpError> {
-        quotes::get_quote(p.0.symbol).await
+    async fn get_quote(&self, p: Parameters<QuoteParams>) -> Result<CallToolResult, McpError> {
+        quotes::get_quote(p.0.symbol, p.0.lang).await
     }
 
     #[tool(description = "Get current quotes for multiple stock symbols in one request.")]
     async fn get_quotes(&self, p: Parameters<SymbolsParams>) -> Result<CallToolResult, McpError> {
-        quotes::get_quotes(p.0.symbols).await
+        quotes::get_quotes(p.0.symbols, p.0.lang).await
     }
 
     #[tool(description = "Get similar stock recommendations and analyst ratings for a symbol.")]
@@ -388,14 +412,14 @@ impl FinanceTools {
 
     #[tool(description = "Search for stocks, ETFs, and companies by name or ticker symbol.")]
     async fn search(&self, p: Parameters<SearchParams>) -> Result<CallToolResult, McpError> {
-        search::search(p.0.query).await
+        search::search(p.0.query, p.0.lang).await
     }
 
     #[tool(
         description = "Discover tickers filtered by type (equity, ETF, mutual fund, index, future, currency, cryptocurrency)."
     )]
     async fn lookup(&self, p: Parameters<LookupParams>) -> Result<CallToolResult, McpError> {
-        search::get_lookup(p.0.query, p.0.query_type).await
+        search::get_lookup(p.0.query, p.0.query_type, p.0.lang).await
     }
 
     #[tool(
@@ -409,7 +433,7 @@ impl FinanceTools {
         description = "Get recent news. If a symbol is provided, returns news for that stock; otherwise returns general market news."
     )]
     async fn get_news(&self, p: Parameters<NewsParams>) -> Result<CallToolResult, McpError> {
-        news::get_news(p.0.symbol).await
+        news::get_news(p.0.symbol, p.0.lang).await
     }
 
     #[tool(
@@ -424,7 +448,7 @@ impl FinanceTools {
         &self,
         p: Parameters<MarketSummaryParams>,
     ) -> Result<CallToolResult, McpError> {
-        market::get_market_summary(p.0.region).await
+        market::get_market_summary(p.0.region, p.0.lang).await
     }
 
     #[tool(
@@ -461,7 +485,7 @@ impl FinanceTools {
         description = "Get comprehensive sector data (overview, performance, top companies, ETFs) for one of the 11 GICS sectors."
     )]
     async fn get_sector(&self, p: Parameters<SectorParams>) -> Result<CallToolResult, McpError> {
-        market::get_sector(p.0.sector).await
+        market::get_sector(p.0.sector, p.0.lang).await
     }
 
     #[tool(
@@ -471,7 +495,7 @@ impl FinanceTools {
         &self,
         p: Parameters<IndustryParams>,
     ) -> Result<CallToolResult, McpError> {
-        market::get_industry(p.0.industry).await
+        market::get_industry(p.0.industry, p.0.lang).await
     }
 
     #[tool(
@@ -592,6 +616,6 @@ impl FinanceTools {
         &self,
         p: Parameters<TranscriptsParams>,
     ) -> Result<CallToolResult, McpError> {
-        transcripts::get_transcripts(p.0.symbol, p.0.limit).await
+        transcripts::get_transcripts(p.0.symbol, p.0.limit, p.0.lang).await
     }
 }

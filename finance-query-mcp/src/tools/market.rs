@@ -23,9 +23,15 @@ fn parse_region(s: &str) -> Region {
     }
 }
 
-pub async fn get_market_summary(region: Option<String>) -> Result<CallToolResult, McpError> {
+pub async fn get_market_summary(
+    region: Option<String>,
+    lang: Option<String>,
+) -> Result<CallToolResult, McpError> {
     let r = parse_region(region.as_deref().unwrap_or("US"));
-    let summary = finance::market_summary(Some(r))
+    let mut summary = finance::market_summary(Some(r))
+        .await
+        .map_err(finance_err)?;
+    crate::lang::translate(&mut summary, lang.as_deref())
         .await
         .map_err(finance_err)?;
     let json = serde_json::to_string(&summary).map_err(ser_err)?;
@@ -72,7 +78,7 @@ pub async fn get_market_hours(region: Option<String>) -> Result<CallToolResult, 
     )]))
 }
 
-pub async fn get_sector(sector: String) -> Result<CallToolResult, McpError> {
+pub async fn get_sector(sector: String, lang: Option<String>) -> Result<CallToolResult, McpError> {
     let s: Sector = sector.parse().map_err(|_| {
         crate::error::invalid_params(format!(
             "Invalid sector '{}'. Valid: technology, financial-services, consumer-cyclical, \
@@ -81,15 +87,24 @@ pub async fn get_sector(sector: String) -> Result<CallToolResult, McpError> {
             sector
         ))
     })?;
-    let data = finance::sector(s).await.map_err(finance_err)?;
+    let mut data = finance::sector(s).await.map_err(finance_err)?;
+    crate::lang::translate(&mut data, lang.as_deref())
+        .await
+        .map_err(finance_err)?;
     let json = serde_json::to_string(&data).map_err(ser_err)?;
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         json,
     )]))
 }
 
-pub async fn get_industry(industry: String) -> Result<CallToolResult, McpError> {
-    let data = finance::industry(&industry).await.map_err(finance_err)?;
+pub async fn get_industry(
+    industry: String,
+    lang: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let mut data = finance::industry(&industry).await.map_err(finance_err)?;
+    crate::lang::translate(&mut data, lang.as_deref())
+        .await
+        .map_err(finance_err)?;
     let json = serde_json::to_string(&data).map_err(ser_err)?;
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         json,
