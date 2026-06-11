@@ -1,7 +1,7 @@
 use crate::cache::{self, Cache};
 use finance_query::{Region, finance};
 
-use super::{ServiceError, ServiceResult};
+use super::{ServiceError, ServiceResult, lang_key};
 
 /// Boolean feature flags for a search request.
 #[derive(Clone, Copy, Default)]
@@ -19,6 +19,7 @@ pub async fn search(
     news: u32,
     flags: SearchFlags,
     region: Option<Region>,
+    lang: Option<&str>,
 ) -> ServiceResult {
     let cache_key = Cache::key(
         "search",
@@ -27,9 +28,11 @@ pub async fn search(
             &quotes.to_string(),
             &news.to_string(),
             if flags.logo { "1" } else { "0" },
+            lang_key(lang),
         ],
     );
     let query = query.to_string();
+    let lang = lang.map(str::to_string);
 
     cache
         .get_or_fetch(
@@ -49,7 +52,8 @@ pub async fn search(
                     options = options.region(r);
                 }
 
-                let result = finance::search(&query, &options).await?;
+                let mut result = finance::search(&query, &options).await?;
+                super::translate(&mut result, lang.as_deref()).await?;
                 serde_json::to_value(&result).map_err(|e| Box::new(e) as ServiceError)
             },
         )
@@ -63,6 +67,7 @@ pub async fn lookup(
     count: u32,
     logo: bool,
     region: Option<Region>,
+    lang: Option<&str>,
 ) -> ServiceResult {
     let type_str = format!("{:?}", lookup_type).to_lowercase();
     let cache_key = Cache::key(
@@ -72,9 +77,11 @@ pub async fn lookup(
             &type_str,
             &count.to_string(),
             if logo { "1" } else { "0" },
+            lang_key(lang),
         ],
     );
     let query = query.to_string();
+    let lang = lang.map(str::to_string);
 
     cache
         .get_or_fetch(
@@ -91,7 +98,8 @@ pub async fn lookup(
                     options = options.region(r);
                 }
 
-                let result = finance::lookup(&query, &options).await?;
+                let mut result = finance::lookup(&query, &options).await?;
+                super::translate(&mut result, lang.as_deref()).await?;
                 serde_json::to_value(&result).map_err(|e| Box::new(e) as ServiceError)
             },
         )

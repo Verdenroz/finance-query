@@ -184,6 +184,7 @@ paths:
           description: Include company logo URL
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Quote data
@@ -218,6 +219,7 @@ paths:
           description: Include company logo URLs
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Batch quotes response with successful quotes and any errors
@@ -961,6 +963,7 @@ paths:
             default: 10
           description: Number of articles to return
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: News articles
@@ -995,6 +998,7 @@ paths:
             type: integer
             default: 10
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Symbol news array
@@ -1544,6 +1548,7 @@ paths:
           example: technology
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Sector data
@@ -1762,6 +1767,7 @@ paths:
           example: semiconductors
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Industry data
@@ -2076,6 +2082,7 @@ paths:
           description: Region code for localization (defaults to US)
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Market summary data
@@ -2187,6 +2194,7 @@ paths:
             $ref: '#/components/schemas/Region'
           description: Region for language/localization settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Search results
@@ -2268,6 +2276,7 @@ paths:
             $ref: '#/components/schemas/Region'
           description: Region for language/localization settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Lookup results
@@ -2339,6 +2348,7 @@ paths:
             type: integer
             default: 2025
           description: Fiscal year (defaults to latest)
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: Earnings transcript
@@ -2366,6 +2376,7 @@ paths:
           schema:
             type: integer
           description: Maximum number of transcripts to return
+        - $ref: '#/components/parameters/Lang'
       responses:
         '200':
           description: List of earnings transcripts
@@ -2781,6 +2792,19 @@ components:
         nullable: true
       description: |
         Comma-separated list of field names to include in response, defaults to all fields if not specified
+    Lang:
+      name: lang
+      in: query
+      required: false
+      schema:
+        type: string
+        nullable: true
+      example: ja
+      description: |
+        Target language for human-readable text fields (BCP 47 tag, e.g. `ja`, `de`, `zh-Hant`).
+        Falls back to the `Accept-Language` header when omitted. English or unsupported
+        values return untranslated text. Symbols, codes, URLs, and numeric fields are
+        never translated.
 
   schemas:
     Quote:

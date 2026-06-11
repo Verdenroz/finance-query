@@ -2,7 +2,7 @@ use crate::cache::{self, Cache};
 use finance_query::{IndicesRegion, Region, Screener, finance};
 use tracing::info;
 
-use super::{ServiceError, ServiceResult};
+use super::{ServiceError, ServiceResult, lang_key};
 
 pub async fn get_trending(cache: &Cache, region: Option<Region>) -> ServiceResult {
     let region_str = region
@@ -61,11 +61,16 @@ pub async fn get_fear_and_greed(cache: &Cache) -> ServiceResult {
         .await
 }
 
-pub async fn get_market_summary(cache: &Cache, region: Option<Region>) -> ServiceResult {
+pub async fn get_market_summary(
+    cache: &Cache,
+    region: Option<Region>,
+    lang: Option<&str>,
+) -> ServiceResult {
     let region_str = region
         .map(|r| format!("{:?}", r))
         .unwrap_or_else(|| "US".to_string());
-    let cache_key = Cache::key("market_summary", &[&region_str]);
+    let cache_key = Cache::key("market_summary", &[&region_str, lang_key(lang)]);
+    let lang = lang.map(str::to_string);
 
     cache
         .get_or_fetch(
@@ -73,7 +78,8 @@ pub async fn get_market_summary(cache: &Cache, region: Option<Region>) -> Servic
             cache::ttl::INDICES,
             cache::is_market_open(),
             || async move {
-                let summary = finance::market_summary(region).await?;
+                let mut summary = finance::market_summary(region).await?;
+                super::translate(&mut summary, lang.as_deref()).await?;
                 serde_json::to_value(summary).map_err(|e| Box::new(e) as ServiceError)
             },
         )
@@ -105,8 +111,10 @@ pub async fn get_sector(
     cache: &Cache,
     sector: finance_query::Sector,
     sector_str: &str,
+    lang: Option<&str>,
 ) -> ServiceResult {
-    let cache_key = Cache::key("sector", &[sector_str]);
+    let cache_key = Cache::key("sector", &[sector_str, lang_key(lang)]);
+    let lang = lang.map(str::to_string);
 
     cache
         .get_or_fetch(
@@ -114,16 +122,18 @@ pub async fn get_sector(
             cache::ttl::SECTORS,
             cache::is_market_open(),
             || async move {
-                let data = finance::sector(sector).await?;
+                let mut data = finance::sector(sector).await?;
+                super::translate(&mut data, lang.as_deref()).await?;
                 serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
             },
         )
         .await
 }
 
-pub async fn get_industry(cache: &Cache, industry: &str) -> ServiceResult {
-    let cache_key = Cache::key("industry", &[industry]);
+pub async fn get_industry(cache: &Cache, industry: &str, lang: Option<&str>) -> ServiceResult {
+    let cache_key = Cache::key("industry", &[industry, lang_key(lang)]);
     let industry = industry.to_string();
+    let lang = lang.map(str::to_string);
 
     cache
         .get_or_fetch(
@@ -131,7 +141,8 @@ pub async fn get_industry(cache: &Cache, industry: &str) -> ServiceResult {
             cache::ttl::SECTORS,
             cache::is_market_open(),
             || async move {
-                let data = finance::industry(&industry).await?;
+                let mut data = finance::industry(&industry).await?;
+                super::translate(&mut data, lang.as_deref()).await?;
                 serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
             },
         )

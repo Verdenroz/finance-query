@@ -13,6 +13,11 @@ use super::{
 };
 use crate::AppState;
 
+/// Normalize a GraphQL `lang` argument to a canonical translation target.
+fn resolve_gql_lang(lang: Option<&str>) -> Option<String> {
+    crate::lang::resolve_lang(lang, &axum::http::HeaderMap::new())
+}
+
 pub struct QueryRoot;
 
 #[Object]
@@ -29,8 +34,12 @@ impl QueryRoot {
         query: String,
         #[graphql(default = 6)] quotes: u32,
         #[graphql(default = 0)] news: u32,
+        #[graphql(desc = "Target language for translated text fields (BCP 47)")] lang: Option<
+            String,
+        >,
     ) -> Result<serde_json::Value> {
         let state = ctx.data::<AppState>()?;
+        let lang = resolve_gql_lang(lang.as_deref());
         crate::services::search::search(
             &state.cache,
             &query,
@@ -41,6 +50,7 @@ impl QueryRoot {
                 ..Default::default()
             },
             None,
+            lang.as_deref(),
         )
         .await
         .map_err(to_gql_error)
@@ -74,9 +84,13 @@ impl QueryRoot {
         &self,
         ctx: &Context<'_>,
         #[graphql(default)] format: GqlValueFormat,
+        #[graphql(desc = "Target language for translated text fields (BCP 47)")] lang: Option<
+            String,
+        >,
     ) -> Result<Vec<GqlMarketSummaryQuote>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::market::get_market_summary(&state.cache, None)
+        let lang = resolve_gql_lang(lang.as_deref());
+        let json = crate::services::market::get_market_summary(&state.cache, None, lang.as_deref())
             .await
             .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
@@ -88,11 +102,16 @@ impl QueryRoot {
         &self,
         ctx: &Context<'_>,
         #[graphql(default = 10)] count: u32,
+        #[graphql(desc = "Target language for translated text fields (BCP 47)")] lang: Option<
+            String,
+        >,
     ) -> Result<Vec<GqlNews>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::news::get_general_news(&state.cache, count as usize)
-            .await
-            .map_err(to_gql_error)?;
+        let lang = resolve_gql_lang(lang.as_deref());
+        let json =
+            crate::services::news::get_general_news(&state.cache, count as usize, lang.as_deref())
+                .await
+                .map_err(to_gql_error)?;
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
@@ -165,11 +184,16 @@ impl GqlTicker {
         ctx: &Context<'_>,
         #[graphql(default)] logo: bool,
         #[graphql(default)] format: GqlValueFormat,
+        #[graphql(desc = "Target language for translated text fields (BCP 47)")] lang: Option<
+            String,
+        >,
     ) -> Result<super::types::quote::GqlQuote> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::quote::get_quote(&state.cache, &self.symbol, logo)
-            .await
-            .map_err(to_gql_error)?;
+        let lang = resolve_gql_lang(lang.as_deref());
+        let json =
+            crate::services::quote::get_quote(&state.cache, &self.symbol, logo, lang.as_deref())
+                .await
+                .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
@@ -219,11 +243,20 @@ impl GqlTicker {
         &self,
         ctx: &Context<'_>,
         #[graphql(default = 10)] count: u32,
+        #[graphql(desc = "Target language for translated text fields (BCP 47)")] lang: Option<
+            String,
+        >,
     ) -> Result<Vec<super::types::news::GqlNews>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::news::get_news(&state.cache, &self.symbol, count as usize)
-            .await
-            .map_err(to_gql_error)?;
+        let lang = resolve_gql_lang(lang.as_deref());
+        let json = crate::services::news::get_news(
+            &state.cache,
+            &self.symbol,
+            count as usize,
+            lang.as_deref(),
+        )
+        .await
+        .map_err(to_gql_error)?;
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
