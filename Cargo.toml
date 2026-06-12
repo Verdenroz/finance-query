@@ -160,10 +160,6 @@ features = [
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 
-[[example]]
-name = "translation_bench"
-required-features = ["translation-offline"]
-
 [dev-dependencies]
 # Testing
 tokio-test = "0.4"
@@ -198,6 +194,13 @@ harness = false
 [[bench]]
 name = "stream"
 harness = false
+
+# One-shot latency harness (not criterion): downloads the NLLB model on
+# first run and reports cold-batch translation times per language.
+[[bench]]
+name = "translation"
+harness = false
+required-features = ["translation-offline"]
 
 [profile.release]
 opt-level = 3

@@ -1,6 +1,9 @@
 //! Latency benchmark for the offline translation backend.
 //!
-//! Run: cargo run --profile bench --example translation_bench --features translation-offline
+//! One-shot harness (not criterion): model load + cold batches dominate, so
+//! statistical sampling would just re-measure the memo cache.
+//!
+//! Run: cargo bench --bench translation --features translation-offline
 //!
 //! Payload approximates a worst-case server endpoint: a batch of news
 //! headlines plus multi-sentence business summaries. Each target language
