@@ -4,7 +4,9 @@
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
 FROM rust:1-slim-bookworm@sha256:b5f842fac1e3b4ff718a652a8e0173b62d9403ec826ef4998880b9347db30684 AS builder
 
-# cmake/g++/make compile CTranslate2 for the translation-offline feature
+# cmake/g++/make are only exercised when building with the (currently
+# disabled) translation-offline feature, which compiles CTranslate2; they are
+# kept so enabling the feature is a one-flag change on the build commands.
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
@@ -40,7 +42,7 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
     for b in indicators backtesting ticker tickers finance stream; do \
         echo "fn main() {}" > benches/$b.rs; \
     done && \
-    cargo build --release -p finance-query-mcp --features translation-offline && \
+    cargo build --release -p finance-query-mcp && \
     rm -rf src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches
 
 # Copy actual source code
@@ -51,7 +53,7 @@ COPY benches ./benches
 
 # Build the actual application
 RUN touch src/lib.rs finance-query-mcp/src/main.rs && \
-    cargo auditable build --release -p finance-query-mcp --features translation-offline
+    cargo auditable build --release -p finance-query-mcp
 
 # ==============================================================================
 # Runtime Stage: Minimal runtime image
