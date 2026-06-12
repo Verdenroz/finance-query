@@ -76,11 +76,17 @@ WORKDIR /app
 
 COPY --from=builder /build/target/release/finance-query-server /app/finance-query-server
 
-RUN chown -R appuser:appuser /app
+# Pre-create the Hugging Face cache dir with appuser ownership so a named
+# volume mounted at HF_HOME inherits it. The ~600 MB translation model is
+# downloaded here on first use; mount a volume to persist it across deploys.
+RUN chown -R appuser:appuser /app \
+    && mkdir -p /home/appuser/.cache/huggingface \
+    && chown -R appuser:appuser /home/appuser/.cache
 
 USER appuser
 
 # Environment variables (matches server/.env.template)
+ENV HF_HOME=/home/appuser/.cache/huggingface
 ENV PORT=8000
 ENV LOG_LEVEL=INFO
 ENV LOG_FORMAT=json

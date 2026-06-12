@@ -75,10 +75,16 @@ WORKDIR /app
 
 COPY --from=builder /build/target/release/fq-mcp /app/fq-mcp
 
-RUN chown -R appuser:appuser /app
+# Pre-create the Hugging Face cache dir with appuser ownership so a named
+# volume mounted at HF_HOME inherits it. The ~600 MB translation model is
+# downloaded here on first use; mount a volume to persist it across deploys.
+RUN chown -R appuser:appuser /app \
+    && mkdir -p /home/appuser/.cache/huggingface \
+    && chown -R appuser:appuser /home/appuser/.cache
 
 USER appuser
 
+ENV HF_HOME=/home/appuser/.cache/huggingface
 ENV MCP_TRANSPORT=http
 ENV MCP_ADDR=0.0.0.0:3000
 

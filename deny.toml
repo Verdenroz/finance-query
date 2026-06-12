@@ -10,7 +10,13 @@ all-features = true
 # Fail on any crate with a known security advisory or that has been yanked.
 yanked = "deny"
 # Add advisory IDs here (with a justification) only to consciously accept a risk.
-ignore = []
+ignore = [
+    # `paste` is unmaintained (not vulnerable). Compile-time-only proc-macro
+    # pulled in via ct2rs -> tokenizers -> macro_rules_attribute for the
+    # optional `translation-offline` feature; no fixed upstream release exists.
+    # Revisit when tokenizers migrates off paste.
+    "RUSTSEC-2024-0436",
+]
 
 [bans]
 # Duplicate versions bloat the tree and widen the attack surface; warn for now.

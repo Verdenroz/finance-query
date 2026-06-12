@@ -1167,6 +1167,17 @@ async fn main() {
 
     info!("Finance Query server initializing...");
 
+    // Warm the offline translation model in the background so the first
+    // translated request doesn't pay the one-time download/load cost. Runs
+    // concurrently with serving: health checks pass while the model loads.
+    #[cfg(feature = "translation-offline")]
+    tokio::spawn(async {
+        match finance_query::translation::preload().await {
+            Ok(()) => info!("Offline translation model preloaded"),
+            Err(e) => warn!("Translation model preload failed: {}", e),
+        }
+    });
+
     // Build application with routes
     let app = create_app().await;
 

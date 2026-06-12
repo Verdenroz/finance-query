@@ -53,8 +53,10 @@ jobs:
         with:
           components: clippy
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      # `full` = all features except translation-offline, which compiles
+      # CTranslate2 from source; the Docker jobs cover that build instead.
       - name: Run clippy
-        run: cargo clippy --all-targets --all-features -- -D warnings
+        run: cargo clippy --workspace --all-targets --features finance-query/full -- -D warnings
 
   # Run all tests — retries only failed tests with exponential backoff to handle rate limiting
   test:
@@ -79,12 +81,14 @@ jobs:
       - uses: taiki-e/install-action@8f531eaecd1898bc3da7d104ad91bee98d1b97bd # v2.79.9
         with:
           tool: nextest
-      - name: Run unit tests (all features)
-        run: cargo nextest run --workspace --all-features
+      # `full` = all features except translation-offline (heavy CTranslate2
+      # native build; compilation is covered by the Docker jobs).
+      - name: Run unit tests (full features)
+        run: cargo nextest run --workspace --features finance-query/full
       - name: Run network integration tests
         run: cargo nextest run --workspace --profile ci-network --run-ignored ignored-only
       - name: Run doctests
-        run: cargo test --workspace --doc --all-features
+        run: cargo test --workspace --doc --features finance-query/full
 
   # Check compilation
   check:
@@ -106,8 +110,10 @@ jobs:
           df -h /
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      # `full` = all features except translation-offline (heavy CTranslate2
+      # native build; compilation is covered by the Docker jobs).
       - name: Check build
-        run: cargo check --all-features --verbose
+        run: cargo check --workspace --features finance-query/full --verbose
 
   # Build release binary
   build:

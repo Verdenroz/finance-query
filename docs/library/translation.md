@@ -110,6 +110,21 @@ The `translation-offline` feature bundles a fully local CPU backend (NLLB-200 di
 finance_query::translation::preload().await?;
 ```
 
+### Performance
+
+Inference runs on the CPU (int8, oneDNN). On a modern 8-core machine a typical
+response payload — a batch of ~20 news titles plus a couple of multi-sentence
+business summaries — translates in roughly 2–3 seconds cold; memoization makes
+repeated fields free within a process.
+
+Earnings **transcripts** are the deliberate exception: a full call transcript
+is hundreds of kilobytes of prose and takes tens of seconds to translate, and
+the `/transcripts/{symbol}/all` server endpoint translates every transcript it
+returns. The server caches translated transcripts for 7 days (transcripts are
+immutable), so the cost is paid once per symbol/quarter/language. If you need
+guaranteed-fast transcript responses, request them in English and translate
+client-side, or warm the cache ahead of time.
+
 ## Custom Backend
 
 Plug any translation engine (e.g. a hosted API) by implementing `TranslationBackend` (requires the [`async-trait`](https://crates.io/crates/async-trait) crate) and registering it process-wide. A custom backend takes precedence over the built-in offline backend:

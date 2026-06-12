@@ -1286,6 +1286,7 @@ dependencies = [
  "cmake",
  "cxx",
  "cxx-build",
+ "onednn-src",
  "tokenizers",
  "walkdir",
 ]
@@ -3335,6 +3336,15 @@ name = "once_cell_polyfill"
 version = "1.70.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "384b8ab6d37215f3c5301a95a4accb5d64aa607f1fcb26a11b5303878451b4fe"
+
+[[package]]
+name = "onednn-src"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ed865cc353dfe2d75a2624d8f8bc7f403c9193b57f43d5045a07647261aef28b"
+dependencies = [
+ "cmake",
+]
 
 [[package]]
 name = "onig"
