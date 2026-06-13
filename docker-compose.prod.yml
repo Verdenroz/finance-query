@@ -66,6 +66,10 @@ services:
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
+    volumes:
+      # Persists the ~600 MB NLLB translation model (downloaded from the
+      # Hugging Face Hub at HF_HOME) across container recreates/deploys.
+      - hf-cache-v2:/home/appuser/.cache/huggingface
     depends_on:
       redis:
         condition: service_healthy
@@ -75,11 +79,15 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
-          memory: 512M
+          # Translation inference is CPU-bound: the offline backend uses up
+          # to 8 intra-op threads, and CTranslate2 holds the int8 NLLB model
+          # (~1.5 GB resident incl. batch buffers) in memory. 512M/1.0 CPU
+          # OOM-kills the container on the first translated request.
+          cpus: '6.0'
+          memory: 3G
         reservations:
-          cpus: '0.25'
-          memory: 128M
+          cpus: '0.5'
+          memory: 1G
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -110,16 +118,22 @@ services:
       - MCP_ADDR=0.0.0.0:3000
       - EDGAR_EMAIL=${EDGAR_EMAIL:-}
       - FRED_API_KEY=${FRED_API_KEY:-}
+    volumes:
+      # Persists the ~600 MB NLLB translation model (downloaded from the
+      # Hugging Face Hub at HF_HOME) across container recreates/deploys.
+      - hf-cache-mcp:/home/appuser/.cache/huggingface
     networks:
       - backend
     deploy:
       resources:
         limits:
-          cpus: '0.5'
-          memory: 256M
+          # The MCP image is built with translation-offline too: tool calls
+          # with a `lang` param load the same ~1.5 GB NLLB model in-process.
+          cpus: '2.0'
+          memory: 2G
         reservations:
-          cpus: '0.1'
-          memory: 64M
+          cpus: '0.25'
+          memory: 256M
     security_opt:
       - no-new-privileges:true
     cap_drop:
@@ -401,6 +415,12 @@ networks:
 
 volumes:
   redis-data:
+    driver: local
+  # Hugging Face model caches (one per service: hf-hub's cache layout is not
+  # designed for concurrent writers, so v2 and MCP each get their own).
+  hf-cache-v2:
+    driver: local
+  hf-cache-mcp:
     driver: local
   caddy-data:
     driver: local

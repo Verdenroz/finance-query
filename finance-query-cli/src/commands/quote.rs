@@ -54,6 +54,10 @@ pub async fn execute(args: QuoteArgs) -> Result<()> {
     // Use Tickers for efficient batch fetching
     let builder = Tickers::builder(args.symbols.clone());
     let builder = if args.logo { builder.logo() } else { builder };
+    let builder = match crate::lang::target() {
+        Some(lang) => builder.lang(lang),
+        None => builder,
+    };
     let tickers = builder.build().await?;
     let response = tickers.quotes().await?;
 

@@ -87,7 +87,7 @@ async fn run_event_loop(
             && let Some(symbol) = app.loading_detailed_symbol.clone()
         {
             detailed_quote_task = Some(tokio::spawn(async move {
-                match finance_query::Ticker::new(&symbol).await {
+                match crate::lang::ticker(&symbol).await {
                     Ok(ticker) => match ticker.quote::<finance_query::format::Both>().await {
                         Ok(quote) => Some((symbol, quote)),
                         Err(_) => None,

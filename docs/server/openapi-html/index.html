@@ -290,6 +290,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -344,6 +347,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -1655,6 +1661,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -1710,6 +1719,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -2260,6 +2272,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -2492,6 +2507,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -2947,6 +2965,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -3119,6 +3140,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -3242,6 +3266,9 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -3350,6 +3377,9 @@
               "default": 2025
             },
             "description": "Fiscal year (defaults to latest)"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -3392,6 +3422,9 @@
               "type": "integer"
             },
             "description": "Maximum number of transcripts to return"
+          },
+          {
+            "$ref": "#/components/parameters/Lang"
           }
         ],
         "responses": {
@@ -4008,6 +4041,17 @@
           "nullable": true
         },
         "description": "Comma-separated list of field names to include in response, defaults to all fields if not specified\n"
+      },
+      "Lang": {
+        "name": "lang",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "nullable": true
+        },
+        "example": "ja",
+        "description": "Target language for human-readable text fields (BCP 47 tag, e.g. `ja`, `de`, `zh-Hant`).\nFalls back to the `Accept-Language` header when omitted. English or unsupported\nvalues return untranslated text. Symbols, codes, URLs, and numeric fields are\nnever translated.\n"
       }
     },
     "schemas": {

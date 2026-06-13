@@ -2,7 +2,6 @@ use crate::error::Result;
 use crate::output::{self, OutputFormat};
 use clap::Parser;
 use colored::Colorize;
-use finance_query::Ticker;
 use serde::Serialize;
 
 #[derive(Parser)]
@@ -39,7 +38,7 @@ struct GradeJson {
 
 pub async fn execute(args: GradesArgs) -> Result<()> {
     let format = OutputFormat::from_str(&args.output)?;
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
 
     let grading_data = ticker.grading_history().await?;
 

@@ -2,7 +2,6 @@ use crate::error::Result;
 use crate::options::run_options_tui;
 use crate::output;
 use clap::Parser;
-use finance_query::Ticker;
 
 #[derive(Parser)]
 pub struct OptionsArgs {
@@ -41,7 +40,7 @@ pub async fn execute(args: OptionsArgs) -> Result<()> {
         return run_options_tui(&args.symbol).await;
     }
 
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
     let options = ticker.options(args.date).await?;
 
     // List expirations mode

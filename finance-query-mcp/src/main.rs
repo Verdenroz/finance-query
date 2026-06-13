@@ -1,4 +1,5 @@
 mod error;
+mod lang;
 mod tools;
 
 use anyhow::Result;
@@ -38,6 +39,16 @@ async fn main() -> Result<()> {
 
     init_edgar();
     init_fred();
+
+    // Warm the offline translation model in the background so the first
+    // tool call with a `lang` param doesn't pay the one-time load cost.
+    #[cfg(feature = "translation-offline")]
+    tokio::spawn(async {
+        match finance_query::translation::preload().await {
+            Ok(()) => info!("Offline translation model preloaded"),
+            Err(e) => tracing::warn!("Translation model preload failed: {e}"),
+        }
+    });
 
     let handler = FinanceTools::new();
 

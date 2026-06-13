@@ -2,7 +2,6 @@ use crate::alerts::{Alert, AlertStore, AlertType};
 use crate::error::Result;
 use clap::{Parser, Subcommand};
 use colored::Colorize;
-use finance_query::Tickers;
 
 #[derive(Parser)]
 pub struct AlertsArgs {
@@ -262,7 +261,7 @@ async fn check_alerts(show_only_triggered: bool) -> Result<()> {
     println!();
 
     // Fetch quotes
-    let tickers = Tickers::new(&unique_symbols).await?;
+    let tickers = crate::lang::tickers(&unique_symbols).await?;
     let response = tickers.quotes().await?;
 
     let mut triggered_count = 0;
@@ -559,7 +558,7 @@ async fn watch_alerts(interval_secs: u64, verbose: bool) -> Result<()> {
         }
 
         // Fetch quotes
-        let tickers = match Tickers::new(&unique_symbols).await {
+        let tickers = match crate::lang::tickers(&unique_symbols).await {
             Ok(t) => t,
             Err(e) => {
                 if verbose {

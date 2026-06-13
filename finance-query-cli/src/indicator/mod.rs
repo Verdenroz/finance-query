@@ -11,7 +11,7 @@ use crossterm::{
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
 use finance_query::indicators::{Indicator, IndicatorResult};
-use finance_query::{Interval, Ticker, TimeRange};
+use finance_query::{Interval, TimeRange};
 use ratatui::{Terminal, backend::CrosstermBackend};
 use serde::Serialize;
 use std::io;
@@ -185,7 +185,7 @@ fn run_indicator_tui(initial_symbol: Option<String>) -> Result<Option<IndicatorC
 }
 
 async fn execute_with_config(config: &IndicatorConfig) -> Result<()> {
-    let ticker = Ticker::new(&config.symbol).await?;
+    let ticker = crate::lang::ticker(&config.symbol).await?;
     let chart = ticker.chart(config.interval, config.range).await?;
     let result = ticker
         .indicator(config.indicator, config.interval, config.range)
@@ -207,7 +207,7 @@ async fn execute_non_interactive(
     let range = parse_range(range_str)?;
     let indicator = parse_indicator(indicator_str)?;
 
-    let ticker = Ticker::new(symbol).await?;
+    let ticker = crate::lang::ticker(symbol).await?;
     let chart = ticker.chart(interval, range).await?;
     let result = ticker.indicator(indicator, interval, range).await?;
 

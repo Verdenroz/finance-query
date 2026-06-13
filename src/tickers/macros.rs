@@ -54,6 +54,21 @@ macro_rules! define_batch_response {
                 self.errors.is_empty()
             }
         }
+
+        #[cfg(feature = "translation")]
+        impl crate::translation::Translatable for $name {
+            fn visit_translatable(&mut self, visit: &mut dyn FnMut(&mut String)) {
+                for value in self.$field.values_mut() {
+                    crate::translation::Translatable::visit_translatable(value, visit);
+                }
+            }
+
+            fn after_translate(&mut self) {
+                for value in self.$field.values_mut() {
+                    crate::translation::Translatable::after_translate(value);
+                }
+            }
+        }
     };
 }
 
@@ -146,6 +161,9 @@ macro_rules! batch_fetch_cached {
                         response.$resp_field.insert(symbol.to_string(), entry.value.clone());
                     }
                 }
+                drop(cache);
+                #[cfg(feature = "translation")]
+                $self.translate_response(&mut response).await?;
                 return Ok(response);
             }
         }
@@ -163,6 +181,9 @@ macro_rules! batch_fetch_cached {
                         response.$resp_field.insert(symbol.to_string(), entry.value.clone());
                     }
                 }
+                drop(cache);
+                #[cfg(feature = "translation")]
+                $self.translate_response(&mut response).await?;
                 return Ok(response);
             }
         }
@@ -204,6 +225,9 @@ macro_rules! batch_fetch_cached {
         for (sym, value) in parsed {
             response.$resp_field.insert(sym.to_string(), value);
         }
+
+        #[cfg(feature = "translation")]
+        $self.translate_response(&mut response).await?;
 
         Ok(response)
     }};

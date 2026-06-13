@@ -150,6 +150,11 @@ impl TickerBuilder {
 
     /// Build the Ticker instance.
     pub async fn build(self) -> Result<Ticker> {
+        #[cfg(feature = "translation")]
+        let translate_lang = {
+            let lang = crate::translation::Lang::parse(&self.config.lang)?;
+            (!lang.is_english()).then_some(lang)
+        };
         let providers = if let Some(set) = self.injected_providers {
             set
         } else if let Some(handle) = self.shared_client {
@@ -175,6 +180,8 @@ impl TickerBuilder {
             providers,
             cache_ttl: self.cache_ttl,
             include_logo: self.include_logo,
+            #[cfg(feature = "translation")]
+            translate_lang,
             quote_cache: Default::default(),
             quote_fetch: Arc::new(tokio::sync::Mutex::new(())),
             chart_cache: Default::default(),
@@ -199,6 +206,8 @@ pub struct Ticker {
     providers: Arc<ProviderSet>,
     cache_ttl: Option<Duration>,
     include_logo: bool,
+    #[cfg(feature = "translation")]
+    translate_lang: Option<crate::translation::Lang>,
     quote_cache: Cache<QuoteSummaryResponse>,
     quote_fetch: Arc<tokio::sync::Mutex<()>>,
     chart_cache: MapCache<(Interval, TimeRange), Chart>,
@@ -249,6 +258,19 @@ impl Ticker {
         &self.providers
     }
 
+    /// Translate a response value when a non-English language is configured
+    /// (no-op otherwise).
+    #[cfg(feature = "translation")]
+    pub(crate) async fn translate_response<T: crate::translation::Translatable>(
+        &self,
+        value: &mut T,
+    ) -> Result<()> {
+        if let Some(lang) = &self.translate_lang {
+            crate::translation::translate_with(value, lang).await?;
+        }
+        Ok(())
+    }
+
     fn is_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
         CacheEntry::is_fresh_with_ttl(entry, self.cache_ttl)
     }
@@ -297,6 +319,13 @@ impl Ticker {
             (None, None)
         };
         let quote = Quote::from_response(&summary.value, logo_url, company_logo_url);
+        #[cfg(feature = "translation")]
+        let quote = {
+            drop(cache);
+            let mut quote = quote;
+            self.translate_response(&mut quote).await?;
+            quote
+        };
         Ok(quote.into())
     }
 
@@ -465,6 +494,12 @@ impl Ticker {
             })
             .await?;
         let news = data;
+        #[cfg(feature = "translation")]
+        let news = {
+            let mut news = news;
+            self.translate_response(&mut news).await?;
+            news
+        };
         if self.cache_ttl.is_some() {
             let mut c = self.news_cache.write().await;
             *c = Some(CacheEntry::new(news.clone()));

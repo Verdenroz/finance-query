@@ -76,5 +76,12 @@ serial_test = "3"
 tokio = { version = "1", features = ["full", "test-util"] }
 
 [features]
-default = ["redis-cache"]
+default = ["redis-cache", "translation"]
 redis-cache = ["dep:redis"]
+# Translation plumbing (pure Rust): `lang` query param + Accept-Language
+# resolution, dictionary-tier translations. Without `translation-offline`
+# (or a custom backend) non-dictionary text passes through untranslated.
+translation = ["finance-query/translation"]
+# Local NLLB machine-translation backend (builds CTranslate2 from source;
+# requires cmake and a C++ toolchain).
+translation-offline = ["translation", "finance-query/translation-offline"]

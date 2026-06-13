@@ -2,11 +2,17 @@ use crate::cache::{self, Cache};
 use finance_query::{Ticker, finance};
 use tracing::info;
 
-use super::{ServiceError, ServiceResult};
+use super::{ServiceError, ServiceResult, lang_key};
 
-pub async fn get_news(cache: &Cache, symbol: &str, count: usize) -> ServiceResult {
-    let cache_key = Cache::key("news", &[&symbol.to_uppercase()]);
+pub async fn get_news(
+    cache: &Cache,
+    symbol: &str,
+    count: usize,
+    lang: Option<&str>,
+) -> ServiceResult {
+    let cache_key = Cache::key("news", &[&symbol.to_uppercase(), lang_key(lang)]);
     let symbol = symbol.to_string();
+    let lang = lang.map(str::to_string);
 
     let json = cache
         .get_or_fetch(
@@ -14,7 +20,12 @@ pub async fn get_news(cache: &Cache, symbol: &str, count: usize) -> ServiceResul
             cache::ttl::NEWS,
             cache::is_market_open(),
             || async move {
-                let ticker = Ticker::new(&symbol).await?;
+                let builder = Ticker::builder(&symbol);
+                let builder = match &lang {
+                    Some(lang) => builder.lang(lang),
+                    None => builder,
+                };
+                let ticker = builder.build().await?;
                 let news = ticker.news().await?;
                 serde_json::to_value(&news).map_err(|e| Box::new(e) as ServiceError)
             },
@@ -24,8 +35,9 @@ pub async fn get_news(cache: &Cache, symbol: &str, count: usize) -> ServiceResul
     Ok(truncate_array(json, count))
 }
 
-pub async fn get_general_news(cache: &Cache, count: usize) -> ServiceResult {
-    let cache_key = Cache::key("news", &["general"]);
+pub async fn get_general_news(cache: &Cache, count: usize, lang: Option<&str>) -> ServiceResult {
+    let cache_key = Cache::key("news", &["general", lang_key(lang)]);
+    let lang = lang.map(str::to_string);
 
     let json = cache
         .get_or_fetch(
@@ -33,7 +45,8 @@ pub async fn get_general_news(cache: &Cache, count: usize) -> ServiceResult {
             cache::ttl::GENERAL_NEWS,
             cache::is_market_open(),
             || async move {
-                let news = finance::news().await?;
+                let mut news = finance::news().await?;
+                super::translate(&mut news, lang.as_deref()).await?;
                 info!("Fetched general market news");
                 serde_json::to_value(&news).map_err(|e| Box::new(e) as ServiceError)
             },

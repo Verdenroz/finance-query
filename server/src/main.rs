@@ -1,5 +1,6 @@
 mod cache;
 mod graphql;
+mod lang;
 mod metrics;
 mod rate_limit;
 mod services;
@@ -10,7 +11,7 @@ use axum::{
         Extension, Path, Query, WebSocketUpgrade,
         ws::{Message, WebSocket},
     },
-    http::{HeaderValue, Method, StatusCode},
+    http::{HeaderMap, HeaderValue, Method, StatusCode},
     middleware,
     response::{IntoResponse, Json},
     routing::{get, post},
@@ -287,6 +288,9 @@ struct QuoteQuery {
     format: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -299,6 +303,9 @@ struct QuotesQuery {
     format: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -476,6 +483,9 @@ struct SearchQuery {
     region: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -496,6 +506,9 @@ struct LookupQuery {
     region: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 fn default_lookup_type() -> String {
@@ -541,6 +554,9 @@ struct NewsQuery {
     count: u32,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 fn default_news_count() -> u32 {
@@ -824,6 +840,9 @@ struct SectorQuery {
     format: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -832,12 +851,18 @@ struct EarningsTranscriptQuery {
     quarter: Option<String>,
     /// Fiscal year. If not provided with quarter, returns latest.
     year: Option<i32>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 #[derive(Deserialize)]
 struct EarningsTranscriptsQuery {
     /// Maximum number of transcripts to return. If not provided, returns all.
     limit: Option<usize>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 fn default_screeners_count() -> u32 {
@@ -1142,6 +1167,17 @@ async fn main() {
 
     info!("Finance Query server initializing...");
 
+    // Warm the offline translation model in the background so the first
+    // translated request doesn't pay the one-time download/load cost. Runs
+    // concurrently with serving: health checks pass while the model loads.
+    #[cfg(feature = "translation-offline")]
+    tokio::spawn(async {
+        match finance_query::translation::preload().await {
+            Ok(()) => info!("Offline translation model preloaded"),
+            Err(e) => warn!("Translation model preload failed: {}", e),
+        }
+    });
+
     // Build application with routes
     let app = create_app().await;
 
@@ -1415,9 +1451,11 @@ async fn get_quote(
     Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<QuoteQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     info!(
         "Received quote request for symbol: {} (logo={}, format={}, fields={:?})",
         symbol,
@@ -1426,7 +1464,7 @@ async fn get_quote(
         params.fields
     );
 
-    match services::quote::get_quote(&state.cache, &symbol, params.logo).await {
+    match services::quote::get_quote(&state.cache, &symbol, params.logo, lang.as_deref()).await {
         Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
@@ -1520,10 +1558,12 @@ use services::{parse_interval, parse_range};
 async fn get_quotes(
     Extension(state): Extension<AppState>,
     Query(params): Query<QuotesQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     info!(
         "Fetching batch quotes for {} symbols (logo={}, format={}, fields={:?})",
         symbols.len(),
@@ -1532,7 +1572,7 @@ async fn get_quotes(
         params.fields
     );
 
-    match services::quote::get_quotes(&state.cache, symbols, params.logo).await {
+    match services::quote::get_quotes(&state.cache, symbols, params.logo, lang.as_deref()).await {
         Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
@@ -1819,8 +1859,10 @@ async fn get_indicators(
 async fn search(
     Extension(state): Extension<AppState>,
     Query(params): Query<SearchQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     info!(
         "Searching for: {} (quotes={}, news={}, logo={}, research={}, cultural={}, region={:?})",
         params.q,
@@ -1846,6 +1888,7 @@ async fn search(
             cultural: params.cultural,
         },
         region,
+        lang.as_deref(),
     )
     .await
     {
@@ -1874,8 +1917,10 @@ async fn search(
 async fn lookup(
     Extension(state): Extension<AppState>,
     Query(params): Query<LookupQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     info!(
         "Looking up: {} (type={}, count={}, logo={}, region={:?})",
         params.q, params.lookup_type, params.count, params.logo, params.region
@@ -1903,6 +1948,7 @@ async fn lookup(
         params.count,
         params.logo,
         region,
+        lang.as_deref(),
     )
     .await
     {
@@ -1923,11 +1969,15 @@ async fn lookup(
 async fn get_general_news(
     Extension(state): Extension<AppState>,
     Query(params): Query<NewsQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     info!("Fetching general market news (fields={:?})", params.fields);
 
-    match services::news::get_general_news(&state.cache, params.count as usize).await {
+    match services::news::get_general_news(&state.cache, params.count as usize, lang.as_deref())
+        .await
+    {
         Ok(json) => {
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
@@ -1946,11 +1996,20 @@ async fn get_news(
     Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<NewsQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     info!("Fetching news for {} (fields={:?})", symbol, params.fields);
 
-    match services::news::get_news(&state.cache, &symbol, params.count as usize).await {
+    match services::news::get_news(
+        &state.cache,
+        &symbol,
+        params.count as usize,
+        lang.as_deref(),
+    )
+    .await
+    {
         Ok(json) => {
             let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
@@ -2225,9 +2284,11 @@ async fn get_sector(
     Extension(state): Extension<AppState>,
     Path(sector): Path<String>,
     Query(params): Query<SectorQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     let st = match sector.parse::<Sector>() {
         Ok(t) => t,
         Err(_) => {
@@ -2244,7 +2305,7 @@ async fn get_sector(
         sector, params.format, params.fields
     );
 
-    match services::market::get_sector(&state.cache, st, &sector).await {
+    match services::market::get_sector(&state.cache, st, &sector, lang.as_deref()).await {
         Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
@@ -2263,16 +2324,18 @@ async fn get_industry(
     Extension(state): Extension<AppState>,
     Path(industry): Path<String>,
     Query(params): Query<SectorQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
 
     info!(
         "Fetching {} industry (format={:?}, fields={:?})",
         industry, params.format, params.fields
     );
 
-    match services::market::get_industry(&state.cache, &industry).await {
+    match services::market::get_industry(&state.cache, &industry, lang.as_deref()).await {
         Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()
@@ -2622,7 +2685,9 @@ async fn get_transcript(
     Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<EarningsTranscriptQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     info!(
         "Fetching transcript for {} (quarter={:?}, year={:?})",
         symbol, params.quarter, params.year
@@ -2633,6 +2698,7 @@ async fn get_transcript(
         &symbol,
         params.quarter.as_deref(),
         params.year,
+        lang.as_deref(),
     )
     .await
     {
@@ -2653,13 +2719,22 @@ async fn get_transcripts(
     Extension(state): Extension<AppState>,
     Path(symbol): Path<String>,
     Query(params): Query<EarningsTranscriptsQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
     info!(
         "Fetching all transcripts for {} (limit={:?})",
         symbol, params.limit
     );
 
-    match services::transcripts::get_transcripts(&state.cache, &symbol, params.limit).await {
+    match services::transcripts::get_transcripts(
+        &state.cache,
+        &symbol,
+        params.limit,
+        lang.as_deref(),
+    )
+    .await
+    {
         Ok(json) => (StatusCode::OK, Json(json)).into_response(),
         Err(e) => {
             error!("Failed to fetch transcripts for {}: {}", symbol, e);
@@ -2707,6 +2782,9 @@ struct MarketSummaryQuery {
     format: Option<String>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
+    /// falls back to the Accept-Language header
+    lang: Option<String>,
 }
 
 /// GET /v2/market-summary
@@ -2715,10 +2793,12 @@ struct MarketSummaryQuery {
 async fn get_market_summary(
     Extension(state): Extension<AppState>,
     Query(params): Query<MarketSummaryQuery>,
+    headers: HeaderMap,
 ) -> impl IntoResponse {
     let region = params.region.as_deref().and_then(parse_region);
     let format = parse_format(params.format.as_deref());
     let fields = parse_fields(params.fields.as_deref());
+    let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
 
     info!(
         "Fetching market summary (region={:?}, format={}, fields={:?})",
@@ -2727,7 +2807,7 @@ async fn get_market_summary(
         params.fields
     );
 
-    match services::market::get_market_summary(&state.cache, region).await {
+    match services::market::get_market_summary(&state.cache, region, lang.as_deref()).await {
         Ok(json) => {
             let response = apply_transforms(json, format, fields.as_ref());
             (StatusCode::OK, Json(response)).into_response()

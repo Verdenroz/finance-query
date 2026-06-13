@@ -3,7 +3,6 @@ use crate::output::{self, OutputFormat};
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use colored::Colorize;
-use finance_query::Ticker;
 use serde::Serialize;
 
 #[derive(Parser)]
@@ -38,7 +37,7 @@ struct QuarterJson {
 
 pub async fn execute(args: EarningsArgs) -> Result<()> {
     let format = OutputFormat::from_str(&args.output)?;
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
 
     // Fetch earnings data
     let (calendar, earnings, history) = tokio::join!(

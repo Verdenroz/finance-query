@@ -1,6 +1,6 @@
 use super::state::{App, SectorsViewMode, Tab};
 use anyhow::Result;
-use finance_query::{Interval, Sector, SectorData, Ticker, Tickers, TimeRange, finance};
+use finance_query::{Interval, Sector, SectorData, TimeRange, finance};
 
 impl App {
     pub async fn refresh_details(&mut self) -> Result<()> {
@@ -35,7 +35,7 @@ impl App {
             let (label, range, interval) = range_options[self.selected_chart_range_idx];
 
             self.status_message = format!("Fetching chart for {} ({})...", symbol, label);
-            match Ticker::new(&symbol).await {
+            match crate::lang::ticker(&symbol).await {
                 Ok(ticker) => match ticker.chart(interval, range).await {
                     Ok(chart) => {
                         let data: Vec<(f64, f64)> = chart
@@ -77,7 +77,7 @@ impl App {
             .ok_or_else(|| anyhow::anyhow!("Watchlist not found"))?;
 
         self.status_message = format!("Fetching quote for {}...", symbol);
-        match Ticker::new(&symbol).await {
+        match crate::lang::ticker(&symbol).await {
             Ok(ticker) => match ticker.quote::<finance_query::format::Both>().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
@@ -144,7 +144,7 @@ impl App {
 
         self.status_message = format!("Added {} to watchlist", symbol);
 
-        match Ticker::new(&symbol).await {
+        match crate::lang::ticker(&symbol).await {
             Ok(ticker) => match ticker.quote::<finance_query::format::Both>().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
@@ -205,7 +205,7 @@ impl App {
 
         self.status_message = format!("Added {} to watchlist", symbol);
 
-        match Ticker::new(&symbol).await {
+        match crate::lang::ticker(&symbol).await {
             Ok(ticker) => match ticker.quote::<finance_query::format::Both>().await {
                 Ok(quote) => {
                     self.quotes.insert(symbol.clone(), quote);
@@ -230,7 +230,7 @@ impl App {
 
         self.status_message = "Fetching quotes...".to_string();
 
-        match Tickers::new(&self.current_watchlist.symbols).await {
+        match crate::lang::tickers(&self.current_watchlist.symbols).await {
             Ok(tickers) => match tickers.quotes().await {
                 Ok(response) => {
                     for (symbol, quote) in response.quotes {
@@ -277,7 +277,7 @@ impl App {
         }
 
         let symbols = self.portfolio.symbols();
-        match Tickers::new(&symbols).await {
+        match crate::lang::tickers(&symbols).await {
             Ok(tickers) => match tickers.quotes().await {
                 Ok(response) => {
                     self.portfolio_prices.clear();
@@ -398,7 +398,7 @@ impl App {
         self.status_message = format!("Fetching news for {}...", symbol);
         self.is_loading_news = true;
 
-        match Ticker::new(symbol).await {
+        match crate::lang::ticker(symbol).await {
             Ok(ticker) => match ticker.news().await {
                 Ok(news) => {
                     self.news_items = news.into_iter().take(20).collect();

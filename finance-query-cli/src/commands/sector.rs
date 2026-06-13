@@ -97,7 +97,8 @@ pub async fn execute(args: SectorArgs) -> Result<()> {
     let sector_type: Sector = args.sector.into();
 
     // Fetch sector data
-    let sector = finance_query::finance::sector(sector_type).await?;
+    let mut sector = finance_query::finance::sector(sector_type).await?;
+    crate::lang::translate(&mut sector).await?;
 
     // For JSON output, return the full sector data
     if format == OutputFormat::Json {

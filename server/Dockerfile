@@ -4,11 +4,17 @@
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
 FROM rust:1-slim-bookworm@sha256:b5f842fac1e3b4ff718a652a8e0173b62d9403ec826ef4998880b9347db30684 AS builder
 
-# Install build dependencies
+# Install build dependencies.
+# cmake/g++/make are only exercised when building with the (currently
+# disabled) translation-offline feature, which compiles CTranslate2; they are
+# kept so enabling the feature is a one-flag change on the build commands.
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
     ca-certificates \
+    cmake \
+    g++ \
+    make \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -34,7 +40,7 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
     echo "" > finance-query-derive/src/lib.rs && \
     echo "fn main() {}" > finance-query-cli/src/main.rs && \
     echo "fn main() {}" > finance-query-mcp/src/main.rs && \
-    for b in indicators backtesting ticker tickers finance stream; do \
+    for b in indicators backtesting ticker tickers finance stream translation; do \
         echo "fn main() {}" > benches/$b.rs; \
     done && \
     cargo build --release -p finance-query-server && \
@@ -56,9 +62,12 @@ RUN touch src/lib.rs server/src/main.rs && \
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
 FROM debian:bookworm-slim@sha256:0104b334637a5f19aa9c983a91b54c89887c0984081f2068983107a6f6c21eeb
 
+# libstdc++6/libgomp1 are required by the CTranslate2 translation backend.
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
     ca-certificates \
     libssl3 \
+    libstdc++6 \
+    libgomp1 \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -69,11 +78,17 @@ WORKDIR /app
 
 COPY --from=builder /build/target/release/finance-query-server /app/finance-query-server
 
-RUN chown -R appuser:appuser /app
+# Pre-create the Hugging Face cache dir with appuser ownership so a named
+# volume mounted at HF_HOME inherits it. The ~600 MB translation model is
+# downloaded here on first use; mount a volume to persist it across deploys.
+RUN chown -R appuser:appuser /app \
+    && mkdir -p /home/appuser/.cache/huggingface \
+    && chown -R appuser:appuser /home/appuser/.cache
 
 USER appuser
 
 # Environment variables (matches server/.env.template)
+ENV HF_HOME=/home/appuser/.cache/huggingface
 ENV PORT=8000
 ENV LOG_LEVEL=INFO
 ENV LOG_FORMAT=json

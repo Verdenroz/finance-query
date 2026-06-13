@@ -652,9 +652,22 @@ fq [OPTIONS] [COMMAND]
 Options:
   -v, --verbose         Enable verbose logging
       --no-color        Disable colored output
+      --lang <LANG>     Target language for translated text fields (BCP 47,
+                        e.g. "ja", "zh-Hant") [env: FQ_LANG=]
   -h, --help            Print help
   -V, --version         Print version
 ```
+
+### Translations
+
+With `--lang` (or the `FQ_LANG` environment variable) set to a non-English BCP 47 tag, human-readable fields — company names, sector/industry labels, business summaries, news titles — are translated. Symbols, codes, and numbers are never touched.
+
+```bash
+fq quote 7203.T --lang ja        # Japanese quote labels
+FQ_LANG=de fq news               # German news titles
+```
+
+Sector names, security types, and officer titles use a built-in dictionary (instant, 11 languages). Free-form text needs a machine-translation backend: install with `--features translation-offline` for the fully local NLLB-200 model, otherwise free-form text stays in English.
 
 ## Output Formats
 

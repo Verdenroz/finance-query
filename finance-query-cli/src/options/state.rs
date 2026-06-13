@@ -4,7 +4,7 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use finance_query::{OptionContract, Ticker};
+use finance_query::OptionContract;
 use ratatui::{Terminal, backend::CrosstermBackend, widgets::TableState};
 use std::io;
 use tokio::time::Duration;
@@ -133,7 +133,7 @@ impl OptionsApp {
         self.is_loading = true;
         self.error_message = None;
 
-        match Ticker::new(&self.symbol).await {
+        match crate::lang::ticker(&self.symbol).await {
             Ok(ticker) => {
                 // Get quote for underlying price
                 if let Ok(quote) = ticker.quote::<finance_query::format::Both>().await {
@@ -171,7 +171,7 @@ impl OptionsApp {
         self.is_loading = true;
         let exp_date = self.expiration_dates[self.selected_expiration_idx];
 
-        match Ticker::new(&self.symbol).await {
+        match crate::lang::ticker(&self.symbol).await {
             Ok(ticker) => match ticker.options(Some(exp_date)).await {
                 Ok(options) => {
                     self.calls = options.calls().0;

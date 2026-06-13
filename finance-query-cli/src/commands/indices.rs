@@ -17,7 +17,8 @@ pub async fn execute(args: IndicesArgs) -> Result<()> {
         None
     };
 
-    let response = finance::indices(region).await?;
+    let mut response = finance::indices(region).await?;
+    crate::lang::translate(&mut response).await?;
 
     let success_count = response.success_count();
     if success_count == 0 {

@@ -3,8 +3,11 @@ use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::{finance_err, invalid_params, ser_err};
 
-pub async fn search(query: String) -> Result<CallToolResult, McpError> {
-    let results = finance::search(&query, &finance_query::SearchOptions::default())
+pub async fn search(query: String, lang: Option<String>) -> Result<CallToolResult, McpError> {
+    let mut results = finance::search(&query, &finance_query::SearchOptions::default())
+        .await
+        .map_err(finance_err)?;
+    crate::lang::translate(&mut results, lang.as_deref())
         .await
         .map_err(finance_err)?;
     let json = serde_json::to_string(&results).map_err(ser_err)?;
@@ -34,6 +37,7 @@ pub async fn screener(
 pub async fn get_lookup(
     query: String,
     query_type: Option<String>,
+    lang: Option<String>,
 ) -> Result<CallToolResult, McpError> {
     let lt = query_type
         .as_deref()
@@ -51,7 +55,10 @@ pub async fn get_lookup(
         Some(t) => LookupOptions::new().lookup_type(t),
         None => LookupOptions::new(),
     };
-    let results = finance::lookup(&query, &opts).await.map_err(finance_err)?;
+    let mut results = finance::lookup(&query, &opts).await.map_err(finance_err)?;
+    crate::lang::translate(&mut results, lang.as_deref())
+        .await
+        .map_err(finance_err)?;
     let json = serde_json::to_string(&results).map_err(ser_err)?;
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         json,

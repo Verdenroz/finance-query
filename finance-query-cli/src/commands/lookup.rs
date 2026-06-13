@@ -39,7 +39,8 @@ pub async fn execute(args: LookupArgs) -> Result<()> {
         options = options.include_logo(true);
     }
 
-    let results = finance::lookup(&args.query, &options).await?;
+    let mut results = finance::lookup(&args.query, &options).await?;
+    crate::lang::translate(&mut results).await?;
 
     if results.is_empty() {
         output::print_info(&format!("No results found for '{}'", args.query));

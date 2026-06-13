@@ -92,8 +92,27 @@ rayon = { version = "1", optional = true }
 # Optional: RSS/Atom feed parsing
 feed-rs = { version = "2", optional = true }
 
+# Optional: fully local machine translation (CTranslate2 + NLLB-200)
+ct2rs = { version = "0.9.19", optional = true, default-features = false, features = ["dnnl", "tokenizers"] }
+hf-hub = { version = "0.5", optional = true, default-features = false, features = ["tokio", "rustls-tls"] }
+
 [features]
 default = []
+# Every feature except `translation-offline`, which compiles CTranslate2 from
+# source and needs cmake + a C++ toolchain.
+full = [
+    "dataframe",
+    "indicators",
+    "backtesting",
+    "fred",
+    "crypto",
+    "rss",
+    "alphavantage",
+    "polygon",
+    "fmp",
+    "risk",
+    "translation",
+]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
 # Enable technical analysis indicators
@@ -114,9 +133,31 @@ polygon = []
 fmp = []
 # Enable standalone risk analytics: VaR, Sharpe/Sortino/Calmar ratios, beta, drawdown
 risk = ["indicators"]
+# Enable translation of human-readable response fields: built-in dictionary
+# for finite finance terms + pluggable ML backend (pure Rust, no heavy deps)
+translation = []
+# Add the fully local CPU machine-translation backend (NLLB-200 via
+# CTranslate2). Heavy native build: compiles CTranslate2 from source (needs
+# cmake + a C++ toolchain) and downloads ~600 MB of model data on first use.
+translation-offline = ["translation", "dep:ct2rs", "dep:hf-hub"]
 
 [package.metadata.docs.rs]
-all-features = true
+# Everything except `translation-offline`: docs.rs cannot afford the
+# CTranslate2 native build. The offline backend adds no public API beyond
+# `translation::preload`.
+features = [
+    "dataframe",
+    "indicators",
+    "backtesting",
+    "fred",
+    "crypto",
+    "rss",
+    "alphavantage",
+    "polygon",
+    "fmp",
+    "risk",
+    "translation",
+]
 rustdoc-args = ["--cfg", "docsrs"]
 
 [dev-dependencies]
@@ -153,6 +194,13 @@ harness = false
 [[bench]]
 name = "stream"
 harness = false
+
+# One-shot latency harness (not criterion): downloads the NLLB model on
+# first run and reports cold-batch translation times per language.
+[[bench]]
+name = "translation"
+harness = false
+required-features = ["translation-offline"]
 
 [profile.release]
 opt-level = 3

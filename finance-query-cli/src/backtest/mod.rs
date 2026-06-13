@@ -22,7 +22,6 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use finance_query::Ticker;
 use finance_query::backtesting::ParamValue;
 use ratatui::{Terminal, backend::CrosstermBackend};
 use std::collections::HashMap;
@@ -362,7 +361,7 @@ async fn run_backtest_with_config(
         return run_portfolio_backtest(config, backtest_config, json_output).await;
     }
 
-    let ticker = Ticker::new(&config.symbol).await?;
+    let ticker = crate::lang::ticker(&config.symbol).await?;
 
     // ── Optimizer path ────────────────────────────────────────────────────────
     if let Some(ref opt_config) = config.optimizer {
@@ -618,7 +617,7 @@ async fn run_backtest_with_config(
             let best_strategy =
                 build_strategy_from_params(&config.strategy, &enabled_params, &best_params);
 
-            match Ticker::new(bench_sym).await {
+            match crate::lang::ticker(bench_sym).await {
                 Ok(bench_ticker) => {
                     if let Ok(bench_chart) = bench_ticker.chart(config.interval, config.range).await
                     {
@@ -738,7 +737,7 @@ async fn run_backtest_with_config(
     // Charts tab. The chart data will be cached inside the bench Ticker, so this
     // adds at most one network round-trip and is a no-op when the cache is warm.
     if let Some(ref bench_sym) = config.benchmark
-        && let Ok(bench_ticker) = Ticker::new(bench_sym).await
+        && let Ok(bench_ticker) = crate::lang::ticker(bench_sym).await
         && let Ok(bench_chart) = bench_ticker.chart(config.interval, config.range).await
     {
         run_result.bench_candles = Some(bench_chart.candles);
@@ -815,7 +814,7 @@ async fn run_portfolio_backtest(
     // Fetch candles (and optionally dividends) for every symbol.
     let mut symbol_data: Vec<SymbolData> = Vec::with_capacity(all_symbols.len());
     for sym in &all_symbols {
-        let ticker = Ticker::new(sym).await.map_err(|e| {
+        let ticker = crate::lang::ticker(sym).await.map_err(|e| {
             crate::error::CliError::InvalidArgument(format!(
                 "Failed to fetch ticker {}: {}",
                 sym, e

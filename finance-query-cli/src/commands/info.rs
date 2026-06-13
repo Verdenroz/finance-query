@@ -2,7 +2,6 @@ use crate::error::Result;
 use crate::output::OutputFormat;
 use clap::Parser;
 use colored::Colorize;
-use finance_query::Ticker;
 use serde::Serialize;
 
 #[derive(Parser)]
@@ -63,7 +62,7 @@ pub async fn execute(args: InfoArgs) -> Result<()> {
     let format = OutputFormat::from_str(&args.output)?;
 
     // Fetch full quote data
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
     let quote = ticker.quote::<finance_query::format::Both>().await?;
 
     // For JSON/CSV output, return structured data

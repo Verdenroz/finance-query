@@ -29,6 +29,7 @@ use std::time::Duration;
 /// ```
 pub struct Providers {
     pub(crate) set: Arc<ProviderSet>,
+    lang: String,
 }
 
 impl Providers {
@@ -42,8 +43,15 @@ impl Providers {
     /// The returned builder accepts the same optional configuration as
     /// [`Ticker::builder`](crate::Ticker::builder) (`.cache()`, `.logo()`,
     /// `.format()`) before calling `.build()`.
+    ///
+    /// The language configured via [`ProvidersBuilder::lang`] or
+    /// [`ProvidersBuilder::region`] is inherited (override with `.lang()` on
+    /// the returned builder). With the `translation` feature, a non-English
+    /// language translates text fields automatically.
     pub fn ticker(&self, symbol: impl Into<String>) -> crate::TickerBuilder {
-        crate::Ticker::builder(symbol).with_provider_set(Arc::clone(&self.set))
+        crate::Ticker::builder(symbol)
+            .lang(self.lang.clone())
+            .with_provider_set(Arc::clone(&self.set))
     }
 
     /// Create a [`TickersBuilder`](crate::TickersBuilder) pre-wired to this provider set.
@@ -51,12 +59,19 @@ impl Providers {
     /// The returned builder accepts the same optional configuration as
     /// [`Tickers::builder`](crate::Tickers::builder) (`.cache()`,
     /// `.max_concurrency()`, `.logo()`, `.format()`) before calling `.build()`.
+    ///
+    /// The language configured via [`ProvidersBuilder::lang`] or
+    /// [`ProvidersBuilder::region`] is inherited (override with `.lang()` on
+    /// the returned builder). With the `translation` feature, a non-English
+    /// language translates text fields automatically.
     pub fn tickers<S, I>(&self, symbols: I) -> crate::TickersBuilder
     where
         S: Into<String>,
         I: IntoIterator<Item = S>,
     {
-        crate::Tickers::builder(symbols).with_provider_set(Arc::clone(&self.set))
+        crate::Tickers::builder(symbols)
+            .lang(self.lang.clone())
+            .with_provider_set(Arc::clone(&self.set))
     }
 
     /// Create a [`CryptoCoin`](crate::CryptoCoin) handle backed by this provider set.
@@ -168,6 +183,16 @@ impl ProvidersBuilder {
         self
     }
 
+    /// Set the language code (e.g., "en-US", "ja-JP").
+    ///
+    /// Inherited by every `Ticker`/`Tickers` handle created from the built
+    /// [`Providers`]. With the `translation` feature, a non-English language
+    /// translates text fields on those handles automatically.
+    pub fn lang(mut self, lang: impl Into<String>) -> Self {
+        self.config.lang = lang.into();
+        self
+    }
+
     /// Set the HTTP request timeout.
     pub fn timeout(mut self, t: Duration) -> Self {
         self.config.timeout = t;
@@ -182,7 +207,13 @@ impl ProvidersBuilder {
 
     /// Build the [`Providers`] instance, initialising all configured providers.
     pub async fn build(self) -> Result<Providers> {
+        #[cfg(feature = "translation")]
+        crate::translation::Lang::parse(&self.config.lang)?;
+        let lang = self.config.lang.clone();
         let set = build_providers(&self.provider_ids, &self.config, self.routes).await?;
-        Ok(Providers { set: Arc::new(set) })
+        Ok(Providers {
+            set: Arc::new(set),
+            lang,
+        })
     }
 }

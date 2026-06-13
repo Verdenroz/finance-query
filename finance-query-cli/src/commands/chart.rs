@@ -6,7 +6,7 @@ use crossterm::{
     execute,
     terminal::{EnterAlternateScreen, LeaveAlternateScreen, disable_raw_mode, enable_raw_mode},
 };
-use finance_query::{Interval, Ticker, TimeRange};
+use finance_query::{Interval, TimeRange};
 use ratatui::{
     Terminal,
     backend::CrosstermBackend,
@@ -282,7 +282,7 @@ async fn render_interactive_chart(
     loop {
         // Fetch data if needed
         if loading {
-            let ticker = Ticker::new(symbol).await?;
+            let ticker = crate::lang::ticker(symbol).await?;
             match ticker.chart(current_interval, current_range).await {
                 Ok(chart) => {
                     chart_data = Some(chart);
@@ -688,7 +688,7 @@ pub async fn execute(args: ChartArgs) -> Result<()> {
     }
 
     // Non-interactive mode for table/json/csv
-    let ticker = Ticker::new(&args.symbol).await?;
+    let ticker = crate::lang::ticker(&args.symbol).await?;
     let chart = ticker.chart(interval, range).await?;
 
     // Use table/json/csv output

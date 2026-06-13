@@ -449,7 +449,7 @@ impl App {
 
     /// Fetch sparkline data for all watchlist symbols
     pub async fn fetch_sparklines(&mut self) -> anyhow::Result<()> {
-        use finance_query::{Interval, Tickers, TimeRange};
+        use finance_query::{Interval, TimeRange};
 
         if self.current_watchlist.symbols.is_empty() {
             return Ok(());
@@ -462,7 +462,7 @@ impl App {
             .map(|s| s.as_str())
             .collect();
 
-        let tickers = Tickers::new(symbols).await?;
+        let tickers = crate::lang::tickers(symbols).await?;
         let result = tickers
             .spark(Interval::FiveMinutes, TimeRange::OneDay)
             .await?;
