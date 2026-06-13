@@ -16,6 +16,15 @@ ignore = [
     # optional `translation-offline` feature; no fixed upstream release exists.
     # Revisit when tokenizers migrates off paste.
     "RUSTSEC-2024-0436",
+    # `bincode` 1.x is unmaintained (not vulnerable). Dev-only: pulled in solely
+    # by the `iai-callgrind` benchmark harness (the regression gate); never
+    # compiled into the published crate or any shipped binary. Revisit when
+    # iai-callgrind moves to bincode 2.x.
+    "RUSTSEC-2025-0141",
+    # `proc-macro-error2` is unmaintained (not vulnerable). Dev-only: pulled in
+    # solely by `iai-callgrind-macros`; a compile-time proc-macro for the
+    # benchmark harness, never shipped. Revisit when iai-callgrind drops it.
+    "RUSTSEC-2026-0173",
 ]
 
 [bans]
