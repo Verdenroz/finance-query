@@ -40,7 +40,7 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
     echo "" > finance-query-derive/src/lib.rs && \
     echo "fn main() {}" > finance-query-cli/src/main.rs && \
     echo "fn main() {}" > finance-query-mcp/src/main.rs && \
-    for b in indicators backtesting ticker tickers finance stream translation; do \
+    for b in indicators backtesting ticker tickers finance stream translation risk providers regression; do \
         echo "fn main() {}" > benches/$b.rs; \
     done && \
     cargo build --release -p finance-query-server && \

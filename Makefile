@@ -1,4 +1,4 @@
-.PHONY: help serve install install-dev build test test-fast lint fix audit docs docker docker-compose docker-compose-down clean publish-dry-run \
+.PHONY: help serve install install-dev build test test-fast lint fix audit bench bench-regression docs docker docker-compose docker-compose-down clean publish-dry-run \
         prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html generate-mcp-html mcp mcp-http build-mcp
 
 # Default target
@@ -89,6 +89,16 @@ audit: ## Run security audit on dependencies
 	@echo "$(GREEN)Running security audit...$(NC)"
 	@command -v cargo-audit >/dev/null 2>&1 || $(CARGO) install cargo-audit
 	@$(CARGO) audit
+
+bench: ## Run criterion wall-clock benchmarks (local profiling, not a CI gate)
+	@echo "$(GREEN)Running criterion benchmarks...$(NC)"
+	$(CARGO) bench --features finance-query/full \
+		--bench indicators --bench backtesting --bench ticker --bench tickers \
+		--bench finance --bench providers --bench risk --bench stream
+
+bench-regression: ## Run the iai-callgrind instruction-count regression gate (vanilla-glibc container)
+	@echo "$(GREEN)Running instruction-count regression gate...$(NC)"
+	@./scripts/bench-regression.sh $(ARGS)
 
 docs: ## Build and serve documentation locally
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"

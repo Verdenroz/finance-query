@@ -1,0 +1,76 @@
+name: Performance Regression
+
+# Deterministic instruction-count regression gate (iai-callgrind under
+# valgrind). Wall-clock benchmarks are too noisy for CI, but callgrind counts
+# CPU instructions, which are stable across runners — so a change in the count
+# is a real change in work done. We measure the PR's base commit, then the PR
+# head, and fail if any benchmark's instruction count regresses past its limit
+# (see the soft_limits in benches/regression.rs).
+
+on:
+  pull_request:
+    paths:
+      - "src/**"
+      - "benches/**"
+      - "Cargo.toml"
+      - "Cargo.lock"
+      - ".github/workflows/regression.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: regression-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  regression:
+    name: Instruction-count gate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+          # Full history so the PR base commit is checkoutable for the baseline.
+          fetch-depth: 0
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+      - name: Install valgrind
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y valgrind
+      - name: Install iai-callgrind-runner
+        # Version MUST match the iai-callgrind dev-dependency in Cargo.toml.
+        run: cargo install iai-callgrind-runner --version 0.16.1 --locked
+      - name: Save baseline from PR base
+        run: |
+          set -euo pipefail
+          git checkout --quiet --force "${{ github.event.pull_request.base.sha }}"
+          # The base commit may predate the regression bench; gate only when it
+          # exists there. `|| true` keeps the first introducing-PR green.
+          if cargo bench --bench regression --features finance-query/risk -- --save-baseline base; then
+            echo "HAVE_BASELINE=1" >> "$GITHUB_ENV"
+          else
+            echo "Base commit has no regression bench yet — recording head metrics without gating."
+            echo "HAVE_BASELINE=0" >> "$GITHUB_ENV"
+          fi
+          git checkout --quiet --force "${{ github.event.pull_request.head.sha }}"
+      - name: Compare PR head against baseline
+        run: |
+          set -euo pipefail
+          if [ "${HAVE_BASELINE}" = "1" ]; then
+            cargo bench --bench regression --features finance-query/risk -- --baseline base
+          else
+            cargo bench --bench regression --features finance-query/risk
+          fi

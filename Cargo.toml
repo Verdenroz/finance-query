@@ -168,11 +168,19 @@ serial_test = "3"
 tokio = { version = "1", features = ["full", "test-util"] }
 # Benchmarking
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
+# Deterministic, instruction-count regression benchmarks (run under valgrind).
+# Dev-only — never compiled into the published `finance-query` crate.
+iai-callgrind = "0.16.1"
 
 [[bench]]
 name = "indicators"
 harness = false
 required-features = ["indicators"]
+
+[[bench]]
+name = "risk"
+harness = false
+required-features = ["risk"]
 
 [[bench]]
 name = "backtesting"
@@ -192,6 +200,10 @@ name = "finance"
 harness = false
 
 [[bench]]
+name = "providers"
+harness = false
+
+[[bench]]
 name = "stream"
 harness = false
 
@@ -201,6 +213,16 @@ harness = false
 name = "translation"
 harness = false
 required-features = ["translation-offline"]
+
+# Deterministic instruction-count regression gate (iai-callgrind, runs under
+# valgrind). Unlike the criterion benches above, these are stable across
+# machines/CI runners and are consumed by `make bench-regression` as a gate.
+# `risk` implies `indicators`; the deserialization benches use always-available
+# model types, so this avoids pulling the heavier provider/dataframe features.
+[[bench]]
+name = "regression"
+harness = false
+required-features = ["risk"]
 
 [profile.release]
 opt-level = 3
