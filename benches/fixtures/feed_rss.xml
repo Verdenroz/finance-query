@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Market Wire — Finance Headlines</title>
+    <link>https://example.com/feed</link>
+    <description>Synthetic offline fixture approximating a financial news RSS feed.</description>
+    <language>en-us</language>
+    <lastBuildDate>Fri, 13 Jun 2026 14:00:00 GMT</lastBuildDate>
+    <item>
+      <title>Fed holds rates steady, signals data-dependent path ahead</title>
+      <link>https://example.com/news/fed-holds-rates</link>
+      <guid isPermaLink="true">https://example.com/news/fed-holds-rates</guid>
+      <pubDate>Fri, 13 Jun 2026 13:30:00 GMT</pubDate>
+      <description>The Federal Reserve left its benchmark rate unchanged, citing balanced risks to inflation and employment.</description>
+    </item>
+    <item>
+      <title>Apple unveils next-generation silicon at developer conference</title>
+      <link>https://example.com/news/apple-silicon</link>
+      <guid isPermaLink="true">https://example.com/news/apple-silicon</guid>
+      <pubDate>Fri, 13 Jun 2026 12:10:00 GMT</pubDate>
+      <description>Shares rose in pre-market trading after the company detailed performance gains and new on-device AI features.</description>
+    </item>
+    <item>
+      <title>Oil settles higher as supply concerns outweigh demand worries</title>
+      <link>https://example.com/news/oil-settles-higher</link>
+      <guid isPermaLink="true">https://example.com/news/oil-settles-higher</guid>
+      <pubDate>Fri, 13 Jun 2026 11:45:00 GMT</pubDate>
+      <description>Crude futures advanced for a third straight session on tighter inventories.</description>
+    </item>
+    <item>
+      <title>Treasury yields edge up ahead of key inflation report</title>
+      <link>https://example.com/news/yields-edge-up</link>
+      <guid isPermaLink="true">https://example.com/news/yields-edge-up</guid>
+      <pubDate>Fri, 13 Jun 2026 10:20:00 GMT</pubDate>
+      <description>The 10-year note yield climbed as traders positioned for fresh CPI data.</description>
+    </item>
+    <item>
+      <title>Tech megacaps lead a broad equity rally into the weekend</title>
+      <link>https://example.com/news/megacap-rally</link>
+      <guid isPermaLink="true">https://example.com/news/megacap-rally</guid>
+      <pubDate>Fri, 13 Jun 2026 09:05:00 GMT</pubDate>
+      <description>A risk-on tone lifted the major averages, with semiconductors among the strongest performers.</description>
+    </item>
+  </channel>
+</rss>

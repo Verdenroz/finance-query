@@ -1,4 +1,4 @@
-.PHONY: help serve install install-dev build test test-fast lint fix audit docs docker docker-compose docker-compose-down clean publish-dry-run \
+.PHONY: help serve install install-dev build test test-fast lint fix audit bench baseline docs docker docker-compose docker-compose-down clean publish-dry-run \
         prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html generate-mcp-html mcp mcp-http build-mcp
 
 # Default target
@@ -89,6 +89,25 @@ audit: ## Run security audit on dependencies
 	@echo "$(GREEN)Running security audit...$(NC)"
 	@command -v cargo-audit >/dev/null 2>&1 || $(CARGO) install cargo-audit
 	@$(CARGO) audit
+
+bench: ## Run criterion wall-clock benchmarks (local profiling, not a CI gate)
+	@echo "$(GREEN)Running criterion benchmarks...$(NC)"
+	$(CARGO) bench --features full \
+		--bench indicators --bench backtesting --bench ticker --bench tickers \
+		--bench finance --bench providers --bench risk --bench stream \
+		--bench serde --bench dataframe --bench feeds
+
+baseline: ARGS ?= --save-baseline=base
+baseline: ## Run the regression gate in a Debian container; saves/updates baseline "base" (ARGS="--baseline=base" to compare without overwriting)
+	@echo "$(GREEN)Running regression gate...$(NC)"
+	$(DOCKER) run --rm --security-opt seccomp=unconfined \
+		-v "$(CURDIR)":/app -w /app \
+		-v fq-bench-cargo:/usr/local/cargo/registry \
+		-v fq-bench-cargobin:/usr/local/cargo/bin \
+		-v fq-bench-target:/app/target \
+		rust:bookworm bash -c 'apt-get update -qq && apt-get install -y -qq valgrind >/dev/null && \
+		(command -v iai-callgrind-runner || cargo install iai-callgrind-runner --version 0.16.1 --locked) && \
+		cargo bench --bench regression --features bench-gate -- $(ARGS)'
 
 docs: ## Build and serve documentation locally
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"

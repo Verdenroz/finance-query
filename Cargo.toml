@@ -140,6 +140,11 @@ translation = []
 # CTranslate2). Heavy native build: compiles CTranslate2 from source (needs
 # cmake + a C++ toolchain) and downloads ~600 MB of model data on first use.
 translation-offline = ["translation", "dep:ct2rs", "dep:hf-hub"]
+# Regression-gate aggregate: every feature whose representative work is pure-Rust
+# compute or serde. HTTP-only providers (alphavantage/polygon/fmp) hit the same
+# public models already covered; dataframe/translation-offline are too heavy for
+# valgrind (excluded by design — see .claude/rules/benches.md).
+bench-gate = ["risk", "backtesting", "rss", "translation", "fred", "crypto"]
 
 [package.metadata.docs.rs]
 # Everything except `translation-offline`: docs.rs cannot afford the
@@ -168,11 +173,19 @@ serial_test = "3"
 tokio = { version = "1", features = ["full", "test-util"] }
 # Benchmarking
 criterion = { version = "0.5", features = ["html_reports", "async_tokio"] }
+# Deterministic, instruction-count regression benchmarks (run under valgrind).
+# Dev-only — never compiled into the published `finance-query` crate.
+iai-callgrind = "0.16.1"
 
 [[bench]]
 name = "indicators"
 harness = false
 required-features = ["indicators"]
+
+[[bench]]
+name = "risk"
+harness = false
+required-features = ["risk"]
 
 [[bench]]
 name = "backtesting"
@@ -192,8 +205,31 @@ name = "finance"
 harness = false
 
 [[bench]]
+name = "providers"
+harness = false
+
+[[bench]]
 name = "stream"
 harness = false
+
+# Model (de)serialization over real captured server responses
+# (benches/fixtures/*.json). Always-available types; no extra features needed.
+[[bench]]
+name = "serde"
+harness = false
+
+# Polars DataFrame conversions (Candle/Chart/Options/Quote). Criterion-only —
+# deliberately NOT in the regression gate (Polars is too heavy for the CI gate).
+[[bench]]
+name = "dataframe"
+harness = false
+required-features = ["dataframe"]
+
+# RSS/Atom feed parsing via feed-rs over offline XML fixtures.
+[[bench]]
+name = "feeds"
+harness = false
+required-features = ["rss"]
 
 # One-shot latency harness (not criterion): downloads the NLLB model on
 # first run and reports cold-batch translation times per language.
@@ -201,6 +237,19 @@ harness = false
 name = "translation"
 harness = false
 required-features = ["translation-offline"]
+
+# Deterministic instruction-count regression gate (iai-callgrind, runs under
+# valgrind). Unlike the criterion benches above, these are stable across
+# machines/CI runners and are consumed by `make baseline` as a gate.
+# `risk`+`backtesting` cover the compute/strategy paths; `rss` and `translation`
+# add the (cheap, pure-Rust) feed-parse and dictionary-translation gates. The
+# serde benches use always-available model types. dataframe is deliberately
+# excluded (Polars is too heavy for the gate — it stays a criterion bench).
+# Run with `--features bench-gate` (aggregate of the four below).
+[[bench]]
+name = "regression"
+harness = false
+required-features = ["risk", "backtesting", "rss", "translation"]
 
 [profile.release]
 opt-level = 3
