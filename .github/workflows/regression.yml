@@ -59,7 +59,7 @@ jobs:
           git checkout --quiet --force "${{ github.event.pull_request.base.sha }}"
           # The base commit may predate the regression bench; gate only when it
           # exists there. `|| true` keeps the first introducing-PR green.
-          if cargo bench --bench regression --features finance-query/risk -- --save-baseline base; then
+          if cargo bench --bench regression --features bench-gate -- --save-baseline=base; then
             echo "HAVE_BASELINE=1" >> "$GITHUB_ENV"
           else
             echo "Base commit has no regression bench yet — recording head metrics without gating."
@@ -70,7 +70,7 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${HAVE_BASELINE}" = "1" ]; then
-            cargo bench --bench regression --features finance-query/risk -- --baseline base
+            cargo bench --bench regression --features bench-gate -- --baseline=base
           else
-            cargo bench --bench regression --features finance-query/risk
+            cargo bench --bench regression --features bench-gate
           fi
