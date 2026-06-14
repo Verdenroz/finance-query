@@ -6,6 +6,13 @@
 //! across runs and machines, so a change in the count is a real change in the
 //! work done, not measurement noise. That makes them safe to fail CI on.
 //!
+//! The gate spans every compute/parse/dispatch facet of the library:
+//! indicators, the backtesting engine, risk analytics, streaming (de)serialize,
+//! provider capability dispatch, and model (de)serialization. (The `ticker` /
+//! `tickers` criterion benches are intentionally excluded — they compare
+//! internal allocation strategies, `std` container micro-ops rather than
+//! library logic.)
+//!
 //! Each benchmark carries a soft limit of +5% on the instruction count (`Ir`).
 //! CI saves a baseline from the target branch, then re-runs on the PR; any
 //! benchmark exceeding its baseline by more than 5% fails the gate.
@@ -15,21 +22,36 @@
 //! Requires `valgrind`. This host's environment matters: a glibc compiled for
 //! `x86-64-v4` (e.g. CachyOS/Arch with AVX-512) emits AVX-512 in its startup
 //! code, which valgrind 3.25 cannot decode (SIGILL). Run on vanilla glibc
-//! (CI's Ubuntu, or `make bench-regression` which uses a Debian container):
+//! (CI's Ubuntu, or a Debian container — see `.claude/rules/benches.md`):
 //!
 //! ```text
-//! cargo bench --bench regression --features finance-query/risk
+//! make bench-regression        # Debian container (recommended; vanilla glibc)
+//! cargo bench --bench regression --features bench-gate   # vanilla-glibc hosts/CI
 //! ```
 //!
 //! The `GLIBC_TUNABLES` entry below additionally stops glibc from dispatching
 //! to AVX-512 string routines (`memcpy`/`memmove`) at runtime, hardening the
 //! gate on AVX-512 hosts that *do* have a valgrind-decodable loader.
 
-use finance_query::indicators::{ema, macd, rsi, sma};
+use finance_query::backtesting::{BacktestConfig, BacktestEngine, SmaCrossover};
+use finance_query::crypto::CoinQuote;
+use finance_query::fred::{MacroSeries, TreasuryYield};
+use finance_query::indicators::{
+    accumulation_distribution, adx, alma, aroon, atr, awesome_oscillator, balance_of_power,
+    bollinger_bands, bull_bear_power, cci, chaikin_oscillator, choppiness_index, cmf, cmo,
+    coppock_curve, dema, donchian_channels, elder_ray, ema, hma, ichimoku, keltner_channels, macd,
+    mcginley_dynamic, mfi, momentum, obv, parabolic_sar, patterns, roc, rsi, sma, stochastic,
+    stochastic_rsi, supertrend, tema, true_range, vwap, vwma, williams_r, wma,
+};
 use finance_query::risk::{
     beta, historical_var, max_drawdown, parametric_var, sharpe_ratio, sortino_ratio,
 };
-use finance_query::{Currency, News, SearchResults};
+use finance_query::streaming::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
+use finance_query::translation::{Lang, translate_texts};
+use finance_query::{
+    Candle, Chart, CompanyFacts, Currency, EdgarSubmissions, FinancialStatement, News, Options,
+    Quote, ScreenerResults, SearchResults,
+};
 use iai_callgrind::{
     Callgrind, EventKind, LibraryBenchmarkConfig, library_benchmark, library_benchmark_group, main,
 };
@@ -60,11 +82,30 @@ fn synthetic_returns(n: usize) -> Vec<f64> {
     closes.windows(2).map(|w| (w[1] - w[0]) / w[0]).collect()
 }
 
+/// Deterministic synthetic OHLCV candles. `Candle` is `#[non_exhaustive]`
+/// outside the crate, so construct via `serde_json` (matches benches/backtesting.rs).
+fn synthetic_candles(n: usize) -> Vec<Candle> {
+    let closes = synthetic_closes(n);
+    closes
+        .iter()
+        .enumerate()
+        .map(|(i, &close)| {
+            serde_json::from_value(serde_json::json!({
+                "timestamp": 1_700_000_000_i64 + i as i64 * 86_400,
+                "open": close,
+                "high": close + 1.0,
+                "low": close - 1.0,
+                "close": close,
+                "volume": 1_000_000_i64,
+                "adjClose": close,
+            }))
+            .unwrap()
+        })
+        .collect()
+}
+
 // Setup functions run *outside* the measured region — iai-callgrind requires a
 // function path (not a closure) for the `setup` argument.
-fn closes_2000() -> Vec<f64> {
-    synthetic_closes(2000)
-}
 fn returns_1000() -> Vec<f64> {
     synthetic_returns(1000)
 }
@@ -73,34 +114,243 @@ fn returns_pair_1000() -> (Vec<f64>, Vec<f64>) {
 }
 
 // ── Indicator hot paths ──────────────────────────────────────────────────────
+//
+// The gate spans the whole indicator suite (all 42), grouped by family so a
+// regression in any single indicator pushes its family's instruction count past
+// the +5% soft limit. Families mirror `src/indicators/` and the criterion bench
+// `benches/indicators.rs`. The per-family setup extracts O/H/L/C/V arrays once,
+// outside the measured region.
 
-#[library_benchmark]
-#[bench::n2000(setup = closes_2000)]
-fn ind_sma(closes: Vec<f64>) -> Vec<Option<f64>> {
-    black_box(sma(black_box(&closes), 200))
+/// `(opens, highs, lows, closes, volumes)` — extracted from synthetic candles.
+type Series = (Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>, Vec<f64>);
+
+fn series_1000() -> Series {
+    let candles = synthetic_candles(1000);
+    let opens = candles.iter().map(|c| c.open).collect();
+    let highs = candles.iter().map(|c| c.high).collect();
+    let lows = candles.iter().map(|c| c.low).collect();
+    let closes = candles.iter().map(|c| c.close).collect();
+    let volumes = candles.iter().map(|c| c.volume as f64).collect();
+    (opens, highs, lows, closes, volumes)
+}
+
+fn candles_1000() -> Vec<Candle> {
+    synthetic_candles(1000)
 }
 
 #[library_benchmark]
-#[bench::n2000(setup = closes_2000)]
-fn ind_ema(closes: Vec<f64>) -> Vec<Option<f64>> {
-    black_box(ema(black_box(&closes), 200))
+#[bench::n1000(setup = series_1000)]
+fn ind_moving_averages(s: Series) {
+    let (_, _, _, closes, volumes) = &s;
+    let _ = black_box(sma(black_box(closes), 20));
+    let _ = black_box(sma(black_box(closes), 200));
+    let _ = black_box(ema(black_box(closes), 20));
+    let _ = black_box(ema(black_box(closes), 200));
+    let _ = black_box(wma(black_box(closes), 20));
+    let _ = black_box(hma(black_box(closes), 20));
+    let _ = black_box(dema(black_box(closes), 20));
+    let _ = black_box(tema(black_box(closes), 20));
+    let _ = black_box(alma(black_box(closes), 9, 0.85, 6.0));
+    let _ = black_box(mcginley_dynamic(black_box(closes), 20));
+    let _ = black_box(vwma(black_box(closes), black_box(volumes), 20));
 }
 
 #[library_benchmark]
-#[bench::n2000(setup = closes_2000)]
-fn ind_rsi(closes: Vec<f64>) -> Vec<Option<f64>> {
-    black_box(rsi(black_box(&closes), 14).unwrap())
+#[bench::n1000(setup = series_1000)]
+fn ind_momentum(s: Series) {
+    let (_, highs, lows, closes, _) = &s;
+    let _ = black_box(rsi(black_box(closes), 14));
+    let _ = black_box(stochastic(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        14,
+        1,
+        3,
+    ));
+    let _ = black_box(stochastic_rsi(black_box(closes), 14, 14, 3, 3));
+    let _ = black_box(cci(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        20,
+    ));
+    let _ = black_box(macd(black_box(closes), 12, 26, 9));
+    let _ = black_box(williams_r(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        14,
+    ));
+    let _ = black_box(roc(black_box(closes), 12));
+    let _ = black_box(momentum(black_box(closes), 10));
+    let _ = black_box(cmo(black_box(closes), 14));
+    let _ = black_box(awesome_oscillator(black_box(highs), black_box(lows), 5, 34));
+    let _ = black_box(coppock_curve(black_box(closes), 14, 11, 10));
 }
 
 #[library_benchmark]
-#[bench::n2000(setup = closes_2000)]
-fn ind_macd(closes: Vec<f64>) -> finance_query::indicators::MacdResult {
-    black_box(macd(black_box(&closes), 12, 26, 9).unwrap())
+#[bench::n1000(setup = series_1000)]
+fn ind_trend(s: Series) {
+    let (_, highs, lows, closes, _) = &s;
+    let _ = black_box(adx(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        14,
+    ));
+    let _ = black_box(aroon(black_box(highs), black_box(lows), 25));
+    let _ = black_box(supertrend(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        10,
+        3.0,
+    ));
+    let _ = black_box(ichimoku(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        9,
+        26,
+        26,
+        26,
+    ));
+    let _ = black_box(parabolic_sar(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        0.02,
+        0.2,
+    ));
+    let _ = black_box(bull_bear_power(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        13,
+    ));
+    let _ = black_box(elder_ray(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        13,
+    ));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = series_1000)]
+fn ind_volatility(s: Series) {
+    let (_, highs, lows, closes, _) = &s;
+    let _ = black_box(bollinger_bands(black_box(closes), 20, 2.0));
+    let _ = black_box(keltner_channels(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        20,
+        10,
+        2.0,
+    ));
+    let _ = black_box(donchian_channels(black_box(highs), black_box(lows), 20));
+    let _ = black_box(atr(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        14,
+    ));
+    let _ = black_box(true_range(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+    ));
+    let _ = black_box(choppiness_index(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        14,
+    ));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = series_1000)]
+fn ind_volume(s: Series) {
+    let (opens, highs, lows, closes, volumes) = &s;
+    let _ = black_box(obv(black_box(closes), black_box(volumes)));
+    let _ = black_box(mfi(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        black_box(volumes),
+        14,
+    ));
+    let _ = black_box(cmf(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        black_box(volumes),
+        20,
+    ));
+    let _ = black_box(chaikin_oscillator(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        black_box(volumes),
+    ));
+    let _ = black_box(accumulation_distribution(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        black_box(volumes),
+    ));
+    let _ = black_box(vwap(
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        black_box(volumes),
+    ));
+    let _ = black_box(balance_of_power(
+        black_box(opens),
+        black_box(highs),
+        black_box(lows),
+        black_box(closes),
+        None,
+    ));
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = candles_1000)]
+fn ind_patterns(candles: Vec<Candle>) {
+    let _ = black_box(patterns(black_box(&candles)));
 }
 
 library_benchmark_group!(
     name = indicators;
-    benchmarks = ind_sma, ind_ema, ind_rsi, ind_macd
+    benchmarks = ind_moving_averages, ind_momentum, ind_trend, ind_volatility, ind_volume,
+        ind_patterns
+);
+
+// ── Backtesting engine ───────────────────────────────────────────────────────
+
+fn backtest_inputs() -> (BacktestConfig, Vec<Candle>) {
+    let config = BacktestConfig::builder()
+        .initial_capital(10_000.0)
+        .commission_pct(0.001)
+        .build()
+        .unwrap();
+    (config, synthetic_candles(1000))
+}
+
+#[library_benchmark]
+#[bench::n1000(setup = backtest_inputs)]
+fn bt_sma_crossover(input: (BacktestConfig, Vec<Candle>)) {
+    let (config, candles) = input;
+    let engine = BacktestEngine::new(config);
+    let strategy = SmaCrossover::new(10, 20);
+    let _ = black_box(engine.run(black_box("BENCH"), black_box(&candles), strategy));
+}
+
+library_benchmark_group!(
+    name = backtesting;
+    benchmarks = bt_sma_crossover
 );
 
 // ── Risk metric hot paths ────────────────────────────────────────────────────
@@ -150,7 +400,107 @@ library_benchmark_group!(
         risk_max_drawdown, risk_beta
 );
 
-// ── Deserialization hot paths (real Yahoo-shaped fixtures) ───────────────────
+// ── Streaming (PriceUpdate serde — the per-tick hot path) ─────────────────────
+
+fn make_price_update() -> PriceUpdate {
+    PriceUpdate {
+        id: "AAPL".to_string(),
+        price: 175.5,
+        time: 1_774_040_720,
+        currency: "USD".to_string(),
+        exchange: "NMS".to_string(),
+        quote_type: QuoteType::Equity,
+        market_hours: MarketHoursType::RegularMarket,
+        change_percent: 1.23,
+        day_volume: 52_345_678,
+        day_high: 176.2,
+        day_low: 174.1,
+        change: 2.15,
+        short_name: "Apple Inc.".to_string(),
+        expire_date: 0,
+        open_price: 173.8,
+        previous_close: 173.35,
+        strike_price: 0.0,
+        underlying_symbol: String::new(),
+        open_interest: 0,
+        options_type: OptionType::Call,
+        mini_option: 0,
+        last_size: 100,
+        bid: 175.48,
+        bid_size: 200,
+        ask: 175.52,
+        ask_size: 300,
+        price_hint: 2,
+        vol_24hr: 0,
+        vol_all_currencies: 0,
+        from_currency: String::new(),
+        last_market: String::new(),
+        circulating_supply: 0.0,
+        market_cap: 2_700_000_000_000.0,
+    }
+}
+
+fn price_update_json() -> String {
+    serde_json::to_string(&make_price_update()).unwrap()
+}
+
+#[library_benchmark]
+#[bench::one(setup = make_price_update)]
+fn stream_serialize(update: PriceUpdate) -> String {
+    black_box(serde_json::to_string(black_box(&update)).unwrap())
+}
+
+#[library_benchmark]
+#[bench::one(setup = price_update_json)]
+fn stream_deserialize(json: String) -> PriceUpdate {
+    black_box(serde_json::from_str(black_box(&json)).unwrap())
+}
+
+library_benchmark_group!(
+    name = streaming;
+    benchmarks = stream_serialize, stream_deserialize
+);
+
+// ── Provider capability dispatch (the per-fetch selection) ───────────────────
+
+use finance_query::Capability;
+
+fn provider_registry() -> Vec<Capability> {
+    use Capability as C;
+    vec![
+        C::QUOTE | C::CHART | C::FUNDAMENTALS | C::CORPORATE | C::OPTIONS, // yahoo
+        C::QUOTE | C::CHART | C::FUNDAMENTALS | C::FOREX | C::CRYPTO | C::COMMODITIES | C::INDICES, // fmp
+        C::QUOTE | C::CHART | C::FUNDAMENTALS | C::OPTIONS | C::FOREX | C::CRYPTO | C::ECONOMIC, // alphavantage
+        C::QUOTE
+            | C::CHART
+            | C::FUNDAMENTALS
+            | C::CORPORATE
+            | C::OPTIONS
+            | C::CRYPTO
+            | C::FOREX
+            | C::FUTURES
+            | C::INDICES
+            | C::FILINGS
+            | C::ECONOMIC, // polygon
+        C::CRYPTO,   // coingecko
+        C::ECONOMIC, // fred
+        C::FILINGS,  // edgar
+    ]
+}
+
+#[library_benchmark]
+#[bench::quote(setup = provider_registry)]
+fn dispatch_select(registry: Vec<Capability>) -> usize {
+    let wanted = black_box(Capability::QUOTE);
+    black_box(registry.iter().filter(|c| c.contains(wanted)).count())
+}
+
+library_benchmark_group!(
+    name = providers;
+    benchmarks = dispatch_select
+);
+
+// ── Model (de)serialization (real Yahoo-shaped fixtures) ─────────────────────
 
 static SEARCH_JSON: &str = include_str!("fixtures/search.json");
 static NEWS_JSON: &str = include_str!("fixtures/news.json");
@@ -171,9 +521,177 @@ fn de_currencies() -> Vec<Currency> {
     black_box(serde_json::from_str(black_box(CURRENCIES_JSON)).unwrap())
 }
 
+fn parsed_currencies() -> Vec<Currency> {
+    serde_json::from_str(CURRENCIES_JSON).unwrap()
+}
+
+#[library_benchmark]
+#[bench::c168(setup = parsed_currencies)]
+fn ser_currencies(currencies: Vec<Currency>) -> String {
+    black_box(serde_json::to_string(black_box(&currencies)).unwrap())
+}
+
 library_benchmark_group!(
-    name = deserialize;
-    benchmarks = de_search, de_news, de_currencies
+    name = model_serde;
+    benchmarks = de_search, de_news, de_currencies, ser_currencies
+);
+
+// ── Endpoint response (de)serialization (real captured server payloads) ──────
+//
+// These are the heaviest per-request serde paths in production. Fixtures are
+// real `GET /v2/...` responses (see `.claude/rules/benches.md`), so the gate
+// tracks the exact shapes users parse. `dataframe` conversions are intentionally
+// excluded (Polars is too heavy for the valgrind gate — criterion-only).
+
+static QUOTE_JSON: &str = include_str!("fixtures/quote.json");
+static CHART_JSON: &str = include_str!("fixtures/chart.json");
+static OPTIONS_JSON: &str = include_str!("fixtures/options.json");
+static FINANCIALS_JSON: &str = include_str!("fixtures/financials.json");
+static SCREENER_JSON: &str = include_str!("fixtures/screener.json");
+static EDGAR_SUBMISSIONS_JSON: &str = include_str!("fixtures/edgar_submissions.json");
+static EDGAR_FACTS_JSON: &str = include_str!("fixtures/edgar_facts.json");
+
+#[library_benchmark]
+fn de_quote() -> Quote {
+    black_box(serde_json::from_str(black_box(QUOTE_JSON)).unwrap())
+}
+
+#[library_benchmark]
+fn de_chart() -> Chart {
+    black_box(serde_json::from_str(black_box(CHART_JSON)).unwrap())
+}
+
+#[library_benchmark]
+fn de_options() -> Options {
+    black_box(serde_json::from_str(black_box(OPTIONS_JSON)).unwrap())
+}
+
+#[library_benchmark]
+fn de_financials() -> FinancialStatement {
+    black_box(serde_json::from_str(black_box(FINANCIALS_JSON)).unwrap())
+}
+
+#[library_benchmark]
+fn de_screener() -> ScreenerResults {
+    black_box(serde_json::from_str(black_box(SCREENER_JSON)).unwrap())
+}
+
+#[library_benchmark]
+fn de_edgar_submissions() -> EdgarSubmissions {
+    black_box(serde_json::from_str(black_box(EDGAR_SUBMISSIONS_JSON)).unwrap())
+}
+
+#[library_benchmark]
+fn de_edgar_facts() -> CompanyFacts {
+    black_box(serde_json::from_str(black_box(EDGAR_FACTS_JSON)).unwrap())
+}
+
+library_benchmark_group!(
+    name = endpoint_serde;
+    benchmarks = de_quote, de_chart, de_options, de_financials, de_screener,
+        de_edgar_submissions, de_edgar_facts
+);
+
+// ── FRED economic series + Treasury yield curve (feature: fred) ───────────────
+//
+// Deserializing the series / yield-curve models is the fred adapter's only
+// pure-Rust cost. Fixtures are real `GET /v2/fred/...` payloads.
+
+static FRED_SERIES_JSON: &str = include_str!("fixtures/fred_series.json");
+static TREASURY_YIELDS_JSON: &str = include_str!("fixtures/treasury_yields.json");
+
+#[library_benchmark]
+fn de_fred_series() -> MacroSeries {
+    black_box(serde_json::from_str(black_box(FRED_SERIES_JSON)).unwrap())
+}
+
+#[library_benchmark]
+fn de_treasury_yields() -> Vec<TreasuryYield> {
+    black_box(serde_json::from_str(black_box(TREASURY_YIELDS_JSON)).unwrap())
+}
+
+library_benchmark_group!(
+    name = economic_serde;
+    benchmarks = de_fred_series, de_treasury_yields
+);
+
+// ── CoinGecko crypto market data (feature: crypto) ───────────────────────────
+//
+// Deserializing the market array into `CoinQuote` is the crypto adapter's only
+// deterministic cost. Fixture is a real `GET /v2/crypto/coins` payload.
+
+static CRYPTO_JSON: &str = include_str!("fixtures/crypto.json");
+
+#[library_benchmark]
+fn de_crypto_coins() -> Vec<CoinQuote> {
+    black_box(serde_json::from_str(black_box(CRYPTO_JSON)).unwrap())
+}
+
+library_benchmark_group!(
+    name = crypto_serde;
+    benchmarks = de_crypto_coins
+);
+
+// ── RSS/Atom feed parsing (feature: rss) ─────────────────────────────────────
+
+static FEED_RSS: &[u8] = include_bytes!("fixtures/feed_rss.xml");
+
+fn feed_bytes() -> &'static [u8] {
+    FEED_RSS
+}
+
+#[library_benchmark]
+#[bench::rss(setup = feed_bytes)]
+fn rss_parse(bytes: &[u8]) -> feed_rs::model::Feed {
+    black_box(feed_rs::parser::parse(black_box(bytes)).unwrap())
+}
+
+library_benchmark_group!(
+    name = feeds;
+    benchmarks = rss_parse
+);
+
+// ── Dictionary-tier translation (feature: translation, pure Rust) ─────────────
+//
+// `translate` is async, but the dictionary tier is sync compute; we drive it on
+// a single-threaded runtime built in setup (outside the measured region). With
+// `translation` (and NOT `translation-offline`) only the dictionary backend
+// runs — deterministic, no model load, no network.
+
+fn translation_inputs() -> (tokio::runtime::Runtime, Vec<String>, Lang) {
+    let rt = tokio::runtime::Builder::new_current_thread()
+        .build()
+        .unwrap();
+    let texts: Vec<String> = [
+        "Strong Buy",
+        "Buy",
+        "Hold",
+        "Sell",
+        "Underperform",
+        "Market Cap",
+        "Earnings per share grew year over year.",
+        "The company raised its full-year revenue guidance.",
+    ]
+    .iter()
+    .map(|s| s.to_string())
+    .collect();
+    let lang = Lang::parse("es").unwrap();
+    (rt, texts, lang)
+}
+
+#[library_benchmark]
+#[bench::dictionary_es(setup = translation_inputs)]
+fn translate_dictionary(input: (tokio::runtime::Runtime, Vec<String>, Lang)) -> Vec<String> {
+    let (rt, texts, lang) = input;
+    black_box(
+        rt.block_on(translate_texts(black_box(&texts), black_box(&lang)))
+            .unwrap(),
+    )
+}
+
+library_benchmark_group!(
+    name = translation;
+    benchmarks = translate_dictionary
 );
 
 // ── Gate: fail any benchmark whose instruction count regresses > 5% ──────────
@@ -185,5 +703,6 @@ main!(
             "GLIBC_TUNABLES",
             "glibc.cpu.hwcaps=-AVX512F,-AVX512VL,-AVX512BW,-AVX512DQ,-AVX512CD,-AVX512IFMA,-AVX512_VBMI,-AVX512_VBMI2,-AVX512_VNNI,-AVX512_BITALG,-AVX512_VPOPCNTDQ",
         );
-    library_benchmark_groups = indicators, risk, deserialize
+    library_benchmark_groups = indicators, backtesting, risk, streaming, providers, model_serde,
+        endpoint_serde, economic_serde, crypto_serde, feeds, translation
 );
