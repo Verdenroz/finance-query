@@ -240,7 +240,7 @@ required-features = ["translation-offline"]
 
 # Deterministic instruction-count regression gate (iai-callgrind, runs under
 # valgrind). Unlike the criterion benches above, these are stable across
-# machines/CI runners and are consumed by `make bench-regression` as a gate.
+# machines/CI runners and are consumed by `make baseline` as a gate.
 # `risk`+`backtesting` cover the compute/strategy paths; `rss` and `translation`
 # add the (cheap, pure-Rust) feed-parse and dictionary-translation gates. The
 # serde benches use always-available model types. dataframe is deliberately

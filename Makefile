@@ -1,4 +1,4 @@
-.PHONY: help serve install install-dev build test test-fast lint fix audit bench bench-regression baseline docs docker docker-compose docker-compose-down clean publish-dry-run \
+.PHONY: help serve install install-dev build test test-fast lint fix audit bench baseline docs docker docker-compose docker-compose-down clean publish-dry-run \
         prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html generate-mcp-html mcp mcp-http build-mcp
 
 # Default target
@@ -97,7 +97,8 @@ bench: ## Run criterion wall-clock benchmarks (local profiling, not a CI gate)
 		--bench finance --bench providers --bench risk --bench stream \
 		--bench serde --bench dataframe --bench feeds
 
-bench-regression: ## Run the regression gate in a Debian container (ARGS=... passes flags through)
+baseline: ARGS ?= --save-baseline=base
+baseline: ## Run the regression gate in a Debian container; saves/updates baseline "base" (ARGS="--baseline=base" to compare without overwriting)
 	@echo "$(GREEN)Running regression gate...$(NC)"
 	$(DOCKER) run --rm --security-opt seccomp=unconfined \
 		-v "$(CURDIR)":/app -w /app \
@@ -107,9 +108,6 @@ bench-regression: ## Run the regression gate in a Debian container (ARGS=... pas
 		rust:bookworm bash -c 'apt-get update -qq && apt-get install -y -qq valgrind >/dev/null && \
 		(command -v iai-callgrind-runner || cargo install iai-callgrind-runner --version 0.16.1 --locked) && \
 		cargo bench --bench regression --features bench-gate -- $(ARGS)'
-
-baseline: ## Run the regression gate against baseline "base", then update it
-	@$(MAKE) bench-regression ARGS="--save-baseline=base $(ARGS)"
 
 docs: ## Build and serve documentation locally
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"

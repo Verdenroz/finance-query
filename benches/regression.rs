@@ -27,7 +27,7 @@
 //! (CI's Ubuntu, or a Debian container — see `.claude/rules/benches.md`):
 //!
 //! ```text
-//! make bench-regression        # Debian container (recommended; vanilla glibc)
+//! make baseline                # Debian container (recommended; vanilla glibc)
 //! cargo bench --bench regression --features bench-gate   # vanilla-glibc hosts/CI
 //! ```
 //!
