@@ -13,9 +13,11 @@
 //! internal allocation strategies, `std` container micro-ops rather than
 //! library logic.)
 //!
-//! Each benchmark carries a soft limit of +5% on the instruction count (`Ir`).
-//! CI saves a baseline from the target branch, then re-runs on the PR; any
-//! benchmark exceeding its baseline by more than 5% fails the gate.
+//! Each benchmark carries soft limits of +5% on instructions (`Ir`, raw work)
+//! and +10% on `EstimatedCycles` (a cache-weighted time proxy — looser because
+//! it's noisier than pure instruction counts). CI saves a baseline from the
+//! target branch, then re-runs on the PR; any benchmark exceeding either limit
+//! over its baseline fails the gate.
 //!
 //! ## Running
 //!
@@ -698,7 +700,12 @@ library_benchmark_group!(
 
 main!(
     config = LibraryBenchmarkConfig::default()
-        .tool(Callgrind::default().soft_limits([(EventKind::Ir, 5.0)]))
+        // Ir (raw work, tight) + EstimatedCycles (time proxy folding in cache
+        // misses, looser since it's noisier than pure instruction counts).
+        .tool(Callgrind::default().soft_limits([
+            (EventKind::Ir, 5.0),
+            (EventKind::EstimatedCycles, 10.0),
+        ]))
         .env(
             "GLIBC_TUNABLES",
             "glibc.cpu.hwcaps=-AVX512F,-AVX512VL,-AVX512BW,-AVX512DQ,-AVX512CD,-AVX512IFMA,-AVX512_VBMI,-AVX512_VBMI2,-AVX512_VNNI,-AVX512_BITALG,-AVX512_VPOPCNTDQ",
