@@ -2,7 +2,7 @@
 # Build Stage: Compile Rust application
 # ==============================================================================
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
-FROM rust:1-slim-bookworm@sha256:b5f842fac1e3b4ff718a652a8e0173b62d9403ec826ef4998880b9347db30684 AS builder
+FROM rust:1-slim-bookworm@sha256:c8a94a78f67ec8c4d474ec7f71e0720f21eb7e584e158daec0874cafa7c30e4d AS builder
 
 # Install build dependencies.
 # cmake/g++/make are only exercised when building with the (currently
