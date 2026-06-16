@@ -53,6 +53,6 @@ axum = "0.8"
 
 [features]
 default = []
-# Local NLLB-200 model via CTranslate2 — requires cmake + a C++ toolchain to
+# Local opus-mt models via CTranslate2 — requires cmake + a C++ toolchain to
 # build. Without it, translation falls back to the built-in dictionary.
 translation-offline = ["finance-query/translation-offline"]

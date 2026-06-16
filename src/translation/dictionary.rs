@@ -2,8 +2,9 @@
 //!
 //! Sector names, security types, and officer titles form a small closed
 //! vocabulary. Translating them through the ML backend is both slower and
-//! less accurate than an exact lookup (e.g. NLLB renders "Technology" as a
-//! full sentence in Japanese), so these terms are resolved here first.
+//! less accurate than an exact lookup (a general MT model may render
+//! "Technology" as a full sentence in Japanese), so these terms are resolved
+//! here first.
 
 use super::lang::Lang;
 

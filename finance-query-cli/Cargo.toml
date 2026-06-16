@@ -89,7 +89,7 @@ notify-rust = "4"
 
 [features]
 default = []
-# Local NLLB machine-translation backend for `--lang` (builds CTranslate2 from
+# Local opus-mt machine-translation backend for `--lang` (builds CTranslate2 from
 # source; requires cmake and a C++ toolchain). Without it `--lang` uses the
 # built-in finance dictionary and passes other text through untranslated.
 translation-offline = ["finance-query/translation-offline"]

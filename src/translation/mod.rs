@@ -13,9 +13,10 @@
 //!    Zero latency, deterministic.
 //! 2. **Machine translation backend** for free-form text (business
 //!    summaries, news titles). The `translation-offline` feature provides a
-//!    fully local CPU backend (NLLB-200, 200+ languages, no API key); a
-//!    custom backend can be plugged via [`set_backend`]. Results are
-//!    memoized process-wide.
+//!    fully local CPU backend (opus-mt bilingual models, ~48 languages, no API
+//!    key) that downloads a small per-language model on first use; a custom
+//!    backend can be plugged via [`set_backend`]. Results are memoized
+//!    process-wide.
 //!
 //! Without any backend, free-form fields are left in English while
 //! dictionary terms are still translated — enabling `translation` alone
@@ -54,7 +55,7 @@ mod dictionary;
 mod lang;
 mod memo;
 #[cfg(feature = "translation-offline")]
-mod offline;
+mod opusmt;
 #[cfg(any(feature = "translation-offline", test))]
 mod split;
 mod translatable;
@@ -62,7 +63,7 @@ mod translatable;
 pub use backend::{TranslationBackend, set_backend};
 pub use lang::Lang;
 #[cfg(feature = "translation-offline")]
-pub use offline::preload;
+pub use opusmt::preload;
 pub use translatable::Translatable;
 
 use crate::error::Result;
@@ -145,7 +146,7 @@ pub async fn translate_texts(texts: &[String], lang: &Lang) -> Result<Vec<String
 
     if !pending.is_empty() {
         match backend::active_backend() {
-            Some(backend) => {
+            Some(backend) if backend.supports(lang) => {
                 let translated = backend.translate_batch(&pending, lang).await?;
                 for (source, translated) in pending.iter().zip(translated) {
                     memo::insert(&lang_code, source, &translated);
@@ -155,6 +156,13 @@ pub async fn translate_texts(texts: &[String], lang: &Lang) -> Result<Vec<String
                         }
                     }
                 }
+            }
+            Some(_) => {
+                tracing::debug!(
+                    lang = %lang_code,
+                    count = pending.len(),
+                    "translation backend does not support this language; leaving free-form text untranslated"
+                );
             }
             None => {
                 tracing::debug!(
@@ -232,6 +240,20 @@ mod tests {
             summary: None,
         };
         assert!(translate(&mut p, "not a lang!").await.is_err());
+    }
+
+    // An uncovered language ("sw": no opus-mt package, not in the dictionary)
+    // must degrade gracefully — text stays English, no error on the request.
+    #[cfg(feature = "translation-offline")]
+    #[tokio::test]
+    async fn unsupported_offline_language_degrades_gracefully() {
+        let mut p = Profile {
+            sector: Some("Technology".into()),
+            summary: Some("Designs and sells devices.".into()),
+        };
+        translate(&mut p, "sw").await.unwrap();
+        assert_eq!(p.sector.as_deref(), Some("Technology"));
+        assert_eq!(p.summary.as_deref(), Some("Designs and sells devices."));
     }
 
     #[tokio::test]

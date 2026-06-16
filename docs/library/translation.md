@@ -18,7 +18,7 @@ Only human-readable fields are translated — names, sector/industry display str
 
 1. **Built-in dictionary** (always available with `translation`): exact translations for the finite vocabulary of sector names, security types, and officer titles in 11 languages — German, Spanish, French, Italian, Portuguese, Dutch, Japanese, Korean, Simplified Chinese, Traditional Chinese, Russian. Zero latency, deterministic.
 2. **Machine translation backend** for free-form text (business summaries, news titles), with process-wide memoization:
-    - `translation-offline` — fully local NLLB-200 model (40+ languages, no API key)
+    - `translation-offline` — fully local opus-mt bilingual models (~48 languages, no API key); a small per-language model (~80–210 MB) is downloaded on first use and cached
     - or a custom backend registered via `set_backend`
 
 Without any backend, free-form fields are left in English while dictionary terms are still translated — enabling `translation` alone never breaks responses.
@@ -100,26 +100,65 @@ English targets are always a no-op; structurally invalid tags return an error.
 
 ## Offline Backend
 
-The `translation-offline` feature bundles a fully local CPU backend (NLLB-200 distilled 600M, int8, via CTranslate2):
+The `translation-offline` feature bundles a fully local CPU backend built on
+**opus-mt bilingual** models (one English→target model per language) run through
+CTranslate2 with int8 weights. Models are distributed as Argos Translate
+packages — the same models LibreTranslate uses:
 
-- Model files (~600 MB) are downloaded from the Hugging Face Hub on first use and cached (respects `HF_HOME`); every subsequent run is fully offline.
-- Override the model repository with the `FINANCE_QUERY_TRANSLATION_MODEL` env var (any CTranslate2 NLLB conversion with a `tokenizer.json`).
-- Servers and CLIs can warm the model up front instead of paying the one-time load on the first translated request:
+- A small per-language package (~80–210 MB: a CTranslate2 model directory plus a
+  SentencePiece tokenizer) is downloaded from the Argos package server on first
+  use of that language and cached; every subsequent run is fully offline. No API
+  key is required.
+- The cache root is `$FINANCE_QUERY_TRANSLATION_CACHE`, falling back to
+  `$HF_HOME/argos`, then `~/.cache/huggingface/argos` — reusing the same
+  persistent volume as other cached model data.
+- Intra-op threads per model default to `min(cores, 8)`; override with
+  `FINANCE_QUERY_TRANSLATION_THREADS`.
+- Models load lazily on the first request for each language. Servers and CLIs can
+  instead warm a set up front (avoiding the one-time load on the first translated
+  request) by listing primary subtags in `FINANCE_QUERY_TRANSLATION_PRELOAD`
+  (e.g. `es,ja,de`) and calling:
 
 ```rust
 finance_query::translation::preload().await?;
 ```
 
+### Language coverage
+
+The offline backend covers **~48 languages** — the major world languages with a
+published opus-mt package (Simplified and Traditional Chinese are distinct
+packages). This is narrower than a single massively-multilingual model, and is a
+deliberate trade: per-language bilingual models are an order of magnitude smaller
+and give far tighter cross-language latency parity than one shared decoder.
+
+A target language with no package degrades gracefully rather than erroring the
+response: free-form text stays English while the **built-in dictionary tier still
+applies** (sector names, security types, officer titles in its 11 languages).
+Only an explicit standalone `translate()` call to an unsupported language returns
+the "not supported by the offline translation model" error.
+
 ### Performance
 
-Inference runs on the CPU (int8, oneDNN). On a modern 8-core machine a typical
-response payload — a batch of ~20 news titles plus a couple of multi-sentence
-business summaries — translates in roughly 2–3 seconds cold; memoization makes
-repeated fields free within a process.
+Inference runs on the CPU (int8, oneDNN). Each model call sorts its sentences by
+length and batches them by token budget, so latency tracks real output tokens
+rather than padding — keeping the spread between languages tight. On a modern
+8-core machine a typical response payload — ~20 news titles plus a couple of
+multi-sentence business summaries — translates in roughly 2–3 seconds cold;
+memoization makes repeated fields free within a process.
 
-Earnings **transcripts** are the deliberate exception: a full call transcript
-is hundreds of kilobytes of prose and takes tens of seconds to translate, and
-the `/transcripts/{symbol}/all` server endpoint translates every transcript it
+Two characteristics are inherent to the model set, not tuning gaps:
+
+- **The spread is bounded by model size.** German and Russian sit at the slow end
+  purely because their opus-mt decoders are the largest in the index (~160–210 MB
+  vs ~80 MB for the smallest); there is no smaller published conversion to swap
+  in. All languages otherwise share the same int8 dnnl GEMM path.
+- **CTranslate2 (`ct2rs`) runs somewhat slower than the reference Python
+  CTranslate2** for the same model, a property of the vendored native build's GEMM
+  backend rather than this crate.
+
+Earnings **transcripts** are the deliberate exception: a full call transcript is
+hundreds of kilobytes of prose and takes tens of seconds to translate, and the
+`/transcripts/{symbol}/all` server endpoint translates every transcript it
 returns. The server caches translated transcripts for 7 days (transcripts are
 immutable), so the cost is paid once per symbol/quarter/language. If you need
 guaranteed-fast transcript responses, request them in English and translate
