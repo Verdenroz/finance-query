@@ -204,6 +204,9 @@ pub use models::{
     quote::Quote,
     sentiment::{FearAndGreed, FearGreedLabel, SymbolSentiment},
 };
+// Offline VADER sentiment scoring (feature-gated)
+#[cfg(feature = "sentiment")]
+pub use models::sentiment::{Sentiment, SentimentLabel, analyze as analyze_sentiment};
 // Multi-provider capability response types (feature-gated)
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use models::commodities::CommodityQuote;

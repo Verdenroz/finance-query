@@ -98,6 +98,8 @@ fn stock_news_to_canonical(
             img: String::new(),
             time: a.published_date.unwrap_or_default(),
             provider_id: Some(crate::providers::Provider::Fmp),
+            #[cfg(feature = "sentiment")]
+            sentiment: None,
         })
         .collect()
 }

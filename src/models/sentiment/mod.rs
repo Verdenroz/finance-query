@@ -5,7 +5,16 @@
 
 pub(crate) mod response;
 
+#[cfg(feature = "sentiment")]
+mod score;
+
 pub use response::{FearAndGreed, FearGreedLabel};
+
+#[cfg(feature = "sentiment")]
+pub use score::{Sentiment, SentimentLabel, analyze};
+
+#[cfg(feature = "sentiment")]
+pub(crate) use score::{aggregate, aggregate_weighted};
 
 use serde::{Deserialize, Serialize};
 

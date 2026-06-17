@@ -494,6 +494,15 @@ impl Ticker {
             })
             .await?;
         let news = data;
+        // Score titles before translation — VADER is English-lexicon based.
+        #[cfg(feature = "sentiment")]
+        let news = {
+            let mut news = news;
+            for article in news.iter_mut() {
+                article.sentiment = Some(crate::models::sentiment::analyze(&article.title));
+            }
+            news
+        };
         #[cfg(feature = "translation")]
         let news = {
             let mut news = news;
@@ -505,6 +514,23 @@ impl Ticker {
             *c = Some(CacheEntry::new(news.clone()));
         }
         Ok(news)
+    }
+
+    /// Average sentiment across recent news headlines for this symbol.
+    ///
+    /// Positive = net bullish coverage, negative = net bearish. Returns a
+    /// neutral, zero-confidence score when there are no headlines.
+    ///
+    /// Only available when the `sentiment` feature is enabled.
+    #[cfg(feature = "sentiment")]
+    pub async fn news_sentiment(&self) -> Result<crate::models::sentiment::Sentiment> {
+        let news = self.news().await?;
+        let scores: Vec<f64> = news
+            .iter()
+            .filter_map(|n| n.sentiment.as_ref().map(|s| s.score))
+            .collect();
+        Ok(crate::models::sentiment::aggregate(&scores)
+            .unwrap_or_else(crate::models::sentiment::Sentiment::neutral))
     }
 
     /// Get the options chain.

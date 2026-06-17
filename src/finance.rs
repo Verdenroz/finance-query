@@ -51,7 +51,17 @@ pub use crate::adapters::yahoo::discovery::search::SearchOptions;
 /// ```
 pub async fn search(query: &str, options: &SearchOptions) -> Result<SearchResults> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    client.search(query, options).await
+    let results = client.search(query, options).await;
+    #[cfg(feature = "sentiment")]
+    let results = results.map(|mut r| {
+        for article in r.news.0.iter_mut() {
+            if let Some(title) = article.title.as_deref() {
+                article.sentiment = Some(crate::models::sentiment::analyze(title));
+            }
+        }
+        r
+    });
+    results
 }
 
 /// Look up symbols by type (equity, ETF, mutual fund, index, future, currency, cryptocurrency)
@@ -178,7 +188,15 @@ pub async fn custom_screener<F: crate::models::discovery::screeners::ScreenerFie
 /// # }
 /// ```
 pub async fn news() -> Result<Vec<crate::models::corporate::news::News>> {
-    crate::scrapers::stockanalysis::scrape_general_news().await
+    let news = crate::scrapers::stockanalysis::scrape_general_news().await;
+    #[cfg(feature = "sentiment")]
+    let news = news.map(|mut articles| {
+        for article in articles.iter_mut() {
+            article.sentiment = Some(crate::models::sentiment::analyze(&article.title));
+        }
+        articles
+    });
+    news
 }
 
 /// Get earnings transcript for a symbol
@@ -215,8 +233,16 @@ pub async fn earnings_transcript(
     year: Option<i32>,
 ) -> Result<Transcript> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    crate::adapters::yahoo::corporate::transcripts::fetch_for_symbol(&client, symbol, quarter, year)
-        .await
+    let transcript = crate::adapters::yahoo::corporate::transcripts::fetch_for_symbol(
+        &client, symbol, quarter, year,
+    )
+    .await;
+    #[cfg(feature = "sentiment")]
+    let transcript = transcript.map(|mut t| {
+        t.score_sentiment();
+        t
+    });
+    transcript
 }
 
 /// Get all earnings transcripts for a symbol
@@ -250,8 +276,18 @@ pub async fn earnings_transcripts(
     limit: Option<usize>,
 ) -> Result<Vec<TranscriptWithMeta>> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    crate::adapters::yahoo::corporate::transcripts::fetch_all_for_symbol(&client, symbol, limit)
-        .await
+    let transcripts = crate::adapters::yahoo::corporate::transcripts::fetch_all_for_symbol(
+        &client, symbol, limit,
+    )
+    .await;
+    #[cfg(feature = "sentiment")]
+    let transcripts = transcripts.map(|mut list| {
+        for t in list.iter_mut() {
+            t.transcript.score_sentiment();
+        }
+        list
+    });
+    transcripts
 }
 
 /// Get market hours/status
