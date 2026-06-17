@@ -24,6 +24,12 @@ pub struct News {
 
     /// Which provider supplied this article (None = Yahoo Finance default)
     pub provider_id: Option<crate::providers::Provider>,
+
+    /// Sentiment score for this article's title (VADER lexicon-based).
+    /// Only present when the `sentiment` feature is enabled.
+    #[cfg(feature = "sentiment")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub sentiment: Option<crate::models::sentiment::Sentiment>,
 }
 
 impl News {
@@ -42,6 +48,8 @@ impl News {
             img,
             time,
             provider_id: None,
+            #[cfg(feature = "sentiment")]
+            sentiment: None,
         }
     }
 }

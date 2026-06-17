@@ -52,7 +52,7 @@ use finance_query::streaming::{MarketHoursType, OptionType, PriceUpdate, QuoteTy
 use finance_query::translation::{Lang, translate_texts};
 use finance_query::{
     Candle, Chart, CompanyFacts, Currency, EdgarSubmissions, FinancialStatement, News, Options,
-    Quote, ScreenerResults, SearchResults,
+    Quote, ScreenerResults, SearchResults, Transcript, analyze_sentiment,
 };
 use iai_callgrind::{
     Callgrind, EventKind, LibraryBenchmarkConfig, library_benchmark, library_benchmark_group, main,
@@ -696,6 +696,39 @@ library_benchmark_group!(
     benchmarks = translate_dictionary
 );
 
+// ── Offline VADER sentiment scoring (feature: sentiment, pure Rust) ───────────
+//
+// Gates the lexicon-scoring path behind `Ticker::news()` /
+// `Transcript::overall_sentiment()` over real captured payloads.
+
+static NEWS_SYMBOL_JSON: &str = include_str!("fixtures/news_symbol.json");
+static SENTIMENT_TRANSCRIPT_JSON: &str = include_str!("fixtures/transcripts.json");
+
+fn news_titles() -> Vec<String> {
+    let news: Vec<News> = serde_json::from_str(NEWS_SYMBOL_JSON).unwrap();
+    news.into_iter().map(|n| n.title).collect()
+}
+
+#[library_benchmark]
+#[bench::headlines(setup = news_titles)]
+fn score_news(titles: Vec<String>) -> usize {
+    titles
+        .iter()
+        .filter(|t| black_box(analyze_sentiment(t)).score != 0.0)
+        .count()
+}
+
+#[library_benchmark]
+fn score_transcript() -> f64 {
+    let t: Transcript = serde_json::from_str(SENTIMENT_TRANSCRIPT_JSON).unwrap();
+    black_box(black_box(&t).overall_sentiment()).score
+}
+
+library_benchmark_group!(
+    name = sentiment;
+    benchmarks = score_news, score_transcript
+);
+
 // ── Gate: fail any benchmark whose instruction count regresses > 5% ──────────
 
 main!(
@@ -711,5 +744,5 @@ main!(
             "glibc.cpu.hwcaps=-AVX512F,-AVX512VL,-AVX512BW,-AVX512DQ,-AVX512CD,-AVX512IFMA,-AVX512_VBMI,-AVX512_VBMI2,-AVX512_VNNI,-AVX512_BITALG,-AVX512_VPOPCNTDQ",
         );
     library_benchmark_groups = indicators, backtesting, risk, streaming, providers, model_serde,
-        endpoint_serde, economic_serde, crypto_serde, feeds, translation
+        endpoint_serde, economic_serde, crypto_serde, feeds, translation, sentiment
 );

@@ -88,6 +88,8 @@ pub async fn fetch_news_response(symbol: &str) -> Result<Vec<News>> {
             img: String::new(),
             time: a.published_utc.unwrap_or_default(),
             provider_id: Some(Provider::Polygon),
+            #[cfg(feature = "sentiment")]
+            sentiment: None,
         })
         .collect())
 }

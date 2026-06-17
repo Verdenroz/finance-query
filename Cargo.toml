@@ -92,6 +92,9 @@ rayon = { version = "1", optional = true }
 # Optional: RSS/Atom feed parsing
 feed-rs = { version = "2", optional = true }
 
+# Optional: offline VADER lexicon-based news/text sentiment scoring
+vader_sentiment = { version = "0.1", optional = true }
+
 # Optional: fully local machine translation (CTranslate2 + opus-mt bilingual)
 ct2rs = { version = "0.9.19", optional = true, default-features = false, features = ["dnnl", "tokenizers", "sentencepiece"] }
 # Extract Argos `.argosmodel` packages (zip: CT2 model dir + SentencePiece)
@@ -113,6 +116,7 @@ full = [
     "fmp",
     "risk",
     "translation",
+    "sentiment",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -126,6 +130,8 @@ fred = ["dep:csv"]
 crypto = []
 # Enable RSS/Atom news feed aggregation
 rss = ["dep:feed-rs"]
+# Enable offline VADER lexicon-based news/transcript sentiment scoring
+sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
 alphavantage = []
 # Enable Polygon.io financial data API
@@ -146,7 +152,7 @@ translation-offline = ["translation", "dep:ct2rs", "dep:zip"]
 # compute or serde. HTTP-only providers (alphavantage/polygon/fmp) hit the same
 # public models already covered; dataframe/translation-offline are too heavy for
 # valgrind (excluded by design — see .claude/rules/benches.md).
-bench-gate = ["risk", "backtesting", "rss", "translation", "fred", "crypto"]
+bench-gate = ["risk", "backtesting", "rss", "translation", "fred", "crypto", "sentiment"]
 
 [package.metadata.docs.rs]
 # Everything except `translation-offline`: docs.rs cannot afford the
@@ -164,6 +170,7 @@ features = [
     "fmp",
     "risk",
     "translation",
+    "sentiment",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 
@@ -233,6 +240,14 @@ name = "feeds"
 harness = false
 required-features = ["rss"]
 
+# Offline VADER sentiment scoring latency over real captured news + transcript
+# payloads. Criterion-only (wall-clock); the regression gate guards the same
+# scoring path via its `sentiment` iai group.
+[[bench]]
+name = "sentiment"
+harness = false
+required-features = ["sentiment"]
+
 # One-shot latency harness (not criterion): downloads opus-mt models on first
 # run and reports cold-batch translation times + cross-language spread.
 [[bench]]
@@ -251,7 +266,7 @@ required-features = ["translation-offline"]
 [[bench]]
 name = "regression"
 harness = false
-required-features = ["risk", "backtesting", "rss", "translation"]
+required-features = ["risk", "backtesting", "rss", "translation", "sentiment"]
 
 [profile.release]
 opt-level = 3

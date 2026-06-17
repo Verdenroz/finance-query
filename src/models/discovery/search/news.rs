@@ -82,4 +82,9 @@ pub struct SearchNews {
     /// Related stock symbols (excluded from DataFrame)
     #[serde(skip_serializing_if = "Option::is_none")]
     pub related_tickers: Option<Vec<String>>,
+    /// Sentiment score for this article's title (VADER lexicon-based).
+    /// Only present when the `sentiment` feature is enabled.
+    #[cfg(feature = "sentiment")]
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub sentiment: Option<crate::models::sentiment::Sentiment>,
 }

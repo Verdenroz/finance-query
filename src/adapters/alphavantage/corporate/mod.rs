@@ -203,6 +203,8 @@ pub async fn fetch_news_response(
             img: String::new(),
             time: a.time_published,
             provider_id: Some(crate::Provider::AlphaVantage),
+            #[cfg(feature = "sentiment")]
+            sentiment: None,
         })
         .collect())
 }
