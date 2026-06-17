@@ -19,6 +19,7 @@ finance-query = { path = "..", features = [
     "rss",
     "risk",
     "translation",
+    "sentiment",
 ] }
 
 # MCP SDK (official Rust MCP SDK from modelcontextprotocol/rust-sdk)
