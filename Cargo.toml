@@ -92,9 +92,10 @@ rayon = { version = "1", optional = true }
 # Optional: RSS/Atom feed parsing
 feed-rs = { version = "2", optional = true }
 
-# Optional: fully local machine translation (CTranslate2 + NLLB-200)
-ct2rs = { version = "0.9.19", optional = true, default-features = false, features = ["dnnl", "tokenizers"] }
-hf-hub = { version = "0.5", optional = true, default-features = false, features = ["tokio", "rustls-tls"] }
+# Optional: fully local machine translation (CTranslate2 + opus-mt bilingual)
+ct2rs = { version = "0.9.19", optional = true, default-features = false, features = ["dnnl", "tokenizers", "sentencepiece"] }
+# Extract Argos `.argosmodel` packages (zip: CT2 model dir + SentencePiece)
+zip = { version = "2", optional = true, default-features = false, features = ["deflate"] }
 
 [features]
 default = []
@@ -136,10 +137,11 @@ risk = ["indicators"]
 # Enable translation of human-readable response fields: built-in dictionary
 # for finite finance terms + pluggable ML backend (pure Rust, no heavy deps)
 translation = []
-# Add the fully local CPU machine-translation backend (NLLB-200 via
-# CTranslate2). Heavy native build: compiles CTranslate2 from source (needs
-# cmake + a C++ toolchain) and downloads ~600 MB of model data on first use.
-translation-offline = ["translation", "dep:ct2rs", "dep:hf-hub"]
+# Add the fully local CPU machine-translation backend (opus-mt bilingual
+# models via CTranslate2, distributed as Argos packages). Heavy native build:
+# compiles CTranslate2 + SentencePiece from source (needs cmake + a C++
+# toolchain). Downloads a small (~80-210 MB) per-language model on first use.
+translation-offline = ["translation", "dep:ct2rs", "dep:zip"]
 # Regression-gate aggregate: every feature whose representative work is pure-Rust
 # compute or serde. HTTP-only providers (alphavantage/polygon/fmp) hit the same
 # public models already covered; dataframe/translation-offline are too heavy for
@@ -231,8 +233,8 @@ name = "feeds"
 harness = false
 required-features = ["rss"]
 
-# One-shot latency harness (not criterion): downloads the NLLB model on
-# first run and reports cold-batch translation times per language.
+# One-shot latency harness (not criterion): downloads opus-mt models on first
+# run and reports cold-batch translation times + cross-language spread.
 [[bench]]
 name = "translation"
 harness = false

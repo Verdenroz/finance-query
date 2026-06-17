@@ -667,7 +667,7 @@ fq quote 7203.T --lang ja        # Japanese quote labels
 FQ_LANG=de fq news               # German news titles
 ```
 
-Sector names, security types, and officer titles use a built-in dictionary (instant, 11 languages). Free-form text needs a machine-translation backend: install with `--features translation-offline` for the fully local NLLB-200 model, otherwise free-form text stays in English.
+Sector names, security types, and officer titles use a built-in dictionary (instant, 11 languages). Free-form text needs a machine-translation backend: install with `--features translation-offline` for the fully local opus-mt bilingual models (~48 languages), otherwise free-form text stays in English.
 
 ## Output Formats
 

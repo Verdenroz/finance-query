@@ -88,61 +88,6 @@ impl Lang {
     pub(crate) fn joins_without_space(&self) -> bool {
         matches!(self.primary.as_str(), "ja" | "zh" | "th" | "km" | "lo")
     }
-
-    /// The NLLB / FLORES-200 language code for the built-in offline backend.
-    ///
-    /// Returns `None` for languages the bundled model does not cover.
-    pub fn nllb_code(&self) -> Option<&'static str> {
-        let code = match (self.primary.as_str(), self.effective_script()) {
-            ("ar", _) => "arb_Arab",
-            ("bg", _) => "bul_Cyrl",
-            ("bn", _) => "ben_Beng",
-            ("ca", _) => "cat_Latn",
-            ("cs", _) => "ces_Latn",
-            ("da", _) => "dan_Latn",
-            ("de", _) => "deu_Latn",
-            ("el", _) => "ell_Grek",
-            ("en", _) => "eng_Latn",
-            ("es", _) => "spa_Latn",
-            ("et", _) => "est_Latn",
-            ("fa", _) => "pes_Arab",
-            ("fi", _) => "fin_Latn",
-            ("fr", _) => "fra_Latn",
-            ("he", _) | ("iw", _) => "heb_Hebr",
-            ("hi", _) => "hin_Deva",
-            ("hr", _) => "hrv_Latn",
-            ("hu", _) => "hun_Latn",
-            ("id", _) | ("in", _) => "ind_Latn",
-            ("it", _) => "ita_Latn",
-            ("ja", _) => "jpn_Jpan",
-            ("ko", _) => "kor_Hang",
-            ("lt", _) => "lit_Latn",
-            ("lv", _) => "lvs_Latn",
-            ("ms", _) => "zsm_Latn",
-            ("nb", _) | ("no", _) => "nob_Latn",
-            ("nl", _) => "nld_Latn",
-            ("nn", _) => "nno_Latn",
-            ("pl", _) => "pol_Latn",
-            ("pt", _) => "por_Latn",
-            ("ro", _) => "ron_Latn",
-            ("ru", _) => "rus_Cyrl",
-            ("sk", _) => "slk_Latn",
-            ("sl", _) => "slv_Latn",
-            ("sv", _) => "swe_Latn",
-            ("sw", _) => "swh_Latn",
-            ("ta", _) => "tam_Taml",
-            ("th", _) => "tha_Thai",
-            ("tl", _) => "tgl_Latn",
-            ("tr", _) => "tur_Latn",
-            ("uk", _) => "ukr_Cyrl",
-            ("ur", _) => "urd_Arab",
-            ("vi", _) => "vie_Latn",
-            ("zh", Some("Hant")) => "zho_Hant",
-            ("zh", _) => "zho_Hans",
-            _ => return None,
-        };
-        Some(code)
-    }
 }
 
 #[cfg(test)]
@@ -161,7 +106,7 @@ mod tests {
     fn parses_region_and_underscore() {
         assert_eq!(Lang::parse("de-DE").unwrap().code(), "de");
         assert_eq!(Lang::parse("pt_BR").unwrap().code(), "pt");
-        assert_eq!(Lang::parse("ja-JP").unwrap().nllb_code(), Some("jpn_Jpan"));
+        assert_eq!(Lang::parse("ja-JP").unwrap().primary(), "ja");
     }
 
     #[test]
@@ -174,13 +119,10 @@ mod tests {
     #[test]
     fn chinese_script_resolution() {
         assert_eq!(Lang::parse("zh").unwrap().code(), "zh-Hans");
-        assert_eq!(Lang::parse("zh-CN").unwrap().nllb_code(), Some("zho_Hans"));
-        assert_eq!(Lang::parse("zh-TW").unwrap().nllb_code(), Some("zho_Hant"));
-        assert_eq!(Lang::parse("zh-HK").unwrap().nllb_code(), Some("zho_Hant"));
-        assert_eq!(
-            Lang::parse("zh-Hant-HK").unwrap().nllb_code(),
-            Some("zho_Hant")
-        );
+        assert_eq!(Lang::parse("zh-CN").unwrap().code(), "zh-Hans");
+        assert_eq!(Lang::parse("zh-TW").unwrap().code(), "zh-Hant");
+        assert_eq!(Lang::parse("zh-HK").unwrap().code(), "zh-Hant");
+        assert_eq!(Lang::parse("zh-Hant-HK").unwrap().code(), "zh-Hant");
         assert_eq!(Lang::parse("zh-Hans").unwrap().code(), "zh-Hans");
     }
 
@@ -189,11 +131,6 @@ mod tests {
         assert!(Lang::parse("").is_err());
         assert!(Lang::parse("x").is_err());
         assert!(Lang::parse("1234").is_err());
-    }
-
-    #[test]
-    fn unknown_language_has_no_nllb_code() {
-        assert_eq!(Lang::parse("tlh").unwrap().nllb_code(), None);
     }
 
     #[test]

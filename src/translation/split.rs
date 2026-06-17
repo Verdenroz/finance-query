@@ -1,7 +1,7 @@
 //! Sentence segmentation for the offline translation backend.
 //!
-//! NLLB-class models are trained on sentence-level inputs; feeding a whole
-//! multi-sentence business summary degrades quality and risks truncation.
+//! opus-mt models are trained on (and capped to) sentence-level inputs;
+//! feeding a whole multi-sentence summary degrades quality and risks truncation.
 //! This splitter is abbreviation-aware so company suffixes like "Inc." do
 //! not produce spurious sentence boundaries.
 

@@ -67,8 +67,8 @@ services:
       - LOG_FORMAT=json
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
     volumes:
-      # Persists the ~600 MB NLLB translation model (downloaded from the
-      # Hugging Face Hub at HF_HOME) across container recreates/deploys.
+      # Persists per-language opus-mt models (~80–210 MB each, under $HF_HOME/argos)
+      # across container recreates/deploys so they download only once.
       - hf-cache-v2:/home/appuser/.cache/huggingface
     depends_on:
       redis:
@@ -79,10 +79,11 @@ services:
     deploy:
       resources:
         limits:
-          # Translation inference is CPU-bound: the offline backend uses up
-          # to 8 intra-op threads, and CTranslate2 holds the int8 NLLB model
-          # (~1.5 GB resident incl. batch buffers) in memory. 512M/1.0 CPU
-          # OOM-kills the container on the first translated request.
+          # Translation inference is CPU-bound: the offline backend uses up to
+          # 8 intra-op threads, and CTranslate2 holds one small int8 opus-mt
+          # model (~80-210 MB each) per requested language in memory. CPU
+          # headroom matters more than RAM — a full transcript translates in
+          # ~2-4 s at 6 CPUs (vs tens of seconds with fewer).
           cpus: '6.0'
           memory: 3G
         reservations:
@@ -119,8 +120,8 @@ services:
       - EDGAR_EMAIL=${EDGAR_EMAIL:-}
       - FRED_API_KEY=${FRED_API_KEY:-}
     volumes:
-      # Persists the ~600 MB NLLB translation model (downloaded from the
-      # Hugging Face Hub at HF_HOME) across container recreates/deploys.
+      # Persists per-language opus-mt models (~80–210 MB each, under $HF_HOME/argos)
+      # across container recreates/deploys so they download only once.
       - hf-cache-mcp:/home/appuser/.cache/huggingface
     networks:
       - backend
@@ -128,7 +129,8 @@ services:
       resources:
         limits:
           # The MCP image is built with translation-offline too: tool calls
-          # with a `lang` param load the same ~1.5 GB NLLB model in-process.
+          # with a `lang` param load a small per-language opus-mt model
+          # in-process (~80-210 MB each).
           cpus: '2.0'
           memory: 2G
         reservations:

@@ -82,6 +82,6 @@ redis-cache = ["dep:redis"]
 # resolution, dictionary-tier translations. Without `translation-offline`
 # (or a custom backend) non-dictionary text passes through untranslated.
 translation = ["finance-query/translation"]
-# Local NLLB machine-translation backend (builds CTranslate2 from source;
+# Local opus-mt machine-translation backend (builds CTranslate2 from source;
 # requires cmake and a C++ toolchain).
 translation-offline = ["translation", "finance-query/translation-offline"]

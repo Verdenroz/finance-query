@@ -5,11 +5,19 @@
 //!
 //! Run: cargo bench --bench translation --features translation-offline
 //!
-//! Payload approximates a worst-case server endpoint: a batch of news
-//! headlines plus multi-sentence business summaries. Each target language
-//! is a cold run (the memo cache is keyed per language).
+//! Two workloads are measured per target language:
+//!  * `quotes+news` — a batch of news headlines plus multi-sentence business
+//!    summaries (a worst-case *quote* endpoint response).
+//!  * `transcript`  — the paragraph bodies of a real earnings-call transcript
+//!    fixture (the heaviest translatable endpoint by far).
+//!
+//! The goal is twofold: absolute latency, and **latency parity across
+//! languages** — the spread between the fastest and slowest target language
+//! for the same payload. With per-language opus-mt bilingual models the spread
+//! is driven mostly by each model's size (decoder width) rather than by output
+//! token count; this harness surfaces that spread directly.
 
-use std::time::Instant;
+use std::time::{Duration, Instant};
 
 use finance_query::translation::{self, Lang};
 
@@ -62,30 +70,125 @@ const SUMMARIES: [&str; 2] = [
      and automotive markets.",
 ];
 
+/// Real earnings-call transcript fixture (paragraph bodies extracted at runtime).
+const TRANSCRIPT_JSON: &str = include_str!("fixtures/transcripts.json");
+
+/// Representative spread of target languages across scripts/families:
+/// Latin (es/de/fr), Cyrillic (ru), CJK (ja/zh), Hangul (ko), RTL (ar).
+const LANGS: [&str; 8] = ["es", "de", "fr", "ru", "ja", "zh", "ko", "ar"];
+
+/// Target languages for this run. `FQ_BENCH_LANGS` (comma-separated) narrows
+/// the set for fast config sweeps; unset uses the full [`LANGS`] spread.
+fn langs() -> Vec<String> {
+    match std::env::var("FQ_BENCH_LANGS") {
+        Ok(v) if !v.trim().is_empty() => v.split(',').map(|s| s.trim().to_string()).collect(),
+        _ => LANGS.iter().map(|s| s.to_string()).collect(),
+    }
+}
+
+/// `FQ_BENCH_WORKLOAD=transcript|quotes` runs just one workload (sweeps only
+/// care about the transcript); unset runs both.
+fn workload_filter() -> Option<String> {
+    std::env::var("FQ_BENCH_WORKLOAD")
+        .ok()
+        .filter(|s| !s.trim().is_empty())
+}
+
+fn transcript_paragraphs() -> Vec<String> {
+    let value: serde_json::Value =
+        serde_json::from_str(TRANSCRIPT_JSON).expect("transcript fixture parses");
+    value["transcriptContent"]["transcript"]["paragraphs"]
+        .as_array()
+        .expect("paragraphs array")
+        .iter()
+        .filter_map(|p| p["text"].as_str())
+        .map(str::to_string)
+        .collect()
+}
+
+struct LangResult {
+    code: String,
+    elapsed: Duration,
+    out_chars: usize,
+}
+
+async fn run_workload(name: &str, texts: &[String]) -> Result<(), Box<dyn std::error::Error>> {
+    let in_chars: usize = texts.iter().map(String::len).sum();
+    println!(
+        "\n=== workload: {name} ({} texts, {} input chars) ===",
+        texts.len(),
+        in_chars
+    );
+
+    let mut results: Vec<LangResult> = Vec::new();
+    for code in langs() {
+        let lang = Lang::parse(&code)?;
+        let t = Instant::now();
+        let out = translation::translate_texts(texts, &lang).await?;
+        let elapsed = t.elapsed();
+        let out_chars: usize = out.iter().map(String::len).sum();
+        results.push(LangResult {
+            code,
+            elapsed,
+            out_chars,
+        });
+    }
+
+    let fastest = results
+        .iter()
+        .map(|r| r.elapsed)
+        .min()
+        .unwrap_or_default()
+        .as_secs_f64();
+    let slowest = results
+        .iter()
+        .map(|r| r.elapsed)
+        .max()
+        .unwrap_or_default()
+        .as_secs_f64();
+
+    for r in &results {
+        let secs = r.elapsed.as_secs_f64();
+        println!(
+            "  {:<4} {:>8.2?}  ({:>7.0} in-char/s, {:>6} out-chars, {:.2}x fastest)",
+            r.code,
+            r.elapsed,
+            in_chars as f64 / secs.max(1e-9),
+            r.out_chars,
+            secs / fastest.max(1e-9),
+        );
+    }
+    println!(
+        "  spread: fastest {:.2}s … slowest {:.2}s  (Δ {:.2}s, {:.2}x)",
+        fastest,
+        slowest,
+        slowest - fastest,
+        slowest / fastest.max(1e-9),
+    );
+    Ok(())
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let texts: Vec<String> = HEADLINES
-        .iter()
-        .chain(SUMMARIES.iter())
-        .map(|s| s.to_string())
-        .collect();
-
     let t = Instant::now();
     translation::preload().await?;
     println!("model load: {:?}", t.elapsed());
-    println!("payload: {} texts", texts.len());
 
-    for code in ["de", "ja", "es"] {
-        let lang = Lang::parse(code)?;
-        let t = Instant::now();
-        let out = translation::translate_texts(&texts, &lang).await?;
-        let elapsed = t.elapsed();
-        println!(
-            "{code}: {:>8.2?}  ({:.1} texts/s)",
-            elapsed,
-            texts.len() as f64 / elapsed.as_secs_f64()
-        );
-        println!("    sample: {}", &out[0]);
+    let only = workload_filter();
+    let run = |name: &str| only.as_deref().is_none_or(|w| name.starts_with(w));
+
+    if run("quotes") {
+        let quotes_news: Vec<String> = HEADLINES
+            .iter()
+            .chain(SUMMARIES.iter())
+            .map(|s| s.to_string())
+            .collect();
+        run_workload("quotes+news", &quotes_news).await?;
     }
+    if run("transcript") {
+        let transcript = transcript_paragraphs();
+        run_workload("transcript", &transcript).await?;
+    }
+
     Ok(())
 }

@@ -23,6 +23,16 @@ pub trait TranslationBackend: Send + Sync {
         "custom"
     }
 
+    /// Whether this backend can translate into `target`.
+    ///
+    /// The pipeline calls this before [`translate_batch`](Self::translate_batch);
+    /// when it returns `false` the free-form text is left untranslated (English)
+    /// instead of failing the request. Defaults to `true` (assume full support).
+    fn supports(&self, target: &Lang) -> bool {
+        let _ = target;
+        true
+    }
+
     /// Translate every English text into the target language, preserving order.
     async fn translate_batch(&self, texts: &[String], target: &Lang) -> Result<Vec<String>>;
 }
@@ -53,7 +63,7 @@ pub(crate) fn active_backend() -> Option<Arc<dyn TranslationBackend>> {
     }
     #[cfg(feature = "translation-offline")]
     {
-        Some(super::offline::shared())
+        Some(super::opusmt::shared())
     }
     #[cfg(not(feature = "translation-offline"))]
     None
