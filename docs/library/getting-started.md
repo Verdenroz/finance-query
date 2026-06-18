@@ -30,6 +30,11 @@ finance-query = { version = "2.0", features = ["dataframe", "backtesting"] }
 | `dataframe` | Polars DataFrame integration for data analysis |
 | `backtesting` | Strategy backtesting engine (includes `indicators`) |
 | `indicators` | 52+ technical indicators (auto-enabled with `backtesting`) |
+| `risk` | Risk analytics: VaR, Sharpe/Sortino/Calmar, beta, drawdown (includes `indicators`) |
+| `rss` | RSS/Atom news feed aggregation |
+| `sentiment` | Offline VADER sentiment scoring for news titles and transcripts (keyless) |
+| `translation` | Translate human-readable response fields (built-in dictionary + pluggable backend) |
+| `translation-offline` | Local opus-mt machine-translation backend (needs `cmake` + a C++ toolchain) |
 
 ## Quick Example
 

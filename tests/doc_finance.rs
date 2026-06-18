@@ -520,3 +520,49 @@ async fn test_currencies() {
     }
     assert!(!currencies.is_empty());
 }
+
+// ---------------------------------------------------------------------------
+// Sentiment — from finance.md "News & Transcript Sentiment" section
+// (offline VADER, no network; gated on the `sentiment` feature)
+// ---------------------------------------------------------------------------
+
+#[cfg(feature = "sentiment")]
+#[test]
+fn test_analyze_sentiment_offline() {
+    use finance_query::{SentimentLabel, analyze_sentiment};
+
+    let s = analyze_sentiment("Strong results and excellent guidance drove the stock higher.");
+    assert_eq!(s.label, SentimentLabel::Bullish);
+    assert!(s.score > 0.0);
+    assert!((0.0..=1.0).contains(&s.confidence));
+
+    // Bearish text scores below the neutral band.
+    let bad = analyze_sentiment("The company missed badly and slashed its outlook.");
+    assert_eq!(bad.label, SentimentLabel::Bearish);
+    assert!(bad.score < 0.0);
+}
+
+#[cfg(feature = "sentiment")]
+#[tokio::test]
+#[ignore = "requires network access"]
+async fn test_news_and_transcript_sentiment() {
+    use finance_query::{SentimentLabel, finance};
+
+    // News titles are scored in place when the `sentiment` feature is on.
+    let news = finance::news().await.unwrap();
+    for article in news.iter().take(5) {
+        if let Some(s) = &article.sentiment {
+            println!("{} → {} ({:+.2})", article.title, s.label.as_str(), s.score);
+        }
+    }
+
+    // Length-weighted aggregate across a whole earnings call.
+    let transcript = finance::earnings_transcript("AAPL", None, None)
+        .await
+        .unwrap();
+    let overall = transcript.overall_sentiment();
+    assert!(matches!(
+        overall.label,
+        SentimentLabel::Bullish | SentimentLabel::Neutral | SentimentLabel::Bearish
+    ));
+}

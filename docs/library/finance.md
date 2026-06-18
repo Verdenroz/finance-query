@@ -348,6 +348,55 @@ for t in &recent {
 }
 ```
 
+### News & Transcript Sentiment
+
+!!! info "Feature flag required"
+    ```toml
+    finance-query = { version = "...", features = ["sentiment"] }
+    ```
+
+With the `sentiment` feature enabled, news titles and transcript paragraphs are
+scored automatically using an offline [VADER](https://github.com/cjhutto/vaderSentiment)
+lexicon — no API key and no network call. Each `News` article carries an optional
+`sentiment: Option<Sentiment>`, and every transcript paragraph is scored in place
+when the transcript is fetched:
+
+```rust
+use finance_query::SentimentLabel;
+
+let news = finance::news().await?;
+for article in news.iter().take(5) {
+    if let Some(s) = &article.sentiment {
+        println!("{} → {} ({:+.2})", article.title, s.label.as_str(), s.score);
+    }
+}
+
+// Aggregate sentiment across a whole earnings call, length-weighted:
+let transcript = finance::earnings_transcript("AAPL", None, None).await?;
+let overall = transcript.overall_sentiment();
+assert!(matches!(
+    overall.label,
+    SentimentLabel::Bullish | SentimentLabel::Neutral | SentimentLabel::Bearish
+));
+```
+
+You can also score arbitrary text directly:
+
+```rust
+use finance_query::{SentimentLabel, analyze_sentiment};
+
+let s = analyze_sentiment("Strong results and excellent guidance drove the stock higher.");
+assert_eq!(s.label, SentimentLabel::Bullish);
+assert!(s.score > 0.0);
+assert!((0.0..=1.0).contains(&s.confidence));
+```
+
+**`Sentiment` fields:**
+
+- `label: SentimentLabel` — `Bullish`, `Neutral`, or `Bearish` (VADER threshold ±0.05)
+- `score: f64` — Compound score from -1.0 (most bearish) to +1.0 (most bullish)
+- `confidence: f64` — Magnitude of the score, 0.0 to 1.0
+
 ## Market Sentiment
 
 ### Fear & Greed Index
