@@ -7,6 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.0] - 2026-06-18
+
+Adds two opt-in, offline-capable enrichment layers — response-field translation
+and VADER sentiment scoring — plus a fully local machine-translation backend.
+Both are feature-gated and default-off, so the default API surface is unchanged.
+
+### Added
+
+- **Translation** (`translation` feature) — post-processes responses so the
+  existing `.lang()`/`.region()` builder surface actually localizes Yahoo's
+  English-only natural-language fields (company summaries, sector/industry
+  names, news titles, officer titles, transcripts). Symbols, codes, URLs, and
+  numbers are never touched.
+  - New `translation` module: `Lang` (BCP 47 tag parsing/normalization),
+    `Translatable` trait (implemented by all text-bearing response models, and
+    composes over `Vec<T>`/`Option<T>`), `TranslationBackend` trait +
+    `set_backend` for plugging a custom engine, `translate(&mut value, lang)`
+    for standalone values, and `preload()`.
+  - Two-tier strategy: a zero-latency built-in dictionary (sector names,
+    security types, officer titles across 11 languages) always applies; an
+    optional ML backend handles free-form text. With no backend, free-form
+    fields stay English and the dictionary tier still applies — enabling
+    `translation` alone never breaks a response.
+  - `ProvidersBuilder::lang()`/`.region()` set the language once and are
+    inherited by every `ticker()`/`tickers()` handle; the tag is validated
+    fail-fast at `build()` before any network call.
+- **`translation-offline` feature** — a fully local CPU machine-translation
+  backend built on opus-mt bilingual models (~48 languages) run through
+  CTranslate2 with int8 weights, distributed as Argos packages. A small
+  per-language model (~80–210 MB) is downloaded on first use and cached;
+  every subsequent run is offline with no API key. Heavy native build (compiles
+  CTranslate2 + SentencePiece from source — needs `cmake` and a C++ toolchain).
+- **Sentiment scoring** (`sentiment` feature) — offline, keyless VADER
+  lexicon-based scoring of news titles and earnings-transcript paragraphs.
+  - New public types: `Sentiment` (`label`, `score`, `confidence`),
+    `SentimentLabel` (`Bullish`/`Neutral`/`Bearish`), and `analyze_sentiment`
+    for scoring arbitrary text.
+  - `News` articles gain an optional `sentiment` field, populated automatically
+    when the feature is enabled; transcript paragraphs are scored in place.
+  - `Ticker::news_sentiment()` returns the average sentiment across recent
+    headlines; `Transcript::overall_sentiment()` returns a length-weighted
+    aggregate across a whole call.
+
+### Security
+
+No publicly known run-time vulnerabilities with a CVE or RUSTSEC assignment were fixed in the library or its direct dependencies in this release. The offline translation backend downloads opus-mt models over HTTPS from the Argos package server on first use and caches them locally; no network call is made unless `translation-offline` is enabled and a non-English language is requested. Sentiment scoring is fully offline (bundled VADER lexicon) with no network access.
+
 ## [2.6.1] - 2026-05-27
 
 ### Added
