@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/Verdenroz/finance-query/security/advisories/new
+    about: Report security issues privately — please do not open a public issue.
+  - name: Question or discussion
+    url: https://github.com/Verdenroz/finance-query/discussions
+    about: Ask questions, share ideas, or get help using Finance Query.
