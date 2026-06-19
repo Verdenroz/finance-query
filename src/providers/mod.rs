@@ -99,10 +99,6 @@ pub enum Fetch {
     Sequential,
     /// Fire all providers concurrently; first success wins.
     Parallel,
-    /// Behaves identically to [`Fetch::Parallel`]. Retained for backward compatibility;
-    /// prefer [`Fetch::Parallel`] for new code.
-    #[deprecated(since = "2.6.0", note = "Use `Fetch::Parallel` instead")]
-    All,
 }
 
 /// Capability bits that a provider can declare.
@@ -392,7 +388,6 @@ impl ProviderSet {
         last.unwrap_or_else(|| Self::no_provider(cap))
     }
 
-    #[allow(deprecated)] // must handle Fetch::All internally until it is removed
     pub(crate) async fn fetch<T, F, Fut>(&self, cap: Capability, f: F) -> Result<T>
     where
         F: Fn(&Arc<dyn ProviderAdapter>) -> Fut,
@@ -414,7 +409,7 @@ impl ProviderSet {
                 }
                 Err(Self::finish_err(cap, last))
             }
-            Fetch::Parallel | Fetch::All => {
+            Fetch::Parallel => {
                 let mut futs = futures::stream::FuturesUnordered::new();
                 for p in &candidates {
                     futs.push(f(p));
