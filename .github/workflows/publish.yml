@@ -93,8 +93,9 @@ jobs:
           TAG: ${{ github.ref_name }}
           USE_AUTO: ${{ steps.changelog.outputs.use_auto }}
         run: |
+          VERSION="${TAG#v}"
           if [ "$USE_AUTO" = "true" ]; then
-            gh release create "$TAG" --verify-tag --generate-notes
+            gh release create "$TAG" --verify-tag --title "$VERSION" --generate-notes
           else
-            gh release create "$TAG" --verify-tag --notes-file /tmp/release_notes.md
+            gh release create "$TAG" --verify-tag --title "$VERSION" --notes-file /tmp/release_notes.md
           fi

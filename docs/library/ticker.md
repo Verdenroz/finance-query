@@ -654,6 +654,23 @@ for article in &news {
 }
 ```
 
+With the `sentiment` feature enabled, each article carries an optional
+`sentiment` score (offline VADER, no API key), and `news_sentiment()` returns the
+average sentiment across recent headlines:
+
+```rust
+// requires the `sentiment` feature
+let news = ticker.news().await?;
+for article in &news {
+    if let Some(s) = &article.sentiment {
+        println!("{} → {} ({:+.2})", article.title, s.label.as_str(), s.score);
+    }
+}
+
+let overall = ticker.news_sentiment().await?;
+println!("Average coverage: {} ({:+.2})", overall.label.as_str(), overall.score);
+```
+
 ## Earnings Transcripts
 
 Get earnings call transcripts:

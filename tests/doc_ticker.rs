@@ -816,3 +816,37 @@ async fn test_ticker_chart_caching() {
     let _ = hourly_1mo;
     let _ = daily_3mo;
 }
+
+// ---------------------------------------------------------------------------
+// Network tests — News sentiment from ticker.md "News" section
+// (gated on the `sentiment` feature; scoring itself is offline VADER)
+// ---------------------------------------------------------------------------
+
+#[cfg(feature = "sentiment")]
+#[tokio::test]
+#[ignore = "requires network access"]
+async fn test_ticker_news_sentiment() {
+    use finance_query::{SentimentLabel, Ticker};
+
+    let ticker = Ticker::new("AAPL").await.unwrap();
+
+    // Each article carries an optional VADER sentiment score.
+    let news = ticker.news().await.unwrap();
+    for article in &news {
+        if let Some(s) = &article.sentiment {
+            println!("{} → {} ({:+.2})", article.title, s.label.as_str(), s.score);
+        }
+    }
+
+    // Average sentiment across recent headlines.
+    let overall = ticker.news_sentiment().await.unwrap();
+    println!(
+        "Average coverage: {} ({:+.2})",
+        overall.label.as_str(),
+        overall.score
+    );
+    assert!(matches!(
+        overall.label,
+        SentimentLabel::Bullish | SentimentLabel::Neutral | SentimentLabel::Bearish
+    ));
+}

@@ -1,22 +1,22 @@
-//! WebSocket client for Yahoo Finance real-time streaming
+//! Streaming client providing a Stream-based API for real-time price updates.
 //!
-//! Provides a Stream-based API for receiving real-time price updates.
+//! Backed by a pluggable [`StreamSource`](super::source::StreamSource) — Yahoo
+//! is the default implementation, with additional providers (e.g. Polygon)
+//! supported through the same abstraction.
 
-use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
-use futures::SinkExt;
 use futures::stream::Stream;
-use tokio::sync::{RwLock, broadcast, mpsc};
-use tokio::time::interval;
+use tokio::sync::{broadcast, mpsc};
 use tokio_stream::wrappers::BroadcastStream;
-use tokio_tungstenite::{connect_async, tungstenite::Message};
-use tracing::{debug, error, info, warn};
+use tracing::warn;
 
-use super::pricing::{PriceUpdate, PricingData, PricingDecodeError};
+use super::pricing::PriceUpdate;
+use super::source::{StreamCommand, StreamSource, run_stream_loop};
+use super::yahoo::YahooStreamSource;
 use crate::error::FinanceError;
 
 /// Result type for streaming operations
@@ -54,12 +54,6 @@ impl From<StreamError> for FinanceError {
     }
 }
 
-/// Yahoo Finance WebSocket URL
-const YAHOO_WS_URL: &str = "wss://streamer.finance.yahoo.com/?version=2";
-
-/// Heartbeat interval for subscription refresh
-const HEARTBEAT_INTERVAL_SECS: u64 = 15;
-
 /// Reconnection backoff duration
 const RECONNECT_BACKOFF_SECS: u64 = 3;
 
@@ -68,7 +62,8 @@ const CHANNEL_CAPACITY: usize = 1024;
 
 /// A streaming price subscription that yields real-time price updates.
 ///
-/// This provides a Flow-like API for receiving real-time price data from Yahoo Finance.
+/// This provides a Flow-like API for receiving real-time price data.
+/// Backed by a pluggable source (Yahoo by default).
 ///
 /// # Example
 ///
@@ -96,17 +91,10 @@ pub struct PriceStream {
     _handle: Arc<StreamHandle>,
 }
 
-/// Handle to manage the WebSocket connection
+/// Handle to manage the streaming session
 struct StreamHandle {
     command_tx: mpsc::Sender<StreamCommand>,
     broadcast_tx: broadcast::Sender<PriceUpdate>,
-}
-
-/// Commands sent to the WebSocket task
-enum StreamCommand {
-    Subscribe(Vec<String>),
-    Unsubscribe(Vec<String>),
-    Close,
 }
 
 impl PriceStream {
@@ -127,10 +115,23 @@ impl PriceStream {
     /// # }
     /// ```
     pub async fn subscribe(symbols: &[&str]) -> StreamResult<Self> {
-        Self::subscribe_inner(symbols, Duration::from_secs(RECONNECT_BACKOFF_SECS)).await
+        Self::subscribe_with_source(
+            Arc::new(YahooStreamSource),
+            symbols,
+            Duration::from_secs(RECONNECT_BACKOFF_SECS),
+        )
+        .await
     }
 
-    async fn subscribe_inner(symbols: &[&str], retry_delay: Duration) -> StreamResult<Self> {
+    /// Subscribe using a specific [`StreamSource`] backend.
+    ///
+    /// Yahoo is the default ([`subscribe`](Self::subscribe)); this is the
+    /// generic entry point shared with [`PriceStreamBuilder`].
+    pub(crate) async fn subscribe_with_source(
+        source: Arc<dyn StreamSource>,
+        symbols: &[&str],
+        retry_delay: Duration,
+    ) -> StreamResult<Self> {
         let (broadcast_tx, broadcast_rx) = broadcast::channel(CHANNEL_CAPACITY);
         let (command_tx, command_rx) = mpsc::channel(32);
 
@@ -138,14 +139,14 @@ impl PriceStream {
 
         let tx_clone = broadcast_tx.clone();
 
-        // Spawn the WebSocket task
-        tokio::spawn(async move {
-            if let Err(e) =
-                run_websocket_loop(initial_symbols, broadcast_tx, command_rx, retry_delay).await
-            {
-                error!("WebSocket loop error: {}", e);
-            }
-        });
+        // Spawn the streaming task driving the chosen source.
+        tokio::spawn(run_stream_loop(
+            source,
+            initial_symbols,
+            broadcast_tx,
+            command_rx,
+            retry_delay,
+        ));
 
         let handle = Arc::new(StreamHandle {
             command_tx,
@@ -236,199 +237,6 @@ impl Stream for PriceStream {
     }
 }
 
-/// Run the WebSocket connection loop with automatic reconnection
-async fn run_websocket_loop(
-    initial_symbols: Vec<String>,
-    broadcast_tx: broadcast::Sender<PriceUpdate>,
-    mut command_rx: mpsc::Receiver<StreamCommand>,
-    retry_delay: Duration,
-) -> StreamResult<()> {
-    let subscriptions = Arc::new(RwLock::new(HashSet::<String>::from_iter(initial_symbols)));
-
-    loop {
-        match connect_and_stream(&subscriptions, &broadcast_tx, &mut command_rx).await {
-            Ok(()) => {
-                info!("WebSocket connection closed gracefully");
-                break;
-            }
-            Err(e) => {
-                error!(
-                    "WebSocket error: {}, reconnecting in {:.1}s...",
-                    e,
-                    retry_delay.as_secs_f32()
-                );
-                tokio::time::sleep(retry_delay).await;
-            }
-        }
-    }
-
-    Ok(())
-}
-
-/// Connect to Yahoo WebSocket and stream data
-async fn connect_and_stream(
-    subscriptions: &Arc<RwLock<HashSet<String>>>,
-    broadcast_tx: &broadcast::Sender<PriceUpdate>,
-    command_rx: &mut mpsc::Receiver<StreamCommand>,
-) -> StreamResult<()> {
-    use futures::StreamExt;
-
-    info!("Connecting to Yahoo Finance WebSocket...");
-
-    let (ws_stream, _) = connect_async(YAHOO_WS_URL)
-        .await
-        .map_err(|e| StreamError::ConnectionFailed(e.to_string()))?;
-
-    info!("Connected to Yahoo Finance WebSocket");
-
-    let (mut write, mut read) = ws_stream.split();
-
-    // Send initial subscriptions
-    {
-        let subs = subscriptions.read().await;
-        if !subs.is_empty() {
-            let symbols: Vec<&str> = subs.iter().map(|s| s.as_str()).collect();
-            let msg = serde_json::json!({ "subscribe": symbols });
-            write
-                .send(Message::Text(msg.to_string().into()))
-                .await
-                .map_err(|e| StreamError::WebSocketError(e.to_string()))?;
-            info!("Subscribed to {} symbols", symbols.len());
-        }
-    }
-
-    // Heartbeat task - sends subscription refresh every 15 seconds
-    let heartbeat_subs = Arc::clone(subscriptions);
-    let (heartbeat_tx, mut heartbeat_rx) = mpsc::channel::<Message>(32);
-
-    tokio::spawn(async move {
-        let mut interval = interval(Duration::from_secs(HEARTBEAT_INTERVAL_SECS));
-        loop {
-            interval.tick().await;
-            let subs = heartbeat_subs.read().await;
-            if !subs.is_empty() {
-                let symbols: Vec<&str> = subs.iter().map(|s| s.as_str()).collect();
-                let msg = serde_json::json!({ "subscribe": symbols });
-                if heartbeat_tx
-                    .send(Message::Text(msg.to_string().into()))
-                    .await
-                    .is_err()
-                {
-                    break;
-                }
-                debug!("Heartbeat subscription sent for {} symbols", symbols.len());
-            }
-        }
-    });
-
-    loop {
-        tokio::select! {
-            // Handle incoming WebSocket messages
-            Some(msg) = read.next() => {
-                match msg {
-                    Ok(Message::Text(text)) => {
-                        if let Err(e) = handle_text_message(&text, broadcast_tx) {
-                            warn!("Failed to handle message: {}", e);
-                        }
-                    }
-                    Ok(Message::Binary(data)) => {
-                        debug!("Received binary message: {} bytes", data.len());
-                    }
-                    Ok(Message::Close(_)) => {
-                        info!("Received close frame");
-                        break;
-                    }
-                    Ok(Message::Ping(data)) => {
-                        let _ = write.send(Message::Pong(data)).await;
-                    }
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!("WebSocket read error: {}", e);
-                        return Err(StreamError::WebSocketError(e.to_string()));
-                    }
-                }
-            }
-
-            // Handle heartbeat messages
-            Some(msg) = heartbeat_rx.recv() => {
-                if let Err(e) = write.send(msg).await {
-                    error!("Failed to send heartbeat: {}", e);
-                    return Err(StreamError::WebSocketError(e.to_string()));
-                }
-            }
-
-            // Handle commands (subscribe/unsubscribe)
-            Some(cmd) = command_rx.recv() => {
-                match cmd {
-                    StreamCommand::Subscribe(symbols) => {
-                        let mut newly_added = Vec::new();
-                        {
-                            let mut subs = subscriptions.write().await;
-                            for s in &symbols {
-                                if subs.insert(s.clone()) {
-                                    newly_added.push(s.clone());
-                                }
-                            }
-                        }
-                        if !newly_added.is_empty() {
-                            let msg = serde_json::json!({ "subscribe": newly_added });
-                            let _ = write.send(Message::Text(msg.to_string().into())).await;
-                            info!("Added subscriptions: {:?}", newly_added);
-                        }
-                    }
-                    StreamCommand::Unsubscribe(symbols) => {
-                        let mut actually_removed = Vec::new();
-                        {
-                            let mut subs = subscriptions.write().await;
-                            for s in &symbols {
-                                if subs.remove(s) {
-                                    actually_removed.push(s.clone());
-                                }
-                            }
-                        }
-                        if !actually_removed.is_empty() {
-                            let msg = serde_json::json!({ "unsubscribe": actually_removed });
-                            let _ = write.send(Message::Text(msg.to_string().into())).await;
-                            info!("Removed subscriptions: {:?}", actually_removed);
-                        }
-                    }
-                    StreamCommand::Close => {
-                        info!("Received close command");
-                        let _ = write.send(Message::Close(None)).await;
-                        return Ok(());
-                    }
-                }
-            }
-
-            else => break,
-        }
-    }
-
-    Ok(())
-}
-
-/// Handle incoming text message from Yahoo WebSocket
-fn handle_text_message(
-    text: &str,
-    broadcast_tx: &broadcast::Sender<PriceUpdate>,
-) -> std::result::Result<(), PricingDecodeError> {
-    // Yahoo sends JSON with base64-encoded protobuf in "message" field
-    let json: serde_json::Value =
-        serde_json::from_str(text).map_err(|e| PricingDecodeError::Base64(e.to_string()))?;
-
-    if let Some(encoded) = json.get("message").and_then(|v| v.as_str()) {
-        let pricing_data = PricingData::from_base64(encoded)?;
-        let price_update: PriceUpdate = pricing_data.into();
-
-        // Broadcast to all receivers
-        if broadcast_tx.receiver_count() > 0 {
-            let _ = broadcast_tx.send(price_update);
-        }
-    }
-
-    Ok(())
-}
-
 /// Builder for creating price streams with custom configuration
 pub struct PriceStreamBuilder {
     symbols: Vec<String>,
@@ -456,10 +264,15 @@ impl PriceStreamBuilder {
         self
     }
 
-    /// Build and start the price stream
+    /// Build and start the price stream (Yahoo-backed).
     pub async fn build(self) -> StreamResult<PriceStream> {
         let symbol_refs: Vec<&str> = self.symbols.iter().map(|s| s.as_str()).collect();
-        PriceStream::subscribe_inner(&symbol_refs, self.retry_delay).await
+        PriceStream::subscribe_with_source(
+            Arc::new(YahooStreamSource),
+            &symbol_refs,
+            self.retry_delay,
+        )
+        .await
     }
 }
 
