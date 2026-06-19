@@ -9,6 +9,7 @@ domain_handle! {
     ///
     /// Created via [`Providers::index`](crate::Providers::index).
     pub struct Index { symbol, symbol }
+    cache: crate::models::indices::IndexQuote
 }
 
 impl Index {

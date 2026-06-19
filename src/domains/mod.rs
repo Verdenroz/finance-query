@@ -7,16 +7,81 @@
 //! the multi-provider dispatch system, making multi-source aggregation
 //! a first-class concept rather than an opt-in on Ticker/Tickers.
 
+// ── Caching ─────────────────────────────────────────────────────────
+
+use crate::error::Result;
+use crate::utils::CacheEntry;
+use std::collections::HashMap;
+use std::time::Duration;
+use tokio::sync::{Mutex, RwLock};
+
+/// Optional per-handle response cache with request deduplication.
+///
+/// Keyed by a `String` so a handle can cache multiple variants (e.g. a
+/// crypto coin priced in different `vs_currency` values); single-result
+/// handles use the empty string. When no TTL is configured (the default),
+/// every call fetches fresh — preserving the stateless behavior.
+pub(crate) struct DomainCache<V> {
+    ttl: Option<Duration>,
+    entries: RwLock<HashMap<String, CacheEntry<V>>>,
+    guard: Mutex<()>,
+}
+
+impl<V: Clone> DomainCache<V> {
+    pub(crate) fn new(ttl: Option<Duration>) -> Self {
+        Self {
+            ttl,
+            entries: RwLock::new(HashMap::new()),
+            guard: Mutex::new(()),
+        }
+    }
+
+    /// Return a fresh cached value for `key`, or run `f` to fetch it.
+    /// Concurrent identical misses collapse to a single upstream call.
+    pub(crate) async fn get_or_try<F, Fut>(&self, key: String, f: F) -> Result<V>
+    where
+        F: FnOnce() -> Fut,
+        Fut: std::future::Future<Output = Result<V>>,
+    {
+        let Some(ttl) = self.ttl else {
+            return f().await;
+        };
+
+        if let Some(entry) = self.entries.read().await.get(&key)
+            && entry.is_fresh(ttl)
+        {
+            return Ok(entry.value.clone());
+        }
+
+        // Dedup: hold the guard so concurrent identical misses don't all fetch.
+        let _g = self.guard.lock().await;
+        if let Some(entry) = self.entries.read().await.get(&key)
+            && entry.is_fresh(ttl)
+        {
+            return Ok(entry.value.clone());
+        }
+
+        let value = f().await?;
+        self.entries
+            .write()
+            .await
+            .insert(key, CacheEntry::new(value.clone()));
+        Ok(value)
+    }
+}
+
 // ── Macros ──────────────────────────────────────────────────────────
 
-/// Generate a single-field domain handle struct with internal constructor
-/// and a string accessor. Callers add methods manually.
+/// Generate a single-field domain handle struct with internal constructor,
+/// a string accessor, and an optional response cache (`.cache(ttl)`).
+/// Callers add fetch methods manually.
 macro_rules! domain_handle {
-    ($(#[$meta:meta])* pub struct $name:ident { $field:ident, $accessor:ident }) => {
+    ($(#[$meta:meta])* pub struct $name:ident { $field:ident, $accessor:ident } cache: $val:ty) => {
         $(#[$meta])*
         pub struct $name {
             $field: std::sync::Arc<str>,
             providers: std::sync::Arc<crate::providers::ProviderSet>,
+            cache: crate::domains::DomainCache<$val>,
         }
 
         impl $name {
@@ -24,7 +89,18 @@ macro_rules! domain_handle {
                 $field: std::sync::Arc<str>,
                 providers: std::sync::Arc<crate::providers::ProviderSet>,
             ) -> Self {
-                Self { $field, providers }
+                Self {
+                    $field,
+                    providers,
+                    cache: crate::domains::DomainCache::new(None),
+                }
+            }
+
+            /// Cache responses for `ttl`, deduplicating concurrent identical
+            /// requests. Off by default (each call fetches fresh).
+            pub fn cache(mut self, ttl: std::time::Duration) -> Self {
+                self.cache = crate::domains::DomainCache::new(Some(ttl));
+                self
             }
 
             /// The handle's identifier string.
@@ -36,34 +112,45 @@ macro_rules! domain_handle {
 }
 
 /// Fetch via the provider dispatch — single symbol field, no extra args.
-/// Use inside a method body.
+/// Routes through the handle's cache. Use inside a method body.
 macro_rules! fetch_via {
     ($self:expr, $field:ident, $cap:ident, $fetch:ident, $ret:ty) => {{
         let __sym = $self.$field.clone();
+        let __providers = std::sync::Arc::clone(&$self.providers);
         $self
-            .providers
-            .fetch(crate::providers::Capability::$cap, move |p| {
-                let __s = __sym.clone();
-                let p = p.clone();
-                async move { p.$fetch(&__s).await }
+            .cache
+            .get_or_try(String::new(), move || async move {
+                __providers
+                    .fetch(crate::providers::Capability::$cap, move |p| {
+                        let __s = __sym.clone();
+                        let p = p.clone();
+                        async move { p.$fetch(&__s).await }
+                    })
+                    .await
             })
             .await
     }};
 }
 
-/// Fetch with one extra string argument (e.g. `vs_currency` for crypto).
+/// Fetch with one extra string argument (e.g. `vs_currency` for crypto),
+/// keyed in the cache by that argument.
 #[allow(unused_macros)]
 macro_rules! fetch_via_with {
     ($self:expr, $field:ident, $cap:ident, $fetch:ident, $arg:expr, $ret:ty) => {{
         let __sym = $self.$field.clone();
         let __arg = ($arg).to_string();
+        let __providers = std::sync::Arc::clone(&$self.providers);
         $self
-            .providers
-            .fetch(crate::providers::Capability::$cap, move |p| {
-                let __s = __sym.clone();
-                let __a = __arg.clone();
-                let p = p.clone();
-                async move { p.$fetch(&__s, &__a).await }
+            .cache
+            .get_or_try(__arg.clone(), move || async move {
+                __providers
+                    .fetch(crate::providers::Capability::$cap, move |p| {
+                        let __s = __sym.clone();
+                        let __a = __arg.clone();
+                        let p = p.clone();
+                        async move { p.$fetch(&__s, &__a).await }
+                    })
+                    .await
             })
             .await
     }};
@@ -110,3 +197,124 @@ pub use forex::ForexPair;
 pub use futures::FuturesContract;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use indices::Index;
+
+// ── Tests ───────────────────────────────────────────────────────────
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::error::FinanceError;
+    use std::sync::Arc;
+    use std::sync::atomic::{AtomicUsize, Ordering};
+
+    fn err() -> FinanceError {
+        FinanceError::NoProviderAvailable { operation: "test" }
+    }
+
+    #[tokio::test]
+    async fn no_ttl_fetches_every_call() {
+        let cache: DomainCache<u32> = DomainCache::new(None);
+        let calls = Arc::new(AtomicUsize::new(0));
+        for _ in 0..3 {
+            let c = calls.clone();
+            let v = cache
+                .get_or_try(String::new(), move || async move {
+                    c.fetch_add(1, Ordering::SeqCst);
+                    Ok::<u32, FinanceError>(42)
+                })
+                .await
+                .unwrap();
+            assert_eq!(v, 42);
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 3);
+    }
+
+    #[tokio::test]
+    async fn ttl_caches_within_window() {
+        let cache: DomainCache<u32> = DomainCache::new(Some(Duration::from_secs(60)));
+        let calls = Arc::new(AtomicUsize::new(0));
+        for _ in 0..3 {
+            let c = calls.clone();
+            let v = cache
+                .get_or_try(String::new(), move || async move {
+                    c.fetch_add(1, Ordering::SeqCst);
+                    Ok::<u32, FinanceError>(7)
+                })
+                .await
+                .unwrap();
+            assert_eq!(v, 7);
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn distinct_keys_cached_separately() {
+        let cache: DomainCache<String> = DomainCache::new(Some(Duration::from_secs(60)));
+        let calls = Arc::new(AtomicUsize::new(0));
+        for key in ["usd", "eur", "usd", "eur"] {
+            let c = calls.clone();
+            let owned = key.to_string();
+            let v = cache
+                .get_or_try(key.to_string(), move || async move {
+                    c.fetch_add(1, Ordering::SeqCst);
+                    Ok::<String, FinanceError>(owned)
+                })
+                .await
+                .unwrap();
+            assert_eq!(v, key);
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn errors_are_not_cached() {
+        let cache: DomainCache<u32> = DomainCache::new(Some(Duration::from_secs(60)));
+        let calls = Arc::new(AtomicUsize::new(0));
+
+        let c = calls.clone();
+        let first = cache
+            .get_or_try(String::new(), move || async move {
+                c.fetch_add(1, Ordering::SeqCst);
+                Err::<u32, FinanceError>(err())
+            })
+            .await;
+        assert!(first.is_err());
+
+        let c = calls.clone();
+        let second = cache
+            .get_or_try(String::new(), move || async move {
+                c.fetch_add(1, Ordering::SeqCst);
+                Ok::<u32, FinanceError>(5)
+            })
+            .await
+            .unwrap();
+        assert_eq!(second, 5);
+        assert_eq!(calls.load(Ordering::SeqCst), 2);
+    }
+
+    #[tokio::test]
+    async fn concurrent_misses_dedup_to_one_fetch() {
+        let cache: Arc<DomainCache<u32>> =
+            Arc::new(DomainCache::new(Some(Duration::from_secs(60))));
+        let calls = Arc::new(AtomicUsize::new(0));
+        let mut handles = Vec::new();
+        for _ in 0..8 {
+            let cache = Arc::clone(&cache);
+            let c = calls.clone();
+            handles.push(tokio::spawn(async move {
+                cache
+                    .get_or_try(String::new(), move || async move {
+                        c.fetch_add(1, Ordering::SeqCst);
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                        Ok::<u32, FinanceError>(1)
+                    })
+                    .await
+                    .unwrap()
+            }));
+        }
+        for h in handles {
+            assert_eq!(h.await.unwrap(), 1);
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+}

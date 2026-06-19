@@ -9,6 +9,7 @@ domain_handle! {
     ///
     /// Created via [`Providers::economic`](crate::Providers::economic).
     pub struct EconomicIndicator { series_id, series_id }
+    cache: crate::models::economic::EconomicSeries
 }
 
 impl EconomicIndicator {
