@@ -1,59 +1,20 @@
 ---
 name: Feature request
-about: Suggest an idea for this project
-title: "[FEATURE REQUEST]"
+about: Suggest a new capability, endpoint, or data source
+title: "[FEATURE] "
 labels: enhancement
 assignees: Verdenroz
-
 ---
 
-# Feature Request
-
 ## Summary
-A clear and concise description of the feature you'd like to see added to FinanceQuery.
+<!-- The feature in one or two sentences. -->
 
-## Problem Statement
-Describe the problem or limitation you're experiencing that this feature would solve.
-- What are you trying to accomplish?
-- What current workflow or process is inefficient?
-- Is this related to a missing data source, endpoint, or functionality?
+## Problem
+<!-- What you're trying to accomplish and why it's hard or impossible today. -->
 
-## Proposed Solution
-Describe the solution you'd like to see implemented.
-- How should this feature work?
-- What would the API endpoint look like?
-- What parameters or options should be available?
+## Proposed solution
+<!-- How it should work: API shape, endpoint, parameters. If it needs a new
+     provider or dependency, name it. -->
 
-
-Expected response format (if applicable):
-```json
-{
-  "example": "response structure"
-}
-```
-
-## Use Cases
-Describe specific scenarios where this feature would be valuable:
-1. [Use case 1]
-2. [Use case 2]
-3. [Use case 3]
-
-## Alternatives Considered
-Describe any alternative solutions or workarounds you've considered.
-- Have you tried using existing endpoints in a different way?
-- Are there external tools or APIs you're currently using as a workaround?
-
-## Additional Context
-- Would this feature require new dependencies or external APIs?
-- Are there any performance or rate limiting considerations?
-- Would this be a breaking change to existing functionality?
-
-## Priority
-How important is this feature to your workflow?
-- [ ] Critical - Blocking my use of the project
-- [ ] High - Would significantly improve my workflow
-- [ ] Medium - Would be nice to have
-- [ ] Low - Minor improvement
-
-## Screenshots/Mockups
-If applicable, add screenshots, diagrams, or mockups to help explain your feature request.
+## Alternatives considered
+<!-- Workarounds you've tried or other approaches you weighed. -->
