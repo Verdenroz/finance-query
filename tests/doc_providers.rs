@@ -33,11 +33,10 @@ fn _verify_provider_enum() {
 // ---------------------------------------------------------------------------
 
 /// Verifies Fetch variants exist with correct type.
-#[allow(dead_code, deprecated)]
+#[allow(dead_code)]
 fn _verify_fetch_variants() {
     let _: Fetch = Fetch::Sequential;
     let _: Fetch = Fetch::Parallel;
-    let _: Fetch = Fetch::All;
 }
 
 // ---------------------------------------------------------------------------
