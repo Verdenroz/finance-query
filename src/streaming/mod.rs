@@ -1,16 +1,20 @@
-//! Real-time price streaming from Yahoo Finance WebSocket
+//! Real-time price streaming with pluggable provider backends.
 //!
 //! This module provides a Stream-based API for receiving real-time price updates,
 //! similar to Kotlin Flow or Rx observables.
 //!
 //! # Overview
 //!
-//! Yahoo Finance provides a WebSocket endpoint that streams real-time price data
-//! in protobuf format. This module handles:
+//! A [`StreamSource`](source::StreamSource) trait abstracts the provider-specific
+//! transport and wire protocol. Yahoo ([`YahooStreamSource`](yahoo::YahooStreamSource))
+//! is the reference implementation, with additional providers (e.g. Polygon)
+//! supported through the same abstraction.
 //!
-//! - WebSocket connection and reconnection
-//! - Protobuf message decoding
+//! This module handles:
+//!
+//! - Provider-agnostic reconnection logic
 //! - Subscription management with automatic heartbeats
+//! - Protobuf message decoding (Yahoo)
 //! - A clean Stream API for consuming updates
 //!
 //! # Example
@@ -37,6 +41,8 @@
 
 mod client;
 mod pricing;
+mod source;
+mod yahoo;
 
 pub use client::{PriceStream, PriceStreamBuilder, StreamError, StreamResult};
 pub use pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
