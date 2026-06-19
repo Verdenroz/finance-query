@@ -138,4 +138,33 @@ impl super::ProviderAdapter for YahooProvider {
     ) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
         crate::adapters::yahoo::quote::quotes::fetch_quotes_batch(&self.client, symbols).await
     }
+
+    async fn fetch_spark(
+        &self,
+        symbols: &[&str],
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
+        use crate::models::chart::spark::Spark;
+        use crate::models::chart::spark::response::SparkResponse;
+
+        let json =
+            crate::adapters::yahoo::quote::spark::fetch(&self.client, symbols, interval, range)
+                .await?;
+        let spark_response = SparkResponse::from_json(json)?;
+
+        let mut out = Vec::new();
+        if let Some(results) = spark_response.spark.result {
+            for result in &results {
+                if let Some(spark) = Spark::from_response(
+                    result,
+                    Some(interval.as_str().to_string()),
+                    Some(range.as_str().to_string()),
+                ) {
+                    out.push((result.symbol.clone(), spark));
+                }
+            }
+        }
+        Ok(out)
+    }
 }

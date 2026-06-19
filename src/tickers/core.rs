@@ -13,7 +13,6 @@ use crate::format::Both;
 use crate::indicators;
 use crate::models::chart::events::ChartEvents;
 use crate::models::chart::spark::Spark;
-use crate::models::chart::spark::response::SparkResponse;
 use crate::models::chart::{CapitalGain, Chart, Dividend, Split};
 use crate::models::corporate::news::News;
 use crate::models::corporate::recommendation::Recommendation;
@@ -1101,52 +1100,37 @@ impl Tickers {
             }
         }
 
-        // Spark is a Yahoo-specific batch endpoint with no provider abstraction equivalent
-        let client = self.providers.first_yahoo()?;
-        let symbols_ref: Vec<&str> = self.symbols.iter().map(|s| &**s).collect();
-        let json =
-            crate::adapters::yahoo::quote::spark::fetch(&client, &symbols_ref, interval, range)
-                .await?;
+        // Dispatch through the provider set under the CHART capability so spark
+        // honors routing like every other chart path (Yahoo is the default).
+        let providers = Arc::clone(&self.providers);
+        let syms: Vec<String> = self.symbols.iter().map(|s| s.to_string()).collect();
+        let spark_result = providers
+            .fetch(Capability::CHART, |p| {
+                let syms = syms.clone();
+                let p = p.clone();
+                async move {
+                    let syms_ref: Vec<&str> = syms.iter().map(String::as_str).collect();
+                    p.fetch_spark(&syms_ref, interval, range).await
+                }
+            })
+            .await;
 
         let mut response = BatchSparksResponse::with_capacity(self.symbols.len());
 
-        match SparkResponse::from_json(json) {
-            Ok(spark_response) => {
-                let mut parsed_sparks: Vec<(Arc<str>, Spark)> = Vec::new();
-
-                if let Some(results) = spark_response.spark.result {
-                    for result in &results {
-                        if let Some(spark) = Spark::from_response(
-                            result,
-                            Some(interval.as_str().to_string()),
-                            Some(range.as_str().to_string()),
-                        ) {
-                            let sym: Arc<str> = result.symbol.as_str().into();
-                            parsed_sparks.push((sym, spark));
-                        } else {
-                            response.errors.insert(
-                                result.symbol.to_string(),
-                                "Failed to parse spark data".to_string(),
-                            );
-                        }
-                    }
-                }
-
+        match spark_result {
+            Ok(parsed_sparks) => {
                 // Cache all parsed sparks
                 if self.cache_ttl.is_some() {
                     let mut cache = self.spark_cache.write().await;
                     for (symbol, spark) in &parsed_sparks {
-                        self.cache_insert(
-                            &mut cache,
-                            (symbol.clone(), interval, range),
-                            spark.clone(),
-                        );
+                        let key: Arc<str> = symbol.as_str().into();
+                        self.cache_insert(&mut cache, (key, interval, range), spark.clone());
                     }
                 }
 
                 // Build response
                 for (symbol, spark) in parsed_sparks {
-                    response.sparks.insert(symbol.to_string(), spark);
+                    response.sparks.insert(symbol, spark);
                 }
 
                 // Track missing symbols

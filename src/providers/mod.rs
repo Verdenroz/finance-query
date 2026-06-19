@@ -270,6 +270,18 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         Err(self.not_supported("quotes_batch"))
     }
 
+    /// Fetch lightweight sparkline data for multiple symbols in a single request.
+    /// Returns successfully-parsed `(symbol, Spark)` pairs; callers fill in
+    /// missing-symbol errors for any symbol absent from the result.
+    async fn fetch_spark(
+        &self,
+        _: &[&str],
+        _: crate::Interval,
+        _: crate::TimeRange,
+    ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
+        Err(self.not_supported("spark"))
+    }
+
     #[cfg(any(
         feature = "crypto",
         feature = "alphavantage",
@@ -659,4 +671,68 @@ pub(crate) async fn build_providers(
         providers.push(Arc::new(edgar::EdgarProvider));
     }
     Ok(ProviderSet::new(providers, yahoo_client, routes))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A CHART-capable provider that does not implement spark — exercises the
+    /// default trait method and proves spark now dispatches through the set.
+    struct NoSparkProvider;
+
+    #[async_trait::async_trait]
+    impl ProviderAdapter for NoSparkProvider {
+        fn id(&self) -> &'static str {
+            "yahoo"
+        }
+        fn capabilities(&self) -> Capability {
+            Capability::CHART
+        }
+    }
+
+    #[tokio::test]
+    async fn fetch_spark_defaults_to_not_supported() {
+        let err = NoSparkProvider
+            .fetch_spark(
+                &["AAPL"],
+                crate::Interval::OneDay,
+                crate::TimeRange::FiveDays,
+            )
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            FinanceError::NotSupported {
+                operation: "spark",
+                ..
+            }
+        ));
+    }
+
+    #[tokio::test]
+    async fn spark_routes_through_provider_set() {
+        // The CHART default route resolves to the "yahoo"-id provider; routing a
+        // provider that lacks spark must surface an error rather than silently
+        // hitting a hardcoded Yahoo client.
+        let set = ProviderSet::new(
+            vec![Arc::new(NoSparkProvider)],
+            None,
+            Routes::new(Fetch::Sequential),
+        );
+        let result = set
+            .fetch(Capability::CHART, |p| {
+                let p = p.clone();
+                async move {
+                    p.fetch_spark(
+                        &["AAPL"],
+                        crate::Interval::OneDay,
+                        crate::TimeRange::FiveDays,
+                    )
+                    .await
+                }
+            })
+            .await;
+        assert!(result.is_err());
+    }
 }
