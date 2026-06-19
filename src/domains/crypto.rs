@@ -9,6 +9,7 @@ domain_handle! {
     ///
     /// Created via [`Providers::crypto`](crate::Providers::crypto).
     pub struct CryptoCoin { id, id }
+    cache: crate::models::crypto::CryptoQuote
 }
 
 impl CryptoCoin {

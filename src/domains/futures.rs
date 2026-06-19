@@ -9,6 +9,7 @@ domain_handle! {
     ///
     /// Created via [`Providers::futures`](crate::Providers::futures).
     pub struct FuturesContract { symbol, symbol }
+    cache: crate::models::futures::FuturesQuote
 }
 
 impl FuturesContract {

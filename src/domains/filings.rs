@@ -10,6 +10,7 @@ domain_handle! {
     ///
     /// Created via [`Providers::filings`](crate::Providers::filings).
     pub struct Filings { symbol, symbol }
+    cache: crate::models::filings::ProviderFilings
 }
 
 impl Filings {

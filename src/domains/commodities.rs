@@ -9,6 +9,7 @@ domain_handle! {
     ///
     /// Created via [`Providers::commodity`](crate::Providers::commodity).
     pub struct Commodity { symbol, symbol }
+    cache: crate::models::commodities::CommodityQuote
 }
 
 impl Commodity {
