@@ -102,6 +102,7 @@ jobs:
     name: Deploy to VPS
     needs: build-and-push
     runs-on: ubuntu-latest
+    permissions: {}
     # Only deploy on master branch pushes, not PRs
     if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
 
