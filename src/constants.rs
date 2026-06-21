@@ -871,6 +871,23 @@ impl TimeRange {
             TimeRange::Max => "max",
         }
     }
+
+    /// A sensible default candle interval for this range, used by the
+    /// `history(range)` convenience on domain handles: finer granularity for
+    /// short ranges, coarser for long ones.
+    pub fn default_interval(&self) -> Interval {
+        match self {
+            TimeRange::OneDay => Interval::FiveMinutes,
+            TimeRange::FiveDays => Interval::FifteenMinutes,
+            TimeRange::OneMonth
+            | TimeRange::ThreeMonths
+            | TimeRange::SixMonths
+            | TimeRange::OneYear
+            | TimeRange::YearToDate => Interval::OneDay,
+            TimeRange::TwoYears | TimeRange::FiveYears => Interval::OneWeek,
+            TimeRange::TenYears | TimeRange::Max => Interval::OneMonth,
+        }
+    }
 }
 
 impl std::fmt::Display for TimeRange {
@@ -2135,5 +2152,19 @@ mod tests {
         assert_eq!(TimeRange::OneMonth.as_str(), "1mo");
         assert_eq!(TimeRange::OneYear.as_str(), "1y");
         assert_eq!(TimeRange::Max.as_str(), "max");
+    }
+
+    #[test]
+    fn test_default_interval_buckets() {
+        // Intraday ranges → sub-day candles; long ranges → coarse candles.
+        assert_eq!(TimeRange::OneDay.default_interval(), Interval::FiveMinutes);
+        assert_eq!(
+            TimeRange::FiveDays.default_interval(),
+            Interval::FifteenMinutes
+        );
+        assert_eq!(TimeRange::OneMonth.default_interval(), Interval::OneDay);
+        assert_eq!(TimeRange::OneYear.default_interval(), Interval::OneDay);
+        assert_eq!(TimeRange::TwoYears.default_interval(), Interval::OneWeek);
+        assert_eq!(TimeRange::Max.default_interval(), Interval::OneMonth);
     }
 }
