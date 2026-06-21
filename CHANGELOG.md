@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`chart()` / `history()` on domain handles** — `ForexPair`, `CryptoCoin`,
+  `Index`, `FuturesContract`, and `Commodity` now expose historical OHLCV data,
+  bringing them toward parity with `Ticker`. Both route through
+  `Capability::CHART` (Yahoo by default) and cache per `(symbol, interval, range)`
+  when `.cache(ttl)` is set. `history(range)` is sugar for
+  `chart(range.default_interval(), range)`.
+  - `CryptoCoin::chart`/`history` take a `vs_currency` and build the chart symbol
+    as `"{ID}-{VS}"` (e.g. `"BTC-USD"`), which resolves on the default Yahoo route
+    for ticker-style ids; CoinGecko-id coins should route `Capability::CHART` to a
+    crypto-aware provider.
+- **`TimeRange::default_interval()`** — the per-range default candle interval used
+  by `history()` (finer granularity for short ranges, coarser for long ones).
+
 ## [2.7.1] - 2026-06-20
 
 Maintenance and internal-architecture release. Domain handles gain opt-in

@@ -76,6 +76,45 @@ impl<V: Clone> DomainCache<V> {
 /// a string accessor, and an optional response cache (`.cache(ttl)`).
 /// Callers add fetch methods manually.
 macro_rules! domain_handle {
+    // Chartable variant — adds a `Chart` response cache read by `chart()`.
+    ($(#[$meta:meta])* pub struct $name:ident { $field:ident, $accessor:ident } cache: $val:ty, chart) => {
+        $(#[$meta])*
+        pub struct $name {
+            $field: std::sync::Arc<str>,
+            providers: std::sync::Arc<crate::providers::ProviderSet>,
+            cache: crate::domains::DomainCache<$val>,
+            chart_cache: crate::domains::DomainCache<crate::models::chart::Chart>,
+        }
+
+        impl $name {
+            pub(crate) fn with_providers(
+                $field: std::sync::Arc<str>,
+                providers: std::sync::Arc<crate::providers::ProviderSet>,
+            ) -> Self {
+                Self {
+                    $field,
+                    providers,
+                    cache: crate::domains::DomainCache::new(None),
+                    chart_cache: crate::domains::DomainCache::new(None),
+                }
+            }
+
+            /// Cache responses for `ttl`, deduplicating concurrent identical
+            /// requests. Off by default (each call fetches fresh).
+            pub fn cache(mut self, ttl: std::time::Duration) -> Self {
+                self.cache = crate::domains::DomainCache::new(Some(ttl));
+                self.chart_cache = crate::domains::DomainCache::new(Some(ttl));
+                self
+            }
+
+            /// The handle's identifier string.
+            pub fn $accessor(&self) -> &str {
+                &self.$field
+            }
+        }
+    };
+
+    // Non-chartable variant.
     ($(#[$meta:meta])* pub struct $name:ident { $field:ident, $accessor:ident } cache: $val:ty) => {
         $(#[$meta])*
         pub struct $name {
@@ -149,6 +188,31 @@ macro_rules! fetch_via_with {
                         let __a = __arg.clone();
                         let p = p.clone();
                         async move { p.$fetch(&__s, &__a).await }
+                    })
+                    .await
+            })
+            .await
+    }};
+}
+
+/// Fetch chart candles via the `CHART` capability, keyed by `(interval, range)`.
+/// `$sym` is the chart-ready symbol expression for this asset class.
+#[allow(unused_macros)]
+macro_rules! fetch_chart_via {
+    ($self:expr, $sym:expr, $interval:expr, $range:expr) => {{
+        let __sym: String = $sym;
+        let __interval = $interval;
+        let __range = $range;
+        let __providers = std::sync::Arc::clone(&$self.providers);
+        let __key = format!("{}:{}:{}", __sym, __interval, __range);
+        $self
+            .chart_cache
+            .get_or_try(__key, move || async move {
+                __providers
+                    .fetch(crate::providers::Capability::CHART, move |p| {
+                        let __s = __sym.clone();
+                        let p = p.clone();
+                        async move { p.fetch_chart(&__s, __interval, __range).await }
                     })
                     .await
             })

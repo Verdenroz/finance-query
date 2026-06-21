@@ -161,13 +161,15 @@ let sec   = providers.filings("AAPL");                        // → Filings
 
 | Handle | Method | Returns |
 |--------|--------|---------|
-| `ForexPair` | `.quote()` | `ForexQuote` |
-| `CryptoCoin` | `.quote(vs_currency)` | `CryptoQuote` |
+| `ForexPair` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `ForexQuote` · `Chart` |
+| `CryptoCoin` | `.quote(vs_currency)` · `.chart(vs_currency, interval, range)` · `.history(vs_currency, range)` | `CryptoQuote` · `Chart` |
 | `EconomicIndicator` | `.series()` | `EconomicSeries` |
-| `Index` | `.quote()` | `IndexQuote` |
-| `FuturesContract` | `.quote()` | `FuturesQuote` |
-| `Commodity` | `.quote()` | `CommodityQuote` |
+| `Index` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `IndexQuote` · `Chart` |
+| `FuturesContract` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `FuturesQuote` · `Chart` |
+| `Commodity` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `CommodityQuote` · `Chart` |
 | `Filings` | `.get()` | `ProviderFilings` |
+
+All chart-capable handles route through `Capability::CHART` (Yahoo by default) and cache per `(symbol, interval, range)` when `.cache(ttl)` is set. `history(range)` is sugar for `chart(range.default_interval(), range)`. The handle's identifier is passed to the chart route as-is, so it must be a chart-route symbol (e.g. `^GSPC`, `NQ=F`, `GC=F`); `CryptoCoin` builds `"{ID}-{VS}"` (e.g. `"BTC-USD"`), which resolves on Yahoo only for ticker-style ids.
 
 ## Tickers and Providers
 

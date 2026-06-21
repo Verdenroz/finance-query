@@ -2,8 +2,10 @@
 //!
 //! Created via [`Providers::forex`](crate::Providers::forex).
 
+use crate::constants::{Interval, TimeRange};
 use crate::domains::DomainCache;
 use crate::error::Result;
+use crate::models::chart::Chart;
 use crate::providers::{Capability, ProviderSet};
 use std::sync::Arc;
 use std::time::Duration;
@@ -16,6 +18,7 @@ pub struct ForexPair {
     to: Arc<str>,
     providers: Arc<ProviderSet>,
     cache: DomainCache<crate::models::forex::ForexQuote>,
+    chart_cache: DomainCache<Chart>,
 }
 
 impl ForexPair {
@@ -29,6 +32,7 @@ impl ForexPair {
             to,
             providers,
             cache: DomainCache::new(None),
+            chart_cache: DomainCache::new(None),
         }
     }
 
@@ -36,6 +40,7 @@ impl ForexPair {
     /// Off by default (each call fetches fresh).
     pub fn cache(mut self, ttl: Duration) -> Self {
         self.cache = DomainCache::new(Some(ttl));
+        self.chart_cache = DomainCache::new(Some(ttl));
         self
     }
 
@@ -66,5 +71,32 @@ impl ForexPair {
                     .await
             })
             .await
+    }
+
+    /// Fetch historical OHLCV candles for this currency pair.
+    ///
+    /// The pair is mapped to the `CHART` route's symbol form `"{FROM}{TO}=X"`
+    /// (e.g. `"USDEUR=X"`, the Yahoo FX convention).
+    pub async fn chart(&self, interval: Interval, range: TimeRange) -> Result<Chart> {
+        let symbol = format!("{}{}=X", self.from, self.to);
+        let providers = Arc::clone(&self.providers);
+        let key = format!("{symbol}:{interval}:{range}");
+        self.chart_cache
+            .get_or_try(key, move || async move {
+                providers
+                    .fetch(Capability::CHART, move |p| {
+                        let s = symbol.clone();
+                        let p = p.clone();
+                        async move { p.fetch_chart(&s, interval, range).await }
+                    })
+                    .await
+            })
+            .await
+    }
+
+    /// Fetch historical candles over `range` at a sensible default interval
+    /// ([`TimeRange::default_interval`]).
+    pub async fn history(&self, range: TimeRange) -> Result<Chart> {
+        self.chart(range.default_interval(), range).await
     }
 }
