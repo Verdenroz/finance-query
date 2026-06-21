@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.7.1] - 2026-06-20
+
+Maintenance and internal-architecture release. Domain handles gain opt-in
+caching, the spark and streaming paths are routed through the provider
+abstraction, and a long-deprecated `Fetch` variant is removed. The default API
+surface is otherwise unchanged.
+
+### Added
+
+- **Opt-in per-handle caching for domain handles** (`ForexPair`, `CryptoCoin`,
+  `EconomicIndicator`, `Index`, `FuturesContract`, `Commodity`, `Filings`),
+  which were previously stateless on every call. New `DomainCache<V>`
+  (`src/domains/mod.rs`) is a `String`-keyed, TTL'd response cache with a fetch
+  guard that collapses concurrent identical misses. Enable per handle with
+  `.cache(ttl)`; default behavior is unchanged (stateless).
+- `ProviderAdapter::fetch_spark` trait method (defaulting to `NotSupported`,
+  mirroring `fetch_quotes_batch`), letting batch spark data flow through
+  `CHART` routing.
+- `PriceStream::subscribe_with_source()` — a generic entry point over the new
+  pluggable `StreamSource` trait, enabling non-Yahoo real-time price streams.
+  `subscribe()` continues to default to Yahoo.
+
+### Changed
+
+- `Tickers::spark()` now dispatches through
+  `ProviderSet::fetch(Capability::CHART, ..)` (via `fetch_spark`) instead of
+  calling Yahoo directly, so it honors `CHART` routing like every other chart
+  path. Caching, fetch-guard dedup, and missing-symbol error tracking are
+  preserved; Yahoo remains the default route.
+- Internal: extracted a pluggable `StreamSource` trait
+  (`src/streaming/source.rs`) with a `YahooStreamSource` reference impl from the
+  Yahoo WebSocket client; `run_stream_loop` drives any source with
+  auto-reconnect. The public `PriceStream` API is unchanged.
+
+### Removed
+
+- **`Fetch::All`** — deprecated since v2.6.0 as an alias for `Fetch::Parallel`.
+  Replace `Fetch::All` with `Fetch::Parallel` (identical behavior). Also removed
+  a duplicate `[profile.release]` from the CLI manifest that Cargo ignored while
+  warning on every build.
+
+### Security
+
+No publicly known run-time vulnerabilities with a CVE or RUSTSEC assignment were
+fixed in the library or its direct dependencies in this release.
+
 ## [2.7.0] - 2026-06-18
 
 Adds two opt-in, offline-capable enrichment layers — response-field translation
@@ -526,7 +572,9 @@ The adapter additions in this release were contributed by [@Johnson-f](https://g
 - Options chain data
 - News and analyst recommendations
 
-[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.6.1...HEAD
+[Unreleased]: https://github.com/Verdenroz/finance-query/compare/v2.7.1...HEAD
+[2.7.1]: https://github.com/Verdenroz/finance-query/compare/v2.7.0...v2.7.1
+[2.7.0]: https://github.com/Verdenroz/finance-query/compare/v2.6.1...v2.7.0
 [2.6.1]: https://github.com/Verdenroz/finance-query/compare/v2.6.0...v2.6.1
 [2.6.0]: https://github.com/Verdenroz/finance-query/compare/v2.5.1...v2.6.0
 [2.5.1]: https://github.com/Verdenroz/finance-query/compare/v2.5.0...v2.5.1
