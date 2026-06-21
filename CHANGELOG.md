@@ -21,6 +21,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     crypto-aware provider.
 - **`TimeRange::default_interval()`** — the per-range default candle interval used
   by `history()` (finer granularity for short ranges, coarser for long ones).
+- **`indicators()` / `indicator()` / `risk()` on domain handles** — `ForexPair`,
+  `CryptoCoin`, `Index`, `FuturesContract`, and `Commodity` now expose the same
+  technical-indicator (`indicators` feature) and risk (`risk` feature) analytics
+  as `Ticker`, computed over each handle's cached chart. `CryptoCoin` takes a
+  leading `vs_currency` argument on all three (matching its `chart()`).
+  - `risk()` annualizes with the handle's asset-class trading calendar — 252 days
+    for exchange-traded (index/futures/commodity), ~260 for forex, 365 for crypto
+    (24/7) — and intraday intervals scale by session length, so Sharpe/Sortino/
+    Calmar are correct across asset classes and intervals. `beta` is always `None`
+    on domain handles (no benchmark is fetched).
+
+### Changed
+
+- Extracted the per-`Indicator` dispatch out of `Ticker::indicator` into a shared
+  internal `indicators::compute_indicator(indicator, &chart)`, now reused by both
+  `Ticker` and the domain handles (no behavior change). `risk` summaries are now
+  computed via an annualization-factor-aware path; `Ticker::risk` is unchanged
+  (still the daily 252-period calendar).
 
 ## [2.7.1] - 2026-06-20
 

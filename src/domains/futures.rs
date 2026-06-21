@@ -40,3 +40,5 @@ impl FuturesContract {
         self.chart(range.default_interval(), range).await
     }
 }
+
+impl_chartable_analytics!(FuturesContract, crate::risk::TradingCalendar::Exchange);

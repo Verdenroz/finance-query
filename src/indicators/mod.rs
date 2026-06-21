@@ -523,6 +523,138 @@ pub fn last_value(values: &[Option<f64>]) -> Option<f64> {
     values.iter().rev().find_map(|&v| v)
 }
 
+/// Compute a single [`Indicator`] over a [`Chart`](crate::models::chart::Chart).
+///
+/// Shared dispatch used by `Ticker::indicator` and the domain handles
+/// (`ForexPair`, `CryptoCoin`, `Index`, `FuturesContract`, `Commodity`) so the
+/// indicator-selection logic lives in exactly one place.
+pub(crate) fn compute_indicator(
+    indicator: Indicator,
+    chart: &crate::models::chart::Chart,
+) -> Result<IndicatorResult> {
+    let o = chart.open_prices();
+    let h = chart.high_prices();
+    let l = chart.low_prices();
+    let c = chart.close_prices();
+    let v = chart.volumes();
+    Ok(match indicator {
+        Indicator::Sma(p) => IndicatorResult::Series(chart.sma(p)),
+        Indicator::Ema(p) => IndicatorResult::Series(chart.ema(p)),
+        Indicator::Rsi(p) => IndicatorResult::Series(chart.rsi(p)?),
+        Indicator::Macd { fast, slow, signal } => {
+            IndicatorResult::Macd(chart.macd(fast, slow, signal)?)
+        }
+        Indicator::Bollinger { period, std_dev } => {
+            IndicatorResult::Bollinger(chart.bollinger_bands(period, std_dev)?)
+        }
+        Indicator::Atr(p) => IndicatorResult::Series(chart.atr(p)?),
+        Indicator::Vwap => IndicatorResult::Series(crate::indicators::vwap(&h, &l, &c, &v)?),
+        Indicator::Wma(p) => IndicatorResult::Series(crate::indicators::wma(&c, p)?),
+        Indicator::Obv => IndicatorResult::Series(crate::indicators::obv(&c, &v)?),
+        Indicator::Dema(p) => IndicatorResult::Series(crate::indicators::dema(&c, p)?),
+        Indicator::Tema(p) => IndicatorResult::Series(crate::indicators::tema(&c, p)?),
+        Indicator::Hma(p) => IndicatorResult::Series(crate::indicators::hma(&c, p)?),
+        Indicator::Vwma(p) => IndicatorResult::Series(crate::indicators::vwma(&c, &v, p)?),
+        Indicator::Alma {
+            period,
+            offset,
+            sigma,
+        } => IndicatorResult::Series(crate::indicators::alma(&c, period, offset, sigma)?),
+        Indicator::McginleyDynamic(p) => {
+            IndicatorResult::Series(crate::indicators::mcginley_dynamic(&c, p)?)
+        }
+        Indicator::Stochastic {
+            k_period,
+            k_slow,
+            d_period,
+        } => IndicatorResult::Stochastic(crate::indicators::stochastic(
+            &h, &l, &c, k_period, k_slow, d_period,
+        )?),
+        Indicator::StochasticRsi {
+            rsi_period,
+            stoch_period,
+            k_period,
+            d_period,
+        } => IndicatorResult::Stochastic(crate::indicators::stochastic_rsi(
+            &c,
+            rsi_period,
+            stoch_period,
+            k_period,
+            d_period,
+        )?),
+        Indicator::Cci(p) => IndicatorResult::Series(crate::indicators::cci(&h, &l, &c, p)?),
+        Indicator::WilliamsR(p) => {
+            IndicatorResult::Series(crate::indicators::williams_r(&h, &l, &c, p)?)
+        }
+        Indicator::Roc(p) => IndicatorResult::Series(crate::indicators::roc(&c, p)?),
+        Indicator::Momentum(p) => IndicatorResult::Series(crate::indicators::momentum(&c, p)?),
+        Indicator::Cmo(p) => IndicatorResult::Series(crate::indicators::cmo(&c, p)?),
+        Indicator::AwesomeOscillator { fast, slow } => {
+            IndicatorResult::Series(crate::indicators::awesome_oscillator(&h, &l, fast, slow)?)
+        }
+        Indicator::CoppockCurve {
+            long_roc,
+            short_roc,
+            wma_period,
+        } => IndicatorResult::Series(crate::indicators::coppock_curve(
+            &c, long_roc, short_roc, wma_period,
+        )?),
+        Indicator::Adx(p) => IndicatorResult::Series(crate::indicators::adx(&h, &l, &c, p)?),
+        Indicator::Aroon(p) => IndicatorResult::Aroon(crate::indicators::aroon(&h, &l, p)?),
+        Indicator::Supertrend { period, multiplier } => IndicatorResult::SuperTrend(
+            crate::indicators::supertrend(&h, &l, &c, period, multiplier)?,
+        ),
+        Indicator::Ichimoku {
+            conversion,
+            base,
+            lagging,
+            displacement,
+        } => IndicatorResult::Ichimoku(crate::indicators::ichimoku(
+            &h,
+            &l,
+            &c,
+            conversion,
+            base,
+            lagging,
+            displacement,
+        )?),
+        Indicator::ParabolicSar { step, max } => {
+            IndicatorResult::Series(crate::indicators::parabolic_sar(&h, &l, &c, step, max)?)
+        }
+        Indicator::BullBearPower(p) => {
+            IndicatorResult::BullBearPower(crate::indicators::bull_bear_power(&h, &l, &c, p)?)
+        }
+        Indicator::ElderRay(p) => {
+            IndicatorResult::ElderRay(crate::indicators::elder_ray(&h, &l, &c, p)?)
+        }
+        Indicator::KeltnerChannels {
+            period,
+            multiplier,
+            atr_period,
+        } => IndicatorResult::Keltner(crate::indicators::keltner_channels(
+            &h, &l, &c, period, atr_period, multiplier,
+        )?),
+        Indicator::DonchianChannels(p) => {
+            IndicatorResult::Donchian(crate::indicators::donchian_channels(&h, &l, p)?)
+        }
+        Indicator::TrueRange => IndicatorResult::Series(crate::indicators::true_range(&h, &l, &c)?),
+        Indicator::ChoppinessIndex(p) => {
+            IndicatorResult::Series(crate::indicators::choppiness_index(&h, &l, &c, p)?)
+        }
+        Indicator::Mfi(p) => IndicatorResult::Series(crate::indicators::mfi(&h, &l, &c, &v, p)?),
+        Indicator::Cmf(p) => IndicatorResult::Series(crate::indicators::cmf(&h, &l, &c, &v, p)?),
+        Indicator::ChaikinOscillator => {
+            IndicatorResult::Series(crate::indicators::chaikin_oscillator(&h, &l, &c, &v)?)
+        }
+        Indicator::AccumulationDistribution => IndicatorResult::Series(
+            crate::indicators::accumulation_distribution(&h, &l, &c, &v)?,
+        ),
+        Indicator::BalanceOfPower(p) => {
+            IndicatorResult::Series(crate::indicators::balance_of_power(&o, &h, &l, &c, p)?)
+        }
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
