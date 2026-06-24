@@ -578,3 +578,17 @@ async fn test_batch_indicators() {
         assert!(response.success_count() > 0);
     }
 }
+
+#[tokio::test]
+#[ignore = "requires network access"]
+async fn test_tickers_calendar() {
+    use finance_query::{Tickers, TimeRange};
+
+    // From tickers.md "Event Calendar" section
+    let tickers = Tickers::new(["AAPL", "MSFT", "TSLA"]).await.unwrap();
+    let events = tickers.calendar(TimeRange::OneMonth).await.unwrap();
+
+    for event in &events {
+        println!("{} {:?} {:?}", event.date, event.symbol, event.event);
+    }
+}

@@ -152,6 +152,17 @@ Earnings history and estimates.
 fq earnings AAPL               # Earnings data
 ```
 
+### `calendar`
+
+Upcoming events across one or more symbols (earnings, dividends, options
+expirations), sorted by date.
+
+```bash
+fq calendar AAPL MSFT TSLA          # Next month of events
+fq calendar KO --range 3mo          # Custom forward window
+fq calendar AAPL -o json            # JSON (also: csv)
+```
+
 ### `news`
 
 Recent company news.
