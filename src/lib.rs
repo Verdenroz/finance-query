@@ -181,6 +181,7 @@ pub use constants::{Frequency, Interval, Region, StatementType, TimeRange, Value
 // Response types - Top-level types returned by API methods
 // ============================================================================
 pub use models::{
+    calendar::{CalendarEvent, EventKind},
     chart::Chart,
     chart::spark::Spark,
     corporate::news::News,

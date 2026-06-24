@@ -888,6 +888,26 @@ impl TimeRange {
             TimeRange::TenYears | TimeRange::Max => Interval::OneMonth,
         }
     }
+
+    /// Approximate span of this range in seconds.
+    ///
+    /// Calendar approximations: a month is 30 days, a year 365. `YearToDate` is
+    /// approximated as one year and `Max` as a far-future horizon.
+    pub const fn approx_duration_secs(&self) -> i64 {
+        const DAY: i64 = 86_400;
+        match self {
+            TimeRange::OneDay => DAY,
+            TimeRange::FiveDays => 5 * DAY,
+            TimeRange::OneMonth => 30 * DAY,
+            TimeRange::ThreeMonths => 90 * DAY,
+            TimeRange::SixMonths => 180 * DAY,
+            TimeRange::OneYear | TimeRange::YearToDate => 365 * DAY,
+            TimeRange::TwoYears => 730 * DAY,
+            TimeRange::FiveYears => 1_825 * DAY,
+            TimeRange::TenYears => 3_650 * DAY,
+            TimeRange::Max => 36_500 * DAY,
+        }
+    }
 }
 
 impl std::fmt::Display for TimeRange {
