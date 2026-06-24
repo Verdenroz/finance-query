@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Thumbnail image with multiple resolutions
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 pub struct NewsThumbnail {
     /// Available image resolutions
     pub resolutions: Option<Vec<ThumbnailResolution>>,
@@ -13,6 +17,7 @@ pub struct NewsThumbnail {
 
 /// Individual thumbnail resolution
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 pub struct ThumbnailResolution {
     /// Image URL
     pub url: Option<String>,

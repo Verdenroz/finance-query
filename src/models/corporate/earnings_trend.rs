@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Earnings trend and estimates
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsTrend {
     /// Default methodology (e.g., "gaap")
@@ -23,6 +27,7 @@ pub struct EarningsTrend {
 
 /// Earnings trend for a specific period
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsTrendPeriod {
     /// End date for this period
@@ -48,6 +53,7 @@ pub struct EarningsTrendPeriod {
 
 /// Earnings estimate data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EarningsEstimate {
     /// Average estimate
@@ -81,6 +87,7 @@ pub struct EarningsEstimate {
 
 /// Revenue estimate data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct RevenueEstimate {
     /// Average estimate
@@ -110,6 +117,7 @@ pub struct RevenueEstimate {
 
 /// EPS trend over time
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EpsTrend {
     /// Current EPS
@@ -139,6 +147,7 @@ pub struct EpsTrend {
 
 /// EPS revision data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct EpsRevisions {
     /// Number of upward revisions in last 7 days

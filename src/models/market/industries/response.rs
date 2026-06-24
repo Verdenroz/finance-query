@@ -1,6 +1,9 @@
 use crate::models::quote::FormattedValue;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 // ============================================================================
 // Raw response structs (private) - for parsing Yahoo's nested structure
 // ============================================================================
@@ -118,6 +121,7 @@ struct RawResearchReport {
 
 /// Industry data from Yahoo Finance
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryData {
@@ -160,6 +164,8 @@ pub struct IndustryData {
 /// Industry overview statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryOverview {
@@ -183,6 +189,8 @@ pub struct IndustryOverview {
 /// Industry performance metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryPerformance {
@@ -206,6 +214,8 @@ pub struct IndustryPerformance {
 /// Benchmark performance for comparison
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct BenchmarkPerformance {
@@ -232,6 +242,8 @@ pub struct BenchmarkPerformance {
 /// Company within an industry
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct IndustryCompany {
@@ -266,6 +278,8 @@ pub struct IndustryCompany {
 /// Top performing company by YTD return
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct PerformingCompany {
@@ -288,6 +302,8 @@ pub struct PerformingCompany {
 /// Top growth company by growth estimate
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct GrowthCompany {
@@ -310,6 +326,8 @@ pub struct GrowthCompany {
 /// Research report
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 #[non_exhaustive]
 pub struct ResearchReport {

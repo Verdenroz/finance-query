@@ -3,6 +3,9 @@ use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Default key statistics for a symbol
 ///
 /// Contains extensive statistical data including valuation metrics, share data, and financial ratios.
@@ -12,6 +15,7 @@ use serde_json::Value;
 /// - `DefaultKeyStatistics<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `DefaultKeyStatistics<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase", bound = "")]
 pub struct DefaultKeyStatistics<F: Format = Both> {
     /// 52-week price change percentage

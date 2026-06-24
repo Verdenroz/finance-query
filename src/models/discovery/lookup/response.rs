@@ -5,6 +5,11 @@
 use super::LookupQuote;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use super::quote::PyLookupQuote;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Raw response wrapper from Yahoo Finance lookup endpoint
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -30,6 +35,7 @@ struct RawLookupResult {
 
 /// Response wrapper for lookup endpoint
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct LookupResults {

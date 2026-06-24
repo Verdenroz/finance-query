@@ -2,8 +2,12 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::quote::FormattedValue;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Fund performance data including returns, risk metrics, and historical performance
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct FundPerformance {
     /// Maximum age of the data in seconds
@@ -53,6 +57,8 @@ pub struct FundPerformance {
 
 /// Performance overview with key return metrics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(rename = "FundPerformanceOverview"))]
 #[serde(rename_all = "camelCase")]
 pub struct PerformanceOverview {
     /// As of date (Unix timestamp)
@@ -78,6 +84,7 @@ pub struct PerformanceOverview {
 
 /// Category average performance overview
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct PerformanceOverviewCat {
     /// Year-to-date return percentage (category average)
@@ -99,6 +106,7 @@ pub struct PerformanceOverviewCat {
 
 /// Trailing returns at market price
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct TrailingReturns {
     /// As of date (Unix timestamp)
@@ -144,6 +152,7 @@ pub struct TrailingReturns {
 
 /// Trailing returns at NAV (Net Asset Value)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct TrailingReturnsNav {
     /// Year-to-date return
@@ -177,6 +186,7 @@ pub struct TrailingReturnsNav {
 
 /// Category average trailing returns
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct TrailingReturnsCat {
     /// Year-to-date return (category average)
@@ -218,6 +228,7 @@ pub struct TrailingReturnsCat {
 
 /// Annual total returns by year
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct AnnualTotalReturns {
     /// Annual returns for this fund
@@ -231,6 +242,7 @@ pub struct AnnualTotalReturns {
 
 /// Single year's return data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct AnnualReturn {
     /// Year (e.g., "2024")
@@ -244,6 +256,7 @@ pub struct AnnualReturn {
 
 /// Past quarterly returns
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct PastQuarterlyReturns {
     /// Quarterly returns
@@ -253,6 +266,7 @@ pub struct PastQuarterlyReturns {
 
 /// Risk overview statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct RiskOverviewStatistics {
     /// Risk statistics for various time periods
@@ -262,6 +276,7 @@ pub struct RiskOverviewStatistics {
 
 /// Category average risk overview statistics
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct RiskOverviewStatisticsCat {
     /// Category average risk statistics
@@ -271,6 +286,7 @@ pub struct RiskOverviewStatisticsCat {
 
 /// Risk statistics for a specific time period
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct RiskStatistic {
     /// Time period (e.g., "3y", "5y", "10y")

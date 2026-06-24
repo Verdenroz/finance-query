@@ -1,11 +1,17 @@
 use super::contract::OptionContract;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use super::contract::PyOptionContract;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Options chain data for a specific expiration
 ///
 /// Note: This struct cannot be manually constructed - use `Ticker::options()` to obtain options data.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct OptionChain {
     /// Expiration date (Unix timestamp)
@@ -27,6 +33,8 @@ pub struct OptionChain {
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 pub struct OptionsQuote {
     /// Symbol

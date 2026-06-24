@@ -19,3 +19,8 @@ pub use query::{EquityScreenerQuery, FundScreenerQuery, QuoteType, ScreenerQuery
 pub use quote::ScreenerQuote;
 pub use response::ScreenerResults;
 pub use values::{ScreenerFundCategory, ScreenerPeerGroup};
+
+#[cfg(feature = "python")]
+pub use quote::PyScreenerQuote;
+#[cfg(feature = "python")]
+pub use response::PyScreenerResults;

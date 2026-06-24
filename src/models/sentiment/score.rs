@@ -4,6 +4,12 @@ use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use vader_sentiment::SentimentIntensityAnalyzer;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
+#[cfg(feature = "python")]
+pub use py::PySentimentLabel;
+
 /// Standard VADER decision threshold on the compound score.
 const THRESHOLD: f64 = 0.05;
 
@@ -35,6 +41,7 @@ impl SentimentLabel {
 /// Only present when the `sentiment` feature is enabled.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct Sentiment {
     /// Directional classification.
@@ -120,6 +127,43 @@ pub(crate) fn aggregate_weighted(texts: &[&str]) -> Option<Sentiment> {
         return None;
     }
     Some(Sentiment::from_compound(weighted_sum / total_weight))
+}
+
+#[cfg(feature = "python")]
+mod py {
+    use super::SentimentLabel;
+    use pyo3::prelude::*;
+
+    #[pyclass(eq, eq_int, hash, frozen, name = "SentimentLabel")]
+    #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum PySentimentLabel {
+        Bullish,
+        Neutral,
+        Bearish,
+    }
+
+    impl ::core::convert::From<PySentimentLabel> for SentimentLabel {
+        fn from(v: PySentimentLabel) -> Self {
+            match v {
+                PySentimentLabel::Bullish => SentimentLabel::Bullish,
+                PySentimentLabel::Neutral => SentimentLabel::Neutral,
+                PySentimentLabel::Bearish => SentimentLabel::Bearish,
+            }
+        }
+    }
+
+    impl ::core::convert::From<SentimentLabel> for PySentimentLabel {
+        fn from(v: SentimentLabel) -> Self {
+            match v {
+                SentimentLabel::Bullish => PySentimentLabel::Bullish,
+                SentimentLabel::Neutral => PySentimentLabel::Neutral,
+                SentimentLabel::Bearish => PySentimentLabel::Bearish,
+                _ => unreachable!(
+                    "SentimentLabel is #[non_exhaustive] but all known variants covered"
+                ),
+            }
+        }
+    }
 }
 
 #[cfg(test)]

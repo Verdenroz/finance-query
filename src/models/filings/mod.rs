@@ -11,13 +11,21 @@ mod search;
 mod submissions;
 
 pub use cik::CikEntry;
+#[cfg(feature = "python")]
+pub use company_facts::PyCompanyFacts;
 pub use company_facts::{CompanyFacts, FactConcept, FactUnit, FactsByTaxonomy};
 pub use filing_index::EdgarFilingIndex;
 pub use provider::{ProviderFiling, ProviderFilings};
+#[cfg(feature = "python")]
+pub use provider::{PyProviderFiling, PyProviderFilings};
 pub use search::{
     EdgarSearchHit, EdgarSearchHitsContainer, EdgarSearchResults, EdgarSearchSource,
     EdgarSearchTotal,
 };
 pub use submissions::{
     EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSubmissions,
+};
+#[cfg(feature = "python")]
+pub use submissions::{
+    PyEdgarFiling, PyEdgarFilingFile, PyEdgarFilingRecent, PyEdgarFilings, PyEdgarSubmissions,
 };

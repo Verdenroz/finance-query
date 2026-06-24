@@ -9,6 +9,9 @@
 use serde::{Deserialize, Deserializer, Serialize};
 use std::collections::HashMap;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Deserialize CIK that may come as a number or a zero-padded string.
 fn deserialize_cik<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<u64>, D::Error> {
     #[derive(Deserialize)]
@@ -98,6 +101,10 @@ pub struct FactsByTaxonomy(pub HashMap<String, FactConcept>);
 /// A single XBRL concept (e.g., "Revenue") with all reported values.
 ///
 /// Values are organized by unit of measure (e.g., "USD", "shares", "pure").
+//
+// PyModel derive skipped: the macro does not currently support
+// `HashMap<K, Vec<T>>` where `T` is a nested PyModel struct (would need
+// `Vec<FactUnit>: Into<Vec<PyFactUnit>>`, which isn't auto-implemented).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct FactConcept {
@@ -201,6 +208,8 @@ impl FactConcept {
 /// Represents one reported value from a specific filing and period.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[non_exhaustive]
 pub struct FactUnit {
     /// Start date of the reporting period (for duration facts, e.g., revenue)
@@ -238,6 +247,59 @@ pub struct FactUnit {
     /// Frame identifier (e.g., "CY2023Q4I")
     #[serde(default)]
     pub frame: Option<String>,
+}
+
+// --------------------------------------------------------------------------
+// Python wrapper for CompanyFacts
+// --------------------------------------------------------------------------
+// PyModel derive cannot be used on CompanyFacts because the `facts` field is
+// `HashMap<String, FactsByTaxonomy>` where `FactsByTaxonomy` is a tuple-
+// newtype over `HashMap<String, FactConcept>`, and the PyModel macro requires
+// named fields. Instead we hand-write a thin frozen pyclass that uses
+// `pythonize` to expose the whole struct as a Python dict/object.
+#[cfg(feature = "python")]
+pub use company_facts_python::PyCompanyFacts;
+
+#[cfg(feature = "python")]
+mod company_facts_python {
+    use super::CompanyFacts;
+    use pyo3::prelude::*;
+    use std::sync::Arc;
+
+    #[pyclass(frozen, name = "CompanyFacts")]
+    #[derive(Debug)]
+    pub struct PyCompanyFacts {
+        inner: Arc<CompanyFacts>,
+    }
+
+    #[pymethods]
+    impl PyCompanyFacts {
+        #[getter]
+        fn cik(&self) -> Option<u64> {
+            self.inner.cik
+        }
+
+        #[getter]
+        fn entity_name(&self) -> Option<String> {
+            self.inner.entity_name.clone()
+        }
+
+        fn __repr__(&self) -> String {
+            format!("{:?}", *self.inner)
+        }
+
+        fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+            ::pythonize::pythonize(py, &*self.inner).map_err(Into::into)
+        }
+    }
+
+    impl From<CompanyFacts> for PyCompanyFacts {
+        fn from(value: CompanyFacts) -> Self {
+            Self {
+                inner: Arc::new(value),
+            }
+        }
+    }
 }
 
 #[cfg(test)]

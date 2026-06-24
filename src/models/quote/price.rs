@@ -7,6 +7,9 @@ use crate::models::format::{Both, Format};
 use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Detailed pricing data for a stock
 ///
 /// Includes current price, pre/post market data, volume, market cap, and exchange information.
@@ -16,6 +19,7 @@ use serde::{Deserialize, Serialize};
 /// - `Price<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `Price<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert, Default)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase", bound = "")]
 pub struct Price<F: Format = Both> {
     /// Maximum age of the data in seconds

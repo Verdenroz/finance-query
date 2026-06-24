@@ -300,6 +300,109 @@ pub mod format {
 pub use finance_query_derive::ToDataFrame;
 
 // ============================================================================
+// PyO3 bindings support (requires "python" feature)
+// ============================================================================
+// Concrete Py wrappers around the generic `FormattedValue<T>`. PyO3 cannot
+// expose generic types, so we emit one wrapper per concrete instantiation.
+#[cfg(feature = "python")]
+pub use models::quote::formatted_value::{
+    PyFormattedValueF64, PyFormattedValueI64, PyFormattedValueString, PyFormattedValueU64,
+};
+
+// PyModel-generated wrapper for `Quote`. Re-exported so the python-bindings
+// crate (and consumers) can reach it without traversing the private `models`
+// module.
+#[cfg(feature = "python")]
+pub use models::quote::data::PyQuote;
+
+#[cfg(feature = "python")]
+pub use models::chart::PyChart;
+
+#[cfg(feature = "python")]
+pub use models::chart::{PyCapitalGain, PyDividend, PySplit};
+
+#[cfg(feature = "python")]
+pub use models::chart::spark::PySpark;
+
+#[cfg(feature = "python")]
+pub use models::fundamentals::PyFinancialStatement;
+
+#[cfg(feature = "python")]
+pub use models::corporate::news::PyNews;
+
+#[cfg(feature = "python")]
+pub use models::corporate::recommendation::PyRecommendation;
+
+#[cfg(feature = "python")]
+pub use models::options::PyOptions;
+
+#[cfg(feature = "python")]
+pub use models::chart::dividend_analytics::PyDividendAnalytics;
+
+#[cfg(feature = "python")]
+pub use models::filings::PyEdgarSubmissions;
+
+#[cfg(feature = "python")]
+pub use models::filings::{PyProviderFiling, PyProviderFilings};
+
+#[cfg(feature = "python")]
+pub use models::filings::PyCompanyFacts;
+
+#[cfg(feature = "python")]
+pub use models::sentiment::{PyFearAndGreed, PyFearGreedLabel};
+
+#[cfg(all(feature = "python", feature = "sentiment"))]
+pub use models::sentiment::{PySentiment, PySentimentLabel};
+
+#[cfg(feature = "python")]
+pub use models::discovery::search::PySearchQuote;
+
+#[cfg(feature = "python")]
+pub use models::discovery::screeners::{PyScreenerQuote, PyScreenerResults};
+
+#[cfg(feature = "python")]
+pub use models::discovery::trending::PyTrendingQuote;
+
+#[cfg(feature = "python")]
+pub use models::discovery::lookup::{PyLookupQuote, PyLookupResults};
+
+#[cfg(feature = "python")]
+pub use models::market::market_summary::{PyMarketSummaryQuote, PySparkData};
+
+#[cfg(feature = "python")]
+pub use models::market::hours::{PyMarketHours, PyMarketTime};
+
+#[cfg(feature = "python")]
+pub use models::market::sectors::PySectorData;
+
+#[cfg(feature = "python")]
+pub use models::market::currencies::PyCurrency;
+
+#[cfg(feature = "python")]
+pub use models::market::industries::PyIndustryData;
+
+#[cfg(feature = "python")]
+pub use models::market::exchanges::PyExchange;
+
+// Python-facing mirrors of the constants enums. Defined here so the
+// `PyModel` derive macro can resolve `PyInterval` / `PyTimeRange` etc. via
+// `use crate::{...}` from inside model files.
+#[cfg(feature = "python")]
+mod constants_py;
+
+#[cfg(feature = "python")]
+pub use constants_py::{
+    PyExchangeCode, PyFrequency, PyIndustry, PyInterval, PyProvider, PyRegion, PyScreener,
+    PySector, PyStatementType, PyTimeRange, PyValueFormat,
+};
+
+// The `PyModel` derive macro emits absolute paths like `::finance_query::PyFormattedValueF64`.
+// To allow the derive to be used from within this crate itself, expose `finance_query` as
+// an alias for `self` so the absolute path resolves locally.
+#[cfg(feature = "python")]
+extern crate self as finance_query;
+
+// ============================================================================
 // Technical Indicators (requires "indicators" feature)
 // ============================================================================
 // Technical analysis indicators for price data (SMA, EMA, RSI, MACD, Bollinger Bands).
@@ -334,6 +437,12 @@ pub use indicators::{
     patterns,
 };
 
+#[cfg(all(feature = "indicators", feature = "python"))]
+pub use indicators::summary::PyIndicatorsSummary;
+
+#[cfg(all(feature = "risk", feature = "python"))]
+pub use risk::PyRiskSummary;
+
 // ============================================================================
 // Backtesting Engine (requires "backtesting" feature)
 // ============================================================================
@@ -342,6 +451,12 @@ pub use indicators::{
 // walk-forward validation, Monte Carlo simulation, and multi-symbol portfolio.
 #[cfg(feature = "backtesting")]
 pub mod backtesting;
+
+#[cfg(feature = "backtesting")]
+pub use backtesting::strategy::prebuilt::{
+    BollingerMeanReversion, DonchianBreakout, MacdSignal, RsiReversal, SmaCrossover,
+    SuperTrendFollow,
+};
 
 // ============================================================================
 // Compile-time thread-safety assertions

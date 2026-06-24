@@ -6,6 +6,22 @@ use crate::Provider;
 use crate::constants::{Interval, TimeRange};
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
+// Bring the Python enum mirrors into scope so the `PyModel` derive can resolve
+// the `PyInterval` / `PyTimeRange` identifiers it emits for `Option<Interval>`
+// and `Option<TimeRange>` fields.
+#[cfg(feature = "python")]
+#[allow(unused_imports)]
+use crate::{PyInterval, PyProvider, PyTimeRange};
+
+// Nested PyModel wrappers used by the generated `PyChart` for the `meta` and
+// `candles` fields.
+#[cfg(feature = "python")]
+#[allow(unused_imports)]
+use super::{candle::PyCandle, meta::PyChartMeta};
+
 /// Fully typed chart data
 ///
 /// Aggregates chart metadata and candles into a single convenient structure.
@@ -15,6 +31,8 @@ use serde::{Deserialize, Serialize};
 /// Note: This struct cannot be manually constructed - use `Ticker::chart()` to obtain chart data.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe_from = "candles"))]
 pub struct Chart {
     /// Stock symbol
     pub symbol: String,

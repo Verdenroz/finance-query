@@ -5,6 +5,9 @@
 use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// A collection of research reports with DataFrame support.
 ///
 /// This wrapper allows `search_results.research_reports.to_dataframe()` syntax while still
@@ -50,6 +53,8 @@ impl ResearchReports {
 /// A research report result from search
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct ResearchReport {

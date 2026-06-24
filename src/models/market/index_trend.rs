@@ -1,8 +1,12 @@
 use crate::models::quote::FormattedValue;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Index trend data (growth estimates for the index)
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct IndexTrend {
     /// Maximum age of the data in seconds
@@ -28,6 +32,7 @@ pub struct IndexTrend {
 
 /// Industry trend data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct IndustryTrend {
     /// Maximum age of the data in seconds
@@ -53,6 +58,7 @@ pub struct IndustryTrend {
 
 /// Sector trend data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct SectorTrend {
     /// Maximum age of the data in seconds
@@ -78,6 +84,7 @@ pub struct SectorTrend {
 
 /// Growth estimate for a specific period
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct TrendEstimate {
     /// Period (e.g., "0q", "+1q", "0y", "+1y", "LTG")

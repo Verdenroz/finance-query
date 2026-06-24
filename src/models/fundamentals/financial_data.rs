@@ -2,6 +2,9 @@ use crate::models::format::{Both, Format};
 use finance_query_derive::FormatConvert;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Financial data and key metrics
 ///
 /// Contains financial ratios, margins, cash flow, and analyst recommendations.
@@ -11,6 +14,7 @@ use serde::{Deserialize, Serialize};
 /// - `FinancialData<Raw>` — fields hold `T` directly (e.g. `Option<f64>`)
 /// - `FinancialData<Pretty>` — fields hold `Option<String>` (human-readable)
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, FormatConvert)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase", bound = "")]
 pub struct FinancialData<F: Format = Both> {
     /// Current stock price

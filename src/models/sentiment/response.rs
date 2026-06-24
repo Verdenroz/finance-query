@@ -4,6 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
+#[cfg(feature = "python")]
+pub use py::PyFearGreedLabel;
+
 /// Classification label for the Fear & Greed Index value.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -39,6 +45,7 @@ impl FearGreedLabel {
 ///
 /// Scale: 0 (Extreme Fear) → 100 (Extreme Greed).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct FearAndGreed {
     /// Index value (0–100)
@@ -157,5 +164,48 @@ mod tests {
     fn test_empty_data_returns_error() {
         let resp = FearAndGreedApiResponse { data: vec![] };
         assert!(FearAndGreed::from_response(resp).is_err());
+    }
+}
+
+#[cfg(feature = "python")]
+mod py {
+    use super::FearGreedLabel;
+    use pyo3::prelude::*;
+
+    #[pyclass(eq, eq_int, hash, frozen, name = "FearGreedLabel")]
+    #[derive(Clone, Copy, PartialEq, Eq, Hash)]
+    pub enum PyFearGreedLabel {
+        ExtremeFear,
+        Fear,
+        Neutral,
+        Greed,
+        ExtremeGreed,
+    }
+
+    impl ::core::convert::From<PyFearGreedLabel> for FearGreedLabel {
+        fn from(v: PyFearGreedLabel) -> Self {
+            match v {
+                PyFearGreedLabel::ExtremeFear => FearGreedLabel::ExtremeFear,
+                PyFearGreedLabel::Fear => FearGreedLabel::Fear,
+                PyFearGreedLabel::Neutral => FearGreedLabel::Neutral,
+                PyFearGreedLabel::Greed => FearGreedLabel::Greed,
+                PyFearGreedLabel::ExtremeGreed => FearGreedLabel::ExtremeGreed,
+            }
+        }
+    }
+
+    impl ::core::convert::From<FearGreedLabel> for PyFearGreedLabel {
+        fn from(v: FearGreedLabel) -> Self {
+            match v {
+                FearGreedLabel::ExtremeFear => PyFearGreedLabel::ExtremeFear,
+                FearGreedLabel::Fear => PyFearGreedLabel::Fear,
+                FearGreedLabel::Neutral => PyFearGreedLabel::Neutral,
+                FearGreedLabel::Greed => PyFearGreedLabel::Greed,
+                FearGreedLabel::ExtremeGreed => PyFearGreedLabel::ExtremeGreed,
+                _ => unreachable!(
+                    "FearGreedLabel is #[non_exhaustive] but all known variants covered"
+                ),
+            }
+        }
     }
 }

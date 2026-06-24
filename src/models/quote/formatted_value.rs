@@ -120,6 +120,79 @@ impl<T> FormattedValue<T> {
     }
 }
 
+#[cfg(feature = "python")]
+mod py {
+    //! Concrete PyO3 wrappers around `FormattedValue<T>`. PyO3 doesn't support
+    //! generic `#[pyclass]`, so we emit one per concrete T.
+    //!
+    //! Naming convention: `FormattedValue` + suffix matching the Rust type.
+    //! Python sees `FormattedValueF64`, `FormattedValueI64`, etc.
+
+    use super::FormattedValue;
+    use pyo3::prelude::*;
+
+    macro_rules! impl_formatted_value_py {
+        ($py_ty:ident, $rust_inner:ty, $py_name:literal) => {
+            #[pyclass(frozen, name = $py_name)]
+            #[derive(Clone)]
+            pub struct $py_ty {
+                inner: ::std::sync::Arc<FormattedValue<$rust_inner>>,
+            }
+
+            #[pymethods]
+            impl $py_ty {
+                #[getter]
+                fn raw(&self) -> Option<$rust_inner> {
+                    self.inner.raw.clone()
+                }
+
+                #[getter]
+                fn fmt(&self) -> Option<String> {
+                    self.inner.fmt.clone()
+                }
+
+                #[getter]
+                fn long_fmt(&self) -> Option<String> {
+                    self.inner.long_fmt.clone()
+                }
+
+                fn __repr__(&self) -> String {
+                    format!("{:?}", *self.inner)
+                }
+            }
+
+            impl ::core::convert::From<FormattedValue<$rust_inner>> for $py_ty {
+                fn from(value: FormattedValue<$rust_inner>) -> Self {
+                    Self {
+                        inner: ::std::sync::Arc::new(value),
+                    }
+                }
+            }
+
+            impl ::core::convert::From<$py_ty> for FormattedValue<$rust_inner> {
+                fn from(value: $py_ty) -> Self {
+                    let inner = value.inner;
+                    FormattedValue {
+                        fmt: inner.fmt.clone(),
+                        long_fmt: inner.long_fmt.clone(),
+                        raw: inner.raw.clone(),
+                    }
+                }
+            }
+        };
+    }
+
+    impl_formatted_value_py!(PyFormattedValueF64, f64, "FormattedValueF64");
+    impl_formatted_value_py!(PyFormattedValueI64, i64, "FormattedValueI64");
+    impl_formatted_value_py!(PyFormattedValueU64, u64, "FormattedValueU64");
+    impl_formatted_value_py!(PyFormattedValueString, String, "FormattedValueString");
+}
+
+#[cfg(feature = "python")]
+pub use py::{
+    PyFormattedValueF64, PyFormattedValueI64, PyFormattedValueString, PyFormattedValueU64,
+};
+
 #[cfg(test)]
 mod tests {
     use super::*;

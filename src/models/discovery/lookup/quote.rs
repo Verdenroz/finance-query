@@ -4,9 +4,14 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// A quote/document result from symbol lookup
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[non_exhaustive]
 #[serde(rename_all = "camelCase")]
 pub struct LookupQuote {

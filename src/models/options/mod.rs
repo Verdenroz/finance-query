@@ -9,3 +9,5 @@ pub(crate) mod response;
 pub use chain::{OptionChain, OptionsQuote};
 pub use contract::{Contracts, OptionContract};
 pub use response::Options;
+#[cfg(feature = "python")]
+pub use response::PyOptions;

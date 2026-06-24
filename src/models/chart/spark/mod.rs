@@ -8,6 +8,12 @@ pub(crate) mod response;
 use super::ChartMeta;
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
+#[cfg(feature = "python")]
+use super::meta::PyChartMeta;
+
 /// Sparkline data for a single symbol.
 ///
 /// Contains lightweight chart data optimized for sparkline rendering,
@@ -16,6 +22,7 @@ use serde::{Deserialize, Serialize};
 /// Note: This struct cannot be manually constructed - obtain via `Tickers::spark()`.
 #[non_exhaustive]
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct Spark {
     /// Stock symbol

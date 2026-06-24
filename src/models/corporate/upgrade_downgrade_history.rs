@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Analyst upgrade/downgrade history
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct UpgradeDowngradeHistory {
     /// List of rating changes
@@ -19,6 +23,7 @@ pub struct UpgradeDowngradeHistory {
 
 /// Individual analyst rating change
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct GradeChange {
     /// Timestamp of the grade change (epoch)

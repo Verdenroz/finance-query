@@ -4,8 +4,12 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Institutional ownership data
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct InstitutionOwnership {
     /// Maximum age of this data in seconds
@@ -19,6 +23,7 @@ pub struct InstitutionOwnership {
 
 /// Individual institutional owner
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct InstitutionOwner {
     /// Maximum age of this data in seconds

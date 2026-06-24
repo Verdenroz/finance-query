@@ -4,6 +4,11 @@ use crate::Provider;
 /// Contains the OHLCV candle/bar structure.
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use crate::PyProvider;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// A single OHLCV candle/bar
 ///
 /// Note: This struct cannot be manually constructed - obtain via `Ticker::chart()`.
@@ -11,6 +16,8 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 pub struct Candle {
     /// Timestamp (Unix)
     pub timestamp: i64,

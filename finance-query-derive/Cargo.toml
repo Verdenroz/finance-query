@@ -18,3 +18,13 @@ proc-macro = true
 syn = { version = "2", features = ["full", "parsing", "extra-traits"] }
 quote = "1"
 proc-macro2 = "1"
+
+[dev-dependencies]
+trybuild = "1"
+pyo3 = { version = "0.27", features = ["abi3-py39"] }
+
+[features]
+default = []
+# When enabled, the crate exposes the PyModel derive macro.
+# Consumers of PyModel must also have `pyo3` in their own dependencies.
+python = []

@@ -1,0 +1,30 @@
+[package]
+name = "finance-query-python"
+version = "2.5.1"
+edition = "2024"
+authors = ["Harvey Tseng <harveytseng2@gmail.com>"]
+description = "Python bindings for the finance-query Rust library"
+license = "MIT"
+repository = "https://github.com/Verdenroz/finance-query"
+publish = false
+
+[lib]
+name = "_finance_query"
+# `rlib` enables `cargo test` to link this crate as a normal Rust library.
+# `cdylib` is required for maturin to produce the Python extension wheel.
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+finance-query = { path = "..", features = [
+    "indicators", "risk", "fred", "crypto", "rss", "backtesting", "dataframe", "python", "sentiment"
+] }
+# `extension-module` is intentionally NOT enabled here — it's added by maturin
+# via `[tool.maturin] features = ["pyo3/extension-module"]` in pyproject.toml,
+# so `cargo test` can still link libpython.
+pyo3 = { version = "0.27", features = ["abi3-py39"] }
+pyo3-async-runtimes = { version = "0.27", features = ["tokio-runtime"] }
+pyo3-polars = "0.26"
+serde_json = "1"
+tokio = { version = "1", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
