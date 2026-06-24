@@ -6,10 +6,14 @@
 
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// A collection of SEC filings from a provider (e.g., Polygon EDGAR).
 ///
 /// Obtain via [`Ticker::filings`](crate::Ticker::filings).
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct ProviderFilings {
     /// Ticker symbol these filings belong to.
@@ -20,6 +24,7 @@ pub struct ProviderFilings {
 
 /// A single SEC filing entry from a provider.
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct ProviderFiling {
     /// SEC accession number (unique filing ID).

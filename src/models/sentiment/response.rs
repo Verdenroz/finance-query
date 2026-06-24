@@ -172,9 +172,8 @@ mod py {
     use super::FearGreedLabel;
     use pyo3::prelude::*;
 
-
-    #[pyclass(eq, eq_int, name = "FearGreedLabel")]
-    #[derive(Clone, Copy, PartialEq, Eq)]
+    #[pyclass(eq, eq_int, hash, frozen, name = "FearGreedLabel")]
+    #[derive(Clone, Copy, PartialEq, Eq, Hash)]
     pub enum PyFearGreedLabel {
         ExtremeFear,
         Fear,
@@ -210,4 +209,3 @@ mod py {
         }
     }
 }
-

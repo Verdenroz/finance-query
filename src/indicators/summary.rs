@@ -17,6 +17,8 @@ use crate::indicators::{
     stochastic_rsi::stochastic_rsi_from_rsi_dense, supertrend::supertrend_with_atr_dense, tema,
     true_range, vwap, vwma, williams_r, wma::wma_raw,
 };
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
 
 /// Helper to extract last value from Result-returning indicators
 #[inline]
@@ -224,6 +226,8 @@ pub(crate) fn calculate_indicators(candles: &[Candle]) -> IndicatorsSummary {
 /// Summary of all calculated technical indicators
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
 #[cfg_attr(feature = "dataframe", derive(crate::ToDataFrame))]
+#[cfg_attr(feature = "python", derive(PyModel))]
+#[cfg_attr(feature = "python", py_model(dataframe = "columns"))]
 #[serde(rename_all = "camelCase")]
 pub struct IndicatorsSummary {
     // === MOVING AVERAGES ===
@@ -402,6 +406,7 @@ pub struct IndicatorsSummary {
 
 /// Stochastic Oscillator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct StochasticData {
     /// %K line value
@@ -414,6 +419,7 @@ pub struct StochasticData {
 
 /// MACD indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct MacdData {
     /// MACD line value
@@ -429,6 +435,7 @@ pub struct MacdData {
 
 /// Aroon indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct AroonData {
     /// Aroon Up value
@@ -441,6 +448,7 @@ pub struct AroonData {
 
 /// Bollinger Bands data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct BollingerBandsData {
     /// Upper band value
@@ -456,6 +464,7 @@ pub struct BollingerBandsData {
 
 /// SuperTrend indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct SuperTrendData {
     /// SuperTrend value
@@ -468,6 +477,7 @@ pub struct SuperTrendData {
 
 /// Ichimoku Cloud data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct IchimokuData {
     /// Conversion line (Tenkan-sen)
@@ -489,6 +499,7 @@ pub struct IchimokuData {
 
 /// Keltner Channels data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct KeltnerChannelsData {
     /// Upper channel value
@@ -504,6 +515,7 @@ pub struct KeltnerChannelsData {
 
 /// Donchian Channels data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct DonchianChannelsData {
     /// Upper channel value
@@ -519,6 +531,7 @@ pub struct DonchianChannelsData {
 
 /// Bull Bear Power indicator data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct BullBearPowerData {
     /// Bull power value
@@ -531,6 +544,7 @@ pub struct BullBearPowerData {
 
 /// Elder Ray Index data
 #[derive(Debug, Clone, Default, serde::Serialize, serde::Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct ElderRayData {
     /// Bull power value

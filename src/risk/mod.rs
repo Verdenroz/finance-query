@@ -34,12 +34,15 @@ pub use self::ratios::{calmar_ratio, sharpe_ratio, sortino_ratio};
 pub use self::var::{historical_var, parametric_var};
 
 use crate::models::chart::Candle;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
 use serde::{Deserialize, Serialize};
 
 /// Comprehensive risk summary for a symbol.
 ///
 /// Obtain via [`Ticker::risk`](crate::Ticker::risk).
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[non_exhaustive]
 pub struct RiskSummary {
     /// 1-day historical Value at Risk at 95% confidence (expressed as positive loss fraction)

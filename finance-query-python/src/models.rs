@@ -3,7 +3,12 @@
 //! Types are added to this module as Ticker/Tickers/finance methods need them.
 
 pub use finance_query::{
-    PyCapitalGain, PyChart, PyDividend, PyEdgarSubmissions, PyFearAndGreed, PyFearGreedLabel,
-    PyFinancialStatement, PyNews, PyQuote, PyRecommendation, PyScreenerQuote, PyScreenerResults,
-    PySearchQuote, PySplit, PyTrendingQuote,
+    PyCapitalGain, PyChart, PyCompanyFacts, PyDividend, PyDividendAnalytics, PyEdgarSubmissions,
+    PyFearAndGreed, PyFearGreedLabel, PyFinancialStatement, PyIndicatorsSummary, PyNews, PyOptions,
+    PyProviderFilings, PyQuote, PyRecommendation, PyRiskSummary, PyScreenerQuote,
+    PyScreenerResults, PySearchQuote, PySentiment, PySentimentLabel, PySpark, PySplit,
+    PyTrendingQuote,
 };
+
+// Note: PyIndicatorResult is imported directly in ticker.rs from crate::indicators
+// (IndicatorResult is an enum, so PyModel derive is not applicable).

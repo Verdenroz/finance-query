@@ -8,6 +8,8 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 #[cfg(feature = "python")]
+use crate::PyProvider;
+#[cfg(feature = "python")]
 use finance_query_derive::PyModel;
 
 /// Raw response structure from Yahoo Finance fundamentals-timeseries API
@@ -70,7 +72,6 @@ pub struct FinancialStatement {
     pub statement: HashMap<String, HashMap<String, f64>>,
 
     /// Which provider supplied this data (None = Yahoo Finance default)
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<crate::providers::Provider>,
 }
 

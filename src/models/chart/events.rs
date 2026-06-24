@@ -8,6 +8,8 @@ use std::collections::HashMap;
 use std::sync::OnceLock;
 
 #[cfg(feature = "python")]
+use crate::PyProvider;
+#[cfg(feature = "python")]
 use finance_query_derive::PyModel;
 
 /// Chart events containing dividends, splits, and capital gains
@@ -86,7 +88,6 @@ pub struct Dividend {
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<Provider>,
 }
 
@@ -110,7 +111,6 @@ pub struct Split {
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<Provider>,
 }
 
@@ -130,7 +130,6 @@ pub struct CapitalGain {
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<Provider>,
 }
 

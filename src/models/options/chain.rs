@@ -2,9 +2,9 @@ use super::contract::OptionContract;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "python")]
-use finance_query_derive::PyModel;
-#[cfg(feature = "python")]
 use super::contract::PyOptionContract;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
 
 /// Options chain data for a specific expiration
 ///

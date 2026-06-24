@@ -5,9 +5,11 @@ use super::SimilarSymbol;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "python")]
-use finance_query_derive::PyModel;
-#[cfg(feature = "python")]
 use super::symbol::PySimilarSymbol;
+#[cfg(feature = "python")]
+use crate::PyProvider;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
 
 /// Fully typed recommendation data
 ///
@@ -27,7 +29,6 @@ pub struct Recommendation {
     pub recommendations: Vec<SimilarSymbol>,
 
     /// Which provider supplied this data (None = Yahoo Finance default)
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<crate::providers::Provider>,
 }
 

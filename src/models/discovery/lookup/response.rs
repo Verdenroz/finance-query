@@ -6,9 +6,9 @@ use super::LookupQuote;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "python")]
-use finance_query_derive::PyModel;
-#[cfg(feature = "python")]
 use super::quote::PyLookupQuote;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
 
 /// Raw response wrapper from Yahoo Finance lookup endpoint
 #[derive(Debug, Clone, Deserialize)]

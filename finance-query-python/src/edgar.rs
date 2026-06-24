@@ -16,7 +16,11 @@ pub fn edgar_init(email: String) -> PyResult<()> {
 
 #[pyfunction]
 #[pyo3(signature = (email, app_name, timeout_seconds = 60))]
-pub fn edgar_init_with_config(email: String, app_name: String, timeout_seconds: u64) -> PyResult<()> {
+pub fn edgar_init_with_config(
+    email: String,
+    app_name: String,
+    timeout_seconds: u64,
+) -> PyResult<()> {
     finance_query::edgar::init_with_config(email, app_name, Duration::from_secs(timeout_seconds))
         .map_err(to_py_err)
 }

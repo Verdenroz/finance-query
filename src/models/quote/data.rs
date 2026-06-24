@@ -25,13 +25,7 @@ use finance_query_derive::PyModel;
 #[cfg(feature = "python")]
 use crate::models::corporate::asset_profile::PyCompanyOfficer;
 #[cfg(feature = "python")]
-use crate::models::fundamentals::balance_sheet_history::{PyBalanceSheetHistory, PyBalanceSheetHistoryQuarterly};
-#[cfg(feature = "python")]
 use crate::models::corporate::calendar_events::PyCalendarEvents;
-#[cfg(feature = "python")]
-use crate::models::fundamentals::cashflow_statement_history::{
-    PyCashflowStatementHistory, PyCashflowStatementHistoryQuarterly,
-};
 #[cfg(feature = "python")]
 use crate::models::corporate::earnings::PyEarnings;
 #[cfg(feature = "python")]
@@ -46,12 +40,6 @@ use crate::models::corporate::fund_ownership::PyFundOwnership;
 use crate::models::corporate::fund_performance::PyFundPerformance;
 #[cfg(feature = "python")]
 use crate::models::corporate::fund_profile::PyFundProfile;
-#[cfg(feature = "python")]
-use crate::models::fundamentals::income_statement_history::{
-    PyIncomeStatementHistory, PyIncomeStatementHistoryQuarterly,
-};
-#[cfg(feature = "python")]
-use crate::models::market::index_trend::{PyIndexTrend, PyIndustryTrend, PySectorTrend};
 #[cfg(feature = "python")]
 use crate::models::corporate::insider_holders::PyInsiderHolders;
 #[cfg(feature = "python")]
@@ -70,6 +58,20 @@ use crate::models::corporate::sec_filings::PySecFilings;
 use crate::models::corporate::top_holdings::PyTopHoldings;
 #[cfg(feature = "python")]
 use crate::models::corporate::upgrade_downgrade_history::PyUpgradeDowngradeHistory;
+#[cfg(feature = "python")]
+use crate::models::fundamentals::balance_sheet_history::{
+    PyBalanceSheetHistory, PyBalanceSheetHistoryQuarterly,
+};
+#[cfg(feature = "python")]
+use crate::models::fundamentals::cashflow_statement_history::{
+    PyCashflowStatementHistory, PyCashflowStatementHistoryQuarterly,
+};
+#[cfg(feature = "python")]
+use crate::models::fundamentals::income_statement_history::{
+    PyIncomeStatementHistory, PyIncomeStatementHistoryQuarterly,
+};
+#[cfg(feature = "python")]
+use crate::models::market::index_trend::{PyIndexTrend, PyIndustryTrend, PySectorTrend};
 
 /// Flattened quote data with deduplicated fields
 ///

@@ -2,9 +2,9 @@ use super::quote::ScreenerQuote;
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "python")]
-use finance_query_derive::PyModel;
-#[cfg(feature = "python")]
 use super::quote::PyScreenerQuote;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
 
 /// Raw response structure from Yahoo Finance screener API (predefined screeners)
 ///

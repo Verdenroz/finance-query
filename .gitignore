@@ -77,3 +77,6 @@ Thumbs.db
 
 # remember plugin (claude-plugins-official) — runtime logs and tmp
 .remember/
+
+# superpowers plugin 
+docs/superpowers/

@@ -249,6 +249,59 @@ pub struct FactUnit {
     pub frame: Option<String>,
 }
 
+// --------------------------------------------------------------------------
+// Python wrapper for CompanyFacts
+// --------------------------------------------------------------------------
+// PyModel derive cannot be used on CompanyFacts because the `facts` field is
+// `HashMap<String, FactsByTaxonomy>` where `FactsByTaxonomy` is a tuple-
+// newtype over `HashMap<String, FactConcept>`, and the PyModel macro requires
+// named fields. Instead we hand-write a thin frozen pyclass that uses
+// `pythonize` to expose the whole struct as a Python dict/object.
+#[cfg(feature = "python")]
+pub use company_facts_python::PyCompanyFacts;
+
+#[cfg(feature = "python")]
+mod company_facts_python {
+    use super::CompanyFacts;
+    use pyo3::prelude::*;
+    use std::sync::Arc;
+
+    #[pyclass(frozen, name = "CompanyFacts")]
+    #[derive(Debug)]
+    pub struct PyCompanyFacts {
+        inner: Arc<CompanyFacts>,
+    }
+
+    #[pymethods]
+    impl PyCompanyFacts {
+        #[getter]
+        fn cik(&self) -> Option<u64> {
+            self.inner.cik
+        }
+
+        #[getter]
+        fn entity_name(&self) -> Option<String> {
+            self.inner.entity_name.clone()
+        }
+
+        fn __repr__(&self) -> String {
+            format!("{:?}", *self.inner)
+        }
+
+        fn to_dict<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyAny>> {
+            ::pythonize::pythonize(py, &*self.inner).map_err(Into::into)
+        }
+    }
+
+    impl From<CompanyFacts> for PyCompanyFacts {
+        fn from(value: CompanyFacts) -> Self {
+            Self {
+                inner: Arc::new(value),
+            }
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

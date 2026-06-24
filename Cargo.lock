@@ -1977,6 +1977,7 @@ dependencies = [
  "pyo3",
  "pyo3-async-runtimes",
  "pyo3-polars",
+ "serde_json",
  "tokio",
  "tracing",
  "tracing-subscriber",

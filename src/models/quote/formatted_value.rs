@@ -163,7 +163,9 @@ mod py {
 
             impl ::core::convert::From<FormattedValue<$rust_inner>> for $py_ty {
                 fn from(value: FormattedValue<$rust_inner>) -> Self {
-                    Self { inner: ::std::sync::Arc::new(value) }
+                    Self {
+                        inner: ::std::sync::Arc::new(value),
+                    }
                 }
             }
 
@@ -188,8 +190,7 @@ mod py {
 
 #[cfg(feature = "python")]
 pub use py::{
-    PyFormattedValueF64, PyFormattedValueI64, PyFormattedValueString,
-    PyFormattedValueU64,
+    PyFormattedValueF64, PyFormattedValueI64, PyFormattedValueString, PyFormattedValueU64,
 };
 
 #[cfg(test)]

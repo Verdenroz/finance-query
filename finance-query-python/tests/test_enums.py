@@ -80,3 +80,25 @@ def test_exchange_code_at_least_one_variant():
 def test_industry_at_least_one_variant():
     assert Industry.Semiconductors is not None
     assert len([attr for attr in dir(Industry) if not attr.startswith("_")]) > 3
+
+
+from finance_query import Provider, SentimentLabel, FearGreedLabel
+
+
+def test_enums_are_hashable():
+    """Enum mirrors must be usable as set/dict members (require __hash__)."""
+    # macro-generated mirror
+    assert Interval.OneDay in {Interval.OneDay, Interval.OneMinute}
+    # hand-written mirrors
+    assert Provider.Yahoo in {Provider.Yahoo, Provider.Edgar}
+    assert SentimentLabel.Bullish in {SentimentLabel.Bullish, SentimentLabel.Bearish}
+    assert FearGreedLabel.Fear in {
+        FearGreedLabel.ExtremeFear,
+        FearGreedLabel.Fear,
+        FearGreedLabel.Neutral,
+        FearGreedLabel.Greed,
+        FearGreedLabel.ExtremeGreed,
+    }
+    # usable as dict keys
+    counts = {Interval.OneDay: 1, FearGreedLabel.Fear: 2}
+    assert counts[Interval.OneDay] == 1

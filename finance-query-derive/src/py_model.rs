@@ -142,7 +142,8 @@ pub fn expand(input: TokenStream) -> TokenStream {
         }
     } else if let Some(field_ident) = &emit_dataframe_from {
         // Find the named field and extract its Vec<Element> element type.
-        let element_ty = fields.iter()
+        let element_ty = fields
+            .iter()
             .find(|f| f.ident.as_ref() == Some(field_ident))
             .and_then(|f| unwrap_generic(&f.ty, "Vec").cloned());
         match element_ty {
@@ -163,7 +164,10 @@ pub fn expand(input: TokenStream) -> TokenStream {
             },
             None => syn::Error::new_spanned(
                 field_ident,
-                format!("dataframe_from = \"{}\" must name a Vec<T> field", field_ident),
+                format!(
+                    "dataframe_from = \"{}\" must name a Vec<T> field",
+                    field_ident
+                ),
             )
             .to_compile_error(),
         }
@@ -434,9 +438,21 @@ fn is_primitive(ty: &Type) -> bool {
         if let Some(seg) = p.path.segments.last() {
             return matches!(
                 seg.ident.to_string().as_str(),
-                "i8" | "i16" | "i32" | "i64" | "i128" | "isize"
-                    | "u8" | "u16" | "u32" | "u64" | "u128" | "usize"
-                    | "f32" | "f64" | "bool" | "char"
+                "i8" | "i16"
+                    | "i32"
+                    | "i64"
+                    | "i128"
+                    | "isize"
+                    | "u8"
+                    | "u16"
+                    | "u32"
+                    | "u64"
+                    | "u128"
+                    | "usize"
+                    | "f32"
+                    | "f64"
+                    | "bool"
+                    | "char"
             );
         }
     }
@@ -459,8 +475,12 @@ fn unwrap_generic<'a>(ty: &'a Type, name: &str) -> Option<&'a Type> {
     if seg.ident != name {
         return None;
     }
-    let syn::PathArguments::AngleBracketed(args) = &seg.arguments else { return None };
-    let syn::GenericArgument::Type(t) = args.args.first()? else { return None };
+    let syn::PathArguments::AngleBracketed(args) = &seg.arguments else {
+        return None;
+    };
+    let syn::GenericArgument::Type(t) = args.args.first()? else {
+        return None;
+    };
     Some(t)
 }
 
@@ -471,7 +491,9 @@ fn unwrap_hashmap(ty: &Type) -> Option<(&Type, &Type)> {
     if seg.ident != "HashMap" {
         return None;
     }
-    let syn::PathArguments::AngleBracketed(args) = &seg.arguments else { return None };
+    let syn::PathArguments::AngleBracketed(args) = &seg.arguments else {
+        return None;
+    };
     let mut iter = args.args.iter();
     let (a, b) = (iter.next()?, iter.next()?);
     let (syn::GenericArgument::Type(k), syn::GenericArgument::Type(v)) = (a, b) else {
@@ -482,8 +504,12 @@ fn unwrap_hashmap(ty: &Type) -> Option<(&Type, &Type)> {
 
 /// `Foo` → `PyFoo` (taking only the last path segment).
 fn wrap_with_py_prefix(ty: &Type) -> TokenStream2 {
-    let Type::Path(p) = ty else { return quote! { #ty } };
-    let Some(seg) = p.path.segments.last() else { return quote! { #ty } };
+    let Type::Path(p) = ty else {
+        return quote! { #ty };
+    };
+    let Some(seg) = p.path.segments.last() else {
+        return quote! { #ty };
+    };
     let py_ident = format_ident!("Py{}", seg.ident);
     quote! { #py_ident }
 }

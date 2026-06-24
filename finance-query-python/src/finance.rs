@@ -37,11 +37,7 @@ fn search<'py>(py: Python<'py>, query: String) -> PyResult<Bound<'py, PyAny>> {
 /// `count` defaults to 25 to match Yahoo's typical screener page size.
 #[pyfunction]
 #[pyo3(signature = (screener, count=25))]
-fn screener<'py>(
-    py: Python<'py>,
-    screener: PyScreener,
-    count: u32,
-) -> PyResult<Bound<'py, PyAny>> {
+fn screener<'py>(py: Python<'py>, screener: PyScreener, count: u32) -> PyResult<Bound<'py, PyAny>> {
     pyo3_async_runtimes::tokio::future_into_py(py, async move {
         let r = finance_query::finance::screener(screener.into(), count)
             .await
@@ -92,10 +88,7 @@ fn lookup<'py>(py: Python<'py>, query: String) -> PyResult<Bound<'py, PyAny>> {
 /// Fetch Yahoo Finance's market summary quotes for `region` (defaults to US).
 #[pyfunction]
 #[pyo3(signature = (region=None))]
-fn market_summary<'py>(
-    py: Python<'py>,
-    region: Option<PyRegion>,
-) -> PyResult<Bound<'py, PyAny>> {
+fn market_summary<'py>(py: Python<'py>, region: Option<PyRegion>) -> PyResult<Bound<'py, PyAny>> {
     pyo3_async_runtimes::tokio::future_into_py(py, async move {
         let r = finance_query::finance::market_summary(region.map(Into::into))
             .await

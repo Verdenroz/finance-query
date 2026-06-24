@@ -7,7 +7,7 @@ pub(crate) mod response;
 pub(crate) mod result;
 mod symbol;
 
-pub use data::Recommendation;
 #[cfg(feature = "python")]
 pub use data::PyRecommendation;
+pub use data::Recommendation;
 pub use symbol::SimilarSymbol;

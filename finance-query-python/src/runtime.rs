@@ -7,7 +7,9 @@ pub fn init_runtime() -> PyResult<()> {
         .enable_all()
         .thread_name("finance-query-py")
         .build()
-        .map_err(|e| pyo3::exceptions::PyRuntimeError::new_err(format!("tokio init failed: {}", e)))?;
+        .map_err(|e| {
+            pyo3::exceptions::PyRuntimeError::new_err(format!("tokio init failed: {}", e))
+        })?;
     let rt: &'static tokio::runtime::Runtime = Box::leak(Box::new(rt));
     pyo3_async_runtimes::tokio::init_with_runtime(rt)
         .map_err(|_| pyo3::exceptions::PyRuntimeError::new_err("runtime already initialised"))?;

@@ -34,3 +34,6 @@ pub struct SymbolSentiment {
 
 #[cfg(feature = "python")]
 pub use response::{PyFearAndGreed, PyFearGreedLabel};
+
+#[cfg(all(feature = "python", feature = "sentiment"))]
+pub use score::{PySentiment, PySentimentLabel};

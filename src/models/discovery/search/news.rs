@@ -7,9 +7,11 @@ use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 
 #[cfg(feature = "python")]
-use finance_query_derive::PyModel;
-#[cfg(feature = "python")]
 use super::thumbnail::PyNewsThumbnail;
+#[cfg(all(feature = "python", feature = "sentiment"))]
+use crate::PySentiment;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
 
 /// A collection of search news with DataFrame support.
 ///
@@ -93,6 +95,5 @@ pub struct SearchNews {
     /// Only present when the `sentiment` feature is enabled.
     #[cfg(feature = "sentiment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub sentiment: Option<crate::models::sentiment::Sentiment>,
 }

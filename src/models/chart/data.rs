@@ -14,7 +14,7 @@ use finance_query_derive::PyModel;
 // and `Option<TimeRange>` fields.
 #[cfg(feature = "python")]
 #[allow(unused_imports)]
-use crate::{PyInterval, PyTimeRange};
+use crate::{PyInterval, PyProvider, PyTimeRange};
 
 // Nested PyModel wrappers used by the generated `PyChart` for the `meta` and
 // `candles` fields.
@@ -53,7 +53,6 @@ pub struct Chart {
 
     /// Which data provider served this data (e.g., "yahoo", "polygon").
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<Provider>,
 }
 

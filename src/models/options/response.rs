@@ -6,11 +6,19 @@ use crate::Provider;
 /// These types are internal implementation details and not exposed in the public API.
 use serde::{Deserialize, Serialize};
 
+#[cfg(feature = "python")]
+use super::contract::PyOptionContract;
+#[cfg(feature = "python")]
+use crate::PyProvider;
+#[cfg(feature = "python")]
+use finance_query_derive::PyModel;
+
 /// Response wrapper for options endpoint
 ///
 /// Note: While this type is public for return values, users should not manually construct it.
 /// Use `Ticker::options()` to obtain options data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub struct Options {
     /// Option chain container
@@ -23,6 +31,7 @@ pub struct Options {
 
 /// Container for option chain results
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 pub(crate) struct OptionChainContainer {
     /// Results array
     pub result: Vec<OptionChainResult>,
@@ -33,6 +42,7 @@ pub(crate) struct OptionChainContainer {
 
 /// Single option chain result
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct OptionChainResult {
     /// Underlying symbol
@@ -56,6 +66,7 @@ pub(crate) struct OptionChainResult {
 
 /// Option chain data for a specific expiration
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[cfg_attr(feature = "python", derive(PyModel))]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct OptionChainData {
     /// Expiration date (Unix timestamp)

@@ -3,6 +3,10 @@
 use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "python")]
+use crate::PyProvider;
+#[cfg(all(feature = "python", feature = "sentiment"))]
+use crate::PySentiment;
+#[cfg(feature = "python")]
 use finance_query_derive::PyModel;
 
 /// A news article
@@ -28,14 +32,12 @@ pub struct News {
     pub time: String,
 
     /// Which provider supplied this article (None = Yahoo Finance default)
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub provider_id: Option<crate::providers::Provider>,
 
     /// Sentiment score for this article's title (VADER lexicon-based).
     /// Only present when the `sentiment` feature is enabled.
     #[cfg(feature = "sentiment")]
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    #[cfg_attr(feature = "python", py_model(skip))]
     pub sentiment: Option<crate::models::sentiment::Sentiment>,
 }
 

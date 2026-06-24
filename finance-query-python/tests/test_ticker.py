@@ -1,7 +1,12 @@
 """Tests for PyTicker — Ticker.new() and ticker.quote()."""
 
 import pytest
-from finance_query import Ticker, Interval, TimeRange, StatementType, Frequency
+from finance_query import Ticker, Tickers, Interval, TimeRange, StatementType, Frequency
+
+
+def test_provider_enum_exists():
+    from finance_query import Provider
+    assert hasattr(Provider, "Yahoo")
 
 
 @pytest.mark.asyncio
@@ -83,6 +88,19 @@ def test_ticker_has_all_methods():
     assert not missing, f"missing methods: {missing}"
 
 
+def test_ticker_has_filings_and_company_facts():
+    expected = {"filings", "edgar_company_facts"}
+    actual = {m for m in dir(Ticker) if not m.startswith("_")}
+    assert expected.issubset(actual), f"missing: {expected - actual}"
+
+
+def test_ticker_has_options_and_dividend_analytics():
+    """Test: options and dividend_analytics methods exist in Ticker."""
+    expected = {"options", "dividend_analytics"}
+    actual = {m for m in dir(Ticker) if not m.startswith("_")}
+    assert expected.issubset(actual), f"missing: {expected - actual}"
+
+
 def test_ticker_has_builder():
     """Smoke: builder() exists and returns a TickerBuilder."""
     from finance_query import TickerBuilder
@@ -116,3 +134,37 @@ def test_enable_logging_rejects_invalid_level():
     import pytest
     with pytest.raises(ValueError):
         finance_query.enable_logging(level="BOGUS")
+
+
+def test_ticker_has_news_sentiment():
+    assert "news_sentiment" in {m for m in dir(Ticker) if not m.startswith("_")}
+
+
+def test_indicators_methods_exist():
+    assert "indicators" in {m for m in dir(Ticker) if not m.startswith("_")}
+    assert "indicators" in {m for m in dir(Tickers) if not m.startswith("_")}
+
+
+def test_indicator_constructors_and_method():
+    from finance_query import Indicator
+    Indicator.sma(20)
+    Indicator.macd(12, 26, 9)
+    Indicator.rsi(14)
+    assert "indicator" in {m for m in dir(Ticker) if not m.startswith("_")}
+
+
+def test_ticker_has_risk():
+    assert "risk" in {m for m in dir(Ticker) if not m.startswith("_")}
+
+
+def test_strategy_classes_constructible():
+    from finance_query import SmaCrossover, RsiReversal, MacdSignal, BollingerMeanReversion, SuperTrendFollow, DonchianBreakout
+    SmaCrossover(10, 20); RsiReversal(14); MacdSignal(12, 26, 9)
+    BollingerMeanReversion(20, 2.0); SuperTrendFollow(10, 3.0)
+    DonchianBreakout(20)
+
+
+def test_backtest_methods_exist():
+    assert "backtest" in {m for m in dir(Ticker) if not m.startswith("_")}
+    assert "backtest_with_benchmark" in {m for m in dir(Ticker) if not m.startswith("_")}
+    assert "backtest" in {m for m in dir(Tickers) if not m.startswith("_")}
