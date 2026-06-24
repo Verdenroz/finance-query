@@ -55,4 +55,49 @@ impl CryptoCoin {
         self.chart(vs_currency, range.default_interval(), range)
             .await
     }
+
+    /// Compute all technical indicators from this coin's chart data (priced in
+    /// `vs_currency`).
+    #[cfg(feature = "indicators")]
+    pub async fn indicators(
+        &self,
+        vs_currency: &str,
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<crate::indicators::IndicatorsSummary> {
+        let chart = self.chart(vs_currency, interval, range).await?;
+        Ok(crate::indicators::summary::calculate_indicators(
+            &chart.candles,
+        ))
+    }
+
+    /// Compute a single technical indicator from this coin's chart data.
+    #[cfg(feature = "indicators")]
+    pub async fn indicator(
+        &self,
+        indicator: crate::indicators::Indicator,
+        vs_currency: &str,
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<crate::indicators::IndicatorResult> {
+        let chart = self.chart(vs_currency, interval, range).await?;
+        Ok(crate::indicators::compute_indicator(indicator, &chart)?)
+    }
+
+    /// Compute a risk summary from this coin's chart data, annualised with the
+    /// 24/7 crypto calendar (365 days/year). `beta` is always `None`.
+    #[cfg(feature = "risk")]
+    pub async fn risk(
+        &self,
+        vs_currency: &str,
+        interval: Interval,
+        range: TimeRange,
+    ) -> Result<crate::risk::RiskSummary> {
+        let chart = self.chart(vs_currency, interval, range).await?;
+        Ok(crate::risk::compute_risk_summary_with_periods(
+            &chart.candles,
+            None,
+            crate::risk::periods_per_year(interval, crate::risk::TradingCalendar::Crypto),
+        ))
+    }
 }

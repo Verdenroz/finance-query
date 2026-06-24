@@ -100,3 +100,5 @@ impl ForexPair {
         self.chart(range.default_interval(), range).await
     }
 }
+
+impl_chartable_analytics!(ForexPair, crate::risk::TradingCalendar::Forex);

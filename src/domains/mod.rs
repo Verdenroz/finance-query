@@ -220,6 +220,61 @@ macro_rules! fetch_chart_via {
     }};
 }
 
+/// Generate `indicators()`, `indicator()`, and `risk()` for a chartable handle
+/// whose `chart(interval, range)` takes no extra arguments. All three reuse the
+/// cached `chart()`; `risk()` annualises with the handle's `$cal`
+/// ([`TradingCalendar`](crate::risk::TradingCalendar)). Crypto is hand-written
+/// (its `chart()` also takes a `vs_currency`).
+#[allow(unused_macros)]
+macro_rules! impl_chartable_analytics {
+    ($name:ident, $cal:expr) => {
+        impl $name {
+            /// Compute all technical indicators from this handle's chart data.
+            #[cfg(feature = "indicators")]
+            pub async fn indicators(
+                &self,
+                interval: crate::Interval,
+                range: crate::TimeRange,
+            ) -> crate::error::Result<crate::indicators::IndicatorsSummary> {
+                let chart = self.chart(interval, range).await?;
+                Ok(crate::indicators::summary::calculate_indicators(
+                    &chart.candles,
+                ))
+            }
+
+            /// Compute a single technical indicator from this handle's chart data.
+            #[cfg(feature = "indicators")]
+            pub async fn indicator(
+                &self,
+                indicator: crate::indicators::Indicator,
+                interval: crate::Interval,
+                range: crate::TimeRange,
+            ) -> crate::error::Result<crate::indicators::IndicatorResult> {
+                let chart = self.chart(interval, range).await?;
+                Ok(crate::indicators::compute_indicator(indicator, &chart)?)
+            }
+
+            /// Compute a risk summary (VaR, Sharpe/Sortino/Calmar, max drawdown)
+            /// from this handle's chart data. Annualised with this asset class's
+            /// trading calendar, so non-daily intervals scale correctly. `beta`
+            /// is always `None` (no benchmark for non-equity handles).
+            #[cfg(feature = "risk")]
+            pub async fn risk(
+                &self,
+                interval: crate::Interval,
+                range: crate::TimeRange,
+            ) -> crate::error::Result<crate::risk::RiskSummary> {
+                let chart = self.chart(interval, range).await?;
+                Ok(crate::risk::compute_risk_summary_with_periods(
+                    &chart.candles,
+                    None,
+                    crate::risk::periods_per_year(interval, $cal),
+                ))
+            }
+        }
+    };
+}
+
 // ── Modules ─────────────────────────────────────────────────────────
 
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]

@@ -40,3 +40,5 @@ impl Index {
         self.chart(range.default_interval(), range).await
     }
 }
+
+impl_chartable_analytics!(Index, crate::risk::TradingCalendar::Exchange);

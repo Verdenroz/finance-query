@@ -171,6 +171,20 @@ let sec   = providers.filings("AAPL");                        // → Filings
 
 All chart-capable handles route through `Capability::CHART` (Yahoo by default) and cache per `(symbol, interval, range)` when `.cache(ttl)` is set. `history(range)` is sugar for `chart(range.default_interval(), range)`. The handle's identifier is passed to the chart route as-is, so it must be a chart-route symbol (e.g. `^GSPC`, `NQ=F`, `GC=F`); `CryptoCoin` builds `"{ID}-{VS}"` (e.g. `"BTC-USD"`), which resolves on Yahoo only for ticker-style ids.
 
+### Technical Indicators & Risk on Domain Handles
+
+With the `indicators` / `risk` features, every chart-capable handle also exposes the same analytics as `Ticker`, computed over its cached chart:
+
+| Method | Feature | Returns |
+|--------|---------|---------|
+| `.indicators(interval, range)` | `indicators` | `IndicatorsSummary` |
+| `.indicator(Indicator, interval, range)` | `indicators` | `IndicatorResult` |
+| `.risk(interval, range)` | `risk` | `RiskSummary` |
+
+`CryptoCoin` takes a leading `vs_currency` argument on all three (e.g. `coin.indicator(Indicator::Rsi(14), "USD", interval, range)`), matching its `chart()`.
+
+`risk()` annualizes with the handle's asset-class trading calendar — 252 days for exchange-traded (index/futures/commodity), ~260 for forex, 365 for crypto (24/7) — and intraday intervals scale by session length, so Sharpe/Sortino/Calmar are correct across asset classes and intervals. `beta` is always `None` on domain handles (no benchmark is fetched).
+
 ## Tickers and Providers
 
 [`Tickers`](../tickers.md) supports the same multi-provider configuration as `Ticker`. Routing is configured through `Providers::builder()` and passed to `Tickers` via `providers.tickers()`:
