@@ -446,6 +446,21 @@ struct BatchIndicatorsQuery {
 }
 
 #[derive(Deserialize)]
+struct CalendarQuery {
+    /// Comma-separated symbols (required)
+    symbols: String,
+    /// Forward window: 1wk/5d, 1mo, 3mo, etc. (default: 1mo)
+    #[serde(default = "default_calendar_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+}
+
+fn default_calendar_range() -> String {
+    "1mo".to_string()
+}
+
+#[derive(Deserialize)]
 struct RangeQuery {
     #[serde(default = "default_max_range")]
     range: String,
@@ -1015,6 +1030,33 @@ async fn get_batch_capital_gains(
     }
 }
 
+/// GET /v2/calendar?symbols=<csv>&range=<str>
+async fn get_calendar(
+    Extension(state): Extension<AppState>,
+    Query(params): Query<CalendarQuery>,
+) -> impl IntoResponse {
+    let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
+    let range = parse_range(&params.range);
+    let fields = parse_fields(params.fields.as_deref());
+
+    info!(
+        "Fetching calendar for {} symbols (range={})",
+        symbols.len(),
+        params.range
+    );
+
+    match services::calendar::get_calendar(&state.cache, symbols, range, &params.range).await {
+        Ok(json) => {
+            let response = apply_transforms(json, ValueFormat::default(), fields.as_ref());
+            (StatusCode::OK, Json(response)).into_response()
+        }
+        Err(e) => {
+            error!("Calendar error: {}", e);
+            into_error_response(e)
+        }
+    }
+}
+
 /// GET /v2/financials?symbols=<csv>&statement=<str>&frequency=<str>
 async fn get_batch_financials(
     Extension(state): Extension<AppState>,
@@ -1297,6 +1339,7 @@ fn api_routes() -> Router {
         .route("/capital-gains/{symbol}", get(get_capital_gains))
         // GET /v2/capital-gains?symbols=<csv>&range=<str>
         .route("/capital-gains", get(get_batch_capital_gains))
+        .route("/calendar", get(get_calendar))
         // GET /v2/chart/{symbol}?interval=<str>&range=<str>&events=<bool>&patterns=<bool>
         .route("/chart/{symbol}", get(get_chart))
         // GET /v2/charts?symbols=<csv>&interval=<str>&range=<str>&patterns=<bool>
