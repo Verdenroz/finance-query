@@ -4,7 +4,7 @@
     [docs.rs/finance-query — backtesting](https://docs.rs/finance-query/latest/finance_query/backtesting/index.html)
 
 !!! tip "Data Source"
-    Backtesting fetches chart data through your configured [providers](../providers/index.md). By default this is Yahoo Finance; use `TickerBuilder::providers()` to use Polygon, FMP, or other data sources for backtesting.
+    Backtesting fetches chart data through your configured [providers](providers/index.md). By default this is Yahoo Finance; use `TickerBuilder::providers()` to use Polygon, FMP, or other data sources for backtesting.
 
 Test trading strategies against historical data. The backtesting engine provides pre-built strategies, a custom strategy builder, ensemble composition, parameter optimization, walk-forward validation, Monte Carlo simulation, and portfolio-level backtesting.
 

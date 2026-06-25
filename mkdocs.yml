@@ -3,6 +3,10 @@ site_url: https://verdenroz.github.io/finance-query/
 site_author: Harvey Tseng
 site_description: Rust library, CLI, and server for financial data
 
+# Exclude local tooling working-files that may live under docs/ but are not pages
+exclude_docs: |
+  superpowers/
+
 repo_url: https://github.com/Verdenroz/finance-query
 repo_name: Verdenroz/finance-query
 
@@ -72,6 +76,14 @@ nav:
           - CoinGecko: library/providers/coingecko.md
           - EDGAR: library/providers/edgar.md
           - FRED: library/providers/fred.md
+      - Domains:
+          - Crypto: library/crypto.md
+          - Forex: library/forex.md
+          - Futures: library/futures.md
+          - Indices: library/indices.md
+          - Commodities: library/commodities.md
+          - Economic: library/economic.md
+          - Filings: library/filings.md
       - Risk Analytics: library/risk.md
       - Translations: library/translation.md
       - Feeds: library/feeds.md
