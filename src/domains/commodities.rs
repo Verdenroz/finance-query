@@ -42,3 +42,5 @@ impl Commodity {
         self.chart(range.default_interval(), range).await
     }
 }
+
+impl_chartable_analytics!(Commodity, crate::risk::TradingCalendar::Exchange);
