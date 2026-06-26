@@ -87,16 +87,40 @@ fn verify_coin_quote_fields(c: CoinQuote) {
 ## Coin Handle
 
 The `CryptoCoin` handle provides a domain-oriented interface for quote, chart, and history
-queries backed by your configured providers. Construct it via `Providers::crypto`:
+queries backed by your configured providers. Construct it via `Providers::crypto`.
+
+`quote` is keyed by the **CoinGecko coin id** (e.g. `"bitcoin"`) and is keyless via CoinGecko:
 
 ```rust
-use finance_query::Providers;
+use finance_query::{Capability, Provider, Providers};
+
+# async fn run() -> Result<(), Box<dyn std::error::Error>> {
+let providers = Providers::builder()
+    .route(Capability::CRYPTO, &[Provider::CoinGecko])
+    .build()
+    .await?;
+let btc = providers.crypto("bitcoin");
+let quote = btc.quote("usd").await?;
+# Ok(()) }
+```
+
+!!! note "Chart vs. quote identifiers"
+    `chart`/`history` route through `Capability::CHART`, not `CRYPTO`. On the default
+    Yahoo route the handle id must be the coin's **ticker** (e.g. `"BTC"`, which Yahoo
+    resolves as `"BTC-USD"`) — *not* the CoinGecko id. To use the CoinGecko id for charts
+    too, route `Capability::CHART` to a crypto-aware provider (Polygon, FMP, or Alpha Vantage).
+
+```rust
+use finance_query::{Capability, Provider, Providers};
 use finance_query::{Interval, TimeRange};
 
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-let providers = Providers::builder().build().await?;
-let btc = providers.crypto("bitcoin");
-let quote = btc.quote("usd").await?;
+let providers = Providers::builder()
+    .route(Capability::CRYPTO, &[Provider::CoinGecko])
+    .build()
+    .await?;
+// Ticker id ("BTC") so the default Yahoo CHART route resolves "BTC-USD".
+let btc = providers.crypto("BTC");
 let chart = btc.chart("usd", Interval::OneDay, TimeRange::OneMonth).await?;
 let history = btc.history("usd", TimeRange::OneMonth).await?;
 # Ok(()) }

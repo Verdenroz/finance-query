@@ -108,16 +108,26 @@ fn _verify_crypto_quote_price(q: finance_query::CryptoQuote) {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_crypto_coin_handle() {
-    use finance_query::{Interval, Providers, TimeRange};
-    let providers = Providers::builder().build().await.unwrap();
+    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+    let providers = Providers::builder()
+        .route(Capability::CRYPTO, &[Provider::CoinGecko])
+        .build()
+        .await
+        .unwrap();
+
+    // `quote` is keyed by the CoinGecko coin *id* (keyless via CoinGecko).
     let btc = providers.crypto("bitcoin");
     let quote = btc.quote("usd").await.unwrap();
     assert!(quote.price.unwrap_or(0.0) > 0.0);
-    let chart = btc
+
+    // `chart`/`history` route through `Capability::CHART`; on the default Yahoo
+    // route the handle id must be the coin's *ticker* (`"BTC"` -> `"BTC-USD"`).
+    let btc_chart = providers.crypto("BTC");
+    let chart = btc_chart
         .chart("usd", Interval::OneDay, TimeRange::OneMonth)
         .await
         .unwrap();
     assert!(!chart.candles.is_empty());
-    let history = btc.history("usd", TimeRange::OneMonth).await.unwrap();
+    let history = btc_chart.history("usd", TimeRange::OneMonth).await.unwrap();
     assert!(!history.candles.is_empty());
 }
