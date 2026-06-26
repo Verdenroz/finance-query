@@ -512,15 +512,15 @@ checksum = "9f1f227452a390804cdb637b74a86990f2a7d7ba4b7d5693aac9b4dd6defd8d6"
 
 [[package]]
 name = "finance-query"
-version = "2.6.0"
+version = "2.7.1"
 dependencies = [
  "anyhow",
  "async-trait",
  "base64",
  "chrono",
  "const_format",
+ "finance-query-derive",
  "futures",
- "once_cell",
  "percent-encoding",
  "prost",
  "regex",
@@ -535,6 +535,15 @@ dependencies = [
  "tokio-tungstenite",
  "tracing",
  "url",
+]
+
+[[package]]
+name = "finance-query-derive"
+version = "2.7.1"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]
@@ -1427,9 +1436,9 @@ dependencies = [
 
 [[package]]
 name = "quinn-proto"
-version = "0.11.14"
+version = "0.11.15"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "434b42fec591c96ef50e21e886936e66d3cc3f737104fdb9b737c40ffb94c098"
+checksum = "4fcb935c5bec503c2f0e306bdd3e58bb9029dcb14fa8d9ac76e3a5256ac0763e"
 dependencies = [
  "aws-lc-rs",
  "bytes",
