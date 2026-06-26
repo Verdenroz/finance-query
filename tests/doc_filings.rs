@@ -6,7 +6,10 @@
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_filings_get() {
-    use finance_query::Providers;
+    use finance_query::{Providers, edgar};
+    // EDGAR needs a contact email for SEC's User-Agent; keyless otherwise.
+    // `let _` tolerates the "already initialized" error from other tests.
+    let _ = edgar::init("user@example.com");
     let providers = Providers::builder().build().await.unwrap();
     let filings = providers.filings("AAPL");
     let result = filings.get().await.unwrap();
