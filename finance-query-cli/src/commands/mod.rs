@@ -1,5 +1,6 @@
 pub mod alerts;
 pub mod backtest;
+pub mod calendar;
 pub mod chart;
 pub mod currencies;
 pub mod dashboard;

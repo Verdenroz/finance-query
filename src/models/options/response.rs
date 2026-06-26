@@ -84,6 +84,25 @@ impl Options {
             .unwrap_or_default()
     }
 
+    /// Map of expiration timestamp → loaded contract count (calls + puts).
+    ///
+    /// Yahoo only populates chains for the requested expiration, so this
+    /// typically covers a single date; absent expirations are omitted.
+    pub(crate) fn contract_counts(&self) -> std::collections::HashMap<i64, usize> {
+        self.first_result()
+            .map(|r| {
+                r.options
+                    .iter()
+                    .map(|chain| {
+                        let calls = chain.calls.as_ref().map_or(0, Vec::len);
+                        let puts = chain.puts.as_ref().map_or(0, Vec::len);
+                        (chain.expiration_date, calls + puts)
+                    })
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
     /// Get strike prices
     pub fn strikes(&self) -> Vec<f64> {
         self.first_result()

@@ -1,4 +1,5 @@
 pub mod analysis;
+pub mod calendar;
 pub mod chart;
 pub mod crypto;
 pub mod dividends;
@@ -45,6 +46,14 @@ pub struct SymbolsParams {
     pub symbols: String,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct CalendarParams {
+    /// Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,TSLA")
+    pub symbols: String,
+    /// Forward time window: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)
+    pub range: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -358,6 +367,16 @@ impl FinanceTools {
         p: Parameters<BatchSymbolsParams>,
     ) -> Result<CallToolResult, McpError> {
         chart::get_charts(p.0.symbols, p.0.interval, p.0.range).await
+    }
+
+    #[tool(
+        description = "Get a time-sorted calendar of upcoming financial events (earnings with estimates, ex-dividend and dividend-payment dates, options expirations, and — when FRED is configured — market-wide economic releases) across multiple symbols. Answers 'what's coming up for my portfolio?' in one call."
+    )]
+    async fn get_calendar(
+        &self,
+        p: Parameters<CalendarParams>,
+    ) -> Result<CallToolResult, McpError> {
+        calendar::get_calendar(p.0.symbols, p.0.range).await
     }
 
     #[tool(

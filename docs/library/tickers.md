@@ -480,6 +480,27 @@ Fetch technical indicators for all symbols concurrently.
 - `indicators`: `HashMap<String, IndicatorsSummary>` - Indicators grouped by symbol
 - `errors`: `HashMap<String, String>` - Error messages grouped by symbol
 
+## Event Calendar
+
+`calendar(range)` merges every symbol's upcoming events — earnings, dividends,
+and standard monthly options expirations — into one list sorted ascending by
+timestamp, fetched concurrently (bounded by `max_concurrency`). With the `fred`
+feature, market-wide economic releases are appended once. It is best-effort per
+symbol: a symbol whose fetch fails contributes no events rather than failing the
+whole call. See the [Ticker Event Calendar](ticker.md#event-calendar) section
+for the `CalendarEvent` / `EventKind` shapes.
+
+```rust
+use finance_query::{Tickers, TimeRange};
+
+let tickers = Tickers::new(["AAPL", "MSFT", "TSLA"]).await?;
+let events = tickers.calendar(TimeRange::OneMonth).await?;
+
+for event in &events {
+    println!("{} {:?} {:?}", event.date, event.symbol, event.event);
+}
+```
+
 ## Batch Response Utility Methods
 
 All batch response types expose three convenience methods:

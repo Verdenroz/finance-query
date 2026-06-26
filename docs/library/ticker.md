@@ -638,6 +638,48 @@ if exp_dates.len() > 1 {
 }
 ```
 
+## Event Calendar
+
+`calendar(range)` aggregates this symbol's upcoming events — earnings (with
+analyst estimates), ex-dividend and dividend-payment dates, and standard monthly
+options expirations — into one list sorted ascending by timestamp. Events are
+limited to the forward window `[now, now + range]`. With the `fred` feature
+enabled, market-wide economic releases (CPI, NFP, GDP, …) are appended with a
+`None` symbol.
+
+```rust
+use finance_query::{EventKind, Ticker, TimeRange};
+
+let ticker = Ticker::new("AAPL").await?;
+let events = ticker.calendar(TimeRange::ThreeMonths).await?;
+
+for event in &events {
+    let symbol = event.symbol.as_deref().unwrap_or("market");
+    match &event.event {
+        EventKind::Earnings { eps_estimate_avg, .. } => {
+            println!("{} {} earnings, est. EPS {:?}", event.date, symbol, eps_estimate_avg);
+        }
+        EventKind::ExDividend { .. } => println!("{} {} ex-dividend", event.date, symbol),
+        EventKind::DividendPayment { .. } => println!("{} {} dividend paid", event.date, symbol),
+        EventKind::OptionsExpiration { .. } => println!("{} {} options expire", event.date, symbol),
+        _ => println!("{} {} event", event.date, symbol),
+    }
+}
+```
+
+**`CalendarEvent` fields:**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `timestamp` | `i64` | Unix timestamp (seconds) when the event occurs |
+| `date` | `String` | ISO 8601 date string for display (e.g. `"2026-01-23"`) |
+| `symbol` | `Option<String>` | Ticker the event belongs to; `None` for market-wide events |
+| `event` | `EventKind` | The specific event and its payload |
+
+**`EventKind` variants:** `Earnings` (analyst EPS/revenue estimates), `ExDividend`,
+`DividendPayment`, `OptionsExpiration` (standard monthly only), and — with the
+`fred` feature — `EconomicRelease`.
+
 ## News
 
 Get recent news for the symbol:

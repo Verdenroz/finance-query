@@ -287,6 +287,9 @@ enum Commands {
     /// Get earnings dates, estimates, and history for a symbol
     Earnings(commands::earnings::EarningsArgs),
 
+    /// Get a calendar of upcoming events across symbols (earnings, dividends, options expirations)
+    Calendar(commands::calendar::CalendarArgs),
+
     /// Get stock split history for a symbol
     Splits(commands::splits::SplitsArgs),
 
@@ -390,6 +393,7 @@ async fn main() -> Result<()> {
         Commands::Indicator(args) => commands::indicator::execute(args).await,
         Commands::Dividends(args) => commands::dividends::execute(args).await,
         Commands::Earnings(args) => commands::earnings::execute(args).await,
+        Commands::Calendar(args) => commands::calendar::execute(args).await,
         Commands::Splits(args) => commands::splits::execute(args).await,
         Commands::Recommendations(args) => commands::recommendations::execute(args).await,
         Commands::Options(args) => commands::options::execute(args).await,
