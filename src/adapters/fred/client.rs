@@ -6,7 +6,7 @@ use std::time::Duration;
 use reqwest::{Client, StatusCode};
 use tracing::debug;
 
-use super::models::{MacroObservation, MacroSeries};
+use super::models::{MacroObservation, MacroSeries, ReleaseDate};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -128,5 +128,66 @@ impl FredClient {
             id: series_id.to_string(),
             observations,
         })
+    }
+
+    /// Fetch upcoming scheduled economic-data release dates.
+    ///
+    /// Queries the FRED `releases/dates` endpoint with a realtime window from
+    /// `today` onward so only future-scheduled releases (CPI, NFP, GDP, FOMC,
+    /// etc.) are returned, sorted ascending by date.
+    pub async fn release_dates(&self, today: &str) -> Result<Vec<ReleaseDate>> {
+        self.limiter.acquire().await;
+
+        let url = format!(
+            "{FRED_BASE}/releases/dates?api_key={}&file_type=json\
+             &include_release_dates_with_no_data=true&sort_order=asc\
+             &realtime_start={today}&realtime_end=9999-12-31",
+            self.api_key
+        );
+
+        debug!("FRED request: releases/dates from {today}");
+        let resp = self.http.get(&url).send().await?;
+
+        match resp.status() {
+            StatusCode::OK => {}
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                return Err(FinanceError::AuthenticationFailed {
+                    context: "FRED API key invalid or missing. Call fred::init(key) first."
+                        .to_string(),
+                });
+            }
+            StatusCode::TOO_MANY_REQUESTS => {
+                return Err(FinanceError::RateLimited {
+                    retry_after: Some(60),
+                });
+            }
+            s => {
+                return Err(FinanceError::ExternalApiError {
+                    api: "FRED".to_string(),
+                    status: s.as_u16(),
+                });
+            }
+        }
+
+        let json: serde_json::Value = resp.json().await?;
+
+        let dates = json
+            .get("release_dates")
+            .and_then(|v| v.as_array())
+            .ok_or_else(|| FinanceError::ResponseStructureError {
+                field: "release_dates".to_string(),
+                context: "FRED response missing release_dates array".to_string(),
+            })?
+            .iter()
+            .filter_map(|rd| {
+                Some(ReleaseDate {
+                    release_id: rd.get("release_id")?.as_u64()?,
+                    release_name: rd.get("release_name")?.as_str()?.to_string(),
+                    date: rd.get("date")?.as_str()?.to_string(),
+                })
+            })
+            .collect();
+
+        Ok(dates)
     }
 }

@@ -1281,6 +1281,73 @@
         }
       }
     },
+    "/v2/calendar": {
+      "get": {
+        "tags": [
+          "Charts"
+        ],
+        "summary": "Get upcoming financial event calendar",
+        "description": "Aggregate upcoming financial events across multiple symbols into a single\ntime-sorted list: earnings reports (with analyst estimates), ex-dividend\nand dividend-payment dates, and options expirations. When the server is\nconfigured with `FRED_API_KEY`, market-wide economic-data releases\n(CPI, NFP, GDP, FOMC, \u2026) are appended as events with a null `symbol`.\n\nEvents are limited to the forward window `[now, now + range]` and sorted\nascending by timestamp. No new upstream calls beyond a quote and an\noptions request per symbol.\n",
+        "parameters": [
+          {
+            "name": "symbols",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            },
+            "description": "Comma-separated list of symbols",
+            "example": "AAPL,MSFT,TSLA"
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "1d",
+                "5d",
+                "1mo",
+                "3mo",
+                "6mo",
+                "1y",
+                "2y",
+                "5y",
+                "10y",
+                "ytd",
+                "max"
+              ],
+              "default": "1mo"
+            },
+            "description": "Forward time window for events"
+          },
+          {
+            "$ref": "#/components/parameters/Fields"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Time-sorted list of upcoming financial events",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CalendarEvent"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequest"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        }
+      }
+    },
     "/v2/financials": {
       "get": {
         "tags": [
@@ -6846,6 +6913,91 @@
             "description": "Symbols that failed to fetch, with error messages",
             "additionalProperties": {
               "type": "string"
+            }
+          }
+        }
+      },
+      "CalendarEvent": {
+        "type": "object",
+        "description": "A single upcoming financial event in the event calendar.",
+        "required": [
+          "timestamp",
+          "date",
+          "event"
+        ],
+        "properties": {
+          "timestamp": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Unix timestamp (seconds) when the event occurs",
+            "example": 1753228800
+          },
+          "date": {
+            "type": "string",
+            "description": "ISO 8601 date string for display",
+            "example": "2026-07-22"
+          },
+          "symbol": {
+            "type": "string",
+            "nullable": true,
+            "description": "Ticker symbol this event belongs to; null for market-wide events",
+            "example": "TSLA"
+          },
+          "event": {
+            "type": "object",
+            "description": "The event payload, discriminated by `type`. One of: `earnings`,\n`ex_dividend`, `dividend_payment`, `options_expiration`, or\n`economic_release` (FRED-backed, market-wide).\n",
+            "required": [
+              "type"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "earnings",
+                  "ex_dividend",
+                  "dividend_payment",
+                  "options_expiration",
+                  "economic_release"
+                ]
+              },
+              "eps_estimate_low": {
+                "type": "number",
+                "nullable": true
+              },
+              "eps_estimate_avg": {
+                "type": "number",
+                "nullable": true
+              },
+              "eps_estimate_high": {
+                "type": "number",
+                "nullable": true
+              },
+              "revenue_estimate_avg": {
+                "type": "integer",
+                "format": "int64",
+                "nullable": true
+              },
+              "is_estimate": {
+                "type": "boolean"
+              },
+              "amount": {
+                "type": "number",
+                "nullable": true,
+                "description": "Dividend amount per share (ex_dividend / dividend_payment)"
+              },
+              "contract_count": {
+                "type": "integer",
+                "nullable": true,
+                "description": "Number of listed contracts for an options_expiration, when a chain\nwas loaded. Null on the calendar path (expiration dates only).\nOnly standard monthly (3rd-Friday) expirations are surfaced.\n"
+              },
+              "name": {
+                "type": "string",
+                "description": "Release name (economic_release)"
+              },
+              "series_id": {
+                "type": "string",
+                "description": "FRED release identifier (economic_release)"
+              }
             }
           }
         }

@@ -43,6 +43,7 @@ use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 pub use crate::models::economic::{MacroSeries, TreasuryYield};
+pub use models::ReleaseDate;
 
 /// FRED free-tier rate limit: 120 requests/minute = 2 req/sec.
 const FRED_RATE_PER_SEC: f64 = 2.0;
@@ -118,6 +119,27 @@ pub async fn series(series_id: &str) -> Result<MacroSeries> {
         .timeout(s.timeout)
         .build_with_limiter(Arc::clone(&s.limiter))?;
     c.series(series_id).await
+}
+
+/// Fetch upcoming scheduled economic-data release dates (CPI, NFP, GDP, FOMC, …).
+///
+/// Returns releases scheduled from today onward, sorted ascending.
+///
+/// # Errors
+///
+/// Returns [`FinanceError::InvalidParameter`] if FRED has not been initialized.
+pub async fn release_dates() -> Result<Vec<ReleaseDate>> {
+    let s = FRED_SINGLETON
+        .get()
+        .ok_or_else(|| FinanceError::InvalidParameter {
+            param: "fred".to_string(),
+            reason: "FRED not initialized. Call fred::init(api_key) first.".to_string(),
+        })?;
+    let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
+    let c = FredClientBuilder::new(&s.api_key)
+        .timeout(s.timeout)
+        .build_with_limiter(Arc::clone(&s.limiter))?;
+    c.release_dates(&today).await
 }
 
 /// Fetch US Treasury yield curve data for the given year.

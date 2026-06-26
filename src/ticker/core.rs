@@ -768,6 +768,56 @@ impl Ticker {
         ))
     }
 
+    /// Aggregate upcoming financial events for this ticker into a single
+    /// time-sorted list.
+    ///
+    /// Combines earnings, ex-dividend and dividend-payment dates with standard
+    /// monthly options expirations, plus — when the `fred` feature is enabled —
+    /// a curated set of major economic releases (CPI, NFP, GDP, …). Limited to
+    /// the forward window `[now, now + range]` and sorted ascending by
+    /// timestamp.
+    ///
+    /// Options are best-effort: a symbol with no listed options contributes no
+    /// expiration events rather than failing the call.
+    pub async fn calendar(
+        &self,
+        range: TimeRange,
+    ) -> Result<Vec<crate::models::calendar::CalendarEvent>> {
+        let now = chrono::Utc::now().timestamp();
+        let window = (now, now + range.approx_duration_secs());
+
+        // The FRED economic-release fetch is independent of the per-symbol
+        // quote/options work, so run all three concurrently.
+        #[cfg(feature = "fred")]
+        let (calendar_events, options, releases) = tokio::join!(
+            self.calendar_events(),
+            self.options(None),
+            crate::adapters::fred::release_dates(),
+        );
+        #[cfg(not(feature = "fred"))]
+        let (calendar_events, options) = tokio::join!(self.calendar_events(), self.options(None));
+
+        let calendar_events = calendar_events?;
+        let options = options.ok();
+
+        let mut events = crate::models::calendar::build_symbol_events(
+            &self.symbol,
+            calendar_events.as_ref(),
+            options.as_ref(),
+            window,
+        );
+
+        #[cfg(feature = "fred")]
+        if let Ok(releases) = releases {
+            events.extend(crate::models::calendar::build_economic_events(
+                releases, window,
+            ));
+        }
+
+        crate::models::calendar::sort_events(&mut events);
+        Ok(events)
+    }
+
     async fn ensure_quote(
         &self,
     ) -> Result<tokio::sync::RwLockReadGuard<'_, Option<CacheEntry<QuoteSummaryResponse>>>> {

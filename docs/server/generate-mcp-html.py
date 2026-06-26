@@ -4,7 +4,7 @@ import json
 import sys
 
 GROUPS = [
-    ("Quotes & Charts",  ["get_quote", "get_quotes", "get_chart", "get_charts", "get_spark", "get_recommendations", "get_splits"]),
+    ("Quotes & Charts",  ["get_quote", "get_quotes", "get_chart", "get_charts", "get_spark", "get_calendar", "get_recommendations", "get_splits"]),
     ("Financials",       ["get_financials", "get_batch_financials"]),
     ("Indicators",       ["get_indicators", "get_batch_indicators"]),
     ("Dividends",        ["get_dividends", "get_batch_dividends"]),

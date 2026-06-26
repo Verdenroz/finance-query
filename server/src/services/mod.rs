@@ -4,6 +4,7 @@
 //! and library calls. Returns `serde_json::Value` (matching cache storage format).
 
 pub mod analysis;
+pub mod calendar;
 pub mod chart;
 pub mod crypto;
 pub mod edgar;

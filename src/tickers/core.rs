@@ -1493,6 +1493,98 @@ impl Tickers {
         )
     }
 
+    /// Aggregate upcoming financial events across all symbols into a single
+    /// time-sorted list.
+    ///
+    /// Merges earnings, dividend, and standard-monthly options-expiration events
+    /// for every symbol — plus, with the `fred` feature, major economic releases
+    /// (CPI, NFP, GDP, …) — within the forward window `[now, now + range]`,
+    /// sorted ascending by timestamp.
+    ///
+    /// Best-effort per symbol: a symbol whose quote or options fetch fails
+    /// simply contributes no events rather than failing the whole call.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::{Tickers, TimeRange};
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let tickers = Tickers::new(["AAPL", "MSFT", "TSLA"]).await?;
+    /// let events = tickers.calendar(TimeRange::OneMonth).await?;
+    /// for e in &events {
+    ///     println!("{} {:?} {:?}", e.date, e.symbol, e.event);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub async fn calendar(
+        &self,
+        range: TimeRange,
+    ) -> Result<Vec<crate::models::calendar::CalendarEvent>> {
+        let now = chrono::Utc::now().timestamp();
+        let window = (now, now + range.approx_duration_secs());
+
+        let symbol_strings: Vec<String> = self.symbols.iter().map(|s| s.to_string()).collect();
+        let providers = Arc::clone(&self.providers);
+
+        let per_symbol = symbol_strings.into_iter().map(|sym| {
+            let providers = Arc::clone(&providers);
+            async move {
+                let quote_fut = {
+                    let sym = sym.clone();
+                    providers.fetch(Capability::QUOTE, move |p| {
+                        let sym = sym.clone();
+                        let p = p.clone();
+                        async move { p.fetch_quote(&sym).await }
+                    })
+                };
+                let opts_fut = {
+                    let sym = sym.clone();
+                    providers.fetch(Capability::OPTIONS, move |p| {
+                        let sym = sym.clone();
+                        let p = p.clone();
+                        async move { p.fetch_options(&sym, None).await }
+                    })
+                };
+                let (quote, options) = tokio::join!(quote_fut, opts_fut);
+                let calendar_events = quote.ok().and_then(|q| q.calendar_events);
+                let options = options.ok();
+                crate::models::calendar::build_symbol_events(
+                    &sym,
+                    calendar_events.as_ref(),
+                    options.as_ref(),
+                    window,
+                )
+            }
+        });
+
+        let per_symbol_fut = stream::iter(per_symbol)
+            .buffer_unordered(self.max_concurrency)
+            .collect::<Vec<_>>();
+
+        // The FRED economic-release fetch is independent of the per-symbol work,
+        // so run it concurrently with the per-symbol stream.
+        #[cfg(feature = "fred")]
+        let (per_symbol_events, releases) =
+            tokio::join!(per_symbol_fut, crate::adapters::fred::release_dates());
+        #[cfg(not(feature = "fred"))]
+        let per_symbol_events = per_symbol_fut.await;
+
+        let mut events: Vec<crate::models::calendar::CalendarEvent> =
+            per_symbol_events.into_iter().flatten().collect();
+
+        #[cfg(feature = "fred")]
+        if let Ok(releases) = releases {
+            events.extend(crate::models::calendar::build_economic_events(
+                releases, window,
+            ));
+        }
+
+        crate::models::calendar::sort_events(&mut events);
+        Ok(events)
+    }
+
     /// Batch calculate all technical indicators for all symbols
     ///
     /// Calculates complete indicator summaries for all symbols from their chart data.

@@ -700,6 +700,52 @@ async fn test_ticker_options() {
 }
 
 // ---------------------------------------------------------------------------
+// Event Calendar from ticker.md
+// ---------------------------------------------------------------------------
+
+/// Verifies CalendarEvent fields documented in the ticker.md "Event Calendar"
+/// table exist with the correct types.
+#[allow(dead_code)]
+fn _verify_calendar_event_fields(e: finance_query::CalendarEvent) {
+    let _: i64 = e.timestamp;
+    let _: String = e.date;
+    let _: Option<String> = e.symbol;
+    let _: finance_query::EventKind = e.event;
+}
+
+#[tokio::test]
+#[ignore = "requires network access"]
+async fn test_ticker_calendar() {
+    use finance_query::{EventKind, Ticker, TimeRange};
+
+    // From ticker.md "Event Calendar" section
+    let ticker = Ticker::new("AAPL").await.unwrap();
+    let events = ticker.calendar(TimeRange::ThreeMonths).await.unwrap();
+
+    for event in &events {
+        let symbol = event.symbol.as_deref().unwrap_or("market");
+        match &event.event {
+            EventKind::Earnings {
+                eps_estimate_avg, ..
+            } => {
+                println!(
+                    "{} {} earnings, est. EPS {:?}",
+                    event.date, symbol, eps_estimate_avg
+                );
+            }
+            EventKind::ExDividend { .. } => println!("{} {} ex-dividend", event.date, symbol),
+            EventKind::DividendPayment { .. } => {
+                println!("{} {} dividend paid", event.date, symbol)
+            }
+            EventKind::OptionsExpiration { .. } => {
+                println!("{} {} options expire", event.date, symbol)
+            }
+            _ => println!("{} {} event", event.date, symbol),
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Network tests — News from ticker.md
 // ---------------------------------------------------------------------------
 

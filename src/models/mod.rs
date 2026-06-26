@@ -11,6 +11,8 @@ pub mod format;
 // ── Capability directories ──────────────────────────────────────────────────
 
 // Yahoo-backed (always available)
+/// Financial event calendar models (earnings, dividends, options expirations).
+pub mod calendar;
 /// Chart/historical data models, including spark sparklines.
 pub mod chart;
 /// Corporate data: profiles, officers, ownership, news, transcripts, recommendations.
