@@ -75,3 +75,59 @@ async fn test_crypto_single_coin_ethereum() {
     println!("Ethereum market cap: ${:.2}B", mktcap / 1e9);
     assert!(mktcap > 0.0);
 }
+
+// ---------------------------------------------------------------------------
+// CoinQuote fields — compile-time verification matching crypto.md table
+// ---------------------------------------------------------------------------
+
+/// Mirrors the `verify_coin_quote_fields` block in crypto.md.
+#[allow(dead_code)]
+fn _verify_coin_quote_fields_doc(c: CoinQuote) {
+    let _: String = c.id;
+    let _: String = c.symbol;
+    let _: String = c.name;
+    let _: Option<f64> = c.current_price;
+    let _: Option<f64> = c.market_cap;
+    let _: Option<u32> = c.market_cap_rank;
+    let _: Option<f64> = c.price_change_percentage_24h;
+    let _: Option<f64> = c.total_volume;
+    let _: Option<f64> = c.circulating_supply;
+    let _: Option<String> = c.image;
+}
+
+/// Mirrors the `verify_crypto_quote_price` block in crypto.md.
+#[allow(dead_code)]
+fn _verify_crypto_quote_price(q: finance_query::CryptoQuote) {
+    let _: Option<f64> = q.price;
+}
+
+// ---------------------------------------------------------------------------
+// CryptoCoin handle — network test
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+#[ignore = "requires network access"]
+async fn test_crypto_coin_handle() {
+    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+    let providers = Providers::builder()
+        .route(Capability::CRYPTO, &[Provider::CoinGecko])
+        .build()
+        .await
+        .unwrap();
+
+    // `quote` is keyed by the CoinGecko coin *id* (keyless via CoinGecko).
+    let btc = providers.crypto("bitcoin");
+    let quote = btc.quote("usd").await.unwrap();
+    assert!(quote.price.unwrap_or(0.0) > 0.0);
+
+    // `chart`/`history` route through `Capability::CHART`; on the default Yahoo
+    // route the handle id must be the coin's *ticker* (`"BTC"` -> `"BTC-USD"`).
+    let btc_chart = providers.crypto("BTC");
+    let chart = btc_chart
+        .chart("usd", Interval::OneDay, TimeRange::OneMonth)
+        .await
+        .unwrap();
+    assert!(!chart.candles.is_empty());
+    let history = btc_chart.history("usd", TimeRange::OneMonth).await.unwrap();
+    assert!(!history.candles.is_empty());
+}

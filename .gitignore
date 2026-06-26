@@ -73,3 +73,7 @@ v1/.pytest_cache/
 # OS files
 .DS_Store
 Thumbs.db
+
+# superpowers workflow artifacts (specs, plans, SDD ledger — local tooling, not docs)
+docs/superpowers/
+.superpowers/
