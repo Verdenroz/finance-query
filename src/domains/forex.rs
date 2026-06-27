@@ -78,7 +78,7 @@ impl ForexPair {
     /// The pair is mapped to the `CHART` route's symbol form `"{FROM}{TO}=X"`
     /// (e.g. `"USDEUR=X"`, the Yahoo FX convention).
     pub async fn chart(&self, interval: Interval, range: TimeRange) -> Result<Chart> {
-        let symbol = format!("{}{}=X", self.from, self.to);
+        let symbol = chart_symbol(&self.from, &self.to);
         let providers = Arc::clone(&self.providers);
         let key = format!("{symbol}:{interval}:{range}");
         self.chart_cache
@@ -102,3 +102,20 @@ impl ForexPair {
 }
 
 impl_chartable_analytics!(ForexPair, crate::risk::TradingCalendar::Forex);
+
+/// Map a currency pair to the `CHART` route's symbol form `"{FROM}{TO}=X"`
+/// (the Yahoo FX convention, e.g. `"USDEUR=X"`).
+fn chart_symbol(from: &str, to: &str) -> String {
+    format!("{from}{to}=X")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chart_symbol_uses_yahoo_fx_convention() {
+        assert_eq!(chart_symbol("USD", "EUR"), "USDEUR=X");
+        assert_eq!(chart_symbol("GBP", "JPY"), "GBPJPY=X");
+    }
+}
