@@ -2,7 +2,7 @@
 # Build Stage: Compile fq-mcp MCP server
 # ==============================================================================
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
-FROM rust:1-slim-bookworm@sha256:c8a94a78f67ec8c4d474ec7f71e0720f21eb7e584e158daec0874cafa7c30e4d AS builder
+FROM rust:1-slim-bookworm@sha256:4732ca96fd086cb9be682050c3f0176288eebaac2b80aa2bcefccfaf198e1950 AS builder
 
 # cmake/g++/make compile CTranslate2 + SentencePiece for the
 # translation-offline feature (opus-mt bilingual models), enabled on the cargo
