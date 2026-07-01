@@ -150,4 +150,58 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].symbol.as_deref(), Some("BTCUSD"));
     }
+
+    /// Mocked HTTP → `Vec<FmpQuoteDTO>` → `crypto_quote_to_canonical`, covering
+    /// the full `fetch_canonical_crypto_quote` pipeline without a network call.
+    #[tokio::test]
+    async fn test_crypto_quote_to_canonical_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/api/v3/quote/BTCUSD")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
+            .with_status(200)
+            .with_body(
+                serde_json::json!([{
+                    "symbol": "BTCUSD",
+                    "name": "Bitcoin USD",
+                    "price": 43200.0,
+                    "change": 1200.0,
+                    "changesPercentage": 2.85,
+                    "dayHigh": 43500.0,
+                    "dayLow": 41800.0,
+                    "marketCap": 845000000000.0,
+                    "volume": 28000000000.0
+                }])
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let quotes: Vec<FmpQuoteDTO> = client.get("/api/v3/quote/BTCUSD", &[]).await.unwrap();
+
+        let quote = crypto_quote_to_canonical("btc", "usd", &quotes);
+        assert_eq!(quote.id, "btc", "id preserves caller input");
+        assert_eq!(quote.symbol, "BTCUSD");
+        assert_eq!(quote.name, "Bitcoin USD");
+        assert_eq!(quote.price, Some(43200.0));
+        assert_eq!(quote.market_cap, Some(845000000000.0));
+        assert_eq!(quote.volume_24h, Some(28000000000.0));
+        assert_eq!(quote.change_24h, Some(1200.0));
+        assert_eq!(quote.change_percent_24h, Some(2.85));
+        assert_eq!(quote.high_24h, Some(43500.0));
+        assert_eq!(quote.low_24h, Some(41800.0));
+    }
+
+    #[test]
+    fn crypto_quote_to_canonical_empty_uppercases_id_as_symbol() {
+        let quote = crypto_quote_to_canonical("btc", "usd", &[]);
+        assert_eq!(quote.id, "btc");
+        assert_eq!(quote.symbol, "BTC");
+        assert_eq!(quote.name, "");
+        assert!(quote.price.is_none());
+    }
 }

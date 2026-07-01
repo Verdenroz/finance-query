@@ -80,6 +80,12 @@ pub async fn futures_snapshot(ticker: &str) -> Result<FuturesSnapshotResponseDTO
 /// Fetch futures quote (canonical) for a symbol.
 pub async fn fetch_futures_quote_response(symbol: &str) -> Result<FuturesQuote> {
     let resp = futures_snapshot(symbol).await?;
+    Ok(snapshot_to_quote(symbol, resp))
+}
+
+/// Map a futures snapshot response to the canonical [`FuturesQuote`],
+/// taking the first result and falling back to the requested symbol.
+fn snapshot_to_quote(symbol: &str, resp: FuturesSnapshotResponseDTO) -> FuturesQuote {
     let snap = resp.results.and_then(|mut v| {
         if v.is_empty() {
             None
@@ -88,7 +94,7 @@ pub async fn fetch_futures_quote_response(symbol: &str) -> Result<FuturesQuote> 
         }
     });
     let session = snap.as_ref().and_then(|s| s.session.as_ref());
-    Ok(FuturesQuote {
+    FuturesQuote {
         symbol: snap
             .as_ref()
             .and_then(|s| s.ticker.clone())
@@ -103,7 +109,7 @@ pub async fn fetch_futures_quote_response(symbol: &str) -> Result<FuturesQuote> 
         open_interest: None,
         volume: None,
         timestamp: None,
-    })
+    }
 }
 
 #[cfg(test)]
@@ -159,11 +165,69 @@ mod tests {
 
         let resp: FuturesSnapshotResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
-        let results = resp.results.unwrap();
+        let results = resp.results.as_ref().unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].ticker.as_deref(), Some("ESZ4"));
         let session = results[0].session.as_ref().unwrap();
         assert!((session.change.unwrap() - 15.0).abs() < 0.01);
         assert!((session.close.unwrap() - 4790.0).abs() < 0.01);
+
+        // Mocked HTTP → DTO → canonical FuturesQuote, covering the full
+        // fetch_futures_quote_response pipeline without a network call.
+        let quote = snapshot_to_quote("ESZ4", resp);
+        assert_eq!(quote.symbol, "ESZ4");
+        assert_eq!(quote.price, Some(4790.0));
+        assert_eq!(quote.change, Some(15.0));
+        assert_eq!(quote.change_percent, Some(0.31));
+    }
+
+    #[test]
+    fn snapshot_to_quote_maps_session_fields() {
+        let resp: FuturesSnapshotResponseDTO = serde_json::from_value(serde_json::json!({
+            "status": "OK",
+            "results": [{
+                "ticker": "ESZ4",
+                "name": "E-mini S&P 500 Dec 2024",
+                "session": {
+                    "change": 15.0,
+                    "change_percent": 0.31,
+                    "close": 4790.0,
+                    "high": 4800.0,
+                    "low": 4760.0,
+                    "open": 4775.0
+                }
+            }]
+        }))
+        .unwrap();
+
+        let quote = snapshot_to_quote("ES", resp);
+        assert_eq!(quote.symbol, "ESZ4", "snapshot ticker wins over input");
+        assert_eq!(quote.name.as_deref(), Some("E-mini S&P 500 Dec 2024"));
+        assert_eq!(quote.price, Some(4790.0));
+        assert_eq!(quote.change, Some(15.0));
+        assert_eq!(quote.change_percent, Some(0.31));
+    }
+
+    #[test]
+    fn snapshot_to_quote_empty_results_falls_back_to_symbol() {
+        let resp: FuturesSnapshotResponseDTO =
+            serde_json::from_value(serde_json::json!({"status": "OK", "results": []})).unwrap();
+        let quote = snapshot_to_quote("ESZ4", resp);
+        assert_eq!(quote.symbol, "ESZ4");
+        assert!(quote.price.is_none());
+        assert!(quote.name.is_none());
+    }
+
+    #[test]
+    fn snapshot_to_quote_missing_session_yields_no_price() {
+        let resp: FuturesSnapshotResponseDTO = serde_json::from_value(serde_json::json!({
+            "status": "OK",
+            "results": [{"ticker": "ESZ4", "name": "E-mini S&P 500 Dec 2024"}]
+        }))
+        .unwrap();
+        let quote = snapshot_to_quote("ES", resp);
+        assert_eq!(quote.symbol, "ESZ4");
+        assert!(quote.price.is_none());
+        assert!(quote.change.is_none());
     }
 }

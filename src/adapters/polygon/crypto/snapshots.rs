@@ -45,9 +45,15 @@ pub async fn crypto_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> 
 pub async fn fetch_crypto_quote_response(from: &str, to: &str) -> Result<CryptoQuote> {
     let ticker = format!("X:{}{}", from.to_uppercase(), to.to_uppercase());
     let resp = crypto_snapshot(&ticker).await?;
+    Ok(snapshot_to_quote(ticker, resp))
+}
+
+/// Map a single-ticker snapshot response to the canonical [`CryptoQuote`];
+/// `price` prefers the day close, falling back to the last trade.
+fn snapshot_to_quote(ticker: String, resp: SingleSnapshotResponseDTO) -> CryptoQuote {
     let snap = resp.ticker;
     let day = snap.as_ref().and_then(|s| s.day.as_ref());
-    Ok(CryptoQuote {
+    CryptoQuote {
         id: snap
             .as_ref()
             .and_then(|s| s.ticker.clone())
@@ -72,7 +78,7 @@ pub async fn fetch_crypto_quote_response(from: &str, to: &str) -> Result<CryptoQ
         high_24h: day.and_then(|d| d.high),
         low_24h: day.and_then(|d| d.low),
         circulating_supply: None,
-    })
+    }
 }
 
 /// Fetch top gainers or losers for crypto.
@@ -139,8 +145,67 @@ mod tests {
 
         let resp: SingleSnapshotResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
-        let snap = resp.ticker.unwrap();
+        let snap = resp.ticker.as_ref().unwrap();
         assert_eq!(snap.ticker.as_deref(), Some("X:BTCUSD"));
         assert!((snap.todays_change.unwrap() - 1200.0).abs() < 0.01);
+
+        // Mocked HTTP → DTO → canonical CryptoQuote, covering the full
+        // fetch_crypto_quote_response pipeline without a network call.
+        let quote = snapshot_to_quote("X:BTCUSD".to_string(), resp);
+        assert_eq!(quote.symbol, "X:BTCUSD");
+        assert_eq!(quote.price, Some(43200.0));
+        assert_eq!(quote.change_24h, Some(1200.0));
+        assert_eq!(quote.change_percent_24h, Some(2.85));
+        assert_eq!(quote.volume_24h, Some(12345.67));
+    }
+
+    #[test]
+    fn snapshot_to_quote_maps_day_and_change_fields() {
+        let resp: SingleSnapshotResponseDTO = serde_json::from_value(serde_json::json!({
+            "status": "OK",
+            "ticker": {
+                "ticker": "X:BTCUSD",
+                "todaysChange": 1200.0,
+                "todaysChangePerc": 2.85,
+                "day": { "o": 42000.0, "h": 43500.0, "l": 41800.0, "c": 43200.0, "v": 12345.67 },
+                "lastTrade": { "price": 43150.0 }
+            }
+        }))
+        .unwrap();
+
+        let quote = snapshot_to_quote("X:BTCUSD".to_string(), resp);
+        assert_eq!(quote.id, "X:BTCUSD");
+        assert_eq!(quote.symbol, "X:BTCUSD");
+        assert_eq!(quote.price, Some(43200.0), "day close wins over last trade");
+        assert_eq!(quote.volume_24h, Some(12345.67));
+        assert_eq!(quote.change_24h, Some(1200.0));
+        assert_eq!(quote.change_percent_24h, Some(2.85));
+        assert_eq!(quote.high_24h, Some(43500.0));
+        assert_eq!(quote.low_24h, Some(41800.0));
+    }
+
+    #[test]
+    fn snapshot_to_quote_falls_back_to_last_trade_price() {
+        let resp: SingleSnapshotResponseDTO = serde_json::from_value(serde_json::json!({
+            "status": "OK",
+            "ticker": {
+                "ticker": "X:BTCUSD",
+                "lastTrade": { "price": 43150.0 }
+            }
+        }))
+        .unwrap();
+        let quote = snapshot_to_quote("X:BTCUSD".to_string(), resp);
+        assert_eq!(quote.price, Some(43150.0));
+        assert!(quote.volume_24h.is_none());
+    }
+
+    #[test]
+    fn snapshot_to_quote_missing_ticker_falls_back_to_input() {
+        let resp: SingleSnapshotResponseDTO =
+            serde_json::from_value(serde_json::json!({"status": "OK"})).unwrap();
+        let quote = snapshot_to_quote("X:ETHUSD".to_string(), resp);
+        assert_eq!(quote.id, "X:ETHUSD");
+        assert_eq!(quote.symbol, "X:ETHUSD");
+        assert!(quote.price.is_none());
     }
 }
