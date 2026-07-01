@@ -16,6 +16,7 @@ const DEFAULT_TIMEOUT: Duration = Duration::from_secs(30);
 pub(crate) struct FredClientBuilder {
     api_key: String,
     timeout: Duration,
+    base_url: Option<String>,
 }
 
 impl FredClientBuilder {
@@ -23,11 +24,19 @@ impl FredClientBuilder {
         Self {
             api_key: api_key.into(),
             timeout: DEFAULT_TIMEOUT,
+            base_url: None,
         }
     }
 
     pub fn timeout(mut self, timeout: Duration) -> Self {
         self.timeout = timeout;
+        self
+    }
+
+    /// Override the API base URL (used by tests to point at a mock server).
+    #[cfg(test)]
+    pub fn base_url(mut self, url: impl Into<String>) -> Self {
+        self.base_url = Some(url.into());
         self
     }
 
@@ -50,6 +59,7 @@ impl FredClientBuilder {
             api_key: self.api_key,
             http,
             limiter,
+            base_url: self.base_url.unwrap_or_else(|| FRED_BASE.to_string()),
         })
     }
 }
@@ -59,6 +69,7 @@ pub(crate) struct FredClient {
     api_key: String,
     http: Client,
     limiter: Arc<RateLimiter>,
+    base_url: String,
 }
 
 impl FredClient {
@@ -67,8 +78,8 @@ impl FredClient {
         self.limiter.acquire().await;
 
         let url = format!(
-            "{FRED_BASE}/series/observations?series_id={series_id}&api_key={}&file_type=json",
-            self.api_key
+            "{}/series/observations?series_id={series_id}&api_key={}&file_type=json",
+            self.base_url, self.api_key
         );
 
         debug!("FRED request: series_id={series_id}");
@@ -139,10 +150,10 @@ impl FredClient {
         self.limiter.acquire().await;
 
         let url = format!(
-            "{FRED_BASE}/releases/dates?api_key={}&file_type=json\
+            "{}/releases/dates?api_key={}&file_type=json\
              &include_release_dates_with_no_data=true&sort_order=asc\
              &realtime_start={today}&realtime_end=9999-12-31",
-            self.api_key
+            self.base_url, self.api_key
         );
 
         debug!("FRED request: releases/dates from {today}");

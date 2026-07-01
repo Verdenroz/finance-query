@@ -2,7 +2,10 @@
 //!
 //! Requires the `polygon` feature flag:
 //!   cargo test --test doc_indices --features polygon
-//!   cargo test --test doc_indices --features polygon -- --ignored   (network tests)
+//!
+//! Runtime behavior of the index quote path is covered without network access
+//! by the mock + unit tests in `src/adapters/polygon/indices/snapshots.rs` and
+//! `src/adapters/fmp/indices/mod.rs` (mocked HTTP → DTO → canonical `IndexQuote`).
 
 #![cfg(feature = "polygon")]
 
@@ -46,34 +49,24 @@ fn test_indices_capability_and_provider_exist() {
 }
 
 // ---------------------------------------------------------------------------
-// Network tests — mirror the setup block in indices.md
+// Compile-time: handle API — mirrors the setup block in indices.md
 // ---------------------------------------------------------------------------
 
-/// Mirrors the main setup block in indices.md:
+/// Verifies the documented `Index` flow type-checks:
 ///   providers.index("I:SPX") → quote(), chart(), history()
-#[tokio::test]
-#[ignore = "requires network access"]
-async fn test_indices_spx_quote_chart_history() {
-    // Build fails without POLYGON_API_KEY (e.g. CI without the secret); skip then.
-    let Ok(providers) = Providers::builder()
+/// Never called; exists only for the compiler to type-check. Runtime behavior
+/// is covered by the mock + unit tests in
+/// `src/adapters/polygon/indices/snapshots.rs`.
+#[allow(dead_code)]
+async fn _verify_index_api() -> finance_query::Result<()> {
+    let providers = Providers::builder()
         .route(Capability::INDICES, &[Provider::Polygon])
         .build()
-        .await
-    else {
-        return;
-    };
+        .await?;
 
     let spx = providers.index("I:SPX");
-
-    let quote = spx.quote().await.unwrap();
-    assert!(!quote.symbol.is_empty(), "symbol should be set");
-
-    let chart = spx
-        .chart(Interval::OneDay, TimeRange::OneMonth)
-        .await
-        .unwrap();
-    assert!(!chart.candles.is_empty(), "chart should return candles");
-
-    let history = spx.history(TimeRange::OneMonth).await.unwrap();
-    assert!(!history.candles.is_empty(), "history should return candles");
+    let _quote: IndexQuote = spx.quote().await?;
+    let _chart: finance_query::Chart = spx.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let _history: finance_query::Chart = spx.history(TimeRange::OneMonth).await?;
+    Ok(())
 }

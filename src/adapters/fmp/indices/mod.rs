@@ -166,4 +166,49 @@ mod tests {
         assert_eq!(result[0].symbol.as_deref(), Some("AAPL"));
         assert_eq!(result[0].sector.as_deref(), Some("Information Technology"));
     }
+
+    /// Mocked HTTP → `Vec<FmpQuoteDTO>` → `index_quote_to_canonical`, covering
+    /// the full `fetch_canonical_index_quote` pipeline without a network call.
+    #[tokio::test]
+    async fn test_index_quote_to_canonical_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/api/v3/quote/%5EGSPC")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
+            .with_status(200)
+            .with_body(
+                serde_json::json!([{
+                    "symbol": "^GSPC",
+                    "name": "S&P 500",
+                    "price": 4790.61,
+                    "change": 20.12,
+                    "changesPercentage": 0.42
+                }])
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let path = format!("/api/v3/quote/{}", encode_path_segment("^GSPC"));
+        let quotes: Vec<FmpQuoteDTO> = client.get(&path, &[]).await.unwrap();
+
+        let quote = index_quote_to_canonical("^GSPC", &quotes);
+        assert_eq!(quote.symbol, "^GSPC");
+        assert_eq!(quote.name.as_deref(), Some("S&P 500"));
+        assert_eq!(quote.price, Some(4790.61));
+        assert_eq!(quote.change, Some(20.12));
+        assert_eq!(quote.change_percent, Some(0.42));
+    }
+
+    #[test]
+    fn index_quote_to_canonical_empty_yields_no_values() {
+        let quote = index_quote_to_canonical("^GSPC", &[]);
+        assert_eq!(quote.symbol, "^GSPC");
+        assert!(quote.name.is_none());
+        assert!(quote.price.is_none());
+    }
 }

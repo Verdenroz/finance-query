@@ -230,3 +230,45 @@ fn fmp_interval_str(interval: crate::Interval) -> &'static str {
         _ => "1hour", // fallback for daily/weekly/monthly
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Interval;
+
+    #[test]
+    fn timestamp_to_date_str_formats_utc_day() {
+        // 2024-01-02T00:00:00Z.
+        assert_eq!(timestamp_to_date_str(1_704_153_600), "2024-01-02");
+        // Within the day still rounds to the same date string.
+        assert_eq!(timestamp_to_date_str(1_704_153_600 + 3_600), "2024-01-02");
+    }
+
+    #[test]
+    fn timestamp_to_date_str_clamps_invalid_to_epoch() {
+        assert_eq!(timestamp_to_date_str(i64::MAX), "1970-01-01");
+    }
+
+    #[test]
+    fn fmp_interval_str_maps_intraday_and_falls_back() {
+        assert_eq!(fmp_interval_str(Interval::OneMinute), "1min");
+        assert_eq!(fmp_interval_str(Interval::FiveMinutes), "5min");
+        assert_eq!(fmp_interval_str(Interval::FifteenMinutes), "15min");
+        assert_eq!(fmp_interval_str(Interval::ThirtyMinutes), "30min");
+        assert_eq!(fmp_interval_str(Interval::OneHour), "1hour");
+        // Daily/weekly/monthly aren't intraday intervals → documented fallback.
+        assert_eq!(fmp_interval_str(Interval::OneDay), "1hour");
+        assert_eq!(fmp_interval_str(Interval::OneWeek), "1hour");
+    }
+
+    #[test]
+    fn range_dates_returns_well_formed_ordered_bounds() {
+        let (from, to) = range_dates(crate::TimeRange::OneMonth);
+        // YYYY-MM-DD shape.
+        assert_eq!(from.len(), 10);
+        assert_eq!(to.len(), 10);
+        assert_eq!(from.matches('-').count(), 2);
+        // Start precedes end (lexicographic works for ISO dates).
+        assert!(from <= to, "from {from} should be <= to {to}");
+    }
+}

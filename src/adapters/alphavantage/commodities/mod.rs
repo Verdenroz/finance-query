@@ -132,6 +132,16 @@ pub async fn fetch_commodities_quote_response(
     symbol: &str,
 ) -> Result<crate::models::commodities::CommodityQuote> {
     let series = fetch_commodity(symbol, Some("daily")).await?;
+    Ok(series_to_quote(symbol, series))
+}
+
+/// Map a commodity series to the canonical
+/// [`CommodityQuote`](crate::models::commodities::CommodityQuote), deriving
+/// change from the two most recent data points.
+fn series_to_quote(
+    symbol: &str,
+    series: CommoditySeriesDTO,
+) -> crate::models::commodities::CommodityQuote {
     let (price, change, change_percent) = match series.data.len() {
         0 => (None, None, None),
         1 => (series.data[0].value, None, None),
@@ -149,7 +159,7 @@ pub async fn fetch_commodities_quote_response(
             }
         }
     };
-    Ok(crate::models::commodities::CommodityQuote {
+    crate::models::commodities::CommodityQuote {
         symbol: symbol.to_string(),
         name: Some(series.name),
         unit: Some(series.unit),
@@ -157,7 +167,7 @@ pub async fn fetch_commodities_quote_response(
         change,
         change_percent,
         timestamp: None,
-    })
+    }
 }
 
 #[cfg(test)]
@@ -225,5 +235,85 @@ mod tests {
         let series = parse_commodity_series(&json).unwrap();
         assert_eq!(series.data.len(), 1);
         assert!((series.data[0].value.unwrap() - 72.68).abs() < 0.01);
+
+        // Mocked HTTP → parse → canonical CommodityQuote, covering the full
+        // fetch_commodities_quote_response pipeline without a network call.
+        let quote = series_to_quote("WTI", series);
+        assert_eq!(quote.symbol, "WTI");
+        assert_eq!(quote.unit.as_deref(), Some("dollars per barrel"));
+        assert_eq!(quote.price, Some(72.68));
+        assert!(quote.change.is_none(), "single point has no change");
+    }
+
+    fn wti_series(data: serde_json::Value) -> CommoditySeriesDTO {
+        serde_json::from_value(serde_json::json!({
+            "name": "WTI",
+            "interval": "daily",
+            "unit": "dollars per barrel",
+            "data": data
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn series_to_quote_derives_change_from_two_latest_points() {
+        let quote = series_to_quote(
+            "WTI",
+            wti_series(serde_json::json!([
+                {"date": "2024-01-02", "value": 74.0},
+                {"date": "2024-01-01", "value": 72.0}
+            ])),
+        );
+        assert_eq!(quote.symbol, "WTI");
+        assert_eq!(quote.name.as_deref(), Some("WTI"));
+        assert_eq!(quote.unit.as_deref(), Some("dollars per barrel"));
+        assert_eq!(quote.price, Some(74.0));
+        assert_eq!(quote.change, Some(2.0));
+        let pct = quote.change_percent.unwrap();
+        assert!((pct - (2.0 / 72.0 * 100.0)).abs() < 1e-9);
+    }
+
+    #[test]
+    fn series_to_quote_single_point_has_price_but_no_change() {
+        let quote = series_to_quote(
+            "WTI",
+            wti_series(serde_json::json!([{"date": "2024-01-02", "value": 74.0}])),
+        );
+        assert_eq!(quote.price, Some(74.0));
+        assert!(quote.change.is_none());
+    }
+
+    #[test]
+    fn series_to_quote_missing_prev_value_yields_price_only() {
+        let quote = series_to_quote(
+            "WTI",
+            wti_series(serde_json::json!([
+                {"date": "2024-01-02", "value": 74.0},
+                {"date": "2024-01-01", "value": null}
+            ])),
+        );
+        assert_eq!(quote.price, Some(74.0));
+        assert!(quote.change.is_none());
+        assert!(quote.change_percent.is_none());
+    }
+
+    #[test]
+    fn series_to_quote_zero_prev_value_yields_price_only() {
+        let quote = series_to_quote(
+            "WTI",
+            wti_series(serde_json::json!([
+                {"date": "2024-01-02", "value": 74.0},
+                {"date": "2024-01-01", "value": 0.0}
+            ])),
+        );
+        assert_eq!(quote.price, Some(74.0));
+        assert!(quote.change.is_none(), "division by zero prev is avoided");
+    }
+
+    #[test]
+    fn series_to_quote_empty_series_yields_no_values() {
+        let quote = series_to_quote("WTI", wti_series(serde_json::json!([])));
+        assert!(quote.price.is_none());
+        assert!(quote.change.is_none());
     }
 }
