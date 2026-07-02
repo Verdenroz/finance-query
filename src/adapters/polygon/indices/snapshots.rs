@@ -76,6 +76,12 @@ pub async fn index_snapshot(ticker: &str) -> Result<IndexSnapshotResponseDTO> {
 /// Fetch index quote (canonical) for a symbol.
 pub async fn fetch_indices_quote_response(symbol: &str) -> Result<IndexQuote> {
     let resp = index_snapshot(symbol).await?;
+    Ok(snapshot_to_quote(symbol, resp))
+}
+
+/// Map an index snapshot response to the canonical [`IndexQuote`],
+/// taking the first result and falling back to the requested symbol.
+fn snapshot_to_quote(symbol: &str, resp: IndexSnapshotResponseDTO) -> IndexQuote {
     let snap = resp.results.and_then(|mut v| {
         if v.is_empty() {
             None
@@ -84,7 +90,7 @@ pub async fn fetch_indices_quote_response(symbol: &str) -> Result<IndexQuote> {
         }
     });
     let session = snap.as_ref().and_then(|s| s.session.as_ref());
-    Ok(IndexQuote {
+    IndexQuote {
         symbol: snap
             .as_ref()
             .and_then(|s| s.ticker.clone())
@@ -94,7 +100,7 @@ pub async fn fetch_indices_quote_response(symbol: &str) -> Result<IndexQuote> {
         change: session.and_then(|s| s.change),
         change_percent: session.and_then(|s| s.change_percent),
         timestamp: None,
-    })
+    }
 }
 
 #[cfg(test)]
@@ -148,11 +154,51 @@ mod tests {
 
         let resp: IndexSnapshotResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
-        let results = resp.results.unwrap();
+        let results = resp.results.as_ref().unwrap();
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].ticker.as_deref(), Some("I:SPX"));
         assert!((results[0].value.unwrap() - 4790.0).abs() < 0.01);
         let session = results[0].session.as_ref().unwrap();
         assert!((session.change.unwrap() - 20.0).abs() < 0.01);
+
+        // Mocked HTTP → DTO → canonical IndexQuote, covering the full
+        // fetch_indices_quote_response pipeline without a network call.
+        let quote = snapshot_to_quote("I:SPX", resp);
+        assert_eq!(quote.symbol, "I:SPX");
+        assert_eq!(quote.name.as_deref(), Some("S&P 500"));
+        assert_eq!(quote.price, Some(4790.0));
+        assert_eq!(quote.change, Some(20.0));
+        assert_eq!(quote.change_percent, Some(0.42));
+    }
+
+    #[test]
+    fn snapshot_to_quote_maps_value_and_session_fields() {
+        let resp: IndexSnapshotResponseDTO = serde_json::from_value(serde_json::json!({
+            "status": "OK",
+            "results": [{
+                "value": 4790.0,
+                "name": "S&P 500",
+                "ticker": "I:SPX",
+                "session": {"change": 20.0, "change_percent": 0.42}
+            }]
+        }))
+        .unwrap();
+
+        let quote = snapshot_to_quote("I:SPX", resp);
+        assert_eq!(quote.symbol, "I:SPX");
+        assert_eq!(quote.name.as_deref(), Some("S&P 500"));
+        assert_eq!(quote.price, Some(4790.0));
+        assert_eq!(quote.change, Some(20.0));
+        assert_eq!(quote.change_percent, Some(0.42));
+    }
+
+    #[test]
+    fn snapshot_to_quote_empty_results_falls_back_to_symbol() {
+        let resp: IndexSnapshotResponseDTO =
+            serde_json::from_value(serde_json::json!({"status": "OK", "results": []})).unwrap();
+        let quote = snapshot_to_quote("I:SPX", resp);
+        assert_eq!(quote.symbol, "I:SPX");
+        assert!(quote.price.is_none());
+        assert!(quote.change.is_none());
     }
 }

@@ -1,8 +1,12 @@
-//! Compile and runtime tests for docs/library/commodities.md
+//! Compile tests for docs/library/commodities.md
 //!
 //! Requires the `fmp` feature flag:
 //!   cargo test --test doc_commodities --features fmp
-//!   cargo test --test doc_commodities --features fmp -- --ignored   (network tests)
+//!
+//! Runtime behavior of the commodity quote path is covered without network
+//! access by the mock + unit tests in `src/adapters/fmp/commodities/mod.rs` and
+//! `src/adapters/alphavantage/commodities/mod.rs` (mocked HTTP → DTO →
+//! canonical `CommodityQuote`).
 
 #![cfg(feature = "fmp")]
 
@@ -26,33 +30,25 @@ fn _verify_commodity_quote_fields(q: CommodityQuote) {
 }
 
 // ---------------------------------------------------------------------------
-// Network tests
+// Compile-time: handle API — mirrors the main handle block from commodities.md
 // ---------------------------------------------------------------------------
 
-/// Mirrors the main handle block from commodities.md.
-/// Tests `providers.commodity(symbol)` with `quote()`, `chart()`, `history()`.
-#[tokio::test]
-#[ignore = "requires network access"]
-async fn test_commodity_quote_chart_history() {
+/// Verifies the documented `Commodity` flow type-checks:
+///   providers.commodity(symbol) → quote(), chart(), history()
+/// Never called; exists only for the compiler to type-check. Runtime behavior
+/// is covered by the mock + unit tests in `src/adapters/fmp/commodities/mod.rs`.
+#[allow(dead_code)]
+async fn _verify_commodity_api() -> finance_query::Result<()> {
     use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
-    // Build fails without FMP_API_KEY (e.g. CI without the secret); skip then.
-    let Ok(providers) = Providers::builder()
+    let providers = Providers::builder()
         .route(Capability::COMMODITIES, &[Provider::Fmp])
         .build()
-        .await
-    else {
-        return;
-    };
-    let gold = providers.commodity("GCUSD");
-    let quote = gold.quote().await.unwrap();
-    let chart = gold
-        .chart(Interval::OneDay, TimeRange::OneMonth)
-        .await
-        .unwrap();
-    let history = gold.history(TimeRange::OneMonth).await.unwrap();
+        .await?;
 
-    assert_eq!(quote.symbol, "GCUSD");
-    assert!(!chart.symbol.is_empty());
-    assert!(!history.symbol.is_empty());
+    let gold = providers.commodity("GCUSD");
+    let _quote: CommodityQuote = gold.quote().await?;
+    let _chart: finance_query::Chart = gold.chart(Interval::OneDay, TimeRange::OneMonth).await?;
+    let _history: finance_query::Chart = gold.history(TimeRange::OneMonth).await?;
+    Ok(())
 }

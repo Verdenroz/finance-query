@@ -155,7 +155,12 @@ pub async fn fetch_crypto_quote_response(
     market: &str,
 ) -> Result<crate::models::crypto::CryptoQuote> {
     let series = crypto_daily(symbol, market).await?;
+    Ok(series_to_quote(series))
+}
 
+/// Map a daily time series to the canonical [`CryptoQuote`](crate::models::crypto::CryptoQuote),
+/// deriving 24h change from the two most recent entries.
+fn series_to_quote(series: CryptoTimeSeriesDTO) -> crate::models::crypto::CryptoQuote {
     let (price, change_24h, change_percent_24h, high_24h, low_24h, volume_24h) =
         if series.entries.len() >= 2 {
             let latest = &series.entries[0];
@@ -188,7 +193,7 @@ pub async fn fetch_crypto_quote_response(
             (None, None, None, None, None, None)
         };
 
-    Ok(crate::models::crypto::CryptoQuote {
+    crate::models::crypto::CryptoQuote {
         id: series.symbol.clone(),
         symbol: series.symbol,
         name: String::new(),
@@ -200,5 +205,130 @@ pub async fn fetch_crypto_quote_response(
         high_24h,
         low_24h,
         circulating_supply: None,
-    })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn series(entries: serde_json::Value) -> CryptoTimeSeriesDTO {
+        serde_json::from_value(serde_json::json!({
+            "symbol": "BTC",
+            "market": "USD",
+            "last_refreshed": "2024-01-15 00:00:00",
+            "entries": entries
+        }))
+        .unwrap()
+    }
+
+    #[test]
+    fn series_to_quote_derives_change_from_two_latest_entries() {
+        let quote = series_to_quote(series(serde_json::json!([
+            {"timestamp": "2024-01-15", "open": 42500.0, "high": 43500.0, "low": 41800.0, "close": 43200.0, "volume": 12345.67},
+            {"timestamp": "2024-01-14", "open": 41800.0, "high": 42600.0, "low": 41500.0, "close": 42000.0, "volume": 11000.0}
+        ])));
+
+        assert_eq!(quote.id, "BTC");
+        assert_eq!(quote.symbol, "BTC");
+        assert_eq!(quote.price, Some(43200.0));
+        assert_eq!(quote.change_24h, Some(1200.0));
+        let pct = quote.change_percent_24h.unwrap();
+        assert!((pct - (1200.0 / 42000.0 * 100.0)).abs() < 1e-9);
+        assert_eq!(quote.high_24h, Some(43500.0));
+        assert_eq!(quote.low_24h, Some(41800.0));
+        assert_eq!(quote.volume_24h, Some(12345.67));
+    }
+
+    #[test]
+    fn series_to_quote_zero_prev_close_yields_zero_percent() {
+        let quote = series_to_quote(series(serde_json::json!([
+            {"timestamp": "2024-01-15", "open": 1.0, "high": 1.0, "low": 1.0, "close": 5.0, "volume": 1.0},
+            {"timestamp": "2024-01-14", "open": 0.0, "high": 0.0, "low": 0.0, "close": 0.0, "volume": 1.0}
+        ])));
+        assert_eq!(quote.change_24h, Some(5.0));
+        assert_eq!(quote.change_percent_24h, Some(0.0));
+    }
+
+    #[test]
+    fn series_to_quote_single_entry_has_price_but_no_change() {
+        let quote = series_to_quote(series(serde_json::json!([
+            {"timestamp": "2024-01-15", "open": 42500.0, "high": 43500.0, "low": 41800.0, "close": 43200.0, "volume": 12345.67}
+        ])));
+        assert_eq!(quote.price, Some(43200.0));
+        assert!(quote.change_24h.is_none());
+        assert!(quote.change_percent_24h.is_none());
+        assert_eq!(quote.volume_24h, Some(12345.67));
+    }
+
+    #[test]
+    fn series_to_quote_empty_series_yields_no_values() {
+        let quote = series_to_quote(series(serde_json::json!([])));
+        assert_eq!(quote.id, "BTC");
+        assert!(quote.price.is_none());
+        assert!(quote.change_24h.is_none());
+        assert!(quote.volume_24h.is_none());
+    }
+
+    /// Mocked HTTP → `parse_crypto_series` → `series_to_quote`, covering the
+    /// full `fetch_crypto_quote_response` pipeline without a network call.
+    #[tokio::test]
+    async fn test_crypto_daily_to_canonical_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("function".into(), "DIGITAL_CURRENCY_DAILY".into()),
+                mockito::Matcher::UrlEncoded("symbol".into(), "BTC".into()),
+                mockito::Matcher::UrlEncoded("market".into(), "USD".into()),
+            ]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "Meta Data": {
+                        "1. Information": "Daily Prices and Volumes for Digital Currency",
+                        "2. Digital Currency Code": "BTC",
+                        "6. Last Refreshed": "2024-01-15 00:00:00"
+                    },
+                    "Time Series (Digital Currency Daily)": {
+                        "2024-01-15": {
+                            "1. open": "42500.00", "2. high": "43500.00",
+                            "3. low": "41800.00", "4. close": "43200.00",
+                            "5. volume": "12345.67"
+                        },
+                        "2024-01-14": {
+                            "1. open": "41800.00", "2. high": "42600.00",
+                            "3. low": "41500.00", "4. close": "42000.00",
+                            "5. volume": "11000.00"
+                        }
+                    }
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = super::super::build_test_client(&server.url()).unwrap();
+        let json = client
+            .get(
+                "DIGITAL_CURRENCY_DAILY",
+                &[("symbol", "BTC"), ("market", "USD")],
+            )
+            .await
+            .unwrap();
+
+        let series = parse_crypto_series(&json, "BTC", "USD").unwrap();
+        assert_eq!(series.entries.len(), 2);
+        assert_eq!(
+            series.entries[0].timestamp, "2024-01-15",
+            "sorted newest first"
+        );
+
+        let quote = series_to_quote(series);
+        assert_eq!(quote.symbol, "BTC");
+        assert_eq!(quote.price, Some(43200.0));
+        assert_eq!(quote.change_24h, Some(1200.0));
+        assert_eq!(quote.volume_24h, Some(12345.67));
+    }
 }

@@ -41,11 +41,7 @@ impl CryptoCoin {
         interval: Interval,
         range: TimeRange,
     ) -> Result<Chart> {
-        let symbol = format!(
-            "{}-{}",
-            self.id().to_uppercase(),
-            vs_currency.to_uppercase()
-        );
+        let symbol = chart_symbol(self.id(), vs_currency);
         fetch_chart_via!(self, symbol, interval, range)
     }
 
@@ -99,5 +95,22 @@ impl CryptoCoin {
             None,
             crate::risk::periods_per_year(interval, crate::risk::TradingCalendar::Crypto),
         ))
+    }
+}
+
+/// Build the `CHART` route symbol `"{ID}-{VS}"`, uppercased (e.g. `"BTC-USD"`)
+/// — the Yahoo crypto convention, valid when the handle id is the coin ticker.
+fn chart_symbol(id: &str, vs_currency: &str) -> String {
+    format!("{}-{}", id.to_uppercase(), vs_currency.to_uppercase())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn chart_symbol_uppercases_ticker_and_vs() {
+        assert_eq!(chart_symbol("BTC", "USD"), "BTC-USD");
+        assert_eq!(chart_symbol("eth", "eur"), "ETH-EUR");
     }
 }
