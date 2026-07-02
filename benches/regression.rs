@@ -634,7 +634,7 @@ library_benchmark_group!(
     benchmarks = de_crypto_coins
 );
 
-// ── RSS/Atom feed parsing (feature: rss) ─────────────────────────────────────
+// ── RSS/Atom feed parsing ────────────────
 
 static FEED_RSS: &[u8] = include_bytes!("fixtures/feed_rss.xml");
 
@@ -644,8 +644,8 @@ fn feed_bytes() -> &'static [u8] {
 
 #[library_benchmark]
 #[bench::rss(setup = feed_bytes)]
-fn rss_parse(bytes: &[u8]) -> feed_rs::model::Feed {
-    black_box(feed_rs::parser::parse(black_box(bytes)).unwrap())
+fn rss_parse(bytes: &[u8]) -> Vec<finance_query::feeds::FeedEntry> {
+    black_box(finance_query::feeds::parse_bytes(black_box(bytes), "bench").unwrap())
 }
 
 library_benchmark_group!(

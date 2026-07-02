@@ -1,8 +1,13 @@
-//! Compile and runtime tests for docs/library/economic.md
+//! Compile tests for docs/library/economic.md
 //!
 //! Requires the `fred` feature flag:
 //!   cargo test --test doc_economic --features fred
-//!   cargo test --test doc_economic --features fred -- --ignored   (network tests)
+//!
+//! Runtime behavior of the economic series path is covered without network
+//! access by the mock + unit tests in `src/adapters/fred/mod.rs`,
+//! `src/adapters/alphavantage/economic/mod.rs`, and
+//! `src/adapters/polygon/economic/mod.rs` (mocked HTTP / DTO → canonical
+//! `EconomicSeries`).
 
 #![cfg(feature = "fred")]
 
@@ -61,22 +66,23 @@ fn _verify_fred_init_pattern() {
 }
 
 // ---------------------------------------------------------------------------
-// Network tests
+// Compile-time: handle API — mirrors the setup block in economic.md
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
-#[ignore = "requires network access (FRED_API_KEY)"]
-async fn test_economic_series() {
+/// Verifies the documented `EconomicIndicator` flow type-checks:
+///   providers.economic("GDP") → series()
+/// Never called; exists only for the compiler to type-check. Runtime behavior
+/// is covered by the mock + unit tests in `src/adapters/fred/mod.rs`.
+#[allow(dead_code)]
+async fn _verify_economic_indicator_api() -> finance_query::Result<()> {
     use finance_query::{Capability, Provider, Providers};
-    // Build fails without FRED_API_KEY (e.g. CI without the secret); skip then.
-    let Ok(providers) = Providers::builder()
+
+    let providers = Providers::builder()
         .route(Capability::ECONOMIC, &[Provider::Fred])
         .build()
-        .await
-    else {
-        return;
-    };
+        .await?;
+
     let gdp = providers.economic("GDP");
-    let series = gdp.series().await.unwrap();
-    let _ = series;
+    let _series: EconomicSeries = gdp.series().await?;
+    Ok(())
 }

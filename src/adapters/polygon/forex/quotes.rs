@@ -99,10 +99,16 @@ pub async fn forex_last_quote(from: &str, to: &str) -> Result<ForexQuoteResponse
 /// Fetch forex quote (canonical) for a currency pair.
 pub async fn fetch_forex_quote_response(from: &str, to: &str) -> Result<ForexQuote> {
     let resp = forex_last_quote(from, to).await?;
+    Ok(last_quote_to_canonical(from, to, resp))
+}
+
+/// Map a last-quote response to the canonical [`ForexQuote`];
+/// `price` prefers bid, falling back to ask.
+fn last_quote_to_canonical(from: &str, to: &str, resp: ForexQuoteResponseDTO) -> ForexQuote {
     let last = resp.last;
     let bid = last.as_ref().and_then(|l| l.bid);
     let ask = last.as_ref().and_then(|l| l.ask);
-    Ok(ForexQuote {
+    ForexQuote {
         symbol: format!("{}{}", from.to_uppercase(), to.to_uppercase()),
         base_currency: Some(from.to_string()),
         quote_currency: Some(to.to_string()),
@@ -112,7 +118,7 @@ pub async fn fetch_forex_quote_response(from: &str, to: &str) -> Result<ForexQuo
         change: None,
         change_percent: None,
         timestamp: last.as_ref().and_then(|l| l.timestamp),
-    })
+    }
 }
 
 /// Fetch historical quotes for a forex ticker.
@@ -196,10 +202,19 @@ mod tests {
 
         let resp: ForexQuoteResponseDTO = serde_json::from_value(json).unwrap();
         assert_eq!(resp.status.as_deref(), Some("OK"));
-        let last = resp.last.unwrap();
+        let last = resp.last.as_ref().unwrap();
         assert!((last.bid.unwrap() - 1.1050).abs() < 0.0001);
         assert!((last.ask.unwrap() - 1.1052).abs() < 0.0001);
         assert_eq!(last.exchange.unwrap(), 48);
+
+        // Mocked HTTP → DTO → canonical ForexQuote, covering the full
+        // fetch_forex_quote_response pipeline without a network call.
+        let quote = last_quote_to_canonical("EUR", "USD", resp);
+        assert_eq!(quote.symbol, "EURUSD");
+        assert_eq!(quote.bid, Some(1.1050));
+        assert_eq!(quote.ask, Some(1.1052));
+        assert_eq!(quote.price, Some(1.1050));
+        assert_eq!(quote.timestamp, Some(1705363200000));
     }
 
     #[tokio::test]
@@ -279,5 +294,45 @@ mod tests {
         assert!((resp.initial_amount.unwrap() - 100.0).abs() < 0.01);
         let last = resp.last.unwrap();
         assert!((last.bid.unwrap() - 1.1050).abs() < 0.0001);
+    }
+
+    #[test]
+    fn last_quote_to_canonical_maps_bid_ask_and_uppercases_symbol() {
+        let resp: ForexQuoteResponseDTO = serde_json::from_value(serde_json::json!({
+            "status": "OK",
+            "last": {"bid": 1.1050, "ask": 1.1052, "timestamp": 1705363200000_i64}
+        }))
+        .unwrap();
+
+        let quote = last_quote_to_canonical("eur", "usd", resp);
+        assert_eq!(quote.symbol, "EURUSD");
+        assert_eq!(quote.base_currency.as_deref(), Some("eur"));
+        assert_eq!(quote.quote_currency.as_deref(), Some("usd"));
+        assert_eq!(quote.bid, Some(1.1050));
+        assert_eq!(quote.ask, Some(1.1052));
+        assert_eq!(quote.price, Some(1.1050), "price prefers bid");
+        assert_eq!(quote.timestamp, Some(1705363200000));
+    }
+
+    #[test]
+    fn last_quote_to_canonical_price_falls_back_to_ask() {
+        let resp: ForexQuoteResponseDTO = serde_json::from_value(serde_json::json!({
+            "status": "OK",
+            "last": {"ask": 1.1052}
+        }))
+        .unwrap();
+        let quote = last_quote_to_canonical("EUR", "USD", resp);
+        assert!(quote.bid.is_none());
+        assert_eq!(quote.price, Some(1.1052));
+    }
+
+    #[test]
+    fn last_quote_to_canonical_missing_last_yields_no_prices() {
+        let resp: ForexQuoteResponseDTO =
+            serde_json::from_value(serde_json::json!({"status": "OK"})).unwrap();
+        let quote = last_quote_to_canonical("EUR", "USD", resp);
+        assert_eq!(quote.symbol, "EURUSD");
+        assert!(quote.price.is_none());
+        assert!(quote.timestamp.is_none());
     }
 }

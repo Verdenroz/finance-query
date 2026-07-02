@@ -1,7 +1,10 @@
-//! Compile and runtime tests for docs/library/futures.md
+//! Compile tests for docs/library/futures.md
 //!
 //! Run: cargo test --test doc_futures --features polygon
-//! Network tests: cargo test --test doc_futures --features polygon -- --ignored
+//!
+//! Runtime behavior of the futures quote path is covered without network
+//! access by the mock + unit tests in `src/adapters/polygon/futures/snapshots.rs`
+//! (mocked HTTP → DTO → canonical `FuturesQuote`).
 
 #![cfg(feature = "polygon")]
 
@@ -29,30 +32,28 @@ fn _verify_futures_quote_fields(q: FuturesQuote) {
 }
 
 // ---------------------------------------------------------------------------
-// Network test — mirrors the "Getting a Handle" block in futures.md
+// Compile-time: handle API — mirrors the "Getting a Handle" block in futures.md
 // ---------------------------------------------------------------------------
 
-#[tokio::test]
-#[ignore = "requires network access (POLYGON_API_KEY)"]
-async fn test_futures_contract() {
+/// Verifies the documented `FuturesContract` flow type-checks: routing setup,
+/// `quote()`, `chart()`, `history()`.
+/// Never called; exists only for the compiler to type-check. Runtime behavior
+/// is covered by the mock + unit tests in
+/// `src/adapters/polygon/futures/snapshots.rs`.
+#[allow(dead_code)]
+async fn _verify_futures_contract_api() -> finance_query::Result<()> {
     use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
-    // Build fails without POLYGON_API_KEY (e.g. CI without the secret); skip then.
-    let Ok(providers) = Providers::builder()
+    let providers = Providers::builder()
         .route(Capability::FUTURES, &[Provider::Polygon])
         .build()
-        .await
-    else {
-        return;
-    };
+        .await?;
 
     let contract = providers.futures("ES");
-    let _quote = contract.quote().await.unwrap();
-    let chart = contract
+    let _quote: FuturesQuote = contract.quote().await?;
+    let _chart: finance_query::Chart = contract
         .chart(Interval::OneDay, TimeRange::OneMonth)
-        .await
-        .unwrap();
-    assert!(!chart.candles.is_empty());
-    let history = contract.history(TimeRange::OneMonth).await.unwrap();
-    assert!(!history.candles.is_empty());
+        .await?;
+    let _history: finance_query::Chart = contract.history(TimeRange::OneMonth).await?;
+    Ok(())
 }

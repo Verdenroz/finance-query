@@ -18,7 +18,15 @@ pub async fn exchange_rate(from_currency: &str, to_currency: &str) -> Result<Exc
             ],
         )
         .await?;
+    parse_exchange_rate(&json, from_currency, to_currency)
+}
 
+/// Parse a `CURRENCY_EXCHANGE_RATE` response into an [`ExchangeRateDTO`].
+fn parse_exchange_rate(
+    json: &serde_json::Value,
+    from_currency: &str,
+    to_currency: &str,
+) -> Result<ExchangeRateDTO> {
     let rate = json.get("Realtime Currency Exchange Rate").ok_or_else(|| {
         FinanceError::ResponseStructureError {
             field: "Realtime Currency Exchange Rate".to_string(),
@@ -193,13 +201,19 @@ pub async fn fetch_forex_quote_response(
     to: &str,
 ) -> Result<crate::models::forex::ForexQuote> {
     let rate = exchange_rate(from, to).await?;
+    Ok(rate_to_canonical(rate))
+}
+
+/// Map an exchange-rate DTO to the canonical [`ForexQuote`](crate::models::forex::ForexQuote);
+/// `price` uses the bid.
+fn rate_to_canonical(rate: ExchangeRateDTO) -> crate::models::forex::ForexQuote {
     let timestamp = parse_av_datetime(&rate.last_refreshed);
     let symbol = format!(
         "{}{}",
         rate.from_currency_code.to_uppercase(),
         rate.to_currency_code.to_uppercase()
     );
-    Ok(crate::models::forex::ForexQuote {
+    crate::models::forex::ForexQuote {
         symbol,
         base_currency: Some(rate.from_currency_code),
         quote_currency: Some(rate.to_currency_code),
@@ -209,7 +223,7 @@ pub async fn fetch_forex_quote_response(
         change: None,
         change_percent: None,
         timestamp,
-    })
+    }
 }
 
 /// Parse an Alpha Vantage datetime string (e.g. "2024-01-15 14:30:00") to a Unix timestamp.
@@ -220,4 +234,123 @@ fn parse_av_datetime(dt_str: &str) -> Option<i64> {
     chrono::NaiveDateTime::parse_from_str(dt_str, "%Y-%m-%d %H:%M:%S")
         .ok()
         .map(|dt| dt.and_utc().timestamp())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn rate_to_canonical_maps_bid_ask_and_uppercases_symbol() {
+        let rate: ExchangeRateDTO = serde_json::from_value(serde_json::json!({
+            "from_currency_code": "eur",
+            "from_currency_name": "Euro",
+            "to_currency_code": "usd",
+            "to_currency_name": "United States Dollar",
+            "exchange_rate": 1.1051,
+            "last_refreshed": "2024-01-15 14:30:00",
+            "bid_price": 1.1050,
+            "ask_price": 1.1052
+        }))
+        .unwrap();
+
+        let quote = rate_to_canonical(rate);
+        assert_eq!(quote.symbol, "EURUSD");
+        assert_eq!(quote.base_currency.as_deref(), Some("eur"));
+        assert_eq!(quote.quote_currency.as_deref(), Some("usd"));
+        assert_eq!(quote.bid, Some(1.1050));
+        assert_eq!(quote.ask, Some(1.1052));
+        assert_eq!(quote.price, Some(1.1050), "price uses the bid");
+        // 2024-01-15T14:30:00Z.
+        assert_eq!(quote.timestamp, Some(1_705_329_000));
+    }
+
+    #[test]
+    fn rate_to_canonical_unparseable_datetime_yields_no_timestamp() {
+        let rate: ExchangeRateDTO = serde_json::from_value(serde_json::json!({
+            "from_currency_code": "EUR",
+            "from_currency_name": "Euro",
+            "to_currency_code": "USD",
+            "to_currency_name": "United States Dollar",
+            "exchange_rate": 1.1051,
+            "last_refreshed": "not-a-datetime",
+            "bid_price": 1.1050,
+            "ask_price": 1.1052
+        }))
+        .unwrap();
+        assert_eq!(rate_to_canonical(rate).timestamp, None);
+    }
+
+    #[test]
+    fn parse_av_datetime_handles_valid_empty_and_garbage() {
+        assert_eq!(
+            parse_av_datetime("2024-01-15 14:30:00"),
+            Some(1_705_329_000)
+        );
+        assert_eq!(parse_av_datetime(""), None);
+        assert_eq!(parse_av_datetime("2024-01-15"), None);
+    }
+
+    #[test]
+    fn parse_exchange_rate_missing_block_errors() {
+        let err = parse_exchange_rate(&serde_json::json!({}), "EUR", "USD").unwrap_err();
+        assert!(matches!(
+            err,
+            crate::error::FinanceError::ResponseStructureError { .. }
+        ));
+    }
+
+    /// Mocked HTTP → `parse_exchange_rate` → `rate_to_canonical`, covering the
+    /// full `fetch_forex_quote_response` pipeline without a network call.
+    #[tokio::test]
+    async fn test_exchange_rate_to_canonical_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("function".into(), "CURRENCY_EXCHANGE_RATE".into()),
+                mockito::Matcher::UrlEncoded("from_currency".into(), "EUR".into()),
+                mockito::Matcher::UrlEncoded("to_currency".into(), "USD".into()),
+            ]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "Realtime Currency Exchange Rate": {
+                        "1. From_Currency Code": "EUR",
+                        "2. From_Currency Name": "Euro",
+                        "3. To_Currency Code": "USD",
+                        "4. To_Currency Name": "United States Dollar",
+                        "5. Exchange Rate": "1.10510000",
+                        "6. Last Refreshed": "2024-01-15 14:30:00",
+                        "7. Time Zone": "UTC",
+                        "8. Bid Price": "1.10500000",
+                        "9. Ask Price": "1.10520000"
+                    }
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = super::super::build_test_client(&server.url()).unwrap();
+        let json = client
+            .get(
+                "CURRENCY_EXCHANGE_RATE",
+                &[("from_currency", "EUR"), ("to_currency", "USD")],
+            )
+            .await
+            .unwrap();
+
+        let rate = parse_exchange_rate(&json, "EUR", "USD").unwrap();
+        assert_eq!(rate.from_currency_code, "EUR");
+        assert!((rate.exchange_rate - 1.1051).abs() < 1e-9);
+
+        let quote = rate_to_canonical(rate);
+        assert_eq!(quote.symbol, "EURUSD");
+        assert_eq!(quote.bid, Some(1.1050));
+        assert_eq!(quote.ask, Some(1.1052));
+        assert_eq!(quote.price, Some(1.1050));
+        assert_eq!(quote.timestamp, Some(1_705_329_000));
+    }
 }

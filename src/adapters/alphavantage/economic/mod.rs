@@ -161,7 +161,17 @@ pub async fn fetch_economic_series_response(
         }
     };
 
-    Ok(crate::models::economic::EconomicSeries {
+    Ok(dto_to_series(func_name, dto))
+}
+
+/// Map an economic series DTO to the canonical
+/// [`EconomicSeries`](crate::models::economic::EconomicSeries); empty
+/// unit/interval strings become `None`.
+fn dto_to_series(
+    func_name: &str,
+    dto: EconomicSeriesDTO,
+) -> crate::models::economic::EconomicSeries {
+    crate::models::economic::EconomicSeries {
         series_id: func_name.to_string(),
         title: Some(dto.name),
         units: if dto.unit.is_empty() {
@@ -182,5 +192,101 @@ pub async fn fetch_economic_series_response(
                 value: dp.value,
             })
             .collect(),
-    })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn dto_to_series_maps_fields_and_observations() {
+        let dto: EconomicSeriesDTO = serde_json::from_value(serde_json::json!({
+            "name": "Real Gross Domestic Product",
+            "interval": "annual",
+            "unit": "billions of dollars",
+            "data": [
+                {"date": "2023-01-01", "value": 22403.435},
+                {"date": "2022-01-01", "value": null}
+            ]
+        }))
+        .unwrap();
+
+        let series = dto_to_series("REAL_GDP", dto);
+        assert_eq!(series.series_id, "REAL_GDP");
+        assert_eq!(series.title.as_deref(), Some("Real Gross Domestic Product"));
+        assert_eq!(series.units.as_deref(), Some("billions of dollars"));
+        assert_eq!(series.frequency.as_deref(), Some("annual"));
+        assert_eq!(series.observations.len(), 2);
+        assert_eq!(series.observations[0].date, "2023-01-01");
+        assert_eq!(series.observations[0].value, Some(22403.435));
+        assert_eq!(series.observations[1].value, None);
+    }
+
+    #[test]
+    fn dto_to_series_empty_unit_and_interval_become_none() {
+        let dto: EconomicSeriesDTO = serde_json::from_value(serde_json::json!({
+            "name": "unknown",
+            "interval": "",
+            "unit": "",
+            "data": []
+        }))
+        .unwrap();
+        let series = dto_to_series("CPI", dto);
+        assert!(series.units.is_none());
+        assert!(series.frequency.is_none());
+        assert!(series.observations.is_empty());
+    }
+
+    #[tokio::test]
+    async fn fetch_economic_series_rejects_unknown_series_id() {
+        let err = fetch_economic_series_response("NOT_A_SERIES")
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            crate::error::FinanceError::InvalidParameter { .. }
+        ));
+    }
+
+    /// Mocked HTTP → `parse_economic_series` → `dto_to_series`, covering the
+    /// full `fetch_economic_series_response` pipeline without a network call.
+    #[tokio::test]
+    async fn test_real_gdp_to_canonical_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "function".into(),
+                "REAL_GDP".into(),
+            )]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "name": "Real Gross Domestic Product",
+                    "interval": "annual",
+                    "unit": "billions of dollars",
+                    "data": [
+                        { "date": "2023-01-01", "value": "22403.435" },
+                        { "date": "2022-01-01", "value": "." }
+                    ]
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = super::super::build_test_client(&server.url()).unwrap();
+        let json = client.get("REAL_GDP", &[]).await.unwrap();
+        let dto = parse_economic_series(&json).unwrap();
+        assert_eq!(dto.data.len(), 2);
+        assert!(dto.data[1].value.is_none(), "\".\" parses to None");
+
+        let series = dto_to_series("REAL_GDP", dto);
+        assert_eq!(series.series_id, "REAL_GDP");
+        assert_eq!(series.frequency.as_deref(), Some("annual"));
+        assert_eq!(series.observations[0].value, Some(22403.435));
+        assert_eq!(series.observations[1].value, None);
+    }
 }

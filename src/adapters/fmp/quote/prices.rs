@@ -463,4 +463,109 @@ mod tests {
         assert_eq!(result[0].date.as_deref(), Some("2024-01-02 09:30:00"));
         assert_eq!(result[0].close, Some(187.20));
     }
+
+    // ── Canonical mapping (DTO → public model) ─────────────────────────────
+    // These cover the pure transform layer that keyless CI never exercises
+    // (it runs only when an FMP_API_KEY routes a request through this provider).
+
+    #[test]
+    fn quote_to_canonical_maps_price_fields() {
+        let quotes: Vec<FmpQuoteDTO> = serde_json::from_value(serde_json::json!([{
+            "symbol": "AAPL",
+            "price": 178.72,
+            "changesPercentage": 1.22,
+            "dayLow": 176.21,
+            "dayHigh": 179.63,
+            "marketCap": 2794000000000_f64,
+            "volume": 58405568,
+            "exchange": "NASDAQ"
+        }]))
+        .unwrap();
+
+        let resp = quote_to_canonical("AAPL", &quotes);
+        assert_eq!(resp.symbol, "AAPL");
+        let price = resp.price.expect("price block present");
+        assert_eq!(price.regular_market_price.and_then(|v| v.raw), Some(178.72));
+        assert_eq!(
+            price.regular_market_change_percent.and_then(|v| v.raw),
+            Some(1.22)
+        );
+        // volume and market_cap are narrowed f64 → i64 in the mapping.
+        assert_eq!(
+            price.regular_market_volume.and_then(|v| v.raw),
+            Some(58405568)
+        );
+        assert_eq!(
+            price.market_cap.and_then(|v| v.raw),
+            Some(2_794_000_000_000)
+        );
+        assert_eq!(price.exchange.as_deref(), Some("NASDAQ"));
+    }
+
+    #[test]
+    fn quote_to_canonical_empty_yields_no_raw_values() {
+        let resp = quote_to_canonical("AAPL", &[]);
+        assert_eq!(resp.symbol, "AAPL");
+        let price = resp.price.expect("price block present even when empty");
+        assert!(price.regular_market_price.is_none());
+        assert!(price.exchange.is_none());
+    }
+
+    #[test]
+    fn historical_to_candles_parses_dates_and_tags_provider() {
+        let resp: HistoricalPriceResponseDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "historical": [
+                {"date": "2024-01-02", "open": 187.15, "high": 188.44, "low": 183.89, "close": 185.64, "volume": 82488700},
+                {"date": "2024-01-03", "open": 184.22, "high": 185.88, "low": 183.43, "close": 184.25, "volume": 58414500}
+            ]
+        }))
+        .unwrap();
+
+        let candles = historical_to_candles(resp.historical);
+        assert_eq!(candles.len(), 2);
+        // 2024-01-02T00:00:00Z.
+        assert_eq!(candles[0].timestamp, 1_704_153_600);
+        assert_eq!(candles[0].close, 185.64);
+        assert_eq!(candles[0].volume, 82_488_700);
+        assert_eq!(
+            candles[0].provider_id,
+            Some(crate::providers::Provider::Fmp)
+        );
+    }
+
+    #[test]
+    fn historical_to_candles_skips_rows_missing_required_fields() {
+        // A row with no close (or unparseable date) is dropped, not defaulted.
+        let resp: HistoricalPriceResponseDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "historical": [
+                {"date": "2024-01-02", "open": 187.15, "high": 188.44, "low": 183.89, "close": 185.64, "volume": 82488700},
+                {"date": "not-a-date", "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1},
+                {"date": "2024-01-04", "open": 1.0, "high": 1.0, "low": 1.0, "volume": 1}
+            ]
+        }))
+        .unwrap();
+
+        let candles = historical_to_candles(resp.historical);
+        assert_eq!(candles.len(), 1, "bad-date and missing-close rows dropped");
+        assert_eq!(candles[0].timestamp, 1_704_153_600);
+    }
+
+    #[test]
+    fn intraday_to_candles_parses_datetime_and_defaults_missing_volume() {
+        let points: Vec<IntradayPriceDTO> = serde_json::from_value(serde_json::json!([
+            {"date": "2024-01-02 09:30:00", "open": 187.15, "high": 187.44, "low": 186.89, "close": 187.20, "volume": 1234567},
+            {"date": "2024-01-02 09:35:00", "open": 187.20, "high": 187.50, "low": 187.10, "close": 187.35}
+        ]))
+        .unwrap();
+
+        let candles = intraday_to_candles(points);
+        assert_eq!(candles.len(), 2);
+        assert_eq!(candles[0].timestamp, 1_704_187_800);
+        assert_eq!(candles[0].volume, 1_234_567);
+        // Missing volume → 0 (not dropped, since volume is not a required field).
+        assert_eq!(candles[1].volume, 0);
+        assert_eq!(candles[1].close, 187.35);
+    }
 }

@@ -49,7 +49,7 @@ Add to your `Cargo.toml`:
 finance-query = "2.3"
 
 # Or with additional features
-finance-query = { version = "2.3", features = ["dataframe", "indicators", "fred", "crypto", "rss", "risk", "translation"] }
+finance-query = { version = "2.3", features = ["dataframe", "indicators", "fred", "crypto", "risk", "translation"] }
 ```
 
 **Single symbol:**

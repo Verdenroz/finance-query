@@ -103,4 +103,48 @@ mod tests {
         assert_eq!(result.len(), 1);
         assert_eq!(result[0].symbol.as_deref(), Some("GCUSD"));
     }
+
+    /// Mocked HTTP → `Vec<FmpQuoteDTO>` → `commodity_quote_to_canonical`, covering
+    /// the full `fetch_canonical_commodity_quote` pipeline without a network call.
+    #[tokio::test]
+    async fn test_commodity_quote_to_canonical_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/api/v3/quote/GCUSD")
+            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
+                "apikey".into(),
+                "test-key".into(),
+            )]))
+            .with_status(200)
+            .with_body(
+                serde_json::json!([{
+                    "symbol": "GCUSD",
+                    "name": "Gold Futures",
+                    "price": 2053.6,
+                    "change": 12.3,
+                    "changesPercentage": 0.6
+                }])
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
+        let quotes: Vec<FmpQuoteDTO> = client.get("/api/v3/quote/GCUSD", &[]).await.unwrap();
+
+        let quote = commodity_quote_to_canonical("GCUSD", &quotes);
+        assert_eq!(quote.symbol, "GCUSD");
+        assert_eq!(quote.name.as_deref(), Some("Gold Futures"));
+        assert_eq!(quote.price, Some(2053.6));
+        assert_eq!(quote.change, Some(12.3));
+        assert_eq!(quote.change_percent, Some(0.6));
+    }
+
+    #[test]
+    fn commodity_quote_to_canonical_empty_yields_no_values() {
+        let quote = commodity_quote_to_canonical("GCUSD", &[]);
+        assert_eq!(quote.symbol, "GCUSD");
+        assert!(quote.price.is_none());
+        assert!(quote.name.is_none());
+    }
 }

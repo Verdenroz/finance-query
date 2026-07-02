@@ -162,7 +162,13 @@ pub async fn fetch_economic_series_response(
     series_id: &str,
 ) -> Result<crate::models::economic::EconomicSeries> {
     let series = crate::adapters::fred::series(series_id).await?;
-    Ok(crate::models::economic::EconomicSeries {
+    Ok(series_to_canonical(series))
+}
+
+/// Map a FRED [`MacroSeries`] to the canonical
+/// [`EconomicSeries`](crate::models::economic::EconomicSeries).
+fn series_to_canonical(series: MacroSeries) -> crate::models::economic::EconomicSeries {
+    crate::models::economic::EconomicSeries {
         series_id: series.id,
         title: None,
         units: None,
@@ -175,7 +181,7 @@ pub async fn fetch_economic_series_response(
                 value: o.value,
             })
             .collect(),
-    })
+    }
 }
 
 #[cfg(test)]
@@ -188,6 +194,87 @@ mod tests {
         let _ = init("test-key-1");
         let result = init("test-key-2");
         assert!(matches!(result, Err(FinanceError::InvalidParameter { .. })));
+    }
+
+    fn test_client(base_url: &str) -> client::FredClient {
+        FredClientBuilder::new("test-key")
+            .timeout(Duration::from_secs(5))
+            .base_url(base_url)
+            .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+            .unwrap()
+    }
+
+    /// Mocked HTTP → `FredClient::series` → `series_to_canonical`, covering the
+    /// full `fetch_economic_series_response` pipeline without a network call.
+    #[tokio::test]
+    async fn test_series_to_canonical_mock() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/series/observations")
+            .match_query(mockito::Matcher::AllOf(vec![
+                mockito::Matcher::UrlEncoded("series_id".into(), "GDP".into()),
+                mockito::Matcher::UrlEncoded("api_key".into(), "test-key".into()),
+                mockito::Matcher::UrlEncoded("file_type".into(), "json".into()),
+            ]))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(
+                serde_json::json!({
+                    "observations": [
+                        { "date": "2023-01-01", "value": "26144.956" },
+                        { "date": "2023-04-01", "value": "." }
+                    ]
+                })
+                .to_string(),
+            )
+            .create_async()
+            .await;
+
+        let series = test_client(&server.url()).series("GDP").await.unwrap();
+        assert_eq!(series.id, "GDP");
+        assert_eq!(series.observations.len(), 2);
+        assert_eq!(series.observations[0].date, "2023-01-01");
+        assert_eq!(series.observations[0].value, Some(26144.956));
+        assert_eq!(series.observations[1].value, None, "\".\" parses to None");
+
+        let canonical = series_to_canonical(series);
+        assert_eq!(canonical.series_id, "GDP");
+        assert_eq!(canonical.observations.len(), 2);
+        assert_eq!(canonical.observations[0].value, Some(26144.956));
+        assert_eq!(canonical.observations[1].value, None);
+    }
+
+    #[tokio::test]
+    async fn test_series_unknown_id_maps_400_to_invalid_parameter() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/series/observations")
+            .match_query(mockito::Matcher::Any)
+            .with_status(400)
+            .create_async()
+            .await;
+
+        let err = test_client(&server.url())
+            .series("NOT_A_SERIES")
+            .await
+            .unwrap_err();
+        assert!(matches!(err, FinanceError::InvalidParameter { .. }));
+    }
+
+    #[tokio::test]
+    async fn test_series_missing_observations_errors() {
+        let mut server = mockito::Server::new_async().await;
+        let _mock = server
+            .mock("GET", "/series/observations")
+            .match_query(mockito::Matcher::Any)
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(serde_json::json!({"error": "unexpected shape"}).to_string())
+            .create_async()
+            .await;
+
+        let err = test_client(&server.url()).series("GDP").await.unwrap_err();
+        assert!(matches!(err, FinanceError::ResponseStructureError { .. }));
     }
 
     #[test]
