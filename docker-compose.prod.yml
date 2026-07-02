@@ -33,15 +33,24 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 256M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 64M
     security_opt:
       - no-new-privileges:true
     healthcheck:
-      test: ["CMD", "curl", "-f", "-s", "-o", "/dev/null", "http://localhost:2019/config/"]
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "-s",
+          "-o",
+          "/dev/null",
+          "http://localhost:2019/config/",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -84,10 +93,10 @@ services:
           # model (~80-210 MB each) per requested language in memory. CPU
           # headroom matters more than RAM — a full transcript translates in
           # ~2-4 s at 6 CPUs (vs tens of seconds with fewer).
-          cpus: '6.0'
+          cpus: "6.0"
           memory: 3G
         reservations:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 1G
     security_opt:
       - no-new-privileges:true
@@ -117,6 +126,7 @@ services:
     environment:
       - MCP_TRANSPORT=http
       - MCP_ADDR=0.0.0.0:3000
+      - MCP_ALLOWED_HOSTS=${SERVER_NAME:-localhost}
       - EDGAR_EMAIL=${EDGAR_EMAIL:-}
       - FRED_API_KEY=${FRED_API_KEY:-}
     volumes:
@@ -131,10 +141,10 @@ services:
           # The MCP image is built with translation-offline too: tool calls
           # with a `lang` param load a small per-language opus-mt model
           # in-process (~80-210 MB each).
-          cpus: '2.0'
+          cpus: "2.0"
           memory: 2G
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 256M
     security_opt:
       - no-new-privileges:true
@@ -176,10 +186,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '1.0'
+          cpus: "1.0"
           memory: 512M
         reservations:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 128M
     security_opt:
       - no-new-privileges:true
@@ -188,7 +198,13 @@ services:
     cap_add:
       - NET_BIND_SERVICE
     healthcheck:
-      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health').read()"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health').read()",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -204,7 +220,7 @@ services:
     image: redis:8.4.0-alpine
     container_name: finance-query-redis
     restart: unless-stopped
-    user: "999:999"  # Redis user
+    user: "999:999" # Redis user
     read_only: true
     tmpfs:
       - /tmp
@@ -225,10 +241,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 256M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 64M
     security_opt:
       - no-new-privileges:true
@@ -251,7 +267,7 @@ services:
     image: oliver006/redis_exporter:v1.80.2-alpine
     container_name: finance-query-redis-exporter
     restart: unless-stopped
-    user: "59000:59000"  # Non-root user
+    user: "59000:59000" # Non-root user
     read_only: true
     expose:
       - "9121"
@@ -267,10 +283,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.25'
+          cpus: "0.25"
           memory: 64M
         reservations:
-          cpus: '0.05'
+          cpus: "0.05"
           memory: 16M
     security_opt:
       - no-new-privileges:true
@@ -292,7 +308,7 @@ services:
     image: prom/prometheus:v3.5.1
     container_name: finance-query-prometheus
     restart: unless-stopped
-    user: "65534:65534"  # nobody user
+    user: "65534:65534" # nobody user
     read_only: true
     tmpfs:
       - /tmp
@@ -303,12 +319,12 @@ services:
       - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus-data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--storage.tsdb.retention.size=8GB'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--storage.tsdb.retention.size=8GB"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
     depends_on:
       finance-query-v2:
         condition: service_healthy
@@ -317,10 +333,10 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 512M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 128M
     security_opt:
       - no-new-privileges:true
@@ -342,7 +358,7 @@ services:
     image: grafana/grafana:11.6.0
     container_name: finance-query-grafana
     restart: unless-stopped
-    user: "472:472"  # Grafana user
+    user: "472:472" # Grafana user
     # read_only disabled for Grafana - needs write access for plugins/logs
     expose:
       - "3000"
@@ -378,17 +394,21 @@ services:
     deploy:
       resources:
         limits:
-          cpus: '0.5'
+          cpus: "0.5"
           memory: 256M
         reservations:
-          cpus: '0.1'
+          cpus: "0.1"
           memory: 64M
     security_opt:
       - no-new-privileges:true
     cap_drop:
       - ALL
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --spider -q http://localhost:3000/api/health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3

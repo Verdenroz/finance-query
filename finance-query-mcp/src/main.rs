@@ -17,6 +17,12 @@ struct Cli {
     /// HTTP bind address (only used when transport=http)
     #[arg(long, default_value = "0.0.0.0:3000", env = "MCP_ADDR")]
     addr: String,
+
+    /// Comma-separated `Host` header values to accept on the HTTP transport
+    /// (DNS-rebinding protection). Loopback addresses are always allowed;
+    /// public deployments must add their domain (e.g. "finance-query.com").
+    #[arg(long, env = "MCP_ALLOWED_HOSTS", value_delimiter = ',')]
+    allowed_hosts: Vec<String>,
 }
 
 #[tokio::main]
@@ -53,7 +59,7 @@ async fn main() -> Result<()> {
     let handler = FinanceTools::new();
 
     match cli.transport.as_str() {
-        "http" => start_http(cli.addr, handler).await,
+        "http" => start_http(cli.addr, cli.allowed_hosts, handler).await,
         _ => start_stdio(handler).await,
     }
 }
@@ -68,7 +74,11 @@ async fn start_stdio(handler: FinanceTools) -> Result<()> {
     Ok(())
 }
 
-async fn start_http(addr: String, _handler: FinanceTools) -> Result<()> {
+async fn start_http(
+    addr: String,
+    extra_allowed_hosts: Vec<String>,
+    _handler: FinanceTools,
+) -> Result<()> {
     use axum::{Router, routing::get};
     use rmcp::transport::streamable_http_server::{
         StreamableHttpServerConfig, StreamableHttpService, session::local::LocalSessionManager,
@@ -76,12 +86,27 @@ async fn start_http(addr: String, _handler: FinanceTools) -> Result<()> {
 
     info!("Starting MCP server (HTTP transport) on {addr}");
 
+    // rmcp defaults `allowed_hosts` to loopback only, rejecting any other
+    // `Host` header as a DNS-rebinding protection. Behind a reverse proxy
+    // (Caddy) the original public Host header is forwarded through, so the
+    // public domain must be added explicitly or every request 403s.
+    let mut allowed_hosts = vec![
+        "localhost".to_string(),
+        "127.0.0.1".to_string(),
+        "::1".to_string(),
+    ];
+    allowed_hosts.extend(extra_allowed_hosts);
+    if allowed_hosts.len() > 3 {
+        info!(hosts = ?allowed_hosts, "HTTP transport allowed hosts configured");
+    }
+
     let service = StreamableHttpService::new(
         || Ok(FinanceTools::new()),
         LocalSessionManager::default().into(),
         StreamableHttpServerConfig::default()
             .with_stateful_mode(false)
-            .with_json_response(true),
+            .with_json_response(true)
+            .with_allowed_hosts(allowed_hosts),
     );
 
     let router = Router::new()
