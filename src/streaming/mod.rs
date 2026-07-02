@@ -40,9 +40,12 @@
 //! ```
 
 mod client;
+mod news;
 mod pricing;
 mod source;
+mod subscription;
 mod yahoo;
 
 pub use client::{PriceStream, PriceStreamBuilder, StreamError, StreamResult};
+pub use news::{NewsStream, NewsStreamBuilder};
 pub use pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};

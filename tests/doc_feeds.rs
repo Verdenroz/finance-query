@@ -1,10 +1,8 @@
 //! Compile and runtime tests for docs/library/feeds.md
 //!
-//! Requires the `rss` feature flag:
-//!   cargo test --test doc_feeds --features rss
-//!   cargo test --test doc_feeds --features rss -- --ignored   (network tests)
-
-#![cfg(feature = "rss")]
+//! `feeds` has no feature gate (always compiled):
+//!   cargo test --test doc_feeds
+//!   cargo test --test doc_feeds -- --ignored   (network tests)
 
 use finance_query::feeds::{FeedEntry, FeedSource};
 

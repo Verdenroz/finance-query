@@ -10,12 +10,10 @@ use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::stream::Stream;
-use tokio::sync::{broadcast, mpsc};
-use tokio_stream::wrappers::BroadcastStream;
-use tracing::warn;
 
 use super::pricing::PriceUpdate;
 use super::source::{StreamCommand, StreamSource, run_stream_loop};
+use super::subscription::Subscription;
 use super::yahoo::YahooStreamSource;
 use crate::error::FinanceError;
 
@@ -87,14 +85,7 @@ const CHANNEL_CAPACITY: usize = 1024;
 /// # }
 /// ```
 pub struct PriceStream {
-    inner: BroadcastStream<PriceUpdate>,
-    _handle: Arc<StreamHandle>,
-}
-
-/// Handle to manage the streaming session
-struct StreamHandle {
-    command_tx: mpsc::Sender<StreamCommand>,
-    broadcast_tx: broadcast::Sender<PriceUpdate>,
+    inner: Subscription<PriceUpdate, StreamCommand>,
 }
 
 impl PriceStream {
@@ -132,31 +123,24 @@ impl PriceStream {
         symbols: &[&str],
         retry_delay: Duration,
     ) -> StreamResult<Self> {
-        let (broadcast_tx, broadcast_rx) = broadcast::channel(CHANNEL_CAPACITY);
-        let (command_tx, command_rx) = mpsc::channel(32);
-
         let initial_symbols: Vec<String> = symbols.iter().map(|s| s.to_string()).collect();
 
-        let tx_clone = broadcast_tx.clone();
+        let inner = Subscription::start(
+            CHANNEL_CAPACITY,
+            32,
+            move |broadcast_tx, command_rx| async move {
+                let _ = run_stream_loop(
+                    source,
+                    initial_symbols,
+                    broadcast_tx,
+                    command_rx,
+                    retry_delay,
+                )
+                .await;
+            },
+        );
 
-        // Spawn the streaming task driving the chosen source.
-        tokio::spawn(run_stream_loop(
-            source,
-            initial_symbols,
-            broadcast_tx,
-            command_rx,
-            retry_delay,
-        ));
-
-        let handle = Arc::new(StreamHandle {
-            command_tx,
-            broadcast_tx: tx_clone,
-        });
-
-        Ok(PriceStream {
-            inner: BroadcastStream::new(broadcast_rx),
-            _handle: handle,
-        })
+        Ok(PriceStream { inner })
     }
 
     /// Create a new receiver for this stream.
@@ -164,8 +148,7 @@ impl PriceStream {
     /// Useful when you need multiple consumers of the same price data.
     pub fn resubscribe(&self) -> Self {
         PriceStream {
-            inner: BroadcastStream::new(self._handle.broadcast_tx.subscribe()),
-            _handle: Arc::clone(&self._handle),
+            inner: self.inner.resubscribe(),
         }
     }
 
@@ -184,11 +167,7 @@ impl PriceStream {
     /// ```
     pub async fn add_symbols(&self, symbols: &[&str]) {
         let symbols: Vec<String> = symbols.iter().map(|s| s.to_string()).collect();
-        let _ = self
-            ._handle
-            .command_tx
-            .send(StreamCommand::Subscribe(symbols))
-            .await;
+        self.inner.send(StreamCommand::Subscribe(symbols)).await;
     }
 
     /// Remove symbols from the subscription.
@@ -206,16 +185,12 @@ impl PriceStream {
     /// ```
     pub async fn remove_symbols(&self, symbols: &[&str]) {
         let symbols: Vec<String> = symbols.iter().map(|s| s.to_string()).collect();
-        let _ = self
-            ._handle
-            .command_tx
-            .send(StreamCommand::Unsubscribe(symbols))
-            .await;
+        self.inner.send(StreamCommand::Unsubscribe(symbols)).await;
     }
 
     /// Close the stream and disconnect from the WebSocket.
     pub async fn close(&self) {
-        let _ = self._handle.command_tx.send(StreamCommand::Close).await;
+        self.inner.send(StreamCommand::Close).await;
     }
 }
 
@@ -223,17 +198,7 @@ impl Stream for PriceStream {
     type Item = PriceUpdate;
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        match Pin::new(&mut self.inner).poll_next(cx) {
-            Poll::Ready(Some(Ok(data))) => Poll::Ready(Some(data)),
-            Poll::Ready(Some(Err(e))) => {
-                warn!("Broadcast error: {:?}", e);
-                // Try again on lag
-                cx.waker().wake_by_ref();
-                Poll::Pending
-            }
-            Poll::Ready(None) => Poll::Ready(None),
-            Poll::Pending => Poll::Pending,
-        }
+        Pin::new(&mut self.inner).poll_next(cx)
     }
 }
 

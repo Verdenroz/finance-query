@@ -89,9 +89,6 @@ csv = { version = "1", optional = true }
 # Optional: parallel iteration for grid-search optimiser
 rayon = { version = "1", optional = true }
 
-# Optional: RSS/Atom feed parsing
-feed-rs = { version = "2", optional = true }
-
 # Optional: offline VADER lexicon-based news/text sentiment scoring
 vader_sentiment = { version = "0.1", optional = true }
 
@@ -110,7 +107,6 @@ full = [
     "backtesting",
     "fred",
     "crypto",
-    "rss",
     "alphavantage",
     "polygon",
     "fmp",
@@ -128,8 +124,6 @@ backtesting = ["indicators", "dep:rayon"]
 fred = ["dep:csv"]
 # Enable CoinGecko cryptocurrency data
 crypto = []
-# Enable RSS/Atom news feed aggregation
-rss = ["dep:feed-rs"]
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -152,7 +146,7 @@ translation-offline = ["translation", "dep:ct2rs", "dep:zip"]
 # compute or serde. HTTP-only providers (alphavantage/polygon/fmp) hit the same
 # public models already covered; dataframe/translation-offline are too heavy for
 # valgrind (excluded by design — see .claude/rules/benches.md).
-bench-gate = ["risk", "backtesting", "rss", "translation", "fred", "crypto", "sentiment"]
+bench-gate = ["risk", "backtesting", "translation", "fred", "crypto", "sentiment"]
 
 [package.metadata.docs.rs]
 # Everything except `translation-offline`: docs.rs cannot afford the
@@ -164,7 +158,6 @@ features = [
     "backtesting",
     "fred",
     "crypto",
-    "rss",
     "alphavantage",
     "polygon",
     "fmp",
@@ -234,11 +227,10 @@ name = "dataframe"
 harness = false
 required-features = ["dataframe"]
 
-# RSS/Atom feed parsing via feed-rs over offline XML fixtures.
+# RSS/Atom feed parsing over offline XML fixtures.
 [[bench]]
 name = "feeds"
 harness = false
-required-features = ["rss"]
 
 # Offline VADER sentiment scoring latency over real captured news + transcript
 # payloads. Criterion-only (wall-clock); the regression gate guards the same
@@ -258,15 +250,16 @@ required-features = ["translation-offline"]
 # Deterministic instruction-count regression gate (iai-callgrind, runs under
 # valgrind). Unlike the criterion benches above, these are stable across
 # machines/CI runners and are consumed by `make baseline` as a gate.
-# `risk`+`backtesting` cover the compute/strategy paths; `rss` and `translation`
-# add the (cheap, pure-Rust) feed-parse and dictionary-translation gates. The
-# serde benches use always-available model types. dataframe is deliberately
-# excluded (Polars is too heavy for the gate — it stays a criterion bench).
-# Run with `--features bench-gate` (aggregate of the four below).
+# `risk`+`backtesting` cover the compute/strategy paths; `translation` adds
+# the (cheap, pure-Rust) dictionary-translation gate; feed-parse is always
+# available (feeds has no feature gate). The serde benches use
+# always-available model types. dataframe is deliberately excluded (Polars is
+# too heavy for the gate — it stays a criterion bench).
+# Run with `--features bench-gate` (aggregate of the below).
 [[bench]]
 name = "regression"
 harness = false
-required-features = ["risk", "backtesting", "rss", "translation", "sentiment"]
+required-features = ["risk", "backtesting", "translation", "sentiment"]
 
 [profile.release]
 opt-level = 3

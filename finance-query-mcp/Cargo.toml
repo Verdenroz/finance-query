@@ -16,7 +16,6 @@ finance-query = { path = "..", features = [
     "indicators",
     "fred",
     "crypto",
-    "rss",
     "risk",
     "translation",
     "sentiment",

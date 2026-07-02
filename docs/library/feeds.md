@@ -3,11 +3,6 @@
 !!! abstract "Cargo Docs"
     [docs.rs/finance-query — feeds](https://docs.rs/finance-query/latest/finance_query/feeds/index.html)
 
-!!! info "Feature flag required"
-    ```toml
-    finance-query = { version = "...", features = ["rss"] }
-    ```
-
 The `feeds` module aggregates RSS and Atom news from over 30 named financial sources, or any custom URL. Multiple feeds can be fetched concurrently in a single call with automatic deduplication and chronological sorting.
 
 ```rust
