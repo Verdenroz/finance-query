@@ -174,6 +174,76 @@ async fn test_filtering_by_market_hours() {
     stream.close().await;
 }
 
+// ---------------------------------------------------------------------------
+// NewsStream — mirrors streaming.md "News Streaming" section
+// ---------------------------------------------------------------------------
+
+#[tokio::test]
+async fn test_news_stream_dynamic_sources_and_multiple_consumers() {
+    use finance_query::feeds::FeedSource;
+    use finance_query::streaming::NewsStream;
+
+    // From streaming.md "Dynamic Sources and Multiple Consumers" section.
+    // No network: empty initial source list, so the poll loop stays idle.
+    let stream = NewsStream::subscribe(&[]).await;
+
+    stream.add_sources(&[FeedSource::WsjMarkets]).await;
+    stream.remove_sources(&[FeedSource::Bloomberg]).await;
+
+    let other_consumer = stream.resubscribe();
+    drop(other_consumer);
+
+    stream.close().await;
+}
+
+#[tokio::test]
+async fn test_news_stream_builder_custom_poll_interval() {
+    use finance_query::feeds::FeedSource;
+    use finance_query::streaming::NewsStreamBuilder;
+    use std::time::Duration;
+
+    // From streaming.md "Custom Poll Interval" section.
+    let stream = NewsStreamBuilder::new()
+        .sources(vec![
+            FeedSource::FederalReserve,
+            FeedSource::SecPressReleases,
+        ])
+        .poll_interval(Duration::from_secs(60))
+        .build()
+        .await;
+
+    stream.close().await;
+}
+
+#[tokio::test]
+#[ignore = "requires network access"]
+async fn test_news_stream_quick_start() {
+    use finance_query::feeds::FeedSource;
+    use finance_query::streaming::NewsStreamBuilder;
+    use futures::StreamExt;
+    use std::time::Duration;
+    use tokio::time::timeout;
+
+    // From streaming.md "News Streaming" Quick Start — short poll interval so
+    // the test doesn't wait for the 5-minute default.
+    let mut stream = NewsStreamBuilder::new()
+        .sources(vec![FeedSource::Bloomberg, FeedSource::MarketWatch])
+        .poll_interval(Duration::from_millis(50))
+        .build()
+        .await;
+
+    let entry = timeout(Duration::from_secs(15), stream.next())
+        .await
+        .expect("timed out waiting for a news entry")
+        .expect("stream ended without an entry");
+
+    println!("[{}] {}", entry.source, entry.title);
+    assert!(!entry.title.is_empty());
+    assert!(!entry.url.is_empty());
+
+    stream.close().await;
+}
+
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_multiple_consumers_with_spawn() {

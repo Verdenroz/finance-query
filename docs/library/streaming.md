@@ -140,8 +140,60 @@ stream.close().await;
     - **Market hours**: Updates are sent during pre-market, regular, and post-market sessions.
     - **Data availability**: Not all fields are populated for every update — Yahoo only sends changed values.
 
+## News Streaming
+
+`NewsStream` gives RSS/Atom feeds (see [Feeds](feeds.md)) the same `Stream` interface as `PriceStream`. Since RSS/Atom has no server push, it works by polling the configured sources on an interval instead of holding a WebSocket connection — yielding an initial batch of entries on subscribe, then only newly-seen ones (deduplicated by URL) on each subsequent poll.
+
+```rust
+use finance_query::streaming::NewsStream;
+use finance_query::feeds::FeedSource;
+use futures::StreamExt;
+
+let mut stream =
+    NewsStream::subscribe(&[FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
+
+while let Some(entry) = stream.next().await {
+    println!("[{}] {}", entry.source, entry.title);
+}
+```
+
+### Custom Poll Interval
+
+```rust
+use finance_query::streaming::NewsStreamBuilder;
+use finance_query::feeds::FeedSource;
+use std::time::Duration;
+
+let mut stream = NewsStreamBuilder::new()
+    .sources(vec![FeedSource::FederalReserve, FeedSource::SecPressReleases])
+    .poll_interval(Duration::from_secs(60))
+    .build()
+    .await;
+```
+
+The default poll interval is 5 minutes.
+
+### Dynamic Sources and Multiple Consumers
+
+`add_sources`, `remove_sources`, `resubscribe`, and `close` work the same way as on `PriceStream`:
+
+```rust
+use finance_query::streaming::NewsStream;
+use finance_query::feeds::FeedSource;
+
+let stream = NewsStream::subscribe(&[FeedSource::Bloomberg]).await;
+
+stream.add_sources(&[FeedSource::WsjMarkets]).await;
+stream.remove_sources(&[FeedSource::Bloomberg]).await;
+
+let other_consumer = stream.resubscribe();
+
+stream.close().await;
+```
+
 ## Next Steps
 
 - [Ticker API](ticker.md) - Fetch snapshot quotes and historical data for the same symbols
+- [Feeds](feeds.md) - The one-shot `fetch`/`fetch_all` API that `NewsStream` polls under the hood
 - [Finance Module](finance.md) - Market summary, trending tickers, and sector data
 - [Configuration](configuration.md) - Proxy and timeout settings that apply to the WebSocket connection
