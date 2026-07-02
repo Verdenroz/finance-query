@@ -98,7 +98,6 @@ pub mod crypto {
     pub use crate::adapters::coingecko::{CoinQuote, coin, coins};
 }
 
-#[cfg(feature = "rss")]
 pub mod feeds;
 
 #[cfg(feature = "risk")]

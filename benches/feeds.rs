@@ -1,16 +1,16 @@
-//! RSS/Atom feed-parsing benchmark (feature: `rss`).
+//! RSS/Atom feed-parsing benchmark.
 //!
-//! Mirrors the parse path in `src/feeds/mod.rs` (`feed_rs::parser::parse` over
-//! the fetched bytes) without any network: the fixtures are offline XML in
+//! Mirrors the parse path in `src/feeds/mod.rs` (`feeds::parse_bytes` over the
+//! fetched bytes) without any network: the fixtures are offline XML in
 //! `benches/fixtures/`. Measures the cost that dominates `feeds::fetch` once the
 //! bytes are in hand.
 //!
 //! ```text
-//! cargo bench --bench feeds --features finance-query/rss
+//! cargo bench --bench feeds
 //! ```
 
 use criterion::{Criterion, Throughput, black_box, criterion_group, criterion_main};
-use feed_rs::parser;
+use finance_query::feeds;
 
 static RSS: &[u8] = include_bytes!("fixtures/feed_rss.xml");
 
@@ -19,8 +19,8 @@ fn bench_parse(c: &mut Criterion) {
     g.throughput(Throughput::Bytes(RSS.len() as u64));
     g.bench_function("rss", |b| {
         b.iter(|| {
-            let feed = parser::parse(black_box(RSS)).unwrap();
-            black_box(feed);
+            let entries = feeds::parse_bytes(black_box(RSS), "bench").unwrap();
+            black_box(entries);
         })
     });
     g.finish();

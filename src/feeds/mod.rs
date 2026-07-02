@@ -1,7 +1,5 @@
 //! RSS/Atom news feed aggregation.
 //!
-//! Requires the **`rss`** feature flag.
-//!
 //! Fetches and parses RSS/Atom feeds from named financial sources or arbitrary URLs.
 //! Multiple feeds can be fetched and merged in one call with automatic deduplication.
 //!
@@ -28,14 +26,15 @@
 //! # }
 //! ```
 
-use feed_rs::parser;
 use futures::future::join_all;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::OnceLock;
 use std::time::Duration;
 
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
+
+mod parser;
 
 /// Cached User-Agent string, computed once from the environment.
 ///
@@ -300,53 +299,17 @@ async fn fetch_with_client(
     url: &str,
     source_name: &str,
 ) -> Result<Vec<FeedEntry>> {
-    let source = source_name.to_string();
-
     let text = client.get(url).send().await?.text().await?;
+    parser::parse(text.as_bytes(), source_name)
+}
 
-    let feed = parser::parse(text.as_bytes()).map_err(|e| FinanceError::FeedParseError {
-        url: url.to_string(),
-        context: e.to_string(),
-    })?;
-
-    let entries = feed
-        .entries
-        .into_iter()
-        .filter_map(|entry| {
-            let title = entry.title.map(|t| t.content)?.trim().to_string();
-            if title.is_empty() {
-                return None;
-            }
-
-            let url_str = entry
-                .links
-                .into_iter()
-                .next()
-                .map(|l| l.href)
-                .unwrap_or_default();
-
-            if url_str.is_empty() {
-                return None;
-            }
-
-            let published = entry.published.or(entry.updated).map(|dt| dt.to_rfc3339());
-
-            let summary = entry
-                .summary
-                .map(|s| s.content)
-                .or_else(|| entry.content.and_then(|c| c.body));
-
-            Some(FeedEntry {
-                title,
-                url: url_str,
-                published,
-                summary,
-                source: source.clone(),
-            })
-        })
-        .collect();
-
-    Ok(entries)
+/// Parse already-fetched RSS/Atom bytes into entries, without a network round-trip.
+///
+/// Used internally by [`fetch`]/[`fetch_all`]; also useful for callers that
+/// fetch feed bytes through their own HTTP client/cache/proxy, and for
+/// offline parsing benchmarks/tests.
+pub fn parse_bytes(bytes: &[u8], source_name: &str) -> Result<Vec<FeedEntry>> {
+    parser::parse(bytes, source_name)
 }
 
 #[cfg(test)]
