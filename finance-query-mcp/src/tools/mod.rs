@@ -335,6 +335,8 @@ pub struct FeedsParams {
     /// economist|financialpost|ftlex|ritholtz
     /// (default: marketwatch, bloomberg, wsj, fortune)
     pub sources: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -619,7 +621,7 @@ impl FinanceTools {
         description = "Fetch RSS/Atom news from financial publishers (Bloomberg, WSJ, MarketWatch, FT, SEC, etc.)."
     )]
     async fn get_feeds(&self, p: Parameters<FeedsParams>) -> Result<CallToolResult, McpError> {
-        feeds::get_feeds(p.0.sources).await
+        feeds::get_feeds(&self.schema, p.0.sources, p.0.fields).await
     }
 
     #[tool(description = "Get market overview with major indices and currencies for a region.")]
