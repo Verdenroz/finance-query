@@ -4,6 +4,7 @@ mod tools;
 
 use anyhow::Result;
 use clap::Parser;
+use finance_query_server::{AppState, StreamHub, cache::Cache, graphql};
 use tools::FinanceTools;
 use tracing::info;
 
@@ -56,7 +57,14 @@ async fn main() -> Result<()> {
         }
     });
 
-    let handler = FinanceTools::new();
+    // MCP is stateless — never connect to Redis, always fetch fresh.
+    let cache = Cache::new(None).await;
+    let state = AppState {
+        cache,
+        stream_hub: StreamHub::new(),
+    };
+    let schema = graphql::build_schema(state);
+    let handler = FinanceTools::new(schema);
 
     match cli.transport.as_str() {
         "http" => start_http(cli.addr, cli.allowed_hosts, handler).await,
@@ -77,7 +85,7 @@ async fn start_stdio(handler: FinanceTools) -> Result<()> {
 async fn start_http(
     addr: String,
     extra_allowed_hosts: Vec<String>,
-    _handler: FinanceTools,
+    handler: FinanceTools,
 ) -> Result<()> {
     use axum::{Router, routing::get};
     use rmcp::transport::streamable_http_server::{
@@ -101,7 +109,7 @@ async fn start_http(
     }
 
     let service = StreamableHttpService::new(
-        || Ok(FinanceTools::new()),
+        move || Ok(handler.clone()),
         LocalSessionManager::default().into(),
         StreamableHttpServerConfig::default()
             .with_stateful_mode(false)

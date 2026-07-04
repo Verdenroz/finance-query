@@ -1933,10 +1933,12 @@ name = "finance-query-mcp"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "async-graphql",
  "axum",
  "clap",
  "dotenvy",
  "finance-query",
+ "finance-query-server",
  "rmcp",
  "schemars",
  "serde",

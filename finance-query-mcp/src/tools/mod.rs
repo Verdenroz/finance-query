@@ -7,6 +7,7 @@ pub mod edgar;
 pub mod feeds;
 pub mod financials;
 pub mod fred;
+pub mod gql;
 pub mod helpers;
 pub mod indicators;
 pub mod market;
@@ -17,6 +18,7 @@ pub mod risk;
 pub mod search;
 pub mod transcripts;
 
+use finance_query_server::graphql::FinanceSchema;
 use rmcp::{
     ErrorData as McpError, ServerHandler, handler::server::tool::ToolRouter,
     handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_handler, tool_router,
@@ -33,11 +35,27 @@ pub struct SymbolParams {
 }
 
 #[derive(Deserialize, JsonSchema)]
+pub struct EdgarFactsParams {
+    /// Stock ticker symbol (e.g., "AAPL", "MSFT", "TSLA")
+    pub symbol: String,
+    /// XBRL taxonomy (default: "us-gaap"); also try "ifrs-full" or "dei"
+    pub taxonomy: Option<String>,
+    /// Comma-separated XBRL concept names to filter to (e.g. "Revenues,Assets");
+    /// omitted = curated defaults (headline financials)
+    pub concepts: Option<String>,
+    /// Comma-separated GraphQL sub-fields to include per concept (e.g. "concept,dataPoints");
+    /// omitted = curated default set
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
 pub struct QuoteParams {
     /// Stock ticker symbol (e.g., "AAPL", "MSFT", "TSLA")
     pub symbol: String,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -46,6 +64,8 @@ pub struct SymbolsParams {
     pub symbols: String,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -54,6 +74,8 @@ pub struct CalendarParams {
     pub symbols: String,
     /// Forward time window: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)
     pub range: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -68,6 +90,8 @@ pub struct ChartParams {
     pub start: Option<i64>,
     /// End date as Unix timestamp (seconds). Defaults to now when `start` is set.
     pub end: Option<i64>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -78,6 +102,10 @@ pub struct FinancialsParams {
     pub statement: String,
     /// Reporting frequency: annual | quarterly (default: annual)
     pub frequency: Option<String>,
+    /// Comma-separated list of line-item metrics to filter to; omitted = all reported metrics
+    pub metrics: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -88,6 +116,8 @@ pub struct IndicatorsParams {
     pub interval: Option<String>,
     /// Time range: 1mo|3mo|6mo|1y|2y|5y (default: 1y)
     pub range: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -96,6 +126,8 @@ pub struct SearchParams {
     pub query: String,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -108,6 +140,8 @@ pub struct ScreenerParams {
     pub screener_type: String,
     /// Number of results to return (default: 25, max: 250)
     pub count: Option<u32>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -116,6 +150,8 @@ pub struct NewsParams {
     pub symbol: Option<String>,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -124,6 +160,14 @@ pub struct MarketSummaryParams {
     pub region: Option<String>,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct FearAndGreedParams {
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -132,6 +176,8 @@ pub struct DividendsParams {
     pub symbol: String,
     /// Time range: 1y|2y|5y|10y|max (default: max)
     pub range: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -144,6 +190,8 @@ pub struct RiskParams {
     pub range: Option<String>,
     /// Benchmark symbol for beta calculation (e.g., "SPY")
     pub benchmark: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -152,6 +200,8 @@ pub struct CryptoParams {
     pub count: Option<u32>,
     /// Quote currency (default: usd)
     pub vs_currency: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -160,6 +210,8 @@ pub struct OptionsParams {
     pub symbol: String,
     /// Expiration date as Unix timestamp in seconds (optional; defaults to nearest expiration)
     pub expiration: Option<i64>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -168,6 +220,8 @@ pub struct RecommendationsParams {
     pub symbol: String,
     /// Maximum number of recommendations to return (default: 5)
     pub limit: Option<u32>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -176,24 +230,32 @@ pub struct SplitsParams {
     pub symbol: String,
     /// Time range: 1y|2y|5y|10y|max (default: max)
     pub range: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct TrendingParams {
     /// Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)
     pub region: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct IndicesParams {
     /// Region: americas|europe|asia-pacific|middle-east-africa|currencies (default: all)
     pub region: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct MarketHoursParams {
     /// Region code: US|GB|DE|CA|AU|FR|IN|CN|HK|BR|TW|SG (default: US)
     pub region: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -203,6 +265,8 @@ pub struct SectorParams {
     pub sector: String,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -211,6 +275,8 @@ pub struct IndustryParams {
     pub industry: String,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -219,6 +285,8 @@ pub struct HoldersParams {
     pub symbol: String,
     /// Holder type: major | institutional | mutualfund | insider-transactions | insider-purchases | insider-roster
     pub holder_type: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -227,18 +295,24 @@ pub struct AnalysisParams {
     pub symbol: String,
     /// Analysis type: recommendations | upgrades-downgrades | earnings-estimate | earnings-history
     pub analysis_type: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FredSeriesParams {
     /// FRED series ID (e.g., "FEDFUNDS", "CPIAUCSL", "GDP", "UNRATE")
     pub id: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct TreasuryYieldsParams {
     /// Year to fetch yield curve data for (default: current year)
     pub year: Option<u32>,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -249,6 +323,8 @@ pub struct TranscriptsParams {
     pub limit: Option<u32>,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -269,6 +345,8 @@ pub struct LookupParams {
     pub query_type: Option<String>,
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
     pub lang: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -279,6 +357,8 @@ pub struct BatchSymbolsParams {
     pub interval: Option<String>,
     /// Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo)
     pub range: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -287,6 +367,8 @@ pub struct BatchDividendsParams {
     pub symbols: String,
     /// Time range: 1y|2y|5y|10y|max (default: 1y)
     pub range: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -297,6 +379,22 @@ pub struct BatchFinancialsParams {
     pub statement: String,
     /// Reporting frequency: annual | quarterly (default: annual)
     pub frequency: Option<String>,
+    /// Comma-separated list of line-item metrics to filter to; omitted = all reported metrics
+    pub metrics: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
+}
+
+#[derive(Deserialize, JsonSchema)]
+pub struct BatchIndicatorsParams {
+    /// Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOG")
+    pub symbols: String,
+    /// Candle interval: 1d|1wk|1mo (default: 1d)
+    pub interval: Option<String>,
+    /// Time range: 1mo|3mo|6mo|1y|2y|5y (default: 1y)
+    pub range: Option<String>,
+    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
+    pub fields: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -316,6 +414,7 @@ pub struct EdgarSearchParams {
 #[derive(Clone)]
 pub struct FinanceTools {
     tool_router: ToolRouter<Self>,
+    schema: FinanceSchema,
 }
 
 #[tool_handler(router = self.tool_router)]
@@ -323,9 +422,10 @@ impl ServerHandler for FinanceTools {}
 
 #[tool_router(router = tool_router)]
 impl FinanceTools {
-    pub fn new() -> Self {
+    pub fn new(schema: FinanceSchema) -> Self {
         Self {
             tool_router: Self::tool_router(),
+            schema,
         }
     }
 
@@ -333,12 +433,12 @@ impl FinanceTools {
         description = "Get current quote and company data for a stock symbol (price, market cap, PE ratio, 52-week range, etc.)"
     )]
     async fn get_quote(&self, p: Parameters<QuoteParams>) -> Result<CallToolResult, McpError> {
-        quotes::get_quote(p.0.symbol, p.0.lang).await
+        quotes::get_quote(&self.schema, p.0.symbol, p.0.lang, p.0.fields).await
     }
 
     #[tool(description = "Get current quotes for multiple stock symbols in one request.")]
     async fn get_quotes(&self, p: Parameters<SymbolsParams>) -> Result<CallToolResult, McpError> {
-        quotes::get_quotes(p.0.symbols, p.0.lang).await
+        quotes::get_quotes(&self.schema, p.0.symbols, p.0.lang, p.0.fields).await
     }
 
     #[tool(description = "Get similar stock recommendations and analyst ratings for a symbol.")]
@@ -346,17 +446,26 @@ impl FinanceTools {
         &self,
         p: Parameters<RecommendationsParams>,
     ) -> Result<CallToolResult, McpError> {
-        quotes::get_recommendations(p.0.symbol, p.0.limit).await
+        quotes::get_recommendations(&self.schema, p.0.symbol, p.0.limit, p.0.fields).await
     }
 
     #[tool(description = "Get historical stock split history for a symbol.")]
     async fn get_splits(&self, p: Parameters<SplitsParams>) -> Result<CallToolResult, McpError> {
-        quotes::get_splits(p.0.symbol, p.0.range).await
+        quotes::get_splits(&self.schema, p.0.symbol, p.0.range, p.0.fields).await
     }
 
     #[tool(description = "Get historical OHLCV candlestick chart data for a symbol.")]
     async fn get_chart(&self, p: Parameters<ChartParams>) -> Result<CallToolResult, McpError> {
-        chart::get_chart(p.0.symbol, p.0.interval, p.0.range, p.0.start, p.0.end).await
+        chart::get_chart(
+            &self.schema,
+            p.0.symbol,
+            p.0.interval,
+            p.0.range,
+            p.0.start,
+            p.0.end,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
@@ -366,7 +475,14 @@ impl FinanceTools {
         &self,
         p: Parameters<BatchSymbolsParams>,
     ) -> Result<CallToolResult, McpError> {
-        chart::get_charts(p.0.symbols, p.0.interval, p.0.range).await
+        chart::get_charts(
+            &self.schema,
+            p.0.symbols,
+            p.0.interval,
+            p.0.range,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
@@ -376,7 +492,7 @@ impl FinanceTools {
         &self,
         p: Parameters<CalendarParams>,
     ) -> Result<CallToolResult, McpError> {
-        calendar::get_calendar(p.0.symbols, p.0.range).await
+        calendar::get_calendar(&self.schema, p.0.symbols, p.0.range, p.0.fields).await
     }
 
     #[tool(
@@ -386,7 +502,14 @@ impl FinanceTools {
         &self,
         p: Parameters<BatchSymbolsParams>,
     ) -> Result<CallToolResult, McpError> {
-        chart::get_spark(p.0.symbols, p.0.interval, p.0.range).await
+        chart::get_spark(
+            &self.schema,
+            p.0.symbols,
+            p.0.interval,
+            p.0.range,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
@@ -396,7 +519,15 @@ impl FinanceTools {
         &self,
         p: Parameters<FinancialsParams>,
     ) -> Result<CallToolResult, McpError> {
-        financials::get_financials(p.0.symbol, p.0.statement, p.0.frequency).await
+        financials::get_financials(
+            &self.schema,
+            p.0.symbol,
+            p.0.statement,
+            p.0.frequency,
+            p.0.metrics,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
@@ -406,7 +537,15 @@ impl FinanceTools {
         &self,
         p: Parameters<BatchFinancialsParams>,
     ) -> Result<CallToolResult, McpError> {
-        financials::get_batch_financials(p.0.symbols, p.0.statement, p.0.frequency).await
+        financials::get_batch_financials(
+            &self.schema,
+            p.0.symbols,
+            p.0.statement,
+            p.0.frequency,
+            p.0.metrics,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
@@ -416,7 +555,14 @@ impl FinanceTools {
         &self,
         p: Parameters<IndicatorsParams>,
     ) -> Result<CallToolResult, McpError> {
-        indicators::get_indicators(p.0.symbol, p.0.interval, p.0.range).await
+        indicators::get_indicators(
+            &self.schema,
+            p.0.symbol,
+            p.0.interval,
+            p.0.range,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
@@ -424,35 +570,49 @@ impl FinanceTools {
     )]
     async fn get_batch_indicators(
         &self,
-        p: Parameters<BatchSymbolsParams>,
+        p: Parameters<BatchIndicatorsParams>,
     ) -> Result<CallToolResult, McpError> {
-        indicators::get_batch_indicators(p.0.symbols, p.0.interval, p.0.range).await
+        indicators::get_batch_indicators(
+            &self.schema,
+            p.0.symbols,
+            p.0.interval,
+            p.0.range,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(description = "Search for stocks, ETFs, and companies by name or ticker symbol.")]
     async fn search(&self, p: Parameters<SearchParams>) -> Result<CallToolResult, McpError> {
-        search::search(p.0.query, p.0.lang).await
+        search::search(&self.schema, p.0.query, p.0.lang, p.0.fields).await
     }
 
     #[tool(
         description = "Discover tickers filtered by type (equity, ETF, mutual fund, index, future, currency, cryptocurrency)."
     )]
     async fn lookup(&self, p: Parameters<LookupParams>) -> Result<CallToolResult, McpError> {
-        search::get_lookup(p.0.query, p.0.query_type, p.0.lang).await
+        search::get_lookup(
+            &self.schema,
+            p.0.query,
+            p.0.query_type,
+            p.0.lang,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
         description = "Get results from a predefined stock screener (e.g., most-actives, day-gainers, undervalued-growth-stocks)."
     )]
     async fn screener(&self, p: Parameters<ScreenerParams>) -> Result<CallToolResult, McpError> {
-        search::screener(p.0.screener_type, p.0.count).await
+        search::screener(&self.schema, p.0.screener_type, p.0.count, p.0.fields).await
     }
 
     #[tool(
         description = "Get recent news. If a symbol is provided, returns news for that stock; otherwise returns general market news."
     )]
     async fn get_news(&self, p: Parameters<NewsParams>) -> Result<CallToolResult, McpError> {
-        news::get_news(p.0.symbol, p.0.lang).await
+        news::get_news(&self.schema, p.0.symbol, p.0.lang, p.0.fields).await
     }
 
     #[tool(
@@ -467,14 +627,17 @@ impl FinanceTools {
         &self,
         p: Parameters<MarketSummaryParams>,
     ) -> Result<CallToolResult, McpError> {
-        market::get_market_summary(p.0.region, p.0.lang).await
+        market::get_market_summary(&self.schema, p.0.region, p.0.lang, p.0.fields).await
     }
 
     #[tool(
         description = "Get the CNN Fear & Greed Index — market sentiment from extreme fear (0) to extreme greed (100)."
     )]
-    async fn get_fear_and_greed(&self) -> Result<CallToolResult, McpError> {
-        market::get_fear_and_greed().await
+    async fn get_fear_and_greed(
+        &self,
+        p: Parameters<FearAndGreedParams>,
+    ) -> Result<CallToolResult, McpError> {
+        market::get_fear_and_greed(&self.schema, p.0.fields).await
     }
 
     #[tool(description = "Get currently trending stock tickers for a region.")]
@@ -482,14 +645,14 @@ impl FinanceTools {
         &self,
         p: Parameters<TrendingParams>,
     ) -> Result<CallToolResult, McpError> {
-        market::get_trending(p.0.region).await
+        market::get_trending(&self.schema, p.0.region, p.0.fields).await
     }
 
     #[tool(
         description = "Get world market indices (S&P 500, DAX, Nikkei, etc.), optionally filtered by region."
     )]
     async fn get_indices(&self, p: Parameters<IndicesParams>) -> Result<CallToolResult, McpError> {
-        market::get_indices(p.0.region).await
+        market::get_indices(&self.schema, p.0.region, p.0.fields).await
     }
 
     #[tool(description = "Get current market hours and open/closed status for a region.")]
@@ -497,14 +660,14 @@ impl FinanceTools {
         &self,
         p: Parameters<MarketHoursParams>,
     ) -> Result<CallToolResult, McpError> {
-        market::get_market_hours(p.0.region).await
+        market::get_market_hours(&self.schema, p.0.region, p.0.fields).await
     }
 
     #[tool(
         description = "Get comprehensive sector data (overview, performance, top companies, ETFs) for one of the 11 GICS sectors."
     )]
     async fn get_sector(&self, p: Parameters<SectorParams>) -> Result<CallToolResult, McpError> {
-        market::get_sector(p.0.sector, p.0.lang).await
+        market::get_sector(&self.schema, p.0.sector, p.0.lang, p.0.fields).await
     }
 
     #[tool(
@@ -514,34 +677,14 @@ impl FinanceTools {
         &self,
         p: Parameters<IndustryParams>,
     ) -> Result<CallToolResult, McpError> {
-        market::get_industry(p.0.industry, p.0.lang).await
-    }
-
-    #[tool(
-        description = "Get dividend history and analytics (CAGR, average payment, payout count) for a dividend-paying stock."
-    )]
-    async fn get_dividends(
-        &self,
-        p: Parameters<DividendsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        dividends::get_dividends(p.0.symbol, p.0.range).await
-    }
-
-    #[tool(
-        description = "Get dividend history for multiple symbols in one request. Use for portfolio income analysis."
-    )]
-    async fn get_batch_dividends(
-        &self,
-        p: Parameters<BatchDividendsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        dividends::get_batch_dividends(p.0.symbols, p.0.range).await
+        market::get_industry(&self.schema, p.0.industry, p.0.lang, p.0.fields).await
     }
 
     #[tool(
         description = "Get ownership data for a stock: major holders, institutional/fund ownership, or insider activity."
     )]
     async fn get_holders(&self, p: Parameters<HoldersParams>) -> Result<CallToolResult, McpError> {
-        analysis::get_holders(p.0.symbol, p.0.holder_type).await
+        analysis::get_holders(&self.schema, p.0.symbol, p.0.holder_type, p.0.fields).await
     }
 
     #[tool(
@@ -551,7 +694,49 @@ impl FinanceTools {
         &self,
         p: Parameters<AnalysisParams>,
     ) -> Result<CallToolResult, McpError> {
-        analysis::get_analysis(p.0.symbol, p.0.analysis_type).await
+        analysis::get_analysis(&self.schema, p.0.symbol, p.0.analysis_type, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get dividend history and analytics (CAGR, average payment, payout count) for a dividend-paying stock."
+    )]
+    async fn get_dividends(
+        &self,
+        p: Parameters<DividendsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        dividends::get_dividends(&self.schema, p.0.symbol, p.0.range, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get dividend history for multiple symbols in one request. Use for portfolio income analysis."
+    )]
+    async fn get_batch_dividends(
+        &self,
+        p: Parameters<BatchDividendsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        dividends::get_batch_dividends(&self.schema, p.0.symbols, p.0.range, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get risk analytics: VaR (95/99%), Sharpe/Sortino/Calmar ratios, beta, and maximum drawdown for a symbol."
+    )]
+    async fn get_risk(&self, p: Parameters<RiskParams>) -> Result<CallToolResult, McpError> {
+        risk::get_risk(
+            &self.schema,
+            p.0.symbol,
+            p.0.interval,
+            p.0.range,
+            p.0.benchmark,
+            p.0.fields,
+        )
+        .await
+    }
+
+    #[tool(
+        description = "Get the options chain for a symbol. Provide an expiration timestamp to get a specific expiry, or omit for the nearest expiration."
+    )]
+    async fn get_options(&self, p: Parameters<OptionsParams>) -> Result<CallToolResult, McpError> {
+        options::get_options(&self.schema, p.0.symbol, p.0.expiration, p.0.fields).await
     }
 
     #[tool(
@@ -559,9 +744,16 @@ impl FinanceTools {
     )]
     async fn get_edgar_facts(
         &self,
-        p: Parameters<SymbolParams>,
+        p: Parameters<EdgarFactsParams>,
     ) -> Result<CallToolResult, McpError> {
-        edgar::get_edgar_facts(p.0.symbol).await
+        edgar::get_edgar_facts(
+            &self.schema,
+            p.0.symbol,
+            p.0.taxonomy,
+            p.0.concepts,
+            p.0.fields,
+        )
+        .await
     }
 
     #[tool(
@@ -571,7 +763,7 @@ impl FinanceTools {
         &self,
         p: Parameters<SymbolParams>,
     ) -> Result<CallToolResult, McpError> {
-        edgar::get_edgar_submissions(p.0.symbol).await
+        edgar::get_edgar_submissions(&self.schema, p.0.symbol).await
     }
 
     #[tool(
@@ -581,51 +773,14 @@ impl FinanceTools {
         &self,
         p: Parameters<EdgarSearchParams>,
     ) -> Result<CallToolResult, McpError> {
-        edgar::get_edgar_search(p.0.query, p.0.forms, p.0.start_date, p.0.end_date).await
-    }
-
-    #[tool(
-        description = "Get risk analytics: VaR (95/99%), Sharpe/Sortino/Calmar ratios, beta, and maximum drawdown for a symbol."
-    )]
-    async fn get_risk(&self, p: Parameters<RiskParams>) -> Result<CallToolResult, McpError> {
-        risk::get_risk(p.0.symbol, p.0.interval, p.0.range, p.0.benchmark).await
-    }
-
-    #[tool(
-        description = "Get top cryptocurrency coins by market cap from CoinGecko (no API key required)."
-    )]
-    async fn get_crypto_coins(
-        &self,
-        p: Parameters<CryptoParams>,
-    ) -> Result<CallToolResult, McpError> {
-        crypto::get_crypto_coins(p.0.count, p.0.vs_currency).await
-    }
-
-    #[tool(
-        description = "Get the options chain for a symbol. Provide an expiration timestamp to get a specific expiry, or omit for the nearest expiration."
-    )]
-    async fn get_options(&self, p: Parameters<OptionsParams>) -> Result<CallToolResult, McpError> {
-        options::get_options(p.0.symbol, p.0.expiration).await
-    }
-
-    #[tool(
-        description = "Get FRED macroeconomic time series data (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE). Requires FRED_API_KEY env var."
-    )]
-    async fn get_fred_series(
-        &self,
-        p: Parameters<FredSeriesParams>,
-    ) -> Result<CallToolResult, McpError> {
-        fred::get_fred_series(p.0.id).await
-    }
-
-    #[tool(
-        description = "Get US Treasury yield curve data (1m through 30y) for a given year. No API key required."
-    )]
-    async fn get_treasury_yields(
-        &self,
-        p: Parameters<TreasuryYieldsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        fred::get_treasury_yields(p.0.year).await
+        edgar::get_edgar_search(
+            &self.schema,
+            p.0.query,
+            p.0.forms,
+            p.0.start_date,
+            p.0.end_date,
+        )
+        .await
     }
 
     #[tool(
@@ -635,6 +790,34 @@ impl FinanceTools {
         &self,
         p: Parameters<TranscriptsParams>,
     ) -> Result<CallToolResult, McpError> {
-        transcripts::get_transcripts(p.0.symbol, p.0.limit, p.0.lang).await
+        transcripts::get_transcripts(&self.schema, p.0.symbol, p.0.limit, p.0.lang, p.0.fields)
+            .await
+    }
+
+    #[tool(
+        description = "Get FRED macroeconomic time series data (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE). Requires FRED_API_KEY env var."
+    )]
+    async fn get_fred_series(
+        &self,
+        p: Parameters<FredSeriesParams>,
+    ) -> Result<CallToolResult, McpError> {
+        fred::get_fred_series(&self.schema, p.0.id, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get US Treasury yield curve data (1m through 30y) for a given year. No API key required."
+    )]
+    async fn get_treasury_yields(
+        &self,
+        p: Parameters<TreasuryYieldsParams>,
+    ) -> Result<CallToolResult, McpError> {
+        fred::get_treasury_yields(&self.schema, p.0.year, p.0.fields).await
+    }
+
+    #[tool(
+        description = "Get top cryptocurrency coins by market cap from CoinGecko (no API key required)."
+    )]
+    async fn get_crypto(&self, p: Parameters<CryptoParams>) -> Result<CallToolResult, McpError> {
+        crypto::get_crypto_coins(&self.schema, p.0.count, p.0.vs_currency, p.0.fields).await
     }
 }
