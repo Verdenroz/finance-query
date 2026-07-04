@@ -3,14 +3,22 @@ use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::ser_err;
 use crate::tools::gql::{
-    GQL_CANDLE_DEFAULT_FIELDS, GQL_CANDLE_VALID_FIELDS, GQL_CHART_DEFAULT_FIELDS,
-    GQL_CHART_META_DEFAULT_FIELDS, GQL_CHART_META_VALID_FIELDS, GQL_CHART_VALID_FIELDS,
-    GQL_SPARK_DEFAULT_FIELDS, GQL_SPARK_VALID_FIELDS, build_selection_or_default, execute_query,
+    DEFAULT_MCP_PAGE_SIZE, GQL_CANDLE_DEFAULT_FIELDS, GQL_CANDLE_VALID_FIELDS,
+    GQL_CHART_DEFAULT_FIELDS, GQL_CHART_META_DEFAULT_FIELDS, GQL_CHART_META_VALID_FIELDS,
+    GQL_CHART_VALID_FIELDS, GQL_SPARK_DEFAULT_FIELDS, GQL_SPARK_VALID_FIELDS,
+    build_connection_selection, build_selection_or_default, escape_gql_string, execute_query,
     gql_string_list_literal, parse_fields, unwrap_field, unwrap_ticker_field,
+    wrap_nested_connection,
 };
 use crate::tools::helpers::{parse_interval, parse_range};
 
-fn build_chart_selection(fields: Option<&[String]>) -> String {
+/// `limit`/`cursor` are `None` for batch callers (which don't expose
+/// pagination params for the nested candles list).
+fn build_chart_selection(
+    fields: Option<&[String]>,
+    limit: Option<u32>,
+    cursor: Option<&str>,
+) -> String {
     // Resolve the field list once, then read `meta`/`candles` membership
     // directly off it — cheaper and clearer than rebuilding a selection
     // string just to `.contains()`-scan it.
@@ -54,15 +62,68 @@ fn build_chart_selection(fields: Option<&[String]>) -> String {
     if want_candles {
         let candle_sel =
             build_selection_or_default(None, GQL_CANDLE_VALID_FIELDS, GQL_CANDLE_DEFAULT_FIELDS);
-        sel.push_str("candles ");
-        sel.push_str(&candle_sel);
+        let mut args = Vec::new();
+        if let Some(limit) = limit {
+            args.push(format!("first: {limit}"));
+        }
+        if let Some(cursor) = cursor {
+            args.push(format!("after: \"{}\"", escape_gql_string(cursor)));
+        }
+        sel.push_str("candles");
+        if !args.is_empty() {
+            sel.push('(');
+            sel.push_str(&args.join(", "));
+            sel.push(')');
+        }
+        sel.push(' ');
+        sel.push_str(&build_connection_selection(&candle_sel));
         sel.push(' ');
     }
     sel.push('}');
     sel
 }
 
+/// Accepts one or more comma-separated symbols: a single symbol returns the
+/// flat chart shape (and honors `start`/`end`), multiple symbols return the
+/// batch `{charts, errors}` shape (`start`/`end` are ignored for batch — the
+/// underlying batch query only supports `interval`/`range`).
+#[allow(clippy::too_many_arguments)]
 pub async fn get_chart(
+    schema: &FinanceSchema,
+    symbols: String,
+    interval: Option<String>,
+    range: Option<String>,
+    start: Option<i64>,
+    end: Option<i64>,
+    fields: Option<String>,
+    limit: Option<u32>,
+    cursor: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let syms: Vec<String> = symbols
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    if syms.len() == 1 {
+        get_one_chart(
+            schema,
+            syms.into_iter().next().unwrap(),
+            interval,
+            range,
+            start,
+            end,
+            fields,
+            limit,
+            cursor,
+        )
+        .await
+    } else {
+        get_many_charts(schema, syms, interval, range, fields).await
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+async fn get_one_chart(
     schema: &FinanceSchema,
     symbol: String,
     interval: Option<String>,
@@ -70,6 +131,8 @@ pub async fn get_chart(
     start: Option<i64>,
     end: Option<i64>,
     fields: Option<String>,
+    limit: Option<u32>,
+    cursor: Option<String>,
 ) -> Result<CallToolResult, McpError> {
     if start.is_none() && end.is_some() {
         return Err(McpError::invalid_params(
@@ -80,7 +143,11 @@ pub async fn get_chart(
 
     let field_list = parse_fields(fields);
 
-    let selection = build_chart_selection(field_list.as_deref());
+    let selection = build_chart_selection(
+        field_list.as_deref(),
+        Some(limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE)),
+        cursor.as_deref(),
+    );
 
     // Build query based on whether start date is set.
     let (query, variables) = if let Some(start) = start {
@@ -133,7 +200,7 @@ pub async fn get_chart(
 
     let json = execute_query(schema, &query, variables).await?;
 
-    let chart = unwrap_ticker_field(json, "chart");
+    let chart = wrap_nested_connection(unwrap_ticker_field(json, "chart"), "candles");
 
     let text = serde_json::to_string(&chart).map_err(ser_err)?;
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
@@ -141,9 +208,9 @@ pub async fn get_chart(
     )]))
 }
 
-pub async fn get_charts(
+async fn get_many_charts(
     schema: &FinanceSchema,
-    symbols: String,
+    syms: Vec<String>,
     interval: Option<String>,
     range: Option<String>,
     fields: Option<String>,
@@ -176,7 +243,6 @@ pub async fn get_charts(
         finance_query::TimeRange::Max => "MAX",
     };
 
-    let syms: Vec<String> = symbols.split(',').map(|s| s.trim().to_string()).collect();
     let syms_literal = gql_string_list_literal(&syms);
 
     let field_list = parse_fields(fields);
@@ -189,7 +255,7 @@ pub async fn get_charts(
         .unwrap_or(true); // default: include chart
 
     let chart_sel = if want_chart {
-        build_chart_selection(field_list.as_deref())
+        build_chart_selection(field_list.as_deref(), None, None)
     } else {
         String::new()
     };
@@ -209,7 +275,14 @@ pub async fn get_charts(
 
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
 
-    let charts = unwrap_field(json, "charts");
+    let mut charts = unwrap_field(json, "charts");
+    if let Some(items) = charts.get_mut("charts").and_then(|v| v.as_array_mut()) {
+        for item in items.iter_mut() {
+            if let Some(chart) = item.get("chart").cloned() {
+                item["chart"] = wrap_nested_connection(chart, "candles");
+            }
+        }
+    }
 
     let text = serde_json::to_string(&charts).map_err(ser_err)?;
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(

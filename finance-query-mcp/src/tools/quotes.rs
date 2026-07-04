@@ -4,14 +4,37 @@ use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::ser_err;
 use crate::tools::gql::{
-    GQL_QUOTE_DEFAULT_FIELDS, GQL_QUOTE_VALID_FIELDS, GQL_RECOMMENDATION_VALID_FIELDS,
-    GQL_SPLIT_DEFAULT_FIELDS, GQL_SPLIT_VALID_FIELDS, RECOMMENDATION_COMPOSITE_FIELDS,
-    build_selection_or_default, build_type_spec_selection, execute_query, gql_string_list_literal,
-    parse_fields, unwrap_field, unwrap_ticker_field,
+    DEFAULT_MCP_PAGE_SIZE, GQL_QUOTE_DEFAULT_FIELDS, GQL_QUOTE_VALID_FIELDS,
+    GQL_RECOMMENDATION_VALID_FIELDS, GQL_SPLIT_DEFAULT_FIELDS, GQL_SPLIT_VALID_FIELDS,
+    RECOMMENDATION_COMPOSITE_FIELDS, build_connection_selection, build_selection_or_default,
+    build_type_spec_selection, escape_gql_string, execute_query, gql_string_list_literal,
+    parse_fields, unwrap_field, unwrap_ticker_field, wrap_nested_connection,
 };
 use crate::tools::helpers::parse_range;
 
+/// Accepts one or more comma-separated symbols: a single symbol returns the
+/// flat quote shape, multiple symbols return the batch `{quotes, errors}` shape.
 pub async fn get_quote(
+    schema: &FinanceSchema,
+    symbols: String,
+    lang: Option<String>,
+    fields: Option<String>,
+    limit: Option<u32>,
+    cursor: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let syms: Vec<String> = symbols
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    if syms.len() == 1 {
+        get_one_quote(schema, syms.into_iter().next().unwrap(), lang, fields).await
+    } else {
+        get_many_quotes(schema, syms, lang, fields, limit, cursor).await
+    }
+}
+
+async fn get_one_quote(
     schema: &FinanceSchema,
     symbol: String,
     lang: Option<String>,
@@ -48,21 +71,22 @@ pub async fn get_quote(
     )]))
 }
 
-pub async fn get_quotes(
+async fn get_many_quotes(
     schema: &FinanceSchema,
-    symbols: String,
+    syms: Vec<String>,
     lang: Option<String>,
     fields: Option<String>,
+    limit: Option<u32>,
+    cursor: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let syms: Vec<String> = symbols.split(',').map(|s| s.trim().to_string()).collect();
-
     let field_list = parse_fields(fields);
 
-    let selection = build_selection_or_default(
+    let inner_selection = build_selection_or_default(
         field_list.as_deref(),
         GQL_QUOTE_VALID_FIELDS,
         GQL_QUOTE_DEFAULT_FIELDS,
     );
+    let selection = build_connection_selection(&inner_selection);
 
     let lang_arg = match crate::lang::normalize(lang.as_deref()) {
         Some(l) => format!("lang: \"{}\"", l),
@@ -79,15 +103,21 @@ pub async fn get_quotes(
         format!("symbols: [{}], {}", syms_literal, lang_arg)
     };
 
+    let mut conn_args = vec![format!("first: {}", limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE))];
+    if let Some(c) = cursor.as_deref() {
+        conn_args.push(format!("after: \"{}\"", escape_gql_string(c)));
+    }
+    let conn_args = conn_args.join(", ");
+
     let query = format!(
-        "query {{ quotes({}) {{ quotes {} errors {{ symbol message }} }} }}",
-        args, selection
+        "query {{ quotes({}) {{ quotes({}) {} errors {{ symbol message }} }} }}",
+        args, conn_args, selection
     );
 
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
 
-    // Unwrap: data.quotes is { quotes: [GqlQuote], errors: [GqlBatchError] }
-    let quotes = unwrap_field(json, "quotes");
+    // Unwrap: data.quotes is { quotes: Connection<GqlQuote>, errors: [GqlBatchError] }
+    let quotes = wrap_nested_connection(unwrap_field(json, "quotes"), "quotes");
 
     let text = serde_json::to_string(&quotes).map_err(ser_err)?;
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(

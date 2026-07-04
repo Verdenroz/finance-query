@@ -19,7 +19,37 @@ const FINANCIAL_LINE_ITEM_FIELDS: &[&str] = GQL_FINANCIAL_LINE_ITEM_VALID_FIELDS
 const FINANCIAL_LINE_ITEM_COMPOSITE_FIELDS: &[(&str, &str)] =
     SHARED_FINANCIAL_LINE_ITEM_COMPOSITE_FIELDS;
 
+/// Accepts one or more comma-separated symbols: a single symbol returns the
+/// flat statement shape, multiple symbols return the batch `{financials, errors}` shape.
 pub async fn get_financials(
+    schema: &FinanceSchema,
+    symbols: String,
+    statement: String,
+    frequency: Option<String>,
+    metrics: Option<String>,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let syms: Vec<String> = symbols
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+    if syms.len() == 1 {
+        get_one_financials(
+            schema,
+            syms.into_iter().next().unwrap(),
+            statement,
+            frequency,
+            metrics,
+            fields,
+        )
+        .await
+    } else {
+        get_many_financials(schema, syms, statement, frequency, metrics, fields).await
+    }
+}
+
+async fn get_one_financials(
     schema: &FinanceSchema,
     symbol: String,
     statement: String,
@@ -73,9 +103,9 @@ pub async fn get_financials(
     )]))
 }
 
-pub async fn get_batch_financials(
+async fn get_many_financials(
     schema: &FinanceSchema,
-    symbols: String,
+    syms: Vec<String>,
     statement: String,
     frequency: Option<String>,
     metrics: Option<String>,
@@ -107,7 +137,6 @@ pub async fn get_batch_financials(
         }
         _ => String::new(),
     };
-    let syms: Vec<String> = symbols.split(',').map(|s| s.trim().to_string()).collect();
     let syms_literal = gql_string_list_literal(&syms);
     let field_list = parse_fields(fields);
     // "statement" (`GqlSymbolFinancials`) is a list of composite

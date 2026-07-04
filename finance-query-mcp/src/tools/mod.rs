@@ -29,9 +29,15 @@ use serde::Deserialize;
 // ── Parameter structs ─────────────────────────────────────────────────────────
 
 #[derive(Deserialize, JsonSchema)]
-pub struct SymbolParams {
+pub struct EdgarSubmissionsParams {
     /// Stock ticker symbol (e.g., "AAPL", "MSFT", "TSLA")
     pub symbol: String,
+    /// Comma-separated list of GraphQL field names to include; omitted = all fields
+    pub fields: Option<String>,
+    /// Maximum filings per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -46,16 +52,11 @@ pub struct EdgarFactsParams {
     /// Comma-separated GraphQL sub-fields to include per concept (e.g. "concept,dataPoints");
     /// omitted = curated default set
     pub fields: Option<String>,
-}
-
-#[derive(Deserialize, JsonSchema)]
-pub struct QuoteParams {
-    /// Stock ticker symbol (e.g., "AAPL", "MSFT", "TSLA")
-    pub symbol: String,
-    /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant"); English or omitted = no translation
-    pub lang: Option<String>,
-    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
-    pub fields: Option<String>,
+    /// Maximum data points per concept per page; omitted = curated default (25).
+    /// Applied uniformly across every returned concept.
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -66,6 +67,10 @@ pub struct SymbolsParams {
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum symbols per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -80,8 +85,8 @@ pub struct CalendarParams {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct ChartParams {
-    /// Stock ticker symbol
-    pub symbol: String,
+    /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,MSFT,GOOG")
+    pub symbols: String,
     /// Candle interval: 1m|5m|15m|30m|1h|1d|1wk|1mo|3mo (default: 1d)
     pub interval: Option<String>,
     /// Time range: 1d|5d|1mo|3mo|6mo|1y|2y|5y|10y|ytd|max (default: 1mo). Ignored when `start` is set.
@@ -92,12 +97,16 @@ pub struct ChartParams {
     pub end: Option<i64>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum candles per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
 pub struct FinancialsParams {
-    /// Stock ticker symbol
-    pub symbol: String,
+    /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,MSFT,GOOGL")
+    pub symbols: String,
     /// Statement type: income | balance | cashflow
     pub statement: String,
     /// Reporting frequency: annual | quarterly (default: annual)
@@ -110,14 +119,18 @@ pub struct FinancialsParams {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct IndicatorsParams {
-    /// Stock ticker symbol
-    pub symbol: String,
+    /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,MSFT,GOOG")
+    pub symbols: String,
     /// Candle interval: 1d|1wk|1mo (default: 1d)
     pub interval: Option<String>,
     /// Time range: 1mo|3mo|6mo|1y|2y|5y (default: 1y)
     pub range: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum symbols per page (only applies when multiple symbols given); omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -128,6 +141,10 @@ pub struct SearchParams {
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum quotes per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -152,6 +169,10 @@ pub struct NewsParams {
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum articles per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -172,12 +193,16 @@ pub struct FearAndGreedParams {
 
 #[derive(Deserialize, JsonSchema)]
 pub struct DividendsParams {
-    /// Stock ticker symbol
-    pub symbol: String,
+    /// One or more comma-separated ticker symbols (e.g., "AAPL" or "AAPL,KO,JNJ")
+    pub symbols: String,
     /// Time range: 1y|2y|5y|10y|max (default: max)
     pub range: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum dividend payments per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -202,6 +227,10 @@ pub struct CryptoParams {
     pub vs_currency: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
+    /// Maximum coins per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -212,6 +241,10 @@ pub struct OptionsParams {
     pub expiration: Option<i64>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum contracts per side (calls/puts) per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor` (applied to both calls and puts); omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -287,6 +320,12 @@ pub struct HoldersParams {
     pub holder_type: String,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum entries per page for holder types with a list (institutional,
+    /// mutualfund, insider-transactions, insider-roster); omitted = curated
+    /// default (25). No-op for major/insider-purchases (no list).
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -305,6 +344,10 @@ pub struct FredSeriesParams {
     pub id: String,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
+    /// Maximum observations per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -313,6 +356,10 @@ pub struct TreasuryYieldsParams {
     pub year: Option<u32>,
     /// Comma-separated list of GraphQL field names to include; omitted = all fields
     pub fields: Option<String>,
+    /// Maximum rows per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -325,6 +372,11 @@ pub struct TranscriptsParams {
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum transcript paragraphs per page; omitted = curated default (25). A
+    /// full call's `text` is returned as paginated paragraphs, not one giant blob
+    pub paragraph_limit: Option<u32>,
+    /// Opaque continuation token from a previous response's paragraphs `pageInfo.endCursor`; omitted = first page
+    pub paragraph_cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -337,6 +389,10 @@ pub struct FeedsParams {
     pub sources: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Maximum entries per page; omitted = curated default (25)
+    pub limit: Option<u32>,
+    /// Opaque continuation token from a previous response's `pageInfo.endCursor`; omitted = first page
+    pub cursor: Option<String>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -349,6 +405,8 @@ pub struct LookupParams {
     pub lang: Option<String>,
     /// Comma-separated list of GraphQL field names to include; omitted = curated default set
     pub fields: Option<String>,
+    /// Include logo URLs (requires an additional upstream API call); default: false
+    pub logo: Option<bool>,
 }
 
 #[derive(Deserialize, JsonSchema)]
@@ -364,42 +422,6 @@ pub struct BatchSymbolsParams {
 }
 
 #[derive(Deserialize, JsonSchema)]
-pub struct BatchDividendsParams {
-    /// Comma-separated list of ticker symbols (e.g., "AAPL,KO,JNJ")
-    pub symbols: String,
-    /// Time range: 1y|2y|5y|10y|max (default: 1y)
-    pub range: Option<String>,
-    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
-    pub fields: Option<String>,
-}
-
-#[derive(Deserialize, JsonSchema)]
-pub struct BatchFinancialsParams {
-    /// Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOGL")
-    pub symbols: String,
-    /// Statement type: income | balance | cashflow
-    pub statement: String,
-    /// Reporting frequency: annual | quarterly (default: annual)
-    pub frequency: Option<String>,
-    /// Comma-separated list of line-item metrics to filter to; omitted = all reported metrics
-    pub metrics: Option<String>,
-    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
-    pub fields: Option<String>,
-}
-
-#[derive(Deserialize, JsonSchema)]
-pub struct BatchIndicatorsParams {
-    /// Comma-separated list of ticker symbols (e.g., "AAPL,MSFT,GOOG")
-    pub symbols: String,
-    /// Candle interval: 1d|1wk|1mo (default: 1d)
-    pub interval: Option<String>,
-    /// Time range: 1mo|3mo|6mo|1y|2y|5y (default: 1y)
-    pub range: Option<String>,
-    /// Comma-separated list of GraphQL field names to include; omitted = curated default set
-    pub fields: Option<String>,
-}
-
-#[derive(Deserialize, JsonSchema)]
 pub struct EdgarSearchParams {
     /// Search query (keywords in filing text)
     pub query: String,
@@ -409,6 +431,10 @@ pub struct EdgarSearchParams {
     pub start_date: Option<String>,
     /// End date filter in YYYY-MM-DD format
     pub end_date: Option<String>,
+    /// Pagination offset; omitted = 0 (first page)
+    pub from: Option<u32>,
+    /// Page size; omitted = 100, max 100
+    pub size: Option<u32>,
 }
 
 // ── Tool handler ──────────────────────────────────────────────────────────────
@@ -432,15 +458,18 @@ impl FinanceTools {
     }
 
     #[tool(
-        description = "Get current quote and company data for a stock symbol (price, market cap, PE ratio, 52-week range, etc.)"
+        description = "Get current quote and company data (price, market cap, PE ratio, 52-week range, etc.) for one or more stock symbols (comma-separated). A single symbol returns one quote object; multiple symbols return a paginated batch of quotes plus per-symbol errors."
     )]
-    async fn get_quote(&self, p: Parameters<QuoteParams>) -> Result<CallToolResult, McpError> {
-        quotes::get_quote(&self.schema, p.0.symbol, p.0.lang, p.0.fields).await
-    }
-
-    #[tool(description = "Get current quotes for multiple stock symbols in one request.")]
-    async fn get_quotes(&self, p: Parameters<SymbolsParams>) -> Result<CallToolResult, McpError> {
-        quotes::get_quotes(&self.schema, p.0.symbols, p.0.lang, p.0.fields).await
+    async fn get_quote(&self, p: Parameters<SymbolsParams>) -> Result<CallToolResult, McpError> {
+        quotes::get_quote(
+            &self.schema,
+            p.0.symbols,
+            p.0.lang,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
     }
 
     #[tool(description = "Get similar stock recommendations and analyst ratings for a symbol.")]
@@ -456,33 +485,20 @@ impl FinanceTools {
         quotes::get_splits(&self.schema, p.0.symbol, p.0.range, p.0.fields).await
     }
 
-    #[tool(description = "Get historical OHLCV candlestick chart data for a symbol.")]
+    #[tool(
+        description = "Get historical OHLCV candlestick chart data for one or more stock symbols (comma-separated). A single symbol supports start/end absolute timestamps and returns one chart; multiple symbols return a batch of charts plus per-symbol errors (interval/range only, no start/end)."
+    )]
     async fn get_chart(&self, p: Parameters<ChartParams>) -> Result<CallToolResult, McpError> {
         chart::get_chart(
             &self.schema,
-            p.0.symbol,
+            p.0.symbols,
             p.0.interval,
             p.0.range,
             p.0.start,
             p.0.end,
             p.0.fields,
-        )
-        .await
-    }
-
-    #[tool(
-        description = "Get historical OHLCV candlestick data for multiple symbols in one request. Use for portfolio analysis and cross-symbol comparison."
-    )]
-    async fn get_charts(
-        &self,
-        p: Parameters<BatchSymbolsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        chart::get_charts(
-            &self.schema,
-            p.0.symbols,
-            p.0.interval,
-            p.0.range,
-            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
         )
         .await
     }
@@ -515,7 +531,7 @@ impl FinanceTools {
     }
 
     #[tool(
-        description = "Get income statement, balance sheet, or cash flow statement for a symbol."
+        description = "Get income statement, balance sheet, or cash flow statement for one or more stock symbols (comma-separated). A single symbol returns one statement; multiple symbols return a batch plus per-symbol errors."
     )]
     async fn get_financials(
         &self,
@@ -523,24 +539,6 @@ impl FinanceTools {
     ) -> Result<CallToolResult, McpError> {
         financials::get_financials(
             &self.schema,
-            p.0.symbol,
-            p.0.statement,
-            p.0.frequency,
-            p.0.metrics,
-            p.0.fields,
-        )
-        .await
-    }
-
-    #[tool(
-        description = "Get financial statements for multiple symbols in one request. Use for comparing fundamentals across companies."
-    )]
-    async fn get_batch_financials(
-        &self,
-        p: Parameters<BatchFinancialsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        financials::get_batch_financials(
-            &self.schema,
             p.0.symbols,
             p.0.statement,
             p.0.frequency,
@@ -551,7 +549,7 @@ impl FinanceTools {
     }
 
     #[tool(
-        description = "Get all 42 technical analysis indicators (SMA, EMA, RSI, MACD, Bollinger Bands, Ichimoku, etc.) for a symbol."
+        description = "Get all 42 technical analysis indicators (SMA, EMA, RSI, MACD, Bollinger Bands, Ichimoku, etc.) for one or more stock symbols (comma-separated). A single symbol returns one indicators object; multiple symbols return a paginated batch plus per-symbol errors."
     )]
     async fn get_indicators(
         &self,
@@ -559,34 +557,27 @@ impl FinanceTools {
     ) -> Result<CallToolResult, McpError> {
         indicators::get_indicators(
             &self.schema,
-            p.0.symbol,
-            p.0.interval,
-            p.0.range,
-            p.0.fields,
-        )
-        .await
-    }
-
-    #[tool(
-        description = "Get all technical indicators for multiple symbols in one request. Use for portfolio-wide technical screening."
-    )]
-    async fn get_batch_indicators(
-        &self,
-        p: Parameters<BatchIndicatorsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        indicators::get_batch_indicators(
-            &self.schema,
             p.0.symbols,
             p.0.interval,
             p.0.range,
             p.0.fields,
+            p.0.limit,
+            p.0.cursor,
         )
         .await
     }
 
     #[tool(description = "Search for stocks, ETFs, and companies by name or ticker symbol.")]
     async fn search(&self, p: Parameters<SearchParams>) -> Result<CallToolResult, McpError> {
-        search::search(&self.schema, p.0.query, p.0.lang, p.0.fields).await
+        search::search(
+            &self.schema,
+            p.0.query,
+            p.0.lang,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
     }
 
     #[tool(
@@ -599,6 +590,7 @@ impl FinanceTools {
             p.0.query_type,
             p.0.lang,
             p.0.fields,
+            p.0.logo,
         )
         .await
     }
@@ -614,14 +606,22 @@ impl FinanceTools {
         description = "Get recent news. If a symbol is provided, returns news for that stock; otherwise returns general market news."
     )]
     async fn get_news(&self, p: Parameters<NewsParams>) -> Result<CallToolResult, McpError> {
-        news::get_news(&self.schema, p.0.symbol, p.0.lang, p.0.fields).await
+        news::get_news(
+            &self.schema,
+            p.0.symbol,
+            p.0.lang,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
     }
 
     #[tool(
         description = "Fetch RSS/Atom news from financial publishers (Bloomberg, WSJ, MarketWatch, FT, SEC, etc.)."
     )]
     async fn get_feeds(&self, p: Parameters<FeedsParams>) -> Result<CallToolResult, McpError> {
-        feeds::get_feeds(&self.schema, p.0.sources, p.0.fields).await
+        feeds::get_feeds(&self.schema, p.0.sources, p.0.fields, p.0.limit, p.0.cursor).await
     }
 
     #[tool(description = "Get market overview with major indices and currencies for a region.")]
@@ -686,7 +686,15 @@ impl FinanceTools {
         description = "Get ownership data for a stock: major holders, institutional/fund ownership, or insider activity."
     )]
     async fn get_holders(&self, p: Parameters<HoldersParams>) -> Result<CallToolResult, McpError> {
-        analysis::get_holders(&self.schema, p.0.symbol, p.0.holder_type, p.0.fields).await
+        analysis::get_holders(
+            &self.schema,
+            p.0.symbol,
+            p.0.holder_type,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
     }
 
     #[tool(
@@ -700,23 +708,21 @@ impl FinanceTools {
     }
 
     #[tool(
-        description = "Get dividend history and analytics (CAGR, average payment, payout count) for a dividend-paying stock."
+        description = "Get dividend history for one or more dividend-paying stocks (comma-separated symbols). A single symbol returns paginated dividend history plus analytics (CAGR, average payment, payout count); multiple symbols return a batch of dividend histories plus per-symbol errors (no analytics for batch)."
     )]
     async fn get_dividends(
         &self,
         p: Parameters<DividendsParams>,
     ) -> Result<CallToolResult, McpError> {
-        dividends::get_dividends(&self.schema, p.0.symbol, p.0.range, p.0.fields).await
-    }
-
-    #[tool(
-        description = "Get dividend history for multiple symbols in one request. Use for portfolio income analysis."
-    )]
-    async fn get_batch_dividends(
-        &self,
-        p: Parameters<BatchDividendsParams>,
-    ) -> Result<CallToolResult, McpError> {
-        dividends::get_batch_dividends(&self.schema, p.0.symbols, p.0.range, p.0.fields).await
+        dividends::get_dividends(
+            &self.schema,
+            p.0.symbols,
+            p.0.range,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
     }
 
     #[tool(
@@ -738,7 +744,15 @@ impl FinanceTools {
         description = "Get the options chain for a symbol. Provide an expiration timestamp to get a specific expiry, or omit for the nearest expiration."
     )]
     async fn get_options(&self, p: Parameters<OptionsParams>) -> Result<CallToolResult, McpError> {
-        options::get_options(&self.schema, p.0.symbol, p.0.expiration, p.0.fields).await
+        options::get_options(
+            &self.schema,
+            p.0.symbol,
+            p.0.expiration,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
     }
 
     #[tool(
@@ -754,6 +768,8 @@ impl FinanceTools {
             p.0.taxonomy,
             p.0.concepts,
             p.0.fields,
+            p.0.limit,
+            p.0.cursor,
         )
         .await
     }
@@ -763,9 +779,10 @@ impl FinanceTools {
     )]
     async fn get_edgar_submissions(
         &self,
-        p: Parameters<SymbolParams>,
+        p: Parameters<EdgarSubmissionsParams>,
     ) -> Result<CallToolResult, McpError> {
-        edgar::get_edgar_submissions(&self.schema, p.0.symbol).await
+        edgar::get_edgar_submissions(&self.schema, p.0.symbol, p.0.fields, p.0.limit, p.0.cursor)
+            .await
     }
 
     #[tool(
@@ -781,19 +798,29 @@ impl FinanceTools {
             p.0.forms,
             p.0.start_date,
             p.0.end_date,
+            p.0.from,
+            p.0.size,
         )
         .await
     }
 
     #[tool(
-        description = "Get earnings call transcripts for a company. Returns the full text of earnings presentations."
+        description = "Get earnings call transcripts for a company. Returns paragraph-by-paragraph text (speaker, timestamp, text), paginated via paragraph_limit/paragraph_cursor since a full call can be tens of thousands of tokens."
     )]
     async fn get_transcripts(
         &self,
         p: Parameters<TranscriptsParams>,
     ) -> Result<CallToolResult, McpError> {
-        transcripts::get_transcripts(&self.schema, p.0.symbol, p.0.limit, p.0.lang, p.0.fields)
-            .await
+        transcripts::get_transcripts(
+            &self.schema,
+            p.0.symbol,
+            p.0.limit,
+            p.0.lang,
+            p.0.fields,
+            p.0.paragraph_limit,
+            p.0.paragraph_cursor,
+        )
+        .await
     }
 
     #[tool(
@@ -803,7 +830,7 @@ impl FinanceTools {
         &self,
         p: Parameters<FredSeriesParams>,
     ) -> Result<CallToolResult, McpError> {
-        fred::get_fred_series(&self.schema, p.0.id, p.0.fields).await
+        fred::get_fred_series(&self.schema, p.0.id, p.0.fields, p.0.limit, p.0.cursor).await
     }
 
     #[tool(
@@ -813,13 +840,21 @@ impl FinanceTools {
         &self,
         p: Parameters<TreasuryYieldsParams>,
     ) -> Result<CallToolResult, McpError> {
-        fred::get_treasury_yields(&self.schema, p.0.year, p.0.fields).await
+        fred::get_treasury_yields(&self.schema, p.0.year, p.0.fields, p.0.limit, p.0.cursor).await
     }
 
     #[tool(
         description = "Get top cryptocurrency coins by market cap from CoinGecko (no API key required)."
     )]
     async fn get_crypto(&self, p: Parameters<CryptoParams>) -> Result<CallToolResult, McpError> {
-        crypto::get_crypto_coins(&self.schema, p.0.count, p.0.vs_currency, p.0.fields).await
+        crypto::get_crypto_coins(
+            &self.schema,
+            p.0.count,
+            p.0.vs_currency,
+            p.0.fields,
+            p.0.limit,
+            p.0.cursor,
+        )
+        .await
     }
 }

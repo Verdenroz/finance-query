@@ -13,11 +13,12 @@
 use async_graphql::Response;
 pub use finance_query_server::graphql::fields::{
     CALENDAR_EVENT_UNION_SELECTION, DIVIDENDS_COMPOSITE_FIELDS, EDGAR_FACTS_COMPOSITE_FIELDS,
-    GQL_CALENDAR_VALID_FIELDS, GQL_CANDLE_VALID_FIELDS, GQL_CHART_META_VALID_FIELDS,
-    GQL_CHART_VALID_FIELDS, GQL_COIN_VALID_FIELDS, GQL_DIVIDENDS_VALID_FIELDS,
-    GQL_EARNINGS_ESTIMATE_COMPOSITE, GQL_EARNINGS_ESTIMATE_VALID_FIELDS,
-    GQL_EARNINGS_HISTORY_COMPOSITE, GQL_EARNINGS_HISTORY_VALID_FIELDS,
-    GQL_EDGAR_FACTS_VALID_FIELDS, GQL_FEAR_AND_GREED_VALID_FIELDS, GQL_FEEDS_VALID_FIELDS,
+    EDGAR_SUBMISSIONS_COMPOSITE_FIELDS, GQL_CALENDAR_VALID_FIELDS, GQL_CANDLE_VALID_FIELDS,
+    GQL_CHART_META_VALID_FIELDS, GQL_CHART_VALID_FIELDS, GQL_COIN_VALID_FIELDS,
+    GQL_DIVIDENDS_VALID_FIELDS, GQL_EARNINGS_ESTIMATE_COMPOSITE,
+    GQL_EARNINGS_ESTIMATE_VALID_FIELDS, GQL_EARNINGS_HISTORY_COMPOSITE,
+    GQL_EARNINGS_HISTORY_VALID_FIELDS, GQL_EDGAR_FACTS_VALID_FIELDS,
+    GQL_EDGAR_SUBMISSIONS_VALID_FIELDS, GQL_FEAR_AND_GREED_VALID_FIELDS, GQL_FEEDS_VALID_FIELDS,
     GQL_GRADING_HISTORY_COMPOSITE, GQL_GRADING_HISTORY_VALID_FIELDS, GQL_INDICATORS_VALID_FIELDS,
     GQL_INDUSTRY_VALID_FIELDS, GQL_INSIDER_PURCHASES_VALID_FIELDS, GQL_INSIDER_ROSTER_COMPOSITE,
     GQL_INSIDER_ROSTER_VALID_FIELDS, GQL_INSIDER_TRANSACTIONS_COMPOSITE,
@@ -33,12 +34,48 @@ pub use finance_query_server::graphql::fields::{
     INDUSTRY_COMPOSITE_FIELDS, LOOKUP_RESULTS_COMPOSITE_FIELDS, MACRO_SERIES_COMPOSITE_FIELDS,
     MARKET_HOURS_COMPOSITE_FIELDS, OPTIONS_COMPOSITE_FIELDS, RECOMMENDATION_COMPOSITE_FIELDS,
     SCREENER_RESULTS_COMPOSITE_FIELDS, SEARCH_RESULTS_COMPOSITE_FIELDS, SECTOR_COMPOSITE_FIELDS,
-    TRANSCRIPT_COMPOSITE_FIELDS, escape_gql_string, gql_string_list_literal, unwrap_field,
-    unwrap_ticker_field,
+    escape_gql_string, gql_string_list_literal, unwrap_field, unwrap_ticker_field,
+};
+pub use finance_query_server::graphql::pagination::{
+    build_connection_selection, build_paginated_composite_selection, connection_nodes,
+    connection_page_info,
 };
 use rmcp::ErrorData as McpError;
 
 use crate::error::invalid_params;
+
+// ── Pagination ────────────────────────────────────────────────────────────
+//
+// MCP pagination is on by default (unlike REST, which defaults off): every
+// list-returning tool always applies a page-size cap, even when the caller
+// omits `limit`, to keep responses within an LLM's context budget. Per-domain
+// overrides exist only where an existing default must be preserved for
+// continuity (e.g. news stays 10).
+
+/// Default page size applied when a tool's `limit` param is omitted.
+pub const DEFAULT_MCP_PAGE_SIZE: u32 = 25;
+
+/// Always wrap a Connection JSON value as `{ items, pageInfo }` for MCP —
+/// unlike REST's `unwrap_connection`, there's no "unpaginated" mode since
+/// pagination is on by default for this transport.
+pub fn wrap_connection(data: serde_json::Value) -> serde_json::Value {
+    serde_json::json!({
+        "items": connection_nodes(&data),
+        "pageInfo": connection_page_info(&data),
+    })
+}
+
+/// Always wrap one nested field within an object as `{items, pageInfo}` — for
+/// wrapper types where only one nested list is paginated (dividends, chart
+/// candles, search quotes, holders ownership/transaction/roster lists).
+pub fn wrap_nested_connection(mut data: serde_json::Value, field: &str) -> serde_json::Value {
+    if let Some(obj) = data.as_object_mut()
+        && let Some(conn) = obj.get(field).cloned()
+    {
+        obj.insert(field.to_string(), wrap_connection(conn));
+    }
+    data
+}
 
 // ── Valid fields per typed GraphQL object ────────────────────────────────────
 //
@@ -110,10 +147,6 @@ pub const GQL_DIVIDENDS_DEFAULT_FIELDS: &[&str] = &["dividends", "analytics"];
 
 /// Default fields for MCP `get_splits` (all fields; splits are small).
 pub const GQL_SPLIT_DEFAULT_FIELDS: &[&str] = &["timestamp", "numerator", "denominator", "ratio"];
-
-/// Default fields for MCP `get_options` (all fields; the whole point of a
-/// single expiration's chain is usually to see both sides).
-pub const GQL_OPTIONS_DEFAULT_FIELDS: &[&str] = GQL_OPTIONS_VALID_FIELDS;
 
 /// Valid fields for `GqlRiskSummary`.
 pub const GQL_RISK_VALID_FIELDS: &[&str] = &[
