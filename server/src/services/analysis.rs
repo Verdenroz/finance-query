@@ -12,22 +12,6 @@ pub enum AnalysisType {
     EarningsHistory,
 }
 
-impl AnalysisType {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "recommendations" => Some(Self::Recommendations),
-            "upgrades-downgrades" => Some(Self::UpgradesDowngrades),
-            "earnings-estimate" => Some(Self::EarningsEstimate),
-            "earnings-history" => Some(Self::EarningsHistory),
-            _ => None,
-        }
-    }
-
-    pub fn valid_types() -> &'static str {
-        "recommendations, upgrades-downgrades, earnings-estimate, earnings-history"
-    }
-}
-
 pub async fn get_analysis(
     cache: &Cache,
     symbol: &str,

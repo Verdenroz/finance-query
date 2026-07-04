@@ -4,6 +4,7 @@
 //! Cache keys are prefixed with "v2:" to avoid conflicts with v1 Python server.
 
 use serde::{Serialize, de::DeserializeOwned};
+#[cfg(feature = "redis-cache")]
 use std::sync::Arc;
 
 #[cfg(feature = "redis-cache")]

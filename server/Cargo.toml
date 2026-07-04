@@ -11,6 +11,10 @@ publish = false  # Server binary not published to crates.io
 [package.metadata.dist]
 dist = false
 
+[lib]
+name = "finance_query_server"
+path = "src/lib.rs"
+
 [[bin]]
 name = "finance-query-server"
 path = "src/main.rs"

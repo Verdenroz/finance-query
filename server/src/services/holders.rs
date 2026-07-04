@@ -14,24 +14,6 @@ pub enum HolderType {
     InsiderRoster,
 }
 
-impl HolderType {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "major" => Some(Self::Major),
-            "institutional" => Some(Self::Institutional),
-            "mutualfund" | "mutual-fund" => Some(Self::Mutualfund),
-            "insider-transactions" => Some(Self::InsiderTransactions),
-            "insider-purchases" => Some(Self::InsiderPurchases),
-            "insider-roster" => Some(Self::InsiderRoster),
-            _ => None,
-        }
-    }
-
-    pub fn valid_types() -> &'static str {
-        "major, institutional, mutualfund, insider-transactions, insider-purchases, insider-roster"
-    }
-}
-
 pub async fn get_holders(
     cache: &Cache,
     symbol: &str,
