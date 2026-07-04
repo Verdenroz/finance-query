@@ -20,6 +20,7 @@ use super::gql_bridge::{
 use super::support::{default_interval, default_range};
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchIndicatorsQuery {
     /// Comma-separated symbols (required)
     symbols: String,
@@ -33,6 +34,7 @@ pub(crate) struct BatchIndicatorsQuery {
 
 /// Query params for /v2/indicators/{symbol}, shared with the chart-range shape.
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct IndicatorsQuery {
     #[serde(default = "default_interval")]
     interval: String,

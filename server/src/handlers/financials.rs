@@ -78,6 +78,7 @@ fn invalid_statement_response(statement: &str) -> axum::response::Response {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct FinancialsQuery {
     /// Frequency: annual or quarterly (default: annual)
     #[serde(default = "default_frequency")]
@@ -89,6 +90,7 @@ pub(crate) struct FinancialsQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchFinancialsQuery {
     /// Comma-separated symbols (required)
     symbols: String,

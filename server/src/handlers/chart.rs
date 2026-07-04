@@ -18,6 +18,7 @@ use super::gql_bridge::{build_rest_selection, execute_gql_rest, interval_to_gql,
 use super::support::{default_interval, default_range};
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ChartQuery {
     #[serde(default = "default_interval")]
     interval: String,
@@ -42,6 +43,7 @@ pub(crate) struct ChartQuery {
 
 /// Query parameters for /v2/spark
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct SparkQuery {
     /// Comma-separated symbols (required)
     symbols: String,
@@ -54,6 +56,7 @@ pub(crate) struct SparkQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchChartsQuery {
     /// Comma-separated symbols (required)
     symbols: String,

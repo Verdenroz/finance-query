@@ -23,6 +23,7 @@ fn default_crypto_count() -> usize {
 
 /// Query parameters for /v2/crypto/coins
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct CryptoCoinsQuery {
     /// Currency to compare against (default: "usd")
     #[serde(default = "default_vs_currency")]
@@ -36,6 +37,7 @@ pub(crate) struct CryptoCoinsQuery {
 
 /// Query parameters for /v2/crypto/coins/{id}
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct CryptoCoinQuery {
     /// Currency to compare against (default: "usd")
     #[serde(default = "default_vs_currency")]

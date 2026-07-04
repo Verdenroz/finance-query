@@ -18,6 +18,7 @@ use tracing::info;
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct EarningsTranscriptQuery {
     /// Fiscal quarter (Q1, Q2, Q3, Q4). If not provided, returns latest.
     quarter: Option<String>,
@@ -29,6 +30,7 @@ pub(crate) struct EarningsTranscriptQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct EarningsTranscriptsQuery {
     /// Maximum number of transcripts to return. If not provided, returns all.
     limit: Option<usize>,

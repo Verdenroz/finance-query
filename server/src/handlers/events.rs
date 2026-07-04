@@ -23,6 +23,7 @@ fn default_max_range() -> String {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct RangeQuery {
     #[serde(default = "default_max_range")]
     range: String,
@@ -31,6 +32,7 @@ pub(crate) struct RangeQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchDividendsQuery {
     /// Comma-separated symbols (required)
     symbols: String,
@@ -41,6 +43,7 @@ pub(crate) struct BatchDividendsQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchSplitsQuery {
     /// Comma-separated symbols (required)
     symbols: String,
@@ -51,6 +54,7 @@ pub(crate) struct BatchSplitsQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchCapitalGainsQuery {
     /// Comma-separated symbols (required)
     symbols: String,

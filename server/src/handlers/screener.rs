@@ -30,6 +30,7 @@ fn format_to_gql(format: &str) -> &'static str {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ScreenersQuery {
     #[serde(default = "default_screeners_count")]
     count: u32,

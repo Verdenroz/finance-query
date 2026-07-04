@@ -19,6 +19,7 @@ fn default_news_count() -> u32 {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct NewsQuery {
     /// Maximum number of articles to return (default: 10)
     #[serde(default = "default_news_count")]

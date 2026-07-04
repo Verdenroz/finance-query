@@ -20,6 +20,7 @@ use tracing::info;
 use super::gql_bridge::{RestTypeSpec, build_rest_composite_selection, execute_gql_rest};
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct HoldersQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,

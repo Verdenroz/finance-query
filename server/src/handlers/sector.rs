@@ -19,6 +19,7 @@ use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
 use super::support::parse_format;
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct SectorQuery {
     /// Value format: raw, pretty, or both (default: raw)
     format: Option<String>,

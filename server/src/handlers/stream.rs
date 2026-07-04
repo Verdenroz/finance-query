@@ -41,6 +41,7 @@ use tracing::{error, info, warn};
 
 /// Stream command from client
 #[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct StreamCommand {
     subscribe: Option<Vec<String>>,
     unsubscribe: Option<Vec<String>>,

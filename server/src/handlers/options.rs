@@ -17,6 +17,7 @@ use tracing::info;
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct OptionsQuery {
     date: Option<i64>, // Optional expiration timestamp
     /// Comma-separated list of fields to include in response
@@ -24,6 +25,7 @@ pub(crate) struct OptionsQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchOptionsQuery {
     /// Comma-separated symbols (required)
     symbols: String,

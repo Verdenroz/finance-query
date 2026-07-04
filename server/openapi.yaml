@@ -2054,7 +2054,7 @@ paths:
             type: string
             example: "10-K,10-Q"
           description: Comma-separated form types to filter (e.g., "10-K,10-Q,8-K")
-        - name: start_date
+        - name: startDate
           in: query
           required: false
           schema:
@@ -2062,7 +2062,7 @@ paths:
             format: date
             example: "2024-01-01"
           description: Start date in YYYY-MM-DD format
-        - name: end_date
+        - name: endDate
           in: query
           required: false
           schema:
@@ -2600,7 +2600,7 @@ paths:
       summary: Top coins by market cap
       description: Fetch top N cryptocurrencies by market cap from CoinGecko
       parameters:
-        - name: vs_currency
+        - name: vsCurrency
           in: query
           schema:
             type: string
@@ -2641,7 +2641,7 @@ paths:
             type: string
           description: CoinGecko coin ID
           example: bitcoin
-        - name: vs_currency
+        - name: vsCurrency
           in: query
           schema:
             type: string
@@ -2801,13 +2801,13 @@ paths:
             Comma-separated source slugs. Unknown values return 400.
             Default: `federal-reserve,sec,marketwatch,bloomberg`.
           example: bloomberg,wsj,coindesk
-        - name: form_type
+        - name: formType
           in: query
           required: false
           schema:
             type: string
             default: 10-K
-          description: SEC filing form type filter, used when sec_filings is in sources
+          description: SEC filing form type filter, used when sec-filings is in sources
           example: 8-K
         - $ref: '#/components/parameters/Fields'
       responses:

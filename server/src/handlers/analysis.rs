@@ -32,6 +32,7 @@ fn default_recommendations_limit() -> u32 {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct RecommendationsQuery {
     #[serde(default = "default_limit")]
     limit: u32,
@@ -40,6 +41,7 @@ pub(crate) struct RecommendationsQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchRecommendationsQuery {
     /// Comma-separated symbols (required)
     symbols: String,
@@ -50,6 +52,7 @@ pub(crate) struct BatchRecommendationsQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct AnalysisQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,

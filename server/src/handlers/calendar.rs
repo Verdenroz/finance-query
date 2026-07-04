@@ -21,6 +21,7 @@ fn default_calendar_range() -> String {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct CalendarQuery {
     /// Comma-separated symbols (required)
     symbols: String,

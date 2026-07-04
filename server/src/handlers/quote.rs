@@ -19,6 +19,7 @@ use super::gql_bridge::{build_rest_selection, execute_gql_rest};
 use super::support::parse_format;
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct QuoteQuery {
     /// Whether to include company logo URL (default: false)
     #[serde(default)]
@@ -33,6 +34,7 @@ pub(crate) struct QuoteQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct QuotesQuery {
     symbols: String, // Comma-separated symbols
     /// Whether to include company logo URLs (default: false)

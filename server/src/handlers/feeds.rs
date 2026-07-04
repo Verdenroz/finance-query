@@ -15,6 +15,7 @@ use super::gql_bridge::{build_rest_selection, execute_gql_rest};
 
 /// Query parameters for /v2/feeds
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct FeedsQuery {
     /// Comma-separated source slugs (default: federal-reserve, sec, marketwatch, bloomberg)
     sources: Option<String>,

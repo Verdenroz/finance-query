@@ -25,6 +25,7 @@ const EDGAR_SEARCH_COMPOSITE_FIELDS: &[(&str, &str)] =
     &[("hits", "{ fileDate form adsh displayNames ciks }")];
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct EdgarSearchQuery {
     /// Search query string (required)
     q: String,
@@ -43,6 +44,7 @@ pub(crate) struct EdgarSearchQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct EdgarFieldsQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
@@ -50,6 +52,7 @@ pub(crate) struct EdgarFieldsQuery {
 
 /// Query parameters for /v2/edgar/facts/{symbol}
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct EdgarFactsQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,

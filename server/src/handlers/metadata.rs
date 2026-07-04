@@ -19,6 +19,7 @@ use super::gql_bridge::{build_rest_composite_selection, build_rest_selection, ex
 
 /// Query parameters for /v2/hours
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct HoursQuery {
     /// Region code (e.g., "US", "JP", "GB"). Defaults to US if not specified.
     region: Option<String>,
@@ -63,6 +64,7 @@ pub(crate) async fn get_hours(
 
 /// Query parameters for /v2/quote-type/{symbol}
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct QuoteTypeQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
@@ -92,6 +94,7 @@ pub(crate) async fn get_quote_type(
 
 /// Query parameters for /v2/currencies
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct CurrenciesQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
@@ -118,6 +121,7 @@ pub(crate) async fn get_currencies(
 
 /// Query parameters for /v2/exchanges
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct ExchangesQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,

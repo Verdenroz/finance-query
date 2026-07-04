@@ -17,6 +17,7 @@ use tracing::info;
 use super::gql_bridge::{build_rest_composite_selection, build_rest_selection, execute_gql_rest};
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct FredSeriesQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
@@ -24,6 +25,7 @@ pub(crate) struct FredSeriesQuery {
 
 /// Query parameters for /v2/fred/treasury-yields
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct TreasuryYieldsQuery {
     /// Calendar year (default: current year)
     year: Option<u32>,

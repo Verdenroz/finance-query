@@ -13,6 +13,7 @@ use super::support::{default_interval, default_range};
 
 /// Query parameters for /v2/risk/{symbol}
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct RiskQuery {
     #[serde(default = "default_interval")]
     interval: String,

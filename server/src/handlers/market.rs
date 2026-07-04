@@ -45,6 +45,7 @@ fn format_to_gql(format: ValueFormat) -> &'static str {
 
 /// Query parameters for /v2/indices
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct IndicesQuery {
     /// Region filter: americas, europe, asia-pacific, middle-east-africa, currencies
     region: Option<String>,
@@ -56,6 +57,7 @@ pub(crate) struct IndicesQuery {
 
 /// Query parameters for /v2/market-summary
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct MarketSummaryQuery {
     /// Region code for localization (e.g., "US", "JP", "GB")
     region: Option<String>,
@@ -70,6 +72,7 @@ pub(crate) struct MarketSummaryQuery {
 
 /// Query parameters for /v2/trending
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct TrendingQuery {
     /// Region code for localization (e.g., "US", "JP", "GB")
     region: Option<String>,
@@ -187,6 +190,7 @@ pub(crate) async fn get_trending(
 
 /// Query parameters for /v2/fear-and-greed
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct FearAndGreedQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,

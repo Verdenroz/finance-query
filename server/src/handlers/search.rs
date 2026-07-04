@@ -51,6 +51,7 @@ fn default_lookup_count() -> u32 {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct SearchQuery {
     /// Search query string (required)
     q: String,
@@ -82,6 +83,7 @@ pub(crate) struct SearchQuery {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct LookupQuery {
     /// Lookup query string (required)
     q: String,
