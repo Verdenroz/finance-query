@@ -5,7 +5,7 @@ use axum::{
     middleware,
 };
 use finance_query_server::{
-    AppState, StreamHub,
+    AppState, FeedHub, StreamHub,
     cache::Cache,
     graphql, metrics,
     rate_limit::{RateLimitConfig, RateLimiterState, rate_limit_middleware},
@@ -108,6 +108,7 @@ async fn create_app() -> Router {
     let state = AppState {
         cache,
         stream_hub: StreamHub::new(),
+        feed_hub: FeedHub::new(),
     };
 
     // Build GraphQL schema (shares AppState with REST handlers).

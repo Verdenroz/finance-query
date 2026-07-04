@@ -11,6 +11,7 @@ mod crypto;
 mod edgar;
 mod events;
 mod feeds;
+mod feeds_stream;
 mod financials;
 mod fred;
 mod gql_bridge;
@@ -82,6 +83,8 @@ pub(crate) fn api_routes() -> Router {
         .route("/fear-and-greed", get(market::get_fear_and_greed))
         // GET /v2/feeds?sources=<csv>&form_type=<str>
         .route("/feeds", get(feeds::get_feeds))
+        // GET /v2/feeds/stream - WebSocket continuous RSS/Atom feed entries
+        .route("/feeds/stream", get(feeds_stream::ws_feeds_stream_handler))
         // GET /v2/financials/{symbol}/{statement}?frequency=<annual|quarterly>
         .route(
             "/financials/{symbol}/{statement}",

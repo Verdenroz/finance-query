@@ -4,7 +4,7 @@ mod tools;
 
 use anyhow::Result;
 use clap::Parser;
-use finance_query_server::{AppState, StreamHub, cache::Cache, graphql};
+use finance_query_server::{AppState, FeedHub, StreamHub, cache::Cache, graphql};
 use tools::FinanceTools;
 use tracing::info;
 
@@ -62,6 +62,7 @@ async fn main() -> Result<()> {
     let state = AppState {
         cache,
         stream_hub: StreamHub::new(),
+        feed_hub: FeedHub::new(),
     };
     let schema = graphql::build_schema(state);
     let handler = FinanceTools::new(schema);
