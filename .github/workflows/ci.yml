@@ -248,8 +248,8 @@ jobs:
           push: false
           load: true
           tags: financequery:v2-ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=docker-server
+          cache-to: type=gha,mode=max,scope=docker-server
       - name: Test Docker image
         run: |
           docker run -d --name test-container -p 8000:8000 financequery:v2-ci
@@ -301,8 +301,8 @@ jobs:
           push: false
           load: true
           tags: financequery:mcp-ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=docker-mcp
+          cache-to: type=gha,mode=max,scope=docker-mcp
       - name: Test MCP Docker image
         run: |
           docker run -d --name test-mcp -p 3000:3000 -e MCP_TRANSPORT=http financequery:mcp-ci
