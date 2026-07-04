@@ -4,6 +4,7 @@
 //! can deserialize directly from the `serde_json::Value` stored in the cache
 //! without any manual field-mapping.
 
+use super::batch::GqlBatchError;
 use async_graphql::{Json, SimpleObject};
 use serde::Deserialize;
 
@@ -222,4 +223,13 @@ pub struct GqlQuote {
     pub fund_performance: Option<Json<serde_json::Value>>,
     pub top_holdings: Option<Json<serde_json::Value>>,
     pub company_officers: Option<Json<serde_json::Value>>,
+}
+
+/// Result of the batch `quotes` root field: successfully fetched quotes plus
+/// any per-symbol fetch errors.
+#[derive(SimpleObject, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlQuotesBatch {
+    pub quotes: Vec<GqlQuote>,
+    pub errors: Vec<GqlBatchError>,
 }

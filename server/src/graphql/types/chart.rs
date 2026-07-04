@@ -1,5 +1,6 @@
 //! GraphQL types for chart / OHLCV candle data.
 
+use super::batch::GqlBatchError;
 use async_graphql::SimpleObject;
 use serde::Deserialize;
 
@@ -54,4 +55,44 @@ pub struct GqlChart {
     pub symbol: String,
     pub meta: GqlChartMeta,
     pub candles: Vec<GqlCandle>,
+}
+
+/// Wraps a symbol name with its chart data, used by the batch `charts` root field.
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct GqlSymbolChart {
+    pub symbol: String,
+    pub chart: GqlChart,
+}
+
+/// Result of the batch `charts` root field: successfully fetched charts plus
+/// any per-symbol fetch errors.
+#[derive(SimpleObject, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlChartsBatch {
+    pub charts: Vec<GqlSymbolChart>,
+    pub errors: Vec<GqlBatchError>,
+}
+
+/// Lightweight sparkline data for a single symbol (close prices only).
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct GqlSpark {
+    pub symbol: String,
+    pub meta: GqlChartMeta,
+    pub timestamps: Vec<i64>,
+    pub closes: Vec<f64>,
+    pub interval: Option<String>,
+    pub range: Option<String>,
+}
+
+/// Result of the batch `spark` root field: successfully fetched sparklines
+/// plus any per-symbol fetch errors.
+#[derive(SimpleObject, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlSparkBatch {
+    pub sparks: Vec<GqlSpark>,
+    pub errors: Vec<GqlBatchError>,
 }

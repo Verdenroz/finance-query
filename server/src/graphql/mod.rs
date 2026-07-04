@@ -6,6 +6,7 @@
 //! - `GET  /graphql/ws`— WebSocket subscription endpoint (graphql-ws protocol)
 
 pub mod error;
+pub mod fields;
 pub mod query;
 pub mod subscription;
 pub mod types;
@@ -27,7 +28,7 @@ pub type FinanceSchema = Schema<QueryRoot, EmptyMutation, SubscriptionRoot>;
 
 /// Build the GraphQL schema and attach `AppState` as shared data.
 pub fn build_schema(state: AppState) -> FinanceSchema {
-    Schema::build(QueryRoot, EmptyMutation, SubscriptionRoot)
+    Schema::build(QueryRoot::default(), EmptyMutation, SubscriptionRoot)
         .data(state)
         .limit_depth(20)
         .limit_complexity(2000)

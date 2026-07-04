@@ -296,3 +296,33 @@ impl From<GqlValueFormat> for finance_query::ValueFormat {
         }
     }
 }
+
+// ── GqlLookupType ─────────────────────────────────────────────────────────────
+
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug, Default)]
+pub enum GqlLookupType {
+    #[default]
+    All,
+    Equity,
+    MutualFund,
+    Etf,
+    Index,
+    Future,
+    Currency,
+    Cryptocurrency,
+}
+
+impl From<GqlLookupType> for finance_query::LookupType {
+    fn from(v: GqlLookupType) -> Self {
+        match v {
+            GqlLookupType::All => finance_query::LookupType::All,
+            GqlLookupType::Equity => finance_query::LookupType::Equity,
+            GqlLookupType::MutualFund => finance_query::LookupType::MutualFund,
+            GqlLookupType::Etf => finance_query::LookupType::Etf,
+            GqlLookupType::Index => finance_query::LookupType::Index,
+            GqlLookupType::Future => finance_query::LookupType::Future,
+            GqlLookupType::Currency => finance_query::LookupType::Currency,
+            GqlLookupType::Cryptocurrency => finance_query::LookupType::Cryptocurrency,
+        }
+    }
+}

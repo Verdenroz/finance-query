@@ -20,6 +20,7 @@ pub mod news;
 pub mod options;
 pub mod quote;
 pub mod risk;
+pub mod screener;
 pub mod search;
 pub mod transcripts;
 
