@@ -164,7 +164,7 @@ prod-status: ## Check production container status
 # Version bumping
 # =============================================================================
 
-bump: ## Bump version for core + server + derive + API specs (usage: make bump VERSION=x.y.z)
+bump: ## Bump version for core + server + mcp + derive + API specs (usage: make bump VERSION=x.y.z)
 ifndef VERSION
 	$(error VERSION is required. Usage: make bump VERSION=x.y.z)
 endif
@@ -175,6 +175,8 @@ endif
 	@sed -i 's/finance-query-derive = { version = "[^"]*"/finance-query-derive = { version = "$(VERSION)"/' Cargo.toml
 	@# Update server Cargo.toml
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' server/Cargo.toml
+	@# Update MCP Cargo.toml (lockstepped with core/server, not independently versioned)
+	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-mcp/Cargo.toml
 	@# Update derive Cargo.toml
 	@sed -i 's/^version = "[^"]*"/version = "$(VERSION)"/' finance-query-derive/Cargo.toml
 	@# Update server OpenAPI version
@@ -187,12 +189,17 @@ endif
 	@echo "$(YELLOW)Updated files:$(NC)"
 	@echo "  - Cargo.toml"
 	@echo "  - server/Cargo.toml"
+	@echo "  - finance-query-mcp/Cargo.toml"
 	@echo "  - finance-query-derive/Cargo.toml"
 	@echo "  - server/openapi.yaml"
 	@echo "  - server/asyncapi.yaml"
 	@echo "  - docs/server/openapi-html/index.html"
 	@echo "  - docs/server/asyncapi-html/index.html"
 	@echo "  - docs/server/mcp-html/index.html"
+	@echo "$(YELLOW)Remember to also hand-edit:$(NC)"
+	@echo "  - CHANGELOG.md (library)"
+	@echo "  - server/CHANGELOG.md"
+	@echo "  - finance-query-mcp/CHANGELOG.md"
 
 bump-cli: ## Bump version for CLI only (usage: make bump-cli VERSION=x.y.z)
 ifndef VERSION
