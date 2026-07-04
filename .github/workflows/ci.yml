@@ -47,17 +47,22 @@ jobs:
               - 'Cargo.toml'
               - 'Cargo.lock'
               - '.github/workflows/ci.yml'
+              - '!server/CHANGELOG.md'
+              - '!finance-query-cli/CHANGELOG.md'
+              - '!finance-query-mcp/CHANGELOG.md'
             server_docker:
               - 'src/**'
               - 'server/**'
               - 'finance-query-derive/**'
               - 'Cargo.toml'
               - 'Cargo.lock'
+              - '!server/CHANGELOG.md'
             mcp_docker:
               - 'src/**'
               - 'finance-query-mcp/**'
               - 'finance-query-derive/**'
               - 'Cargo.toml'
+              - '!finance-query-mcp/CHANGELOG.md'
               - 'Cargo.lock'
             fuzz:
               - 'src/**'
