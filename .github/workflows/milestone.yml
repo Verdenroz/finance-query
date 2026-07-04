@@ -1,0 +1,82 @@
+name: Auto Milestone
+
+# pull_request_target (PR labeling) + issues (issue labeling)
+on: # zizmor: ignore[dangerous-triggers]
+  issues:
+    types: [labeled]
+  pull_request_target:
+    types: [labeled]
+
+permissions:
+  contents: read
+
+jobs:
+  milestone:
+    name: Assign next-release milestone
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            // Labels that mark an issue/PR as release-worthy work; only these
+            // trigger auto-milestoning.
+            const TRIGGER_LABELS = new Set([
+              "bug",
+              "enhancement",
+              "performance",
+              "breaking-change",
+              "refactor",
+            ]);
+
+            const label = context.payload.label?.name;
+            if (!label || !TRIGGER_LABELS.has(label)) {
+              return;
+            }
+
+            // `issues` and `pull_request_target` events put the item under
+            // `issue` / `pull_request` respectively — both accept the same
+            // `milestone` field via the issues API (a PR is an issue).
+            const item = context.payload.issue ?? context.payload.pull_request;
+            if (!item || item.milestone) {
+              return; // already milestoned — never override a manual choice
+            }
+
+            const { data: milestones } = await github.rest.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: "open",
+            });
+
+            // Milestones are named by plain semver (e.g. "2.8.0"). The "next
+            // release" is the highest-versioned open one — a milestone for an
+            // already-shipped version may still be open if not manually
+            // closed, so picking the max (not just any open one) is what
+            // makes this correct.
+            const semver = (title) => {
+              const match = title.match(/^(\d+)\.(\d+)\.(\d+)$/);
+              return match ? match.slice(1).map(Number) : null;
+            };
+            const compare = (a, b) => a[0] - b[0] || a[1] - b[1] || a[2] - b[2];
+
+            const next = milestones
+              .map((m) => ({ milestone: m, version: semver(m.title) }))
+              .filter(({ version }) => version !== null)
+              .sort((a, b) => compare(b.version, a.version))[0]?.milestone;
+
+            if (!next) {
+              return; // no semver-named open milestone to assign
+            }
+
+            await github.rest.issues.update({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: item.number,
+              milestone: next.number,
+            });
