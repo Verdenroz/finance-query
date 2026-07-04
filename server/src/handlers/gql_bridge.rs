@@ -10,6 +10,7 @@ use axum::{Json, http::StatusCode, response::IntoResponse};
 use tracing::error;
 
 use finance_query_server::graphql;
+use finance_query_server::graphql::pagination::{connection_nodes, connection_page_info};
 use finance_query_server::services::{parse_interval, parse_range};
 
 /// (REST path key, GraphQL field name, VALID fields, composite sub-field map).
@@ -121,6 +122,21 @@ pub(crate) async fn execute_gql_rest(
     }
 
     Ok(response.data.into_json().unwrap_or(serde_json::Value::Null))
+}
+
+/// Reshape a GraphQL Connection JSON value (`{edges:[{node,...}], pageInfo}`)
+/// into REST's legacy bare-array shape when the caller didn't opt into
+/// pagination (`paginated = false`), or the new `{items, pageInfo}` envelope
+/// when they did (passed `limit`/`cursor`). Keeps existing REST responses
+/// byte-identical by default even though every converted field now returns a
+/// `Connection` under the hood.
+pub(crate) fn unwrap_connection(data: serde_json::Value, paginated: bool) -> serde_json::Value {
+    let nodes = connection_nodes(&data);
+    if paginated {
+        serde_json::json!({ "items": nodes, "pageInfo": connection_page_info(&data) })
+    } else {
+        serde_json::Value::Array(nodes)
+    }
 }
 
 // Map a REST interval string to a GqlInterval enum literal for GraphQL query building.

@@ -13,6 +13,7 @@ use finance_query_server::graphql::{
         GQL_MAJOR_HOLDERS_VALID_FIELDS, GQL_MUTUAL_FUND_HOLDERS_VALID_FIELDS, GQL_OWNER_FIELDS,
         unwrap_ticker_field,
     },
+    pagination::{build_paginated_composite_selection, unwrap_nested_connection},
 };
 use serde::Deserialize;
 use tracing::info;
@@ -24,6 +25,23 @@ use super::gql_bridge::{RestTypeSpec, build_rest_composite_selection, execute_gq
 pub(crate) struct HoldersQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Max entries per page for holder types with a list (institutional,
+    /// mutualfund, insider-transactions, insider-roster); omitted (with cursor
+    /// also omitted) = every matching entry as a bare array, unchanged from
+    /// pre-pagination behavior. No-op for major/insider-purchases (no list).
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
+}
+
+/// Which nested list field (if any) is paginated for a given holder type key.
+fn holder_paginated_field(key: &str) -> Option<&'static str> {
+    match key {
+        "institutional" | "mutualfund" => Some("ownershipList"),
+        "insider-transactions" => Some("transactions"),
+        "insider-roster" => Some("holders"),
+        _ => None,
+    }
 }
 
 /// Per-holder-type spec. The first element must stay in sync with every
@@ -83,8 +101,29 @@ pub(crate) async fn get_holders(
             "status": 400
         }))).into_response();
     };
-    let selection =
-        build_rest_composite_selection(params.fields.as_deref(), valid_fields, composite_fields);
+    let paginated_field = holder_paginated_field(&key);
+    let selection = match paginated_field {
+        Some(pf) => {
+            let item_selection = composite_fields
+                .iter()
+                .find(|(name, _)| *name == pf)
+                .map(|(_, sel)| *sel)
+                .unwrap_or("{ }");
+            build_paginated_composite_selection(
+                params.fields.as_deref(),
+                valid_fields,
+                valid_fields,
+                composite_fields,
+                pf,
+                item_selection,
+                params.limit,
+                params.cursor.as_deref(),
+            )
+        }
+        None => {
+            build_rest_composite_selection(params.fields.as_deref(), valid_fields, composite_fields)
+        }
+    };
     let query = format!(
         "query GetHolders($symbol: String!) {{ ticker(symbol: $symbol) {{ {gql_field} {selection} }} }}"
     );
@@ -98,5 +137,10 @@ pub(crate) async fn get_holders(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_ticker_field(data, gql_field))).into_response()
+    let mut result = unwrap_ticker_field(data, gql_field);
+    if let Some(pf) = paginated_field {
+        let paginated = params.limit.is_some() || params.cursor.is_some();
+        result = unwrap_nested_connection(result, pf, paginated);
+    }
+    (StatusCode::OK, Json(result)).into_response()
 }

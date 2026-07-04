@@ -6,13 +6,14 @@ use axum::{
 };
 use finance_query_server::graphql::{
     self,
-    fields::{GQL_NEWS_VALID_FIELDS, unwrap_field, unwrap_ticker_field},
+    fields::{GQL_NEWS_VALID_FIELDS, escape_gql_string, unwrap_field, unwrap_ticker_field},
+    pagination::build_connection_selection,
 };
 use finance_query_server::lang;
 use serde::Deserialize;
 use tracing::info;
 
-use super::gql_bridge::{build_rest_selection, execute_gql_rest};
+use super::gql_bridge::{build_rest_selection, execute_gql_rest, unwrap_connection};
 
 fn default_news_count() -> u32 {
     10
@@ -29,6 +30,26 @@ pub(crate) struct NewsQuery {
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
     /// falls back to the Accept-Language header
     lang: Option<String>,
+    /// Max articles per page; omitted (with cursor also omitted) = every fetched
+    /// article (up to `count`) as a bare array, unchanged from pre-pagination behavior
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
+}
+
+fn connection_args(params: &NewsQuery) -> String {
+    let mut args = Vec::new();
+    if let Some(limit) = params.limit {
+        args.push(format!("first: {limit}"));
+    }
+    if let Some(cursor) = params.cursor.as_deref() {
+        args.push(format!("after: \"{}\"", escape_gql_string(cursor)));
+    }
+    if args.is_empty() {
+        String::new()
+    } else {
+        format!(", {}", args.join(", "))
+    }
 }
 
 /// GET /v2/news
@@ -40,15 +61,17 @@ pub(crate) async fn get_general_news(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
-    let selection = build_rest_selection(params.fields.as_deref(), GQL_NEWS_VALID_FIELDS);
+    let inner_selection = build_rest_selection(params.fields.as_deref(), GQL_NEWS_VALID_FIELDS);
+    let selection = build_connection_selection(&inner_selection);
     let lang_arg = match &lang {
         Some(l) => format!(", lang: \"{}\"", l),
         None => String::new(),
     };
+    let conn_args = connection_args(&params);
 
     let query = format!(
-        "query {{ news(count: {}{}) {} }}",
-        params.count, lang_arg, selection
+        "query {{ news(count: {}{}{}) {} }}",
+        params.count, lang_arg, conn_args, selection
     );
     info!("Fetching general market news (fields={:?})", params.fields);
 
@@ -56,7 +79,9 @@ pub(crate) async fn get_general_news(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_field(data, "news"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result = unwrap_connection(unwrap_field(data, "news"), paginated);
+    (StatusCode::OK, Json(result)).into_response()
 }
 
 /// GET /v2/news/{symbol}
@@ -69,15 +94,17 @@ pub(crate) async fn get_news(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
-    let selection = build_rest_selection(params.fields.as_deref(), GQL_NEWS_VALID_FIELDS);
+    let inner_selection = build_rest_selection(params.fields.as_deref(), GQL_NEWS_VALID_FIELDS);
+    let selection = build_connection_selection(&inner_selection);
     let lang_arg = match &lang {
         Some(l) => format!(", lang: \"{}\"", l),
         None => String::new(),
     };
+    let conn_args = connection_args(&params);
 
     let query = format!(
-        "query GetNews($symbol: String!) {{ ticker(symbol: $symbol) {{ news(count: {}{}) {} }} }}",
-        params.count, lang_arg, selection
+        "query GetNews($symbol: String!) {{ ticker(symbol: $symbol) {{ news(count: {}{}{}) {} }} }}",
+        params.count, lang_arg, conn_args, selection
     );
     info!("Fetching news for {} (fields={:?})", symbol, params.fields);
 
@@ -88,5 +115,7 @@ pub(crate) async fn get_news(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_ticker_field(data, "news"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result = unwrap_connection(unwrap_ticker_field(data, "news"), paginated);
+    (StatusCode::OK, Json(result)).into_response()
 }

@@ -14,6 +14,7 @@ use finance_query_server::graphql::{
         GQL_RECOMMENDATION_VALID_FIELDS, RECOMMENDATION_COMPOSITE_FIELDS, gql_string_list_literal,
         unwrap_field, unwrap_ticker_field,
     },
+    pagination::{build_connection_selection, unwrap_nested_connection},
 };
 use serde::Deserialize;
 use tracing::info;
@@ -49,6 +50,12 @@ pub(crate) struct BatchRecommendationsQuery {
     limit: u32,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Max symbols per page; omitted (with page_cursor also omitted) = every
+    /// requested symbol's recommendations as a bare array, unchanged from
+    /// pre-pagination behavior
+    page_limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    page_cursor: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -136,9 +143,27 @@ pub(crate) async fn get_batch_recommendations(
         GQL_RECOMMENDATION_VALID_FIELDS,
         RECOMMENDATION_COMPOSITE_FIELDS,
     );
+    let selection = build_connection_selection(&item_selection);
+
+    let mut conn_args = Vec::new();
+    if let Some(limit) = params.page_limit {
+        conn_args.push(format!("first: {limit}"));
+    }
+    if let Some(cursor) = params.page_cursor.as_deref() {
+        conn_args.push(format!(
+            "after: \"{}\"",
+            cursor.replace('\\', "\\\\").replace('"', "\\\"")
+        ));
+    }
+    let conn_args_str = if conn_args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", conn_args.join(", "))
+    };
+
     let query = format!(
-        "query {{ recommendationsBatch(symbols: [{}], limit: {}) {{ recommendations {} errors {{ symbol message }} }} }}",
-        syms_literal, params.limit, item_selection
+        "query {{ recommendationsBatch(symbols: [{}], limit: {}) {{ recommendations{} {} errors {{ symbol message }} }} }}",
+        syms_literal, params.limit, conn_args_str, selection
     );
 
     info!(
@@ -151,11 +176,13 @@ pub(crate) async fn get_batch_recommendations(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (
-        StatusCode::OK,
-        Json(unwrap_field(data, "recommendationsBatch")),
-    )
-        .into_response()
+    let paginated = params.page_limit.is_some() || params.page_cursor.is_some();
+    let result = unwrap_nested_connection(
+        unwrap_field(data, "recommendationsBatch"),
+        "recommendations",
+        paginated,
+    );
+    (StatusCode::OK, Json(result)).into_response()
 }
 
 /// GET /v2/analysis/{symbol}/{analysis_type}

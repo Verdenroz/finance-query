@@ -10,13 +10,14 @@ use finance_query_server::graphql::{
         DIVIDENDS_COMPOSITE_FIELDS, GQL_DIVIDENDS_VALID_FIELDS, GQL_SPLIT_VALID_FIELDS,
         gql_string_list_literal, unwrap_field, unwrap_ticker_field,
     },
+    pagination::{
+        build_connection_selection, build_paginated_composite_selection, unwrap_nested_connection,
+    },
 };
 use serde::Deserialize;
 use tracing::info;
 
-use super::gql_bridge::{
-    build_rest_composite_selection, build_rest_selection, execute_gql_rest, range_to_gql,
-};
+use super::gql_bridge::{build_rest_selection, execute_gql_rest, range_to_gql};
 
 fn default_max_range() -> String {
     "max".to_string()
@@ -33,6 +34,20 @@ pub(crate) struct RangeQuery {
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub(crate) struct DividendsQuery {
+    #[serde(default = "default_max_range")]
+    range: String,
+    /// Comma-separated list of fields to include in response
+    fields: Option<String>,
+    /// Max dividend payments per page; omitted (with cursor also omitted) = every
+    /// matching payment as a bare array, unchanged from pre-pagination behavior
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
+}
+
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub(crate) struct BatchDividendsQuery {
     /// Comma-separated symbols (required)
     symbols: String,
@@ -40,6 +55,11 @@ pub(crate) struct BatchDividendsQuery {
     range: String,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Max symbols per page; omitted (with cursor also omitted) = every requested
+    /// symbol's dividend history as a bare array, unchanged from pre-pagination behavior
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -70,13 +90,23 @@ pub(crate) struct BatchCapitalGainsQuery {
 pub(crate) async fn get_dividends(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Path(symbol): Path<String>,
-    Query(params): Query<RangeQuery>,
+    Query(params): Query<DividendsQuery>,
 ) -> impl IntoResponse {
     let gql_range = range_to_gql(&params.range);
-    let selection = build_rest_composite_selection(
+    let dividends_item_selection = DIVIDENDS_COMPOSITE_FIELDS
+        .iter()
+        .find(|(name, _)| *name == "dividends")
+        .map(|(_, sel)| *sel)
+        .unwrap_or("{ timestamp amount }");
+    let selection = build_paginated_composite_selection(
         params.fields.as_deref(),
         GQL_DIVIDENDS_VALID_FIELDS,
+        GQL_DIVIDENDS_VALID_FIELDS,
         DIVIDENDS_COMPOSITE_FIELDS,
+        "dividends",
+        dividends_item_selection,
+        params.limit,
+        params.cursor.as_deref(),
     );
     let query = format!(
         "query GetDivs($symbol: String!) {{ ticker(symbol: $symbol) {{ dividends(range: {gql_range}) {selection} }} }}"
@@ -92,7 +122,13 @@ pub(crate) async fn get_dividends(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_ticker_field(data, "dividends"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result = unwrap_nested_connection(
+        unwrap_ticker_field(data, "dividends"),
+        "dividends",
+        paginated,
+    );
+    (StatusCode::OK, Json(result)).into_response()
 }
 
 /// GET /v2/splits/{symbol}
@@ -160,15 +196,33 @@ pub(crate) async fn get_batch_dividends(
         .as_deref()
         .map(|f| f.split(',').any(|x| x.trim() == "dividends"))
         .unwrap_or(true);
-    let selection = if want_dividends {
+    let item_selection = if want_dividends {
         "{ symbol dividends { timestamp amount } }".to_string()
     } else {
         "{ symbol }".to_string()
     };
+    let selection = build_connection_selection(&item_selection);
     let syms_literal = finance_query_server::graphql::fields::gql_string_list_literal(&symbols);
+
+    let mut conn_args = Vec::new();
+    if let Some(limit) = params.limit {
+        conn_args.push(format!("first: {limit}"));
+    }
+    if let Some(cursor) = params.cursor.as_deref() {
+        conn_args.push(format!(
+            "after: \"{}\"",
+            cursor.replace('\\', "\\\\").replace('"', "\\\"")
+        ));
+    }
+    let conn_args_str = if conn_args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", conn_args.join(", "))
+    };
+
     let query = format!(
-        "query {{ dividendsBatch(symbols: [{}], range: {}) {{ dividends {} errors {{ symbol message }} }} }}",
-        syms_literal, gql_range, selection
+        "query {{ dividendsBatch(symbols: [{}], range: {}) {{ dividends{} {} errors {{ symbol message }} }} }}",
+        syms_literal, gql_range, conn_args_str, selection
     );
     info!(
         "Fetching batch dividends for {} symbols (range={})",
@@ -180,7 +234,10 @@ pub(crate) async fn get_batch_dividends(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_field(data, "dividendsBatch"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result =
+        unwrap_nested_connection(unwrap_field(data, "dividendsBatch"), "dividends", paginated);
+    (StatusCode::OK, Json(result)).into_response()
 }
 
 /// GET /v2/splits?symbols=<csv>&range=<str>

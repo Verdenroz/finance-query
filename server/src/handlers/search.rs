@@ -11,6 +11,7 @@ use finance_query_server::graphql::{
         LOOKUP_RESULTS_COMPOSITE_FIELDS, SEARCH_RESULTS_COMPOSITE_FIELDS, escape_gql_string,
         unwrap_field,
     },
+    pagination::{build_paginated_composite_selection, unwrap_nested_connection},
 };
 use finance_query_server::lang;
 use serde::Deserialize;
@@ -80,6 +81,11 @@ pub(crate) struct SearchQuery {
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
     /// falls back to the Accept-Language header
     lang: Option<String>,
+    /// Max quotes per page; omitted (with cursor also omitted) = every fetched
+    /// quote (up to `quotes`) as a bare array, unchanged from pre-pagination behavior
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
 }
 
 #[derive(Deserialize)]
@@ -125,10 +131,20 @@ pub(crate) async fn search(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
-    let selection = build_rest_composite_selection(
+    let quotes_item_selection = SEARCH_RESULTS_COMPOSITE_FIELDS
+        .iter()
+        .find(|(name, _)| *name == "quotes")
+        .map(|(_, sel)| *sel)
+        .unwrap_or("{ symbol }");
+    let selection = build_paginated_composite_selection(
         params.fields.as_deref(),
         GQL_SEARCH_RESULTS_VALID_FIELDS,
+        GQL_SEARCH_RESULTS_VALID_FIELDS,
         SEARCH_RESULTS_COMPOSITE_FIELDS,
+        "quotes",
+        quotes_item_selection,
+        params.limit,
+        params.cursor.as_deref(),
     );
     let region_arg = params
         .region
@@ -168,7 +184,9 @@ pub(crate) async fn search(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_field(data, "search"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result = unwrap_nested_connection(unwrap_field(data, "search"), "quotes", paginated);
+    (StatusCode::OK, Json(result)).into_response()
 }
 
 /// GET /v2/lookup

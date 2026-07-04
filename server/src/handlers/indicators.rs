@@ -10,6 +10,7 @@ use finance_query_server::graphql::{
         GQL_INDICATORS_VALID_FIELDS, INDICATOR_COMPOSITE_FIELDS, gql_string_list_literal,
         unwrap_field, unwrap_ticker_field,
     },
+    pagination::{build_connection_selection, unwrap_nested_connection},
 };
 use serde::Deserialize;
 use tracing::info;
@@ -30,6 +31,11 @@ pub(crate) struct BatchIndicatorsQuery {
     range: String,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Max symbols per page; omitted (with cursor also omitted) = every requested
+    /// symbol's indicators as a bare array, unchanged from pre-pagination behavior
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
 }
 
 /// Query params for /v2/indicators/{symbol}, shared with the chart-range shape.
@@ -89,7 +95,7 @@ pub(crate) async fn get_batch_indicators(
         .as_deref()
         .map(|f| f.split(',').any(|x| x.trim() == "indicators"))
         .unwrap_or(true);
-    let selection = if want_indicators {
+    let item_selection = if want_indicators {
         format!(
             "{{ symbol indicators {} }}",
             build_rest_indicators_selection(params.fields.as_deref())
@@ -97,9 +103,27 @@ pub(crate) async fn get_batch_indicators(
     } else {
         "{ symbol }".to_string()
     };
+    let selection = build_connection_selection(&item_selection);
+
+    let mut conn_args = Vec::new();
+    if let Some(limit) = params.limit {
+        conn_args.push(format!("first: {limit}"));
+    }
+    if let Some(cursor) = params.cursor.as_deref() {
+        conn_args.push(format!(
+            "after: \"{}\"",
+            cursor.replace('\\', "\\\\").replace('"', "\\\"")
+        ));
+    }
+    let conn_args_str = if conn_args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", conn_args.join(", "))
+    };
+
     let query = format!(
-        "query {{ indicatorsBatch(symbols: [{}], interval: {gql_interval}, range: {gql_range}) {{ indicators {} errors {{ symbol message }} }} }}",
-        syms_literal, selection
+        "query {{ indicatorsBatch(symbols: [{}], interval: {gql_interval}, range: {gql_range}) {{ indicators{} {} errors {{ symbol message }} }} }}",
+        syms_literal, conn_args_str, selection
     );
     info!(
         "Fetching batch indicators for {} symbols (interval={}, range={})",
@@ -111,7 +135,13 @@ pub(crate) async fn get_batch_indicators(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_field(data, "indicatorsBatch"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result = unwrap_nested_connection(
+        unwrap_field(data, "indicatorsBatch"),
+        "indicators",
+        paginated,
+    );
+    (StatusCode::OK, Json(result)).into_response()
 }
 
 /// Build the `indicators { ... }` selection set, expanding any composite

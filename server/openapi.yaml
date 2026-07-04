@@ -220,6 +220,8 @@ paths:
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
         - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch quotes response with successful quotes and any errors
@@ -313,6 +315,8 @@ paths:
             is either a pattern name (e.g. `"Hammer"`, `"BullishEngulfing"`) or
             `null` when no pattern was detected on that bar.
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Chart data (with optional events and patterns)
@@ -388,6 +392,8 @@ paths:
             default: max
           description: Time range for dividend history
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Dividend history and analytics
@@ -619,6 +625,8 @@ paths:
             Detect candlestick patterns and include a per-bar signal array in
             each chart object. The `patterns` array aligns 1:1 with `candles`.
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch chart data with successful charts and any errors
@@ -654,6 +662,8 @@ paths:
             default: 1y
           description: Time range for dividend history
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch dividend data with successful results and any errors
@@ -853,6 +863,25 @@ paths:
             default: 5
           description: Maximum number of recommendations per symbol
         - $ref: '#/components/parameters/Fields'
+        - name: pageLimit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+          description: |
+            Max symbols per page (distinct from `limit`, which caps recommendations
+            *per symbol*). Pagination is opt-in: omitting both `pageLimit` and
+            `pageCursor` returns every requested symbol's recommendations as a bare
+            array, unchanged from pre-pagination behavior.
+        - name: pageCursor
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
+          description: Opaque continuation token from a previous response's `pageInfo.endCursor`.
       responses:
         '200':
           description: Batch recommendations with successful results and any errors
@@ -887,6 +916,8 @@ paths:
             format: int64
           description: Unix timestamp for expiration date (optional, defaults to nearest expiration)
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch options data with successful results and any errors
@@ -929,6 +960,8 @@ paths:
             default: 1mo
           description: Time range
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch indicators with successful results and any errors
@@ -1016,6 +1049,8 @@ paths:
           description: Number of articles to return
         - $ref: '#/components/parameters/Fields'
         - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: News articles
@@ -1051,6 +1086,8 @@ paths:
             default: 10
         - $ref: '#/components/parameters/Fields'
         - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Symbol news array
@@ -1085,6 +1122,8 @@ paths:
             type: integer
           description: Expiration date (Unix timestamp)
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Options chain
@@ -1201,6 +1240,19 @@ paths:
           description: Type of holder data
           example: major
         - $ref: '#/components/parameters/Fields'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+          description: |
+            Max entries per page for holder types with a list (institutional,
+            mutualfund, insider-transactions, insider-roster). No-op for
+            major/insider-purchases (no list). Pagination is opt-in: omitting
+            both `limit` and `cursor` returns the existing response shape unchanged.
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Holder data
@@ -1957,6 +2009,8 @@ paths:
             example: AAPL
           description: Stock ticker symbol
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Filing history retrieved successfully
@@ -1985,7 +2039,11 @@ paths:
                     example: "https://www.apple.com"
                   filings:
                     type: object
-                    description: Recent filings (up to 1000)
+                    description: |
+                      Recent filings (up to 1000). Pagination is opt-in: omitting both
+                      `limit` and `cursor` returns every filing as a bare array, unchanged
+                      from pre-pagination behavior. Passing either returns
+                      `{ items: [...], pageInfo: {...} }` instead.
         '404':
           description: Symbol not found
         '503':
@@ -2009,6 +2067,19 @@ paths:
             example: AAPL
           description: Stock ticker symbol
         - $ref: '#/components/parameters/Fields'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+          description: |
+            Max data points per concept per page, applied uniformly across every
+            returned concept. Pagination is opt-in: omitting both `limit` and
+            `cursor` returns every matching data point as a bare array, unchanged
+            from pre-pagination behavior.
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: XBRL facts retrieved successfully
@@ -2070,15 +2141,34 @@ paths:
             format: date
             example: "2024-12-31"
           description: End date in YYYY-MM-DD format
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+          description: Page size (max 100)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Search results
+          description: Search results (now includes a `pageInfo` object alongside `totalHits`)
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  pageInfo:
+                    $ref: '#/components/schemas/PageInfo'
                   hits:
                     type: object
                     properties:
@@ -2258,6 +2348,19 @@ paths:
           description: Region for language/localization settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
         - $ref: '#/components/parameters/Lang'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+          description: |
+            Max quotes per page (applies to the `quotes` results only). Pagination
+            is opt-in: omitting both `limit` and `cursor` returns every fetched
+            quote (up to `quotes`) as a bare array, unchanged from pre-pagination
+            behavior.
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Search results
@@ -2495,6 +2598,8 @@ paths:
           description: FRED series ID (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE)
           example: FEDFUNDS
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Time series observations
@@ -2539,9 +2644,15 @@ paths:
           description: Calendar year (defaults to current year)
           example: 2026
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
-          description: Treasury yield curve records sorted newest-first
+          description: |
+            Treasury yield curve records sorted newest-first. Pagination is
+            opt-in: omitting both `limit` and `cursor` returns every row as a
+            bare array, unchanged from pre-pagination behavior. Passing either
+            returns `{ items: [...], pageInfo: {...} }` instead.
           content:
             application/json:
               schema:
@@ -2614,9 +2725,16 @@ paths:
             maximum: 250
           description: Number of coins to return
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
-          description: List of coins sorted by market cap descending
+          description: |
+            List of coins sorted by market cap descending. Pagination is
+            opt-in: omitting both `limit` and `cursor` returns every fetched
+            coin (up to `count`) as a bare array, unchanged from
+            pre-pagination behavior. Passing either returns
+            `{ items: [...], pageInfo: {...} }` instead.
           content:
             application/json:
               schema:
@@ -2870,8 +2988,47 @@ components:
         Falls back to the `Accept-Language` header when omitted. English or unsupported
         values return untranslated text. Symbols, codes, URLs, and numeric fields are
         never translated.
+    PaginationLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        nullable: true
+      description: |
+        Max items per page. Pagination is opt-in for REST: omitting both `limit` and
+        `cursor` returns every matching item as a bare array/existing response shape,
+        unchanged from pre-pagination behavior. Passing either switches the response to
+        `{"items": [...], "pageInfo": {...}}` (or adds `pageInfo` alongside an existing
+        envelope's other fields).
+    PaginationCursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        nullable: true
+      description: |
+        Opaque continuation token from a previous response's `pageInfo.endCursor`.
+        Omitted = first page.
 
   schemas:
+    PageInfo:
+      type: object
+      description: Relay-style pagination metadata, present when a paginated field was requested.
+      properties:
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+        startCursor:
+          type: string
+          nullable: true
+        endCursor:
+          type: string
+          nullable: true
+
     Quote:
       type: object
       description: Stock quote data
@@ -3739,6 +3896,13 @@ components:
           format: int64
           nullable: true
           description: Total number of matching results (only present in custom screener responses, for pagination)
+        pageInfo:
+          allOf:
+            - $ref: '#/components/schemas/PageInfo'
+          nullable: true
+          description: |
+            Present only for `/v2/screeners/custom` (predefined `/v2/screeners/{type}`
+            has no underlying offset support upstream, so this is always null there).
 
     ScreenerQuote:
       type: object

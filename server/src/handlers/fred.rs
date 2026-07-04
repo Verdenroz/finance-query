@@ -10,17 +10,25 @@ use finance_query_server::graphql::{
         GQL_MACRO_SERIES_VALID_FIELDS, GQL_TREASURY_YIELD_VALID_FIELDS,
         MACRO_SERIES_COMPOSITE_FIELDS, unwrap_field,
     },
+    pagination::{
+        build_connection_selection, build_paginated_composite_selection, unwrap_nested_connection,
+    },
 };
 use serde::Deserialize;
 use tracing::info;
 
-use super::gql_bridge::{build_rest_composite_selection, build_rest_selection, execute_gql_rest};
+use super::gql_bridge::{build_rest_selection, execute_gql_rest, unwrap_connection};
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct FredSeriesQuery {
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Max observations per page; omitted (with cursor also omitted) = every
+    /// matching observation as a bare array, unchanged from pre-pagination behavior
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
 }
 
 /// Query parameters for /v2/fred/treasury-yields
@@ -31,6 +39,11 @@ pub(crate) struct TreasuryYieldsQuery {
     year: Option<u32>,
     /// Comma-separated list of fields to include in response
     fields: Option<String>,
+    /// Max rows per page; omitted (with cursor also omitted) = every matching
+    /// row as a bare array, unchanged from pre-pagination behavior
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
 }
 
 /// GET /v2/fred/series/{id}
@@ -41,10 +54,20 @@ pub(crate) async fn get_fred_series(
     Path(series_id): Path<String>,
     Query(params): Query<FredSeriesQuery>,
 ) -> impl IntoResponse {
-    let selection = build_rest_composite_selection(
+    let observations_item_selection = MACRO_SERIES_COMPOSITE_FIELDS
+        .iter()
+        .find(|(name, _)| *name == "observations")
+        .map(|(_, sel)| *sel)
+        .unwrap_or("{ date value }");
+    let selection = build_paginated_composite_selection(
         params.fields.as_deref(),
         GQL_MACRO_SERIES_VALID_FIELDS,
+        GQL_MACRO_SERIES_VALID_FIELDS,
         MACRO_SERIES_COMPOSITE_FIELDS,
+        "observations",
+        observations_item_selection,
+        params.limit,
+        params.cursor.as_deref(),
     );
     let query = format!("query GetFredSeries($id: String!) {{ fredSeries(id: $id) {selection} }}");
     let mut vars = Variables::default();
@@ -56,7 +79,10 @@ pub(crate) async fn get_fred_series(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_field(data, "fredSeries"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result =
+        unwrap_nested_connection(unwrap_field(data, "fredSeries"), "observations", paginated);
+    (StatusCode::OK, Json(result)).into_response()
 }
 
 /// GET /v2/fred/treasury-yields
@@ -66,12 +92,28 @@ pub(crate) async fn get_fred_treasury_yields(
     Extension(schema): Extension<graphql::FinanceSchema>,
     Query(params): Query<TreasuryYieldsQuery>,
 ) -> impl IntoResponse {
-    let selection = build_rest_selection(params.fields.as_deref(), GQL_TREASURY_YIELD_VALID_FIELDS);
-    let year_arg = match params.year {
-        Some(y) => format!("(year: {y})"),
-        None => String::new(),
+    let inner_selection =
+        build_rest_selection(params.fields.as_deref(), GQL_TREASURY_YIELD_VALID_FIELDS);
+    let selection = build_connection_selection(&inner_selection);
+    let mut args = Vec::new();
+    if let Some(y) = params.year {
+        args.push(format!("year: {y}"));
+    }
+    if let Some(limit) = params.limit {
+        args.push(format!("first: {limit}"));
+    }
+    if let Some(cursor) = params.cursor.as_deref() {
+        args.push(format!(
+            "after: \"{}\"",
+            cursor.replace('\\', "\\\\").replace('"', "\\\"")
+        ));
+    }
+    let args_str = if args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", args.join(", "))
     };
-    let query = format!("query {{ treasuryYields{year_arg} {selection} }}");
+    let query = format!("query {{ treasuryYields{args_str} {selection} }}");
 
     info!("Fetching Treasury yields for year {:?}", params.year);
 
@@ -79,5 +121,7 @@ pub(crate) async fn get_fred_treasury_yields(
         Ok(d) => d,
         Err(resp) => return resp,
     };
-    (StatusCode::OK, Json(unwrap_field(data, "treasuryYields"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result = unwrap_connection(unwrap_field(data, "treasuryYields"), paginated);
+    (StatusCode::OK, Json(result)).into_response()
 }

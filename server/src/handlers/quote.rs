@@ -12,6 +12,7 @@ use axum::http::StatusCode;
 use finance_query_server::graphql::{
     self,
     fields::{GQL_QUOTE_VALID_FIELDS, unwrap_field, unwrap_ticker_field},
+    pagination::{build_connection_selection, unwrap_nested_connection},
 };
 use finance_query_server::lang;
 
@@ -47,6 +48,11 @@ pub(crate) struct QuotesQuery {
     /// Target language for translated text fields (BCP 47, e.g. "ja", "zh-Hant");
     /// falls back to the Accept-Language header
     lang: Option<String>,
+    /// Max symbols per page; omitted (with cursor also omitted) = every requested
+    /// symbol's quote as a bare array, unchanged from pre-pagination behavior
+    limit: Option<u32>,
+    /// Opaque continuation cursor from a previous response's `pageInfo.endCursor`
+    cursor: Option<String>,
 }
 
 /// GET /v2/quote/{symbol}
@@ -124,7 +130,8 @@ pub(crate) async fn get_quotes(
         None => String::new(),
     };
     let logo_arg = if params.logo { ", logo: true" } else { "" };
-    let selection = build_rest_selection(params.fields.as_deref(), GQL_QUOTE_VALID_FIELDS);
+    let inner_selection = build_rest_selection(params.fields.as_deref(), GQL_QUOTE_VALID_FIELDS);
+    let selection = build_connection_selection(&inner_selection);
 
     let syms: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     let syms_literal: String = syms
@@ -133,9 +140,25 @@ pub(crate) async fn get_quotes(
         .collect::<Vec<_>>()
         .join(", ");
 
+    let mut conn_args = Vec::new();
+    if let Some(limit) = params.limit {
+        conn_args.push(format!("first: {limit}"));
+    }
+    if let Some(cursor) = params.cursor.as_deref() {
+        conn_args.push(format!(
+            "after: \"{}\"",
+            cursor.replace('\\', "\\\\").replace('"', "\\\"")
+        ));
+    }
+    let conn_args_str = if conn_args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", conn_args.join(", "))
+    };
+
     let query = format!(
-        "query {{ quotes(symbols: [{}], format: {}{}{}) {{ quotes {} errors {{ symbol message }} }} }}",
-        syms_literal, gql_format, logo_arg, lang_arg, selection
+        "query {{ quotes(symbols: [{}], format: {}{}{}) {{ quotes{} {} errors {{ symbol message }} }} }}",
+        syms_literal, gql_format, logo_arg, lang_arg, conn_args_str, selection
     );
 
     info!(
@@ -151,5 +174,7 @@ pub(crate) async fn get_quotes(
         Err(resp) => return resp,
     };
 
-    (StatusCode::OK, Json(unwrap_field(data, "quotes"))).into_response()
+    let paginated = params.limit.is_some() || params.cursor.is_some();
+    let result = unwrap_nested_connection(unwrap_field(data, "quotes"), "quotes", paginated);
+    (StatusCode::OK, Json(result)).into_response()
 }
