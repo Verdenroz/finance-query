@@ -120,6 +120,12 @@ jobs:
           script: |
             cd /opt/finance-query
 
+            # Pin the on-disk checkout to the exact commit being deployed —
+            # an out-of-band sync can otherwise leave docker-compose.prod.yml
+            # stale relative to the images this job just pushed.
+            git fetch origin master
+            git checkout --force ${{ github.sha }}
+
             # Pull latest images
             docker compose -f docker-compose.prod.yml pull
 

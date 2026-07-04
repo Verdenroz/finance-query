@@ -1,5 +1,5 @@
 use crate::cache::{self, Cache};
-use finance_query::{IndicesRegion, Region, Screener, finance};
+use finance_query::{IndicesRegion, Region, Screener, Tickers, finance};
 use tracing::info;
 
 use super::{ServiceError, ServiceResult, lang_key};
@@ -17,7 +17,29 @@ pub async fn get_trending(cache: &Cache, region: Option<Region>) -> ServiceResul
             cache::is_market_open(),
             || async move {
                 let trending = finance::trending(region).await?;
-                serde_json::to_value(trending).map_err(|e| Box::new(e) as ServiceError)
+                // Yahoo's trending endpoint only returns bare symbols — enrich
+                // each with a batch quote lookup so name/price/change aren't null.
+                let symbols: Vec<&str> = trending.iter().map(|t| t.symbol.as_str()).collect();
+                let quotes = if symbols.is_empty() {
+                    std::collections::HashMap::new()
+                } else {
+                    Tickers::builder(symbols).build().await?.quotes().await?.quotes
+                };
+                let enriched: Vec<serde_json::Value> = trending
+                    .into_iter()
+                    .map(|t| {
+                        let quote_json = quotes
+                            .get(&t.symbol)
+                            .and_then(|q| serde_json::to_value(q).ok());
+                        serde_json::json!({
+                            "symbol": t.symbol,
+                            "shortName": quote_json.as_ref().and_then(|v| v.get("shortName")).cloned(),
+                            "regularMarketPrice": quote_json.as_ref().and_then(|v| v.get("regularMarketPrice")).cloned(),
+                            "regularMarketChangePercent": quote_json.as_ref().and_then(|v| v.get("regularMarketChangePercent")).cloned(),
+                        })
+                    })
+                    .collect();
+                serde_json::to_value(enriched).map_err(|e| Box::new(e) as ServiceError)
             },
         )
         .await

@@ -3,25 +3,45 @@ info:
   title: Finance Query Streaming API
   version: 2.7.1
   description: |
-    Real-time price streaming from Yahoo Finance via WebSocket.
+    Real-time price streaming from Yahoo Finance, and continuous RSS/Atom feed
+    streaming, both via WebSocket.
 
-    ## Connection Flow
+    ## Price stream connection flow (`/v2/stream`)
     1. Connect to the WebSocket endpoint
     2. Send a subscribe message with ticker symbols
     3. Receive real-time price updates as they occur
+
+    ## Feed stream connection flow (`/v2/feeds/stream`)
+    1. Connect to the WebSocket endpoint
+    2. Send a subscribe message with feed source slugs (same slugs accepted by
+       `GET /v2/feeds`)
+    3. Receive newly-seen feed entries as the server polls each source
+
+    RSS/Atom has no push transport of its own, so the feed stream polls every
+    5 minutes and fans out only entries not seen before (deduplicated by URL)
+    — unlike the price stream, which is genuinely push end to end.
 
 servers:
   production:
     url: finance-query.com/v2/stream
     protocol: wss
-    description: Production server
+    description: Production server (price stream)
   development:
     url: localhost:8000/v2/stream
     protocol: ws
-    description: Local development server
+    description: Local development server (price stream)
+  feedsProduction:
+    url: finance-query.com/v2/feeds/stream
+    protocol: wss
+    description: Production server (feed stream)
+  feedsDevelopment:
+    url: localhost:8000/v2/feeds/stream
+    protocol: ws
+    description: Local development server (feed stream)
 
 channels:
   /:
+    servers: [production, development]
     publish:
       operationId: sendMessage
       summary: Send messages to the server
@@ -34,6 +54,21 @@ channels:
       summary: Receive price updates from the server
       message:
         $ref: '#/components/messages/PriceUpdate'
+
+  /feeds:
+    servers: [feedsProduction, feedsDevelopment]
+    publish:
+      operationId: sendFeedMessage
+      summary: Send messages to the server
+      message:
+        oneOf:
+          - $ref: '#/components/messages/FeedSubscribe'
+          - $ref: '#/components/messages/FeedUnsubscribe'
+    subscribe:
+      operationId: receiveFeedEntry
+      summary: Receive new feed entries from the server
+      message:
+        $ref: '#/components/messages/FeedEntryMessage'
 
 components:
   messages:
@@ -82,6 +117,57 @@ components:
       contentType: application/json
       payload:
         $ref: '#/components/schemas/PriceUpdate'
+
+    FeedSubscribe:
+      name: subscribe
+      title: Subscribe Message
+      summary: Subscribe to feed sources
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - subscribe
+        properties:
+          subscribe:
+            type: array
+            items:
+              type: string
+            description: >-
+              List of feed source slugs to subscribe to (same slugs as
+              `GET /v2/feeds`'s `sources` param).
+            example:
+              - bloomberg
+              - marketwatch
+          formType:
+            type: string
+            description: SEC filing form type, used when sec-filings is in subscribe
+            example: 8-K
+
+    FeedUnsubscribe:
+      name: unsubscribe
+      title: Unsubscribe Message
+      summary: Unsubscribe from feed sources
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - unsubscribe
+        properties:
+          unsubscribe:
+            type: array
+            items:
+              type: string
+            description: List of feed source slugs to unsubscribe from
+            example:
+              - bloomberg
+
+    FeedEntryMessage:
+      name: feedEntry
+      title: Feed Entry
+      summary: A newly-seen RSS/Atom feed entry
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/FeedEntry'
 
   schemas:
     PriceUpdate:
@@ -204,3 +290,22 @@ components:
       enum:
         - CALL
         - PUT
+
+    FeedEntry:
+      type: object
+      description: A single entry from an RSS/Atom feed
+      properties:
+        title:
+          type: string
+        url:
+          type: string
+          format: uri
+        published:
+          type: string
+          format: date-time
+          nullable: true
+        summary:
+          type: string
+          nullable: true
+        source:
+          type: string

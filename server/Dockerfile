@@ -36,6 +36,7 @@ COPY finance-query-mcp/Cargo.toml ./finance-query-mcp/
 # Cargo validates their source paths during workspace resolution even when not building them.
 RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches && \
     echo "pub fn dummy() {}" > src/lib.rs && \
+    echo "pub fn dummy() {}" > server/src/lib.rs && \
     echo "fn main() {}" > server/src/main.rs && \
     echo "" > finance-query-derive/src/lib.rs && \
     echo "fn main() {}" > finance-query-cli/src/main.rs && \
@@ -53,7 +54,7 @@ COPY finance-query-derive/src ./finance-query-derive/src
 COPY benches ./benches
 
 # Build the actual application
-RUN touch src/lib.rs server/src/main.rs && \
+RUN touch src/lib.rs server/src/lib.rs server/src/main.rs && \
     cargo auditable build --release -p finance-query-server --features translation-offline
 
 # ==============================================================================

@@ -20,6 +20,12 @@ finance-query = { path = "..", features = [
     "translation",
     "sentiment",
 ] }
+finance-query-server = { path = "../server", default-features = false, features = [
+    "translation",
+] }
+
+# GraphQL (for in-process schema execution)
+async-graphql = "7"
 
 # MCP SDK (official Rust MCP SDK from modelcontextprotocol/rust-sdk)
 rmcp = { version = "1", features = [
@@ -55,4 +61,7 @@ axum = "0.8"
 default = []
 # Local opus-mt models via CTranslate2 — requires cmake + a C++ toolchain to
 # build. Without it, translation falls back to the built-in dictionary.
-translation-offline = ["finance-query/translation-offline"]
+translation-offline = [
+    "finance-query/translation-offline",
+    "finance-query-server/translation-offline",
+]

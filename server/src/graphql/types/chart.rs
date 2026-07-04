@@ -1,6 +1,8 @@
 //! GraphQL types for chart / OHLCV candle data.
 
-use async_graphql::SimpleObject;
+use super::batch::GqlBatchError;
+use crate::graphql::pagination::{self, Page};
+use async_graphql::{ComplexObject, Result, SimpleObject};
 use serde::Deserialize;
 
 /// A single OHLCV candle / price bar.
@@ -48,10 +50,84 @@ pub struct GqlChartMeta {
 
 /// Historical chart data for a single symbol.
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(rename_all = "camelCase")]
 pub struct GqlChart {
     pub symbol: String,
     pub meta: GqlChartMeta,
+    #[graphql(skip)]
     pub candles: Vec<GqlCandle>,
+    /// Time interval used for this chart (e.g. "1d").
+    pub interval: Option<String>,
+    /// Time range used for this chart (e.g. "1mo").
+    pub range: Option<String>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlChart {
+    /// OHLCV candles for the requested interval/range.
+    async fn candles(
+        &self,
+        #[graphql(desc = "Max candles to return; omitted = every matching candle in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlCandle>> {
+        pagination::paginate(self.candles.clone(), first, after).await
+    }
+}
+
+/// Wraps a symbol name with its chart data, used by the batch `charts` root field.
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct GqlSymbolChart {
+    pub symbol: String,
+    pub chart: GqlChart,
+}
+
+/// Result of the batch `charts` root field: successfully fetched charts plus
+/// any per-symbol fetch errors.
+#[derive(SimpleObject, Debug, Clone)]
+#[graphql(rename_fields = "camelCase", complex)]
+pub struct GqlChartsBatch {
+    #[graphql(skip)]
+    pub charts: Vec<GqlSymbolChart>,
+    pub errors: Vec<GqlBatchError>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlChartsBatch {
+    /// Successfully fetched per-symbol charts.
+    async fn charts(
+        &self,
+        #[graphql(desc = "Max symbols to return; omitted = every matching symbol in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlSymbolChart>> {
+        pagination::paginate(self.charts.clone(), first, after).await
+    }
+}
+
+/// Lightweight sparkline data for a single symbol (close prices only).
+#[derive(SimpleObject, Deserialize, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+#[serde(rename_all = "camelCase")]
+pub struct GqlSpark {
+    pub symbol: String,
+    pub meta: GqlChartMeta,
+    pub timestamps: Vec<i64>,
+    pub closes: Vec<f64>,
+    pub interval: Option<String>,
+    pub range: Option<String>,
+}
+
+/// Result of the batch `spark` root field: successfully fetched sparklines
+/// plus any per-symbol fetch errors.
+#[derive(SimpleObject, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlSparkBatch {
+    pub sparks: Vec<GqlSpark>,
+    pub errors: Vec<GqlBatchError>,
 }

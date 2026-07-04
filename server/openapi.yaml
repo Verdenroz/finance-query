@@ -220,6 +220,8 @@ paths:
         - $ref: '#/components/parameters/Format'
         - $ref: '#/components/parameters/Fields'
         - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch quotes response with successful quotes and any errors
@@ -229,16 +231,15 @@ paths:
                 $ref: '#/components/schemas/BatchQuotesResponse'
               example:
                 quotes:
-                  AAPL:
-                    symbol: AAPL
+                  - symbol: AAPL
                     shortName: Apple Inc.
                     regularMarketPrice: 182.52
-                  MSFT:
-                    symbol: MSFT
+                  - symbol: MSFT
                     shortName: Microsoft Corporation
                     regularMarketPrice: 378.91
                 errors:
-                  INVALID: "Symbol not found in response"
+                  - symbol: INVALID
+                    message: "Symbol not found in response"
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -314,6 +315,8 @@ paths:
             is either a pattern name (e.g. `"Hammer"`, `"BullishEngulfing"`) or
             `null` when no pattern was detected on that bar.
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Chart data (with optional events and patterns)
@@ -389,6 +392,8 @@ paths:
             default: max
           description: Time range for dividend history
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Dividend history and analytics
@@ -553,8 +558,7 @@ paths:
                 $ref: '#/components/schemas/BatchSparksResponse'
               example:
                 sparks:
-                  AAPL:
-                    symbol: AAPL
+                  - symbol: AAPL
                     closes: [258.61, 258.08, 258.29, 257.04, 256.73]
                     timestamps: [1767969000, 1767969300, 1767969600, 1767969900, 1767970200]
                     interval: "5m"
@@ -565,8 +569,7 @@ paths:
                       exchangeName: NMS
                       regularMarketPrice: 258.44
                       previousClose: 259.04
-                  MSFT:
-                    symbol: MSFT
+                  - symbol: MSFT
                     closes: [474.47, 475.20, 475.46, 472.99]
                     timestamps: [1767969000, 1767969300, 1767969600, 1767969900]
                     interval: "5m"
@@ -577,7 +580,7 @@ paths:
                       exchangeName: NMS
                       regularMarketPrice: 477.35
                       previousClose: 478.11
-                errors: {}
+                errors: []
         '400':
           $ref: '#/components/responses/BadRequest'
         '500':
@@ -622,6 +625,8 @@ paths:
             Detect candlestick patterns and include a per-bar signal array in
             each chart object. The `patterns` array aligns 1:1 with `candles`.
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch chart data with successful charts and any errors
@@ -657,6 +662,8 @@ paths:
             default: 1y
           description: Time range for dividend history
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch dividend data with successful results and any errors
@@ -812,6 +819,15 @@ paths:
             enum: [annual, quarterly]
             default: annual
           description: Statement frequency
+        - name: metrics
+          in: query
+          schema:
+            type: string
+            nullable: true
+          description: |
+            Comma-separated metric names to include in each symbol's statement
+            (e.g. `TotalRevenue,NetIncome`). Omitted = all metrics.
+          example: TotalRevenue,NetIncome
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
@@ -847,6 +863,25 @@ paths:
             default: 5
           description: Maximum number of recommendations per symbol
         - $ref: '#/components/parameters/Fields'
+        - name: pageLimit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+          description: |
+            Max symbols per page (distinct from `limit`, which caps recommendations
+            *per symbol*). Pagination is opt-in: omitting both `pageLimit` and
+            `pageCursor` returns every requested symbol's recommendations as a bare
+            array, unchanged from pre-pagination behavior.
+        - name: pageCursor
+          in: query
+          required: false
+          schema:
+            type: string
+            nullable: true
+          description: Opaque continuation token from a previous response's `pageInfo.endCursor`.
       responses:
         '200':
           description: Batch recommendations with successful results and any errors
@@ -881,6 +916,8 @@ paths:
             format: int64
           description: Unix timestamp for expiration date (optional, defaults to nearest expiration)
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch options data with successful results and any errors
@@ -923,6 +960,8 @@ paths:
             default: 1mo
           description: Time range
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Batch indicators with successful results and any errors
@@ -986,11 +1025,13 @@ paths:
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Batch quotes response for world indices
+          description: Quotes for world market indices
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/BatchQuotesResponse'
+                type: array
+                items:
+                  $ref: '#/components/schemas/Quote'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -1008,6 +1049,8 @@ paths:
           description: Number of articles to return
         - $ref: '#/components/parameters/Fields'
         - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: News articles
@@ -1043,6 +1086,8 @@ paths:
             default: 10
         - $ref: '#/components/parameters/Fields'
         - $ref: '#/components/parameters/Lang'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Symbol news array
@@ -1077,6 +1122,8 @@ paths:
             type: integer
           description: Expiration date (Unix timestamp)
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Options chain
@@ -1115,14 +1162,25 @@ paths:
             enum: [annual, quarterly]
             default: annual
           description: Data frequency (annual or quarterly)
+        - name: metrics
+          in: query
+          schema:
+            type: string
+            nullable: true
+          description: |
+            Comma-separated metric names to include in the statement
+            (e.g. `TotalRevenue,NetIncome`). Omitted = all metrics.
+          example: TotalRevenue,NetIncome
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Financial statement data
+          description: Financial statement line items
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/FinancialStatement'
+                type: array
+                items:
+                  $ref: '#/components/schemas/FinancialLineItem'
         '400':
           $ref: '#/components/responses/BadRequest'
         '404':
@@ -1182,6 +1240,19 @@ paths:
           description: Type of holder data
           example: major
         - $ref: '#/components/parameters/Fields'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+          description: |
+            Max entries per page for holder types with a list (institutional,
+            mutualfund, insider-transactions, insider-roster). No-op for
+            major/insider-purchases (no list). Pagination is opt-in: omitting
+            both `limit` and `cursor` returns the existing response shape unchanged.
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Holder data
@@ -1938,6 +2009,8 @@ paths:
             example: AAPL
           description: Stock ticker symbol
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Filing history retrieved successfully
@@ -1966,7 +2039,11 @@ paths:
                     example: "https://www.apple.com"
                   filings:
                     type: object
-                    description: Recent filings (up to 1000)
+                    description: |
+                      Recent filings (up to 1000). Pagination is opt-in: omitting both
+                      `limit` and `cursor` returns every filing as a bare array, unchanged
+                      from pre-pagination behavior. Passing either returns
+                      `{ items: [...], pageInfo: {...} }` instead.
         '404':
           description: Symbol not found
         '503':
@@ -1990,6 +2067,19 @@ paths:
             example: AAPL
           description: Stock ticker symbol
         - $ref: '#/components/parameters/Fields'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+          description: |
+            Max data points per concept per page, applied uniformly across every
+            returned concept. Pagination is opt-in: omitting both `limit` and
+            `cursor` returns every matching data point as a bare array, unchanged
+            from pre-pagination behavior.
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: XBRL facts retrieved successfully
@@ -2035,7 +2125,7 @@ paths:
             type: string
             example: "10-K,10-Q"
           description: Comma-separated form types to filter (e.g., "10-K,10-Q,8-K")
-        - name: start_date
+        - name: startDate
           in: query
           required: false
           schema:
@@ -2043,7 +2133,7 @@ paths:
             format: date
             example: "2024-01-01"
           description: Start date in YYYY-MM-DD format
-        - name: end_date
+        - name: endDate
           in: query
           required: false
           schema:
@@ -2051,15 +2141,34 @@ paths:
             format: date
             example: "2024-12-31"
           description: End date in YYYY-MM-DD format
+        - name: from
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 0
+            default: 0
+          description: Pagination offset
+        - name: size
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 100
+          description: Page size (max 100)
         - $ref: '#/components/parameters/Fields'
       responses:
         '200':
-          description: Search results
+          description: Search results (now includes a `pageInfo` object alongside `totalHits`)
           content:
             application/json:
               schema:
                 type: object
                 properties:
+                  pageInfo:
+                    $ref: '#/components/schemas/PageInfo'
                   hits:
                     type: object
                     properties:
@@ -2239,6 +2348,19 @@ paths:
           description: Region for language/localization settings (defaults to US)
         - $ref: '#/components/parameters/Fields'
         - $ref: '#/components/parameters/Lang'
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            nullable: true
+          description: |
+            Max quotes per page (applies to the `quotes` results only). Pagination
+            is opt-in: omitting both `limit` and `cursor` returns every fetched
+            quote (up to `quotes`) as a bare array, unchanged from pre-pagination
+            behavior.
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Search results
@@ -2475,6 +2597,9 @@ paths:
             type: string
           description: FRED series ID (e.g., FEDFUNDS, CPIAUCSL, GDP, UNRATE)
           example: FEDFUNDS
+        - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
           description: Time series observations
@@ -2518,9 +2643,16 @@ paths:
             type: integer
           description: Calendar year (defaults to current year)
           example: 2026
+        - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
-          description: Treasury yield curve records sorted newest-first
+          description: |
+            Treasury yield curve records sorted newest-first. Pagination is
+            opt-in: omitting both `limit` and `cursor` returns every row as a
+            bare array, unchanged from pre-pagination behavior. Passing either
+            returns `{ items: [...], pageInfo: {...} }` instead.
           content:
             application/json:
               schema:
@@ -2531,19 +2663,19 @@ paths:
                     date:
                       type: string
                       example: '02/20/2026'
-                    y1m:
+                    y1M:
                       type: number
                       nullable: true
-                    y2m:
+                    y2M:
                       type: number
                       nullable: true
-                    y3m:
+                    y3M:
                       type: number
                       nullable: true
-                    y4m:
+                    y4M:
                       type: number
                       nullable: true
-                    y6m:
+                    y6M:
                       type: number
                       nullable: true
                     y1:
@@ -2579,7 +2711,7 @@ paths:
       summary: Top coins by market cap
       description: Fetch top N cryptocurrencies by market cap from CoinGecko
       parameters:
-        - name: vs_currency
+        - name: vsCurrency
           in: query
           schema:
             type: string
@@ -2593,9 +2725,16 @@ paths:
             maximum: 250
           description: Number of coins to return
         - $ref: '#/components/parameters/Fields'
+        - $ref: '#/components/parameters/PaginationLimit'
+        - $ref: '#/components/parameters/PaginationCursor'
       responses:
         '200':
-          description: List of coins sorted by market cap descending
+          description: |
+            List of coins sorted by market cap descending. Pagination is
+            opt-in: omitting both `limit` and `cursor` returns every fetched
+            coin (up to `count`) as a bare array, unchanged from
+            pre-pagination behavior. Passing either returns
+            `{ items: [...], pageInfo: {...} }` instead.
           content:
             application/json:
               schema:
@@ -2620,7 +2759,7 @@ paths:
             type: string
           description: CoinGecko coin ID
           example: bitcoin
-        - name: vs_currency
+        - name: vsCurrency
           in: query
           schema:
             type: string
@@ -2780,13 +2919,13 @@ paths:
             Comma-separated source slugs. Unknown values return 400.
             Default: `federal-reserve,sec,marketwatch,bloomberg`.
           example: bloomberg,wsj,coindesk
-        - name: form_type
+        - name: formType
           in: query
           required: false
           schema:
             type: string
             default: 10-K
-          description: SEC filing form type filter, used when sec_filings is in sources
+          description: SEC filing form type filter, used when sec-filings is in sources
           example: 8-K
         - $ref: '#/components/parameters/Fields'
       responses:
@@ -2849,8 +2988,47 @@ components:
         Falls back to the `Accept-Language` header when omitted. English or unsupported
         values return untranslated text. Symbols, codes, URLs, and numeric fields are
         never translated.
+    PaginationLimit:
+      name: limit
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        nullable: true
+      description: |
+        Max items per page. Pagination is opt-in for REST: omitting both `limit` and
+        `cursor` returns every matching item as a bare array/existing response shape,
+        unchanged from pre-pagination behavior. Passing either switches the response to
+        `{"items": [...], "pageInfo": {...}}` (or adds `pageInfo` alongside an existing
+        envelope's other fields).
+    PaginationCursor:
+      name: cursor
+      in: query
+      required: false
+      schema:
+        type: string
+        nullable: true
+      description: |
+        Opaque continuation token from a previous response's `pageInfo.endCursor`.
+        Omitted = first page.
 
   schemas:
+    PageInfo:
+      type: object
+      description: Relay-style pagination metadata, present when a paginated field was requested.
+      properties:
+        hasNextPage:
+          type: boolean
+        hasPreviousPage:
+          type: boolean
+        startCursor:
+          type: string
+          nullable: true
+        endCursor:
+          type: string
+          nullable: true
+
     Quote:
       type: object
       description: Stock quote data
@@ -2968,31 +3146,41 @@ components:
         transcript:
           $ref: '#/components/schemas/Transcript'
 
+    BatchError:
+      type: object
+      description: A single symbol's fetch failure within a batch response
+      properties:
+        symbol:
+          type: string
+          example: INVALID
+        message:
+          type: string
+          example: Symbol not found in response
+
     BatchQuotesResponse:
       type: object
       description: Response from batch quotes endpoint with successful quotes and errors
       properties:
         quotes:
-          type: object
-          description: Successfully fetched quotes, keyed by symbol
-          additionalProperties:
+          type: array
+          description: Successfully fetched quotes
+          items:
             $ref: '#/components/schemas/Quote'
           example:
-            AAPL:
-              symbol: AAPL
+            - symbol: AAPL
               shortName: Apple Inc.
               regularMarketPrice: 182.52
-            MSFT:
-              symbol: MSFT
+            - symbol: MSFT
               shortName: Microsoft Corporation
               regularMarketPrice: 378.91
         errors:
-          type: object
+          type: array
           description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
           example:
-            INVALID: "Symbol not found in response"
+            - symbol: INVALID
+              message: "Symbol not found in response"
 
     Chart:
       type: object
@@ -3095,64 +3283,34 @@ components:
         name:
           type: string
           example: Bitcoin
-        current_price:
+        currentPrice:
           type: number
           format: double
           nullable: true
-        market_cap:
+        marketCap:
           type: number
           format: double
           nullable: true
-        market_cap_rank:
-          type: integer
-          nullable: true
-        fully_diluted_valuation:
+        priceChangePercentage24H:
           type: number
           format: double
           nullable: true
-        total_volume:
+        totalVolume:
           type: number
           format: double
           nullable: true
-        high_24h:
+        circulatingSupply:
           type: number
           format: double
           nullable: true
-        low_24h:
-          type: number
-          format: double
-          nullable: true
-        price_change_24h:
-          type: number
-          format: double
-          nullable: true
-        price_change_percentage_24h:
-          type: number
-          format: double
-          nullable: true
-        circulating_supply:
-          type: number
-          format: double
-          nullable: true
-        total_supply:
-          type: number
-          format: double
-          nullable: true
-        max_supply:
-          type: number
-          format: double
-          nullable: true
-        ath:
-          type: number
-          format: double
-          nullable: true
-        ath_change_percentage:
-          type: number
-          format: double
-          nullable: true
-        last_updated:
+        image:
           type: string
           nullable: true
+          description: URL to the coin's logo image
+        marketCapRank:
+          type: integer
+          nullable: true
+          description: Market cap rank (1 = highest market cap)
 
     Split:
       type: object
@@ -3561,27 +3719,8 @@ components:
 
     OptionsResponse:
       type: object
-      description: Yahoo Finance options chain response wrapper
+      description: Options chain data for a symbol (all expirations flattened together)
       properties:
-        optionChain:
-          type: object
-          properties:
-            result:
-              type: array
-              items:
-                $ref: '#/components/schemas/OptionChainResult'
-            error:
-              nullable: true
-              description: Error object if request failed
-
-    OptionChainResult:
-      type: object
-      description: Options data for an underlying symbol
-      properties:
-        underlyingSymbol:
-          type: string
-          nullable: true
-          example: AAPL
         expirationDates:
           type: array
           description: Available expiration dates (Unix timestamps)
@@ -3594,32 +3733,26 @@ components:
           items:
             type: number
             format: double
-        hasMiniOptions:
-          type: boolean
-          nullable: true
-        options:
-          type: array
-          description: Option chains by expiration date
-          items:
-            $ref: '#/components/schemas/OptionChain'
-
-    OptionChain:
-      type: object
-      properties:
-        expirationDate:
-          type: integer
-          format: int64
-        hasMiniOptions:
-          type: boolean
-          nullable: true
         calls:
           type: array
+          description: All call contracts across expirations
           items:
             $ref: '#/components/schemas/OptionContract'
         puts:
           type: array
+          description: All put contracts across expirations
           items:
             $ref: '#/components/schemas/OptionContract'
+
+    SymbolOptions:
+      type: object
+      description: Options chain for one symbol, used by the batch options endpoint
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        options:
+          $ref: '#/components/schemas/OptionsResponse'
 
     OptionContract:
       type: object
@@ -3664,6 +3797,11 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/SimilarSymbol'
+        providerId:
+          type: string
+          nullable: true
+          description: Which provider supplied this data (absent = Yahoo Finance default)
+          example: Yahoo
 
     SimilarSymbol:
       type: object
@@ -3677,36 +3815,58 @@ components:
           format: double
           description: Recommendation similarity score (higher = more similar)
 
-    FinancialStatement:
+    FinancialDataPoint:
       type: object
-      description: Financial statement data organized by metric and date
+      description: A single date/value pair for a financial metric
+      properties:
+        date:
+          type: string
+          description: Statement date
+          example: "2024-09-30"
+        value:
+          type: number
+          format: double
+          example: 391035000000
+
+    FinancialLineItem:
+      type: object
+      description: A single financial metric with its historical values
+      properties:
+        metric:
+          type: string
+          description: Metric name
+          example: TotalRevenue
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancialDataPoint'
+
+    SymbolFinancials:
+      type: object
+      description: Financial statement line items for one symbol
       properties:
         symbol:
           type: string
-          description: Stock symbol
           example: AAPL
-        statementType:
-          type: string
-          description: Type of statement (income, balance, cashflow)
-          example: income
-        frequency:
-          type: string
-          description: Data frequency (annual or quarterly)
-          example: annual
         statement:
-          type: object
-          description: Financial metrics mapped to date-value pairs
-          additionalProperties:
-            type: object
-            additionalProperties:
-              type: number
-          example:
-            TotalRevenue:
-              "2024-09-30": 391035000000
-              "2023-09-30": 383285000000
-            NetIncome:
-              "2024-09-30": 100913000000
-              "2023-09-30": 96995000000
+          type: array
+          items:
+            $ref: '#/components/schemas/FinancialLineItem'
+
+    BatchFinancialsResponse:
+      type: object
+      description: Response from batch financials endpoint with successful financial statements and errors
+      properties:
+        financials:
+          type: array
+          description: Successfully fetched financial statements
+          items:
+            $ref: '#/components/schemas/SymbolFinancials'
+        errors:
+          type: array
+          description: Symbols that failed to fetch, with error messages
+          items:
+            $ref: '#/components/schemas/BatchError'
 
     ScreenersResponse:
       type: object
@@ -3736,6 +3896,13 @@ components:
           format: int64
           nullable: true
           description: Total number of matching results (only present in custom screener responses, for pagination)
+        pageInfo:
+          allOf:
+            - $ref: '#/components/schemas/PageInfo'
+          nullable: true
+          description: |
+            Present only for `/v2/screeners/custom` (predefined `/v2/screeners/{type}`
+            has no underlying offset support upstream, so this is always null there).
 
     ScreenerQuote:
       type: object
@@ -4543,18 +4710,6 @@ components:
           format: double
           nullable: true
           description: Search relevance score
-        index:
-          type: string
-          nullable: true
-          description: Index membership
-        prevName:
-          type: string
-          nullable: true
-          description: Previous company name (if renamed)
-        nameChangeDate:
-          type: string
-          nullable: true
-          description: Date of name change
 
     SearchNews:
       type: object
@@ -4586,7 +4741,9 @@ components:
           nullable: true
           description: Article type (STORY, VIDEO, etc.)
         thumbnail:
-          $ref: '#/components/schemas/NewsThumbnail'
+          type: object
+          nullable: true
+          description: Nested thumbnail resolutions/URLs (opaque, passed through as-is)
         relatedTickers:
           type: array
           nullable: true
@@ -4958,81 +5115,121 @@ components:
       description: Response from batch spark endpoint with successful sparks and errors
       properties:
         sparks:
-          type: object
-          description: Successfully fetched sparks, keyed by symbol
-          additionalProperties:
+          type: array
+          description: Successfully fetched sparks
+          items:
             $ref: '#/components/schemas/Spark'
         errors:
-          type: object
+          type: array
           description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
+
+    SymbolChart:
+      type: object
+      description: Chart data for one symbol, used by the batch charts endpoint
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        chart:
+          $ref: '#/components/schemas/Chart'
 
     BatchChartsResponse:
       type: object
       description: Response from batch charts endpoint with successful charts and errors
       properties:
         charts:
-          type: object
-          description: Successfully fetched charts, keyed by symbol
-          additionalProperties:
-            $ref: '#/components/schemas/Chart'
+          type: array
+          description: Successfully fetched charts
+          items:
+            $ref: '#/components/schemas/SymbolChart'
         errors:
-          type: object
+          type: array
           description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
+
+    SymbolDividends:
+      type: object
+      description: Dividend history for one symbol, used by the batch dividends endpoint
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        dividends:
+          type: array
+          items:
+            $ref: '#/components/schemas/Dividend'
 
     BatchDividendsResponse:
       type: object
-      description: Response from batch dividends endpoint with successful dividend lists and errors
+      description: Response from batch dividends endpoint with successful dividend histories and errors
       properties:
         dividends:
-          type: object
-          description: Successfully fetched dividend histories, keyed by symbol
-          additionalProperties:
-            type: array
-            items:
-              $ref: '#/components/schemas/Dividend'
+          type: array
+          description: Successfully fetched dividend histories
+          items:
+            $ref: '#/components/schemas/SymbolDividends'
         errors:
-          type: object
+          type: array
           description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
+
+    SymbolSplits:
+      type: object
+      description: Stock split history for one symbol, used by the batch splits endpoint
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        splits:
+          type: array
+          items:
+            $ref: '#/components/schemas/Split'
 
     BatchSplitsResponse:
       type: object
       description: Response from batch splits endpoint with successful split lists and errors
       properties:
         splits:
-          type: object
-          description: Successfully fetched split histories, keyed by symbol
-          additionalProperties:
-            type: array
-            items:
-              $ref: '#/components/schemas/Split'
+          type: array
+          description: Successfully fetched split histories
+          items:
+            $ref: '#/components/schemas/SymbolSplits'
         errors:
-          type: object
+          type: array
           description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
+
+    SymbolCapitalGains:
+      type: object
+      description: Capital gains history for one symbol, used by the batch capital gains endpoint
+      properties:
+        symbol:
+          type: string
+          example: SPY
+        capitalGains:
+          type: array
+          items:
+            $ref: '#/components/schemas/CapitalGain'
 
     BatchCapitalGainsResponse:
       type: object
       description: Response from batch capital gains endpoint with successful capital gains lists and errors
       properties:
         capitalGains:
-          type: object
-          description: Successfully fetched capital gains histories, keyed by symbol
-          additionalProperties:
-            type: array
-            items:
-              $ref: '#/components/schemas/CapitalGain'
+          type: array
+          description: Successfully fetched capital gains histories
+          items:
+            $ref: '#/components/schemas/SymbolCapitalGains'
         errors:
-          type: object
+          type: array
           description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
 
     CalendarEvent:
       type: object
@@ -5054,108 +5251,150 @@ components:
           description: Ticker symbol this event belongs to; null for market-wide events
           example: TSLA
         event:
-          type: object
           description: |
-            The event payload, discriminated by `type`. One of: `earnings`,
-            `ex_dividend`, `dividend_payment`, `options_expiration`, or
-            `economic_release` (FRED-backed, market-wide).
-          required: [type]
-          properties:
-            type:
-              type: string
-              enum: [earnings, ex_dividend, dividend_payment, options_expiration, economic_release]
-            eps_estimate_low:
-              type: number
-              nullable: true
-            eps_estimate_avg:
-              type: number
-              nullable: true
-            eps_estimate_high:
-              type: number
-              nullable: true
-            revenue_estimate_avg:
-              type: integer
-              format: int64
-              nullable: true
-            is_estimate:
-              type: boolean
-            amount:
-              type: number
-              nullable: true
-              description: Dividend amount per share (ex_dividend / dividend_payment)
-            contract_count:
-              type: integer
-              nullable: true
-              description: |
-                Number of listed contracts for an options_expiration, when a chain
-                was loaded. Null on the calendar path (expiration dates only).
-                Only standard monthly (3rd-Friday) expirations are surfaced.
-            name:
-              type: string
-              description: Release name (economic_release)
-            series_id:
-              type: string
-              description: FRED release identifier (economic_release)
+            The event payload — a GraphQL union, discriminated by `__typename`
+            rather than a `type` string field. One of `GqlEarningsEvent`,
+            `GqlExDividendEvent`, `GqlDividendPaymentEvent`,
+            `GqlOptionsExpirationEvent`, or `GqlEconomicReleaseEvent`
+            (FRED-backed, market-wide).
+          oneOf:
+            - $ref: '#/components/schemas/GqlEarningsEvent'
+            - $ref: '#/components/schemas/GqlExDividendEvent'
+            - $ref: '#/components/schemas/GqlDividendPaymentEvent'
+            - $ref: '#/components/schemas/GqlOptionsExpirationEvent'
+            - $ref: '#/components/schemas/GqlEconomicReleaseEvent'
+          discriminator:
+            propertyName: __typename
 
-    BatchFinancialsResponse:
+    GqlEarningsEvent:
       type: object
-      description: Response from batch financials endpoint with successful financial statements and errors
+      description: Upcoming earnings report with analyst estimate data.
       properties:
-        financials:
-          type: object
-          description: Successfully fetched financial statements, keyed by symbol
-          additionalProperties:
-            $ref: '#/components/schemas/FinancialStatement'
-        errors:
-          type: object
-          description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+        __typename:
+          type: string
+          enum: [GqlEarningsEvent]
+        epsEstimateLow:
+          type: number
+          nullable: true
+        epsEstimateAvg:
+          type: number
+          nullable: true
+        epsEstimateHigh:
+          type: number
+          nullable: true
+        revenueEstimateAvg:
+          type: integer
+          format: int64
+          nullable: true
+        isEstimate:
+          type: boolean
+
+    GqlExDividendEvent:
+      type: object
+      description: Ex-dividend date — shares must be held before this date to receive the dividend.
+      properties:
+        __typename:
+          type: string
+          enum: [GqlExDividendEvent]
+        amount:
+          type: number
+          nullable: true
+          description: Dividend amount per share, when known
+
+    GqlDividendPaymentEvent:
+      type: object
+      description: Dividend payment date — cash arrives in the account.
+      properties:
+        __typename:
+          type: string
+          enum: [GqlDividendPaymentEvent]
+        amount:
+          type: number
+          nullable: true
+          description: Dividend amount per share, when known
+
+    GqlOptionsExpirationEvent:
+      type: object
+      description: Standard monthly options expiration (3rd Friday) for this ticker.
+      properties:
+        __typename:
+          type: string
+          enum: [GqlOptionsExpirationEvent]
+        contractCount:
+          type: integer
+          nullable: true
+          description: |
+            Number of listed contracts (calls + puts) expiring on this date when
+            a chain was loaded. Null if only the expiration date is known.
+
+    GqlEconomicReleaseEvent:
+      type: object
+      description: Economic data release (requires the `fred` feature / `FRED_API_KEY`).
+      properties:
+        __typename:
+          type: string
+          enum: [GqlEconomicReleaseEvent]
+        name:
+          type: string
+          description: Human-readable release name (e.g. "Consumer Price Index")
+        seriesId:
+          type: string
+          description: FRED release identifier as a string
 
     BatchRecommendationsResponse:
       type: object
       description: Response from batch recommendations endpoint with successful recommendations and errors
       properties:
         recommendations:
-          type: object
-          description: Successfully fetched recommendations, keyed by symbol
-          additionalProperties:
+          type: array
+          description: Successfully fetched recommendations
+          items:
             $ref: '#/components/schemas/Recommendation'
         errors:
-          type: object
+          type: array
           description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
 
     BatchOptionsResponse:
       type: object
       description: Response from batch options endpoint with successful options chains and errors
       properties:
         options:
-          type: object
-          description: Successfully fetched options chains, keyed by symbol
-          additionalProperties:
-            $ref: '#/components/schemas/Options'
+          type: array
+          description: Successfully fetched options chains
+          items:
+            $ref: '#/components/schemas/SymbolOptions'
         errors:
-          type: object
+          type: array
           description: Symbols that failed to fetch, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
+
+    SymbolIndicators:
+      type: object
+      description: Indicator summary for one symbol, used by the batch indicators endpoint
+      properties:
+        symbol:
+          type: string
+          example: AAPL
+        indicators:
+          $ref: '#/components/schemas/IndicatorsSummary'
 
     BatchIndicatorsResponse:
       type: object
       description: Response from batch indicators endpoint with successful indicator summaries and errors
       properties:
         indicators:
-          type: object
-          description: Successfully calculated indicators, keyed by symbol
-          additionalProperties:
-            $ref: '#/components/schemas/IndicatorsSummary'
+          type: array
+          description: Successfully calculated indicators
+          items:
+            $ref: '#/components/schemas/SymbolIndicators'
         errors:
-          type: object
+          type: array
           description: Symbols that failed to calculate, with error messages
-          additionalProperties:
-            type: string
+          items:
+            $ref: '#/components/schemas/BatchError'
 
     Spark:
       type: object

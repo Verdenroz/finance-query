@@ -3,40 +3,16 @@ use finance_query::Ticker;
 
 use super::{ServiceError, ServiceResult};
 
-/// Analysis type identifiers matching the REST path param.
-#[derive(Debug, Clone, Copy)]
-pub enum AnalysisType {
-    Recommendations,
-    UpgradesDowngrades,
-    EarningsEstimate,
-    EarningsHistory,
-}
-
-impl AnalysisType {
-    pub fn from_str(s: &str) -> Option<Self> {
-        match s.to_lowercase().as_str() {
-            "recommendations" => Some(Self::Recommendations),
-            "upgrades-downgrades" => Some(Self::UpgradesDowngrades),
-            "earnings-estimate" => Some(Self::EarningsEstimate),
-            "earnings-history" => Some(Self::EarningsHistory),
-            _ => None,
-        }
-    }
-
-    pub fn valid_types() -> &'static str {
-        "recommendations, upgrades-downgrades, earnings-estimate, earnings-history"
-    }
-}
-
-pub async fn get_analysis(
-    cache: &Cache,
-    symbol: &str,
-    analysis_type: AnalysisType,
-    analysis_type_str: &str,
-) -> ServiceResult {
-    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), analysis_type_str]);
+/// Each analysis type gets its own straight-line async fn (rather than one fn
+/// with a match over all 4 awaiting different `Ticker` accessors) — a single
+/// multi-branch async closure must size its generator state for the union of
+/// every branch's locals/await-points at once, which under this workspace's
+/// `opt-level=0` (un-inlined) dev profile risks overflowing the worker stack.
+/// See `services::holders` (fixed for the same reason) and
+/// `services::quote::get_quote` for the one-path shape.
+pub async fn get_recommendation_trend(cache: &Cache, symbol: &str) -> ServiceResult {
+    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), "recommendations"]);
     let symbol = symbol.to_string();
-
     cache
         .get_or_fetch(
             &cache_key,
@@ -44,25 +20,59 @@ pub async fn get_analysis(
             cache::is_market_open(),
             || async move {
                 let ticker = Ticker::new(&symbol).await?;
-                let json: serde_json::Value = match analysis_type {
-                    AnalysisType::Recommendations => {
-                        let data = ticker.recommendation_trend().await?;
-                        serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)?
-                    }
-                    AnalysisType::UpgradesDowngrades => {
-                        let data = ticker.grading_history().await?;
-                        serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)?
-                    }
-                    AnalysisType::EarningsEstimate => {
-                        let data = ticker.earnings_trend().await?;
-                        serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)?
-                    }
-                    AnalysisType::EarningsHistory => {
-                        let data = ticker.earnings_history().await?;
-                        serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)?
-                    }
-                };
-                Ok(json)
+                let data = ticker.recommendation_trend().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+pub async fn get_grading_history(cache: &Cache, symbol: &str) -> ServiceResult {
+    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), "upgrades-downgrades"]);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol).await?;
+                let data = ticker.grading_history().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+pub async fn get_earnings_trend(cache: &Cache, symbol: &str) -> ServiceResult {
+    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), "earnings-estimate"]);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol).await?;
+                let data = ticker.earnings_trend().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
+            },
+        )
+        .await
+}
+
+pub async fn get_earnings_history(cache: &Cache, symbol: &str) -> ServiceResult {
+    let cache_key = Cache::key("analysis", &[&symbol.to_uppercase(), "earnings-history"]);
+    let symbol = symbol.to_string();
+    cache
+        .get_or_fetch(
+            &cache_key,
+            cache::ttl::ANALYSIS,
+            cache::is_market_open(),
+            || async move {
+                let ticker = Ticker::new(&symbol).await?;
+                let data = ticker.earnings_history().await?;
+                serde_json::to_value(data).map_err(|e| Box::new(e) as ServiceError)
             },
         )
         .await
