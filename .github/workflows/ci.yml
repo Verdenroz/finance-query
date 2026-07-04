@@ -110,9 +110,8 @@ jobs:
       - name: Run clippy
         run: cargo clippy --workspace --all-targets --features finance-query/full -- -D warnings
 
-  # Run all tests — retries only failed tests with exponential backoff to handle rate limiting
-  test:
-    name: Test Suite
+  test-unit:
+    name: Test Suite (unit)
     runs-on: ubuntu-latest
     needs: changes
     if: needs.changes.outputs.rust == 'true'
@@ -132,6 +131,8 @@ jobs:
           df -h /
       - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: v0-rust-test-suite
       - uses: taiki-e/install-action@ace6ebe54a6a0c86dfb5f7764b17f793b6925bc3 # v2.82.3
         with:
           tool: nextest
@@ -139,10 +140,84 @@ jobs:
       # native build; compilation is covered by the Docker jobs).
       - name: Run unit tests (full features)
         run: cargo nextest run --workspace --features finance-query/full
+
+  test-network:
+    name: Test Suite (network)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: v0-rust-test-suite
+      - uses: taiki-e/install-action@ace6ebe54a6a0c86dfb5f7764b17f793b6925bc3 # v2.82.3
+        with:
+          tool: nextest
       - name: Run network integration tests
         run: cargo nextest run --workspace --profile ci-network --run-ignored ignored-only
+
+  test-doctest:
+    name: Test Suite (doctest)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: v0-rust-test-suite
+      # `full` = all features except translation-offline (heavy CTranslate2
+      # native build; compilation is covered by the Docker jobs).
       - name: Run doctests
         run: cargo test --workspace --doc --features finance-query/full
+
+  # Required-status-check name preserved as "Test Suite" (branch protection
+  # references this exact context) even though the real work now runs as
+  # three parallel jobs above. `always()` + explicit result-checking is
+  # required here — without it, a real sub-job failure would leave this
+  # aggregator skipped-by-cascade instead of failed, and GitHub treats a
+  # skipped required check as passing.
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: [changes, test-unit, test-network, test-doctest]
+    if: always() && needs.changes.outputs.rust == 'true'
+    steps:
+      - name: Check suite results
+        run: |
+          for result in "${{ needs.test-unit.result }}" "${{ needs.test-network.result }}" "${{ needs.test-doctest.result }}"; do
+            if [ "$result" != "success" ]; then
+              echo "A test suite did not succeed: $result"
+              exit 1
+            fi
+          done
 
   # Check compilation
   check:
@@ -175,7 +250,7 @@ jobs:
   build:
     name: Build Release
     runs-on: ubuntu-latest
-    needs: [fmt, clippy, test, check]
+    needs: [fmt, clippy, check]
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -215,7 +290,7 @@ jobs:
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [changes, fmt, clippy, test, check]
+    needs: [changes, fmt, clippy, check]
     if: needs.changes.outputs.server_docker == 'true'
     permissions:
       contents: read
@@ -268,7 +343,7 @@ jobs:
   docker-mcp:
     name: MCP Docker Build
     runs-on: ubuntu-latest
-    needs: [changes, fmt, clippy, test, check]
+    needs: [changes, fmt, clippy, check]
     if: needs.changes.outputs.mcp_docker == 'true'
     permissions:
       contents: read
