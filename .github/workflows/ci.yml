@@ -14,10 +14,60 @@ permissions:
   contents: read
 
 jobs:
+  # Decide which downstream jobs this change set actually needs, so
+  # docs-only / single-crate PRs don't pay for work that can't have broken.
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust }}
+      server_docker: ${{ steps.filter.outputs.server_docker }}
+      mcp_docker: ${{ steps.filter.outputs.mcp_docker }}
+      fuzz: ${{ steps.filter.outputs.fuzz }}
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'src/**'
+              - 'server/**'
+              - 'finance-query-cli/**'
+              - 'finance-query-mcp/**'
+              - 'finance-query-derive/**'
+              - 'benches/**'
+              - 'tests/**'
+              - 'fuzz/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.github/workflows/ci.yml'
+            server_docker:
+              - 'src/**'
+              - 'server/**'
+              - 'finance-query-derive/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            mcp_docker:
+              - 'src/**'
+              - 'finance-query-mcp/**'
+              - 'finance-query-derive/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            fuzz:
+              - 'src/**'
+              - 'fuzz/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+
   # Check code formatting
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -25,7 +75,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           components: rustfmt
       - name: Check formatting
@@ -35,6 +85,8 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -49,7 +101,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           df -h /
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           components: clippy
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
@@ -58,10 +110,11 @@ jobs:
       - name: Run clippy
         run: cargo clippy --workspace --all-targets --features finance-query/full -- -D warnings
 
-  # Run all tests — retries only failed tests with exponential backoff to handle rate limiting
-  test:
-    name: Test Suite
+  test-unit:
+    name: Test Suite (unit)
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -76,8 +129,10 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           df -h /
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: test-suite
       - uses: taiki-e/install-action@ace6ebe54a6a0c86dfb5f7764b17f793b6925bc3 # v2.82.3
         with:
           tool: nextest
@@ -85,15 +140,91 @@ jobs:
       # native build; compilation is covered by the Docker jobs).
       - name: Run unit tests (full features)
         run: cargo nextest run --workspace --features finance-query/full
+
+  test-network:
+    name: Test Suite (network)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: test-suite
+      - uses: taiki-e/install-action@ace6ebe54a6a0c86dfb5f7764b17f793b6925bc3 # v2.82.3
+        with:
+          tool: nextest
       - name: Run network integration tests
         run: cargo nextest run --workspace --profile ci-network --run-ignored ignored-only
+
+  test-doctest:
+    name: Test Suite (doctest)
+    runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /opt/hostedtoolcache/CodeQL
+          df -h /
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          shared-key: test-suite
+      # `full` = all features except translation-offline (heavy CTranslate2
+      # native build; compilation is covered by the Docker jobs).
       - name: Run doctests
         run: cargo test --workspace --doc --features finance-query/full
+
+  # Required-status-check name preserved as "Test Suite" (branch protection
+  # references this exact context) even though the real work now runs as
+  # three parallel jobs above. `always()` + explicit result-checking is
+  # required here — without it, a real sub-job failure would leave this
+  # aggregator skipped-by-cascade instead of failed, and GitHub treats a
+  # skipped required check as passing.
+  test:
+    name: Test Suite
+    runs-on: ubuntu-latest
+    needs: [changes, test-unit, test-network, test-doctest]
+    if: always() && needs.changes.outputs.rust == 'true'
+    steps:
+      - name: Check suite results
+        run: |
+          for result in "${{ needs.test-unit.result }}" "${{ needs.test-network.result }}" "${{ needs.test-doctest.result }}"; do
+            if [ "$result" != "success" ]; then
+              echo "A test suite did not succeed: $result"
+              exit 1
+            fi
+          done
 
   # Check compilation
   check:
     name: Check Build
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -108,7 +239,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           df -h /
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       # `full` = all features except translation-offline (heavy CTranslate2
       # native build; compilation is covered by the Docker jobs).
@@ -119,7 +250,7 @@ jobs:
   build:
     name: Build Release
     runs-on: ubuntu-latest
-    needs: [fmt, clippy, test, check]
+    needs: [fmt, clippy, check]
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -134,7 +265,7 @@ jobs:
           sudo rm -rf /opt/ghc
           sudo rm -rf /opt/hostedtoolcache/CodeQL
           df -h /
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
       # cargo-auditable embeds the dependency manifest into each binary so the
       # shipped artifacts can be scanned later with `cargo audit bin`.
@@ -159,7 +290,8 @@ jobs:
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [fmt, clippy, test, check]
+    needs: [changes, fmt, clippy, check]
+    if: needs.changes.outputs.server_docker == 'true'
     permissions:
       contents: read
       security-events: write # upload Trivy SARIF to code scanning
@@ -180,8 +312,8 @@ jobs:
           push: false
           load: true
           tags: financequery:v2-ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=docker-server
+          cache-to: type=gha,mode=max,scope=docker-server
       - name: Test Docker image
         run: |
           docker run -d --name test-container -p 8000:8000 financequery:v2-ci
@@ -211,7 +343,8 @@ jobs:
   docker-mcp:
     name: MCP Docker Build
     runs-on: ubuntu-latest
-    needs: [fmt, clippy, test, check]
+    needs: [changes, fmt, clippy, check]
+    if: needs.changes.outputs.mcp_docker == 'true'
     permissions:
       contents: read
       security-events: write # upload Trivy SARIF to code scanning
@@ -232,8 +365,8 @@ jobs:
           push: false
           load: true
           tags: financequery:mcp-ci
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          cache-from: type=gha,scope=docker-mcp
+          cache-to: type=gha,mode=max,scope=docker-mcp
       - name: Test MCP Docker image
         run: |
           docker run -d --name test-mcp -p 3000:3000 -e MCP_TRANSPORT=http financequery:mcp-ci
@@ -264,6 +397,8 @@ jobs:
   fuzz:
     name: Fuzz
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.fuzz == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -271,7 +406,7 @@ jobs:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           persist-credentials: false
-      - uses: dtolnay/rust-toolchain@29eef336d9b2848a0b548edc03f92a220660cdb8 # stable
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30 # stable
         with:
           toolchain: nightly
       - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1

@@ -1,3 +1,4 @@
+# syntax=docker/dockerfile:1
 # ==============================================================================
 # Build Stage: Compile Rust application
 # ==============================================================================
@@ -43,7 +44,14 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
     echo "fn main() {}" > finance-query-mcp/src/main.rs && \
     for b in indicators backtesting ticker tickers finance stream translation risk providers regression serde dataframe feeds sentiment; do \
         echo "fn main() {}" > benches/$b.rs; \
-    done && \
+    done
+
+# Cargo registry + target dir are cache mounts (not COPY'd layers), so a
+# trivial Cargo.lock churn (e.g. an internal workspace-member version bump)
+# can't invalidate previously-compiled deps — including translation-offline's
+# from-source CTranslate2 C++ build, by far the most expensive part of this.
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/build/target,sharing=locked \
     cargo build --release -p finance-query-server --features translation-offline && \
     rm -rf src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches
 
@@ -53,9 +61,14 @@ COPY server/src ./server/src
 COPY finance-query-derive/src ./finance-query-derive/src
 COPY benches ./benches
 
-# Build the actual application
-RUN touch src/lib.rs server/src/lib.rs server/src/main.rs && \
-    cargo auditable build --release -p finance-query-server --features translation-offline
+# Build the actual application. The compiled binary is copied out of the
+# target cache mount before it unmounts — mount contents aren't part of the
+# image layer, so a later `COPY --from=builder` can't reach into them.
+RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
+    --mount=type=cache,target=/build/target,sharing=locked \
+    touch src/lib.rs server/src/lib.rs server/src/main.rs && \
+    cargo auditable build --release -p finance-query-server --features translation-offline && \
+    cp target/release/finance-query-server /build/finance-query-server
 
 # ==============================================================================
 # Runtime Stage: Minimal runtime image
@@ -77,7 +90,7 @@ RUN useradd -m -u 1000 -s /bin/bash appuser
 
 WORKDIR /app
 
-COPY --from=builder /build/target/release/finance-query-server /app/finance-query-server
+COPY --from=builder /build/finance-query-server /app/finance-query-server
 
 # Pre-create the Hugging Face cache dir with appuser ownership so a named
 # volume mounted at HF_HOME inherits it. Small per-language opus-mt models

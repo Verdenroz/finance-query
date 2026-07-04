@@ -1,0 +1,37 @@
+docker:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "server/Dockerfile"
+          - "finance-query-mcp/Dockerfile"
+          - "v1/Dockerfile*"
+
+ci:
+  - changed-files:
+      - any-glob-to-any-file:
+          - ".github/workflows/**"
+          - ".pre-commit-config.yaml"
+          - "deny.toml"
+
+python:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "v1/**"
+          - "**/*.py"
+
+dependencies:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "Cargo.toml"
+          - "Cargo.lock"
+          - "**/Cargo.toml"
+          - "docs/requirements.txt"
+
+performance:
+  - changed-files:
+      - any-glob-to-any-file: "benches/**"
+
+documentation:
+  - changed-files:
+      - any-glob-to-any-file:
+          - "docs/**"
+          - "**/*.md"

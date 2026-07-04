@@ -1,0 +1,75 @@
+name: Prune Stale Caches
+
+# Runs once CI finishes on master (that run's cache generation is saved by
+# then) plus a weekly safety net for caches written by other master-only
+# workflows (regression/publish/deploy) not tied to CI's completion.
+# workflow_run only matches runs whose head_branch is literally "master",
+# which fork PR runs never have — no untrusted code is checked out either
+# way, this only calls the Actions cache API.
+on: # zizmor: ignore[dangerous-triggers]
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [master]
+  schedule:
+    - cron: "30 7 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  prune:
+    name: Prune superseded rust-cache generations
+    runs-on: ubuntu-latest
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            // Swatinem/rust-cache keys look like "v0-rust-<job>-<os>-<envhash>-<lockhash>".
+            // Every Cargo.lock change on master mints a brand-new <lockhash> and
+            // the previous generation becomes permanently unreachable (GitHub's
+            // restore-key fallback always prefers the newest match) — but nothing
+            // deletes the old one, so master's cache footprint only ever grows.
+            // Docker's buildkit-blob-*/index-* caches are content-addressed per
+            // layer, not per generation, so they're deliberately excluded here.
+            const RUST_CACHE = /^v0-rust-/;
+
+            const caches = await github.paginate(github.rest.actions.getActionsCacheList, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: "refs/heads/master",
+              per_page: 100,
+            });
+
+            const families = new Map();
+            for (const c of caches) {
+              if (!RUST_CACHE.test(c.key)) continue;
+              const family = c.key.replace(/-[0-9a-f]+$/, "");
+              if (!families.has(family)) families.set(family, []);
+              families.get(family).push(c);
+            }
+
+            let freedBytes = 0;
+            let deletedCount = 0;
+            for (const entries of families.values()) {
+              entries.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+              for (const stale of entries.slice(1)) {
+                await github.rest.actions.deleteActionsCacheById({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  cache_id: stale.id,
+                });
+                freedBytes += stale.size_in_bytes;
+                deletedCount++;
+                console.log(`Deleted stale cache "${stale.key}" (${(stale.size_in_bytes / 1024 / 1024).toFixed(0)} MB, created ${stale.created_at})`);
+              }
+            }
+            console.log(`Pruned ${deletedCount} stale cache(s), freed ${(freedBytes / 1024 / 1024 / 1024).toFixed(2)} GiB.`);
