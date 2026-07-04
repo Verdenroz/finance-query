@@ -5,10 +5,6 @@ docker:
           - "finance-query-mcp/Dockerfile"
           - "v1/Dockerfile*"
 
-github-actions:
-  - changed-files:
-      - any-glob-to-any-file: ".github/workflows/**"
-
 ci:
   - changed-files:
       - any-glob-to-any-file:
