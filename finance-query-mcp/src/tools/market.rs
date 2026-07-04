@@ -25,16 +25,22 @@ pub async fn get_market_summary(
         GQL_MARKET_SUMMARY_VALID_FIELDS,
         GQL_MARKET_SUMMARY_DEFAULT_FIELDS,
     );
-    let region_arg = region
-        .as_deref()
-        .filter(|r| !r.is_empty())
-        .map(|r| format!("region: \"{}\", ", crate::tools::gql::escape_gql_string(r)))
-        .unwrap_or_default();
-    let lang_arg = match crate::lang::normalize(lang.as_deref()) {
-        Some(l) => format!("lang: \"{}\"", l),
-        None => String::new(),
+    let mut args = Vec::new();
+    if let Some(r) = region.as_deref().filter(|r| !r.is_empty()) {
+        args.push(format!(
+            "region: \"{}\"",
+            crate::tools::gql::escape_gql_string(r)
+        ));
+    }
+    if let Some(l) = crate::lang::normalize(lang.as_deref()) {
+        args.push(format!("lang: \"{l}\""));
+    }
+    let args_str = if args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", args.join(", "))
     };
-    let query = format!("query {{ marketSummary({region_arg}{lang_arg}) {selection} }}");
+    let query = format!("query {{ marketSummary{args_str} {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "marketSummary");
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
@@ -73,9 +79,10 @@ pub async fn get_trending(
     );
     let region_arg = region
         .as_deref()
-        .map(|r| format!("region: \"{}\"", crate::tools::gql::escape_gql_string(r)))
+        .filter(|r| !r.is_empty())
+        .map(|r| format!("(region: \"{}\")", crate::tools::gql::escape_gql_string(r)))
         .unwrap_or_default();
-    let query = format!("query {{ trending({region_arg}) {selection} }}");
+    let query = format!("query {{ trending{region_arg} {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "trending");
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(

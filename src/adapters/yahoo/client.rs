@@ -873,14 +873,30 @@ impl YahooClient {
                 .unwrap_or_default()
         }
 
-        let calls = chain
-            .and_then(|c| c.get("calls"))
-            .map(map_contracts)
+        // Calls/puts are nested per-expiration under `options[]`, not directly
+        // on `result[0]` (only `expirationDates`/`strikes` live there).
+        let option_chains = chain
+            .and_then(|c| c.get("options"))
+            .and_then(|o| o.as_array());
+
+        let calls = option_chains
+            .map(|chains| {
+                chains
+                    .iter()
+                    .filter_map(|c| c.get("calls"))
+                    .flat_map(map_contracts)
+                    .collect()
+            })
             .unwrap_or_default();
 
-        let puts = chain
-            .and_then(|c| c.get("puts"))
-            .map(map_contracts)
+        let puts = option_chains
+            .map(|chains| {
+                chains
+                    .iter()
+                    .filter_map(|c| c.get("puts"))
+                    .flat_map(map_contracts)
+                    .collect()
+            })
             .unwrap_or_default();
 
         Ok(crate::providers::build_options(
