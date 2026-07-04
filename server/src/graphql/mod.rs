@@ -7,6 +7,7 @@
 
 pub mod error;
 pub mod fields;
+pub mod pagination;
 pub mod query;
 pub mod subscription;
 pub mod types;

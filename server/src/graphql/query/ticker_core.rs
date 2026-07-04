@@ -6,6 +6,7 @@ use async_graphql::{Context, Object, Result};
 use super::{build_gql_options, resolve_gql_lang};
 use crate::AppState;
 use crate::graphql::error::to_gql_error;
+use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
     chart::GqlChart,
     enums::{GqlFrequency, GqlInterval, GqlStatementType, GqlTimeRange, GqlValueFormat},
@@ -85,14 +86,21 @@ impl TickerCoreQuery {
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
+    #[allow(clippy::too_many_arguments)]
     async fn news(
         &self,
         ctx: &Context<'_>,
-        #[graphql(default = 10)] count: u32,
+        #[graphql(default = 10, desc = "Overall cap on articles fetched")] count: u32,
         #[graphql(desc = "Target language for translated text fields (BCP 47)")] lang: Option<
             String,
         >,
-    ) -> Result<Vec<GqlNews>> {
+        #[graphql(
+            desc = "Max entries per page; omitted = every fetched article (up to `count`) in one page"
+        )]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlNews>> {
         let state = ctx.data::<AppState>()?;
         let lang = resolve_gql_lang(lang.as_deref());
         let json = crate::services::news::get_news(
@@ -103,7 +111,9 @@ impl TickerCoreQuery {
         )
         .await
         .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        let entries: Vec<GqlNews> =
+            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        pagination::paginate(entries, first, after).await
     }
 
     async fn options(&self, ctx: &Context<'_>, date: Option<i64>) -> Result<GqlOptions> {

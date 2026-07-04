@@ -4,7 +4,8 @@
 //! nested sub-types.
 
 use super::batch::GqlBatchError;
-use async_graphql::SimpleObject;
+use crate::graphql::pagination::{self, Page};
+use async_graphql::{ComplexObject, Result, SimpleObject};
 use serde::Deserialize;
 
 // ── Nested sub-types ───────────────────────────────────────────────────────
@@ -186,8 +187,23 @@ pub struct GqlSymbolIndicators {
 /// Result of the batch `indicatorsBatch` root field: successfully computed
 /// indicators plus any per-symbol fetch errors.
 #[derive(SimpleObject, Debug, Clone)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 pub struct GqlIndicatorsBatch {
+    #[graphql(skip)]
     pub indicators: Vec<GqlSymbolIndicators>,
     pub errors: Vec<GqlBatchError>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlIndicatorsBatch {
+    /// Successfully computed per-symbol indicators.
+    async fn indicators(
+        &self,
+        #[graphql(desc = "Max symbols to return; omitted = every matching symbol in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlSymbolIndicators>> {
+        pagination::paginate(self.indicators.clone(), first, after).await
+    }
 }

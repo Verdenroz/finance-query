@@ -442,8 +442,14 @@ pub const GQL_EXCHANGE_VALID_FIELDS: &[&str] =
 
 // ── Screeners (predefined + custom) ─────────────────────────────────────────
 
-pub const GQL_SCREENER_RESULTS_VALID_FIELDS: &[&str] =
-    &["quotes", "type", "description", "lastUpdated", "total"];
+pub const GQL_SCREENER_RESULTS_VALID_FIELDS: &[&str] = &[
+    "quotes",
+    "type",
+    "description",
+    "lastUpdated",
+    "total",
+    "pageInfo",
+];
 
 /// Full field set for a single `GqlScreenerQuote` — always expanded whole
 /// when `quotes` is selected (consistent with sector/industry/search: no
@@ -465,8 +471,13 @@ pub const GQL_SCREENER_QUOTE_FIELDS: &str = "{ \
     earningsTimestamp earningsTimestampStart earningsTimestampEnd currency \
 }";
 
-pub const SCREENER_RESULTS_COMPOSITE_FIELDS: &[(&str, &str)] =
-    &[("quotes", GQL_SCREENER_QUOTE_FIELDS)];
+pub const SCREENER_RESULTS_COMPOSITE_FIELDS: &[(&str, &str)] = &[
+    ("quotes", GQL_SCREENER_QUOTE_FIELDS),
+    (
+        "pageInfo",
+        "{ hasNextPage hasPreviousPage startCursor endCursor }",
+    ),
+];
 
 // ── Search / Lookup ──────────────────────────────────────────────────────────
 
@@ -679,6 +690,24 @@ pub const GQL_EDGAR_FACTS_VALID_FIELDS: &[&str] = &[
 ];
 pub const EDGAR_FACTS_COMPOSITE_FIELDS: &[(&str, &str)] =
     &[("dataPoints", "{ end val fy fp form }")];
+
+/// Valid GraphQL field names for `GqlEdgarSubmissions` (top-level `edgarSubmissions` field).
+pub const GQL_EDGAR_SUBMISSIONS_VALID_FIELDS: &[&str] = &[
+    "cik",
+    "name",
+    "tickers",
+    "exchanges",
+    "sic",
+    "sicDescription",
+    "fiscalYearEnd",
+    "category",
+    "filings",
+];
+/// `filings` is composite (`GqlEdgarFiling`) and needs its own nested sub-selection.
+pub const EDGAR_SUBMISSIONS_COMPOSITE_FIELDS: &[(&str, &str)] = &[(
+    "filings",
+    "{ accessionNumber filingDate reportDate form size primaryDocument primaryDocDescription }",
+)];
 
 // ── Transcripts ──────────────────────────────────────────────────────────────
 

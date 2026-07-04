@@ -1,6 +1,7 @@
 //! GraphQL types for FRED economic series and US Treasury yield curve data.
 
-use async_graphql::SimpleObject;
+use crate::graphql::pagination::{self, Page};
+use async_graphql::{ComplexObject, Result, SimpleObject};
 use serde::Deserialize;
 
 /// A single observation in a FRED data series.
@@ -14,11 +15,28 @@ pub struct GqlMacroObservation {
 
 /// A FRED macro-economic time series with all its observations.
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(default)]
 pub struct GqlMacroSeries {
     pub id: String,
+    #[graphql(skip)]
     pub observations: Vec<GqlMacroObservation>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlMacroSeries {
+    /// Time series observations.
+    async fn observations(
+        &self,
+        #[graphql(
+            desc = "Max observations to return; omitted = every matching observation in one page"
+        )]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlMacroObservation>> {
+        pagination::paginate(self.observations.clone(), first, after).await
+    }
 }
 
 /// One day of US Treasury yield curve rates. Maturities with no published

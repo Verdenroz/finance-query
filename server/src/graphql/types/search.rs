@@ -1,6 +1,7 @@
 //! GraphQL types for symbol/news search and type-filtered lookup.
 
-use async_graphql::{Json, SimpleObject};
+use crate::graphql::pagination::{self, Page};
+use async_graphql::{ComplexObject, Json, Result, SimpleObject};
 use serde::Deserialize;
 
 /// A quote/symbol result from `search`.
@@ -58,14 +59,29 @@ pub struct GqlResearchReport {
 
 /// Combined search results: quotes, news, and research reports.
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlSearchResults {
     pub count: Option<i32>,
+    #[graphql(skip)]
     pub quotes: Vec<GqlSearchQuote>,
     pub news: Vec<GqlSearchNews>,
     pub research_reports: Vec<GqlResearchReport>,
     pub total_time: Option<i64>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlSearchResults {
+    /// Quote/symbol results.
+    async fn quotes(
+        &self,
+        #[graphql(desc = "Max quotes to return; omitted = every matching quote in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlSearchQuote>> {
+        pagination::paginate(self.quotes.clone(), first, after).await
+    }
 }
 
 /// A quote/document result from `lookup`.

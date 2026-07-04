@@ -5,6 +5,7 @@ use async_graphql::{Context, Object, Result};
 
 use crate::AppState;
 use crate::graphql::error::to_gql_error;
+use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
     calendar::GqlCalendarEvent,
     crypto::GqlCoinQuote,
@@ -24,13 +25,21 @@ impl RootMetadataQuery {
         &self,
         ctx: &Context<'_>,
         #[graphql(default_with = "\"usd\".to_string()")] vs_currency: String,
-        #[graphql(default = 50)] count: u32,
-    ) -> Result<Vec<GqlCoinQuote>> {
+        #[graphql(default = 50, desc = "Overall cap on coins fetched")] count: u32,
+        #[graphql(
+            desc = "Max coins per page; omitted = every fetched coin (up to `count`) in one page"
+        )]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlCoinQuote>> {
         let state = ctx.data::<AppState>()?;
         let json = crate::services::crypto::get_coins(&state.cache, &vs_currency, count as usize)
             .await
             .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        let coins: Vec<GqlCoinQuote> =
+            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        pagination::paginate(coins, first, after).await
     }
 
     /// A single cryptocurrency quote by CoinGecko ID (e.g. "bitcoin").
@@ -138,7 +147,11 @@ impl RootMetadataQuery {
         &self,
         ctx: &Context<'_>,
         #[graphql(desc = "Calendar year (default: current year)")] year: Option<i32>,
-    ) -> Result<Vec<GqlTreasuryYield>> {
+        #[graphql(desc = "Max rows to return; omitted = every matching row in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlTreasuryYield>> {
         let state = ctx.data::<AppState>()?;
         let year = year.unwrap_or_else(|| {
             chrono::Utc::now()
@@ -150,7 +163,9 @@ impl RootMetadataQuery {
         let json = crate::services::fred::get_treasury_yields(&state.cache, year as u32)
             .await
             .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        let rows: Vec<GqlTreasuryYield> =
+            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        pagination::paginate(rows, first, after).await
     }
 
     /// SEC EDGAR full-text search.
@@ -197,14 +212,22 @@ impl RootMetadataQuery {
                     .collect()
             })
             .unwrap_or_default();
+        let total_hits = results
+            .hits
+            .as_ref()
+            .and_then(|h| h.total.as_ref())
+            .and_then(|t| t.value)
+            .map(|v| v as i64);
+        let effective_from = from.map(|v| v.max(0) as usize).unwrap_or(0);
+        let effective_size = hits.len();
         Ok(GqlEdgarSearchResults {
-            total_hits: results
-                .hits
-                .as_ref()
-                .and_then(|h| h.total.as_ref())
-                .and_then(|t| t.value)
-                .map(|v| v as i64),
+            total_hits,
             hits,
+            page_info: Some(crate::graphql::pagination::offset_page_info(
+                effective_from,
+                effective_size,
+                total_hits,
+            )),
         })
     }
 }

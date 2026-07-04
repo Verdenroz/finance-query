@@ -1,7 +1,8 @@
 //! GraphQL types for corporate events: dividends, splits, capital gains.
 
 use super::batch::GqlBatchError;
-use async_graphql::SimpleObject;
+use crate::graphql::pagination::{self, Page};
+use async_graphql::{ComplexObject, Result, SimpleObject};
 use serde::Deserialize;
 
 /// A single dividend payment.
@@ -45,11 +46,26 @@ pub struct GqlDividendAnalytics {
 
 /// Dividends response: payment history + computed analytics.
 #[derive(SimpleObject, Deserialize, Debug, Clone)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(rename_all = "camelCase")]
 pub struct GqlDividends {
+    #[graphql(skip)]
     pub dividends: Vec<GqlDividend>,
     pub analytics: GqlDividendAnalytics,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlDividends {
+    /// Dividend payment history.
+    async fn dividends(
+        &self,
+        #[graphql(desc = "Max entries to return; omitted = every matching entry in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlDividend>> {
+        pagination::paginate(self.dividends.clone(), first, after).await
+    }
 }
 
 /// Wrapper for batch dividends: `{symbol, dividends}`. `dividends` is a plain
@@ -66,10 +82,25 @@ pub struct GqlSymbolDividends {
 /// Result of the batch `dividendsBatch` root field: successfully fetched
 /// dividend histories plus any per-symbol fetch errors.
 #[derive(SimpleObject, Debug, Clone)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 pub struct GqlDividendsBatch {
+    #[graphql(skip)]
     pub dividends: Vec<GqlSymbolDividends>,
     pub errors: Vec<GqlBatchError>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlDividendsBatch {
+    /// Successfully fetched per-symbol dividend histories.
+    async fn dividends(
+        &self,
+        #[graphql(desc = "Max symbols to return; omitted = every matching symbol in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlSymbolDividends>> {
+        pagination::paginate(self.dividends.clone(), first, after).await
+    }
 }
 
 /// Wrapper for batch splits: `{symbol, splits}`.

@@ -163,6 +163,13 @@ impl RootDiscoveryQuery {
         let json =
             serde_json::to_value(&results).map_err(|e| async_graphql::Error::new(e.to_string()))?;
         let json = finance_query::ValueFormat::from(format).transform(json);
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        let mut gql_results: GqlScreenerResults =
+            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        gql_results.page_info = Some(crate::graphql::pagination::offset_page_info(
+            input.offset as usize,
+            input.size as usize,
+            gql_results.total,
+        ));
+        Ok(gql_results)
     }
 }

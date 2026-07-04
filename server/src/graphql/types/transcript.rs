@@ -1,6 +1,7 @@
 //! GraphQL types for earnings call transcripts.
 
-use async_graphql::SimpleObject;
+use crate::graphql::pagination::{self, Page};
+use async_graphql::{ComplexObject, Result, SimpleObject};
 use serde::Deserialize;
 
 // ── Top-level wrapper (from get_transcripts call) ──────────────────────────
@@ -56,12 +57,29 @@ pub struct GqlSpeakerData {
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlTranscriptData {
     pub number_of_speakers: i32,
     pub text: String,
+    #[graphql(skip)]
     pub paragraphs: Vec<GqlParagraph>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlTranscriptData {
+    /// Per-paragraph breakdown (speaker, start/end timestamp, text). A full
+    /// call's `text` blob can be tens of thousands of tokens — paginate
+    /// through paragraphs instead when only part of the call is needed.
+    async fn paragraphs(
+        &self,
+        #[graphql(desc = "Max paragraphs to return; omitted = every paragraph in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlParagraph>> {
+        pagination::paginate(self.paragraphs.clone(), first, after).await
+    }
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]

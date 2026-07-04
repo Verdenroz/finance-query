@@ -5,7 +5,8 @@
 //! without any manual field-mapping.
 
 use super::batch::GqlBatchError;
-use async_graphql::{Json, SimpleObject};
+use crate::graphql::pagination::{self, Page};
+use async_graphql::{ComplexObject, Json, Result, SimpleObject};
 use serde::Deserialize;
 
 /// Full quote data for a stock / ETF / fund, mirroring `finance_query::Quote`.
@@ -228,8 +229,23 @@ pub struct GqlQuote {
 /// Result of the batch `quotes` root field: successfully fetched quotes plus
 /// any per-symbol fetch errors.
 #[derive(SimpleObject, Debug, Clone)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 pub struct GqlQuotesBatch {
+    #[graphql(skip)]
     pub quotes: Vec<GqlQuote>,
     pub errors: Vec<GqlBatchError>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlQuotesBatch {
+    /// Successfully fetched quotes.
+    async fn quotes(
+        &self,
+        #[graphql(desc = "Max quotes to return; omitted = every matching quote in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlQuote>> {
+        pagination::paginate(self.quotes.clone(), first, after).await
+    }
 }

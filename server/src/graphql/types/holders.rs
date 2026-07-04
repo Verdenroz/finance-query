@@ -1,6 +1,7 @@
 //! GraphQL types for holders / ownership data.
 
-use async_graphql::{Json, SimpleObject};
+use crate::graphql::pagination::{self, Page};
+use async_graphql::{ComplexObject, Json, Object, Result, SimpleObject};
 use serde::Deserialize;
 
 // ── Major Holders Breakdown ────────────────────────────────────────────────
@@ -19,11 +20,26 @@ pub struct GqlMajorHoldersBreakdown {
 // ── Institution Ownership ───────────────────────────────────────────────────
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlInstitutionOwnership {
     pub max_age: Option<i64>,
+    #[graphql(skip)]
     pub ownership_list: Vec<GqlInstitutionOwner>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlInstitutionOwnership {
+    /// Institutional ownership positions.
+    async fn ownership_list(
+        &self,
+        #[graphql(desc = "Max entries to return; omitted = every matching entry in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlInstitutionOwner>> {
+        pagination::paginate(self.ownership_list.clone(), first, after).await
+    }
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
@@ -42,11 +58,26 @@ pub struct GqlInstitutionOwner {
 // ── Fund Ownership ──────────────────────────────────────────────────────────
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlFundOwnership {
     pub max_age: Option<i64>,
+    #[graphql(skip)]
     pub ownership_list: Vec<GqlFundOwner>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlFundOwnership {
+    /// Mutual fund ownership positions.
+    async fn ownership_list(
+        &self,
+        #[graphql(desc = "Max entries to return; omitted = every matching entry in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlFundOwner>> {
+        pagination::paginate(self.ownership_list.clone(), first, after).await
+    }
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
@@ -65,11 +96,26 @@ pub struct GqlFundOwner {
 // ── Insider Transactions ────────────────────────────────────────────────────
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
-#[graphql(rename_fields = "camelCase")]
+#[graphql(rename_fields = "camelCase", complex)]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlInsiderTransactions {
     pub max_age: Option<i64>,
+    #[graphql(skip)]
     pub transactions: Vec<GqlInsiderTransaction>,
+}
+
+#[ComplexObject(rename_fields = "camelCase")]
+impl GqlInsiderTransactions {
+    /// Insider transaction history.
+    async fn transactions(
+        &self,
+        #[graphql(desc = "Max entries to return; omitted = every matching entry in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlInsiderTransaction>> {
+        pagination::paginate(self.transactions.clone(), first, after).await
+    }
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
@@ -110,11 +156,27 @@ pub struct GqlNetSharePurchaseActivity {
 
 // ── Insider Holders (insider roster) ────────────────────────────────────────
 
-#[derive(SimpleObject, Deserialize, Debug, Clone, Default)]
-#[graphql(rename_fields = "camelCase")]
+/// Not a `SimpleObject`: its only field is paginated, so a plain `#[Object]`
+/// resolver replaces what would otherwise be a `SimpleObject` with zero
+/// remaining (non-skipped) fields.
+#[derive(Deserialize, Debug, Clone, Default)]
 #[serde(rename_all = "camelCase", default)]
 pub struct GqlInsiderHolders {
     pub holders: Vec<GqlInsiderHolder>,
+}
+
+#[Object(rename_fields = "camelCase")]
+impl GqlInsiderHolders {
+    /// Insider roster.
+    async fn holders(
+        &self,
+        #[graphql(desc = "Max entries to return; omitted = every matching entry in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlInsiderHolder>> {
+        pagination::paginate(self.holders.clone(), first, after).await
+    }
 }
 
 #[derive(SimpleObject, Deserialize, Debug, Clone, Default)]

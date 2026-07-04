@@ -6,6 +6,7 @@ use async_graphql::{Context, Object, Result};
 use super::resolve_gql_lang;
 use crate::AppState;
 use crate::graphql::error::to_gql_error;
+use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
     enums::{GqlIndicesRegion, GqlValueFormat},
     feeds::GqlFeedEntry,
@@ -74,21 +75,30 @@ impl RootMarketQuery {
     }
 
     /// General market news.
+    #[allow(clippy::too_many_arguments)]
     async fn news(
         &self,
         ctx: &Context<'_>,
-        #[graphql(default = 10)] count: u32,
+        #[graphql(default = 10, desc = "Overall cap on articles fetched")] count: u32,
         #[graphql(desc = "Target language for translated text fields (BCP 47)")] lang: Option<
             String,
         >,
-    ) -> Result<Vec<GqlNews>> {
+        #[graphql(
+            desc = "Max entries per page; omitted = every fetched article (up to `count`) in one page"
+        )]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlNews>> {
         let state = ctx.data::<AppState>()?;
         let lang = resolve_gql_lang(lang.as_deref());
         let json =
             crate::services::news::get_general_news(&state.cache, count as usize, lang.as_deref())
                 .await
                 .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        let entries: Vec<GqlNews> =
+            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        pagination::paginate(entries, first, after).await
     }
 
     /// RSS/Atom feed entries aggregated from one or more named financial
@@ -102,7 +112,11 @@ impl RootMarketQuery {
         sources: Option<Vec<String>>,
         #[graphql(desc = "SEC form type for the sec-filings source (default: \"10-K\")")]
         form_type: Option<String>,
-    ) -> Result<Vec<GqlFeedEntry>> {
+        #[graphql(desc = "Max entries to return; omitted = every matching entry in one page")]
+        first: Option<i32>,
+        #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
+        after: Option<String>,
+    ) -> Result<Page<GqlFeedEntry>> {
         let state = ctx.data::<AppState>()?;
         let source_key = sources
             .as_deref()
@@ -119,7 +133,9 @@ impl RootMarketQuery {
         )
         .await
         .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        let entries: Vec<GqlFeedEntry> =
+            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        pagination::paginate(entries, first, after).await
     }
 
     /// World market indices, optionally filtered by region.

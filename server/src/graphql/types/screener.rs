@@ -5,6 +5,7 @@
 //! first, so these are exposed as opaque `Json<serde_json::Value>` here
 //! (scalar in raw mode, string in fmt mode, full object in both mode).
 
+use crate::graphql::pagination::GqlPageInfo;
 use async_graphql::{InputObject, Json, SimpleObject};
 use serde::Deserialize;
 
@@ -90,6 +91,10 @@ pub struct GqlScreenerResults {
     pub description: Option<String>,
     pub last_updated: Option<i64>,
     pub total: Option<i64>,
+    /// Present only for `customScreener` (predefined `screener` has no
+    /// underlying offset support upstream, so no pagination metadata to report).
+    #[serde(skip)]
+    pub page_info: Option<GqlPageInfo>,
 }
 
 /// A single filter condition for `customScreener`. `field`/`operator` are
