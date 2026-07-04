@@ -253,7 +253,7 @@ pub const GQL_QUOTE_VALID_FIELDS: &[&str] = &[
 ];
 
 /// Valid GraphQL field names for `GqlChart` (top-level only).
-pub const GQL_CHART_VALID_FIELDS: &[&str] = &["symbol", "meta", "candles"];
+pub const GQL_CHART_VALID_FIELDS: &[&str] = &["symbol", "meta", "candles", "interval", "range"];
 
 /// Valid GraphQL field names for `GqlChartMeta` (sub-fields of `meta`).
 pub const GQL_CHART_META_VALID_FIELDS: &[&str] = &[
@@ -303,7 +303,10 @@ pub const GQL_SPARK_VALID_FIELDS: &[&str] = &[
 ];
 
 /// Valid GraphQL field names for `GqlNews`.
-pub const GQL_NEWS_VALID_FIELDS: &[&str] = &["title", "link", "source", "img", "time"];
+pub const GQL_NEWS_VALID_FIELDS: &[&str] = &["title", "link", "source", "img", "time", "sentiment"];
+
+/// `sentiment` is composite (`GqlSentiment`) and needs its own nested sub-selection.
+pub const NEWS_COMPOSITE_FIELDS: &[(&str, &str)] = &[("sentiment", "{ label score confidence }")];
 
 /// Valid GraphQL field names for `GqlFeedEntry` (top-level `feeds` root field).
 pub const GQL_FEEDS_VALID_FIELDS: &[&str] = &["title", "url", "published", "summary", "source"];
@@ -377,10 +380,15 @@ pub const CALENDAR_EVENT_UNION_SELECTION: &str = "{ \
 pub const GQL_MARKET_SUMMARY_VALID_FIELDS: &[&str] = &[
     "symbol",
     "shortName",
+    "exchange",
     "fullExchangeName",
+    "quoteType",
+    "marketState",
     "regularMarketPrice",
     "regularMarketChange",
     "regularMarketChangePercent",
+    "regularMarketPreviousClose",
+    "regularMarketTime",
 ];
 
 /// Valid fields for `GqlFearAndGreed`.
@@ -701,6 +709,12 @@ pub const GQL_EDGAR_SUBMISSIONS_VALID_FIELDS: &[&str] = &[
     "sicDescription",
     "fiscalYearEnd",
     "category",
+    "ein",
+    "entityType",
+    "stateOfIncorporation",
+    "website",
+    "insiderTransactionForOwnerExists",
+    "insiderTransactionForIssuerExists",
     "filings",
 ];
 /// `filings` is composite (`GqlEdgarFiling`) and needs its own nested sub-selection.

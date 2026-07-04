@@ -66,8 +66,8 @@ pub(crate) struct AnalysisQuery {
 }
 
 /// (GraphQL field name -> (VALID, composite sub-field map)) per analysis type.
-/// The first element must stay in sync with every `services::analysis::AnalysisType`
-/// variant and its corresponding GraphQL field.
+/// The first element must stay in sync with every `services::analysis` per-type
+/// fn and its corresponding GraphQL field.
 const ANALYSIS_TYPE_REST_SPECS: &[RestTypeSpec] = &[
     (
         "recommendations",

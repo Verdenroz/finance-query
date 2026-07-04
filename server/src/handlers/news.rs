@@ -6,14 +6,17 @@ use axum::{
 };
 use finance_query_server::graphql::{
     self,
-    fields::{GQL_NEWS_VALID_FIELDS, escape_gql_string, unwrap_field, unwrap_ticker_field},
+    fields::{
+        GQL_NEWS_VALID_FIELDS, NEWS_COMPOSITE_FIELDS, escape_gql_string, unwrap_field,
+        unwrap_ticker_field,
+    },
     pagination::build_connection_selection,
 };
 use finance_query_server::lang;
 use serde::Deserialize;
 use tracing::info;
 
-use super::gql_bridge::{build_rest_selection, execute_gql_rest, unwrap_connection};
+use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest, unwrap_connection};
 
 fn default_news_count() -> u32 {
     10
@@ -61,7 +64,11 @@ pub(crate) async fn get_general_news(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
-    let inner_selection = build_rest_selection(params.fields.as_deref(), GQL_NEWS_VALID_FIELDS);
+    let inner_selection = build_rest_composite_selection(
+        params.fields.as_deref(),
+        GQL_NEWS_VALID_FIELDS,
+        NEWS_COMPOSITE_FIELDS,
+    );
     let selection = build_connection_selection(&inner_selection);
     let lang_arg = match &lang {
         Some(l) => format!(", lang: \"{}\"", l),
@@ -94,7 +101,11 @@ pub(crate) async fn get_news(
     headers: HeaderMap,
 ) -> impl IntoResponse {
     let lang = lang::resolve_lang(params.lang.as_deref(), &headers);
-    let inner_selection = build_rest_selection(params.fields.as_deref(), GQL_NEWS_VALID_FIELDS);
+    let inner_selection = build_rest_composite_selection(
+        params.fields.as_deref(),
+        GQL_NEWS_VALID_FIELDS,
+        NEWS_COMPOSITE_FIELDS,
+    );
     let selection = build_connection_selection(&inner_selection);
     let lang_arg = match &lang {
         Some(l) => format!(", lang: \"{}\"", l),

@@ -3,8 +3,8 @@ use rmcp::{ErrorData as McpError, model::CallToolResult};
 
 use crate::error::ser_err;
 use crate::tools::gql::{
-    DEFAULT_MCP_PAGE_SIZE, GQL_NEWS_DEFAULT_FIELDS, GQL_NEWS_VALID_FIELDS,
-    build_connection_selection, build_selection_or_default, escape_gql_string, execute_query,
+    DEFAULT_MCP_PAGE_SIZE, GQL_NEWS_DEFAULT_FIELDS, GQL_NEWS_VALID_FIELDS, NEWS_COMPOSITE_FIELDS,
+    build_connection_selection, build_type_spec_selection, escape_gql_string, execute_query,
     parse_fields, unwrap_field, unwrap_ticker_field, wrap_connection,
 };
 
@@ -18,10 +18,11 @@ pub async fn get_news(
 ) -> Result<CallToolResult, McpError> {
     let field_list = parse_fields(fields);
 
-    let inner_selection = build_selection_or_default(
+    let inner_selection = build_type_spec_selection(
         field_list.as_deref(),
         GQL_NEWS_VALID_FIELDS,
         GQL_NEWS_DEFAULT_FIELDS,
+        NEWS_COMPOSITE_FIELDS,
     );
     let selection = build_connection_selection(&inner_selection);
 

@@ -45,7 +45,7 @@ fn holder_paginated_field(key: &str) -> Option<&'static str> {
 }
 
 /// Per-holder-type spec. The first element must stay in sync with every
-/// `services::holders::HolderType` variant and its corresponding GraphQL field.
+/// `services::holders` per-type fn and its corresponding GraphQL field.
 const HOLDER_TYPE_REST_SPECS: &[RestTypeSpec] = &[
     ("major", "majorHolders", GQL_MAJOR_HOLDERS_VALID_FIELDS, &[]),
     (

@@ -313,8 +313,11 @@ pub(crate) fn build_rest_chart_selection(
         return top_selection;
     }
     let mut sel = String::from("{ ");
-    if top_selection.contains("symbol") {
-        sel.push_str("symbol ");
+    for f in ["symbol", "interval", "range"] {
+        if top_selection.contains(f) {
+            sel.push_str(f);
+            sel.push(' ');
+        }
     }
     if want_meta {
         sel.push_str("meta ");

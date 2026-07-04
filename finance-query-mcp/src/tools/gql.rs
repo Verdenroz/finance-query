@@ -32,9 +32,10 @@ pub use finance_query_server::graphql::fields::{
     GQL_SPARK_VALID_FIELDS, GQL_SPLIT_VALID_FIELDS, GQL_TRANSCRIPT_VALID_FIELDS,
     GQL_TREASURY_YIELD_VALID_FIELDS, GQL_TRENDING_VALID_FIELDS, INDICATOR_COMPOSITE_FIELDS,
     INDUSTRY_COMPOSITE_FIELDS, LOOKUP_RESULTS_COMPOSITE_FIELDS, MACRO_SERIES_COMPOSITE_FIELDS,
-    MARKET_HOURS_COMPOSITE_FIELDS, OPTIONS_COMPOSITE_FIELDS, RECOMMENDATION_COMPOSITE_FIELDS,
-    SCREENER_RESULTS_COMPOSITE_FIELDS, SEARCH_RESULTS_COMPOSITE_FIELDS, SECTOR_COMPOSITE_FIELDS,
-    escape_gql_string, gql_string_list_literal, unwrap_field, unwrap_ticker_field,
+    MARKET_HOURS_COMPOSITE_FIELDS, NEWS_COMPOSITE_FIELDS, OPTIONS_COMPOSITE_FIELDS,
+    RECOMMENDATION_COMPOSITE_FIELDS, SCREENER_RESULTS_COMPOSITE_FIELDS,
+    SEARCH_RESULTS_COMPOSITE_FIELDS, SECTOR_COMPOSITE_FIELDS, escape_gql_string,
+    gql_string_list_literal, unwrap_field, unwrap_ticker_field,
 };
 pub use finance_query_server::graphql::pagination::{
     build_connection_selection, build_paginated_composite_selection, connection_nodes,
@@ -112,7 +113,7 @@ pub const GQL_CANDLE_DEFAULT_FIELDS: &[&str] =
     &["timestamp", "open", "high", "low", "close", "volume"];
 
 /// Curated default field set for MCP `get_news` when `fields` is omitted.
-pub const GQL_NEWS_DEFAULT_FIELDS: &[&str] = &["title", "link", "source", "time"];
+pub const GQL_NEWS_DEFAULT_FIELDS: &[&str] = &["title", "link", "source", "time", "sentiment"];
 
 /// Curated default field set for MCP `get_feeds` when `fields` is omitted.
 pub const GQL_FEEDS_DEFAULT_FIELDS: &[&str] = &["title", "url", "published", "source"];

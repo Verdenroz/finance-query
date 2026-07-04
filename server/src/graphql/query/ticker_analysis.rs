@@ -23,53 +23,33 @@ pub(super) struct TickerAnalysisQuery {
 impl TickerAnalysisQuery {
     async fn recommendation_trend(&self, ctx: &Context<'_>) -> Result<GqlRecommendationTrend> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::analysis::get_analysis(
-            &state.cache,
-            &self.symbol,
-            crate::services::analysis::AnalysisType::Recommendations,
-            "recommendations",
-        )
-        .await
-        .map_err(to_gql_error)?;
+        let json = crate::services::analysis::get_recommendation_trend(&state.cache, &self.symbol)
+            .await
+            .map_err(to_gql_error)?;
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     async fn grading_history(&self, ctx: &Context<'_>) -> Result<GqlUpgradeDowngradeHistory> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::analysis::get_analysis(
-            &state.cache,
-            &self.symbol,
-            crate::services::analysis::AnalysisType::UpgradesDowngrades,
-            "upgrades-downgrades",
-        )
-        .await
-        .map_err(to_gql_error)?;
+        let json = crate::services::analysis::get_grading_history(&state.cache, &self.symbol)
+            .await
+            .map_err(to_gql_error)?;
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     async fn earnings_estimate(&self, ctx: &Context<'_>) -> Result<GqlEarningsTrend> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::analysis::get_analysis(
-            &state.cache,
-            &self.symbol,
-            crate::services::analysis::AnalysisType::EarningsEstimate,
-            "earnings-estimate",
-        )
-        .await
-        .map_err(to_gql_error)?;
+        let json = crate::services::analysis::get_earnings_trend(&state.cache, &self.symbol)
+            .await
+            .map_err(to_gql_error)?;
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     async fn earnings_history(&self, ctx: &Context<'_>) -> Result<GqlEarningsHistory> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::analysis::get_analysis(
-            &state.cache,
-            &self.symbol,
-            crate::services::analysis::AnalysisType::EarningsHistory,
-            "earnings-history",
-        )
-        .await
-        .map_err(to_gql_error)?;
+        let json = crate::services::analysis::get_earnings_history(&state.cache, &self.symbol)
+            .await
+            .map_err(to_gql_error)?;
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
@@ -188,6 +168,13 @@ impl TickerAnalysisQuery {
             sic_description: submissions.sic_description,
             fiscal_year_end: submissions.fiscal_year_end,
             category: submissions.category,
+            ein: submissions.ein,
+            entity_type: submissions.entity_type,
+            state_of_incorporation: submissions.state_of_incorporation,
+            website: submissions.website,
+            insider_transaction_for_owner_exists: submissions.insider_transaction_for_owner_exists,
+            insider_transaction_for_issuer_exists: submissions
+                .insider_transaction_for_issuer_exists,
             filings,
         })
     }

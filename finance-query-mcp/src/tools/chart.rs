@@ -46,8 +46,11 @@ fn build_chart_selection(
 
     // Rebuild with nested sub-selections.
     let mut sel = String::from("{ ");
-    if chosen.contains(&"symbol") {
-        sel.push_str("symbol ");
+    for f in ["symbol", "interval", "range"] {
+        if chosen.contains(&f) {
+            sel.push_str(f);
+            sel.push(' ');
+        }
     }
     if want_meta {
         let meta_sel = build_selection_or_default(

@@ -60,6 +60,12 @@ pub struct GqlEdgarSubmissions {
     pub sic_description: Option<String>,
     pub fiscal_year_end: Option<String>,
     pub category: Option<String>,
+    pub ein: Option<String>,
+    pub entity_type: Option<String>,
+    pub state_of_incorporation: Option<String>,
+    pub website: Option<String>,
+    pub insider_transaction_for_owner_exists: Option<u8>,
+    pub insider_transaction_for_issuer_exists: Option<u8>,
     #[graphql(skip)]
     pub filings: Vec<GqlEdgarFiling>,
 }

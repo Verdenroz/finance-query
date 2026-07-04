@@ -31,8 +31,13 @@ pub struct GqlFearAndGreed {
 pub struct GqlMarketSummaryQuote {
     pub symbol: Option<String>,
     pub short_name: Option<String>,
+    pub exchange: Option<String>,
     pub full_exchange_name: Option<String>,
+    pub quote_type: Option<String>,
+    pub market_state: Option<String>,
     pub regular_market_price: Option<Json<serde_json::Value>>,
     pub regular_market_change: Option<Json<serde_json::Value>>,
     pub regular_market_change_percent: Option<Json<serde_json::Value>>,
+    pub regular_market_previous_close: Option<Json<serde_json::Value>>,
+    pub regular_market_time: Option<Json<serde_json::Value>>,
 }

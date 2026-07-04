@@ -57,6 +57,10 @@ pub struct GqlChart {
     pub meta: GqlChartMeta,
     #[graphql(skip)]
     pub candles: Vec<GqlCandle>,
+    /// Time interval used for this chart (e.g. "1d").
+    pub interval: Option<String>,
+    /// Time range used for this chart (e.g. "1mo").
+    pub range: Option<String>,
 }
 
 #[ComplexObject(rename_fields = "camelCase")]
