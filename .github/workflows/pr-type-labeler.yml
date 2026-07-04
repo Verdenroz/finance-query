@@ -1,0 +1,54 @@
+name: PR Type Labeler
+
+# pull_request_target: only reads the PR body via the API and adds labels —
+# no checkout of PR code — so it's safe to run with write perms on fork PRs.
+on: # zizmor: ignore[dangerous-triggers]
+  pull_request_target:
+    types: [opened, edited, synchronize]
+    branches: [master]
+
+permissions:
+  contents: read
+
+jobs:
+  label:
+    name: Label by Type of Change
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
+        with:
+          script: |
+            // Maps the PR template's "Type of Change" checkboxes to labels.
+            const CHECKBOX_LABELS = [
+              ["Bug fix", "bug"],
+              ["New feature", "enhancement"],
+              ["Breaking change", "breaking-change"],
+              ["Documentation update", "documentation"],
+              ["Refactoring", "refactor"],
+              ["Performance improvement", "performance"],
+            ];
+
+            const body = context.payload.pull_request.body || "";
+            const isChecked = (text) =>
+              new RegExp(`- \\[[xX]\\]\\s*${text}`).test(body);
+
+            const labels = CHECKBOX_LABELS
+              .filter(([text]) => isChecked(text))
+              .map(([, label]) => label);
+
+            if (labels.length === 0) {
+              return;
+            }
+
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.payload.pull_request.number,
+              labels,
+            });

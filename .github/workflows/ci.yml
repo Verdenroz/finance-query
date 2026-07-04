@@ -5,6 +5,7 @@ on:
     branches: [master]
   pull_request:
     branches: [master]
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 
 env:
   CARGO_TERM_COLOR: always
@@ -14,10 +15,70 @@ permissions:
   contents: read
 
 jobs:
+  # Decide which downstream jobs this change set actually needs, so
+  # docs-only / single-crate PRs don't pay for work that can't have broken.
+  # A "full-ci" label forces everything back on regardless of paths.
+  changes:
+    name: Detect Changes
+    runs-on: ubuntu-latest
+    outputs:
+      rust: ${{ steps.filter.outputs.rust == 'true' || steps.force.outputs.force == 'true' }}
+      server_docker: ${{ steps.filter.outputs.server_docker == 'true' || steps.force.outputs.force == 'true' }}
+      mcp_docker: ${{ steps.filter.outputs.mcp_docker == 'true' || steps.force.outputs.force == 'true' }}
+      fuzz: ${{ steps.filter.outputs.fuzz == 'true' || steps.force.outputs.force == 'true' }}
+    steps:
+      - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
+        with:
+          egress-policy: audit
+      - id: force
+        env:
+          PR_LABELS: ${{ toJSON(github.event.pull_request.labels) }}
+        run: |
+          if echo "$PR_LABELS" | jq -e '(. // []) | any(.name == "full-ci")' > /dev/null; then
+            echo "force=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "force=false" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: dorny/paths-filter@7b450fff21473bca461d4b92ce414b9d0420d706 # v4.0.2
+        id: filter
+        with:
+          filters: |
+            rust:
+              - 'src/**'
+              - 'server/**'
+              - 'finance-query-cli/**'
+              - 'finance-query-mcp/**'
+              - 'finance-query-derive/**'
+              - 'benches/**'
+              - 'tests/**'
+              - 'fuzz/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+              - '.github/workflows/ci.yml'
+            server_docker:
+              - 'src/**'
+              - 'server/**'
+              - 'finance-query-derive/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            mcp_docker:
+              - 'src/**'
+              - 'finance-query-mcp/**'
+              - 'finance-query-derive/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+            fuzz:
+              - 'src/**'
+              - 'fuzz/**'
+              - 'Cargo.toml'
+              - 'Cargo.lock'
+
   # Check code formatting
   fmt:
     name: Rustfmt
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -35,6 +96,8 @@ jobs:
   clippy:
     name: Clippy
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -62,6 +125,8 @@ jobs:
   test:
     name: Test Suite
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -94,6 +159,8 @@ jobs:
   check:
     name: Check Build
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.rust == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
@@ -159,7 +226,8 @@ jobs:
   docker:
     name: Docker Build
     runs-on: ubuntu-latest
-    needs: [fmt, clippy, test, check]
+    needs: [changes, fmt, clippy, test, check]
+    if: needs.changes.outputs.server_docker == 'true'
     permissions:
       contents: read
       security-events: write # upload Trivy SARIF to code scanning
@@ -211,7 +279,8 @@ jobs:
   docker-mcp:
     name: MCP Docker Build
     runs-on: ubuntu-latest
-    needs: [fmt, clippy, test, check]
+    needs: [changes, fmt, clippy, test, check]
+    if: needs.changes.outputs.mcp_docker == 'true'
     permissions:
       contents: read
       security-events: write # upload Trivy SARIF to code scanning
@@ -264,6 +333,8 @@ jobs:
   fuzz:
     name: Fuzz
     runs-on: ubuntu-latest
+    needs: changes
+    if: needs.changes.outputs.fuzz == 'true'
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
         with:
