@@ -6,6 +6,7 @@ pub mod crypto;
 pub mod edgar;
 pub mod enums;
 pub mod events;
+pub mod feeds;
 pub mod financials;
 pub mod formatted;
 pub mod fred;

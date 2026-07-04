@@ -1,5 +1,5 @@
 //! Market-wide root query fields: trending, indices, sector/industry data,
-//! market summary, Fear & Greed, and general news.
+//! market summary, Fear & Greed, general news, and RSS/Atom feeds.
 
 use async_graphql::{Context, Object, Result};
 
@@ -8,6 +8,7 @@ use crate::AppState;
 use crate::graphql::error::to_gql_error;
 use crate::graphql::types::{
     enums::{GqlIndicesRegion, GqlValueFormat},
+    feeds::GqlFeedEntry,
     industry::GqlIndustryData,
     market::{GqlFearAndGreed, GqlMarketSummaryQuote, GqlTrendingQuote},
     news::GqlNews,
@@ -87,6 +88,37 @@ impl RootMarketQuery {
             crate::services::news::get_general_news(&state.cache, count as usize, lang.as_deref())
                 .await
                 .map_err(to_gql_error)?;
+        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+    }
+
+    /// RSS/Atom feed entries aggregated from one or more named financial
+    /// publishers (see `finance_query::feeds::FeedSource` for the full list).
+    async fn feeds(
+        &self,
+        ctx: &Context<'_>,
+        #[graphql(
+            desc = "Source slugs, e.g. [\"bloomberg\", \"marketwatch\"] (default: federal-reserve, sec, marketwatch, bloomberg)"
+        )]
+        sources: Option<Vec<String>>,
+        #[graphql(desc = "SEC form type for the sec-filings source (default: \"10-K\")")]
+        form_type: Option<String>,
+    ) -> Result<Vec<GqlFeedEntry>> {
+        let state = ctx.data::<AppState>()?;
+        let source_key = sources
+            .as_deref()
+            .map(|s| s.join(","))
+            .unwrap_or_else(|| "all".to_string());
+        let parsed =
+            crate::services::feeds::parse_sources(sources.as_deref(), form_type.as_deref())
+                .map_err(async_graphql::Error::new)?;
+        let json = crate::services::feeds::get_feeds(
+            &state.cache,
+            &parsed,
+            &source_key,
+            form_type.as_deref().unwrap_or(""),
+        )
+        .await
+        .map_err(to_gql_error)?;
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 

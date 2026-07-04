@@ -305,6 +305,9 @@ pub const GQL_SPARK_VALID_FIELDS: &[&str] = &[
 /// Valid GraphQL field names for `GqlNews`.
 pub const GQL_NEWS_VALID_FIELDS: &[&str] = &["title", "link", "source", "img", "time"];
 
+/// Valid GraphQL field names for `GqlFeedEntry` (top-level `feeds` root field).
+pub const GQL_FEEDS_VALID_FIELDS: &[&str] = &["title", "url", "published", "summary", "source"];
+
 /// Valid GraphQL field names for `GqlTrendingQuote` (top-level `trending` root field).
 pub const GQL_TRENDING_VALID_FIELDS: &[&str] = &[
     "symbol",
