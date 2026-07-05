@@ -4,10 +4,10 @@ groups:
   - name: redis_health
     interval: 30s
     rules:
-      # Info only: with allkeys-lru, running near maxmemory is the cache's
-      # normal steady state, not a fault.
+      # Info only: near-maxmemory is normal under allkeys-lru. Guard against
+      # maxmemory=0 (unlimited), which would divide by zero into +Inf.
       - alert: RedisMemoryHigh
-        expr: redis_memory_used_bytes / redis_memory_max_bytes > 0.9
+        expr: (redis_memory_used_bytes / redis_memory_max_bytes > 0.9) and (redis_memory_max_bytes > 0)
         for: 15m
         labels:
           severity: info
