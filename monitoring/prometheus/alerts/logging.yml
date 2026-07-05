@@ -1,0 +1,16 @@
+# Loki caps ingestion at 4MB/s (loki-config.yml); this catches silent drops
+# during exactly the log-volume spikes an incident would produce.
+
+groups:
+  - name: logging_health
+    interval: 30s
+    rules:
+      - alert: LokiDroppingLogs
+        expr: rate(loki_discarded_samples_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: loki
+        annotations:
+          summary: "Loki is discarding log samples"
+          description: "Loki has discarded {{ $value }} samples/s over 5m (reason: {{ $labels.reason }}) — log volume is exceeding its ingestion limit."

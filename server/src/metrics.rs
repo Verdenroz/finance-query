@@ -204,6 +204,39 @@ lazy_static! {
         .namespace("finance_query")
     )
     .expect("Failed to create rate limit rejections counter");
+
+    /// Total requests allowed through the rate limiter
+    pub static ref RATE_LIMIT_ALLOWED: Counter = Counter::with_opts(
+        Opts::new(
+            "rate_limit_allowed_total",
+            "Total number of requests allowed through the rate limiter"
+        )
+        .namespace("finance_query")
+    )
+    .expect("Failed to create rate limit allowed counter");
+
+    /// Configured rate limit quota (requests/minute), for usage-ratio queries
+    pub static ref RATE_LIMIT_QUOTA_PER_MINUTE: Gauge = Gauge::with_opts(
+        Opts::new(
+            "rate_limit_quota_per_minute",
+            "Configured rate limit quota in requests per minute"
+        )
+        .namespace("finance_query")
+    )
+    .expect("Failed to create rate limit quota gauge");
+
+    // === GraphQL Limit Metrics ===
+
+    /// Queries rejected for exceeding the complexity or depth limit
+    pub static ref GRAPHQL_LIMIT_REJECTIONS: CounterVec = CounterVec::new(
+        Opts::new(
+            "graphql_limit_rejections_total",
+            "Total GraphQL queries rejected for exceeding a complexity or depth limit"
+        )
+        .namespace("finance_query"),
+        &["limit_type"]
+    )
+    .expect("Failed to create GraphQL limit rejections counter");
 }
 
 /// Initialize metrics registry
@@ -263,6 +296,15 @@ pub fn init() {
         REGISTRY
             .register(Box::new(RATE_LIMIT_REJECTIONS.clone()))
             .expect("Failed to register RATE_LIMIT_REJECTIONS");
+        REGISTRY
+            .register(Box::new(RATE_LIMIT_ALLOWED.clone()))
+            .expect("Failed to register RATE_LIMIT_ALLOWED");
+        REGISTRY
+            .register(Box::new(RATE_LIMIT_QUOTA_PER_MINUTE.clone()))
+            .expect("Failed to register RATE_LIMIT_QUOTA_PER_MINUTE");
+        REGISTRY
+            .register(Box::new(GRAPHQL_LIMIT_REJECTIONS.clone()))
+            .expect("Failed to register GRAPHQL_LIMIT_REJECTIONS");
 
         tracing::info!("Prometheus metrics initialized");
     });
@@ -310,6 +352,10 @@ impl RequestTimer {
         HTTP_REQUESTS_TOTAL
             .with_label_values(&[&self.method, &self.endpoint, &status.to_string()])
             .inc();
+
+        if status >= 500 {
+            ERRORS_TOTAL.with_label_values(&["http_5xx"]).inc();
+        }
 
         HTTP_REQUESTS_IN_FLIGHT.dec();
     }

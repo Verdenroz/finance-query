@@ -178,6 +178,30 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Per-container CPU/memory; read-only mounts, no --privileged needed for cgroup stats.
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.49.1@sha256:524779a2661c9ea1b4b87d47fedfc56c3aed182511fcdac031f345a1fd229461
+    container_name: finance-query-cadvisor
+    restart: unless-stopped
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev:/dev:ro
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8080/healthz"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # Redis (internal only)
   redis:
     image: redis:8.4.0-alpine@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d
@@ -327,23 +351,13 @@ services:
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
       - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/home.json
-      - GF_PLUGINS_PREINSTALL_DISABLED=true
+      - GF_INSTALL_PLUGINS=grafana-lokiexplore-app 2.1.5
       - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
       - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:587}
       - GF_SMTP_USER=${GF_SMTP_USER}
       - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
       - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
       - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME:-Finance Query Alerts}
-    entrypoint:
-      - /bin/sh
-      - -c
-      - |
-        set -e
-        if ! grep -q '"version": "2.1.5"' /var/lib/grafana/plugins/grafana-lokiexplore-app/plugin.json 2>/dev/null; then
-          rm -rf /var/lib/grafana/plugins/grafana-lokiexplore-app
-          grafana cli --pluginsDir /var/lib/grafana/plugins plugins install grafana-lokiexplore-app 2.1.5
-        fi
-        exec /run.sh
     depends_on:
       prometheus:
         condition: service_healthy

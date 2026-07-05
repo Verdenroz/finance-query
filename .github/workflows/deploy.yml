@@ -119,6 +119,15 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/finance-query
+            set -a; . ./.env 2>/dev/null || true; set +a
+            IMAGE_BASE="ghcr.io/${GITHUB_REPO:-verdenroz/finance-query}"
+            PREV_SHA=$(git rev-parse HEAD)
+
+            check_health() {
+              curl -f http://localhost/v2/health \
+                && curl -f http://localhost/v1/health \
+                && curl -f http://localhost/mcp/health
+            }
 
             # Pin the on-disk checkout to the exact commit being deployed —
             # an out-of-band sync can otherwise leave docker-compose.prod.yml
@@ -133,9 +142,20 @@ jobs:
             # Deploy with zero-downtime
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
+            # Verify deployment; roll back to the previous SHA's images on failure.
+            sleep 10
+            if ! check_health; then
+              echo "Health check failed for ${{ github.sha }}, rolling back to $PREV_SHA"
+              git checkout --force "$PREV_SHA"
+              for svc in v2 v1 mcp; do
+                docker pull "$IMAGE_BASE/$svc:$PREV_SHA"
+                docker tag "$IMAGE_BASE/$svc:$PREV_SHA" "$IMAGE_BASE/$svc:latest"
+              done
+              docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+              sleep 10
+              check_health
+              exit 1
+            fi
+
             # Cleanup old images
             docker image prune -f
-
-            # Verify deployment
-            sleep 10
-            curl -f http://localhost/health || exit 1

@@ -41,3 +41,13 @@ groups:
         annotations:
           summary: "Redis cache is UNREACHABLE"
           description: "Redis has been unreachable for 3+ minutes. API is using in-memory fallback - cache will not persist across restarts."
+
+      - alert: RateLimitNearCapacity
+        expr: increase(finance_query_rate_limit_allowed_total[1m]) / finance_query_rate_limit_quota_per_minute > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          service: finance-query-v2
+        annotations:
+          summary: "V2 rate limit usage above 80%"
+          description: "Allowed requests are at {{ $value | humanizePercentage }} of the per-minute quota — clients are close to being rejected."

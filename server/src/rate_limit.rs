@@ -62,6 +62,8 @@ impl RateLimiterState {
             NonZeroU32::new(config.requests_per_minute).unwrap_or(NonZeroU32::new(60).unwrap()),
         );
 
+        crate::metrics::RATE_LIMIT_QUOTA_PER_MINUTE.set(config.requests_per_minute as f64);
+
         Self {
             limiter: Arc::new(RateLimiter::direct(quota)),
         }
@@ -89,7 +91,7 @@ pub async fn rate_limit_middleware(
     // Check rate limit
     match limiter.limiter.check() {
         Ok(_) => {
-            // Request allowed
+            crate::metrics::RATE_LIMIT_ALLOWED.inc();
             next.run(request).await.into_response()
         }
         Err(not_until) => {

@@ -128,7 +128,7 @@ async fn create_app() -> Router {
         .merge(graphql::graphql_routes(schema.clone()))
         .layer(Extension(schema))
         .layer(Extension(state))
-        .layer(middleware::from_fn(handlers::metrics_middleware))
+        .route_layer(middleware::from_fn(handlers::metrics_middleware))
         .layer(middleware::from_fn_with_state(
             rate_limiter,
             rate_limit_middleware,

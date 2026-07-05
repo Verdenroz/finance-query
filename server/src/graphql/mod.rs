@@ -41,6 +41,20 @@ async fn graphql_handler(schema: Extension<FinanceSchema>, req: GraphQLRequest) 
     let timer = crate::metrics::GraphqlTimer::new("http");
     let response = schema.execute(req.into_inner()).await;
     timer.observe(response.is_ok());
+
+    for err in &response.errors {
+        let limit_type = match err.message.as_str() {
+            "Query is too complex." => Some("complexity"),
+            "Query is nested too deep." => Some("depth"),
+            _ => None,
+        };
+        if let Some(limit_type) = limit_type {
+            crate::metrics::GRAPHQL_LIMIT_REJECTIONS
+                .with_label_values(&[limit_type])
+                .inc();
+        }
+    }
+
     response.into()
 }
 

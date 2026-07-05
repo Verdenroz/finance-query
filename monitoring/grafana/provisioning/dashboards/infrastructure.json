@@ -588,14 +588,14 @@
             "type": "prometheus",
             "uid": "prometheus"
           },
-          "expr": "redis_memory_used_bytes / redis_memory_max_bytes",
+          "expr": "(redis_memory_used_bytes / redis_memory_max_bytes) and (redis_memory_max_bytes > 0)",
           "refId": "A",
           "legendFormat": "used"
         }
       ],
       "title": "Redis Memory Used vs Max",
       "type": "gauge",
-      "description": "redis_memory_used_bytes / redis_memory_max_bytes. Shows no data if no maxmemory limit is set."
+      "description": "redis_memory_used_bytes / redis_memory_max_bytes, guarded against divide-by-zero. Shows no data if no maxmemory limit is set."
     },
     {
       "datasource": {
@@ -1130,6 +1130,189 @@
       "title": "v2 Cache Backend",
       "type": "stat",
       "description": "v2 Redis cache backend connectivity (falls back to in-memory when disconnected)."
+    },
+    {
+      "collapsed": false,
+      "gridPos": {
+        "h": 1,
+        "w": 24,
+        "x": 0,
+        "y": 35
+      },
+      "id": 16,
+      "panels": [],
+      "title": "Containers (cAdvisor)",
+      "type": "row"
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "short"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 36
+      },
+      "id": 17,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\".+\"}[$__rate_interval]))",
+          "refId": "A",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "title": "Container CPU Usage",
+      "type": "timeseries",
+      "description": "CPU cores used per container (cAdvisor)."
+    },
+    {
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "axisBorderShow": false,
+            "axisCenteredZero": false,
+            "axisColorMode": "text",
+            "axisLabel": "",
+            "axisPlacement": "auto",
+            "barAlignment": 0,
+            "drawStyle": "line",
+            "fillOpacity": 10,
+            "gradientMode": "none",
+            "hideFrom": {
+              "legend": false,
+              "tooltip": false,
+              "viz": false
+            },
+            "insertNulls": false,
+            "lineInterpolation": "linear",
+            "lineWidth": 1,
+            "pointSize": 5,
+            "scaleDistribution": {
+              "type": "linear"
+            },
+            "showPoints": "never",
+            "spanNulls": false,
+            "stacking": {
+              "group": "A",
+              "mode": "none"
+            },
+            "thresholdsStyle": {
+              "mode": "off"
+            }
+          },
+          "mappings": [],
+          "unit": "bytes"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 36
+      },
+      "id": 18,
+      "options": {
+        "legend": {
+          "calcs": [
+            "mean",
+            "max"
+          ],
+          "displayMode": "table",
+          "placement": "bottom",
+          "showLegend": true
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "pluginVersion": "11.6.0",
+      "targets": [
+        {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "expr": "sum by (name) (container_memory_usage_bytes{name=~\".+\"})",
+          "refId": "A",
+          "legendFormat": "{{name}}"
+        }
+      ],
+      "title": "Container Memory Usage",
+      "type": "timeseries",
+      "description": "Resident memory per container (cAdvisor)."
     }
   ],
   "refresh": "30s",

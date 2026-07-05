@@ -162,9 +162,9 @@ app.add_middleware(
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
-app.add_middleware(MetricsMiddleware)
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(RequestContextMiddleware)
+app.add_middleware(MetricsMiddleware)
 
 if os.getenv("USE_SECURITY", "False") == "True":
     app.add_middleware(RateLimitMiddleware)

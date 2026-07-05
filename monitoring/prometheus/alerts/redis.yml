@@ -25,3 +25,24 @@ groups:
         annotations:
           summary: "CRITICAL: Redis is rejecting connections"
           description: "Redis rejected {{ $value }} connections/s over the last 5m (maxclients reached). Requests are failing to reach the cache."
+
+      # V2's own Redis connection state, distinct from RedisCacheDown's exporter-side `up`.
+      - alert: CacheBackendDisconnected
+        expr: finance_query_cache_backend_connected == 0
+        for: 5m
+        labels:
+          severity: critical
+          service: finance-query-v2
+        annotations:
+          summary: "Finance Query V2 lost its Redis cache connection"
+          description: "cache_backend_connected has been 0 for 5+ minutes — V2 is running in silent in-memory fallback (issue #222). Cache will not persist across restarts."
+
+      - alert: CacheErrorsHigh
+        expr: rate(finance_query_cache_errors_total[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          service: finance-query-v2
+        annotations:
+          summary: "Finance Query V2 is seeing Redis command errors"
+          description: "cache_errors_total is increasing — Redis commands are failing (not just cache misses)."

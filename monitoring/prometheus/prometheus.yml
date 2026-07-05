@@ -81,6 +81,17 @@ scrape_configs:
         labels:
           service: 'node-exporter'
 
+  # Per-container CPU/memory; drops non-container cgroup series (empty image label).
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+    metric_relabel_configs:
+      - source_labels: [image]
+        regex: ''
+        action: drop
+
   # Scrape Alertmanager itself
   - job_name: 'alertmanager'
     static_configs:
