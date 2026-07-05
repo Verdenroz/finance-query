@@ -1,0 +1,23 @@
+# Rendered by entrypoint.sh at container start: Alertmanager can't expand
+# env vars itself, so ALERT_WEBHOOK_URL has to be injected this way.
+
+route:
+  receiver: {{DEFAULT_RECEIVER}}
+  group_by: ["alertname", "service"]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+inhibit_rules:
+  # A firing critical alert mutes warning/info noise for the same service.
+  - source_matchers:
+      - severity = critical
+    target_matchers:
+      - severity =~ warning|info
+    equal: ["service"]
+
+# entrypoint.sh appends a `notify` receiver below with whichever channels
+# (webhook, email) are configured, so `receivers` MUST stay the last section
+# of this template.
+receivers:
+  - name: blackhole

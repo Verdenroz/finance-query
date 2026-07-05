@@ -38,6 +38,7 @@ dependencies = [
     "python-json-logger>=3.3.0,<5.0.0",
     "beautifulsoup4>=4.13.5",
     "frozendict>=2.4.6",
+    "prometheus-client>=0.25.0",
 ]
 
 [dependency-groups]

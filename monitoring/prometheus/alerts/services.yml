@@ -1,0 +1,26 @@
+# Availability rules for the non-primary services. The v2 ServiceDown rule
+# lives in finance-query.yml.
+
+groups:
+  - name: service_availability
+    interval: 30s
+    rules:
+      - alert: V1ServiceDown
+        expr: up{job="finance-query-v1"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: finance-query-v1
+        annotations:
+          summary: "Finance Query V1 is DOWN"
+          description: "The legacy V1 API (passively monitored — no active development) has been unreachable for 2+ minutes. Existing consumers still depend on it."
+
+      - alert: MCPServiceDown
+        expr: up{job="finance-query-mcp"} == 0
+        for: 2m
+        labels:
+          severity: critical
+          service: finance-query-mcp
+        annotations:
+          summary: "Finance Query MCP server is DOWN"
+          description: "The MCP server (finance-query.com/mcp) has been unreachable for 2+ minutes. AI-agent integrations are failing."

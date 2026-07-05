@@ -134,12 +134,17 @@ impl Cache {
             None
         };
 
+        // The uncached fallback is otherwise invisible in production; expose
+        // it as a gauge so monitoring can alert on it.
+        crate::metrics::CACHE_BACKEND_CONNECTED.set(if conn.is_some() { 1.0 } else { 0.0 });
+
         Self { conn }
     }
 
     #[cfg(not(feature = "redis-cache"))]
     pub async fn new(_redis_url: Option<&str>) -> Self {
         tracing::info!("Redis cache feature not enabled. Caching disabled.");
+        crate::metrics::CACHE_BACKEND_CONNECTED.set(0.0);
         Self {}
     }
 
@@ -199,6 +204,9 @@ impl Cache {
             }
             Err(e) => {
                 tracing::warn!(key = %key, error = %e, "Cache GET error");
+                crate::metrics::CACHE_ERRORS
+                    .with_label_values(&["get"])
+                    .inc();
                 timer.observe();
                 None
             }
@@ -237,6 +245,9 @@ impl Cache {
             .await
         {
             tracing::warn!(key = %key, error = %e, "Cache SET error");
+            crate::metrics::CACHE_ERRORS
+                .with_label_values(&["set"])
+                .inc();
         } else {
             tracing::debug!(key = %key, ttl = ttl_seconds, "Cache SET");
         }

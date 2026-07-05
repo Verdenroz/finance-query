@@ -128,7 +128,7 @@ async fn create_app() -> Router {
         .merge(graphql::graphql_routes(schema.clone()))
         .layer(Extension(schema))
         .layer(Extension(state))
-        .layer(middleware::from_fn(handlers::metrics_middleware))
+        .route_layer(middleware::from_fn(handlers::metrics_middleware))
         .layer(middleware::from_fn_with_state(
             rate_limiter,
             rate_limit_middleware,
@@ -149,8 +149,7 @@ fn init_tracing() {
 
     let filter = tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
         format!(
-            "finance_query={},server={},tower_http=debug,axum::rejection=trace",
-            log_level, log_level
+            "finance_query={log_level},server={log_level},tower_http={log_level},axum::rejection=trace"
         )
         .into()
     });

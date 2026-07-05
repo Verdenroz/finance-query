@@ -1,5 +1,5 @@
-.PHONY: help serve install install-dev build test test-fast lint fix audit bench baseline docs docker docker-compose docker-compose-down clean publish-dry-run \
-        prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html generate-mcp-html mcp mcp-http build-mcp
+.PHONY: help serve install install-dev build test test-fast lint fix audit bench baseline docs clean publish-dry-run \
+        prod prod-down prod-logs prod-status prod-build bump bump-cli generate-api-html generate-mcp-html mcp mcp-http
 
 # Default target
 .DEFAULT_GOAL := help
@@ -25,9 +25,6 @@ mcp: ## Run MCP server (stdio transport, for local development)
 
 mcp-http: ## Run MCP server (HTTP streaming transport, for VPS — binds to MCP_ADDR, default 0.0.0.0:3000)
 	MCP_TRANSPORT=http $(CARGO) run -p finance-query-mcp
-
-build-mcp: ## Build MCP server release binary
-	$(CARGO) build --release -p finance-query-mcp
 
 serve: ## Start development server
 	@echo "$(GREEN)Starting server at http://localhost:$(PORT)$(NC)"
@@ -85,10 +82,10 @@ fix: ## Auto-fix formatting and linting issues
 	@$(CARGO) clippy --workspace --all-targets --all-features --fix --allow-dirty --allow-staged
 	@echo "$(GREEN)✓ Auto-fix complete!$(NC)"
 
-audit: ## Run security audit on dependencies
-	@echo "$(GREEN)Running security audit...$(NC)"
-	@command -v cargo-audit >/dev/null 2>&1 || $(CARGO) install cargo-audit
-	@$(CARGO) audit
+audit: ## Run the same dependency policy check as CI (advisories, bans, licenses, sources)
+	@echo "$(GREEN)Running cargo-deny...$(NC)"
+	@command -v cargo-deny >/dev/null 2>&1 || $(CARGO) install cargo-deny --locked
+	@cargo deny check advisories bans licenses sources
 
 bench: ## Run criterion wall-clock benchmarks (local profiling, not a CI gate)
 	@echo "$(GREEN)Running criterion benchmarks...$(NC)"
@@ -113,17 +110,6 @@ docs: ## Build and serve documentation locally
 	@echo "$(GREEN)Serving docs at http://localhost:8080$(NC)"
 	uv run mkdocs serve -a localhost:8080 --livereload
 
-docker: ## Build Docker image for v2 server
-	@echo "$(GREEN)Building v2 Docker image...$(NC)"
-	$(DOCKER) build -f server/Dockerfile -t financequery:v2 .
-
-docker-compose: ## Start both v1 and v2 with Docker Compose
-	@echo "$(GREEN)Starting v1 and v2 servers...$(NC)"
-	$(DOCKER_COMPOSE) up -d
-
-docker-compose-down: ## Stop Docker Compose services
-	$(DOCKER_COMPOSE) down
-
 clean: ## Clean build artifacts
 	@echo "$(GREEN)Cleaning build artifacts...$(NC)"
 	$(CARGO) clean
@@ -135,30 +121,33 @@ publish-dry-run: ## Test publishing to crates.io (dry run)
 	$(CARGO) publish -p finance-query --dry-run
 
 # =============================================================================
-# Production Docker Compose (docker-compose.prod.yml with Caddy)
+# Production Docker Compose
 # =============================================================================
+
+# docker-compose.prod.yml is an overlay — both -f flags are required together.
+PROD_COMPOSE := $(DOCKER_COMPOSE) -f docker-compose.yml -f docker-compose.prod.yml
 
 prod: ## Start production stack
 	@echo "$(GREEN)Starting production stack...$(NC)"
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml up -d
+	$(PROD_COMPOSE) up -d
 	@echo "$(GREEN)✓ Running at http://localhost$(NC)"
 
 prod-build: ## Build and start production stack
 	@echo "$(GREEN)Building production stack...$(NC)"
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml up -d --build
+	$(PROD_COMPOSE) up -d --build
 
 prod-down: ## Stop production stack
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml down
+	$(PROD_COMPOSE) down
 
 prod-logs: ## View production logs (use SVC=name for specific service)
 	@if [ -n "$(SVC)" ]; then \
-		$(DOCKER_COMPOSE) -f docker-compose.prod.yml logs -f $(SVC); \
+		$(PROD_COMPOSE) logs -f $(SVC); \
 	else \
-		$(DOCKER_COMPOSE) -f docker-compose.prod.yml logs -f; \
+		$(PROD_COMPOSE) logs -f; \
 	fi
 
 prod-status: ## Check production container status
-	$(DOCKER_COMPOSE) -f docker-compose.prod.yml ps
+	$(PROD_COMPOSE) ps
 
 # =============================================================================
 # Version bumping

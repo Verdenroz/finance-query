@@ -1,0 +1,15 @@
+# Per-container health via cAdvisor.
+
+groups:
+  - name: container_health
+    interval: 30s
+    rules:
+      - alert: ContainerRestartingRepeatedly
+        expr: changes(container_start_time_seconds{name=~".+"}[15m]) > 2
+        for: 1m
+        labels:
+          severity: warning
+          service: docker
+        annotations:
+          summary: "Container {{ $labels.name }} is restarting repeatedly"
+          description: "{{ $labels.name }} has restarted {{ $value }} times in the last 15m — likely crash-looping."

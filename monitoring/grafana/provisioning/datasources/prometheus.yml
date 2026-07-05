@@ -1,10 +1,17 @@
-# Grafana datasource configuration
-# Auto-provisions Prometheus as a datasource on Grafana startup
+# uids are hardcoded in the provisioned dashboard JSON; changing them
+# here breaks every panel's datasource reference.
 
 apiVersion: 1
 
+# Deletes the pre-uid "Prometheus" datasource from older deploys instead of
+# reconciling it in place, which errors on a uid mismatch.
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+
 datasources:
   - name: Prometheus
+    uid: prometheus
     type: prometheus
     access: proxy
     url: http://prometheus:9090
@@ -13,4 +20,12 @@ datasources:
     jsonData:
       httpMethod: POST
       timeInterval: 15s
+    version: 1
+
+  - name: Loki
+    uid: loki
+    type: loki
+    access: proxy
+    url: http://loki:3100
+    editable: true
     version: 1

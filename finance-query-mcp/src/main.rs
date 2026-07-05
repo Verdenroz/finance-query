@@ -1,5 +1,6 @@
 mod error;
 mod lang;
+mod metrics;
 mod tools;
 
 use anyhow::Result;
@@ -46,6 +47,8 @@ async fn main() -> Result<()> {
 
     init_edgar();
     init_fred();
+    // Both transports record tool metrics; only http exports them via /metrics.
+    metrics::init();
 
     // Warm the offline translation model in the background so the first
     // tool call with a `lang` param doesn't pay the one-time load cost.
@@ -120,6 +123,9 @@ async fn start_http(
 
     let router = Router::new()
         .route("/health", get(|| async { "ok" }))
+        // Unauthenticated by design: Caddy blocks /mcp/metrics at the edge,
+        // so this route is only reachable from inside the docker network.
+        .route("/metrics", get(|| async { metrics::gather() }))
         .fallback_service(service);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     info!("Listening on http://{addr}/");

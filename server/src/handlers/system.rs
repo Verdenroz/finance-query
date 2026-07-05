@@ -68,7 +68,12 @@ pub(crate) async fn metrics_middleware(
     next: axum::middleware::Next,
 ) -> axum::response::Response {
     let method = request.method().to_string();
-    let path = request.uri().path().to_string();
+    // Route template, not raw URI, to keep label cardinality bounded.
+    let path = request
+        .extensions()
+        .get::<axum::extract::MatchedPath>()
+        .map(|p| p.as_str().to_string())
+        .unwrap_or_else(|| request.uri().path().to_string());
 
     let timer = metrics::RequestTimer::new(method, path);
 

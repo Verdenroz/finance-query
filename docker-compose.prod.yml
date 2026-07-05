@@ -1,35 +1,10 @@
-# Production Docker Compose
-# Usage: docker compose -f docker-compose.prod.yml up -d
+# Production overrides. Usage:
+#   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
 services:
-  # Caddy reverse proxy with automatic HTTPS
   caddy:
-    image: caddy:2.11-alpine
-    container_name: finance-query-caddy
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - ./caddy-entrypoint.sh:/entrypoint.sh:ro
-      - caddy-data:/data
-      - caddy-config:/config
     environment:
-      - SERVER_NAME=${SERVER_NAME:-localhost}
       - MONITORING_PASSWORD=${MONITORING_PASSWORD:?MONITORING_PASSWORD required}
-    entrypoint: ["/entrypoint.sh"]
-    depends_on:
-      finance-query-v1:
-        condition: service_healthy
-      finance-query-v2:
-        condition: service_healthy
-      finance-query-mcp:
-        condition: service_healthy
-    networks:
-      - frontend
-      - backend
-      - monitoring
     deploy:
       resources:
         limits:
@@ -40,51 +15,18 @@ services:
           memory: 64M
     security_opt:
       - no-new-privileges:true
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "curl",
-          "-f",
-          "-s",
-          "-o",
-          "/dev/null",
-          "http://localhost:2019/config/",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 5s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # V2 Rust Server
   finance-query-v2:
     image: ghcr.io/${GITHUB_REPO:-verdenroz/finance-query}/v2:latest
-    container_name: finance-query-v2
-    restart: unless-stopped
     expose:
       - "8000"
-    env_file:
-      - server/.env
     environment:
-      - PORT=8000
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
     volumes:
       # Persists per-language opus-mt models (~80–210 MB each, under $HF_HOME/argos)
       # across container recreates/deploys so they download only once.
       - hf-cache-v2:/home/appuser/.cache/huggingface
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - backend
-      - monitoring
     deploy:
       resources:
         limits:
@@ -104,37 +46,16 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
-    healthcheck:
-      test: ["CMD", "curl", "-f", "-q", "http://localhost:8000/v2/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # MCP Server (HTTP streaming transport for AI agents)
   finance-query-mcp:
     image: ghcr.io/${GITHUB_REPO:-verdenroz/finance-query}/mcp:latest
-    container_name: finance-query-mcp
-    restart: unless-stopped
     expose:
       - "3000"
-    environment:
-      - MCP_TRANSPORT=http
-      - MCP_ADDR=0.0.0.0:3000
-      - MCP_ALLOWED_HOSTS=${SERVER_NAME:-localhost}
-      - EDGAR_EMAIL=${EDGAR_EMAIL:-}
-      - FRED_API_KEY=${FRED_API_KEY:-}
     volumes:
       # Persists per-language opus-mt models (~80–210 MB each, under $HF_HOME/argos)
       # across container recreates/deploys so they download only once.
       - hf-cache-mcp:/home/appuser/.cache/huggingface
-    networks:
-      - backend
     deploy:
       resources:
         limits:
@@ -152,37 +73,14 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
-    healthcheck:
-      test: ["CMD", "curl", "-f", "-q", "http://localhost:3000/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 10s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # V1 Python Server
   finance-query-v1:
     image: ghcr.io/${GITHUB_REPO:-verdenroz/finance-query}/v1:latest
-    container_name: finance-query-v1
-    restart: unless-stopped
     expose:
       - "8000"
-    env_file:
-      - v1/.env
     environment:
-      - LOG_LEVEL=INFO
-      - LOG_FORMAT=json
       - REDIS_URL=redis://:${REDIS_PASSWORD}@redis:6379
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - backend
-      - monitoring
     deploy:
       resources:
         limits:
@@ -197,35 +95,13 @@ services:
       - ALL
     cap_add:
       - NET_BIND_SERVICE
-    healthcheck:
-      test:
-        [
-          "CMD",
-          "python",
-          "-c",
-          "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health').read()",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # Redis (internal only)
   redis:
-    image: redis:8.4.0-alpine
-    container_name: finance-query-redis
-    restart: unless-stopped
     user: "999:999" # Redis user
     read_only: true
     tmpfs:
       - /tmp
-    volumes:
-      - redis-data:/data
     # Redis is used purely as a cache (data is reconstructable from upstream APIs),
     # so persistence is disabled. This prevents the AOF/RDB from growing unbounded
     # or blocking writes (stop-writes-on-bgsave-error) when disk is low.
@@ -236,8 +112,6 @@ services:
       --requirepass ${REDIS_PASSWORD}
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru"
-    networks:
-      - backend
     deploy:
       resources:
         limits:
@@ -256,30 +130,15 @@ services:
       timeout: 10s
       retries: 3
       start_period: 5s
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
   # Redis Exporter for Prometheus metrics
   redis-exporter:
-    image: oliver006/redis_exporter:v1.80.2-alpine
-    container_name: finance-query-redis-exporter
-    restart: unless-stopped
     user: "59000:59000" # Non-root user
     read_only: true
     expose:
       - "9121"
     environment:
-      - REDIS_ADDR=redis:6379
       - REDIS_PASSWORD=${REDIS_PASSWORD}
-    depends_on:
-      redis:
-        condition: service_healthy
-    networks:
-      - backend
-      - monitoring
     deploy:
       resources:
         limits:
@@ -292,32 +151,33 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9121/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+
+  # Host metrics (disk/memory/CPU)
+  node-exporter:
+    read_only: true
+    expose:
+      - "9100"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+        reservations:
+          cpus: "0.05"
+          memory: 16M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   # Prometheus
   prometheus:
-    image: prom/prometheus:v3.5.1
-    container_name: finance-query-prometheus
-    restart: unless-stopped
     user: "65534:65534" # nobody user
     read_only: true
     tmpfs:
       - /tmp
     expose:
       - "9090"
-    volumes:
-      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-      - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
-      - prometheus-data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
@@ -325,11 +185,6 @@ services:
       - "--storage.tsdb.retention.size=8GB"
       - "--web.console.libraries=/usr/share/prometheus/console_libraries"
       - "--web.console.templates=/usr/share/prometheus/consoles"
-    depends_on:
-      finance-query-v2:
-        condition: service_healthy
-    networks:
-      - monitoring
     deploy:
       resources:
         limits:
@@ -342,35 +197,74 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
+
+  # Alertmanager
+  alertmanager:
+    user: "65534:65534" # nobody user
+    read_only: true
+    tmpfs:
+      - /tmp
+    expose:
+      - "9093"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # Loki (log aggregation)
+  loki:
+    user: "10001:10001" # loki user
+    read_only: true
+    expose:
+      - "3100"
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+  # Promtail (ships container logs to Loki)
+  promtail:
+    read_only: true
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # No healthcheck: the promtail image ships no shell utilities to probe with.
 
   # Grafana
   grafana:
-    image: grafana/grafana:11.6.0
-    container_name: finance-query-grafana
-    restart: unless-stopped
     user: "472:472" # Grafana user
     # read_only disabled for Grafana - needs write access for plugins/logs
     expose:
       - "3000"
-    volumes:
-      - grafana-data:/var/lib/grafana
-      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     environment:
       # Admin credentials (REQUIRED - no fallback)
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:?GRAFANA_ADMIN_USER required}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:?GRAFANA_ADMIN_PASSWORD required}
-      - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s/grafana
       - GF_SERVER_SERVE_FROM_SUB_PATH=true
       # Security hardening
@@ -379,18 +273,6 @@ services:
       - GF_SECURITY_COOKIE_SECURE=true
       - GF_SECURITY_COOKIE_SAMESITE=strict
       - GF_SECURITY_STRICT_TRANSPORT_SECURITY=true
-      # SMTP for email alerts (optional)
-      - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
-      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:587}
-      - GF_SMTP_USER=${GF_SMTP_USER}
-      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
-      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
-      - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME:-Finance Query Alerts}
-    depends_on:
-      prometheus:
-        condition: service_healthy
-    networks:
-      - monitoring
     deploy:
       resources:
         limits:
@@ -403,52 +285,23 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "wget --spider -q http://localhost:3000/api/health || exit 1",
-        ]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    logging:
-      driver: json-file
-      options:
-        max-size: "10m"
-        max-file: "3"
 
 networks:
   # Frontend network - only Caddy + app servers
   frontend:
-    driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-frontend
   # Backend network - app servers + Redis
   backend:
-    driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-backend
   # Monitoring network - Prometheus + exporters + Grafana
   monitoring:
-    driver: bridge
     driver_opts:
       com.docker.network.bridge.name: br-monitoring
 
 volumes:
-  redis-data:
-    driver: local
   # Hugging Face model caches (one per service: hf-hub's cache layout is not
   # designed for concurrent writers, so v2 and MCP each get their own).
   hf-cache-v2:
-    driver: local
   hf-cache-mcp:
-    driver: local
-  caddy-data:
-    driver: local
-  caddy-config:
-    driver: local
-  prometheus-data:
-    driver: local
-  grafana-data:
-    driver: local

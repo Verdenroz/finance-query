@@ -18,10 +18,15 @@ pub mod risk;
 pub mod search;
 pub mod transcripts;
 
+use crate::metrics::ToolCallTimer;
 use finance_query_server::graphql::FinanceSchema;
 use rmcp::{
-    ErrorData as McpError, ServerHandler, handler::server::tool::ToolRouter,
-    handler::server::wrapper::Parameters, model::CallToolResult, tool, tool_handler, tool_router,
+    ErrorData as McpError, RoleServer, ServerHandler,
+    handler::server::tool::{ToolCallContext, ToolRouter},
+    handler::server::wrapper::Parameters,
+    model::{CallToolRequestParams, CallToolResult},
+    service::RequestContext,
+    tool, tool_handler, tool_router,
 };
 use schemars::JsonSchema;
 use serde::Deserialize;
@@ -446,7 +451,23 @@ pub struct FinanceTools {
 }
 
 #[tool_handler(router = self.tool_router)]
-impl ServerHandler for FinanceTools {}
+impl ServerHandler for FinanceTools {
+    // Manual replica of the #[tool_handler]-generated call_tool; the macro
+    // skips methods that already exist, so this is the one metrics chokepoint.
+    async fn call_tool(
+        &self,
+        request: CallToolRequestParams,
+        context: RequestContext<RoleServer>,
+    ) -> Result<CallToolResult, McpError> {
+        let timer = ToolCallTimer::new(request.name.clone());
+        let tcc = ToolCallContext::new(self, request, context);
+        let result = self.tool_router.call(tcc).await;
+        // A tool-level failure surfaces as Ok(result) with is_error set, not Err.
+        let ok = matches!(&result, Ok(r) if r.is_error != Some(true));
+        timer.observe(ok);
+        result
+    }
+}
 
 #[tool_router(router = tool_router)]
 impl FinanceTools {

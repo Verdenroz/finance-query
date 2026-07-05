@@ -5,9 +5,14 @@
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
 FROM rust:1-slim-bookworm@sha256:4732ca96fd086cb9be682050c3f0176288eebaac2b80aa2bcefccfaf198e1950 AS builder
 
-# cmake/g++/make compile CTranslate2 + SentencePiece for the
-# translation-offline feature (opus-mt bilingual models), enabled on the cargo
-# build commands below.
+# translation-offline for published images; dev overrides to translation
+# (dictionary tier only) to skip the from-source CTranslate2 C++ build.
+ARG CARGO_FEATURES=translation-offline
+
+# release: opt-level=3, fat LTO, single codegen unit. Dev overrides to `dev`
+# (docker-compose.override.yml) for much faster builds.
+ARG CARGO_PROFILE=release
+
 RUN apt-get update && apt-get install -y \
     pkg-config \
     libssl-dev \
@@ -51,7 +56,7 @@ RUN mkdir -p src server/src finance-query-derive/src finance-query-cli/src finan
 # from-source CTranslate2 C++ build, by far the most expensive part of this.
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/build/target,sharing=locked \
-    cargo build --release -p finance-query-mcp --features translation-offline && \
+    cargo build --profile ${CARGO_PROFILE} -p finance-query-mcp --features ${CARGO_FEATURES} && \
     rm -rf src server/src finance-query-derive/src finance-query-cli/src finance-query-mcp/src benches
 
 # Copy actual source code
@@ -67,8 +72,9 @@ COPY benches ./benches
 RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
     --mount=type=cache,target=/build/target,sharing=locked \
     touch src/lib.rs server/src/lib.rs finance-query-mcp/src/main.rs && \
-    cargo auditable build --release -p finance-query-mcp --features translation-offline && \
-    cp target/release/fq-mcp /build/fq-mcp
+    cargo auditable build --profile ${CARGO_PROFILE} -p finance-query-mcp --features ${CARGO_FEATURES} && \
+    OUT_DIR=$([ "${CARGO_PROFILE}" = "dev" ] && echo debug || echo "${CARGO_PROFILE}") && \
+    cp target/${OUT_DIR}/fq-mcp /build/fq-mcp
 
 # ==============================================================================
 # Runtime Stage: Minimal runtime image

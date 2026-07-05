@@ -1939,6 +1939,8 @@ dependencies = [
  "dotenvy",
  "finance-query",
  "finance-query-server",
+ "lazy_static",
+ "prometheus",
  "rmcp",
  "schemars",
  "serde",

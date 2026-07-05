@@ -117,6 +117,72 @@ lazy_static! {
     )
     .expect("Failed to create WebSocket symbols gauge");
 
+    // === GraphQL Metrics ===
+
+    /// GraphQL executions by source (`http` = POST /graphql, `rest_bridge` =
+    /// REST handlers delegating through the in-process schema) and outcome
+    pub static ref GRAPHQL_REQUESTS_TOTAL: CounterVec = CounterVec::new(
+        Opts::new("graphql_requests_total", "Total number of GraphQL executions")
+            .namespace("finance_query"),
+        &["source", "status"]
+    )
+    .expect("Failed to create GraphQL requests counter");
+
+    /// GraphQL execution duration in seconds
+    pub static ref GRAPHQL_REQUEST_DURATION: HistogramVec = HistogramVec::new(
+        HistogramOpts::new(
+            "graphql_request_duration_seconds",
+            "GraphQL execution latency in seconds"
+        )
+        .namespace("finance_query")
+        .buckets(vec![0.001, 0.005, 0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0]),
+        &["source"]
+    )
+    .expect("Failed to create GraphQL request duration histogram");
+
+    // === Cache Backend Metrics ===
+
+    /// Whether the Redis cache backend is connected (1) or the server is
+    /// running uncached (0); the fallback is otherwise silent without this.
+    pub static ref CACHE_BACKEND_CONNECTED: Gauge = Gauge::with_opts(
+        Opts::new(
+            "cache_backend_connected",
+            "1 when the Redis cache backend is connected, 0 when caching is disabled"
+        )
+        .namespace("finance_query")
+    )
+    .expect("Failed to create cache backend gauge");
+
+    /// Cache operation errors (Redis command failures, not misses)
+    pub static ref CACHE_ERRORS: CounterVec = CounterVec::new(
+        Opts::new("cache_errors_total", "Total number of cache operation errors")
+            .namespace("finance_query"),
+        &["operation"]
+    )
+    .expect("Failed to create cache errors counter");
+
+    // === Streaming Hub Metrics ===
+
+    /// Distinct symbols with an active upstream price-stream subscription
+    pub static ref STREAM_SUBSCRIPTIONS_ACTIVE: Gauge = Gauge::with_opts(
+        Opts::new(
+            "stream_subscriptions_active",
+            "Number of distinct symbols actively subscribed on the upstream price stream"
+        )
+        .namespace("finance_query")
+    )
+    .expect("Failed to create stream subscriptions gauge");
+
+    /// Distinct feed sources with an active upstream poll subscription
+    pub static ref FEED_SUBSCRIPTIONS_ACTIVE: Gauge = Gauge::with_opts(
+        Opts::new(
+            "feed_subscriptions_active",
+            "Number of distinct feed sources actively polled by the feed hub"
+        )
+        .namespace("finance_query")
+    )
+    .expect("Failed to create feed subscriptions gauge");
+
     // === Error Metrics ===
 
     /// Total errors by type
@@ -138,6 +204,39 @@ lazy_static! {
         .namespace("finance_query")
     )
     .expect("Failed to create rate limit rejections counter");
+
+    /// Total requests allowed through the rate limiter
+    pub static ref RATE_LIMIT_ALLOWED: Counter = Counter::with_opts(
+        Opts::new(
+            "rate_limit_allowed_total",
+            "Total number of requests allowed through the rate limiter"
+        )
+        .namespace("finance_query")
+    )
+    .expect("Failed to create rate limit allowed counter");
+
+    /// Configured rate limit quota (requests/minute), for usage-ratio queries
+    pub static ref RATE_LIMIT_QUOTA_PER_MINUTE: Gauge = Gauge::with_opts(
+        Opts::new(
+            "rate_limit_quota_per_minute",
+            "Configured rate limit quota in requests per minute"
+        )
+        .namespace("finance_query")
+    )
+    .expect("Failed to create rate limit quota gauge");
+
+    // === GraphQL Limit Metrics ===
+
+    /// Queries rejected for exceeding the complexity or depth limit
+    pub static ref GRAPHQL_LIMIT_REJECTIONS: CounterVec = CounterVec::new(
+        Opts::new(
+            "graphql_limit_rejections_total",
+            "Total GraphQL queries rejected for exceeding a complexity or depth limit"
+        )
+        .namespace("finance_query"),
+        &["limit_type"]
+    )
+    .expect("Failed to create GraphQL limit rejections counter");
 }
 
 /// Initialize metrics registry
@@ -174,11 +273,38 @@ pub fn init() {
             .register(Box::new(WEBSOCKET_SYMBOLS_SUBSCRIBED.clone()))
             .expect("Failed to register WEBSOCKET_SYMBOLS_SUBSCRIBED");
         REGISTRY
+            .register(Box::new(GRAPHQL_REQUESTS_TOTAL.clone()))
+            .expect("Failed to register GRAPHQL_REQUESTS_TOTAL");
+        REGISTRY
+            .register(Box::new(GRAPHQL_REQUEST_DURATION.clone()))
+            .expect("Failed to register GRAPHQL_REQUEST_DURATION");
+        REGISTRY
+            .register(Box::new(CACHE_BACKEND_CONNECTED.clone()))
+            .expect("Failed to register CACHE_BACKEND_CONNECTED");
+        REGISTRY
+            .register(Box::new(CACHE_ERRORS.clone()))
+            .expect("Failed to register CACHE_ERRORS");
+        REGISTRY
+            .register(Box::new(STREAM_SUBSCRIPTIONS_ACTIVE.clone()))
+            .expect("Failed to register STREAM_SUBSCRIPTIONS_ACTIVE");
+        REGISTRY
+            .register(Box::new(FEED_SUBSCRIPTIONS_ACTIVE.clone()))
+            .expect("Failed to register FEED_SUBSCRIPTIONS_ACTIVE");
+        REGISTRY
             .register(Box::new(ERRORS_TOTAL.clone()))
             .expect("Failed to register ERRORS_TOTAL");
         REGISTRY
             .register(Box::new(RATE_LIMIT_REJECTIONS.clone()))
             .expect("Failed to register RATE_LIMIT_REJECTIONS");
+        REGISTRY
+            .register(Box::new(RATE_LIMIT_ALLOWED.clone()))
+            .expect("Failed to register RATE_LIMIT_ALLOWED");
+        REGISTRY
+            .register(Box::new(RATE_LIMIT_QUOTA_PER_MINUTE.clone()))
+            .expect("Failed to register RATE_LIMIT_QUOTA_PER_MINUTE");
+        REGISTRY
+            .register(Box::new(GRAPHQL_LIMIT_REJECTIONS.clone()))
+            .expect("Failed to register GRAPHQL_LIMIT_REJECTIONS");
 
         tracing::info!("Prometheus metrics initialized");
     });
@@ -227,6 +353,10 @@ impl RequestTimer {
             .with_label_values(&[&self.method, &self.endpoint, &status.to_string()])
             .inc();
 
+        if status >= 500 {
+            ERRORS_TOTAL.with_label_values(&["http_5xx"]).inc();
+        }
+
         HTTP_REQUESTS_IN_FLIGHT.dec();
     }
 }
@@ -250,6 +380,33 @@ impl CacheTimer {
         CACHE_OPERATION_DURATION
             .with_label_values(&[&self.operation])
             .observe(duration);
+    }
+}
+
+/// Helper to track GraphQL execution timing per source
+pub struct GraphqlTimer {
+    start: Instant,
+    source: &'static str,
+}
+
+impl GraphqlTimer {
+    pub fn new(source: &'static str) -> Self {
+        Self {
+            start: Instant::now(),
+            source,
+        }
+    }
+
+    pub fn observe(self, ok: bool) {
+        let duration = self.start.elapsed().as_secs_f64();
+
+        GRAPHQL_REQUEST_DURATION
+            .with_label_values(&[self.source])
+            .observe(duration);
+
+        GRAPHQL_REQUESTS_TOTAL
+            .with_label_values(&[self.source, if ok { "ok" } else { "error" }])
+            .inc();
     }
 }
 
@@ -287,6 +444,34 @@ mod tests {
         // Should contain metric names (with namespace prefix)
         assert!(output.contains("finance_query_http_requests_total"));
         assert!(output.contains("cache_hits_total"));
+    }
+
+    #[test]
+    fn test_graphql_timer() {
+        init();
+        let timer = GraphqlTimer::new("http");
+        timer.observe(true);
+        let timer = GraphqlTimer::new("rest_bridge");
+        timer.observe(false);
+
+        let output = gather();
+        assert!(output.contains("finance_query_graphql_requests_total"));
+        assert!(output.contains("finance_query_graphql_request_duration_seconds"));
+    }
+
+    #[test]
+    fn test_cache_and_hub_metrics() {
+        init();
+        CACHE_BACKEND_CONNECTED.set(1.0);
+        CACHE_ERRORS.with_label_values(&["get"]).inc();
+        STREAM_SUBSCRIPTIONS_ACTIVE.set(3.0);
+        FEED_SUBSCRIPTIONS_ACTIVE.set(2.0);
+
+        let output = gather();
+        assert!(output.contains("finance_query_cache_backend_connected"));
+        assert!(output.contains("finance_query_cache_errors_total"));
+        assert!(output.contains("finance_query_stream_subscriptions_active"));
+        assert!(output.contains("finance_query_feed_subscriptions_active"));
     }
 
     #[test]

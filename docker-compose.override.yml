@@ -1,0 +1,94 @@
+# Local dev overrides. Compose auto-merges this with docker-compose.yml for
+# plain `docker compose up` — no -f flags needed.
+
+services:
+  caddy:
+    environment:
+      # No real domain in dev, so Caddy just serves plain HTTP on localhost;
+      # any plaintext value works for the monitoring basic-auth password here.
+      - MONITORING_PASSWORD=${MONITORING_PASSWORD:-devpassword}
+
+  finance-query-v2:
+    build:
+      context: .
+      dockerfile: server/Dockerfile
+      # Skips the from-source CTranslate2 C++ compile
+      args:
+        CARGO_FEATURES: translation
+        CARGO_PROFILE: dev
+    image: finance-query-v2:dev
+    ports:
+      - "8001:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+      - LOG_LEVEL=DEBUG
+
+  finance-query-v1:
+    build:
+      context: ./v1
+      dockerfile: Dockerfile
+    image: finance-query-v1:dev
+    ports:
+      - "8002:8000"
+    environment:
+      - REDIS_URL=redis://redis:6379
+
+  finance-query-mcp:
+    build:
+      context: .
+      dockerfile: finance-query-mcp/Dockerfile
+      args:
+        CARGO_FEATURES: translation
+        CARGO_PROFILE: dev
+    image: finance-query-mcp:dev
+    ports:
+      - "8003:3000"
+
+  node-exporter:
+    ports:
+      - "9100:9100"
+
+  redis:
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+
+  redis-exporter:
+    ports:
+      - "9121:9121"
+
+  prometheus:
+    ports:
+      - "9090:9090"
+    # Same as base plus --web.enable-lifecycle, so `curl -X POST
+    # localhost:9090/-/reload` picks up rule changes without a restart.
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
+
+  alertmanager:
+    ports:
+      - "9093:9093"
+
+  loki:
+    ports:
+      - "3100:3100"
+
+  grafana:
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/
+    depends_on:
+      loki:
+        condition: service_started

@@ -10,6 +10,12 @@ global:
 rule_files:
   - "alerts/*.yml"
 
+# Route fired alerts to Alertmanager (webhook notifications)
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: ['alertmanager:9093']
+
 # Scrape configurations
 scrape_configs:
   # Scrape Prometheus itself
@@ -35,6 +41,32 @@ scrape_configs:
         target_label: instance
         replacement: 'finance-query-v2'
 
+  # Scrape finance-query V1 (legacy Python server, passively monitored)
+  - job_name: 'finance-query-v1'
+    metrics_path: '/v1/metrics'
+    static_configs:
+      - targets: ['finance-query-v1:8000']
+        labels:
+          service: 'finance-query-v1'
+          version: 'v1'
+          language: 'python'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'finance-query-v1'
+
+  # Scrape MCP server
+  - job_name: 'finance-query-mcp'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['finance-query-mcp:3000']
+        labels:
+          service: 'finance-query-mcp'
+    relabel_configs:
+      - source_labels: [__address__]
+        target_label: instance
+        replacement: 'finance-query-mcp'
+
   # Scrape Redis (via redis-exporter)
   - job_name: 'redis'
     scrape_interval: 15s
@@ -42,3 +74,35 @@ scrape_configs:
       - targets: ['redis-exporter:9121']
         labels:
           service: 'redis'
+
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          service: 'node-exporter'
+
+  # Per-container CPU/memory; drops non-container cgroup series (empty image label).
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          service: 'cadvisor'
+    metric_relabel_configs:
+      - source_labels: [image]
+        regex: ''
+        action: drop
+
+  # Scrape Alertmanager itself
+  - job_name: 'alertmanager'
+    static_configs:
+      - targets: ['alertmanager:9093']
+        labels:
+          service: 'alertmanager'
+
+  # Scrape Loki (log aggregation)
+  - job_name: 'loki'
+    metrics_path: '/metrics'
+    static_configs:
+      - targets: ['loki:3100']
+        labels:
+          service: 'loki'

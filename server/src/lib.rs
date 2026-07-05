@@ -70,6 +70,7 @@ impl StreamHub {
             }
             *count += 1;
         }
+        metrics::STREAM_SUBSCRIPTIONS_ACTIVE.set(inner.symbol_ref_counts.len() as f64);
 
         // Create upstream stream if this is the first active subscription.
         if inner.upstream.is_none() {
@@ -119,6 +120,7 @@ impl StreamHub {
         for symbol in &newly_unneeded {
             inner.symbol_ref_counts.remove(symbol);
         }
+        metrics::STREAM_SUBSCRIPTIONS_ACTIVE.set(inner.symbol_ref_counts.len() as f64);
 
         if let Some(upstream) = inner.upstream.as_ref()
             && !newly_unneeded.is_empty()
@@ -182,6 +184,7 @@ impl FeedHub {
             }
             *count += 1;
         }
+        metrics::FEED_SUBSCRIPTIONS_ACTIVE.set(inner.source_ref_counts.len() as f64);
 
         // Create upstream stream if this is the first active subscription.
         if inner.upstream.is_none() {
@@ -221,6 +224,7 @@ impl FeedHub {
         for source in &newly_unneeded {
             inner.source_ref_counts.remove(&source.url());
         }
+        metrics::FEED_SUBSCRIPTIONS_ACTIVE.set(inner.source_ref_counts.len() as f64);
 
         if let Some(upstream) = inner.upstream.as_ref()
             && !newly_unneeded.is_empty()

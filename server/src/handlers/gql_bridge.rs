@@ -93,9 +93,11 @@ pub(crate) async fn execute_gql_rest(
     query: &str,
     variables: async_graphql::Variables,
 ) -> Result<serde_json::Value, axum::response::Response> {
+    let timer = crate::metrics::GraphqlTimer::new("rest_bridge");
     let response: async_graphql::Response = schema
         .execute(async_graphql::Request::new(query).variables(variables))
         .await;
+    timer.observe(response.errors.is_empty());
 
     if !response.errors.is_empty() {
         let status = response.errors.iter().find_map(|e| {

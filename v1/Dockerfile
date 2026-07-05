@@ -1,5 +1,5 @@
 # Start with the official Python image
-FROM python:3.14.0-slim
+FROM python:3.14.0-slim@sha256:0aecac02dc3d4c5dbb024b753af084cafe41f5416e02193f1ce345d671ec966e
 
 # Install system dependencies
 RUN apt-get update && apt-get install -y \

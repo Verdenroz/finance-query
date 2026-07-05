@@ -20,6 +20,7 @@ Bridges every MCP tool through the same in-process GraphQL schema that powers th
 - **`fields` param** on most tools — comma-separated GraphQL field names, validated against the same typed `VALID_FIELDS` allow-lists REST uses (`server/src/graphql/fields.rs`); omitted falls back to a curated default response instead of the full object.
 - **`limit`/`cursor` params** on every list-returning tool — MCP now always paginates (unlike REST, which stays unpaginated by default), so `get_feeds`, `get_news`, `get_dividends`, `get_chart`, `get_holders`, `search`, `get_quote`/`get_indicators` (multi-symbol), `get_options`, `get_fred_series`, `get_edgar_facts`, `get_edgar_submissions`, `get_treasury_yields`, and `get_crypto` all now return `{"items": [...], "pageInfo": {"hasNextPage": bool, "endCursor": "..."}}` even when the caller passes neither param.
 - **`lang` param on quote/news/search tools** now also flows through the shared GraphQL layer for translated text fields (dictionary tier always on; ML-backed only when the deployed binary has `translation-offline` enabled).
+- **Prometheus metrics** (`src/metrics.rs`) — per-tool call counts (`finance_query_mcp_tool_calls_total{tool,status}`), latency histogram (`finance_query_mcp_tool_call_duration_seconds{tool}`), and an in-flight gauge, recorded in a manual `ServerHandler::call_tool` chokepoint covering all 32 tools; exported at `GET /metrics` on the HTTP transport (internal-only — Caddy never forwards it). Part of the production-monitoring overhaul (#222).
 
 ### Changed
 
