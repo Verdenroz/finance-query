@@ -109,12 +109,12 @@ services:
       - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus-data:/prometheus
     command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-      - '--storage.tsdb.retention.time=30d'
-      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
-      - '--web.console.templates=/usr/share/prometheus/consoles'
-      - '--web.enable-lifecycle'
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
+      - "--web.console.templates=/usr/share/prometheus/consoles"
+      - "--web.enable-lifecycle"
     depends_on:
       - finance-query-v2
     networks:
@@ -139,12 +139,6 @@ services:
       - "-config.file=/etc/loki/loki-config.yml"
     networks:
       - finance-query-network
-    healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 30s
 
   # Promtail (ships container logs to Loki)
   promtail:
@@ -161,8 +155,7 @@ services:
     command:
       - "-config.file=/etc/promtail/promtail-config.yml"
     depends_on:
-      loki:
-        condition: service_healthy
+      - loki
     networks:
       - finance-query-network
 
@@ -197,7 +190,11 @@ services:
     networks:
       - finance-query-network
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://localhost:3000/api/health || exit 1"]
+      test:
+        [
+          "CMD-SHELL",
+          "wget --spider -q http://localhost:3000/api/health || exit 1",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
