@@ -89,10 +89,10 @@ It is designed to be used in three ways:
     make serve  # Compiles and runs v2 server
     ```
 
-    Or run both v1 and v2 with Docker Compose:
+    Or run the full stack with Docker Compose:
 
     ```bash
-    make docker-compose  # Starts v1 (port 8002), v2 (port 8001), Redis, and Nginx
+    docker compose up -d  # Starts v1 (port 8002), v2 (port 8001), Redis, Caddy, and the full monitoring stack
     ```
 
     ### Reference

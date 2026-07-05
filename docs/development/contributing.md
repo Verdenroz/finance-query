@@ -31,7 +31,7 @@ make lint              # Run pre-commit checks (fmt, clippy, check)
 make audit             # Run security audit on dependencies
 make docs              # Build and serve MkDocs documentation
 make build             # Build library and server in release mode
-make docker-compose    # Start v1 and v2 servers together
+docker compose up -d   # Start the full stack (v1, v2, Redis, Caddy, monitoring)
 make clean             # Clean build artifacts
 ```
 

@@ -1,144 +1,294 @@
+# Shared base for both local dev and production.
+#
+# Local dev: `docker compose up` — Compose auto-merges this with
+# docker-compose.override.yml
+# Production: `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`
+#   — adds published images, security hardening, and required secrets.
+
 services:
-  # V2 Rust Server
-  finance-query-v2:
-    build:
-      context: .
-      dockerfile: server/Dockerfile
-    container_name: finance-query-v2
+  caddy:
+    image: caddy:2.11-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
+    container_name: finance-query-caddy
     restart: unless-stopped
     ports:
-      - "8001:8000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    environment:
+      - SERVER_NAME=${SERVER_NAME:-localhost}
+    # Caddy can't expand env vars in its config, so the password is hashed
+    # and substituted here (`$$` escapes Compose, passing a literal `$` through).
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        if [ -z "$$MONITORING_PASSWORD" ]; then
+          echo "WARNING: MONITORING_PASSWORD not set, authentication will not work!"
+          exit 1
+        fi
+        HASHED_PASSWORD=$$(caddy hash-password --plaintext "$$MONITORING_PASSWORD")
+        sed "s|{{HASHED_PASSWORD}}|$$HASHED_PASSWORD|g" /etc/caddy/Caddyfile > /tmp/Caddyfile
+        exec caddy run --config /tmp/Caddyfile --adapter caddyfile
+    depends_on:
+      finance-query-v1:
+        condition: service_healthy
+      finance-query-v2:
+        condition: service_healthy
+      finance-query-mcp:
+        condition: service_healthy
+    networks:
+      - frontend
+      - backend
+      - monitoring
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "curl",
+          "-f",
+          "-s",
+          "-o",
+          "/dev/null",
+          "http://localhost:2019/config/",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 5s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # V2 Rust Server
+  finance-query-v2:
+    container_name: finance-query-v2
+    restart: unless-stopped
     env_file:
       - server/.env
     environment:
       - PORT=8000
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
-      - REDIS_URL=redis://redis:6379
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+      - monitoring
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v2/health"]
+      test: ["CMD", "curl", "-f", "-q", "http://localhost:8000/v2/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 10s
-    networks:
-      - finance-query-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # V1 Python Server
   finance-query-v1:
-    build:
-      context: ./v1
-      dockerfile: Dockerfile
     container_name: finance-query-v1
     restart: unless-stopped
-    ports:
-      - "8002:8000"
     env_file:
       - v1/.env
     environment:
       - LOG_LEVEL=INFO
       - LOG_FORMAT=json
-      - REDIS_URL=redis://redis:6379
     depends_on:
-      - redis
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+      - monitoring
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/health"]
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/v1/health').read()",
+        ]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 30s
-    networks:
-      - finance-query-network
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Redis for caching (shared, internal only)
+  # MCP Server (HTTP streaming transport for AI agents)
+  finance-query-mcp:
+    container_name: finance-query-mcp
+    restart: unless-stopped
+    environment:
+      - MCP_TRANSPORT=http
+      - MCP_ADDR=0.0.0.0:3000
+      - MCP_ALLOWED_HOSTS=${SERVER_NAME:-localhost}
+      - EDGAR_EMAIL=${EDGAR_EMAIL:-}
+      - FRED_API_KEY=${FRED_API_KEY:-}
+    networks:
+      - backend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-q", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Host metrics (disk/memory/CPU) — a full disk previously surfaced only
+  # as Redis errors, with no direct signal pointing at disk space itself.
+  node-exporter:
+    image: prom/node-exporter:v1.11.1@sha256:e9cff4fc67b1818f8c97adb115b9f12c9a54b533de86765d4a0effc01b357205
+    container_name: finance-query-node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro,rslave
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Redis (internal only)
   redis:
-    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
+    image: redis:8.4.0-alpine@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d
     container_name: finance-query-redis
     restart: unless-stopped
-    # No external port - only accessible within Docker network
     volumes:
       - redis-data:/data
-    command: redis-server --appendonly yes
     networks:
-      - finance-query-network
+      - backend
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Redis Exporter for Prometheus metrics
   redis-exporter:
-    image: oliver006/redis_exporter:latest@sha256:2e9795be900db073e9475fdb9c5124db309b07a3e4e75a1770705cb03be1a1c8
+    image: oliver006/redis_exporter:v1.80.2-alpine@sha256:5c1692551217e4519a04b89aa87a8c3360173f020e8cef280c798e9f5dbc819a
     container_name: finance-query-redis-exporter
     restart: unless-stopped
-    ports:
-      - "9121:9121"
     environment:
       - REDIS_ADDR=redis:6379
     depends_on:
-      - redis
-    networks:
-      - finance-query-network
-
-  # Nginx reverse proxy
-  nginx:
-    image: nginx:alpine@sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa
-    container_name: finance-query-nginx
-    restart: unless-stopped
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx/certs:/etc/nginx/certs:ro
-    depends_on:
-      finance-query-v1:
-        condition: service_healthy
-      finance-query-v2:
+      redis:
         condition: service_healthy
     networks:
-      - finance-query-network
+      - backend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9121/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Prometheus - Metrics collection and storage
+  # Prometheus
   prometheus:
-    image: prom/prometheus:latest@sha256:c6b27ea434f8389bfe233fbc7be381cf50587c286e871bc842008f5a1b1908a7
+    image: prom/prometheus:v3.5.1@sha256:38c3b05c3bc744ff1b0b7b4eb82196026442845e62a1e2073795565da506d7a2
     container_name: finance-query-prometheus
     restart: unless-stopped
-    ports:
-      - "9090:9090"
     volumes:
       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ./monitoring/prometheus/alerts:/etc/prometheus/alerts:ro
       - prometheus-data:/prometheus
-    command:
-      - "--config.file=/etc/prometheus/prometheus.yml"
-      - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=30d"
-      - "--web.console.libraries=/usr/share/prometheus/console_libraries"
-      - "--web.console.templates=/usr/share/prometheus/consoles"
-      - "--web.enable-lifecycle"
     depends_on:
-      - finance-query-v2
+      finance-query-v2:
+        condition: service_healthy
     networks:
-      - finance-query-network
+      - monitoring
     healthcheck:
       test: ["CMD", "wget", "--spider", "-q", "http://localhost:9090/-/healthy"]
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Alertmanager (routes Prometheus alerts to a webhook and/or email)
+  alertmanager:
+    image: prom/alertmanager:v0.33.1@sha256:9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
+    container_name: finance-query-alertmanager
+    restart: unless-stopped
+    environment:
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+      - ALERT_EMAIL_TO=${ALERT_EMAIL_TO:-}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:587}
+      - GF_SMTP_USER=${GF_SMTP_USER:-}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD:-}
+      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS:-}
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml.tmpl:/etc/alertmanager/alertmanager.yml.tmpl:ro
+      - ./monitoring/alertmanager/entrypoint.sh:/entrypoint.sh:ro
+      - alertmanager-data:/alertmanager
+    entrypoint: ["/entrypoint.sh"]
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Loki (log aggregation)
   loki:
     image: grafana/loki:3.6.11@sha256:44148ad243c07957113baea950ee5ba9b0c8eff8d7e38ff3cc1c0af705790945
     container_name: finance-query-loki
     restart: unless-stopped
-    ports:
-      - "3100:3100"
     volumes:
       - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
       - loki-data:/loki
     command:
       - "-config.file=/etc/loki/loki-config.yml"
     networks:
-      - finance-query-network
+      - monitoring
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Promtail (ships container logs to Loki)
   promtail:
@@ -157,38 +307,48 @@ services:
     depends_on:
       - loki
     networks:
-      - finance-query-network
+      - monitoring
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
-  # Grafana - Metrics visualization and dashboards
+  # Grafana
   grafana:
-    image: grafana/grafana:latest@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
+    image: grafana/grafana:12.4.5@sha256:26b8f35a9e4e4431995cf64c3f396505a4faf17bcfc19f9ed84943ec6bfd5ecd
     container_name: finance-query-grafana
     restart: unless-stopped
-    ports:
-      - "3000:3000"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
     environment:
-      # Admin credentials
-      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
-      - GF_SERVER_ROOT_URL=%(protocol)s://%(domain)s:%(http_port)s/
       - GF_ANALYTICS_REPORTING_ENABLED=false
       - GF_ANALYTICS_CHECK_FOR_UPDATES=false
-      # SMTP for email alerts (optional)
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/home.json
+      - GF_PLUGINS_PREINSTALL_DISABLED=true
       - GF_SMTP_ENABLED=${GF_SMTP_ENABLED:-false}
       - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:587}
       - GF_SMTP_USER=${GF_SMTP_USER}
       - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD}
       - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS}
       - GF_SMTP_FROM_NAME=${GF_SMTP_FROM_NAME:-Finance Query Alerts}
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        set -e
+        if ! grep -q '"version": "2.1.5"' /var/lib/grafana/plugins/grafana-lokiexplore-app/plugin.json 2>/dev/null; then
+          rm -rf /var/lib/grafana/plugins/grafana-lokiexplore-app
+          grafana cli --pluginsDir /var/lib/grafana/plugins plugins install grafana-lokiexplore-app 2.1.5
+        fi
+        exec /run.sh
     depends_on:
-      - prometheus
-      - loki
+      prometheus:
+        condition: service_healthy
     networks:
-      - finance-query-network
+      - monitoring
     healthcheck:
       test:
         [
@@ -198,14 +358,26 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
 networks:
-  finance-query-network:
+  frontend:
+    driver: bridge
+  backend:
+    driver: bridge
+  monitoring:
     driver: bridge
 
 volumes:
   redis-data:
   prometheus-data:
   grafana-data:
+  alertmanager-data:
   loki-data:
   promtail-data:
+  caddy-data:
+  caddy-config:

@@ -26,7 +26,6 @@ exclude = [
     ".env*",
     "Makefile",
     "docker-compose*.yml",
-    "nginx/",
     "mkdocs.yml",
 ]
 

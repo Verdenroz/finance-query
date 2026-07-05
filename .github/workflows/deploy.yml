@@ -126,11 +126,12 @@ jobs:
             git fetch origin master
             git checkout --force ${{ github.sha }}
 
+            # docker-compose.prod.yml is an overlay on docker-compose.yml
             # Pull latest images
-            docker compose -f docker-compose.prod.yml pull
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
 
             # Deploy with zero-downtime
-            docker compose -f docker-compose.prod.yml up -d
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
 
             # Cleanup old images
             docker image prune -f
