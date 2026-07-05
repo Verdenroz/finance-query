@@ -136,6 +136,12 @@ mod tests {
         TOOL_CALLS_TOTAL
             .with_label_values(&["get_chart", "error"])
             .inc();
+        // HistogramVec only emits a family once some label combination has been
+        // observed, so this must happen here rather than relying on another
+        // test happening to run first.
+        TOOL_CALL_DURATION
+            .with_label_values(&["get_chart"])
+            .observe(0.01);
 
         let output = gather();
 
