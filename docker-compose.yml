@@ -54,7 +54,7 @@ services:
 
   # Redis for caching (shared, internal only)
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:6ab0b6e7381779332f97b8ca76193e45b0756f38d4c0dcda72dbb3c32061ab99
     container_name: finance-query-redis
     restart: unless-stopped
     # No external port - only accessible within Docker network
@@ -66,7 +66,7 @@ services:
 
   # Redis Exporter for Prometheus metrics
   redis-exporter:
-    image: oliver006/redis_exporter:latest
+    image: oliver006/redis_exporter:latest@sha256:2e9795be900db073e9475fdb9c5124db309b07a3e4e75a1770705cb03be1a1c8
     container_name: finance-query-redis-exporter
     restart: unless-stopped
     ports:
@@ -80,7 +80,7 @@ services:
 
   # Nginx reverse proxy
   nginx:
-    image: nginx:alpine
+    image: nginx:alpine@sha256:54f2a904c251d5a34adf545a72d32515a15e08418dae0266e23be2e18c66fefa
     container_name: finance-query-nginx
     restart: unless-stopped
     ports:
@@ -99,7 +99,7 @@ services:
 
   # Prometheus - Metrics collection and storage
   prometheus:
-    image: prom/prometheus:latest
+    image: prom/prometheus:latest@sha256:c6b27ea434f8389bfe233fbc7be381cf50587c286e871bc842008f5a1b1908a7
     container_name: finance-query-prometheus
     restart: unless-stopped
     ports:
@@ -127,7 +127,7 @@ services:
 
   # Grafana - Metrics visualization and dashboards
   grafana:
-    image: grafana/grafana:latest
+    image: grafana/grafana:latest@sha256:121a7a9ece6dc10b969f1f96eed64b4f07dfac0d0b8abc070f7cb83bbde86f63
     container_name: finance-query-grafana
     restart: unless-stopped
     ports:

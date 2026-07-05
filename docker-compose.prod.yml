@@ -4,7 +4,7 @@
 services:
   # Caddy reverse proxy with automatic HTTPS
   caddy:
-    image: caddy:2.11-alpine
+    image: caddy:2.11-alpine@sha256:5f5c8640aae01df9654968d946d8f1a56c497f1dd5c5cda4cf95ab7c14d58648
     container_name: finance-query-caddy
     restart: unless-stopped
     ports:
@@ -218,7 +218,7 @@ services:
 
   # Redis (internal only)
   redis:
-    image: redis:8.4.0-alpine
+    image: redis:8.4.0-alpine@sha256:4eec4565e45aa0b3966554c866bc73211e281b0b3d89fe9a33c982e6faca809d
     container_name: finance-query-redis
     restart: unless-stopped
     user: "999:999" # Redis user
@@ -265,7 +265,7 @@ services:
 
   # Redis Exporter for Prometheus metrics
   redis-exporter:
-    image: oliver006/redis_exporter:v1.80.2-alpine
+    image: oliver006/redis_exporter:v1.80.2-alpine@sha256:5c1692551217e4519a04b89aa87a8c3360173f020e8cef280c798e9f5dbc819a
     container_name: finance-query-redis-exporter
     restart: unless-stopped
     user: "59000:59000" # Non-root user
@@ -307,7 +307,7 @@ services:
   # Host metrics (disk/memory/CPU) weren't visible at all before this; a
   # full disk had no direct signal, only downstream symptoms.
   node-exporter:
-    image: prom/node-exporter:v1.11.1
+    image: prom/node-exporter:v1.11.1@sha256:e9cff4fc67b1818f8c97adb115b9f12c9a54b533de86765d4a0effc01b357205
     container_name: finance-query-node-exporter
     restart: unless-stopped
     read_only: true
@@ -348,7 +348,7 @@ services:
 
   # Prometheus
   prometheus:
-    image: prom/prometheus:v3.5.1
+    image: prom/prometheus:v3.5.1@sha256:38c3b05c3bc744ff1b0b7b4eb82196026442845e62a1e2073795565da506d7a2
     container_name: finance-query-prometheus
     restart: unless-stopped
     user: "65534:65534" # nobody user
@@ -398,7 +398,7 @@ services:
 
   # Alertmanager (routes Prometheus alerts to the ALERT_WEBHOOK_URL receiver)
   alertmanager:
-    image: prom/alertmanager:v0.33.1
+    image: prom/alertmanager:v0.33.1@sha256:9e082985f56f4c8c9f724e18f2288c6708f472e56a5286b8863d080434ea065d
     container_name: finance-query-alertmanager
     restart: unless-stopped
     user: "65534:65534" # nobody user
@@ -448,7 +448,7 @@ services:
 
   # Loki (log aggregation)
   loki:
-    image: grafana/loki:3.6.11
+    image: grafana/loki:3.6.11@sha256:44148ad243c07957113baea950ee5ba9b0c8eff8d7e38ff3cc1c0af705790945
     container_name: finance-query-loki
     restart: unless-stopped
     user: "10001:10001" # loki user
@@ -488,7 +488,7 @@ services:
 
   # Promtail (ships container logs to Loki)
   promtail:
-    image: grafana/promtail:3.6.11
+    image: grafana/promtail:3.6.11@sha256:a761cb834cfaeee29745440d4884d6748f0a08d8f68928db1d707018c1dcfbe9
     container_name: finance-query-promtail
     restart: unless-stopped
     read_only: true
@@ -527,7 +527,7 @@ services:
 
   # Grafana
   grafana:
-    image: grafana/grafana:11.6.0
+    image: grafana/grafana:11.6.0@sha256:62d2b9d20a19714ebfe48d1bb405086081bc602aa053e28cf6d73c7537640dfb
     container_name: finance-query-grafana
     restart: unless-stopped
     user: "472:472" # Grafana user
