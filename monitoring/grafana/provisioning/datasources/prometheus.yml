@@ -3,6 +3,12 @@
 
 apiVersion: 1
 
+# Deletes the pre-uid "Prometheus" datasource from older deploys instead of
+# reconciling it in place, which errors on a uid mismatch.
+deleteDatasources:
+  - name: Prometheus
+    orgId: 1
+
 datasources:
   - name: Prometheus
     uid: prometheus
