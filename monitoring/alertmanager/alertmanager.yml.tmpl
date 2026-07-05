@@ -16,7 +16,8 @@ inhibit_rules:
       - severity =~ warning|info
     equal: ["service"]
 
-# entrypoint.sh appends the webhook receiver below when ALERT_WEBHOOK_URL is
-# set, so `receivers` MUST stay the last section of this template.
+# entrypoint.sh appends a `notify` receiver below with whichever channels
+# (webhook, email) are configured, so `receivers` MUST stay the last section
+# of this template.
 receivers:
   - name: blackhole

@@ -409,12 +409,17 @@ services:
       - "9093"
     environment:
       - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+      - ALERT_EMAIL_TO=${ALERT_EMAIL_TO:-}
+      - GF_SMTP_HOST=${GF_SMTP_HOST:-smtp.gmail.com:587}
+      - GF_SMTP_USER=${GF_SMTP_USER:-}
+      - GF_SMTP_PASSWORD=${GF_SMTP_PASSWORD:-}
+      - GF_SMTP_FROM_ADDRESS=${GF_SMTP_FROM_ADDRESS:-}
     volumes:
       - ./monitoring/alertmanager/alertmanager.yml.tmpl:/etc/alertmanager/alertmanager.yml.tmpl:ro
       - ./monitoring/alertmanager/entrypoint.sh:/entrypoint.sh:ro
       - alertmanager-data:/alertmanager
     # Alertmanager can't expand env vars in its config; the entrypoint renders
-    # the template with ALERT_WEBHOOK_URL first (same pattern as caddy-entrypoint.sh).
+    # the template with these vars first (same pattern as caddy-entrypoint.sh).
     entrypoint: ["/entrypoint.sh"]
     networks:
       - monitoring
