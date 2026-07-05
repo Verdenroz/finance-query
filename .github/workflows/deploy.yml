@@ -26,14 +26,19 @@ jobs:
             context: .
             file: server/Dockerfile
             suffix: v2
+            # translation-offline disabled temporarily
+            build-args: CARGO_FEATURES=translation
           - name: V1 (Python)
             context: v1
             file: v1/Dockerfile
             suffix: v1
+            build-args: ""
           - name: MCP
             context: .
             file: finance-query-mcp/Dockerfile
             suffix: mcp
+            # translation-offline disabled temporarily
+            build-args: CARGO_FEATURES=translation
 
     steps:
       - uses: step-security/harden-runner@9af89fc71515a100421586dfdb3dc9c984fbf411 # v2.19.4
@@ -63,6 +68,7 @@ jobs:
         with:
           context: ${{ matrix.image.context }}
           file: ${{ matrix.image.file }}
+          build-args: ${{ matrix.image.build-args }}
           push: true
           tags: |
             ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}/${{ matrix.image.suffix }}:latest

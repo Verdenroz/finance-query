@@ -30,12 +30,8 @@ services:
     deploy:
       resources:
         limits:
-          # Translation inference is CPU-bound: the offline backend uses up to
-          # 8 intra-op threads, and CTranslate2 holds one small int8 opus-mt
-          # model (~80-210 MB each) per requested language in memory. CPU
-          # headroom matters more than RAM — a full transcript translates in
-          # ~2-4 s at 6 CPUs (vs tens of seconds with fewer).
-          cpus: "6.0"
+          # translation-offline disabled temporarily
+          cpus: "2.0"
           memory: 3G
         reservations:
           cpus: "0.5"
