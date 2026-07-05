@@ -143,7 +143,7 @@ lazy_static! {
     // === Cache Backend Metrics ===
 
     /// Whether the Redis cache backend is connected (1) or the server is
-    /// running uncached (0) — the fallback is otherwise silent in production
+    /// running uncached (0); the fallback is otherwise silent without this.
     pub static ref CACHE_BACKEND_CONNECTED: Gauge = Gauge::with_opts(
         Opts::new(
             "cache_backend_connected",

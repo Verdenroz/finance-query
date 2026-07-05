@@ -452,8 +452,8 @@ pub struct FinanceTools {
 
 #[tool_handler(router = self.tool_router)]
 impl ServerHandler for FinanceTools {
-    // Manual replica of the #[tool_handler]-generated call_tool (the macro skips
-    // methods that already exist) — the single metrics chokepoint for all tools.
+    // Manual replica of the #[tool_handler]-generated call_tool; the macro
+    // skips methods that already exist, so this is the one metrics chokepoint.
     async fn call_tool(
         &self,
         request: CallToolRequestParams,

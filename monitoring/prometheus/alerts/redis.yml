@@ -1,5 +1,4 @@
-# Redis cache alerting rules (redis-exporter). RedisCacheDown (up == 0) lives
-# in finance-query.yml — do not duplicate it here.
+# RedisCacheDown (up == 0) lives in finance-query.yml; don't duplicate it here.
 
 groups:
   - name: redis_health

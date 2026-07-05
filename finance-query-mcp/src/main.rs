@@ -123,8 +123,8 @@ async fn start_http(
 
     let router = Router::new()
         .route("/health", get(|| async { "ok" }))
-        // Unauthenticated by design: only reachable on the internal docker
-        // network — Caddy forwards /mcp* exclusively, never /metrics.
+        // Unauthenticated by design: Caddy blocks /mcp/metrics at the edge,
+        // so this route is only reachable from inside the docker network.
         .route("/metrics", get(|| async { metrics::gather() }))
         .fallback_service(service);
     let listener = tokio::net::TcpListener::bind(&addr).await?;

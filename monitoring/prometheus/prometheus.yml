@@ -75,7 +75,6 @@ scrape_configs:
         labels:
           service: 'redis'
 
-  # Scrape host metrics (disk/memory/CPU — the VPS disk is the known failure mode)
   - job_name: 'node-exporter'
     static_configs:
       - targets: ['node-exporter:9100']

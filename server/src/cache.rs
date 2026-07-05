@@ -134,8 +134,8 @@ impl Cache {
             None
         };
 
-        // The uncached fallback is otherwise invisible in production — expose
-        // it as a gauge so monitoring can alert on it (issue #222).
+        // The uncached fallback is otherwise invisible in production; expose
+        // it as a gauge so monitoring can alert on it.
         crate::metrics::CACHE_BACKEND_CONNECTED.set(if conn.is_some() { 1.0 } else { 0.0 });
 
         Self { conn }

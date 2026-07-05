@@ -1,5 +1,5 @@
-# Alertmanager config TEMPLATE — rendered by entrypoint.sh at container start
-# (Alertmanager cannot expand env vars, so ALERT_WEBHOOK_URL is injected there).
+# Rendered by entrypoint.sh at container start: Alertmanager can't expand
+# env vars itself, so ALERT_WEBHOOK_URL has to be injected this way.
 
 route:
   receiver: {{DEFAULT_RECEIVER}}

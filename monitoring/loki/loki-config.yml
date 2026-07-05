@@ -1,6 +1,5 @@
-# Loki configuration (single-binary, filesystem storage).
-# Retention/ingestion caps are the point: the VPS disk is the constrained
-# resource (issue #222 — disk hit 99% and took Redis down with it).
+# Retention and ingestion are capped because disk space on this host is
+# limited; logging must not be able to fill it.
 
 auth_enabled: false
 

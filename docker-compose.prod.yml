@@ -304,8 +304,8 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Node Exporter for host metrics (disk/memory/CPU — the VPS disk filling up
-  # was invisible before; see issue #222)
+  # Host metrics (disk/memory/CPU) weren't visible at all before this; a
+  # full disk had no direct signal, only downstream symptoms.
   node-exporter:
     image: prom/node-exporter:v1.11.1
     container_name: finance-query-node-exporter
@@ -441,7 +441,7 @@ services:
         max-size: "10m"
         max-file: "3"
 
-  # Loki (log aggregation; retention capped — the VPS disk is the scarce resource)
+  # Loki (log aggregation)
   loki:
     image: grafana/loki:3.6.11
     container_name: finance-query-loki

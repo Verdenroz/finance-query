@@ -1,6 +1,5 @@
-# Promtail configuration — discovers containers via the Docker socket and
-# ships their logs to Loki. Mounting the socket is root-equivalent host
-# access; accepted read-only for reliable discovery on this single-host stack.
+# Docker socket access is root-equivalent; accepted here, read-only, since
+# it's the only reliable way to discover containers on a single host.
 
 server:
   http_listen_port: 9080

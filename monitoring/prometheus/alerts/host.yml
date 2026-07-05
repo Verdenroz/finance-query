@@ -1,13 +1,11 @@
-# Host-level alerting rules (node-exporter). Disk rules exist because of the
-# issue #222 incident class: cache bloat filled the VPS disk to 99%, which
-# surfaced only as downstream Redis errors.
+# Disk rules exist because a full disk previously surfaced only as Redis
+# errors, with nothing pointing at disk space as the actual cause.
 
 groups:
   - name: host_health
     interval: 30s
     rules:
-      # Disk >80% — early warning before the #222 incident class (disk bloat
-      # cascading into Redis write errors) can recur
+      # Early warning before disk bloat cascades into Redis write errors again
       - alert: HostDiskUsageWarning
         expr: |
           (

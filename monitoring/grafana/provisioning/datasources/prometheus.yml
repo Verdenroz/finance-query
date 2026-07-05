@@ -1,6 +1,5 @@
-# Grafana datasource configuration
-# Auto-provisions Prometheus + Loki as datasources on Grafana startup.
-# uids are hardcoded by the provisioned dashboards — do not change them.
+# uids are hardcoded in the provisioned dashboard JSON; changing them
+# here breaks every panel's datasource reference.
 
 apiVersion: 1
 
