@@ -9,6 +9,9 @@ attic/
 .claude/
 IDEAS.md
 *.py
+# v1 is the one Python codebase that IS tracked — carve it out of the *.py ignore
+!v1/src/**/*.py
+!v1/tests/**/*.py
 flamegraph.svg
 *.data
 /CLAUDE.md

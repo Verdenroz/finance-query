@@ -1,0 +1,27 @@
+# Promtail configuration — discovers containers via the Docker socket and
+# ships their logs to Loki. Mounting the socket is root-equivalent host
+# access; accepted read-only for reliable discovery on this single-host stack.
+
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: /positions/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: docker
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 15s
+    relabel_configs:
+      # Docker reports names with a leading slash; strip it.
+      - source_labels: ["__meta_docker_container_name"]
+        regex: "/(.*)"
+        target_label: container_name
+      - source_labels: ["__meta_docker_container_log_stream"]
+        target_label: stream

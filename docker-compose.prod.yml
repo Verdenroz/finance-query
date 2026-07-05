@@ -135,6 +135,7 @@ services:
       - hf-cache-mcp:/home/appuser/.cache/huggingface
     networks:
       - backend
+      - monitoring
     deploy:
       resources:
         limits:
@@ -303,6 +304,48 @@ services:
         max-size: "10m"
         max-file: "3"
 
+  # Node Exporter for host metrics (disk/memory/CPU — the VPS disk filling up
+  # was invisible before; see issue #222)
+  node-exporter:
+    image: prom/node-exporter:v1.11.1
+    container_name: finance-query-node-exporter
+    restart: unless-stopped
+    read_only: true
+    expose:
+      - "9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro,rslave
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 64M
+        reservations:
+          cpus: "0.05"
+          memory: 16M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9100/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
   # Prometheus
   prometheus:
     image: prom/prometheus:v3.5.1
@@ -347,6 +390,130 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Alertmanager (routes Prometheus alerts to the ALERT_WEBHOOK_URL receiver)
+  alertmanager:
+    image: prom/alertmanager:v0.33.1
+    container_name: finance-query-alertmanager
+    restart: unless-stopped
+    user: "65534:65534" # nobody user
+    read_only: true
+    tmpfs:
+      - /tmp
+    expose:
+      - "9093"
+    environment:
+      - ALERT_WEBHOOK_URL=${ALERT_WEBHOOK_URL:-}
+    volumes:
+      - ./monitoring/alertmanager/alertmanager.yml.tmpl:/etc/alertmanager/alertmanager.yml.tmpl:ro
+      - ./monitoring/alertmanager/entrypoint.sh:/entrypoint.sh:ro
+      - alertmanager-data:/alertmanager
+    # Alertmanager can't expand env vars in its config; the entrypoint renders
+    # the template with ALERT_WEBHOOK_URL first (same pattern as caddy-entrypoint.sh).
+    entrypoint: ["/entrypoint.sh"]
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:9093/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Loki (log aggregation; retention capped — the VPS disk is the scarce resource)
+  loki:
+    image: grafana/loki:3.6.11
+    container_name: finance-query-loki
+    restart: unless-stopped
+    user: "10001:10001" # loki user
+    read_only: true
+    expose:
+      - "3100"
+    volumes:
+      - ./monitoring/loki/loki-config.yml:/etc/loki/loki-config.yml:ro
+      - loki-data:/loki
+    command:
+      - "-config.file=/etc/loki/loki-config.yml"
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 512M
+        reservations:
+          cpus: "0.1"
+          memory: 128M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:3100/ready"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Promtail (ships container logs to Loki)
+  promtail:
+    image: grafana/promtail:3.6.11
+    container_name: finance-query-promtail
+    restart: unless-stopped
+    read_only: true
+    volumes:
+      - ./monitoring/promtail/promtail-config.yml:/etc/promtail/promtail-config.yml:ro
+      # Docker socket is root-equivalent host access; accepted read-only for
+      # per-container log discovery on this single-host stack.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - promtail-data:/positions
+    command:
+      - "-config.file=/etc/promtail/promtail-config.yml"
+    depends_on:
+      loki:
+        condition: service_healthy
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: "0.25"
+          memory: 128M
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    # No healthcheck: the promtail image ships no shell utilities to probe with.
     logging:
       driver: json-file
       options:
@@ -451,4 +618,10 @@ volumes:
   prometheus-data:
     driver: local
   grafana-data:
+    driver: local
+  alertmanager-data:
+    driver: local
+  loki-data:
+    driver: local
+  promtail-data:
     driver: local

@@ -27,6 +27,12 @@
         reverse_proxy finance-query-v2:8000
     }
 
+    # Metrics stay internal: Prometheus scrapes over the docker monitoring
+    # network, never through Caddy (Caddy picks the most specific handle).
+    handle /v2/metrics {
+        respond 403
+    }
+
     # V2 API (Rust)
     handle /v2/* {
         reverse_proxy finance-query-v2:8000
@@ -35,6 +41,11 @@
     # V2 WebSocket streaming
     handle /v2/stream {
         reverse_proxy finance-query-v2:8000
+    }
+
+    # Same as /v2/metrics: scraped internally only.
+    handle /v1/metrics {
+        respond 403
     }
 
     # V1 API (Python)
@@ -57,6 +68,11 @@
 
     handle /hours {
         reverse_proxy finance-query-v1:8000
+    }
+
+    # Same as /v2/metrics: scraped internally only
+    handle /mcp/metrics {
+        respond 403
     }
 
     # MCP Server (Model Context Protocol — for AI agents)

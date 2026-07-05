@@ -1,0 +1,59 @@
+# Host-level alerting rules (node-exporter). Disk rules exist because of the
+# issue #222 incident class: cache bloat filled the VPS disk to 99%, which
+# surfaced only as downstream Redis errors.
+
+groups:
+  - name: host_health
+    interval: 30s
+    rules:
+      # Disk >80% — early warning before the #222 incident class (disk bloat
+      # cascading into Redis write errors) can recur
+      - alert: HostDiskUsageWarning
+        expr: |
+          (
+            1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          ) > 0.80
+        for: 15m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: "Disk usage above 80% on {{ $labels.mountpoint }}"
+          description: "Filesystem {{ $labels.device }} at {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full. Investigate before it cascades (issue #222: disk bloat previously reached 99% and broke Redis)."
+
+      - alert: HostDiskUsageCritical
+        expr: |
+          (
+            1 - node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}
+            / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"}
+          ) > 0.90
+        for: 5m
+        labels:
+          severity: critical
+          service: host
+        annotations:
+          summary: "CRITICAL: Disk usage above 90% on {{ $labels.mountpoint }}"
+          description: "Filesystem {{ $labels.device }} at {{ $labels.mountpoint }} is {{ $value | humanizePercentage }} full. This is the issue #222 incident class (cache bloat -> full disk -> Redis errors). Free space NOW."
+
+      - alert: HostMemoryAvailableLow
+        expr: |
+          (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) < 0.10
+        for: 10m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: "Host memory available below 10%"
+          description: "Only {{ $value | humanizePercentage }} of memory is available. OOM-killing a container is likely next."
+
+      - alert: HostHighCpu
+        expr: |
+          (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m]))) > 0.90
+        for: 15m
+        labels:
+          severity: warning
+          service: host
+        annotations:
+          summary: "Host CPU above 90% for 15m"
+          description: "Sustained CPU at {{ $value | humanizePercentage }}. Check for a runaway container (translation inference is the usual CPU-bound suspect)."

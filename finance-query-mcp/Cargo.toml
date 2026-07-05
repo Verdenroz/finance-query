@@ -46,6 +46,10 @@ schemars = "1"
 # Error handling
 anyhow = "1"
 
+# Metrics (same versions as server/Cargo.toml)
+prometheus = "0.14"
+lazy_static = "1.5"
+
 # CLI argument parsing (transport flag)
 clap = { version = "4", features = ["derive", "env"] }
 

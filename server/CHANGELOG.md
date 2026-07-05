@@ -24,6 +24,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   every list-returning GraphQL field. Opt-in and backward compatible on REST
   (`limit`/`cursor` query params; omitted = full unpaginated response, the
   prior behavior); MCP always paginates to protect LLM context windows.
+- **Deeper Prometheus metrics** (`server/src/metrics.rs`) — GraphQL execution
+  counters/latency split by source (`http` vs `rest_bridge`), a
+  `cache_backend_connected` 0/1 gauge exposing the previously-silent Redis
+  fallback mode, `cache_errors_total{get|set}` for real Redis command failures
+  (distinct from misses), and `stream_subscriptions_active`/
+  `feed_subscriptions_active` hub gauges. Part of the production-monitoring
+  overhaul (#222).
 
 ### Changed
 

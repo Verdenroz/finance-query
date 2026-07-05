@@ -11,13 +11,14 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi_injectable import cleanup_all_exit_stacks, register_app
 from mangum import Mangum
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from redis import Redis
 from starlette import status
-from starlette.responses import JSONResponse
+from starlette.responses import JSONResponse, Response
 
 from src.connections import ConnectionManager, RedisConnectionManager
 from src.context import RequestContextMiddleware
-from src.middleware import LoggingMiddleware, RateLimitMiddleware
+from src.middleware import LoggingMiddleware, MetricsMiddleware, RateLimitMiddleware, record_redis_connected, record_redis_error
 from src.models import ValidationErrorResponse
 from src.routes import (
     earnings_transcript_router,
@@ -87,14 +88,18 @@ async def lifespan(app: FastAPI):
                 redis.ping()
                 app.state.redis = redis
                 app.state.connection_manager = RedisConnectionManager(redis)
+                record_redis_connected(True)
                 logger.info("Redis connection established")
             except Exception as e:
                 logger.warning("Failed to initialize Redis connection, falling back to in-memory mode", extra={"error": str(e)})
+                record_redis_error()
+                record_redis_connected(False)
                 redis = None
                 app.state.redis = None
                 app.state.connection_manager = ConnectionManager()
         else:
             logger.info("Redis not configured, using in-memory connection manager")
+            record_redis_connected(False)
             redis = None
             app.state.redis = None
             app.state.connection_manager = ConnectionManager()
@@ -157,6 +162,7 @@ app.add_middleware(
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
+app.add_middleware(MetricsMiddleware)
 app.add_middleware(LoggingMiddleware)
 app.add_middleware(RequestContextMiddleware)
 
@@ -201,6 +207,11 @@ async def health_v1():
 @app.get(path="/v1/ping", tags=["Health Check"], description="Ping endpoint")
 async def ping_v1():
     return await _ping_response()
+
+
+@app.get(path="/v1/metrics", tags=["Monitoring"], description="Prometheus metrics endpoint")
+async def metrics_v1():
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 
 app.include_router(sockets_router)
