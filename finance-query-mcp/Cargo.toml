@@ -63,9 +63,12 @@ axum = "0.8"
 
 [features]
 default = []
+# Dictionary-tier translation for the `lang` tool param.
+translation = ["finance-query/translation", "finance-query-server/translation"]
 # Local opus-mt models via CTranslate2 — requires cmake + a C++ toolchain to
 # build. Without it, translation falls back to the built-in dictionary.
 translation-offline = [
+    "translation",
     "finance-query/translation-offline",
     "finance-query-server/translation-offline",
 ]
