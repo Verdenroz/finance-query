@@ -4,7 +4,7 @@ use async_graphql::{Context, Object, Result};
 
 use super::{GqlTicker, build_gql_options, extract_batch_errors, resolve_gql_lang};
 use crate::AppState;
-use crate::graphql::error::to_gql_error;
+use crate::graphql::error::{from_gql_json, to_gql_error};
 use crate::graphql::types::{
     chart::{GqlChart, GqlChartsBatch, GqlSpark, GqlSparkBatch, GqlSymbolChart},
     enums::{GqlFrequency, GqlInterval, GqlStatementType, GqlTimeRange, GqlValueFormat},
@@ -61,8 +61,7 @@ impl RootBatchQuery {
         let mut quotes = Vec::with_capacity(quotes_map.len());
         for (_, v) in quotes_map {
             let v = lib_format.transform(v);
-            let q: GqlQuote =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let q: GqlQuote = from_gql_json(v)?;
             quotes.push(q);
         }
         Ok(GqlQuotesBatch { quotes, errors })
@@ -98,8 +97,7 @@ impl RootBatchQuery {
 
         let mut charts = Vec::with_capacity(charts_map.len());
         for (symbol, v) in charts_map {
-            let chart: GqlChart =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let chart: GqlChart = from_gql_json(v)?;
             charts.push(GqlSymbolChart { symbol, chart });
         }
         Ok(GqlChartsBatch { charts, errors })
@@ -130,8 +128,7 @@ impl RootBatchQuery {
 
         let mut sparks = Vec::with_capacity(sparks_map.len());
         for (_, v) in sparks_map {
-            let spark: GqlSpark =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let spark: GqlSpark = from_gql_json(v)?;
             sparks.push(spark);
         }
         Ok(GqlSparkBatch { sparks, errors })
@@ -159,8 +156,7 @@ impl RootBatchQuery {
 
         let mut options = Vec::with_capacity(options_map.len());
         for (symbol, v) in options_map {
-            let opts: finance_query::Options =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let opts: finance_query::Options = from_gql_json(v)?;
             options.push(GqlSymbolOptions {
                 symbol,
                 options: build_gql_options(opts),
@@ -196,8 +192,7 @@ impl RootBatchQuery {
 
         let mut splits = Vec::with_capacity(splits_map.len());
         for (symbol, v) in splits_map {
-            let entries: Vec<GqlSplit> =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let entries: Vec<GqlSplit> = from_gql_json(v)?;
             splits.push(GqlSymbolSplits {
                 symbol,
                 splits: entries,
@@ -233,8 +228,7 @@ impl RootBatchQuery {
 
         let mut capital_gains = Vec::with_capacity(cg_map.len());
         for (symbol, v) in cg_map {
-            let entries: Vec<GqlCapitalGain> =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let entries: Vec<GqlCapitalGain> = from_gql_json(v)?;
             capital_gains.push(GqlSymbolCapitalGains {
                 symbol,
                 capital_gains: entries,
@@ -273,8 +267,7 @@ impl RootBatchQuery {
 
         let mut dividends = Vec::with_capacity(dividends_map.len());
         for (symbol, v) in dividends_map {
-            let entries: Vec<GqlDividend> =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let entries: Vec<GqlDividend> = from_gql_json(v)?;
             dividends.push(GqlSymbolDividends {
                 symbol,
                 dividends: entries,
@@ -313,8 +306,7 @@ impl RootBatchQuery {
 
         let mut indicators = Vec::with_capacity(indicators_map.len());
         for (symbol, v) in indicators_map {
-            let flags: GqlIndicatorsSummary =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let flags: GqlIndicatorsSummary = from_gql_json(v)?;
             indicators.push(GqlSymbolIndicators {
                 symbol,
                 indicators: flags,
@@ -345,8 +337,7 @@ impl RootBatchQuery {
 
         let mut recommendations = Vec::with_capacity(recs_map.len());
         for (_, v) in recs_map {
-            let rec: GqlRecommendation =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let rec: GqlRecommendation = from_gql_json(v)?;
             recommendations.push(rec);
         }
         Ok(GqlRecommendationsBatch {
@@ -392,8 +383,7 @@ impl RootBatchQuery {
 
         let mut financials = Vec::with_capacity(financials_map.len());
         for (symbol, v) in financials_map {
-            let fs: finance_query::FinancialStatement =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let fs: finance_query::FinancialStatement = from_gql_json(v)?;
             let items: Vec<GqlFinancialLineItem> = fs
                 .statement
                 .into_iter()

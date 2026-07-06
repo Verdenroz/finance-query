@@ -8,37 +8,7 @@ use crate::tools::gql::{
     escape_gql_string, execute_query, gql_string_list_literal, parse_fields, unwrap_field,
     unwrap_ticker_field, wrap_nested_connection,
 };
-use crate::tools::helpers::{parse_interval, parse_range};
-
-fn interval_to_gql(s: &str) -> &'static str {
-    match parse_interval(s) {
-        finance_query::Interval::OneMinute => "ONE_MINUTE",
-        finance_query::Interval::FiveMinutes => "FIVE_MINUTES",
-        finance_query::Interval::FifteenMinutes => "FIFTEEN_MINUTES",
-        finance_query::Interval::ThirtyMinutes => "THIRTY_MINUTES",
-        finance_query::Interval::OneHour => "ONE_HOUR",
-        finance_query::Interval::OneDay => "ONE_DAY",
-        finance_query::Interval::OneWeek => "ONE_WEEK",
-        finance_query::Interval::OneMonth => "ONE_MONTH",
-        finance_query::Interval::ThreeMonths => "THREE_MONTHS",
-    }
-}
-
-fn range_to_gql(s: &str) -> &'static str {
-    match parse_range(s) {
-        finance_query::TimeRange::OneDay => "ONE_DAY",
-        finance_query::TimeRange::FiveDays => "FIVE_DAYS",
-        finance_query::TimeRange::OneMonth => "ONE_MONTH",
-        finance_query::TimeRange::ThreeMonths => "THREE_MONTHS",
-        finance_query::TimeRange::SixMonths => "SIX_MONTHS",
-        finance_query::TimeRange::OneYear => "ONE_YEAR",
-        finance_query::TimeRange::TwoYears => "TWO_YEARS",
-        finance_query::TimeRange::FiveYears => "FIVE_YEARS",
-        finance_query::TimeRange::TenYears => "TEN_YEARS",
-        finance_query::TimeRange::YearToDate => "YEAR_TO_DATE",
-        finance_query::TimeRange::Max => "MAX",
-    }
-}
+use crate::tools::helpers::{interval_to_gql, range_to_gql};
 
 /// Accepts one or more comma-separated symbols: a single symbol returns the
 /// flat indicators shape, multiple symbols return the batch `{indicators, errors}` shape.

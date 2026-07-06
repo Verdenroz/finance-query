@@ -159,9 +159,12 @@ pub async fn get_sector(
 ) -> Result<CallToolResult, McpError> {
     // Validating against the `Sector` enum before use means only an exact,
     // known canonical slug can ever reach the query text — safe to splice.
-    let _s: Sector = sector
-        .parse()
-        .map_err(|_| crate::error::invalid_params(format!("Invalid sector '{}'", sector)))?;
+    let _s: Sector = sector.parse().map_err(|_| {
+        crate::error::invalid_params(format!(
+            "Invalid sector: '{sector}'. Valid types: {}",
+            Sector::valid_types()
+        ))
+    })?;
     let field_list = parse_fields(fields);
     let selection = build_type_spec_selection(
         field_list.as_deref(),

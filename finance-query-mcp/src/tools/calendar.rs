@@ -6,23 +6,7 @@ use crate::tools::gql::{
     CALENDAR_EVENT_UNION_SELECTION, GQL_CALENDAR_VALID_FIELDS, execute_query,
     gql_string_list_literal, parse_fields, unwrap_field,
 };
-use crate::tools::helpers::parse_range;
-
-fn range_to_gql(s: &str) -> &'static str {
-    match parse_range(s) {
-        finance_query::TimeRange::OneDay => "ONE_DAY",
-        finance_query::TimeRange::FiveDays => "FIVE_DAYS",
-        finance_query::TimeRange::OneMonth => "ONE_MONTH",
-        finance_query::TimeRange::ThreeMonths => "THREE_MONTHS",
-        finance_query::TimeRange::SixMonths => "SIX_MONTHS",
-        finance_query::TimeRange::OneYear => "ONE_YEAR",
-        finance_query::TimeRange::TwoYears => "TWO_YEARS",
-        finance_query::TimeRange::FiveYears => "FIVE_YEARS",
-        finance_query::TimeRange::TenYears => "TEN_YEARS",
-        finance_query::TimeRange::YearToDate => "YEAR_TO_DATE",
-        finance_query::TimeRange::Max => "MAX",
-    }
-}
+use crate::tools::helpers::range_to_gql;
 
 /// Build the `calendar { ... }` selection set, expanding `event` with its
 /// full union inline-fragment selection.

@@ -6,7 +6,7 @@ use crate::tools::gql::{
     GQL_RISK_DEFAULT_FIELDS, GQL_RISK_VALID_FIELDS, build_selection_or_default, execute_query,
     parse_fields, unwrap_ticker_field,
 };
-use crate::tools::helpers::{parse_interval, parse_range};
+use crate::tools::helpers::{interval_to_gql, range_to_gql};
 
 pub async fn get_risk(
     schema: &FinanceSchema,
@@ -16,32 +16,8 @@ pub async fn get_risk(
     benchmark: Option<String>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let interval_str = interval.as_deref().unwrap_or("1d");
-    let range_str = range.as_deref().unwrap_or("1y");
-    let gql_interval = match parse_interval(interval_str) {
-        finance_query::Interval::OneMinute => "ONE_MINUTE",
-        finance_query::Interval::FiveMinutes => "FIVE_MINUTES",
-        finance_query::Interval::FifteenMinutes => "FIFTEEN_MINUTES",
-        finance_query::Interval::ThirtyMinutes => "THIRTY_MINUTES",
-        finance_query::Interval::OneHour => "ONE_HOUR",
-        finance_query::Interval::OneDay => "ONE_DAY",
-        finance_query::Interval::OneWeek => "ONE_WEEK",
-        finance_query::Interval::OneMonth => "ONE_MONTH",
-        finance_query::Interval::ThreeMonths => "THREE_MONTHS",
-    };
-    let gql_range = match parse_range(range_str) {
-        finance_query::TimeRange::OneDay => "ONE_DAY",
-        finance_query::TimeRange::FiveDays => "FIVE_DAYS",
-        finance_query::TimeRange::OneMonth => "ONE_MONTH",
-        finance_query::TimeRange::ThreeMonths => "THREE_MONTHS",
-        finance_query::TimeRange::SixMonths => "SIX_MONTHS",
-        finance_query::TimeRange::OneYear => "ONE_YEAR",
-        finance_query::TimeRange::TwoYears => "TWO_YEARS",
-        finance_query::TimeRange::FiveYears => "FIVE_YEARS",
-        finance_query::TimeRange::TenYears => "TEN_YEARS",
-        finance_query::TimeRange::YearToDate => "YEAR_TO_DATE",
-        finance_query::TimeRange::Max => "MAX",
-    };
+    let gql_interval = interval_to_gql(interval.as_deref().unwrap_or("1d"));
+    let gql_range = range_to_gql(range.as_deref().unwrap_or("1y"));
     let has_benchmark = benchmark.as_deref().is_some_and(|b| !b.is_empty());
     let bench_arg = if has_benchmark {
         ", benchmark: $benchmark"

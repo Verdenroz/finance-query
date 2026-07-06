@@ -175,7 +175,7 @@ impl FinanceError {
                 | FinanceError::HttpError(_)
                 | FinanceError::AuthenticationFailed { .. }
                 | FinanceError::ServerError { .. }
-        )
+        ) || matches!(self, FinanceError::ExternalApiError { status, .. } if *status >= 500)
     }
 
     /// Check if this error indicates an authentication issue
@@ -208,10 +208,14 @@ impl FinanceError {
             Self::ServerError { .. } => ErrorCategory::Server,
             Self::SymbolNotFound { .. } => ErrorCategory::NotFound,
             Self::InvalidParameter { .. } => ErrorCategory::Validation,
-            Self::JsonParseError(_) | Self::ResponseStructureError { .. } => ErrorCategory::Parsing,
+            Self::JsonParseError(_)
+            | Self::ResponseStructureError { .. }
+            | Self::MacroDataError { .. }
+            | Self::FeedParseError { .. } => ErrorCategory::Parsing,
             Self::NotSupported { .. } | Self::NoProviderAvailable { .. } => {
                 ErrorCategory::Validation
             }
+            Self::ExternalApiError { .. } => ErrorCategory::Server,
             _ => ErrorCategory::Other,
         }
     }
@@ -246,6 +250,16 @@ impl FinanceError {
                 *c = context.into();
             }
             Self::ServerError {
+                context: ref mut c, ..
+            } => {
+                *c = context.into();
+            }
+            Self::MacroDataError {
+                context: ref mut c, ..
+            } => {
+                *c = context.into();
+            }
+            Self::FeedParseError {
                 context: ref mut c, ..
             } => {
                 *c = context.into();

@@ -175,8 +175,8 @@ impl TickersBuilder {
         self
     }
 
-    /// Set a complete ClientConfig
-    pub fn config(mut self, config: ClientConfig) -> Self {
+    #[allow(dead_code)]
+    pub(crate) fn config(mut self, config: ClientConfig) -> Self {
         self.config = config;
         self
     }

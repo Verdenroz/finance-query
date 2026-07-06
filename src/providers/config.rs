@@ -198,6 +198,15 @@ impl ProvidersBuilder {
         self
     }
 
+    /// Set the region code (e.g., "US", "JP", "DE").
+    ///
+    /// For standard countries, prefer `.region()` instead to ensure correct
+    /// lang/region pairing.
+    pub fn region_code(mut self, region: impl Into<String>) -> Self {
+        self.config.region = region.into();
+        self
+    }
+
     /// Set the HTTP request timeout.
     pub fn timeout(mut self, t: Duration) -> Self {
         self.config.timeout = t;

@@ -40,7 +40,7 @@ pub async fn execute(args: MarketArgs) -> Result<()> {
     let format = OutputFormat::from_str(&args.output)?;
 
     // Parse region if provided
-    let region = args.region.as_deref().and_then(parse_region);
+    let region = args.region.as_deref().and_then(|s| s.parse().ok());
 
     // Fetch market summary
     let mut markets = finance_query::finance::market_summary(region).await?;
@@ -95,25 +95,4 @@ pub async fn execute(args: MarketArgs) -> Result<()> {
     output::print_many(&market_items, format)?;
 
     Ok(())
-}
-
-fn parse_region(s: &str) -> Option<finance_query::Region> {
-    use finance_query::Region;
-    match s.to_uppercase().as_str() {
-        "US" => Some(Region::UnitedStates),
-        "GB" | "UK" => Some(Region::UnitedKingdom),
-        "CA" => Some(Region::Canada),
-        "AU" => Some(Region::Australia),
-        "DE" => Some(Region::Germany),
-        "FR" => Some(Region::France),
-        "IT" => Some(Region::Italy),
-        "ES" => Some(Region::Spain),
-        "HK" => Some(Region::HongKong),
-        "SG" => Some(Region::Singapore),
-        "IN" => Some(Region::India),
-        "BR" => Some(Region::Brazil),
-        "CN" => Some(Region::China),
-        "TW" => Some(Region::Taiwan),
-        _ => None,
-    }
 }

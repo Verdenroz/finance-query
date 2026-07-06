@@ -1084,53 +1084,6 @@ impl Region {
         }
     }
 
-    /// Get the CORS domain for this region
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use finance_query::Region;
-    ///
-    /// assert_eq!(Region::UnitedStates.cors_domain(), "finance.yahoo.com");
-    /// assert_eq!(Region::France.cors_domain(), "fr.finance.yahoo.com");
-    /// ```
-    pub fn cors_domain(&self) -> &'static str {
-        match self {
-            Region::Argentina => "ar.finance.yahoo.com",
-            Region::Australia => "au.finance.yahoo.com",
-            Region::Brazil => "br.financas.yahoo.com",
-            Region::Canada => "ca.finance.yahoo.com",
-            Region::China => "cn.finance.yahoo.com",
-            Region::Denmark => "dk.finance.yahoo.com",
-            Region::Finland => "fi.finance.yahoo.com",
-            Region::France => "fr.finance.yahoo.com",
-            Region::Germany => "de.finance.yahoo.com",
-            Region::Greece => "gr.finance.yahoo.com",
-            Region::HongKong => "hk.finance.yahoo.com",
-            Region::India => "in.finance.yahoo.com",
-            Region::Israel => "il.finance.yahoo.com",
-            Region::Italy => "it.finance.yahoo.com",
-            Region::Japan => "finance.yahoo.co.jp",
-            Region::Korea => "kr.finance.yahoo.com",
-            Region::Malaysia => "my.finance.yahoo.com",
-            Region::Mexico => "mx.finance.yahoo.com",
-            Region::NewZealand => "nz.finance.yahoo.com",
-            Region::Norway => "no.finance.yahoo.com",
-            Region::Portugal => "pt.finance.yahoo.com",
-            Region::Qatar => "qa.finance.yahoo.com",
-            Region::Russia => "ru.finance.yahoo.com",
-            Region::Singapore => "sg.finance.yahoo.com",
-            Region::Spain => "es.finance.yahoo.com",
-            Region::Sweden => "se.finance.yahoo.com",
-            Region::Taiwan => "tw.finance.yahoo.com",
-            Region::Thailand => "th.finance.yahoo.com",
-            Region::Turkey => "tr.finance.yahoo.com",
-            Region::UnitedKingdom => "uk.finance.yahoo.com",
-            Region::UnitedStates => "finance.yahoo.com",
-            Region::Vietnam => "vn.finance.yahoo.com",
-        }
-    }
-
     /// UTC offset in seconds for the region's primary exchange.
     ///
     /// Returns the standard-time (non-DST) UTC offset of each country's main
