@@ -139,7 +139,7 @@ pub async fn get_feeds(
             cache::ttl::GENERAL_NEWS,
             cache::is_market_open(),
             || async move {
-                let entries = finance_query::feeds::fetch_all(&sources).await?;
+                let entries = finance_query::feeds::fetch_all(sources).await?;
                 serde_json::to_value(&entries).map_err(|e| Box::new(e) as ServiceError)
             },
         )

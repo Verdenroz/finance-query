@@ -124,7 +124,7 @@ async fn run_workload(name: &str, texts: &[String]) -> Result<(), Box<dyn std::e
     for code in langs() {
         let lang = Lang::parse(&code)?;
         let t = Instant::now();
-        let out = translation::translate_texts(texts, &lang).await?;
+        let out = translation::translate_texts(texts.to_vec(), &lang).await?;
         let elapsed = t.elapsed();
         let out_chars: usize = out.iter().map(String::len).sum();
         results.push(LangResult {

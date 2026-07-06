@@ -45,7 +45,7 @@ async fn _verify_futures_contract_api() -> finance_query::Result<()> {
     use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
     let providers = Providers::builder()
-        .route(Capability::FUTURES, &[Provider::Polygon])
+        .route(Capability::FUTURES, [Provider::Polygon])
         .build()
         .await?;
 
@@ -55,5 +55,39 @@ async fn _verify_futures_contract_api() -> finance_query::Result<()> {
         .chart(Interval::OneDay, TimeRange::OneMonth)
         .await?;
     let _history: finance_query::Chart = contract.history(TimeRange::OneMonth).await?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Compile-time: Indicators & Risk section of futures.md
+// ---------------------------------------------------------------------------
+
+/// Verifies the documented `FuturesContract::indicators`/`indicator`/`risk`
+/// flow type-checks. Never called; exists only for the compiler to type-check.
+#[allow(dead_code)]
+#[cfg(all(feature = "indicators", feature = "risk"))]
+async fn _verify_futures_contract_indicators_and_risk() -> finance_query::Result<()> {
+    use finance_query::indicators::Indicator;
+    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+
+    let providers = Providers::builder()
+        .route(Capability::FUTURES, [Provider::Polygon])
+        .build()
+        .await?;
+    let contract = providers.futures("ES");
+
+    let summary = contract
+        .indicators(Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+    let _: Option<f64> = summary.rsi_14;
+
+    let _rsi_21 = contract
+        .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+
+    let risk = contract.risk(Interval::OneDay, TimeRange::OneYear).await?;
+    let _: f64 = risk.var_95;
+    let _: f64 = risk.max_drawdown;
+
     Ok(())
 }

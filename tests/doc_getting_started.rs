@@ -178,7 +178,7 @@ async fn test_streaming_connects() {
     use finance_query::streaming::PriceStream;
 
     // Subscribe to real-time price updates via WebSocket
-    let stream = PriceStream::subscribe(&["AAPL", "NVDA", "TSLA"])
+    let stream = PriceStream::subscribe(["AAPL", "NVDA", "TSLA"])
         .await
         .unwrap();
 

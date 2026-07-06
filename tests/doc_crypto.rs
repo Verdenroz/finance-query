@@ -102,6 +102,47 @@ fn _verify_crypto_quote_price(q: finance_query::CryptoQuote) {
 }
 
 // ---------------------------------------------------------------------------
+// Compile-time: Indicators & Risk section of crypto.md
+// ---------------------------------------------------------------------------
+
+/// Verifies the documented `CryptoCoin::indicators`/`indicator`/`risk` flow
+/// type-checks. Never called; exists only for the compiler to type-check.
+#[allow(dead_code)]
+#[cfg(all(feature = "indicators", feature = "risk"))]
+async fn _verify_crypto_coin_indicators_and_risk() -> finance_query::Result<()> {
+    use finance_query::indicators::Indicator;
+    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+
+    let providers = Providers::builder()
+        .route(Capability::CRYPTO, [Provider::CoinGecko])
+        .build()
+        .await?;
+    let btc = providers.crypto("BTC");
+
+    let summary = btc
+        .indicators("usd", Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+    let _: Option<f64> = summary.rsi_14;
+
+    let _rsi_21 = btc
+        .indicator(
+            Indicator::Rsi(21),
+            "usd",
+            Interval::OneDay,
+            TimeRange::ThreeMonths,
+        )
+        .await?;
+
+    let risk = btc
+        .risk("usd", Interval::OneDay, TimeRange::OneYear)
+        .await?;
+    let _: f64 = risk.var_95;
+    let _: f64 = risk.max_drawdown;
+
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
 // CryptoCoin handle — network test
 // ---------------------------------------------------------------------------
 
@@ -110,7 +151,7 @@ fn _verify_crypto_quote_price(q: finance_query::CryptoQuote) {
 async fn test_crypto_coin_handle() {
     use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
     let providers = Providers::builder()
-        .route(Capability::CRYPTO, &[Provider::CoinGecko])
+        .route(Capability::CRYPTO, [Provider::CoinGecko])
         .build()
         .await
         .unwrap();

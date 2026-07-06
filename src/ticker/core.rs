@@ -663,7 +663,7 @@ impl Ticker {
     ///
     /// Routes through the provider system; EDGAR is always available as a fallback
     /// (auto-injected when no explicit FILINGS route is set). To prefer Polygon:
-    /// `.route(Capability::FILINGS, &[Provider::Polygon, Provider::Edgar])`.
+    /// `.route(Capability::FILINGS, [Provider::Polygon, Provider::Edgar])`.
     ///
     /// For the full EDGAR submissions response or structured XBRL data, use
     /// [`edgar_submissions`](Self::edgar_submissions) / [`edgar_company_facts`](Self::edgar_company_facts).

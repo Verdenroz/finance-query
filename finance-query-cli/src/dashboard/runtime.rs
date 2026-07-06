@@ -28,7 +28,7 @@ pub async fn run_dashboard() -> Result<()> {
             .iter()
             .map(|s| s.as_str())
             .collect();
-        match PriceStream::subscribe(&symbols).await {
+        match PriceStream::subscribe(symbols.iter().copied()).await {
             Ok(stream) => {
                 price_stream = Some(stream);
                 app.status_message = format!("Connected • {} symbols", symbols.len());

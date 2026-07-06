@@ -54,7 +54,7 @@ automatically when it is non-English):
 use finance_query::{Capability, Provider, Providers};
 
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Yahoo])
     .lang("ja")
     .build().await?;
 

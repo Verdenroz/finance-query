@@ -386,11 +386,11 @@ async fn test_dynamic_symbol_management() {
     println!("Initial symbols: {:?}", tickers.symbols());
 
     // Add more symbols
-    tickers.add_symbols(&["GOOGL", "TSLA", "NVDA"]);
+    tickers.add_symbols(["GOOGL", "TSLA", "NVDA"]);
     println!("After adding: {:?}", tickers.symbols());
 
     // Remove symbols (also clears their cached data)
-    tickers.remove_symbols(&["MSFT", "TSLA"]).await;
+    tickers.remove_symbols(["MSFT", "TSLA"]).await;
     println!("After removing: {:?}", tickers.symbols());
 
     // Fetch quotes for current symbols
@@ -530,7 +530,7 @@ async fn test_tickers_polygon_yahoo_fallback() {
 
     // From tickers.md "Provider Configuration" — Polygon with Yahoo fallback via Providers
     let providers = Providers::builder()
-        .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+        .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential)
         .build()
         .await

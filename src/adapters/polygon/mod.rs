@@ -14,8 +14,8 @@
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Route chart and quote data to Polygon with Yahoo as fallback
 //! let providers = Providers::builder()
-//!     .route(Capability::CHART, &[Provider::Polygon, Provider::Yahoo])
-//!     .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+//!     .route(Capability::CHART, [Provider::Polygon, Provider::Yahoo])
+//!     .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
 //!     .build().await?;
 //!
 //! let ticker = providers.ticker("AAPL").build().await?;

@@ -281,8 +281,8 @@ let ticker = Ticker::new("AAPL").await?;
 
 // Route specific capabilities to preferred providers (routing lives on Providers::builder)
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
-    .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
+    .route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;

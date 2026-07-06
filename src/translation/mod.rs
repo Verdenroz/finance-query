@@ -91,7 +91,7 @@ pub async fn translate_with<T: Translatable + ?Sized>(value: &mut T, lang: &Lang
         return Ok(());
     }
 
-    let translated = translate_texts(&texts, lang).await?;
+    let translated = translate_texts(texts, lang).await?;
 
     let mut iter = translated.into_iter();
     value.visit_translatable(&mut |s| {
@@ -108,9 +108,14 @@ pub async fn translate_with<T: Translatable + ?Sized>(value: &mut T, lang: &Lang
 /// Applies the dictionary, the process-wide memo cache, and the active
 /// machine-translation backend in that order. Texts without a dictionary
 /// hit are returned unchanged when no backend is available.
-pub async fn translate_texts(texts: &[String], lang: &Lang) -> Result<Vec<String>> {
+pub async fn translate_texts<S, I>(texts: I, lang: &Lang) -> Result<Vec<String>>
+where
+    S: Into<String>,
+    I: IntoIterator<Item = S>,
+{
+    let texts: Vec<String> = texts.into_iter().map(Into::into).collect();
     if lang.is_english() {
-        return Ok(texts.to_vec());
+        return Ok(texts);
     }
     let lang_code = lang.code();
     let dict_lang = DictLang::from_lang(lang);
@@ -264,7 +269,7 @@ mod tests {
             "Energy".to_string(),
             "Technology".to_string(),
         ];
-        let out = translate_texts(&texts, &lang).await.unwrap();
+        let out = translate_texts(texts, &lang).await.unwrap();
         assert_eq!(out, vec!["Technologie", "Énergie", "Technologie"]);
     }
 }

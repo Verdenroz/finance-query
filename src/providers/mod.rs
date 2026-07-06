@@ -103,7 +103,7 @@ pub enum Fetch {
 
 /// Capability bits that a provider can declare.
 ///
-/// Route a capability to specific providers using `.route(Capability::QUOTE, &[Provider::Fmp])`.
+/// Route a capability to specific providers using `.route(Capability::QUOTE, [Provider::Fmp])`.
 /// If no route is configured for a capability, all providers declaring that capability are used.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct Capability(u32);

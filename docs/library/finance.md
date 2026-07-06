@@ -132,7 +132,7 @@ Check market status and trading hours:
 let hours = finance::hours(None).await?;
 
 // Japan market hours
-let hours = finance::hours(Some("JP")).await?;
+let hours = finance::hours(Some(Region::Japan)).await?;
 
 for market in &hours.markets {
     println!("{}: {}", market.name, market.status);

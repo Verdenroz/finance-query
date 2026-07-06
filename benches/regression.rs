@@ -686,7 +686,7 @@ fn translation_inputs() -> (tokio::runtime::Runtime, Vec<String>, Lang) {
 fn translate_dictionary(input: (tokio::runtime::Runtime, Vec<String>, Lang)) -> Vec<String> {
     let (rt, texts, lang) = input;
     black_box(
-        rt.block_on(translate_texts(black_box(&texts), black_box(&lang)))
+        rt.block_on(translate_texts(black_box(texts), black_box(&lang)))
             .unwrap(),
     )
 }

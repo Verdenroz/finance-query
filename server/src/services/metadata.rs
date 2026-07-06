@@ -1,5 +1,5 @@
 use crate::cache::{self, Cache};
-use finance_query::{Ticker, finance};
+use finance_query::{Region, Ticker, finance};
 
 use super::{ServiceError, ServiceResult};
 
@@ -35,10 +35,9 @@ pub async fn get_exchanges(cache: &Cache) -> ServiceResult {
         .await
 }
 
-pub async fn get_hours(cache: &Cache, region: Option<&str>) -> ServiceResult {
-    let region_display = region.unwrap_or("US");
+pub async fn get_hours(cache: &Cache, region: Option<Region>) -> ServiceResult {
+    let region_display = region.map(|r| r.region()).unwrap_or("US");
     let cache_key = Cache::key("hours", &[region_display]);
-    let region = region.map(|s| s.to_string());
 
     cache
         .get_or_fetch(
@@ -46,7 +45,7 @@ pub async fn get_hours(cache: &Cache, region: Option<&str>) -> ServiceResult {
             cache::ttl::MARKET_HOURS,
             cache::is_market_open(),
             || async move {
-                let response = finance::hours(region.as_deref()).await?;
+                let response = finance::hours(region).await?;
                 serde_json::to_value(&response).map_err(|e| Box::new(e) as ServiceError)
             },
         )

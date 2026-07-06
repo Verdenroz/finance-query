@@ -14,9 +14,9 @@
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Route capabilities to Alpha Vantage with Yahoo as fallback
 //! let providers = Providers::builder()
-//!     .route(Capability::QUOTE, &[Provider::AlphaVantage, Provider::Yahoo])
-//!     .route(Capability::CHART, &[Provider::AlphaVantage, Provider::Yahoo])
-//!     .route(Capability::ECONOMIC, &[Provider::AlphaVantage])
+//!     .route(Capability::QUOTE, [Provider::AlphaVantage, Provider::Yahoo])
+//!     .route(Capability::CHART, [Provider::AlphaVantage, Provider::Yahoo])
+//!     .route(Capability::ECONOMIC, [Provider::AlphaVantage])
 //!     .build().await?;
 //!
 //! let ticker = providers.ticker("AAPL").build().await?;

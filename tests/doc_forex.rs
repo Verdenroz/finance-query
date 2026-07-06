@@ -40,7 +40,7 @@ async fn _verify_forex_pair_api() -> finance_query::Result<()> {
     use std::time::Duration;
 
     let providers = Providers::builder()
-        .route(Capability::FOREX, &[Provider::AlphaVantage])
+        .route(Capability::FOREX, [Provider::AlphaVantage])
         .build()
         .await?;
 
@@ -50,5 +50,39 @@ async fn _verify_forex_pair_api() -> finance_query::Result<()> {
     let _history: finance_query::Chart = pair.history(TimeRange::OneMonth).await?;
 
     let _cached = providers.forex("EUR", "USD").cache(Duration::from_secs(60));
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Compile-time: Indicators & Risk section of forex.md
+// ---------------------------------------------------------------------------
+
+/// Verifies the documented `ForexPair::indicators`/`indicator`/`risk` flow
+/// type-checks. Never called; exists only for the compiler to type-check.
+#[allow(dead_code)]
+#[cfg(all(feature = "indicators", feature = "risk"))]
+async fn _verify_forex_pair_indicators_and_risk() -> finance_query::Result<()> {
+    use finance_query::indicators::Indicator;
+    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+
+    let providers = Providers::builder()
+        .route(Capability::FOREX, [Provider::AlphaVantage])
+        .build()
+        .await?;
+    let pair = providers.forex("EUR", "USD");
+
+    let summary = pair
+        .indicators(Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+    let _: Option<f64> = summary.rsi_14;
+
+    let _rsi_21 = pair
+        .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+
+    let risk = pair.risk(Interval::OneDay, TimeRange::OneYear).await?;
+    let _: f64 = risk.var_95;
+    let _: f64 = risk.max_drawdown;
+
     Ok(())
 }

@@ -22,7 +22,7 @@ use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 let providers = Providers::builder()
-    .route(Capability::FUTURES, &[Provider::Polygon])
+    .route(Capability::FUTURES, [Provider::Polygon])
     .build()
     .await?;
 let contract = providers.futures("ES");
@@ -59,6 +59,43 @@ let history = contract.history(TimeRange::OneMonth).await?;
 ## History
 
 `history(range)` is a convenience wrapper around `chart` that picks a sensible default interval for the given range via [`TimeRange::default_interval`](https://docs.rs/finance-query/latest/finance_query/enum.TimeRange.html#method.default_interval).
+
+## Indicators & Risk
+
+`indicators(interval, range)` / `indicator(kind, interval, range)` (requires
+the `indicators` feature) and `risk(interval, range)` (requires the `risk`
+feature) compute directly from this handle's own chart data:
+
+```rust
+use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+use finance_query::indicators::Indicator;
+
+# async fn run() -> Result<(), Box<dyn std::error::Error>> {
+let providers = Providers::builder()
+    .route(Capability::FUTURES, [Provider::Polygon])
+    .build()
+    .await?;
+let contract = providers.futures("ES");
+
+let summary = contract
+    .indicators(Interval::OneDay, TimeRange::ThreeMonths)
+    .await?;
+if let Some(rsi) = summary.rsi_14 {
+    println!("RSI(14): {:.2}", rsi);
+}
+
+let rsi_21 = contract
+    .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
+    .await?;
+
+let risk = contract.risk(Interval::OneDay, TimeRange::OneYear).await?;
+println!("VaR 95%:      {:.2}%", risk.var_95 * 100.0);
+println!("Max Drawdown: {:.2}%", risk.max_drawdown * 100.0);
+# Ok(()) }
+```
+
+`risk` takes no benchmark parameter — `beta` is always `None`, since futures
+contracts have no natural benchmark to compare against.
 
 ## Provider Reference
 

@@ -125,7 +125,7 @@ async fn _verify_builder_examples() -> Result<(), Box<dyn std::error::Error>> {
     let _news = tickers.news().await?;
 
     let providers = Providers::builder()
-        .route(Capability::QUOTE, &[Provider::Yahoo])
+        .route(Capability::QUOTE, [Provider::Yahoo])
         .lang("ja")
         .build()
         .await?;

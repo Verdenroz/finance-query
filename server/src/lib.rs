@@ -74,8 +74,7 @@ impl StreamHub {
 
         // Create upstream stream if this is the first active subscription.
         if inner.upstream.is_none() {
-            let refs: Vec<&str> = unique.iter().map(|s| s.as_str()).collect();
-            let stream = PriceStream::subscribe(&refs).await?;
+            let stream = PriceStream::subscribe(unique.iter().map(|s| s.as_str())).await?;
             inner.upstream = Some(stream);
             return Ok(());
         }
@@ -84,8 +83,9 @@ impl StreamHub {
         if !newly_needed.is_empty()
             && let Some(upstream) = inner.upstream.as_ref()
         {
-            let refs: Vec<&str> = newly_needed.iter().map(|s| s.as_str()).collect();
-            upstream.add_symbols(&refs).await;
+            upstream
+                .add_symbols(newly_needed.iter().map(|s| s.as_str()))
+                .await;
         }
 
         Ok(())
@@ -125,8 +125,9 @@ impl StreamHub {
         if let Some(upstream) = inner.upstream.as_ref()
             && !newly_unneeded.is_empty()
         {
-            let refs: Vec<&str> = newly_unneeded.iter().map(|s| s.as_str()).collect();
-            upstream.remove_symbols(&refs).await;
+            upstream
+                .remove_symbols(newly_unneeded.iter().map(|s| s.as_str()))
+                .await;
         }
 
         // If nothing is subscribed anywhere, close upstream to stop background tasks.
@@ -188,7 +189,7 @@ impl FeedHub {
 
         // Create upstream stream if this is the first active subscription.
         if inner.upstream.is_none() {
-            let stream = NewsStream::subscribe(sources).await;
+            let stream = NewsStream::subscribe(sources.iter().cloned()).await;
             inner.upstream = Some(stream);
             return;
         }
@@ -197,7 +198,7 @@ impl FeedHub {
         if !newly_needed.is_empty()
             && let Some(upstream) = inner.upstream.as_ref()
         {
-            upstream.add_sources(&newly_needed).await;
+            upstream.add_sources(newly_needed).await;
         }
     }
 
@@ -229,7 +230,7 @@ impl FeedHub {
         if let Some(upstream) = inner.upstream.as_ref()
             && !newly_unneeded.is_empty()
         {
-            upstream.remove_sources(&newly_unneeded).await;
+            upstream.remove_sources(newly_unneeded).await;
         }
 
         // If nothing is subscribed anywhere, close upstream to stop the poll loop.

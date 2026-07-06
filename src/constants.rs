@@ -950,14 +950,22 @@ pub enum Region {
     Israel,
     /// Italy (it-IT, IT)
     Italy,
+    /// Japan (ja-JP, JP)
+    Japan,
+    /// South Korea (ko-KR, KR)
+    Korea,
     /// Malaysia (ms-MY, MY)
     Malaysia,
+    /// Mexico (es-MX, MX)
+    Mexico,
     /// New Zealand (en-NZ, NZ)
     NewZealand,
     /// Norway (nb-NO, NO)
     Norway,
     /// Portugal (pt-PT, PT)
     Portugal,
+    /// Qatar (ar-QA, QA)
+    Qatar,
     /// Russia (ru-RU, RU)
     Russia,
     /// Singapore (en-SG, SG)
@@ -1008,10 +1016,14 @@ impl Region {
             Region::India => "en-IN",
             Region::Israel => "he-IL",
             Region::Italy => "it-IT",
+            Region::Japan => "ja-JP",
+            Region::Korea => "ko-KR",
             Region::Malaysia => "ms-MY",
+            Region::Mexico => "es-MX",
             Region::NewZealand => "en-NZ",
             Region::Norway => "nb-NO",
             Region::Portugal => "pt-PT",
+            Region::Qatar => "ar-QA",
             Region::Russia => "ru-RU",
             Region::Singapore => "en-SG",
             Region::Spain => "es-ES",
@@ -1051,10 +1063,14 @@ impl Region {
             Region::India => "IN",
             Region::Israel => "IL",
             Region::Italy => "IT",
+            Region::Japan => "JP",
+            Region::Korea => "KR",
             Region::Malaysia => "MY",
+            Region::Mexico => "MX",
             Region::NewZealand => "NZ",
             Region::Norway => "NO",
             Region::Portugal => "PT",
+            Region::Qatar => "QA",
             Region::Russia => "RU",
             Region::Singapore => "SG",
             Region::Spain => "ES",
@@ -1094,10 +1110,14 @@ impl Region {
             Region::India => "in.finance.yahoo.com",
             Region::Israel => "il.finance.yahoo.com",
             Region::Italy => "it.finance.yahoo.com",
+            Region::Japan => "finance.yahoo.co.jp",
+            Region::Korea => "kr.finance.yahoo.com",
             Region::Malaysia => "my.finance.yahoo.com",
+            Region::Mexico => "mx.finance.yahoo.com",
             Region::NewZealand => "nz.finance.yahoo.com",
             Region::Norway => "no.finance.yahoo.com",
             Region::Portugal => "pt.finance.yahoo.com",
+            Region::Qatar => "qa.finance.yahoo.com",
             Region::Russia => "ru.finance.yahoo.com",
             Region::Singapore => "sg.finance.yahoo.com",
             Region::Spain => "es.finance.yahoo.com",
@@ -1129,6 +1149,8 @@ impl Region {
         match self {
             // UTC-5 (NYSE/TSX winter)
             Region::UnitedStates | Region::Canada => -18_000,
+            // UTC-6 (BMV — Mexico abolished DST for most of the country in 2022)
+            Region::Mexico => -21_600,
             // UTC-3 (BYMA / B3 winter)
             Region::Argentina | Region::Brazil => -10_800,
             // UTC+0 (LSE / Euronext Lisbon)
@@ -1144,8 +1166,8 @@ impl Region {
             | Region::Finland => 3_600,
             // UTC+2 (Athens, Tel Aviv, Moscow — note Russia stays UTC+3 year-round)
             Region::Greece | Region::Israel => 7_200,
-            // UTC+3 (MOEX — no DST since 2014)
-            Region::Turkey | Region::Russia => 10_800,
+            // UTC+3 (MOEX — no DST since 2014; Qatar/AST has no DST)
+            Region::Turkey | Region::Russia | Region::Qatar => 10_800,
             // UTC+5:30 (BSE/NSE — India has no DST)
             Region::India => 19_800,
             // UTC+7 (SET Bangkok, HSX Hanoi)
@@ -1156,6 +1178,8 @@ impl Region {
             | Region::Singapore
             | Region::Malaysia
             | Region::Taiwan => 28_800,
+            // UTC+9 (TSE, KRX — neither observes DST)
+            Region::Japan | Region::Korea => 32_400,
             // UTC+10 (ASX — AEST winter)
             Region::Australia => 36_000,
             // UTC+12 (NZX — NZST winter)
@@ -1183,10 +1207,14 @@ impl std::str::FromStr for Region {
             "IN" => Ok(Region::India),
             "IL" => Ok(Region::Israel),
             "IT" => Ok(Region::Italy),
+            "JP" => Ok(Region::Japan),
+            "KR" => Ok(Region::Korea),
             "MY" => Ok(Region::Malaysia),
+            "MX" => Ok(Region::Mexico),
             "NZ" => Ok(Region::NewZealand),
             "NO" => Ok(Region::Norway),
             "PT" => Ok(Region::Portugal),
+            "QA" => Ok(Region::Qatar),
             "RU" => Ok(Region::Russia),
             "SG" => Ok(Region::Singapore),
             "ES" => Ok(Region::Spain),

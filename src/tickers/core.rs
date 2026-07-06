@@ -1704,20 +1704,24 @@ impl Tickers {
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut tickers = Tickers::new(["AAPL"]).await?;
-    /// tickers.add_symbols(&["MSFT", "GOOGL"]);
+    /// tickers.add_symbols(["MSFT", "GOOGL"]);
     /// assert_eq!(tickers.len(), 3);
     /// # Ok(())
     /// # }
     /// ```
-    pub fn add_symbols(&mut self, symbols: &[impl AsRef<str>]) {
+    pub fn add_symbols<S, I>(&mut self, symbols: I)
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
         // Use HashSet for O(n+m) deduplication instead of O(n*m) linear search
         use std::collections::HashSet;
 
         let existing: HashSet<&str> = self.symbols.iter().map(|s| &**s).collect();
         let to_add: Vec<Arc<str>> = symbols
-            .iter()
-            .map(|s| s.as_ref())
-            .filter(|s| !existing.contains(s))
+            .into_iter()
+            .map(Into::into)
+            .filter(|s| !existing.contains(s.as_str()))
             .map(|s| s.into())
             .collect();
 
@@ -1820,14 +1824,19 @@ impl Tickers {
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let mut tickers = Tickers::new(["AAPL", "MSFT", "GOOGL"]).await?;
-    /// tickers.remove_symbols(&["MSFT"]);
+    /// tickers.remove_symbols(["MSFT"]);
     /// assert_eq!(tickers.len(), 2);
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn remove_symbols(&mut self, symbols: &[impl AsRef<str>]) {
+    pub async fn remove_symbols<S, I>(&mut self, symbols: I)
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
         use std::collections::HashSet;
-        let to_remove: HashSet<&str> = symbols.iter().map(|s| s.as_ref()).collect();
+        let owned: Vec<String> = symbols.into_iter().map(Into::into).collect();
+        let to_remove: HashSet<&str> = owned.iter().map(|s| s.as_str()).collect();
 
         // Remove from symbol list — O(1) lookup per element
         self.symbols.retain(|s| !to_remove.contains(&**s));
@@ -2145,14 +2154,14 @@ mod tests {
         assert_eq!(tickers.len(), 1);
         assert_eq!(tickers.symbols(), &["AAPL"]);
 
-        tickers.add_symbols(&["MSFT", "GOOGL"]);
+        tickers.add_symbols(["MSFT", "GOOGL"]);
         assert_eq!(tickers.len(), 3);
         assert!(tickers.symbols().contains(&"AAPL"));
         assert!(tickers.symbols().contains(&"MSFT"));
         assert!(tickers.symbols().contains(&"GOOGL"));
 
         // Adding duplicate shouldn't increase count
-        tickers.add_symbols(&["AAPL"]);
+        tickers.add_symbols(["AAPL"]);
         assert_eq!(tickers.len(), 3);
     }
 
@@ -2166,7 +2175,7 @@ mod tests {
         let _ = tickers.quotes().await;
 
         // Remove one symbol
-        tickers.remove_symbols(&["MSFT"]).await;
+        tickers.remove_symbols(["MSFT"]).await;
         assert_eq!(tickers.len(), 2);
         assert!(tickers.symbols().contains(&"AAPL"));
         assert!(!tickers.symbols().contains(&"MSFT"));

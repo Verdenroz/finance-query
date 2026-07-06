@@ -78,7 +78,7 @@ async fn _verify_economic_indicator_api() -> finance_query::Result<()> {
     use finance_query::{Capability, Provider, Providers};
 
     let providers = Providers::builder()
-        .route(Capability::ECONOMIC, &[Provider::Fred])
+        .route(Capability::ECONOMIC, [Provider::Fred])
         .build()
         .await?;
 

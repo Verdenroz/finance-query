@@ -21,10 +21,9 @@ pub async fn execute(args: StreamArgs) -> Result<()> {
     println!();
 
     // Subscribe to price stream
-    let mut stream =
-        PriceStream::subscribe(&args.symbols.iter().map(|s| s.as_str()).collect::<Vec<_>>())
-            .await
-            .map_err(|e| crate::error::CliError::Other(e.into()))?;
+    let mut stream = PriceStream::subscribe(args.symbols.iter().map(|s| s.as_str()))
+        .await
+        .map_err(|e| crate::error::CliError::Other(e.into()))?;
 
     // Process price updates as they arrive
     while let Some(price) = stream.next().await {

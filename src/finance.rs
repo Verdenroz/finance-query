@@ -296,25 +296,25 @@ pub async fn earnings_transcripts(
 ///
 /// # Arguments
 ///
-/// * `region` - Optional region override (e.g., "US", "JP", "GB"). If None, uses default (US).
+/// * `region` - Optional region override. If None, uses default (US).
 ///
 /// # Examples
 ///
 /// ```no_run
-/// use finance_query::finance;
+/// use finance_query::{finance, Region};
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Get US market hours (default)
 /// let hours = finance::hours(None).await?;
 ///
 /// // Get Japan market hours
-/// let jp_hours = finance::hours(Some("JP")).await?;
+/// let jp_hours = finance::hours(Some(Region::Japan)).await?;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn hours(region: Option<&str>) -> Result<crate::models::market::hours::MarketHours> {
+pub async fn hours(region: Option<Region>) -> Result<crate::models::market::hours::MarketHours> {
     let client = YahooClient::new(ClientConfig::default()).await?;
-    crate::adapters::yahoo::market::hours::fetch(&client, region).await
+    crate::adapters::yahoo::market::hours::fetch(&client, region.map(|r| r.region())).await
 }
 
 /// Get world market indices quotes

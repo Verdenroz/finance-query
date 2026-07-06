@@ -71,7 +71,7 @@ const CHANNEL_CAPACITY: usize = 1024;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// // Subscribe to multiple symbols
-/// let mut stream = PriceStream::subscribe(&["AAPL", "NVDA", "TSLA"]).await?;
+/// let mut stream = PriceStream::subscribe(["AAPL", "NVDA", "TSLA"]).await?;
 ///
 /// // Receive price updates
 /// while let Some(price) = stream.next().await {
@@ -101,11 +101,15 @@ impl PriceStream {
     /// use finance_query::streaming::PriceStream;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let stream = PriceStream::subscribe(&["AAPL", "GOOGL"]).await?;
+    /// let stream = PriceStream::subscribe(["AAPL", "GOOGL"]).await?;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn subscribe(symbols: &[&str]) -> StreamResult<Self> {
+    pub async fn subscribe<S, I>(symbols: I) -> StreamResult<Self>
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
         Self::subscribe_with_source(
             Arc::new(YahooStreamSource),
             symbols,
@@ -118,12 +122,16 @@ impl PriceStream {
     ///
     /// Yahoo is the default ([`subscribe`](Self::subscribe)); this is the
     /// generic entry point shared with [`PriceStreamBuilder`].
-    pub(crate) async fn subscribe_with_source(
+    pub(crate) async fn subscribe_with_source<S, I>(
         source: Arc<dyn StreamSource>,
-        symbols: &[&str],
+        symbols: I,
         retry_delay: Duration,
-    ) -> StreamResult<Self> {
-        let initial_symbols: Vec<String> = symbols.iter().map(|s| s.to_string()).collect();
+    ) -> StreamResult<Self>
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
+        let initial_symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
 
         let inner = Subscription::start(
             CHANNEL_CAPACITY,
@@ -160,13 +168,17 @@ impl PriceStream {
     /// use finance_query::streaming::PriceStream;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let stream = PriceStream::subscribe(&["AAPL"]).await?;
-    /// stream.add_symbols(&["NVDA", "TSLA"]).await;
+    /// let stream = PriceStream::subscribe(["AAPL"]).await?;
+    /// stream.add_symbols(["NVDA", "TSLA"]).await;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn add_symbols(&self, symbols: &[&str]) {
-        let symbols: Vec<String> = symbols.iter().map(|s| s.to_string()).collect();
+    pub async fn add_symbols<S, I>(&self, symbols: I)
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
+        let symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
         self.inner.send(StreamCommand::Subscribe(symbols)).await;
     }
 
@@ -178,13 +190,17 @@ impl PriceStream {
     /// use finance_query::streaming::PriceStream;
     ///
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-    /// let stream = PriceStream::subscribe(&["AAPL", "NVDA"]).await?;
-    /// stream.remove_symbols(&["NVDA"]).await;
+    /// let stream = PriceStream::subscribe(["AAPL", "NVDA"]).await?;
+    /// stream.remove_symbols(["NVDA"]).await;
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn remove_symbols(&self, symbols: &[&str]) {
-        let symbols: Vec<String> = symbols.iter().map(|s| s.to_string()).collect();
+    pub async fn remove_symbols<S, I>(&self, symbols: I)
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
+        let symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
         self.inner.send(StreamCommand::Unsubscribe(symbols)).await;
     }
 
@@ -218,8 +234,12 @@ impl PriceStreamBuilder {
     }
 
     /// Add symbols to subscribe to
-    pub fn symbols(mut self, symbols: &[&str]) -> Self {
-        self.symbols.extend(symbols.iter().map(|s| s.to_string()));
+    pub fn symbols<S, I>(mut self, symbols: I) -> Self
+    where
+        S: Into<String>,
+        I: IntoIterator<Item = S>,
+    {
+        self.symbols.extend(symbols.into_iter().map(Into::into));
         self
     }
 
@@ -231,10 +251,9 @@ impl PriceStreamBuilder {
 
     /// Build and start the price stream (Yahoo-backed).
     pub async fn build(self) -> StreamResult<PriceStream> {
-        let symbol_refs: Vec<&str> = self.symbols.iter().map(|s| s.as_str()).collect();
         PriceStream::subscribe_with_source(
             Arc::new(YahooStreamSource),
-            &symbol_refs,
+            self.symbols,
             self.retry_delay,
         )
         .await

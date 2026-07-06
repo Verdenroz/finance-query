@@ -17,7 +17,7 @@ use std::time::Duration;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let providers = Providers::builder()
-///     .route(Capability::QUOTE, &[Provider::Yahoo])
+///     .route(Capability::QUOTE, [Provider::Yahoo])
 ///     .fetch(Fetch::Sequential)
 ///     .build().await?;
 ///
@@ -166,13 +166,18 @@ impl ProvidersBuilder {
     /// Providers referenced in the route are automatically added to the
     /// initialisation list if not already present. If omitted for a capability,
     /// Yahoo is used as default.
-    pub fn route(mut self, cap: crate::providers::Capability, providers: &[Provider]) -> Self {
-        self.routes.map.insert(cap, providers.to_vec());
-        for provider in providers {
+    pub fn route(
+        mut self,
+        cap: crate::providers::Capability,
+        providers: impl IntoIterator<Item = Provider>,
+    ) -> Self {
+        let providers: Vec<Provider> = providers.into_iter().collect();
+        for provider in &providers {
             if !self.provider_ids.contains(provider) {
                 self.provider_ids.push(*provider);
             }
         }
+        self.routes.map.insert(cap, providers);
         self
     }
 

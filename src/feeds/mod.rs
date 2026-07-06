@@ -16,7 +16,7 @@
 //! }
 //!
 //! // Aggregate multiple sources
-//! let news = feeds::fetch_all(&[
+//! let news = feeds::fetch_all([
 //!     FeedSource::FederalReserve,
 //!     FeedSource::SecPressReleases,
 //!     FeedSource::MarketWatch,
@@ -271,9 +271,9 @@ pub async fn fetch(source: FeedSource) -> Result<Vec<FeedEntry>> {
 ///
 /// A single `reqwest::Client` is shared across all concurrent fetches within
 /// this call, reusing connection pools and TLS state.
-pub async fn fetch_all(sources: &[FeedSource]) -> Result<Vec<FeedEntry>> {
+pub async fn fetch_all(sources: impl IntoIterator<Item = FeedSource>) -> Result<Vec<FeedEntry>> {
     let client = build_feed_client()?;
-    let pairs: Vec<(String, String)> = sources.iter().map(|s| (s.url(), s.name())).collect();
+    let pairs: Vec<(String, String)> = sources.into_iter().map(|s| (s.url(), s.name())).collect();
     let futures: Vec<_> = pairs
         .iter()
         .map(|(url, name)| fetch_with_client(&client, url, name))

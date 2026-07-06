@@ -11,7 +11,7 @@ Subscribe to live price updates via WebSocket. The streaming API uses a Flow-lik
 use finance_query::streaming::PriceStream;
 use futures::StreamExt;
 
-let mut stream = PriceStream::subscribe(&["AAPL", "NVDA", "TSLA"]).await?;
+let mut stream = PriceStream::subscribe(["AAPL", "NVDA", "TSLA"]).await?;
 
 while let Some(price) = stream.next().await {
     println!("{}: ${:.2} ({:+.2}%)",
@@ -29,7 +29,7 @@ while let Some(price) = stream.next().await {
 ```rust
 use finance_query::streaming::PriceStream;
 
-let mut stream = PriceStream::subscribe(&["AAPL", "GOOGL"]).await?;
+let mut stream = PriceStream::subscribe(["AAPL", "GOOGL"]).await?;
 ```
 
 ### Builder Pattern
@@ -39,7 +39,7 @@ use finance_query::streaming::PriceStreamBuilder;
 use std::time::Duration;
 
 let mut stream = PriceStreamBuilder::new()
-    .symbols(&["AAPL", "MSFT", "NVDA"])
+    .symbols(["AAPL", "MSFT", "NVDA"])
     .retry(Duration::from_secs(5))
     .build()
     .await?;
@@ -52,13 +52,13 @@ Add or remove symbols after the stream is created:
 ```rust
 use finance_query::streaming::PriceStream;
 
-let stream = PriceStream::subscribe(&["AAPL"]).await?;
+let stream = PriceStream::subscribe(["AAPL"]).await?;
 
 // Add more symbols
-stream.add_symbols(&["NVDA", "TSLA"]).await;
+stream.add_symbols(["NVDA", "TSLA"]).await;
 
 // Remove symbols
-stream.remove_symbols(&["AAPL"]).await;
+stream.remove_symbols(["AAPL"]).await;
 ```
 
 ## Multiple Consumers
@@ -69,7 +69,7 @@ Use `resubscribe()` to create additional receivers sharing the same WebSocket co
 use finance_query::streaming::PriceStream;
 use futures::StreamExt;
 
-let mut stream1 = PriceStream::subscribe(&["AAPL", "NVDA"]).await?;
+let mut stream1 = PriceStream::subscribe(["AAPL", "NVDA"]).await?;
 let mut stream2 = stream1.resubscribe();
 
 // Both streams receive the same updates
@@ -112,7 +112,7 @@ Each update yielded by the stream contains:
 use finance_query::streaming::{PriceStream, MarketHoursType};
 use futures::StreamExt;
 
-let mut stream = PriceStream::subscribe(&["AAPL", "MSFT", "GOOGL"]).await?;
+let mut stream = PriceStream::subscribe(["AAPL", "MSFT", "GOOGL"]).await?;
 
 while let Some(price) = stream.next().await {
     // Only process regular market updates
@@ -127,7 +127,7 @@ while let Some(price) = stream.next().await {
 ```rust
 use finance_query::streaming::PriceStream;
 
-let stream = PriceStream::subscribe(&["AAPL"]).await?;
+let stream = PriceStream::subscribe(["AAPL"]).await?;
 
 // ... use stream ...
 
@@ -150,7 +150,7 @@ use finance_query::feeds::FeedSource;
 use futures::StreamExt;
 
 let mut stream =
-    NewsStream::subscribe(&[FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
+    NewsStream::subscribe([FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
 
 while let Some(entry) = stream.next().await {
     println!("[{}] {}", entry.source, entry.title);
@@ -181,10 +181,10 @@ The default poll interval is 5 minutes.
 use finance_query::streaming::NewsStream;
 use finance_query::feeds::FeedSource;
 
-let stream = NewsStream::subscribe(&[FeedSource::Bloomberg]).await;
+let stream = NewsStream::subscribe([FeedSource::Bloomberg]).await;
 
-stream.add_sources(&[FeedSource::WsjMarkets]).await;
-stream.remove_sources(&[FeedSource::Bloomberg]).await;
+stream.add_sources([FeedSource::WsjMarkets]).await;
+stream.remove_sources([FeedSource::Bloomberg]).await;
 
 let other_consumer = stream.resubscribe();
 

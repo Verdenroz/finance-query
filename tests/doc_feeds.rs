@@ -145,7 +145,7 @@ async fn test_fetch_all_deduplicates() {
     use finance_query::feeds;
     use std::collections::HashSet;
 
-    let news = feeds::fetch_all(&[
+    let news = feeds::fetch_all([
         FeedSource::FederalReserve,
         FeedSource::SecPressReleases,
         FeedSource::MarketWatch,
@@ -192,7 +192,7 @@ async fn test_fetch_all_five_sources() {
     use finance_query::feeds;
 
     // From feeds.md "Fetching Multiple Feeds" section — all 5 documented sources
-    let news = feeds::fetch_all(&[
+    let news = feeds::fetch_all([
         FeedSource::FederalReserve,
         FeedSource::SecPressReleases,
         FeedSource::MarketWatch,

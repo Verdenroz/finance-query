@@ -72,7 +72,10 @@ impl RootMetadataQuery {
         #[graphql(desc = "Region code (e.g. \"US\", \"JP\", \"GB\")")] region: Option<String>,
     ) -> Result<GqlMarketHours> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::metadata::get_hours(&state.cache, region.as_deref())
+        let region = region
+            .as_deref()
+            .and_then(|s| s.parse::<finance_query::Region>().ok());
+        let json = crate::services::metadata::get_hours(&state.cache, region)
             .await
             .map_err(to_gql_error)?;
         serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))

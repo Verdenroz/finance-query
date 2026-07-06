@@ -74,8 +74,8 @@ use finance_query::{Capability, Fetch, Provider, Providers};
 
 // Route quote to Polygon (fallback Yahoo), fundamentals to FMP (fallback Yahoo)
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
-    .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
+    .route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;

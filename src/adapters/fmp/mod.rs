@@ -14,8 +14,8 @@
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Route fundamentals and quote data to FMP with Yahoo as fallback
 //! let providers = Providers::builder()
-//!     .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
-//!     .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
+//!     .route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])
+//!     .route(Capability::QUOTE, [Provider::Fmp, Provider::Yahoo])
 //!     .build().await?;
 //!
 //! let ticker = providers.ticker("AAPL").build().await?;

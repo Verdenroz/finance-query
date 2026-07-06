@@ -11,7 +11,8 @@ pub struct HoursArgs {
 }
 
 pub async fn execute(args: HoursArgs) -> Result<()> {
-    let hours = finance::hours(args.region.as_deref()).await?;
+    let region = args.region.as_deref().and_then(|s| s.parse().ok());
+    let hours = finance::hours(region).await?;
 
     if hours.markets.is_empty() {
         output::print_info("No market hours data available");
