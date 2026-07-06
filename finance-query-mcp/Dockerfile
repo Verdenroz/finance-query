@@ -3,7 +3,7 @@
 # Build Stage: Compile fq-mcp MCP server
 # ==============================================================================
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
-FROM rust:1-slim-bookworm@sha256:4732ca96fd086cb9be682050c3f0176288eebaac2b80aa2bcefccfaf198e1950 AS builder
+FROM rust:1-slim-bookworm@sha256:e18a79fc84dfcfc3ab5ba72290398a644c135c97eaa881447fddc354ee4701a3 AS builder
 
 # translation-offline for published images; dev overrides to translation
 # (dictionary tier only) to skip the from-source CTranslate2 C++ build.
