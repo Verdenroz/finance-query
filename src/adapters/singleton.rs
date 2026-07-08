@@ -18,6 +18,7 @@
 /// Call `set_singleton(api_key, timeout)` from the provider's own
 /// `init_with_timeout` to keep that function's public doc comment
 /// hand-written and provider-specific.
+#[allow(unused_macros)]
 macro_rules! provider_singleton_state {
     (
         name = $struct_name:ident,
@@ -64,6 +65,7 @@ macro_rules! provider_singleton_state {
 /// only set the env var), then reads the shared singleton state back out to
 /// build a fresh client. Requires [`provider_singleton_state!`] to have been
 /// invoked first in the same module (uses its `$struct_name`/`$static_name`).
+#[allow(unused_macros)]
 macro_rules! provider_build_client {
     (
         name = $struct_name:ident,
@@ -115,5 +117,7 @@ macro_rules! provider_build_client {
     };
 }
 
+#[allow(unused_imports)]
 pub(crate) use provider_build_client;
+#[allow(unused_imports)]
 pub(crate) use provider_singleton_state;
