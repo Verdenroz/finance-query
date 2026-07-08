@@ -377,6 +377,7 @@ impl std::fmt::Display for Operation {
 ///
 /// Maps each [`Capability`] to an ordered list of [`Provider`]s to try.
 /// When a capability has no entry, all providers declaring that capability are used.
+#[derive(Debug)]
 pub struct Routes {
     pub(crate) map: HashMap<Capability, Vec<Provider>>,
     pub(crate) fetch: Fetch,
@@ -536,6 +537,19 @@ pub(crate) struct ProviderSet {
     providers: Vec<Arc<dyn ProviderAdapter>>,
     yahoo_client: Option<Arc<YahooClient>>,
     routes: Routes,
+}
+
+impl std::fmt::Debug for ProviderSet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ProviderSet")
+            .field(
+                "providers",
+                &self.providers.iter().map(|p| p.id()).collect::<Vec<_>>(),
+            )
+            .field("has_yahoo_client", &self.yahoo_client.is_some())
+            .field("routes", &self.routes)
+            .finish()
+    }
 }
 
 impl ProviderSet {

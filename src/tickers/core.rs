@@ -430,6 +430,12 @@ impl Tickers {
     /// Pass to [`Ticker::builder`](crate::Ticker::builder) or other
     /// [`Tickers::builder`] calls via `.client(handle)` to share the
     /// authenticated session without a new auth handshake.
+    ///
+    /// # Panics
+    ///
+    /// Panics if these tickers were created via [`Providers`](crate::Providers) with
+    /// no Yahoo provider configured. For session sharing across multiple tickers,
+    /// prefer [`Providers::tickers`](crate::Providers::tickers) instead.
     pub fn client_handle(&self) -> ClientHandle {
         ClientHandle(
             self.providers

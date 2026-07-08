@@ -32,6 +32,15 @@ pub struct Providers {
     lang: String,
 }
 
+impl std::fmt::Debug for Providers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Providers")
+            .field("set", &self.set)
+            .field("lang", &self.lang)
+            .finish()
+    }
+}
+
 impl Providers {
     /// Create a builder for configuring providers.
     pub fn builder() -> ProvidersBuilder {
@@ -136,6 +145,7 @@ impl Providers {
 }
 
 /// Builder for [`Providers`].
+#[derive(Debug)]
 pub struct ProvidersBuilder {
     provider_ids: Vec<Provider>,
     config: ClientConfig,

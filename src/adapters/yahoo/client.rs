@@ -591,7 +591,12 @@ impl YahooClient {
         let params = [("count", limit.to_string())];
         let response = self.request_with_params(&url, &params).await?;
         let json = response.json().await?;
-        let recs: RecommendationResponse = serde_json::from_value(json)?;
+        let recs: RecommendationResponse = serde_json::from_value(json).map_err(|e| {
+            crate::error::FinanceError::ResponseStructureError {
+                field: "recommendations".to_string(),
+                context: format!("failed to parse recommendations for '{symbol}': {e}"),
+            }
+        })?;
         Ok(recs
             .finance
             .result
