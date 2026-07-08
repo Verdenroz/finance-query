@@ -73,7 +73,7 @@ impl GqlChart {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlCandle>> {
-        pagination::paginate(self.candles.clone(), first, after).await
+        pagination::paginate(&self.candles, first, after).await
     }
 }
 
@@ -106,7 +106,7 @@ impl GqlChartsBatch {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlSymbolChart>> {
-        pagination::paginate(self.charts.clone(), first, after).await
+        pagination::paginate(&self.charts, first, after).await
     }
 }
 

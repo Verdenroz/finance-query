@@ -38,7 +38,7 @@ impl RootMetadataQuery {
             .await
             .map_err(to_gql_error)?;
         let coins: Vec<GqlCoinQuote> = from_gql_json(json)?;
-        pagination::paginate(coins, first, after).await
+        pagination::paginate(&coins, first, after).await
     }
 
     /// A single cryptocurrency quote by CoinGecko ID (e.g. "bitcoin").
@@ -153,7 +153,7 @@ impl RootMetadataQuery {
             .await
             .map_err(to_gql_error)?;
         let rows: Vec<GqlTreasuryYield> = from_gql_json(json)?;
-        pagination::paginate(rows, first, after).await
+        pagination::paginate(&rows, first, after).await
     }
 
     /// SEC EDGAR full-text search.

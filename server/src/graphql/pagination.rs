@@ -18,12 +18,16 @@ use std::future::Future;
 /// The `Connection` type every paginated GraphQL field returns.
 pub type Page<T> = Connection<OpaqueCursor<usize>, T>;
 
-/// Paginate a `Vec` already held in memory — the common case (feeds, holders,
+/// Paginate a slice already held in memory — the common case (feeds, holders,
 /// dividends, chart candles, news, search quotes, batch results, FRED
 /// observations, EDGAR fact data points): all fetched in full from upstream
 /// today, with Rust-side slicing as the only lever available.
-pub async fn paginate<T: OutputType>(
-    items: Vec<T>,
+///
+/// Takes `&[T]` rather than an owned `Vec<T>` so callers don't have to clone
+/// the entire backing list just to slice out one page — only the returned
+/// page's items are cloned.
+pub async fn paginate<T: OutputType + Clone>(
+    items: &[T],
     first: Option<i32>,
     after: Option<String>,
 ) -> Result<Page<T>> {
@@ -34,16 +38,15 @@ pub async fn paginate<T: OutputType>(
         first,
         None,
         |after: Option<OpaqueCursor<usize>>, _before, first, _last| async move {
-            let start = after.map(|OpaqueCursor(o)| o + 1).unwrap_or(0);
+            let start = after.map(|OpaqueCursor(o)| o + 1).unwrap_or(0).min(total);
             let end = first.map(|f| (start + f).min(total)).unwrap_or(total);
             let mut connection = Connection::new(start > 0, end < total);
             connection.edges.extend(
-                items
-                    .into_iter()
+                items[start..end]
+                    .iter()
+                    .cloned()
                     .enumerate()
-                    .skip(start)
-                    .take(end.saturating_sub(start))
-                    .map(|(i, node)| Edge::new(OpaqueCursor(i), node)),
+                    .map(|(i, node)| Edge::new(OpaqueCursor(start + i), node)),
             );
             Ok::<_, async_graphql::Error>(connection)
         },
@@ -258,7 +261,7 @@ mod tests {
     use async_graphql::connection::CursorType;
 
     async fn page(items: Vec<i32>, first: Option<i32>, after: Option<String>) -> Page<i32> {
-        paginate(items, first, after).await.unwrap()
+        paginate(&items, first, after).await.unwrap()
     }
 
     #[tokio::test]

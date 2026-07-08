@@ -94,7 +94,7 @@ impl RootMarketQuery {
                 .await
                 .map_err(to_gql_error)?;
         let entries: Vec<GqlNews> = from_gql_json(json)?;
-        pagination::paginate(entries, first, after).await
+        pagination::paginate(&entries, first, after).await
     }
 
     /// RSS/Atom feed entries aggregated from one or more named financial
@@ -130,7 +130,7 @@ impl RootMarketQuery {
         .await
         .map_err(to_gql_error)?;
         let entries: Vec<GqlFeedEntry> = from_gql_json(json)?;
-        pagination::paginate(entries, first, after).await
+        pagination::paginate(&entries, first, after).await
     }
 
     /// World market indices, optionally filtered by region.

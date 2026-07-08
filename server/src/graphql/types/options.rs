@@ -53,7 +53,7 @@ impl GqlOptions {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlOptionContract>> {
-        pagination::paginate(self.calls.clone(), first, after).await
+        pagination::paginate(&self.calls, first, after).await
     }
 
     /// All put contracts across expirations.
@@ -64,7 +64,7 @@ impl GqlOptions {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlOptionContract>> {
-        pagination::paginate(self.puts.clone(), first, after).await
+        pagination::paginate(&self.puts, first, after).await
     }
 }
 
@@ -97,6 +97,6 @@ impl GqlOptionsBatch {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlSymbolOptions>> {
-        pagination::paginate(self.options.clone(), first, after).await
+        pagination::paginate(&self.options, first, after).await
     }
 }

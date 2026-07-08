@@ -204,6 +204,6 @@ impl GqlIndicatorsBatch {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlSymbolIndicators>> {
-        pagination::paginate(self.indicators.clone(), first, after).await
+        pagination::paginate(&self.indicators, first, after).await
     }
 }

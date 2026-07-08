@@ -112,7 +112,7 @@ pub fn stochastic(
     let slow_dense: Vec<f64>;
     let (slow_k, slow_k_valid_start) = if k_slow == 1 {
         slow_dense = raw_k_for_sma[raw_k_valid_start..].to_vec();
-        (raw_k.clone(), raw_k_valid_start)
+        (raw_k, raw_k_valid_start)
     } else {
         let raw_k_slice = &raw_k_for_sma[raw_k_valid_start..];
         slow_dense = sma_raw(raw_k_slice, k_slow); // Vec<f64>, avoids Vec<Option<f64>>

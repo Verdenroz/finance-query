@@ -35,7 +35,7 @@ impl GqlMacroSeries {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlMacroObservation>> {
-        pagination::paginate(self.observations.clone(), first, after).await
+        pagination::paginate(&self.observations, first, after).await
     }
 }
 

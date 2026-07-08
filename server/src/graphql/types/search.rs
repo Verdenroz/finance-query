@@ -80,7 +80,7 @@ impl GqlSearchResults {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlSearchQuote>> {
-        pagination::paginate(self.quotes.clone(), first, after).await
+        pagination::paginate(&self.quotes, first, after).await
     }
 }
 

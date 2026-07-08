@@ -110,7 +110,7 @@ impl TickerCoreQuery {
         .await
         .map_err(to_gql_error)?;
         let entries: Vec<GqlNews> = from_gql_json(json)?;
-        pagination::paginate(entries, first, after).await
+        pagination::paginate(&entries, first, after).await
     }
 
     async fn options(&self, ctx: &Context<'_>, date: Option<i64>) -> Result<GqlOptions> {
