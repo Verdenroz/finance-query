@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 use crate::models::futures::FuturesQuote;
 
 use super::super::build_client;
@@ -70,11 +70,9 @@ pub struct FuturesSnapshotResponseDTO {
 pub async fn futures_snapshot(ticker: &str) -> Result<FuturesSnapshotResponseDTO> {
     let client = build_client()?;
     let path = format!("/v3/snapshot/futures/{}", encode_path_segment(ticker));
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "futures_snapshot".to_string(),
-        context: format!("Failed to parse futures snapshot response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "futures_snapshot", "futures snapshot response")
+        .await
 }
 
 /// Fetch futures quote (canonical) for a symbol.

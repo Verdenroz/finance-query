@@ -1,7 +1,7 @@
 //! Futures aggregate bar endpoints: OHLCV bars.
 #![allow(dead_code)]
 
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -50,11 +50,14 @@ pub async fn futures_aggregates(
     let query_refs: Vec<(&str, &str)> =
         query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
-    let json = client.get_raw(&path, &query_refs).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "futures_aggregates".to_string(),
-        context: format!("Failed to parse futures aggregate response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &query_refs,
+            "futures_aggregates",
+            "futures aggregate response",
+        )
+        .await
 }
 
 #[cfg(test)]

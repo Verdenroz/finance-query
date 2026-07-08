@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -50,11 +50,14 @@ async fn fetch_indicator(
         indicator,
         encode_path_segment(ticker)
     );
-    let json = client.get_raw(&path, params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: indicator.to_string(),
-        context: format!("Failed to parse index {indicator} response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            params,
+            indicator,
+            &format!("index {indicator} response"),
+        )
+        .await
 }
 
 #[cfg(test)]

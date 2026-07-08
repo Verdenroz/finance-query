@@ -55,11 +55,9 @@ pub async fn stock_aggregates(
     let query_refs: Vec<(&str, &str)> =
         query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
-    let json = client.get_raw(&path, &query_refs).await?;
-    serde_json::from_value(json).map_err(|e| crate::error::FinanceError::ResponseStructureError {
-        field: "aggregates".to_string(),
-        context: format!("Failed to parse aggregate response: {e}"),
-    })
+    client
+        .get_as(&path, &query_refs, "aggregates", "aggregate response")
+        .await
 }
 
 /// Helper: convert interval to (multiplier, timespan).
@@ -180,11 +178,9 @@ pub async fn stock_previous_close(
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
 
-    let json = client.get_raw(&path, &params).await?;
-    serde_json::from_value(json).map_err(|e| crate::error::FinanceError::ResponseStructureError {
-        field: "previous_close".to_string(),
-        context: format!("Failed to parse previous close response: {e}"),
-    })
+    client
+        .get_as(&path, &params, "previous_close", "previous close response")
+        .await
 }
 
 /// Fetch grouped daily bars for the entire stock market on a given date.
@@ -204,11 +200,9 @@ pub async fn stock_grouped_daily(
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
 
-    let json = client.get_raw(&path, &params).await?;
-    serde_json::from_value(json).map_err(|e| crate::error::FinanceError::ResponseStructureError {
-        field: "grouped_daily".to_string(),
-        context: format!("Failed to parse grouped daily response: {e}"),
-    })
+    client
+        .get_as(&path, &params, "grouped_daily", "grouped daily response")
+        .await
 }
 
 /// Fetch daily open/close for a stock ticker on a specific date.
@@ -231,11 +225,14 @@ pub async fn stock_daily_open_close(
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
 
-    let json = client.get_raw(&path, &params).await?;
-    serde_json::from_value(json).map_err(|e| crate::error::FinanceError::ResponseStructureError {
-        field: "daily_open_close".to_string(),
-        context: format!("Failed to parse daily open/close response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &params,
+            "daily_open_close",
+            "daily open/close response",
+        )
+        .await
 }
 
 #[cfg(test)]

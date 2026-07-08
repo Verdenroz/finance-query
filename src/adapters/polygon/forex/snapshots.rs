@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -17,11 +17,9 @@ pub async fn forex_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsRespo
         Some(t) => vec![("tickers", t)],
         None => vec![],
     };
-    let json = client.get_raw(path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "forex_snapshots".to_string(),
-        context: format!("Failed to parse forex snapshots response: {e}"),
-    })
+    client
+        .get_as(path, &params, "forex_snapshots", "forex snapshots response")
+        .await
 }
 
 /// Fetch snapshot for a single forex ticker.
@@ -33,11 +31,9 @@ pub async fn forex_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
         "/v2/snapshot/locale/global/markets/forex/tickers/{}",
         ticker
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "forex_snapshot".to_string(),
-        context: format!("Failed to parse forex snapshot response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "forex_snapshot", "forex snapshot response")
+        .await
 }
 
 /// Fetch top forex movers (gainers or losers).
@@ -49,11 +45,9 @@ pub async fn forex_top_movers(direction: &str) -> Result<SnapshotsResponseDTO> {
         "/v2/snapshot/locale/global/markets/forex/{}",
         encode_path_segment(direction)
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "forex_top_movers".to_string(),
-        context: format!("Failed to parse forex top movers response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "forex_top_movers", "forex top movers response")
+        .await
 }
 
 #[cfg(test)]

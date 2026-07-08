@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::Provider;
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 use crate::models::options::OptionContract;
 use crate::models::options::Options;
 use crate::providers::build_options;
@@ -265,11 +265,14 @@ pub async fn options_contract_snapshot(
         encode_path_segment(underlying),
         encode_path_segment(contract)
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "options_contract_snapshot".to_string(),
-        context: format!("Failed to parse options contract snapshot response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &[],
+            "options_contract_snapshot",
+            "options contract snapshot response",
+        )
+        .await
 }
 
 #[cfg(test)]

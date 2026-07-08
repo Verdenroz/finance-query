@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 use crate::models::crypto::CryptoQuote;
 
 use super::super::build_client;
@@ -18,11 +18,14 @@ pub async fn crypto_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsResp
         Some(t) => vec![("tickers", t)],
         None => vec![],
     };
-    let json = client.get_raw(path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "crypto_snapshots".to_string(),
-        context: format!("Failed to parse crypto snapshots response: {e}"),
-    })
+    client
+        .get_as(
+            path,
+            &params,
+            "crypto_snapshots",
+            "crypto snapshots response",
+        )
+        .await
 }
 
 /// Fetch snapshot for a single crypto ticker.
@@ -34,11 +37,9 @@ pub async fn crypto_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> 
         "/v2/snapshot/locale/global/markets/crypto/tickers/{}",
         ticker
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "crypto_snapshot".to_string(),
-        context: format!("Failed to parse crypto snapshot response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "crypto_snapshot", "crypto snapshot response")
+        .await
 }
 
 /// Fetch crypto quote (canonical) for a currency pair.
@@ -90,11 +91,14 @@ pub async fn crypto_top_movers(direction: &str) -> Result<SnapshotsResponseDTO> 
         "/v2/snapshot/locale/global/markets/crypto/{}",
         encode_path_segment(direction)
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "crypto_top_movers".to_string(),
-        context: format!("Failed to parse crypto top movers response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &[],
+            "crypto_top_movers",
+            "crypto top movers response",
+        )
+        .await
 }
 
 #[cfg(test)]

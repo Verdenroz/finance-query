@@ -36,10 +36,10 @@ mod client;
 mod economic;
 pub mod models;
 
+use crate::adapters::singleton::provider_singleton_state;
 use crate::error::{FinanceError, Result};
-use crate::rate_limiter::RateLimiter;
 use client::FredClientBuilder;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 use std::time::Duration;
 
 pub use crate::models::economic::{MacroSeries, TreasuryYield};
@@ -48,23 +48,23 @@ pub use models::ReleaseDate;
 /// FRED free-tier rate limit: 120 requests/minute = 2 req/sec.
 const FRED_RATE_PER_SEC: f64 = 2.0;
 
-/// Stable configuration stored in the FRED process-global singleton.
-///
-/// Only the API key, timeout, and rate-limiter are stored — NOT the
-/// `reqwest::Client`. `reqwest::Client` internally spawns hyper connection-pool
-/// tasks on whichever tokio runtime first uses them; when that runtime is
-/// dropped (e.g. at the end of a `#[tokio::test]`), those tasks die and
-/// subsequent calls from a different runtime receive `DispatchGone`. A fresh
-/// `reqwest::Client` is built per `series()` call via
-/// [`FredClientBuilder::build_with_limiter`], reusing this shared limiter so
-/// the 2 req/sec FRED rate limit is respected across all calls.
-struct FredSingleton {
-    api_key: String,
-    timeout: Duration,
-    limiter: Arc<RateLimiter>,
-}
-
-static FRED_SINGLETON: OnceLock<FredSingleton> = OnceLock::new();
+// Stable configuration stored in the FRED process-global singleton.
+//
+// Only the API key, timeout, and rate-limiter are stored — NOT the
+// `reqwest::Client`. `reqwest::Client` internally spawns hyper connection-pool
+// tasks on whichever tokio runtime first uses them; when that runtime is
+// dropped (e.g. at the end of a `#[tokio::test]`), those tasks die and
+// subsequent calls from a different runtime receive `DispatchGone`. A fresh
+// `reqwest::Client` is built per `series()` call via
+// `FredClientBuilder::build_with_limiter`, reusing this shared limiter so
+// the 2 req/sec FRED rate limit is respected across all calls.
+provider_singleton_state!(
+    name = FredSingleton,
+    static_name = FRED_SINGLETON,
+    rate_const = FRED_RATE_PER_SEC,
+    provider_key = "fred",
+    already_init_reason = "FRED client already initialized",
+);
 
 /// Initialize the global FRED client with an API key.
 ///
@@ -83,16 +83,7 @@ pub fn init(api_key: impl Into<String>) -> Result<()> {
 
 /// Initialize the FRED client with a custom timeout.
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
-    FRED_SINGLETON
-        .set(FredSingleton {
-            api_key: api_key.into(),
-            timeout,
-            limiter: Arc::new(RateLimiter::new(FRED_RATE_PER_SEC)),
-        })
-        .map_err(|_| FinanceError::InvalidParameter {
-            param: "fred".to_string(),
-            reason: "FRED client already initialized".to_string(),
-        })
+    set_singleton(api_key, timeout)
 }
 
 /// Fetch all observations for a FRED data series.
@@ -187,6 +178,7 @@ fn series_to_canonical(series: MacroSeries) -> crate::models::economic::Economic
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::rate_limiter::RateLimiter;
 
     #[test]
     fn test_init_errors_on_double_init() {

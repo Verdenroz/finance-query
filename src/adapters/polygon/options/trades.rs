@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -13,11 +13,14 @@ use super::super::models::*;
 pub async fn options_last_trade(ticker: &str) -> Result<LastTradeResponseDTO> {
     let client = build_client()?;
     let path = format!("/v2/last/trade/{}", encode_path_segment(ticker));
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "options_last_trade".to_string(),
-        context: format!("Failed to parse options last trade response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &[],
+            "options_last_trade",
+            "options last trade response",
+        )
+        .await
 }
 
 /// Fetch historical trades for an options contract.

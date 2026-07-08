@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -11,11 +11,9 @@ use super::super::models::*;
 pub async fn stock_last_trade(ticker: &str) -> Result<LastTradeResponseDTO> {
     let client = build_client()?;
     let path = format!("/v2/last/trade/{}", encode_path_segment(ticker));
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "last_trade".to_string(),
-        context: format!("Failed to parse last trade response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "last_trade", "last trade response")
+        .await
 }
 
 /// Fetch historical trades for a stock ticker.
@@ -35,11 +33,9 @@ pub async fn stock_trades(
 pub async fn stock_last_quote(ticker: &str) -> Result<LastQuoteResponseDTO> {
     let client = build_client()?;
     let path = format!("/v2/last/nbbo/{}", encode_path_segment(ticker));
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "last_quote".to_string(),
-        context: format!("Failed to parse last quote response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "last_quote", "last quote response")
+        .await
 }
 
 /// Fetch historical NBBO quotes for a stock ticker.

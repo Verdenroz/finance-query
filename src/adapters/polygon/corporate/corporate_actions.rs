@@ -122,11 +122,9 @@ pub async fn stock_ipos(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<
 pub async fn stock_ticker_events(ticker: &str) -> Result<TickerEventsResponseDTO> {
     let client = build_client()?;
     let path = format!("/vX/reference/tickers/{}/events", ticker);
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| crate::error::FinanceError::ResponseStructureError {
-        field: "ticker_events".to_string(),
-        context: format!("Failed to parse ticker events: {e}"),
-    })
+    client
+        .get_as(&path, &[], "ticker_events", "ticker events")
+        .await
 }
 
 /// Helper to parse a "YYYY-MM-DD" date string into a Unix timestamp.

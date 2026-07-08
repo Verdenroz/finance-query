@@ -114,6 +114,59 @@ macro_rules! domain_handle {
         }
     };
 
+    // Two-key chartable variant (e.g. forex pairs) — two identifier fields
+    // with their own accessors instead of one shared field/accessor.
+    (
+        $(#[$meta:meta])*
+        pub struct $name:ident {
+            $(#[$meta1:meta])* $field1:ident, $accessor1:ident,
+            $(#[$meta2:meta])* $field2:ident, $accessor2:ident $(,)?
+        } cache: $val:ty, chart
+    ) => {
+        $(#[$meta])*
+        pub struct $name {
+            $field1: std::sync::Arc<str>,
+            $field2: std::sync::Arc<str>,
+            providers: std::sync::Arc<crate::providers::ProviderSet>,
+            cache: crate::domains::DomainCache<$val>,
+            chart_cache: crate::domains::DomainCache<crate::models::chart::Chart>,
+        }
+
+        impl $name {
+            pub(crate) fn with_providers(
+                $field1: std::sync::Arc<str>,
+                $field2: std::sync::Arc<str>,
+                providers: std::sync::Arc<crate::providers::ProviderSet>,
+            ) -> Self {
+                Self {
+                    $field1,
+                    $field2,
+                    providers,
+                    cache: crate::domains::DomainCache::new(None),
+                    chart_cache: crate::domains::DomainCache::new(None),
+                }
+            }
+
+            /// Cache responses for `ttl`, deduplicating concurrent identical
+            /// requests. Off by default (each call fetches fresh).
+            pub fn cache(mut self, ttl: std::time::Duration) -> Self {
+                self.cache = crate::domains::DomainCache::new(Some(ttl));
+                self.chart_cache = crate::domains::DomainCache::new(Some(ttl));
+                self
+            }
+
+            $(#[$meta1])*
+            pub fn $accessor1(&self) -> &str {
+                &self.$field1
+            }
+
+            $(#[$meta2])*
+            pub fn $accessor2(&self) -> &str {
+                &self.$field2
+            }
+        }
+    };
+
     // Non-chartable variant.
     ($(#[$meta:meta])* pub struct $name:ident { $field:ident, $accessor:ident } cache: $val:ty) => {
         $(#[$meta])*
@@ -164,6 +217,30 @@ macro_rules! fetch_via {
                         let __s = __sym.clone();
                         let p = p.clone();
                         async move { p.$fetch(&__s).await }
+                    })
+                    .await
+            })
+            .await
+    }};
+}
+
+/// Fetch via the provider dispatch — two identifier fields (e.g. forex's
+/// `from`/`to`), cached under the empty-string key. Use inside a method body.
+#[allow(unused_macros)]
+macro_rules! fetch_via_two {
+    ($self:expr, $field1:ident, $field2:ident, $cap:ident, $fetch:ident, $ret:ty) => {{
+        let __a = $self.$field1.clone();
+        let __b = $self.$field2.clone();
+        let __providers = std::sync::Arc::clone(&$self.providers);
+        $self
+            .cache
+            .get_or_try(String::new(), move || async move {
+                __providers
+                    .fetch(crate::providers::Capability::$cap, move |p| {
+                        let __x = __a.clone();
+                        let __y = __b.clone();
+                        let p = p.clone();
+                        async move { p.$fetch(&__x, &__y).await }
                     })
                     .await
             })

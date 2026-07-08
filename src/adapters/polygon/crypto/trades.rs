@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -53,11 +53,14 @@ pub async fn crypto_last_trade(from: &str, to: &str) -> Result<CryptoLastTradeRe
         encode_path_segment(from),
         encode_path_segment(to)
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "crypto_last_trade".to_string(),
-        context: format!("Failed to parse crypto last trade response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &[],
+            "crypto_last_trade",
+            "crypto last trade response",
+        )
+        .await
 }
 
 /// Fetch historical trades for a crypto ticker.

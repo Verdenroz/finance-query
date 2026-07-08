@@ -49,10 +49,8 @@ mod options; // OPTIONS
 
 pub(crate) mod websocket;
 
+use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
 use crate::error::{FinanceError, Result};
-use crate::rate_limiter::RateLimiter;
-use client::PolygonClientBuilder;
-use std::sync::{Arc, OnceLock};
 use std::time::Duration;
 
 // Capability modules
@@ -76,13 +74,25 @@ pub use filings::*;
 /// Polygon.io free-tier rate limit: 5 req/sec.
 const PG_RATE_PER_SEC: f64 = 5.0;
 
-struct PolygonSingleton {
-    api_key: String,
-    timeout: Duration,
-    limiter: Arc<RateLimiter>,
-}
+provider_singleton_state!(
+    name = PolygonSingleton,
+    static_name = PG_SINGLETON,
+    rate_const = PG_RATE_PER_SEC,
+    provider_key = "polygon",
+    already_init_reason = "Polygon client already initialized",
+);
 
-static PG_SINGLETON: OnceLock<PolygonSingleton> = OnceLock::new();
+provider_build_client!(
+    name = PolygonSingleton,
+    static_name = PG_SINGLETON,
+    rate_const = PG_RATE_PER_SEC,
+    provider_key = "polygon",
+    env_var = "POLYGON_API_KEY",
+    env_missing_reason =
+        "POLYGON_API_KEY not set. Call polygon::init(key) or set POLYGON_API_KEY env var.",
+    builder = client::PolygonClientBuilder,
+    client_ty = client::PolygonClient,
+);
 
 /// Initialize the global Polygon client with an API key.
 ///
@@ -99,49 +109,7 @@ pub fn init(api_key: impl Into<String>) -> Result<()> {
 /// Initialize the Polygon client with a custom timeout.
 #[allow(dead_code)]
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
-    PG_SINGLETON
-        .set(PolygonSingleton {
-            api_key: api_key.into(),
-            timeout,
-            limiter: Arc::new(RateLimiter::new(PG_RATE_PER_SEC)),
-        })
-        .map_err(|_| FinanceError::InvalidParameter {
-            param: "polygon".to_string(),
-            reason: "Polygon client already initialized".to_string(),
-        })
-}
-
-/// Build a fresh client from the singleton state.
-pub(crate) fn build_client() -> Result<client::PolygonClient> {
-    if PG_SINGLETON.get().is_none()
-        && let Ok(key) = std::env::var("POLYGON_API_KEY")
-    {
-        let _ = PG_SINGLETON.set(PolygonSingleton {
-            api_key: key,
-            timeout: Duration::from_secs(30),
-            limiter: Arc::new(RateLimiter::new(PG_RATE_PER_SEC)),
-        });
-    }
-    let s = PG_SINGLETON
-        .get()
-        .ok_or_else(|| FinanceError::InvalidParameter {
-            param: "polygon".to_string(),
-            reason:
-                "POLYGON_API_KEY not set. Call polygon::init(key) or set POLYGON_API_KEY env var."
-                    .to_string(),
-        })?;
-    PolygonClientBuilder::new(&s.api_key)
-        .timeout(s.timeout)
-        .build_with_limiter(Arc::clone(&s.limiter))
-}
-
-/// Build a test client pointing at a mock server URL.
-#[cfg(test)]
-pub(crate) fn build_test_client(base_url: &str) -> Result<client::PolygonClient> {
-    PolygonClientBuilder::new("test-key")
-        .timeout(Duration::from_secs(5))
-        .base_url(base_url)
-        .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+    set_singleton(api_key, timeout)
 }
 
 /// Internal: read the configured API key. Used by the websocket module.

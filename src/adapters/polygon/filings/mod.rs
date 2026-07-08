@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 use crate::models::filings::{ProviderFiling, ProviderFilings};
 
 use super::build_client;
@@ -116,11 +116,9 @@ pub async fn filing_10k_sections(
         "/v1/reference/sec/filings/{}/sections",
         encode_path_segment(accession_number)
     );
-    let json = client.get_raw(&path, params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "10k_sections".to_string(),
-        context: format!("Failed to parse 10-K sections: {e}"),
-    })
+    client
+        .get_as(&path, params, "10k_sections", "10-K sections")
+        .await
 }
 
 /// Fetch 8-K filing text.
@@ -133,11 +131,7 @@ pub async fn filing_8k_text(
         "/v1/reference/sec/filings/{}/8k",
         encode_path_segment(accession_number)
     );
-    let json = client.get_raw(&path, params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "8k_text".to_string(),
-        context: format!("Failed to parse 8-K text: {e}"),
-    })
+    client.get_as(&path, params, "8k_text", "8-K text").await
 }
 
 /// Fetch risk factors from SEC filings.
