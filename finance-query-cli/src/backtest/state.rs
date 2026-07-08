@@ -7,6 +7,7 @@ use super::types::{
 };
 use super::user_presets::{self, UserStrategyPreset};
 use crate::error::Result;
+use crate::parse::{parse_interval, parse_range};
 use finance_query::{Interval, TimeRange};
 use ratatui::style::Color;
 use std::collections::HashMap;
@@ -1549,73 +1550,11 @@ impl App {
 // Helper functions for parsing and formatting
 
 pub fn interval_to_string(interval: Interval) -> String {
-    match interval {
-        Interval::OneMinute => "1m",
-        Interval::FiveMinutes => "5m",
-        Interval::FifteenMinutes => "15m",
-        Interval::ThirtyMinutes => "30m",
-        Interval::OneHour => "1h",
-        Interval::OneDay => "1d",
-        Interval::OneWeek => "1wk",
-        Interval::OneMonth => "1mo",
-        Interval::ThreeMonths => "3mo",
-    }
-    .to_string()
+    interval.to_string()
 }
 
 pub fn range_to_string(range: TimeRange) -> String {
-    match range {
-        TimeRange::OneDay => "1d",
-        TimeRange::FiveDays => "5d",
-        TimeRange::OneMonth => "1mo",
-        TimeRange::ThreeMonths => "3mo",
-        TimeRange::SixMonths => "6mo",
-        TimeRange::OneYear => "1y",
-        TimeRange::TwoYears => "2y",
-        TimeRange::FiveYears => "5y",
-        TimeRange::TenYears => "10y",
-        TimeRange::YearToDate => "ytd",
-        TimeRange::Max => "max",
-    }
-    .to_string()
-}
-
-pub fn parse_interval(s: &str) -> Result<Interval> {
-    match s.to_lowercase().as_str() {
-        "1m" => Ok(Interval::OneMinute),
-        "5m" => Ok(Interval::FiveMinutes),
-        "15m" => Ok(Interval::FifteenMinutes),
-        "30m" => Ok(Interval::ThirtyMinutes),
-        "1h" => Ok(Interval::OneHour),
-        "1d" => Ok(Interval::OneDay),
-        "1wk" => Ok(Interval::OneWeek),
-        "1mo" => Ok(Interval::OneMonth),
-        "3mo" => Ok(Interval::ThreeMonths),
-        _ => Err(crate::error::CliError::InvalidArgument(format!(
-            "Invalid interval: {}. Valid: 1m, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo, 3mo",
-            s
-        ))),
-    }
-}
-
-pub fn parse_range(s: &str) -> Result<TimeRange> {
-    match s.to_lowercase().as_str() {
-        "1d" => Ok(TimeRange::OneDay),
-        "5d" => Ok(TimeRange::FiveDays),
-        "1mo" => Ok(TimeRange::OneMonth),
-        "3mo" => Ok(TimeRange::ThreeMonths),
-        "6mo" => Ok(TimeRange::SixMonths),
-        "1y" => Ok(TimeRange::OneYear),
-        "2y" => Ok(TimeRange::TwoYears),
-        "5y" => Ok(TimeRange::FiveYears),
-        "10y" => Ok(TimeRange::TenYears),
-        "ytd" => Ok(TimeRange::YearToDate),
-        "max" => Ok(TimeRange::Max),
-        _ => Err(crate::error::CliError::InvalidArgument(format!(
-            "Invalid range: {}",
-            s
-        ))),
-    }
+    range.to_string()
 }
 
 pub fn parse_bool(s: &str) -> Result<bool> {

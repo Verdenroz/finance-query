@@ -1,8 +1,9 @@
 use crate::error::Result;
 use crate::output::{self, OutputFormat};
+use crate::parse::parse_range;
 use clap::Parser;
 use colored::Colorize;
-use finance_query::{EventKind, TimeRange};
+use finance_query::EventKind;
 
 #[derive(Parser)]
 pub struct CalendarArgs {
@@ -149,25 +150,5 @@ fn kind_str(event: &EventKind) -> &'static str {
         EventKind::DividendPayment { .. } => "dividend_payment",
         EventKind::OptionsExpiration { .. } => "options_expiration",
         _ => "other",
-    }
-}
-
-fn parse_range(s: &str) -> Result<TimeRange> {
-    match s.to_lowercase().as_str() {
-        "1d" => Ok(TimeRange::OneDay),
-        "5d" | "1wk" => Ok(TimeRange::FiveDays),
-        "1mo" => Ok(TimeRange::OneMonth),
-        "3mo" => Ok(TimeRange::ThreeMonths),
-        "6mo" => Ok(TimeRange::SixMonths),
-        "1y" => Ok(TimeRange::OneYear),
-        "2y" => Ok(TimeRange::TwoYears),
-        "5y" => Ok(TimeRange::FiveYears),
-        "10y" => Ok(TimeRange::TenYears),
-        "ytd" => Ok(TimeRange::YearToDate),
-        "max" => Ok(TimeRange::Max),
-        _ => Err(crate::error::CliError::InvalidArgument(format!(
-            "Invalid range '{}'. Valid ranges: 1d, 5d/1wk, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max",
-            s
-        ))),
     }
 }

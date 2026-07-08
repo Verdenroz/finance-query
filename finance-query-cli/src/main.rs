@@ -234,6 +234,7 @@ mod indicator;
 pub(crate) mod lang;
 pub(crate) mod options;
 mod output;
+mod parse;
 pub(crate) mod portfolio;
 
 use error::Result;

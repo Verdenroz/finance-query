@@ -816,6 +816,27 @@ impl std::fmt::Display for Interval {
     }
 }
 
+impl std::str::FromStr for Interval {
+    type Err = ();
+
+    /// Parses the same short codes returned by [`Interval::as_str`] (e.g. `"1d"`,
+    /// `"1wk"`), case-insensitively.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "1m" => Ok(Interval::OneMinute),
+            "5m" => Ok(Interval::FiveMinutes),
+            "15m" => Ok(Interval::FifteenMinutes),
+            "30m" => Ok(Interval::ThirtyMinutes),
+            "1h" => Ok(Interval::OneHour),
+            "1d" => Ok(Interval::OneDay),
+            "1wk" => Ok(Interval::OneWeek),
+            "1mo" => Ok(Interval::OneMonth),
+            "3mo" => Ok(Interval::ThreeMonths),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Time ranges for chart data
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum TimeRange {
@@ -913,6 +934,30 @@ impl TimeRange {
 impl std::fmt::Display for TimeRange {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for TimeRange {
+    type Err = ();
+
+    /// Parses the same short codes returned by [`TimeRange::as_str`] (e.g. `"3mo"`,
+    /// `"ytd"`), case-insensitively. `"1wk"` is also accepted as an alias for
+    /// [`TimeRange::FiveDays`] (a trading week).
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "1d" => Ok(TimeRange::OneDay),
+            "5d" | "1wk" => Ok(TimeRange::FiveDays),
+            "1mo" => Ok(TimeRange::OneMonth),
+            "3mo" => Ok(TimeRange::ThreeMonths),
+            "6mo" => Ok(TimeRange::SixMonths),
+            "1y" => Ok(TimeRange::OneYear),
+            "2y" => Ok(TimeRange::TwoYears),
+            "5y" => Ok(TimeRange::FiveYears),
+            "10y" => Ok(TimeRange::TenYears),
+            "ytd" => Ok(TimeRange::YearToDate),
+            "max" => Ok(TimeRange::Max),
+            _ => Err(()),
+        }
     }
 }
 
@@ -2153,6 +2198,48 @@ mod tests {
         assert_eq!(TimeRange::OneMonth.as_str(), "1mo");
         assert_eq!(TimeRange::OneYear.as_str(), "1y");
         assert_eq!(TimeRange::Max.as_str(), "max");
+    }
+
+    #[test]
+    fn test_interval_from_str_round_trips_as_str() {
+        for interval in [
+            Interval::OneMinute,
+            Interval::FiveMinutes,
+            Interval::FifteenMinutes,
+            Interval::ThirtyMinutes,
+            Interval::OneHour,
+            Interval::OneDay,
+            Interval::OneWeek,
+            Interval::OneMonth,
+            Interval::ThreeMonths,
+        ] {
+            assert_eq!(interval.as_str().parse(), Ok(interval));
+        }
+        assert_eq!("1D".parse(), Ok(Interval::OneDay));
+        assert_eq!(" 1d ".parse(), Ok(Interval::OneDay));
+        assert_eq!("bogus".parse::<Interval>(), Err(()));
+    }
+
+    #[test]
+    fn test_time_range_from_str_round_trips_as_str() {
+        for range in [
+            TimeRange::OneDay,
+            TimeRange::FiveDays,
+            TimeRange::OneMonth,
+            TimeRange::ThreeMonths,
+            TimeRange::SixMonths,
+            TimeRange::OneYear,
+            TimeRange::TwoYears,
+            TimeRange::FiveYears,
+            TimeRange::TenYears,
+            TimeRange::YearToDate,
+            TimeRange::Max,
+        ] {
+            assert_eq!(range.as_str().parse(), Ok(range));
+        }
+        assert_eq!("1wk".parse(), Ok(TimeRange::FiveDays));
+        assert_eq!("YTD".parse(), Ok(TimeRange::YearToDate));
+        assert_eq!("bogus".parse::<TimeRange>(), Err(()));
     }
 
     #[test]
