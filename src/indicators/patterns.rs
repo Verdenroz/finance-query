@@ -311,6 +311,7 @@ fn is_inverted_hammer_shape(c: &Candle) -> bool {
 // ── Pattern detectors ─────────────────────────────────────────────────────────
 
 /// Detect three-bar patterns at position `i` (signal bar is `candles[i]`).
+#[inline]
 fn detect_three_bar(candles: &[Candle], i: usize) -> Option<CandlePattern> {
     if i < 2 {
         return None;
@@ -378,6 +379,7 @@ fn detect_three_bar(candles: &[Candle], i: usize) -> Option<CandlePattern> {
 }
 
 /// Detect two-bar patterns at position `i` (signal bar is `candles[i]`).
+#[inline]
 fn detect_two_bar(candles: &[Candle], i: usize) -> Option<CandlePattern> {
     if i < 1 {
         return None;
@@ -459,6 +461,7 @@ fn detect_two_bar(candles: &[Candle], i: usize) -> Option<CandlePattern> {
 }
 
 /// Detect one-bar patterns at position `i`.
+#[inline]
 fn detect_one_bar(candles: &[Candle], i: usize) -> Option<CandlePattern> {
     let c = &candles[i];
 
