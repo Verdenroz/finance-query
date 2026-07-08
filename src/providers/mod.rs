@@ -90,6 +90,90 @@ impl Provider {
             Self::Edgar => "edgar",
         }
     }
+
+    /// Every provider variant compiled into this build, regardless of whether
+    /// it's actually configured/initialized. Used to compute error-message
+    /// hints (see [`Capability::candidate_providers`]) without needing a live
+    /// `ProviderSet`.
+    pub(crate) fn all() -> Vec<Self> {
+        let mut v = vec![Self::Yahoo];
+        #[cfg(feature = "polygon")]
+        v.push(Self::Polygon);
+        #[cfg(feature = "fmp")]
+        v.push(Self::Fmp);
+        #[cfg(feature = "alphavantage")]
+        v.push(Self::AlphaVantage);
+        #[cfg(feature = "crypto")]
+        v.push(Self::CoinGecko);
+        #[cfg(feature = "fred")]
+        v.push(Self::Fred);
+        v.push(Self::Edgar);
+        v
+    }
+
+    /// Static capability bitflags for this provider variant. Must be kept in
+    /// sync with the matching `src/providers/<name>.rs` adapter's
+    /// `ProviderAdapter::capabilities()` — see `provider_capabilities_match_adapters`
+    /// in the test module below.
+    pub(crate) fn capabilities(self) -> Capability {
+        match self {
+            Self::Yahoo => {
+                Capability::QUOTE
+                    | Capability::CHART
+                    | Capability::FUNDAMENTALS
+                    | Capability::CORPORATE
+                    | Capability::OPTIONS
+            }
+            #[cfg(feature = "polygon")]
+            Self::Polygon => {
+                Capability::QUOTE
+                    | Capability::CHART
+                    | Capability::FUNDAMENTALS
+                    | Capability::CORPORATE
+                    | Capability::OPTIONS
+                    | Capability::CRYPTO
+                    | Capability::FOREX
+                    | Capability::FUTURES
+                    | Capability::INDICES
+                    | Capability::FILINGS
+                    | Capability::ECONOMIC
+            }
+            #[cfg(feature = "fmp")]
+            Self::Fmp => {
+                Capability::QUOTE
+                    | Capability::CHART
+                    | Capability::FUNDAMENTALS
+                    | Capability::CORPORATE
+                    | Capability::INDICES
+                    | Capability::COMMODITIES
+                    | Capability::FOREX
+                    | Capability::CRYPTO
+            }
+            #[cfg(feature = "alphavantage")]
+            Self::AlphaVantage => {
+                Capability::QUOTE
+                    | Capability::CHART
+                    | Capability::FUNDAMENTALS
+                    | Capability::CORPORATE
+                    | Capability::OPTIONS
+                    | Capability::CRYPTO
+                    | Capability::FOREX
+                    | Capability::COMMODITIES
+                    | Capability::ECONOMIC
+            }
+            #[cfg(feature = "crypto")]
+            Self::CoinGecko => Capability::CRYPTO,
+            #[cfg(feature = "fred")]
+            Self::Fred => Capability::ECONOMIC,
+            Self::Edgar => Capability::FILINGS,
+        }
+    }
+}
+
+impl std::fmt::Display for Provider {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -167,10 +251,125 @@ impl Capability {
     }
 }
 
+impl std::fmt::Display for Capability {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.name())
+    }
+}
+
+impl Capability {
+    /// Providers whose `capabilities()` declare this capability, regardless of
+    /// which providers are actually configured/feature-enabled in this build.
+    ///
+    /// Purely informational — used to make [`crate::FinanceError::NotSupported`]/
+    /// [`crate::FinanceError::NoProviderAvailable`] point at what would need to
+    /// be enabled (feature flag) and/or routed (`Providers::builder().route(...)`).
+    pub(crate) fn candidate_providers(self) -> Vec<Provider> {
+        Provider::all()
+            .into_iter()
+            .filter(|p| p.capabilities().contains(self))
+            .collect()
+    }
+}
+
 impl std::ops::BitOr for Capability {
     type Output = Self;
     fn bitor(self, rhs: Self) -> Self {
         Self(self.0 | rhs.0)
+    }
+}
+
+/// A single provider-adapter operation — finer-grained than [`Capability`]
+/// (e.g. `Chart`, `ChartRange`, and `Spark` all fall under `Capability::CHART`).
+///
+/// Used in [`crate::FinanceError::NotSupported`] to say exactly which method a
+/// provider doesn't implement; [`Operation::capability`] recovers the coarser
+/// bit for computing which other providers could satisfy it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[non_exhaustive]
+pub enum Operation {
+    /// Single-symbol quote.
+    Quote,
+    /// Historical OHLCV chart over an interval/range.
+    Chart,
+    /// Historical OHLCV chart over a custom timestamp range.
+    ChartRange,
+    /// Financial statements (income/balance/cash flow).
+    Financials,
+    /// Symbol news.
+    News,
+    /// Similar-symbol recommendations.
+    Recommendations,
+    /// Options chain.
+    Options,
+    /// Corporate calendar events (earnings, dividends, splits).
+    Events,
+    /// Batch quotes for multiple symbols in one request.
+    QuotesBatch,
+    /// Lightweight sparkline data for multiple symbols in one request.
+    Spark,
+    /// Cryptocurrency quote.
+    CryptoQuote,
+    /// Macro-economic data series.
+    EconomicSeries,
+    /// Foreign exchange currency pair quote.
+    ForexQuote,
+    /// Stock market index quote.
+    IndicesQuote,
+    /// Futures contract quote.
+    FuturesQuote,
+    /// Commodity price quote.
+    CommoditiesQuote,
+    /// SEC EDGAR filing data.
+    Filings,
+}
+
+impl Operation {
+    /// Short lowercase identifier (e.g. `"chart_range"`, `"crypto_quote"`).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Quote => "quote",
+            Self::Chart => "chart",
+            Self::ChartRange => "chart_range",
+            Self::Financials => "financials",
+            Self::News => "news",
+            Self::Recommendations => "recommendations",
+            Self::Options => "options",
+            Self::Events => "events",
+            Self::QuotesBatch => "quotes_batch",
+            Self::Spark => "spark",
+            Self::CryptoQuote => "crypto_quote",
+            Self::EconomicSeries => "economic_series",
+            Self::ForexQuote => "forex_quote",
+            Self::IndicesQuote => "indices_quote",
+            Self::FuturesQuote => "futures_quote",
+            Self::CommoditiesQuote => "commodities_quote",
+            Self::Filings => "filings",
+        }
+    }
+
+    /// The coarser [`Capability`] bit this operation falls under.
+    pub fn capability(self) -> Capability {
+        match self {
+            Self::Quote | Self::QuotesBatch => Capability::QUOTE,
+            Self::Chart | Self::ChartRange | Self::Spark => Capability::CHART,
+            Self::Financials => Capability::FUNDAMENTALS,
+            Self::News | Self::Recommendations | Self::Events => Capability::CORPORATE,
+            Self::Options => Capability::OPTIONS,
+            Self::CryptoQuote => Capability::CRYPTO,
+            Self::EconomicSeries => Capability::ECONOMIC,
+            Self::ForexQuote => Capability::FOREX,
+            Self::IndicesQuote => Capability::INDICES,
+            Self::FuturesQuote => Capability::FUTURES,
+            Self::CommoditiesQuote => Capability::COMMODITIES,
+            Self::Filings => Capability::FILINGS,
+        }
+    }
+}
+
+impl std::fmt::Display for Operation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
     }
 }
 
@@ -194,7 +393,7 @@ impl Routes {
 
 #[async_trait::async_trait]
 pub(crate) trait ProviderAdapter: Send + Sync {
-    fn id(&self) -> &'static str;
+    fn id(&self) -> Provider;
     fn capabilities(&self) -> Capability;
 
     /// Initialize this provider. Called once during construction.
@@ -202,17 +401,18 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         Ok(())
     }
 
-    fn not_supported(&self, operation: &'static str) -> FinanceError {
+    fn not_supported(&self, operation: Operation) -> FinanceError {
         FinanceError::NotSupported {
             provider: self.id(),
             operation,
+            candidates: operation.capability().candidate_providers(),
         }
     }
 
     // Single-ticker quote routing; Ticker uses first_yahoo() directly for crumb auth.
     // Wired up for future multi-provider single-ticker quote routing.
     async fn fetch_quote(&self, _: &str) -> Result<QuoteSummaryResponse> {
-        Err(self.not_supported("quote"))
+        Err(self.not_supported(Operation::Quote))
     }
     async fn fetch_chart(
         &self,
@@ -220,7 +420,7 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         _: crate::Interval,
         _: crate::TimeRange,
     ) -> Result<crate::models::chart::Chart> {
-        Err(self.not_supported("chart"))
+        Err(self.not_supported(Operation::Chart))
     }
     async fn fetch_chart_range(
         &self,
@@ -229,7 +429,7 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         _: i64,
         _: i64,
     ) -> Result<crate::models::chart::Chart> {
-        Err(self.not_supported("chart_range"))
+        Err(self.not_supported(Operation::ChartRange))
     }
     async fn fetch_financials(
         &self,
@@ -237,33 +437,33 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         _: crate::StatementType,
         _: crate::Frequency,
     ) -> Result<crate::models::fundamentals::FinancialStatement> {
-        Err(self.not_supported("financials"))
+        Err(self.not_supported(Operation::Financials))
     }
     async fn fetch_news(&self, _: &str) -> Result<Vec<crate::models::corporate::news::News>> {
-        Err(self.not_supported("news"))
+        Err(self.not_supported(Operation::News))
     }
     async fn fetch_similar_symbols(
         &self,
         _: &str,
         _: u32,
     ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
-        Err(self.not_supported("recommendations"))
+        Err(self.not_supported(Operation::Recommendations))
     }
     async fn fetch_options(
         &self,
         _: &str,
         _: Option<i64>,
     ) -> Result<crate::models::options::Options> {
-        Err(self.not_supported("options"))
+        Err(self.not_supported(Operation::Options))
     }
     async fn fetch_events(&self, _: &str) -> Result<crate::models::chart::events::ChartEvents> {
-        Err(self.not_supported("events"))
+        Err(self.not_supported(Operation::Events))
     }
     /// Fetch quotes for multiple symbols in a single request.
     /// Returns `(symbol, QuoteSummaryResponse)` pairs — only partially populated
     /// (price module only) since batch endpoints don't return full quoteSummary data.
     async fn fetch_quotes_batch(&self, _: &[&str]) -> Result<Vec<(String, QuoteSummaryResponse)>> {
-        Err(self.not_supported("quotes_batch"))
+        Err(self.not_supported(Operation::QuotesBatch))
     }
 
     /// Fetch lightweight sparkline data for multiple symbols in a single request.
@@ -275,7 +475,7 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         _: crate::Interval,
         _: crate::TimeRange,
     ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
-        Err(self.not_supported("spark"))
+        Err(self.not_supported(Operation::Spark))
     }
 
     #[cfg(any(
@@ -289,7 +489,7 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         _: &str,
         _: &str,
     ) -> Result<crate::models::crypto::CryptoQuote> {
-        Err(self.not_supported("crypto_quote"))
+        Err(self.not_supported(Operation::CryptoQuote))
     }
 
     #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
@@ -297,7 +497,7 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         &self,
         _: &str,
     ) -> Result<crate::models::economic::EconomicSeries> {
-        Err(self.not_supported("economic_series"))
+        Err(self.not_supported(Operation::EconomicSeries))
     }
 
     #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
@@ -306,17 +506,17 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         _from: &str,
         _to: &str,
     ) -> Result<crate::models::forex::ForexQuote> {
-        Err(self.not_supported("forex_quote"))
+        Err(self.not_supported(Operation::ForexQuote))
     }
 
     #[cfg(any(feature = "polygon", feature = "fmp"))]
     async fn fetch_indices_quote(&self, _: &str) -> Result<crate::models::indices::IndexQuote> {
-        Err(self.not_supported("indices_quote"))
+        Err(self.not_supported(Operation::IndicesQuote))
     }
 
     #[cfg(feature = "polygon")]
     async fn fetch_futures_quote(&self, _: &str) -> Result<crate::models::futures::FuturesQuote> {
-        Err(self.not_supported("futures_quote"))
+        Err(self.not_supported(Operation::FuturesQuote))
     }
 
     #[cfg(any(feature = "fmp", feature = "alphavantage"))]
@@ -324,11 +524,11 @@ pub(crate) trait ProviderAdapter: Send + Sync {
         &self,
         _: &str,
     ) -> Result<crate::models::commodities::CommodityQuote> {
-        Err(self.not_supported("commodities_quote"))
+        Err(self.not_supported(Operation::CommoditiesQuote))
     }
 
     async fn fetch_filings(&self, _: &str) -> Result<crate::models::filings::ProviderFilings> {
-        Err(self.not_supported("filings"))
+        Err(self.not_supported(Operation::Filings))
     }
 }
 
@@ -358,29 +558,30 @@ impl ProviderSet {
         if let Some(provider_ids) = self.routes.map.get(&cap) {
             provider_ids
                 .iter()
-                .filter_map(|id| self.providers.iter().find(|p| p.id() == id.as_str()))
+                .filter_map(|id| self.providers.iter().find(|p| p.id() == *id))
                 .collect()
         } else if cap == Capability::FILINGS {
             // Default: EDGAR (keyless SEC filings) first, then Yahoo
             let mut v: Vec<&Arc<dyn ProviderAdapter>> = self
                 .providers
                 .iter()
-                .filter(|p| p.id() == "edgar")
+                .filter(|p| p.id() == Provider::Edgar)
                 .collect();
-            v.extend(self.providers.iter().filter(|p| p.id() == "yahoo"));
+            v.extend(self.providers.iter().filter(|p| p.id() == Provider::Yahoo));
             v
         } else {
             // Default: Yahoo only
             self.providers
                 .iter()
-                .filter(|p| p.id() == "yahoo")
+                .filter(|p| p.id() == Provider::Yahoo)
                 .collect()
         }
     }
 
     fn no_provider(cap: Capability) -> FinanceError {
         FinanceError::NoProviderAvailable {
-            operation: cap.name(),
+            operation: cap,
+            candidates: cap.candidate_providers(),
         }
     }
 
@@ -428,10 +629,12 @@ impl ProviderSet {
     }
 
     pub(crate) fn first_yahoo(&self) -> Result<Arc<YahooClient>> {
-        self.yahoo_client
-            .as_ref()
-            .map(Arc::clone)
-            .ok_or_else(|| FinanceError::NoProviderAvailable { operation: "yahoo" })
+        self.yahoo_client.as_ref().map(Arc::clone).ok_or_else(|| {
+            FinanceError::NoProviderAvailable {
+                operation: Capability::QUOTE,
+                candidates: vec![Provider::Yahoo],
+            }
+        })
     }
 }
 
@@ -678,8 +881,8 @@ mod tests {
 
     #[async_trait::async_trait]
     impl ProviderAdapter for NoSparkProvider {
-        fn id(&self) -> &'static str {
-            "yahoo"
+        fn id(&self) -> Provider {
+            Provider::Yahoo
         }
         fn capabilities(&self) -> Capability {
             Capability::CHART
@@ -699,7 +902,7 @@ mod tests {
         assert!(matches!(
             err,
             FinanceError::NotSupported {
-                operation: "spark",
+                operation: Operation::Spark,
                 ..
             }
         ));
@@ -729,5 +932,63 @@ mod tests {
             })
             .await;
         assert!(result.is_err());
+    }
+
+    // Guards `Provider::capabilities()` (the static table used to compute
+    // error-message candidates) against drifting from each adapter's real
+    // `ProviderAdapter::capabilities()`. Yahoo is exempted — constructing
+    // `YahooProvider` requires a live auth handshake — but every other
+    // adapter is a zero-cost unit struct, so this is a cheap sync check.
+    #[cfg(feature = "polygon")]
+    #[test]
+    fn polygon_capabilities_match_static_table() {
+        assert_eq!(
+            ProviderAdapter::capabilities(&polygon::PolygonProvider),
+            Provider::Polygon.capabilities()
+        );
+    }
+
+    #[cfg(feature = "fmp")]
+    #[test]
+    fn fmp_capabilities_match_static_table() {
+        assert_eq!(
+            ProviderAdapter::capabilities(&fmp::FmpProvider),
+            Provider::Fmp.capabilities()
+        );
+    }
+
+    #[cfg(feature = "alphavantage")]
+    #[test]
+    fn alphavantage_capabilities_match_static_table() {
+        assert_eq!(
+            ProviderAdapter::capabilities(&alphavantage::AlphaVantageProvider),
+            Provider::AlphaVantage.capabilities()
+        );
+    }
+
+    #[cfg(feature = "crypto")]
+    #[test]
+    fn coingecko_capabilities_match_static_table() {
+        assert_eq!(
+            ProviderAdapter::capabilities(&coingecko::CoinGeckoProvider),
+            Provider::CoinGecko.capabilities()
+        );
+    }
+
+    #[cfg(feature = "fred")]
+    #[test]
+    fn fred_capabilities_match_static_table() {
+        assert_eq!(
+            ProviderAdapter::capabilities(&fred::FredProvider),
+            Provider::Fred.capabilities()
+        );
+    }
+
+    #[test]
+    fn edgar_capabilities_match_static_table() {
+        assert_eq!(
+            ProviderAdapter::capabilities(&edgar::EdgarProvider),
+            Provider::Edgar.capabilities()
+        );
     }
 }

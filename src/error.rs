@@ -1,4 +1,13 @@
+use crate::providers::{Capability, Operation, Provider};
 use thiserror::Error;
+
+fn join_providers(providers: &[Provider]) -> String {
+    providers
+        .iter()
+        .map(|p| p.as_str())
+        .collect::<Vec<_>>()
+        .join(", ")
+}
 
 /// Main error type for the library
 #[derive(Error, Debug)]
@@ -117,19 +126,31 @@ pub enum FinanceError {
     },
 
     /// The requested operation is not supported by this provider.
-    #[error("{provider} does not support {operation}")]
+    #[error(
+        "{provider} does not support {operation} (supported by: {}; route it via Providers::builder().route(...))",
+        join_providers(candidates)
+    )]
     NotSupported {
         /// Provider identifier
-        provider: &'static str,
-        /// Operation name
-        operation: &'static str,
+        provider: Provider,
+        /// The specific operation that isn't implemented
+        operation: Operation,
+        /// Other providers whose `capabilities()` declare this operation
+        /// (informational — may still need a feature flag enabled and/or routing).
+        candidates: Vec<Provider>,
     },
 
     /// No configured provider supports this operation or all providers failed.
-    #[error("no provider available for {operation}")]
+    #[error(
+        "no provider available for {operation} (supported by: {}; route it via Providers::builder().route(...))",
+        join_providers(candidates)
+    )]
     NoProviderAvailable {
-        /// Operation name
-        operation: &'static str,
+        /// The capability no configured provider declared
+        operation: Capability,
+        /// Providers whose `capabilities()` declare this operation
+        /// (informational — may still need a feature flag enabled and/or routing).
+        candidates: Vec<Provider>,
     },
 
     /// Translation backend failure (model download, load, or inference)

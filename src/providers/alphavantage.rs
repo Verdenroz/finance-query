@@ -11,8 +11,8 @@ pub(crate) struct AlphaVantageProvider;
 
 #[async_trait::async_trait]
 impl super::ProviderAdapter for AlphaVantageProvider {
-    fn id(&self) -> &'static str {
-        "alphavantage"
+    fn id(&self) -> super::Provider {
+        super::Provider::AlphaVantage
     }
     fn capabilities(&self) -> super::Capability {
         super::Capability::QUOTE

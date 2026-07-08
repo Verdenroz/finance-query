@@ -4,7 +4,7 @@ use axum::{
     http::StatusCode,
     response::{IntoResponse, Json},
 };
-use finance_query::Screener;
+use finance_query::{Screener, ValueFormat};
 use finance_query_server::graphql::{
     self,
     fields::{GQL_SCREENER_RESULTS_VALID_FIELDS, SCREENER_RESULTS_COMPOSITE_FIELDS, unwrap_field},
@@ -13,6 +13,7 @@ use serde::Deserialize;
 use tracing::info;
 
 use super::gql_bridge::{build_rest_composite_selection, execute_gql_rest};
+use super::support::parse_format;
 
 fn default_screeners_count() -> u32 {
     std::env::var("SCREENERS_COUNT")
@@ -21,11 +22,13 @@ fn default_screeners_count() -> u32 {
         .unwrap_or(25)
 }
 
-fn format_to_gql(format: &str) -> &'static str {
-    match format.to_lowercase().as_str() {
-        "pretty" => "PRETTY",
-        "both" => "BOTH",
-        _ => "RAW",
+// Delegates to the shared `parse_format` (same `fmt`/`full` aliases every other
+// endpoint accepts) instead of re-matching the raw string.
+fn format_to_gql(format: Option<&str>) -> &'static str {
+    match parse_format(format) {
+        ValueFormat::Raw => "RAW",
+        ValueFormat::Pretty => "PRETTY",
+        ValueFormat::Both => "BOTH",
     }
 }
 
@@ -105,7 +108,7 @@ pub(crate) async fn get_screeners(
         }
     };
     let gql_type = st.as_scr_id().to_uppercase();
-    let gql_format = format_to_gql(params.format.as_deref().unwrap_or("raw"));
+    let gql_format = format_to_gql(params.format.as_deref());
     let selection = build_rest_composite_selection(
         params.fields.as_deref(),
         GQL_SCREENER_RESULTS_VALID_FIELDS,
@@ -158,7 +161,7 @@ pub(crate) async fn post_custom_screener(
         .as_deref()
         .map(|s| s.to_lowercase() == "asc")
         .unwrap_or(false);
-    let gql_format = format_to_gql(body.format.as_deref().unwrap_or("raw"));
+    let gql_format = format_to_gql(body.format.as_deref());
     let selection = build_rest_composite_selection(
         body.fields.as_deref(),
         GQL_SCREENER_RESULTS_VALID_FIELDS,

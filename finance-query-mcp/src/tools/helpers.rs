@@ -9,18 +9,27 @@ fn parse_range(s: &str) -> TimeRange {
 }
 
 pub fn parse_statement_type(s: &str) -> Option<StatementType> {
-    match s.to_lowercase().as_str() {
-        "income" => Some(StatementType::Income),
-        "balance" => Some(StatementType::Balance),
-        "cashflow" | "cash-flow" => Some(StatementType::CashFlow),
-        _ => None,
+    s.parse().ok()
+}
+
+/// Fallible on purpose: silently defaulting an unrecognized frequency to
+/// `Annual` would mask typos, so invalid input must be rejected by the caller.
+pub fn parse_frequency(s: &str) -> Option<Frequency> {
+    s.parse().ok()
+}
+
+pub fn statement_to_gql(statement: StatementType) -> &'static str {
+    match statement {
+        StatementType::Income => "INCOME",
+        StatementType::Balance => "BALANCE",
+        StatementType::CashFlow => "CASH_FLOW",
     }
 }
 
-pub fn parse_frequency(s: &str) -> Frequency {
-    match s.to_lowercase().as_str() {
-        "quarterly" | "q" => Frequency::Quarterly,
-        _ => Frequency::Annual,
+pub fn frequency_to_gql(frequency: Frequency) -> &'static str {
+    match frequency {
+        Frequency::Annual => "ANNUAL",
+        Frequency::Quarterly => "QUARTERLY",
     }
 }
 

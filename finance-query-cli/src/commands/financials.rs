@@ -343,26 +343,21 @@ fn humanize_metric_name(name: &str) -> String {
 }
 
 fn parse_statement_type(s: &str) -> Result<StatementType> {
-    match s.to_lowercase().as_str() {
-        "income" | "income-statement" => Ok(StatementType::Income),
-        "balance" | "balance-sheet" => Ok(StatementType::Balance),
-        "cash" | "cashflow" | "cash-flow" => Ok(StatementType::CashFlow),
-        _ => Err(crate::error::CliError::InvalidArgument(format!(
+    s.parse().map_err(|_| {
+        crate::error::CliError::InvalidArgument(format!(
             "Invalid statement type '{}'. Valid types: income, balance, cash-flow",
             s
-        ))),
-    }
+        ))
+    })
 }
 
 fn parse_frequency(s: &str) -> Result<Frequency> {
-    match s.to_lowercase().as_str() {
-        "annual" | "yearly" | "year" => Ok(Frequency::Annual),
-        "quarterly" | "quarter" | "q" => Ok(Frequency::Quarterly),
-        _ => Err(crate::error::CliError::InvalidArgument(format!(
+    s.parse().map_err(|_| {
+        crate::error::CliError::InvalidArgument(format!(
             "Invalid frequency '{}'. Valid frequencies: annual, quarterly",
             s
-        ))),
-    }
+        ))
+    })
 }
 
 /// Format large numbers with K, M, B, T suffixes

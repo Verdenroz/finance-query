@@ -9,8 +9,8 @@ pub(crate) struct PolygonProvider;
 
 #[async_trait::async_trait]
 impl super::ProviderAdapter for PolygonProvider {
-    fn id(&self) -> &'static str {
-        "polygon"
+    fn id(&self) -> super::Provider {
+        super::Provider::Polygon
     }
     fn capabilities(&self) -> super::Capability {
         super::Capability::QUOTE

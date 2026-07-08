@@ -327,7 +327,10 @@ mod tests {
     use std::sync::atomic::{AtomicUsize, Ordering};
 
     fn err() -> FinanceError {
-        FinanceError::NoProviderAvailable { operation: "test" }
+        FinanceError::NoProviderAvailable {
+            operation: crate::providers::Capability::QUOTE,
+            candidates: Vec::new(),
+        }
     }
 
     #[tokio::test]

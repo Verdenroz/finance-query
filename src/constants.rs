@@ -289,7 +289,7 @@ pub mod indices {
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             match s.to_lowercase().replace(['-', '_'], "").as_str() {
-                "americas" | "america" => Ok(Region::Americas),
+                "americas" | "america" | "am" => Ok(Region::Americas),
                 "europe" | "eu" => Ok(Region::Europe),
                 "asiapacific" | "asia" | "apac" => Ok(Region::AsiaPacific),
                 "middleeastafrica" | "mea" | "emea" => Ok(Region::MiddleEastAfrica),
@@ -591,6 +591,21 @@ impl StatementType {
     }
 }
 
+impl std::str::FromStr for StatementType {
+    type Err = ();
+
+    /// Case-insensitive; accepts `as_str()`'s canonical form plus the hyphenated
+    /// `-statement`/`-sheet` variants and the `"cash"` shorthand.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "income" | "income-statement" => Ok(StatementType::Income),
+            "balance" | "balance-sheet" => Ok(StatementType::Balance),
+            "cash" | "cashflow" | "cash-flow" => Ok(StatementType::CashFlow),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Income statement fields (without frequency prefix)
 const INCOME_STATEMENT_FIELDS: [&str; 30] = [
     fundamental_types::TOTAL_REVENUE,
@@ -758,6 +773,20 @@ impl Frequency {
     /// ```
     pub fn prefix(&self, field: &str) -> String {
         format!("{}{}", self.as_str(), field)
+    }
+}
+
+impl std::str::FromStr for Frequency {
+    type Err = ();
+
+    /// Case-insensitive; accepts `as_str()`'s canonical form plus common
+    /// shorthands (`"year"`/`"yearly"`, `"quarter"`/`"q"`).
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "annual" | "yearly" | "year" => Ok(Frequency::Annual),
+            "quarterly" | "quarter" | "q" => Ok(Frequency::Quarterly),
+            _ => Err(()),
+        }
     }
 }
 
@@ -2198,6 +2227,31 @@ mod tests {
         assert_eq!(TimeRange::OneMonth.as_str(), "1mo");
         assert_eq!(TimeRange::OneYear.as_str(), "1y");
         assert_eq!(TimeRange::Max.as_str(), "max");
+    }
+
+    #[test]
+    fn test_statement_type_from_str_round_trips_as_str() {
+        for statement in [
+            StatementType::Income,
+            StatementType::Balance,
+            StatementType::CashFlow,
+        ] {
+            assert_eq!(statement.as_str().parse(), Ok(statement));
+        }
+        assert_eq!("INCOME-STATEMENT".parse(), Ok(StatementType::Income));
+        assert_eq!("balance-sheet".parse(), Ok(StatementType::Balance));
+        assert_eq!("cash".parse(), Ok(StatementType::CashFlow));
+        assert_eq!("bogus".parse::<StatementType>(), Err(()));
+    }
+
+    #[test]
+    fn test_frequency_from_str_round_trips_as_str() {
+        for frequency in [Frequency::Annual, Frequency::Quarterly] {
+            assert_eq!(frequency.as_str().parse(), Ok(frequency));
+        }
+        assert_eq!("YEARLY".parse(), Ok(Frequency::Annual));
+        assert_eq!("q".parse(), Ok(Frequency::Quarterly));
+        assert_eq!("bogus".parse::<Frequency>(), Err(()));
     }
 
     #[test]

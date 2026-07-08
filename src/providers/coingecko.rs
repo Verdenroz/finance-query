@@ -6,8 +6,8 @@ pub(crate) struct CoinGeckoProvider;
 
 #[async_trait::async_trait]
 impl super::ProviderAdapter for CoinGeckoProvider {
-    fn id(&self) -> &'static str {
-        "coingecko"
+    fn id(&self) -> super::Provider {
+        super::Provider::CoinGecko
     }
     fn capabilities(&self) -> super::Capability {
         super::Capability::CRYPTO

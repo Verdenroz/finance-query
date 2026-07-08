@@ -1438,9 +1438,7 @@ impl Tickers {
                         let items = p.fetch_similar_symbols(&sym, limit).await?;
                         Ok(recommendation_from_similar(
                             sym,
-                            Some(Provider::from_id_str(p.id()).ok_or_else(|| {
-                                FinanceError::InternalError(format!("unknown provider id: {}", p.id()))
-                            })?),
+                            Some(p.id()),
                             items,
                             Some(limit),
                         ))

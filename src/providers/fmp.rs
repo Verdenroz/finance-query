@@ -7,8 +7,8 @@ pub(crate) struct FmpProvider;
 
 #[async_trait::async_trait]
 impl super::ProviderAdapter for FmpProvider {
-    fn id(&self) -> &'static str {
-        "fmp"
+    fn id(&self) -> Provider {
+        Provider::Fmp
     }
     fn capabilities(&self) -> super::Capability {
         super::Capability::QUOTE

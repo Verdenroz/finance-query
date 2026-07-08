@@ -6,8 +6,8 @@ pub(crate) struct FredProvider;
 
 #[async_trait::async_trait]
 impl super::ProviderAdapter for FredProvider {
-    fn id(&self) -> &'static str {
-        "fred"
+    fn id(&self) -> super::Provider {
+        super::Provider::Fred
     }
 
     fn capabilities(&self) -> super::Capability {

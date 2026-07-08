@@ -459,10 +459,7 @@ impl Ticker {
                 let p = p.clone();
                 async move {
                     let r = p.fetch_similar_symbols(&sym, limit).await?;
-                    let provider = Provider::from_id_str(p.id()).ok_or_else(|| {
-                        FinanceError::InternalError(format!("unknown provider id: {}", p.id()))
-                    })?;
-                    Ok((provider, r))
+                    Ok((p.id(), r))
                 }
             })
             .await?;

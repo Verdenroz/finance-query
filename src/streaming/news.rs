@@ -86,6 +86,18 @@ impl NewsStream {
     }
 
     /// Add more sources to the subscription.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::streaming::NewsStream;
+    /// use finance_query::feeds::FeedSource;
+    ///
+    /// # async fn example() {
+    /// let stream = NewsStream::subscribe([FeedSource::Bloomberg]).await;
+    /// stream.add_sources([FeedSource::MarketWatch, FeedSource::WsjMarkets]).await;
+    /// # }
+    /// ```
     pub async fn add_sources(&self, sources: impl IntoIterator<Item = FeedSource>) {
         self.inner
             .send(FeedCommand::AddSources(sources.into_iter().collect()))
@@ -93,6 +105,18 @@ impl NewsStream {
     }
 
     /// Remove sources from the subscription (matched by [`FeedSource::url`]).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::streaming::NewsStream;
+    /// use finance_query::feeds::FeedSource;
+    ///
+    /// # async fn example() {
+    /// let stream = NewsStream::subscribe([FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
+    /// stream.remove_sources([FeedSource::MarketWatch]).await;
+    /// # }
+    /// ```
     pub async fn remove_sources(&self, sources: impl IntoIterator<Item = FeedSource>) {
         let urls = sources.into_iter().map(|s| s.url()).collect();
         self.inner.send(FeedCommand::RemoveSources(urls)).await;
