@@ -4,7 +4,7 @@
 
 use crate::error::{FinanceError, Result};
 use crate::models::corporate::news::News;
-use scraper::{Html, Selector};
+use crate::scrapers::html;
 use std::collections::HashMap;
 use std::sync::LazyLock;
 use tracing::info;
@@ -70,13 +70,6 @@ static EXCHANGE_MAPPING: LazyLock<HashMap<&'static str, &'static str>> = LazyLoc
     ])
 });
 
-/// CSS selectors for `parse_news` — parsed once and reused across every call.
-static ALL_DIVS_SEL: LazyLock<Selector> = LazyLock::new(|| Selector::parse("div").unwrap());
-static IMG_SEL: LazyLock<Selector> = LazyLock::new(|| Selector::parse("img").unwrap());
-static TITLE_SEL: LazyLock<Selector> = LazyLock::new(|| Selector::parse("h3 a").unwrap());
-static SOURCE_TIME_SEL: LazyLock<Selector> =
-    LazyLock::new(|| Selector::parse("div[title]").unwrap());
-
 /// Build a reqwest client with the StockAnalysis user agent.
 fn build_client() -> Result<reqwest::Client> {
     Ok(reqwest::Client::builder()
@@ -118,35 +111,31 @@ fn build_symbol_urls(symbol: &str) -> Vec<String> {
 }
 
 /// Parse news articles from HTML content
-fn parse_news(html: &str) -> Result<Vec<News>> {
-    let document = Html::parse_document(html);
-
+fn parse_news(document: &str) -> Result<Vec<News>> {
     // Find all divs that contain the news item structure:
     // - h3 with a link (title)
     // - div with title attribute (source/time)
     let mut news_list = Vec::new();
     let mut seen_titles = std::collections::HashSet::new();
 
-    for item in document.select(&ALL_DIVS_SEL) {
-        let title_elem = item.select(&TITLE_SEL).next();
-        let source_time_elem = item.select(&SOURCE_TIME_SEL).next();
+    for item in html::find_all(document, "div") {
+        let title_elem =
+            html::find_first(item.inner, "h3").and_then(|h3| html::find_first(h3.inner, "a"));
+        let source_time_elem = html::find_first_with_attr(item.inner, "div", "title");
 
         if let (Some(title_el), Some(source_time_el)) = (title_elem, source_time_elem) {
-            let title = title_el.text().collect::<String>().trim().to_string();
-            let link = title_el.value().attr("href").unwrap_or("").to_string();
+            let title = title_el.text().trim().to_string();
+            let link = title_el.attr("href").unwrap_or_default();
 
             // Skip if missing essential fields or already seen (dedup)
             if title.is_empty() || link.is_empty() || !seen_titles.insert(title.clone()) {
                 continue;
             }
 
-            let source_time_text = source_time_el.text().collect::<String>();
-            let img = item
-                .select(&IMG_SEL)
-                .next()
-                .and_then(|e| e.value().attr("src"))
-                .unwrap_or("")
-                .to_string();
+            let source_time_text = source_time_el.text();
+            let img = html::find_first(item.inner, "img")
+                .and_then(|e| e.attr("src"))
+                .unwrap_or_default();
 
             // Parse "14 hours ago - Seeking Alpha" format
             let (time, source) = if let Some(pos) = source_time_text.find(" - ") {
@@ -247,6 +236,50 @@ mod tests {
         let urls = build_symbol_urls("VOD.L");
         assert_eq!(urls.len(), 1);
         assert!(urls[0].contains("quote/lon/VOD"));
+    }
+
+    #[test]
+    fn parses_news_offline() {
+        let html = r#"
+            <div class="feed">
+              <div class="item">
+                <img src="/logo1.png">
+                <h3><a href="/news/fed-holds-rates">Fed holds rates steady</a></h3>
+                <div title="2026-07-09">14 hours ago - Reuters</div>
+              </div>
+              <div class="item">
+                <img src="/logo2.png">
+                <h3><a href="/news/earnings-beat">Earnings beat expectations</a></h3>
+                <div title="2026-07-08">2 days ago - Bloomberg</div>
+              </div>
+              <div class="not-a-news-item">just some other div</div>
+            </div>
+        "#;
+
+        let news = parse_news(html).unwrap();
+        assert_eq!(news.len(), 2);
+        assert_eq!(news[0].title, "Fed holds rates steady");
+        assert_eq!(news[0].link, "/news/fed-holds-rates");
+        assert_eq!(news[0].source, "Reuters");
+        assert_eq!(news[0].time, "14 hours ago");
+        assert_eq!(news[0].img, "/logo1.png");
+    }
+
+    #[test]
+    fn parse_news_dedupes_repeated_titles() {
+        let html = r#"
+            <div>
+              <h3><a href="/news/1">Same headline</a></h3>
+              <div title="x">1 hour ago - Source</div>
+            </div>
+            <div>
+              <h3><a href="/news/1-repost">Same headline</a></h3>
+              <div title="y">2 hours ago - Source</div>
+            </div>
+        "#;
+
+        let news = parse_news(html).unwrap();
+        assert_eq!(news.len(), 1);
     }
 
     #[tokio::test]

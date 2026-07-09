@@ -1,22 +1,27 @@
-//! Rate limiting middleware using governor.
+//! Global (non-keyed) rate limiting middleware.
 //!
-//! Provides per-IP rate limiting to prevent abuse and protect upstream Yahoo Finance API.
+//! Applies one shared token bucket across all requests to protect the
+//! upstream Yahoo Finance API. Per-IP tracking would require additional
+//! state management and isn't implemented.
+//!
+//! Hand-rolled rather than a general-purpose crate: the only capability
+//! this needs is a single continuously-refilling counter, which a `Mutex`
+//! around a token count + timestamp covers in a few dozen lines, at none of
+//! the transitive dependency weight (keyed limiters, jitter, jemalloc-style
+//! CPU timing) a multi-tenant rate-limiting library carries for capabilities
+//! this middleware never exercises.
 
 use axum::{
     Json,
     body::Body,
+    extract::State,
     http::{Request, StatusCode},
     middleware::Next,
     response::IntoResponse,
 };
-use governor::{
-    Quota, RateLimiter,
-    clock::{Clock, DefaultClock},
-    state::{InMemoryState, NotKeyed},
-};
 use serde::Serialize;
-use std::num::NonZeroU32;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use tracing::warn;
 
 /// Rate limit configuration
@@ -49,24 +54,66 @@ impl RateLimitConfig {
     }
 }
 
+/// Continuously-refilling token bucket: capacity and refill rate are both
+/// derived from `requests_per_minute`, so a bucket allows an initial burst
+/// up to that count and then admits one request every `60s / count`.
+struct TokenBucket {
+    capacity: f64,
+    refill_per_sec: f64,
+    tokens: f64,
+    last_refill: Instant,
+}
+
+impl TokenBucket {
+    fn new(requests_per_minute: u32) -> Self {
+        let capacity = requests_per_minute.max(1) as f64;
+        Self {
+            capacity,
+            refill_per_sec: capacity / 60.0,
+            tokens: capacity,
+            last_refill: Instant::now(),
+        }
+    }
+
+    /// Attempt to consume one token. `Ok` on success; `Err(retry_after)` on
+    /// failure, with the wait time until the next token would be available.
+    fn check(&mut self) -> Result<(), Duration> {
+        let now = Instant::now();
+        let elapsed = now.duration_since(self.last_refill).as_secs_f64();
+        self.tokens = (self.tokens + elapsed * self.refill_per_sec).min(self.capacity);
+        self.last_refill = now;
+
+        if self.tokens >= 1.0 {
+            self.tokens -= 1.0;
+            Ok(())
+        } else {
+            let deficit = 1.0 - self.tokens;
+            Err(Duration::from_secs_f64(deficit / self.refill_per_sec))
+        }
+    }
+}
+
 /// Shared rate limiter state
 #[derive(Clone)]
 pub struct RateLimiterState {
-    limiter: Arc<RateLimiter<NotKeyed, InMemoryState, DefaultClock>>,
+    bucket: Arc<Mutex<TokenBucket>>,
 }
 
 impl RateLimiterState {
     /// Create a new rate limiter with the given configuration
     pub fn new(config: RateLimitConfig) -> Self {
-        let quota = Quota::per_minute(
-            NonZeroU32::new(config.requests_per_minute).unwrap_or(NonZeroU32::new(60).unwrap()),
-        );
-
         crate::metrics::RATE_LIMIT_QUOTA_PER_MINUTE.set(config.requests_per_minute as f64);
 
         Self {
-            limiter: Arc::new(RateLimiter::direct(quota)),
+            bucket: Arc::new(Mutex::new(TokenBucket::new(config.requests_per_minute))),
         }
+    }
+
+    fn check(&self) -> Result<(), Duration> {
+        self.bucket
+            .lock()
+            .unwrap_or_else(|poisoned| poisoned.into_inner())
+            .check()
     }
 }
 
@@ -84,25 +131,20 @@ struct RateLimitError {
 /// Applies global rate limiting to all requests.
 /// Note: Per-IP tracking would require additional state management.
 pub async fn rate_limit_middleware(
-    State(limiter): axum::extract::State<RateLimiterState>,
+    State(limiter): State<RateLimiterState>,
     request: Request<Body>,
     next: Next,
 ) -> impl IntoResponse {
-    // Check rate limit
-    match limiter.limiter.check() {
-        Ok(_) => {
+    match limiter.check() {
+        Ok(()) => {
             crate::metrics::RATE_LIMIT_ALLOWED.inc();
             next.run(request).await.into_response()
         }
-        Err(not_until) => {
-            // Rate limit exceeded
-            let retry_after = not_until
-                .wait_time_from(DefaultClock::default().now())
-                .as_secs();
+        Err(retry_after) => {
+            let retry_after = retry_after.as_secs().max(1);
 
             warn!("Rate limit exceeded (retry after {} seconds)", retry_after);
 
-            // Track rate limit rejection
             crate::metrics::RATE_LIMIT_REJECTIONS.inc();
 
             let error_response = RateLimitError {
@@ -127,9 +169,6 @@ pub async fn rate_limit_middleware(
     }
 }
 
-// Import State extractor for middleware
-use axum::extract::State;
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -148,6 +187,37 @@ mod tests {
         let state = RateLimiterState::new(config);
 
         // Verify we can check rate limits
-        assert!(state.limiter.check().is_ok());
+        assert!(state.check().is_ok());
+    }
+
+    #[test]
+    fn allows_burst_up_to_capacity() {
+        let mut bucket = TokenBucket::new(5);
+        for _ in 0..5 {
+            assert!(bucket.check().is_ok());
+        }
+        assert!(bucket.check().is_err());
+    }
+
+    #[test]
+    fn denies_beyond_capacity_with_retry_after() {
+        let mut bucket = TokenBucket::new(1);
+        assert!(bucket.check().is_ok());
+        let err = bucket.check().unwrap_err();
+        // At 1 request/minute, the next token is ~60s away.
+        assert!(err.as_secs_f64() > 50.0 && err.as_secs_f64() <= 60.0);
+    }
+
+    #[test]
+    fn refills_over_time() {
+        let mut bucket = TokenBucket::new(60); // 1 token/sec
+        for _ in 0..60 {
+            assert!(bucket.check().is_ok());
+        }
+        assert!(bucket.check().is_err());
+
+        // Simulate elapsed time by rewinding last_refill instead of sleeping.
+        bucket.last_refill = Instant::now() - Duration::from_secs(1);
+        assert!(bucket.check().is_ok());
     }
 }
