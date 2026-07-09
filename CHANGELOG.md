@@ -31,6 +31,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
     (24/7) — and intraday intervals scale by session length, so Sharpe/Sortino/
     Calmar are correct across asset classes and intervals. `beta` is always `None`
     on domain handles (no benchmark is fetched).
+- **Financial event calendar** — `Ticker::calendar(range)` / `Tickers::calendar(range)`
+  → `Vec<CalendarEvent>`, aggregating upcoming earnings, ex-dividend/dividend-payment
+  dates, and standard monthly options expirations across one or more symbols into a
+  single time-sorted list. With the `fred` feature, `fred::release_dates()` appends a
+  curated set of market-moving economic releases (CPI, NFP, GDP, …). New public
+  `CalendarEvent` / `EventKind` types.
+- `Region::Japan` / `Region::Korea` / `Region::Mexico` / `Region::Qatar` variants
+  (verified live against Yahoo's market-time endpoint).
+- `ProvidersBuilder::region_code` for parity with `TickerBuilder`/`TickersBuilder`.
 
 ### Changed
 
@@ -39,6 +48,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `Ticker` and the domain handles (no behavior change). `risk` summaries are now
   computed via an annualization-factor-aware path; `Ticker::risk` is unchanged
   (still the daily 252-period calendar).
+- `Tickers::add_symbols`/`remove_symbols`, `PriceStream::subscribe`/`add_symbols`/
+  `remove_symbols`, `PriceStreamBuilder::symbols`, `NewsStream::subscribe`/
+  `add_sources`/`remove_sources`, `NewsStreamBuilder::sources`, `feeds::fetch_all`,
+  `ProvidersBuilder::route`, and `translation::translate_texts` now accept
+  `impl IntoIterator<Item = impl Into<String>>` (or `Item = Provider`/`FeedSource`
+  where applicable) instead of requiring a `&[...]` slice reference.
+- **Breaking**: `finance::hours()` now takes `Option<Region>` instead of
+  `Option<&str>`, matching the typed sibling `market_summary`/`trending`/`indices`
+  functions.
+  - Migration: `finance::hours(Some("JP"))` → `finance::hours(Some(Region::Japan))`
+- **Breaking**: `FinanceError::NotSupported`'s `provider`/`operation` fields changed
+  from `&'static str` to the typed `Provider`/`Operation` enums, and gained a new
+  `candidates: Vec<Provider>` field listing which providers could have served the
+  capability. Code matching or destructuring these fields as strings will need
+  updating; the `Display` output text is unchanged.
+
+### Fixed
+
+- Options chain parsing (`Ticker::options`/`Tickers::options`) now correctly reads
+  calls/puts from the per-expiration `options[]` array instead of the top-level
+  chain result, which could silently return an empty or incomplete contract list.
+- `FinanceError::with_context`/`category`/`is_retriable` now cover `MacroDataError`/
+  `FeedParseError`/`ExternalApiError`, which had matching fields but were previously
+  silently skipped.
+
+### Removed
+
+- **Breaking**: `Region::cors_domain()` removed (unused, zero call sites anywhere).
+- `ClientConfigBuilder`/`ClientConfig::builder()` — dead code, unreachable outside
+  the crate and fully superseded by the direct `.timeout()`/`.proxy()`/`.lang()`/
+  `.region()`/`.region_code()` setters already on every builder.
+
+### Security
+
+- `feed-rs` (and its `quick-xml`/XML dependency chain) removed entirely; RSS/Atom
+  parsing is now a hand-rolled, dependency-free extractor (`src/feeds/parser.rs`),
+  resolving RUSTSEC-2026-0195.
+- Bumped `crossbeam-epoch` 0.9.18 → 0.9.20 (RUSTSEC-2026-0204).
 
 ## [2.7.1] - 2026-06-20
 
