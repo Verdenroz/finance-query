@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::PaginatedResponseDTO;
@@ -84,11 +84,14 @@ pub async fn futures_contracts(
 ) -> Result<PaginatedResponseDTO<FuturesContractDTO>> {
     let client = build_client()?;
     let path = "/v3/reference/futures/contracts";
-    let json = client.get_raw(path, params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "futures_contracts".to_string(),
-        context: format!("Failed to parse futures contracts response: {e}"),
-    })
+    client
+        .get_as(
+            path,
+            params,
+            "futures_contracts",
+            "futures contracts response",
+        )
+        .await
 }
 
 /// Fetch futures products reference data.
@@ -99,11 +102,14 @@ pub async fn futures_products(
 ) -> Result<PaginatedResponseDTO<FuturesProductDTO>> {
     let client = build_client()?;
     let path = "/v3/reference/futures/products";
-    let json = client.get_raw(path, params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "futures_products".to_string(),
-        context: format!("Failed to parse futures products response: {e}"),
-    })
+    client
+        .get_as(
+            path,
+            params,
+            "futures_products",
+            "futures products response",
+        )
+        .await
 }
 
 /// Fetch futures schedules reference data.
@@ -114,11 +120,14 @@ pub async fn futures_schedules(
 ) -> Result<PaginatedResponseDTO<FuturesScheduleDTO>> {
     let client = build_client()?;
     let path = "/v3/reference/futures/schedules";
-    let json = client.get_raw(path, params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "futures_schedules".to_string(),
-        context: format!("Failed to parse futures schedules response: {e}"),
-    })
+    client
+        .get_as(
+            path,
+            params,
+            "futures_schedules",
+            "futures schedules response",
+        )
+        .await
 }
 
 #[cfg(test)]

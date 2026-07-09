@@ -68,7 +68,7 @@ let tickers = Tickers::builder(vec!["AAPL", "MSFT", "GOOGL", "TSLA"])
 use finance_query::{Capability, Fetch, Provider, Providers};
 
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
@@ -81,7 +81,7 @@ With multiple providers enabled (e.g. `polygon` feature), route capabilities to 
 ```rust
 #[cfg(feature = "polygon")]
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
@@ -534,11 +534,11 @@ let mut tickers = Tickers::new(vec!["AAPL", "MSFT"]).await?;
 println!("Initial symbols: {:?}", tickers.symbols());
 
 // Add more symbols
-tickers.add_symbols(&["GOOGL", "TSLA", "NVDA"]);
+tickers.add_symbols(["GOOGL", "TSLA", "NVDA"]);
 println!("After adding: {:?}", tickers.symbols());
 
 // Remove symbols (also clears their cached data)
-tickers.remove_symbols(&["MSFT", "TSLA"]).await;
+tickers.remove_symbols(["MSFT", "TSLA"]).await;
 println!("After removing: {:?}", tickers.symbols());
 
 // Fetch quotes for current symbols

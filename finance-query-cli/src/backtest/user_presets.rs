@@ -1,11 +1,11 @@
 use super::indicators::IndicatorDef;
-use super::state::{parse_interval, parse_range};
 use super::types::{
     BacktestConfiguration, BuiltCondition, BuiltIndicator, CompareTarget, ComparisonType,
     ConditionGroup, EnsembleConfig, EnsembleMemberConfig, EnsembleModeChoice, LogicalOp,
     RebalanceModeChoice, StrategyConfig, bars_per_year_for_interval,
 };
 use crate::error::Result;
+use crate::parse::{parse_interval, parse_range};
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use std::fs;

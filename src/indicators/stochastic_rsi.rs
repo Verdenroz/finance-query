@@ -129,11 +129,11 @@ pub(crate) fn stochastic_rsi_from_rsi_dense(
     }
     let k_dense: Vec<f64>;
     let (k_line, k_valid_start) = if k_period == 1 {
-        k_dense = raw_stoch_dense.clone();
         let mut k_line = vec![None; len];
         for (j, &v) in raw_stoch_dense.iter().enumerate() {
             k_line[j + raw_start] = Some(v);
         }
+        k_dense = raw_stoch_dense;
         (k_line, raw_start)
     } else {
         k_dense = sma_raw(&raw_stoch_dense, k_period);

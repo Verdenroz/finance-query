@@ -38,7 +38,7 @@ impl GqlInstitutionOwnership {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlInstitutionOwner>> {
-        pagination::paginate(self.ownership_list.clone(), first, after).await
+        pagination::paginate(&self.ownership_list, first, after).await
     }
 }
 
@@ -76,7 +76,7 @@ impl GqlFundOwnership {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlFundOwner>> {
-        pagination::paginate(self.ownership_list.clone(), first, after).await
+        pagination::paginate(&self.ownership_list, first, after).await
     }
 }
 
@@ -114,7 +114,7 @@ impl GqlInsiderTransactions {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlInsiderTransaction>> {
-        pagination::paginate(self.transactions.clone(), first, after).await
+        pagination::paginate(&self.transactions, first, after).await
     }
 }
 
@@ -175,7 +175,7 @@ impl GqlInsiderHolders {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlInsiderHolder>> {
-        pagination::paginate(self.holders.clone(), first, after).await
+        pagination::paginate(&self.holders, first, after).await
     }
 }
 

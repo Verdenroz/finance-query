@@ -150,4 +150,20 @@ impl PolygonClient {
             context: format!("Failed to deserialize Polygon response: {e}"),
         })
     }
+
+    /// GET and deserialize directly into `T`, wrapping parse failures as
+    /// `ResponseStructureError { field, context: "Failed to parse {desc}: {e}" }`.
+    pub async fn get_as<T: DeserializeOwned>(
+        &self,
+        path: &str,
+        params: &[(&str, &str)],
+        field: &str,
+        desc: &str,
+    ) -> Result<T> {
+        let json = self.get_raw(path, params).await?;
+        serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
+            field: field.to_string(),
+            context: format!("Failed to parse {desc}: {e}"),
+        })
+    }
 }

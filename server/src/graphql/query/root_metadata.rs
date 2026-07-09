@@ -4,7 +4,7 @@
 use async_graphql::{Context, Object, Result};
 
 use crate::AppState;
-use crate::graphql::error::to_gql_error;
+use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
 use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
     calendar::GqlCalendarEvent,
@@ -37,9 +37,8 @@ impl RootMetadataQuery {
         let json = crate::services::crypto::get_coins(&state.cache, &vs_currency, count as usize)
             .await
             .map_err(to_gql_error)?;
-        let coins: Vec<GqlCoinQuote> =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
-        pagination::paginate(coins, first, after).await
+        let coins: Vec<GqlCoinQuote> = from_gql_json(json)?;
+        pagination::paginate(&coins, first, after).await
     }
 
     /// A single cryptocurrency quote by CoinGecko ID (e.g. "bitcoin").
@@ -50,19 +49,18 @@ impl RootMetadataQuery {
         #[graphql(default_with = "\"usd\".to_string()")] vs_currency: String,
     ) -> Result<GqlCoinQuote> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::crypto::get_coin(&state.cache, &id, &vs_currency)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::crypto::get_coin(
+            &state.cache,
+            &id,
+            &vs_currency,
+        ))
+        .await
     }
 
     /// Resolve a ticker symbol to its SEC CIK number. Requires `EDGAR_EMAIL`.
     async fn edgar_cik(&self, ctx: &Context<'_>, symbol: String) -> Result<GqlEdgarCik> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::edgar::get_cik(&state.cache, &symbol)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::edgar::get_cik(&state.cache, &symbol)).await
     }
 
     /// Market open/close hours, optionally for a specific region.
@@ -72,10 +70,10 @@ impl RootMetadataQuery {
         #[graphql(desc = "Region code (e.g. \"US\", \"JP\", \"GB\")")] region: Option<String>,
     ) -> Result<GqlMarketHours> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::metadata::get_hours(&state.cache, region.as_deref())
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        let region = region
+            .as_deref()
+            .and_then(|s| s.parse::<finance_query::Region>().ok());
+        exec_gql(crate::services::metadata::get_hours(&state.cache, region)).await
     }
 
     /// Quote type metadata (exchange, timezone, identifiers) for a symbol.
@@ -85,28 +83,23 @@ impl RootMetadataQuery {
         symbol: String,
     ) -> Result<Option<GqlQuoteTypeData>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::metadata::get_quote_type(&state.cache, &symbol)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::metadata::get_quote_type(
+            &state.cache,
+            &symbol,
+        ))
+        .await
     }
 
     /// Currency pairs available from Yahoo Finance.
     async fn currencies(&self, ctx: &Context<'_>) -> Result<Vec<GqlCurrency>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::metadata::get_currencies(&state.cache)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::metadata::get_currencies(&state.cache)).await
     }
 
     /// Supported stock exchanges with their symbol suffixes and data providers.
     async fn exchanges(&self, ctx: &Context<'_>) -> Result<Vec<GqlExchange>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::metadata::get_exchanges(&state.cache)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::metadata::get_exchanges(&state.cache)).await
     }
 
     /// Upcoming financial events (earnings, dividends, options expirations,
@@ -128,18 +121,14 @@ impl RootMetadataQuery {
         )
         .await
         .map_err(to_gql_error)?;
-        let events: Vec<finance_query::CalendarEvent> =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        let events: Vec<finance_query::CalendarEvent> = from_gql_json(json)?;
         Ok(events.into_iter().map(GqlCalendarEvent::from).collect())
     }
 
     /// A FRED economic data series (e.g. "FEDFUNDS", "CPIAUCSL"). Requires `FRED_API_KEY`.
     async fn fred_series(&self, ctx: &Context<'_>, id: String) -> Result<GqlMacroSeries> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::fred::get_series(&state.cache, &id)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::fred::get_series(&state.cache, &id)).await
     }
 
     /// US Treasury yield curve rates for a calendar year (keyless).
@@ -163,9 +152,8 @@ impl RootMetadataQuery {
         let json = crate::services::fred::get_treasury_yields(&state.cache, year as u32)
             .await
             .map_err(to_gql_error)?;
-        let rows: Vec<GqlTreasuryYield> =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
-        pagination::paginate(rows, first, after).await
+        let rows: Vec<GqlTreasuryYield> = from_gql_json(json)?;
+        pagination::paginate(&rows, first, after).await
     }
 
     /// SEC EDGAR full-text search.
@@ -192,8 +180,7 @@ impl RootMetadataQuery {
         )
         .await
         .map_err(to_gql_error)?;
-        let results: finance_query::EdgarSearchResults =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        let results: finance_query::EdgarSearchResults = from_gql_json(json)?;
         let hits: Vec<GqlEdgarSearchHit> = results
             .hits
             .as_ref()

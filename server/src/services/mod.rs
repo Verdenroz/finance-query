@@ -57,36 +57,14 @@ pub fn lang_key(lang: Option<&str>) -> &str {
     lang.unwrap_or("en")
 }
 
-/// Parse an interval string into the library's `Interval` enum.
+/// Parse an interval string into the library's `Interval` enum, falling back to
+/// `OneDay` for anything invalid (upstream GraphQL enums already validate this).
 pub fn parse_interval(s: &str) -> Interval {
-    match s {
-        "1m" => Interval::OneMinute,
-        "5m" => Interval::FiveMinutes,
-        "15m" => Interval::FifteenMinutes,
-        "30m" => Interval::ThirtyMinutes,
-        "1h" => Interval::OneHour,
-        "1d" => Interval::OneDay,
-        "1wk" => Interval::OneWeek,
-        "1mo" => Interval::OneMonth,
-        "3mo" => Interval::ThreeMonths,
-        _ => Interval::OneDay,
-    }
+    s.parse().unwrap_or(Interval::OneDay)
 }
 
-/// Parse a range string into the library's `TimeRange` enum.
+/// Parse a range string into the library's `TimeRange` enum, falling back to
+/// `OneMonth` for anything invalid (upstream GraphQL enums already validate this).
 pub fn parse_range(s: &str) -> TimeRange {
-    match s {
-        "1d" => TimeRange::OneDay,
-        "5d" => TimeRange::FiveDays,
-        "1mo" => TimeRange::OneMonth,
-        "3mo" => TimeRange::ThreeMonths,
-        "6mo" => TimeRange::SixMonths,
-        "1y" => TimeRange::OneYear,
-        "2y" => TimeRange::TwoYears,
-        "5y" => TimeRange::FiveYears,
-        "10y" => TimeRange::TenYears,
-        "ytd" => TimeRange::YearToDate,
-        "max" => TimeRange::Max,
-        _ => TimeRange::OneMonth,
-    }
+    s.parse().unwrap_or(TimeRange::OneMonth)
 }

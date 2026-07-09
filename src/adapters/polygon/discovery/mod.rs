@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 use crate::models::corporate::recommendation::SimilarSymbol;
 
 use super::build_client;
@@ -223,11 +223,9 @@ pub async fn all_tickers(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO
 pub async fn ticker_details(ticker: &str) -> Result<TickerDetailsResponseDTO> {
     let client = build_client()?;
     let path = format!("/v3/reference/tickers/{}", encode_path_segment(ticker));
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "ticker_details".to_string(),
-        context: format!("Failed to parse ticker details: {e}"),
-    })
+    client
+        .get_as(&path, &[], "ticker_details", "ticker details")
+        .await
 }
 
 /// Fetch ticker types.
@@ -275,21 +273,27 @@ pub async fn condition_codes(params: &[(&str, &str)]) -> Result<PaginatedRespons
 /// Fetch upcoming market holidays.
 pub async fn market_holidays() -> Result<Vec<MarketHolidayDTO>> {
     let client = build_client()?;
-    let json = client.get_raw("/v1/marketstatus/upcoming", &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "market_holidays".to_string(),
-        context: format!("Failed to parse market holidays: {e}"),
-    })
+    client
+        .get_as(
+            "/v1/marketstatus/upcoming",
+            &[],
+            "market_holidays",
+            "market holidays",
+        )
+        .await
 }
 
 /// Fetch current market status.
 pub async fn market_status() -> Result<MarketStatusResponseDTO> {
     let client = build_client()?;
-    let json = client.get_raw("/v1/marketstatus/now", &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "market_status".to_string(),
-        context: format!("Failed to parse market status: {e}"),
-    })
+    client
+        .get_as(
+            "/v1/marketstatus/now",
+            &[],
+            "market_status",
+            "market status",
+        )
+        .await
 }
 
 #[cfg(test)]

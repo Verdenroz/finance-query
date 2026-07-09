@@ -92,19 +92,12 @@ pub async fn execute(args: IndicesArgs) -> Result<()> {
 }
 
 fn parse_region(s: &str) -> Result<IndicesRegion> {
-    match s.to_lowercase().as_str() {
-        "americas" | "america" | "am" => Ok(IndicesRegion::Americas),
-        "europe" | "eu" => Ok(IndicesRegion::Europe),
-        "asia" | "asiapacific" | "asia-pacific" | "apac" => Ok(IndicesRegion::AsiaPacific),
-        "mea" | "middleeastafrica" | "middle-east-africa" | "emea" => {
-            Ok(IndicesRegion::MiddleEastAfrica)
-        }
-        "currencies" | "currency" | "fx" => Ok(IndicesRegion::Currencies),
-        _ => Err(crate::error::CliError::InvalidArgument(format!(
+    s.parse().map_err(|_| {
+        crate::error::CliError::InvalidArgument(format!(
             "Invalid region '{}'. Valid regions: americas, europe, asia, mea, currencies",
             s
-        ))),
-    }
+        ))
+    })
 }
 
 fn truncate(s: &str, max_len: usize) -> String {

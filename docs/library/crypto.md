@@ -96,7 +96,7 @@ use finance_query::{Capability, Provider, Providers};
 
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 let providers = Providers::builder()
-    .route(Capability::CRYPTO, &[Provider::CoinGecko])
+    .route(Capability::CRYPTO, [Provider::CoinGecko])
     .build()
     .await?;
 let btc = providers.crypto("bitcoin");
@@ -116,7 +116,7 @@ use finance_query::{Interval, TimeRange};
 
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 let providers = Providers::builder()
-    .route(Capability::CRYPTO, &[Provider::CoinGecko])
+    .route(Capability::CRYPTO, [Provider::CoinGecko])
     .build()
     .await?;
 // Ticker id ("BTC") so the default Yahoo CHART route resolves "BTC-USD".
@@ -136,3 +136,42 @@ fn verify_crypto_quote_price(q: CryptoQuote) {
     let _: Option<f64> = q.price;
 }
 ```
+
+## Indicators & Risk
+
+`indicators`/`indicator` (requires the `indicators` feature) and `risk`
+(requires the `risk` feature) compute from the same `vs_currency`-priced
+chart data as `chart`/`history` above — annualised with a 24/7 (365-day)
+calendar, since crypto trades every day of the year:
+
+```rust
+use finance_query::{Capability, Provider, Providers};
+use finance_query::{Interval, TimeRange};
+use finance_query::indicators::Indicator;
+
+# async fn run() -> Result<(), Box<dyn std::error::Error>> {
+let providers = Providers::builder()
+    .route(Capability::CRYPTO, [Provider::CoinGecko])
+    .build()
+    .await?;
+let btc = providers.crypto("BTC");
+
+let summary = btc
+    .indicators("usd", Interval::OneDay, TimeRange::ThreeMonths)
+    .await?;
+if let Some(rsi) = summary.rsi_14 {
+    println!("RSI(14): {:.2}", rsi);
+}
+
+let rsi_21 = btc
+    .indicator(Indicator::Rsi(21), "usd", Interval::OneDay, TimeRange::ThreeMonths)
+    .await?;
+
+let risk = btc.risk("usd", Interval::OneDay, TimeRange::OneYear).await?;
+println!("VaR 95%:      {:.2}%", risk.var_95 * 100.0);
+println!("Max Drawdown: {:.2}%", risk.max_drawdown * 100.0);
+# Ok(()) }
+```
+
+`risk` takes no benchmark parameter — `beta` is always `None`, since crypto
+has no natural benchmark to compare against.

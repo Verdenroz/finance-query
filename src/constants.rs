@@ -289,7 +289,7 @@ pub mod indices {
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
             match s.to_lowercase().replace(['-', '_'], "").as_str() {
-                "americas" | "america" => Ok(Region::Americas),
+                "americas" | "america" | "am" => Ok(Region::Americas),
                 "europe" | "eu" => Ok(Region::Europe),
                 "asiapacific" | "asia" | "apac" => Ok(Region::AsiaPacific),
                 "middleeastafrica" | "mea" | "emea" => Ok(Region::MiddleEastAfrica),
@@ -591,6 +591,21 @@ impl StatementType {
     }
 }
 
+impl std::str::FromStr for StatementType {
+    type Err = ();
+
+    /// Case-insensitive; accepts `as_str()`'s canonical form plus the hyphenated
+    /// `-statement`/`-sheet` variants and the `"cash"` shorthand.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "income" | "income-statement" => Ok(StatementType::Income),
+            "balance" | "balance-sheet" => Ok(StatementType::Balance),
+            "cash" | "cashflow" | "cash-flow" => Ok(StatementType::CashFlow),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Income statement fields (without frequency prefix)
 const INCOME_STATEMENT_FIELDS: [&str; 30] = [
     fundamental_types::TOTAL_REVENUE,
@@ -761,6 +776,20 @@ impl Frequency {
     }
 }
 
+impl std::str::FromStr for Frequency {
+    type Err = ();
+
+    /// Case-insensitive; accepts `as_str()`'s canonical form plus common
+    /// shorthands (`"year"`/`"yearly"`, `"quarter"`/`"q"`).
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "annual" | "yearly" | "year" => Ok(Frequency::Annual),
+            "quarterly" | "quarter" | "q" => Ok(Frequency::Quarterly),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Chart intervals
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum Interval {
@@ -813,6 +842,27 @@ impl Interval {
 impl std::fmt::Display for Interval {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.write_str(self.as_str())
+    }
+}
+
+impl std::str::FromStr for Interval {
+    type Err = ();
+
+    /// Parses the same short codes returned by [`Interval::as_str`] (e.g. `"1d"`,
+    /// `"1wk"`), case-insensitively.
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "1m" => Ok(Interval::OneMinute),
+            "5m" => Ok(Interval::FiveMinutes),
+            "15m" => Ok(Interval::FifteenMinutes),
+            "30m" => Ok(Interval::ThirtyMinutes),
+            "1h" => Ok(Interval::OneHour),
+            "1d" => Ok(Interval::OneDay),
+            "1wk" => Ok(Interval::OneWeek),
+            "1mo" => Ok(Interval::OneMonth),
+            "3mo" => Ok(Interval::ThreeMonths),
+            _ => Err(()),
+        }
     }
 }
 
@@ -916,6 +966,30 @@ impl std::fmt::Display for TimeRange {
     }
 }
 
+impl std::str::FromStr for TimeRange {
+    type Err = ();
+
+    /// Parses the same short codes returned by [`TimeRange::as_str`] (e.g. `"3mo"`,
+    /// `"ytd"`), case-insensitively. `"1wk"` is also accepted as an alias for
+    /// [`TimeRange::FiveDays`] (a trading week).
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.trim().to_lowercase().as_str() {
+            "1d" => Ok(TimeRange::OneDay),
+            "5d" | "1wk" => Ok(TimeRange::FiveDays),
+            "1mo" => Ok(TimeRange::OneMonth),
+            "3mo" => Ok(TimeRange::ThreeMonths),
+            "6mo" => Ok(TimeRange::SixMonths),
+            "1y" => Ok(TimeRange::OneYear),
+            "2y" => Ok(TimeRange::TwoYears),
+            "5y" => Ok(TimeRange::FiveYears),
+            "10y" => Ok(TimeRange::TenYears),
+            "ytd" => Ok(TimeRange::YearToDate),
+            "max" => Ok(TimeRange::Max),
+            _ => Err(()),
+        }
+    }
+}
+
 /// Supported regions for Yahoo Finance regional APIs
 ///
 /// Each region has predefined language and region codes that work together.
@@ -950,14 +1024,22 @@ pub enum Region {
     Israel,
     /// Italy (it-IT, IT)
     Italy,
+    /// Japan (ja-JP, JP)
+    Japan,
+    /// South Korea (ko-KR, KR)
+    Korea,
     /// Malaysia (ms-MY, MY)
     Malaysia,
+    /// Mexico (es-MX, MX)
+    Mexico,
     /// New Zealand (en-NZ, NZ)
     NewZealand,
     /// Norway (nb-NO, NO)
     Norway,
     /// Portugal (pt-PT, PT)
     Portugal,
+    /// Qatar (ar-QA, QA)
+    Qatar,
     /// Russia (ru-RU, RU)
     Russia,
     /// Singapore (en-SG, SG)
@@ -1008,10 +1090,14 @@ impl Region {
             Region::India => "en-IN",
             Region::Israel => "he-IL",
             Region::Italy => "it-IT",
+            Region::Japan => "ja-JP",
+            Region::Korea => "ko-KR",
             Region::Malaysia => "ms-MY",
+            Region::Mexico => "es-MX",
             Region::NewZealand => "en-NZ",
             Region::Norway => "nb-NO",
             Region::Portugal => "pt-PT",
+            Region::Qatar => "ar-QA",
             Region::Russia => "ru-RU",
             Region::Singapore => "en-SG",
             Region::Spain => "es-ES",
@@ -1051,10 +1137,14 @@ impl Region {
             Region::India => "IN",
             Region::Israel => "IL",
             Region::Italy => "IT",
+            Region::Japan => "JP",
+            Region::Korea => "KR",
             Region::Malaysia => "MY",
+            Region::Mexico => "MX",
             Region::NewZealand => "NZ",
             Region::Norway => "NO",
             Region::Portugal => "PT",
+            Region::Qatar => "QA",
             Region::Russia => "RU",
             Region::Singapore => "SG",
             Region::Spain => "ES",
@@ -1065,49 +1155,6 @@ impl Region {
             Region::UnitedKingdom => "GB",
             Region::UnitedStates => "US",
             Region::Vietnam => "VN",
-        }
-    }
-
-    /// Get the CORS domain for this region
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use finance_query::Region;
-    ///
-    /// assert_eq!(Region::UnitedStates.cors_domain(), "finance.yahoo.com");
-    /// assert_eq!(Region::France.cors_domain(), "fr.finance.yahoo.com");
-    /// ```
-    pub fn cors_domain(&self) -> &'static str {
-        match self {
-            Region::Argentina => "ar.finance.yahoo.com",
-            Region::Australia => "au.finance.yahoo.com",
-            Region::Brazil => "br.financas.yahoo.com",
-            Region::Canada => "ca.finance.yahoo.com",
-            Region::China => "cn.finance.yahoo.com",
-            Region::Denmark => "dk.finance.yahoo.com",
-            Region::Finland => "fi.finance.yahoo.com",
-            Region::France => "fr.finance.yahoo.com",
-            Region::Germany => "de.finance.yahoo.com",
-            Region::Greece => "gr.finance.yahoo.com",
-            Region::HongKong => "hk.finance.yahoo.com",
-            Region::India => "in.finance.yahoo.com",
-            Region::Israel => "il.finance.yahoo.com",
-            Region::Italy => "it.finance.yahoo.com",
-            Region::Malaysia => "my.finance.yahoo.com",
-            Region::NewZealand => "nz.finance.yahoo.com",
-            Region::Norway => "no.finance.yahoo.com",
-            Region::Portugal => "pt.finance.yahoo.com",
-            Region::Russia => "ru.finance.yahoo.com",
-            Region::Singapore => "sg.finance.yahoo.com",
-            Region::Spain => "es.finance.yahoo.com",
-            Region::Sweden => "se.finance.yahoo.com",
-            Region::Taiwan => "tw.finance.yahoo.com",
-            Region::Thailand => "th.finance.yahoo.com",
-            Region::Turkey => "tr.finance.yahoo.com",
-            Region::UnitedKingdom => "uk.finance.yahoo.com",
-            Region::UnitedStates => "finance.yahoo.com",
-            Region::Vietnam => "vn.finance.yahoo.com",
         }
     }
 
@@ -1129,6 +1176,8 @@ impl Region {
         match self {
             // UTC-5 (NYSE/TSX winter)
             Region::UnitedStates | Region::Canada => -18_000,
+            // UTC-6 (BMV — Mexico abolished DST for most of the country in 2022)
+            Region::Mexico => -21_600,
             // UTC-3 (BYMA / B3 winter)
             Region::Argentina | Region::Brazil => -10_800,
             // UTC+0 (LSE / Euronext Lisbon)
@@ -1144,8 +1193,8 @@ impl Region {
             | Region::Finland => 3_600,
             // UTC+2 (Athens, Tel Aviv, Moscow — note Russia stays UTC+3 year-round)
             Region::Greece | Region::Israel => 7_200,
-            // UTC+3 (MOEX — no DST since 2014)
-            Region::Turkey | Region::Russia => 10_800,
+            // UTC+3 (MOEX — no DST since 2014; Qatar/AST has no DST)
+            Region::Turkey | Region::Russia | Region::Qatar => 10_800,
             // UTC+5:30 (BSE/NSE — India has no DST)
             Region::India => 19_800,
             // UTC+7 (SET Bangkok, HSX Hanoi)
@@ -1156,6 +1205,8 @@ impl Region {
             | Region::Singapore
             | Region::Malaysia
             | Region::Taiwan => 28_800,
+            // UTC+9 (TSE, KRX — neither observes DST)
+            Region::Japan | Region::Korea => 32_400,
             // UTC+10 (ASX — AEST winter)
             Region::Australia => 36_000,
             // UTC+12 (NZX — NZST winter)
@@ -1183,10 +1234,14 @@ impl std::str::FromStr for Region {
             "IN" => Ok(Region::India),
             "IL" => Ok(Region::Israel),
             "IT" => Ok(Region::Italy),
+            "JP" => Ok(Region::Japan),
+            "KR" => Ok(Region::Korea),
             "MY" => Ok(Region::Malaysia),
+            "MX" => Ok(Region::Mexico),
             "NZ" => Ok(Region::NewZealand),
             "NO" => Ok(Region::Norway),
             "PT" => Ok(Region::Portugal),
+            "QA" => Ok(Region::Qatar),
             "RU" => Ok(Region::Russia),
             "SG" => Ok(Region::Singapore),
             "ES" => Ok(Region::Spain),
@@ -2172,6 +2227,73 @@ mod tests {
         assert_eq!(TimeRange::OneMonth.as_str(), "1mo");
         assert_eq!(TimeRange::OneYear.as_str(), "1y");
         assert_eq!(TimeRange::Max.as_str(), "max");
+    }
+
+    #[test]
+    fn test_statement_type_from_str_round_trips_as_str() {
+        for statement in [
+            StatementType::Income,
+            StatementType::Balance,
+            StatementType::CashFlow,
+        ] {
+            assert_eq!(statement.as_str().parse(), Ok(statement));
+        }
+        assert_eq!("INCOME-STATEMENT".parse(), Ok(StatementType::Income));
+        assert_eq!("balance-sheet".parse(), Ok(StatementType::Balance));
+        assert_eq!("cash".parse(), Ok(StatementType::CashFlow));
+        assert_eq!("bogus".parse::<StatementType>(), Err(()));
+    }
+
+    #[test]
+    fn test_frequency_from_str_round_trips_as_str() {
+        for frequency in [Frequency::Annual, Frequency::Quarterly] {
+            assert_eq!(frequency.as_str().parse(), Ok(frequency));
+        }
+        assert_eq!("YEARLY".parse(), Ok(Frequency::Annual));
+        assert_eq!("q".parse(), Ok(Frequency::Quarterly));
+        assert_eq!("bogus".parse::<Frequency>(), Err(()));
+    }
+
+    #[test]
+    fn test_interval_from_str_round_trips_as_str() {
+        for interval in [
+            Interval::OneMinute,
+            Interval::FiveMinutes,
+            Interval::FifteenMinutes,
+            Interval::ThirtyMinutes,
+            Interval::OneHour,
+            Interval::OneDay,
+            Interval::OneWeek,
+            Interval::OneMonth,
+            Interval::ThreeMonths,
+        ] {
+            assert_eq!(interval.as_str().parse(), Ok(interval));
+        }
+        assert_eq!("1D".parse(), Ok(Interval::OneDay));
+        assert_eq!(" 1d ".parse(), Ok(Interval::OneDay));
+        assert_eq!("bogus".parse::<Interval>(), Err(()));
+    }
+
+    #[test]
+    fn test_time_range_from_str_round_trips_as_str() {
+        for range in [
+            TimeRange::OneDay,
+            TimeRange::FiveDays,
+            TimeRange::OneMonth,
+            TimeRange::ThreeMonths,
+            TimeRange::SixMonths,
+            TimeRange::OneYear,
+            TimeRange::TwoYears,
+            TimeRange::FiveYears,
+            TimeRange::TenYears,
+            TimeRange::YearToDate,
+            TimeRange::Max,
+        ] {
+            assert_eq!(range.as_str().parse(), Ok(range));
+        }
+        assert_eq!("1wk".parse(), Ok(TimeRange::FiveDays));
+        assert_eq!("YTD".parse(), Ok(TimeRange::YearToDate));
+        assert_eq!("bogus".parse::<TimeRange>(), Err(()));
     }
 
     #[test]

@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -51,11 +51,14 @@ pub async fn index_aggregates(
     let query_refs: Vec<(&str, &str)> =
         query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
-    let json = client.get_raw(&path, &query_refs).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "index_aggregates".to_string(),
-        context: format!("Failed to parse index aggregate response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &query_refs,
+            "index_aggregates",
+            "index aggregate response",
+        )
+        .await
 }
 
 /// Fetch the previous day's OHLCV bar for an index ticker.
@@ -65,11 +68,14 @@ pub async fn index_previous_close(ticker: &str) -> Result<AggregateResponseDTO> 
     let client = build_client()?;
     let path = format!("/v2/aggs/ticker/{}/prev", encode_path_segment(ticker));
 
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "index_previous_close".to_string(),
-        context: format!("Failed to parse index previous close response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &[],
+            "index_previous_close",
+            "index previous close response",
+        )
+        .await
 }
 
 /// Fetch daily open/close for an index ticker on a specific date.
@@ -84,11 +90,14 @@ pub async fn index_daily_open_close(ticker: &str, date: &str) -> Result<DailyOpe
         encode_path_segment(date)
     );
 
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "index_daily_open_close".to_string(),
-        context: format!("Failed to parse index daily open/close response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &[],
+            "index_daily_open_close",
+            "index daily open/close response",
+        )
+        .await
 }
 
 #[cfg(test)]

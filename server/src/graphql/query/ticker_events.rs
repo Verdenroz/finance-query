@@ -4,7 +4,7 @@
 use async_graphql::{Context, Object, Result};
 
 use crate::AppState;
-use crate::graphql::error::to_gql_error;
+use crate::graphql::error::exec_gql;
 use crate::graphql::types::{
     enums::{GqlInterval, GqlTimeRange},
     events::{GqlCapitalGain, GqlDividends, GqlSplit},
@@ -24,15 +24,13 @@ impl TickerEventsQuery {
         #[graphql(default_with = "GqlTimeRange::Max")] range: GqlTimeRange,
     ) -> Result<GqlDividends> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::events::get_dividends(
+        exec_gql(crate::services::events::get_dividends(
             &state.cache,
             &self.symbol,
             range.into(),
             range.as_str(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     async fn splits(
@@ -41,15 +39,13 @@ impl TickerEventsQuery {
         #[graphql(default_with = "GqlTimeRange::Max")] range: GqlTimeRange,
     ) -> Result<Vec<GqlSplit>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::events::get_splits(
+        exec_gql(crate::services::events::get_splits(
             &state.cache,
             &self.symbol,
             range.into(),
             range.as_str(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     async fn capital_gains(
@@ -58,15 +54,13 @@ impl TickerEventsQuery {
         #[graphql(default_with = "GqlTimeRange::Max")] range: GqlTimeRange,
     ) -> Result<Vec<GqlCapitalGain>> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::events::get_capital_gains(
+        exec_gql(crate::services::events::get_capital_gains(
             &state.cache,
             &self.symbol,
             range.into(),
             range.as_str(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     async fn indicators(
@@ -76,17 +70,15 @@ impl TickerEventsQuery {
         range: GqlTimeRange,
     ) -> Result<GqlIndicatorsSummary> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::indicators::get_indicators(
+        exec_gql(crate::services::indicators::get_indicators(
             &state.cache,
             &self.symbol,
             interval.into(),
             interval.as_str(),
             range.into(),
             range.as_str(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     async fn risk(
@@ -97,7 +89,7 @@ impl TickerEventsQuery {
         benchmark: Option<String>,
     ) -> Result<GqlRiskSummary> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::risk::get_risk(
+        exec_gql(crate::services::risk::get_risk(
             &state.cache,
             &self.symbol,
             interval.into(),
@@ -105,9 +97,7 @@ impl TickerEventsQuery {
             range.into(),
             range.as_str(),
             benchmark.as_deref(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 }

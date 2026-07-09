@@ -1,7 +1,7 @@
 //! Stock snapshot endpoints: full market, single ticker, top movers.
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 
 use super::build_client;
@@ -17,11 +17,9 @@ pub async fn stock_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
         "/v2/snapshot/locale/us/markets/stocks/tickers/{}",
         encode_path_segment(ticker)
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "snapshot".to_string(),
-        context: format!("Failed to parse snapshot response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "snapshot", "snapshot response")
+        .await
 }
 
 /// Fetch quote summary response (canonical) for a stock ticker.
@@ -75,11 +73,9 @@ pub async fn stock_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsRespo
         Some(t) => vec![("tickers", t)],
         None => vec![],
     };
-    let json = client.get_raw(path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "snapshots".to_string(),
-        context: format!("Failed to parse snapshots response: {e}"),
-    })
+    client
+        .get_as(path, &params, "snapshots", "snapshots response")
+        .await
 }
 
 /// Fetch top gainers or losers snapshot.
@@ -92,11 +88,9 @@ pub async fn stock_top_movers(direction: &str) -> Result<SnapshotsResponseDTO> {
         "/v2/snapshot/locale/us/markets/stocks/{}",
         encode_path_segment(direction)
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "top_movers".to_string(),
-        context: format!("Failed to parse top movers response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "top_movers", "top movers response")
+        .await
 }
 
 #[cfg(test)]

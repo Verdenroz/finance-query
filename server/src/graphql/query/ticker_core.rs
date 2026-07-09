@@ -5,7 +5,7 @@ use async_graphql::{Context, Object, Result};
 
 use super::{build_gql_options, resolve_gql_lang};
 use crate::AppState;
-use crate::graphql::error::to_gql_error;
+use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
 use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
     chart::GqlChart,
@@ -43,7 +43,7 @@ impl TickerCoreQuery {
                 .await
                 .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        from_gql_json(json)
     }
 
     // async-graphql requires each field to be an explicit function parameter, preventing a params struct
@@ -71,7 +71,7 @@ impl TickerCoreQuery {
             ));
         }
 
-        let json = crate::services::chart::get_chart(
+        exec_gql(crate::services::chart::get_chart(
             &state.cache,
             &self.symbol,
             interval.into(),
@@ -80,10 +80,8 @@ impl TickerCoreQuery {
             end,
             events,
             patterns,
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -111,9 +109,8 @@ impl TickerCoreQuery {
         )
         .await
         .map_err(to_gql_error)?;
-        let entries: Vec<GqlNews> =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
-        pagination::paginate(entries, first, after).await
+        let entries: Vec<GqlNews> = from_gql_json(json)?;
+        pagination::paginate(&entries, first, after).await
     }
 
     async fn options(&self, ctx: &Context<'_>, date: Option<i64>) -> Result<GqlOptions> {
@@ -121,8 +118,7 @@ impl TickerCoreQuery {
         let json = crate::services::options::get_options(&state.cache, &self.symbol, date)
             .await
             .map_err(to_gql_error)?;
-        let opts: finance_query::Options =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        let opts: finance_query::Options = from_gql_json(json)?;
         Ok(build_gql_options(opts))
     }
 
@@ -133,11 +129,12 @@ impl TickerCoreQuery {
         #[graphql(default = 5)] limit: u32,
     ) -> Result<GqlRecommendation> {
         let state = ctx.data::<AppState>()?;
-        let json =
-            crate::services::analysis::get_recommendations(&state.cache, &self.symbol, limit)
-                .await
-                .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::analysis::get_recommendations(
+            &state.cache,
+            &self.symbol,
+            limit,
+        ))
+        .await
     }
 
     async fn financials(
@@ -161,8 +158,7 @@ impl TickerCoreQuery {
         )
         .await
         .map_err(to_gql_error)?;
-        let fs: finance_query::FinancialStatement =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        let fs: finance_query::FinancialStatement = from_gql_json(json)?;
         let metric_set: Option<std::collections::HashSet<&str>> = metrics
             .as_ref()
             .map(|m| m.iter().map(|s| s.as_str()).collect());

@@ -130,7 +130,7 @@ mod tests {
     async fn pluggable_source_delivers_updates() {
         let mut stream = PriceStream::subscribe_with_source(
             Arc::new(MockSource),
-            &["AAPL"],
+            ["AAPL"],
             Duration::from_millis(50),
         )
         .await

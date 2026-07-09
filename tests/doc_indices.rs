@@ -60,7 +60,7 @@ fn test_indices_capability_and_provider_exist() {
 #[allow(dead_code)]
 async fn _verify_index_api() -> finance_query::Result<()> {
     let providers = Providers::builder()
-        .route(Capability::INDICES, &[Provider::Polygon])
+        .route(Capability::INDICES, [Provider::Polygon])
         .build()
         .await?;
 
@@ -68,5 +68,38 @@ async fn _verify_index_api() -> finance_query::Result<()> {
     let _quote: IndexQuote = spx.quote().await?;
     let _chart: finance_query::Chart = spx.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     let _history: finance_query::Chart = spx.history(TimeRange::OneMonth).await?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Compile-time: Indicators & Risk section of indices.md
+// ---------------------------------------------------------------------------
+
+/// Verifies the documented `Index::indicators`/`indicator`/`risk` flow
+/// type-checks. Never called; exists only for the compiler to type-check.
+#[allow(dead_code)]
+#[cfg(all(feature = "indicators", feature = "risk"))]
+async fn _verify_index_indicators_and_risk() -> finance_query::Result<()> {
+    use finance_query::indicators::Indicator;
+
+    let providers = Providers::builder()
+        .route(Capability::INDICES, [Provider::Polygon])
+        .build()
+        .await?;
+    let spx = providers.index("I:SPX");
+
+    let summary = spx
+        .indicators(Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+    let _: Option<f64> = summary.rsi_14;
+
+    let _rsi_21 = spx
+        .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+
+    let risk = spx.risk(Interval::OneDay, TimeRange::OneYear).await?;
+    let _: f64 = risk.var_95;
+    let _: f64 = risk.max_drawdown;
+
     Ok(())
 }

@@ -29,7 +29,7 @@ impl GqlFactConcept {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlFactDataPoint>> {
-        pagination::paginate(self.data_points.clone(), first, after).await
+        pagination::paginate(&self.data_points, first, after).await
     }
 }
 
@@ -81,7 +81,7 @@ impl GqlEdgarSubmissions {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlEdgarFiling>> {
-        pagination::paginate(self.filings.clone(), first, after).await
+        pagination::paginate(&self.filings, first, after).await
     }
 }
 

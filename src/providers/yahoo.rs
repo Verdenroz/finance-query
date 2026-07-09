@@ -31,8 +31,8 @@ impl YahooProvider {
 
 #[async_trait::async_trait]
 impl super::ProviderAdapter for YahooProvider {
-    fn id(&self) -> &'static str {
-        "yahoo"
+    fn id(&self) -> super::Provider {
+        super::Provider::Yahoo
     }
 
     fn capabilities(&self) -> super::Capability {

@@ -20,7 +20,7 @@ use finance_query::{Capability, Provider, Providers};
 
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 let providers = Providers::builder()
-    .route(Capability::ECONOMIC, &[Provider::Fred])
+    .route(Capability::ECONOMIC, [Provider::Fred])
     .build()
     .await?;
 let gdp = providers.economic("GDP");
@@ -65,7 +65,7 @@ use finance_query::{Capability, Provider, Providers};
 
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 let providers = Providers::builder()
-    .route(Capability::ECONOMIC, &[Provider::Fred])
+    .route(Capability::ECONOMIC, [Provider::Fred])
     .build()
     .await?;
 

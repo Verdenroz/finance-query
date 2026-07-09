@@ -53,11 +53,11 @@ use finance_query::{Capability, Fetch, Provider, Providers};
 
 let providers = Providers::builder()
     // Route quotes to Polygon first, Yahoo as fallback
-    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
     // Route fundamentals to FMP first, Yahoo as fallback
-    .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
+    .route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])
     // Route corporate (news, recommendations) to Polygon only
-    .route(Capability::CORPORATE, &[Provider::Polygon])
+    .route(Capability::CORPORATE, [Provider::Polygon])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
@@ -97,7 +97,7 @@ use finance_query::{Capability, Fetch, Provider, Providers};
 
 // Sequential: try Polygon, then Yahoo if Polygon fails
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
@@ -105,7 +105,7 @@ let ticker = providers.ticker("AAPL").build().await?;
 
 // Parallel: race Polygon against Yahoo, use whichever responds first
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Parallel)
     .build()
     .await?;
@@ -140,8 +140,8 @@ For non-equity asset classes, use the `Providers` factory to create domain handl
 use finance_query::{Providers, Provider, Capability, Fetch};
 
 let providers = Providers::builder()
-    .route(Capability::FOREX, &[Provider::AlphaVantage])
-    .route(Capability::ECONOMIC, &[Provider::Fred])
+    .route(Capability::FOREX, [Provider::AlphaVantage])
+    .route(Capability::ECONOMIC, [Provider::Fred])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
@@ -193,7 +193,7 @@ With the `indicators` / `risk` features, every chart-capable handle also exposes
 use finance_query::{Capability, Fetch, Provider, Providers};
 
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;

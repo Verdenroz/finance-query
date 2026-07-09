@@ -4,7 +4,7 @@ use axum::{
     http::{HeaderMap, StatusCode},
     response::{IntoResponse, Json},
 };
-use finance_query::ValueFormat;
+use finance_query::{IndicesRegion, ValueFormat};
 use finance_query_server::graphql::{
     self,
     fields::{
@@ -24,14 +24,13 @@ use super::support::parse_format;
 /// unrecognized input, matching `IndicesRegion::parse`'s permissive-but-strict
 /// behavior (invalid region == no filter, not an error).
 fn indices_region_to_gql(s: &str) -> Option<&'static str> {
-    match s.to_lowercase().replace(['-', '_'], "").as_str() {
-        "americas" | "america" => Some("AMERICAS"),
-        "europe" | "eu" => Some("EUROPE"),
-        "asiapacific" | "asia" | "apac" => Some("ASIA_PACIFIC"),
-        "middleeastafrica" | "mea" | "emea" => Some("MIDDLE_EAST_AFRICA"),
-        "currencies" | "currency" | "fx" => Some("CURRENCIES"),
-        _ => None,
-    }
+    IndicesRegion::parse(s).map(|region| match region {
+        IndicesRegion::Americas => "AMERICAS",
+        IndicesRegion::Europe => "EUROPE",
+        IndicesRegion::AsiaPacific => "ASIA_PACIFIC",
+        IndicesRegion::MiddleEastAfrica => "MIDDLE_EAST_AFRICA",
+        IndicesRegion::Currencies => "CURRENCIES",
+    })
 }
 
 /// Map a REST `format` string to the `GqlValueFormat` enum literal.

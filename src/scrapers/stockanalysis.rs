@@ -70,6 +70,13 @@ static EXCHANGE_MAPPING: LazyLock<HashMap<&'static str, &'static str>> = LazyLoc
     ])
 });
 
+/// CSS selectors for `parse_news` — parsed once and reused across every call.
+static ALL_DIVS_SEL: LazyLock<Selector> = LazyLock::new(|| Selector::parse("div").unwrap());
+static IMG_SEL: LazyLock<Selector> = LazyLock::new(|| Selector::parse("img").unwrap());
+static TITLE_SEL: LazyLock<Selector> = LazyLock::new(|| Selector::parse("h3 a").unwrap());
+static SOURCE_TIME_SEL: LazyLock<Selector> =
+    LazyLock::new(|| Selector::parse("div[title]").unwrap());
+
 /// Build a reqwest client with the StockAnalysis user agent.
 fn build_client() -> Result<reqwest::Client> {
     Ok(reqwest::Client::builder()
@@ -117,17 +124,12 @@ fn parse_news(html: &str) -> Result<Vec<News>> {
     // Find all divs that contain the news item structure:
     // - h3 with a link (title)
     // - div with title attribute (source/time)
-    let all_divs = Selector::parse("div").unwrap();
-    let img_sel = Selector::parse("img").unwrap();
-    let title_sel = Selector::parse("h3 a").unwrap();
-    let source_time_sel = Selector::parse("div[title]").unwrap();
-
     let mut news_list = Vec::new();
     let mut seen_titles = std::collections::HashSet::new();
 
-    for item in document.select(&all_divs) {
-        let title_elem = item.select(&title_sel).next();
-        let source_time_elem = item.select(&source_time_sel).next();
+    for item in document.select(&ALL_DIVS_SEL) {
+        let title_elem = item.select(&TITLE_SEL).next();
+        let source_time_elem = item.select(&SOURCE_TIME_SEL).next();
 
         if let (Some(title_el), Some(source_time_el)) = (title_elem, source_time_elem) {
             let title = title_el.text().collect::<String>().trim().to_string();
@@ -140,7 +142,7 @@ fn parse_news(html: &str) -> Result<Vec<News>> {
 
             let source_time_text = source_time_el.text().collect::<String>();
             let img = item
-                .select(&img_sel)
+                .select(&IMG_SEL)
                 .next()
                 .and_then(|e| e.value().attr("src"))
                 .unwrap_or("")

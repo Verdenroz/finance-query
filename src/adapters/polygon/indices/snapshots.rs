@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 use crate::models::indices::IndexQuote;
 
 use super::super::build_client;
@@ -66,11 +66,9 @@ pub async fn index_snapshot(ticker: &str) -> Result<IndexSnapshotResponseDTO> {
     let client = build_client()?;
     let path = "/v3/snapshot/indices";
     let params = [("ticker.any_of", ticker)];
-    let json = client.get_raw(path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "index_snapshot".to_string(),
-        context: format!("Failed to parse index snapshot response: {e}"),
-    })
+    client
+        .get_as(path, &params, "index_snapshot", "index snapshot response")
+        .await
 }
 
 /// Fetch index quote (canonical) for a symbol.

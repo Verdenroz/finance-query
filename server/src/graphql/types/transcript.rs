@@ -78,7 +78,7 @@ impl GqlTranscriptData {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlParagraph>> {
-        pagination::paginate(self.paragraphs.clone(), first, after).await
+        pagination::paginate(&self.paragraphs, first, after).await
     }
 }
 

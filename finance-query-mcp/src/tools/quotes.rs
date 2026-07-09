@@ -1,4 +1,3 @@
-use finance_query::TimeRange;
 use finance_query_server::graphql::FinanceSchema;
 use rmcp::{ErrorData as McpError, model::CallToolResult};
 
@@ -10,7 +9,7 @@ use crate::tools::gql::{
     build_type_spec_selection, escape_gql_string, execute_query, gql_string_list_literal,
     parse_fields, unwrap_field, unwrap_ticker_field, wrap_nested_connection,
 };
-use crate::tools::helpers::parse_range;
+use crate::tools::helpers::range_to_gql;
 
 /// Accepts one or more comma-separated symbols: a single symbol returns the
 /// flat quote shape, multiple symbols return the batch `{quotes, errors}` shape.
@@ -157,20 +156,7 @@ pub async fn get_splits(
     range: Option<String>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let r = parse_range(range.as_deref().unwrap_or("max"));
-    let gql_range = match r {
-        TimeRange::OneDay => "ONE_DAY",
-        TimeRange::FiveDays => "FIVE_DAYS",
-        TimeRange::OneMonth => "ONE_MONTH",
-        TimeRange::ThreeMonths => "THREE_MONTHS",
-        TimeRange::SixMonths => "SIX_MONTHS",
-        TimeRange::OneYear => "ONE_YEAR",
-        TimeRange::TwoYears => "TWO_YEARS",
-        TimeRange::FiveYears => "FIVE_YEARS",
-        TimeRange::TenYears => "TEN_YEARS",
-        TimeRange::YearToDate => "YEAR_TO_DATE",
-        TimeRange::Max => "MAX",
-    };
+    let gql_range = range_to_gql(range.as_deref().unwrap_or("max"));
 
     let field_list = parse_fields(fields);
     let selection = build_selection_or_default(

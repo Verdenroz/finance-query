@@ -12,7 +12,7 @@
 //! use futures::StreamExt;
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-//! let mut stream = PriceStream::subscribe(&["AAPL", "NVDA"]).await?;
+//! let mut stream = PriceStream::subscribe(["AAPL", "NVDA"]).await?;
 //! while let Some(update) = stream.next().await {
 //!     println!("{:?}", update);
 //! }

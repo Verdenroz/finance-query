@@ -10,7 +10,9 @@ use crate::tools::gql::{
     build_type_spec_selection, execute_query, gql_string_list_literal, parse_fields, unwrap_field,
     unwrap_ticker_field,
 };
-use crate::tools::helpers::{parse_frequency, parse_statement_type};
+use crate::tools::helpers::{
+    frequency_to_gql, parse_frequency, parse_statement_type, statement_to_gql,
+};
 
 /// Valid/default fields for `GqlFinancialLineItem` (`{ metric values }`);
 /// `values` (`Vec<GqlFinancialDataPoint>`, composite) needs its nested
@@ -62,20 +64,14 @@ async fn get_one_financials(
             "Invalid statement type: '{statement}'. Use: income, balance, cashflow"
         ))
     })?;
-    let freq = parse_frequency(frequency.as_deref().unwrap_or("annual"));
-    let st_str = st.as_str();
-    let freq_str = freq.as_str();
-    let gql_st = match st_str {
-        "income" => "INCOME",
-        "balance" => "BALANCE",
-        "cashflow" => "CASH_FLOW",
-        _ => unreachable!(),
-    };
-    let gql_freq = match freq_str {
-        "annual" => "ANNUAL",
-        "quarterly" => "QUARTERLY",
-        _ => "ANNUAL",
-    };
+    let freq_input = frequency.as_deref().unwrap_or("annual");
+    let freq = parse_frequency(freq_input).ok_or_else(|| {
+        invalid_params(format!(
+            "Invalid frequency: '{freq_input}'. Use: annual, quarterly"
+        ))
+    })?;
+    let gql_st = statement_to_gql(st);
+    let gql_freq = frequency_to_gql(freq);
     let metric_list = parse_fields(metrics);
     let metrics_arg = match &metric_list {
         Some(list) if !list.is_empty() => {
@@ -116,20 +112,14 @@ async fn get_many_financials(
             "Invalid statement type: '{statement}'. Use: income, balance, cashflow"
         ))
     })?;
-    let freq = parse_frequency(frequency.as_deref().unwrap_or("annual"));
-    let st_str = st.as_str();
-    let freq_str = freq.as_str();
-    let gql_st = match st_str {
-        "income" => "INCOME",
-        "balance" => "BALANCE",
-        "cashflow" => "CASH_FLOW",
-        _ => unreachable!(),
-    };
-    let gql_freq = match freq_str {
-        "annual" => "ANNUAL",
-        "quarterly" => "QUARTERLY",
-        _ => "ANNUAL",
-    };
+    let freq_input = frequency.as_deref().unwrap_or("annual");
+    let freq = parse_frequency(freq_input).ok_or_else(|| {
+        invalid_params(format!(
+            "Invalid frequency: '{freq_input}'. Use: annual, quarterly"
+        ))
+    })?;
+    let gql_st = statement_to_gql(st);
+    let gql_freq = frequency_to_gql(freq);
     let metric_list = parse_fields(metrics);
     let metrics_arg = match &metric_list {
         Some(list) if !list.is_empty() => {

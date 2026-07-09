@@ -19,7 +19,7 @@ use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
 let providers = Providers::builder()
-    .route(Capability::INDICES, &[Provider::Polygon])
+    .route(Capability::INDICES, [Provider::Polygon])
     .build()
     .await?;
 let spx = providers.index("I:SPX");
@@ -56,7 +56,7 @@ Fetch the current snapshot for the index.
 ```rust
 # use finance_query::{Capability, Provider, Providers};
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-# let providers = Providers::builder().route(Capability::INDICES, &[Provider::Polygon]).build().await?;
+# let providers = Providers::builder().route(Capability::INDICES, [Provider::Polygon]).build().await?;
 let spx = providers.index("I:SPX");
 let quote = spx.quote().await?;
 println!("S&P 500: {:?}", quote.price);
@@ -70,7 +70,7 @@ Fetch OHLCV candles for a specific `Interval` and `TimeRange`.
 ```rust
 # use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-# let providers = Providers::builder().route(Capability::INDICES, &[Provider::Polygon]).build().await?;
+# let providers = Providers::builder().route(Capability::INDICES, [Provider::Polygon]).build().await?;
 let spx = providers.index("I:SPX");
 let chart = spx.chart(Interval::OneDay, TimeRange::OneMonth).await?;
 println!("Candles: {}", chart.candles.len());
@@ -84,12 +84,42 @@ Shorthand for `chart` using the default interval for the given `TimeRange`.
 ```rust
 # use finance_query::{Capability, Provider, Providers, TimeRange};
 # async fn run() -> Result<(), Box<dyn std::error::Error>> {
-# let providers = Providers::builder().route(Capability::INDICES, &[Provider::Polygon]).build().await?;
+# let providers = Providers::builder().route(Capability::INDICES, [Provider::Polygon]).build().await?;
 let spx = providers.index("I:SPX");
 let history = spx.history(TimeRange::OneMonth).await?;
 println!("Candles: {}", history.candles.len());
 # Ok(()) }
 ```
+
+### `indicators(interval, range)` / `indicator(kind, interval, range)` / `risk(interval, range)`
+
+Compute technical indicators or a risk summary from this index's own chart
+data (requires the `indicators`/`risk` features respectively).
+
+```rust
+# use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+# async fn run() -> Result<(), Box<dyn std::error::Error>> {
+# let providers = Providers::builder().route(Capability::INDICES, [Provider::Polygon]).build().await?;
+use finance_query::indicators::Indicator;
+
+let spx = providers.index("I:SPX");
+let summary = spx.indicators(Interval::OneDay, TimeRange::ThreeMonths).await?;
+if let Some(rsi) = summary.rsi_14 {
+    println!("RSI(14): {:.2}", rsi);
+}
+
+let rsi_21 = spx
+    .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
+    .await?;
+
+let risk = spx.risk(Interval::OneDay, TimeRange::OneYear).await?;
+println!("VaR 95%:      {:.2}%", risk.var_95 * 100.0);
+println!("Max Drawdown: {:.2}%", risk.max_drawdown * 100.0);
+# Ok(()) }
+```
+
+`risk` takes no benchmark parameter — `beta` is always `None`, since indices
+have no natural benchmark to compare against.
 
 ## `IndexQuote` Fields
 

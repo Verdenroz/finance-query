@@ -5,7 +5,7 @@ use async_graphql::{Context, Object, Result};
 
 use super::resolve_gql_lang;
 use crate::AppState;
-use crate::graphql::error::to_gql_error;
+use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
 use crate::graphql::pagination::{self, Page};
 use crate::graphql::types::{
     enums::{GqlIndicesRegion, GqlValueFormat},
@@ -38,16 +38,13 @@ impl RootMarketQuery {
             .await
             .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        from_gql_json(json)
     }
 
     /// Current Fear & Greed Index from alternative.me.
     async fn fear_and_greed(&self, ctx: &Context<'_>) -> Result<GqlFearAndGreed> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::market::get_fear_and_greed(&state.cache)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::market::get_fear_and_greed(&state.cache)).await
     }
 
     /// Market summary: major indices, currencies, and commodities.
@@ -71,7 +68,7 @@ impl RootMarketQuery {
                 .await
                 .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        from_gql_json(json)
     }
 
     /// General market news.
@@ -96,9 +93,8 @@ impl RootMarketQuery {
             crate::services::news::get_general_news(&state.cache, count as usize, lang.as_deref())
                 .await
                 .map_err(to_gql_error)?;
-        let entries: Vec<GqlNews> =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
-        pagination::paginate(entries, first, after).await
+        let entries: Vec<GqlNews> = from_gql_json(json)?;
+        pagination::paginate(&entries, first, after).await
     }
 
     /// RSS/Atom feed entries aggregated from one or more named financial
@@ -133,9 +129,8 @@ impl RootMarketQuery {
         )
         .await
         .map_err(to_gql_error)?;
-        let entries: Vec<GqlFeedEntry> =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
-        pagination::paginate(entries, first, after).await
+        let entries: Vec<GqlFeedEntry> = from_gql_json(json)?;
+        pagination::paginate(&entries, first, after).await
     }
 
     /// World market indices, optionally filtered by region.
@@ -163,8 +158,7 @@ impl RootMarketQuery {
         let mut result = Vec::with_capacity(quotes_map.len());
         for (_, v) in quotes_map {
             let v = lib_format.transform(v);
-            let q: GqlQuote =
-                serde_json::from_value(v).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+            let q: GqlQuote = from_gql_json(v)?;
             result.push(q);
         }
         Ok(result)
@@ -182,14 +176,17 @@ impl RootMarketQuery {
     ) -> Result<GqlSectorData> {
         let state = ctx.data::<AppState>()?;
         let lang = resolve_gql_lang(lang.as_deref());
-        let st: finance_query::Sector = sector
-            .parse()
-            .map_err(|_| async_graphql::Error::new(format!("Invalid sector: {sector}")))?;
+        let st: finance_query::Sector = sector.parse().map_err(|_| {
+            async_graphql::Error::new(format!(
+                "Invalid sector: '{sector}'. Valid types: {}",
+                finance_query::Sector::valid_types()
+            ))
+        })?;
         let json = crate::services::market::get_sector(&state.cache, st, &sector, lang.as_deref())
             .await
             .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        from_gql_json(json)
     }
 
     /// Fetch industry-level market data.
@@ -208,6 +205,6 @@ impl RootMarketQuery {
             .await
             .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        from_gql_json(json)
     }
 }

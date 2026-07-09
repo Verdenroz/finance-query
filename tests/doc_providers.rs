@@ -52,7 +52,7 @@ async fn test_provider_builder_builds() {
     use finance_query::{Capability, Providers};
 
     let result = Providers::builder()
-        .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+        .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential)
         .build()
         .await;

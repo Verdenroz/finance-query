@@ -6,7 +6,7 @@ use async_graphql::{Context, Object, Result};
 
 use super::resolve_gql_lang;
 use crate::AppState;
-use crate::graphql::error::to_gql_error;
+use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
 use crate::graphql::types::{
     analysis::{
         GqlEarningsHistory, GqlEarningsTrend, GqlRecommendationTrend, GqlUpgradeDowngradeHistory,
@@ -23,34 +23,38 @@ pub(super) struct TickerAnalysisQuery {
 impl TickerAnalysisQuery {
     async fn recommendation_trend(&self, ctx: &Context<'_>) -> Result<GqlRecommendationTrend> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::analysis::get_recommendation_trend(&state.cache, &self.symbol)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::analysis::get_recommendation_trend(
+            &state.cache,
+            &self.symbol,
+        ))
+        .await
     }
 
     async fn grading_history(&self, ctx: &Context<'_>) -> Result<GqlUpgradeDowngradeHistory> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::analysis::get_grading_history(&state.cache, &self.symbol)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::analysis::get_grading_history(
+            &state.cache,
+            &self.symbol,
+        ))
+        .await
     }
 
     async fn earnings_estimate(&self, ctx: &Context<'_>) -> Result<GqlEarningsTrend> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::analysis::get_earnings_trend(&state.cache, &self.symbol)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::analysis::get_earnings_trend(
+            &state.cache,
+            &self.symbol,
+        ))
+        .await
     }
 
     async fn earnings_history(&self, ctx: &Context<'_>) -> Result<GqlEarningsHistory> {
         let state = ctx.data::<AppState>()?;
-        let json = crate::services::analysis::get_earnings_history(&state.cache, &self.symbol)
-            .await
-            .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        exec_gql(crate::services::analysis::get_earnings_history(
+            &state.cache,
+            &self.symbol,
+        ))
+        .await
     }
 
     /// SEC EDGAR company facts (XBRL) for this symbol.
@@ -71,8 +75,7 @@ impl TickerAnalysisQuery {
         let json = crate::services::edgar::get_facts(&state.cache, &self.symbol)
             .await
             .map_err(to_gql_error)?;
-        let facts: finance_query::CompanyFacts =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        let facts: finance_query::CompanyFacts = from_gql_json(json)?;
         let taxonomy_facts = facts.facts.get(&taxonomy);
         let default_concepts: &[&str] = &[
             "Revenues",
@@ -138,8 +141,7 @@ impl TickerAnalysisQuery {
         let json = crate::services::edgar::get_submissions(&state.cache, &self.symbol)
             .await
             .map_err(to_gql_error)?;
-        let submissions: finance_query::EdgarSubmissions =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        let submissions: finance_query::EdgarSubmissions = from_gql_json(json)?;
         let filings: Vec<GqlEdgarFiling> = submissions
             .filings
             .as_ref()
@@ -193,16 +195,14 @@ impl TickerAnalysisQuery {
     ) -> Result<GqlTranscriptWithMeta> {
         let state = ctx.data::<AppState>()?;
         let lang = resolve_gql_lang(lang.as_deref());
-        let json = crate::services::transcripts::get_transcript(
+        exec_gql(crate::services::transcripts::get_transcript(
             &state.cache,
             &self.symbol,
             quarter.as_deref(),
             year,
             lang.as_deref(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     /// Earnings call transcripts for this symbol.
@@ -216,14 +216,12 @@ impl TickerAnalysisQuery {
     ) -> Result<Vec<GqlTranscriptWithMeta>> {
         let state = ctx.data::<AppState>()?;
         let lang = resolve_gql_lang(lang.as_deref());
-        let json = crate::services::transcripts::get_transcripts(
+        exec_gql(crate::services::transcripts::get_transcripts(
             &state.cache,
             &self.symbol,
             limit.map(|l| l as usize),
             lang.as_deref(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 }

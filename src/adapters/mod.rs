@@ -34,6 +34,7 @@
 //! - Full mockito test coverage (no API key needed to run tests)
 
 pub(crate) mod common;
+pub(crate) mod singleton;
 
 /// Alpha Vantage financial data API (requires `alphavantage` feature).
 #[cfg(feature = "alphavantage")]

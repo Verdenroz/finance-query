@@ -26,7 +26,7 @@ No manual init call needed — the provider reads the key during `TickerBuilder:
 use finance_query::{Capability, Fetch, Provider, Providers, Raw};
 
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Fmp, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;

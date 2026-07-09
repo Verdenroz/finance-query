@@ -236,7 +236,7 @@ async fn test_trending_region() {
 #[tokio::test]
 #[ignore = "requires network access"]
 async fn test_market_hours() {
-    use finance_query::finance;
+    use finance_query::{Region, finance};
 
     // From finance.md "Market Hours" section
     // US market hours (default)
@@ -244,7 +244,7 @@ async fn test_market_hours() {
     assert!(!hours.markets.is_empty());
 
     // Japan market hours
-    let hours = finance::hours(Some("JP")).await.unwrap();
+    let hours = finance::hours(Some(Region::Japan)).await.unwrap();
     for market in &hours.markets {
         println!("{}: {}", market.name, market.status);
         println!("  Open: {:?}", market.open);

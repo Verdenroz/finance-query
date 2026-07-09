@@ -8,7 +8,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -89,11 +89,14 @@ pub async fn options_contract_details(ticker: &str) -> Result<OptionsContractRes
         "/v3/reference/options/contracts/{}",
         encode_path_segment(ticker)
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "options_contract_details".to_string(),
-        context: format!("Failed to parse options contract details response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &[],
+            "options_contract_details",
+            "options contract details response",
+        )
+        .await
 }
 
 #[cfg(test)]

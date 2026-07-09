@@ -49,7 +49,7 @@ enum FeedCommand {
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let mut stream =
-///     NewsStream::subscribe(&[FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
+///     NewsStream::subscribe([FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
 ///
 /// while let Some(entry) = stream.next().await {
 ///     println!("[{}] {}", entry.source, entry.title);
@@ -65,11 +65,8 @@ impl NewsStream {
     /// Subscribe to a continuous stream of new entries from the given
     /// sources, polling every 5 minutes. Use [`NewsStreamBuilder`] to
     /// customize the poll interval.
-    pub async fn subscribe(sources: &[FeedSource]) -> Self {
-        NewsStreamBuilder::new()
-            .sources(sources.to_vec())
-            .build()
-            .await
+    pub async fn subscribe(sources: impl IntoIterator<Item = FeedSource>) -> Self {
+        NewsStreamBuilder::new().sources(sources).build().await
     }
 
     async fn start(sources: Vec<FeedSource>, poll_interval: Duration) -> Self {
@@ -89,15 +86,39 @@ impl NewsStream {
     }
 
     /// Add more sources to the subscription.
-    pub async fn add_sources(&self, sources: &[FeedSource]) {
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::streaming::NewsStream;
+    /// use finance_query::feeds::FeedSource;
+    ///
+    /// # async fn example() {
+    /// let stream = NewsStream::subscribe([FeedSource::Bloomberg]).await;
+    /// stream.add_sources([FeedSource::MarketWatch, FeedSource::WsjMarkets]).await;
+    /// # }
+    /// ```
+    pub async fn add_sources(&self, sources: impl IntoIterator<Item = FeedSource>) {
         self.inner
-            .send(FeedCommand::AddSources(sources.to_vec()))
+            .send(FeedCommand::AddSources(sources.into_iter().collect()))
             .await;
     }
 
     /// Remove sources from the subscription (matched by [`FeedSource::url`]).
-    pub async fn remove_sources(&self, sources: &[FeedSource]) {
-        let urls = sources.iter().map(FeedSource::url).collect();
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::streaming::NewsStream;
+    /// use finance_query::feeds::FeedSource;
+    ///
+    /// # async fn example() {
+    /// let stream = NewsStream::subscribe([FeedSource::Bloomberg, FeedSource::MarketWatch]).await;
+    /// stream.remove_sources([FeedSource::MarketWatch]).await;
+    /// # }
+    /// ```
+    pub async fn remove_sources(&self, sources: impl IntoIterator<Item = FeedSource>) {
+        let urls = sources.into_iter().map(|s| s.url()).collect();
         self.inner.send(FeedCommand::RemoveSources(urls)).await;
     }
 
@@ -131,7 +152,7 @@ impl NewsStreamBuilder {
     }
 
     /// Add sources to subscribe to.
-    pub fn sources(mut self, sources: Vec<FeedSource>) -> Self {
+    pub fn sources(mut self, sources: impl IntoIterator<Item = FeedSource>) -> Self {
         self.sources.extend(sources);
         self
     }
@@ -174,8 +195,8 @@ async fn run_feed_loop(
                 if sources.is_empty() {
                     continue;
                 }
-                let batch: Vec<FeedSource> = sources.iter().map(|(_, s)| s.clone()).collect();
-                match fetch_all(&batch).await {
+                let batch = sources.iter().map(|(_, s)| s.clone());
+                match fetch_all(batch).await {
                     Ok(entries) => {
                         for entry in entries {
                             if seen.insert(entry.url.clone()) {
@@ -223,15 +244,15 @@ mod tests {
     async fn add_and_remove_sources_are_accepted() {
         // No network: sources list is empty so the poll tick is a no-op;
         // this only exercises the command channel plumbing.
-        let stream = NewsStream::subscribe(&[]).await;
-        stream.add_sources(&[FeedSource::Bloomberg]).await;
-        stream.remove_sources(&[FeedSource::Bloomberg]).await;
+        let stream = NewsStream::subscribe([]).await;
+        stream.add_sources([FeedSource::Bloomberg]).await;
+        stream.remove_sources([FeedSource::Bloomberg]).await;
         stream.close().await;
     }
 
     #[tokio::test]
     async fn resubscribe_gives_an_independent_receiver() {
-        let stream = NewsStream::subscribe(&[]).await;
+        let stream = NewsStream::subscribe([]).await;
         let other = stream.resubscribe();
         drop(other);
         stream.close().await;

@@ -69,7 +69,7 @@ async fn test_simple_subscribe() {
     use finance_query::streaming::PriceStream;
 
     // From streaming.md "Simple Subscribe" section
-    let stream = PriceStream::subscribe(&["AAPL", "GOOGL"]).await.unwrap();
+    let stream = PriceStream::subscribe(["AAPL", "GOOGL"]).await.unwrap();
     let _ = stream;
 }
 
@@ -81,7 +81,7 @@ async fn test_builder_pattern() {
 
     // From streaming.md "Builder Pattern" section
     let stream = PriceStreamBuilder::new()
-        .symbols(&["AAPL", "MSFT", "NVDA"])
+        .symbols(["AAPL", "MSFT", "NVDA"])
         .retry(Duration::from_secs(5))
         .build()
         .await
@@ -96,13 +96,13 @@ async fn test_dynamic_subscriptions() {
     use finance_query::streaming::PriceStream;
 
     // From streaming.md "Dynamic Subscriptions" section
-    let stream = PriceStream::subscribe(&["AAPL"]).await.unwrap();
+    let stream = PriceStream::subscribe(["AAPL"]).await.unwrap();
 
     // Add more symbols
-    stream.add_symbols(&["NVDA", "TSLA"]).await;
+    stream.add_symbols(["NVDA", "TSLA"]).await;
 
     // Remove symbols
-    stream.remove_symbols(&["AAPL"]).await;
+    stream.remove_symbols(["AAPL"]).await;
 }
 
 #[tokio::test]
@@ -111,7 +111,7 @@ async fn test_resubscribe() {
     use finance_query::streaming::PriceStream;
 
     // From streaming.md "Multiple Consumers" section
-    let stream1 = PriceStream::subscribe(&["AAPL", "NVDA"]).await.unwrap();
+    let stream1 = PriceStream::subscribe(["AAPL", "NVDA"]).await.unwrap();
     let stream2 = stream1.resubscribe();
 
     // Both handles share the same WebSocket connection
@@ -125,7 +125,7 @@ async fn test_close() {
     use finance_query::streaming::PriceStream;
 
     // From streaming.md "Closing the Stream" section
-    let stream = PriceStream::subscribe(&["AAPL"]).await.unwrap();
+    let stream = PriceStream::subscribe(["AAPL"]).await.unwrap();
     stream.close().await;
 }
 
@@ -137,7 +137,7 @@ async fn test_quick_start() {
     use tokio::time::{Duration, timeout};
 
     // From streaming.md "Quick Start" section — full pattern with stream.next()
-    let mut stream = PriceStream::subscribe(&["AAPL", "NVDA", "TSLA"])
+    let mut stream = PriceStream::subscribe(["AAPL", "NVDA", "TSLA"])
         .await
         .unwrap();
 
@@ -160,7 +160,7 @@ async fn test_filtering_by_market_hours() {
     use tokio::time::{Duration, timeout};
 
     // From streaming.md "Filtering Updates" section
-    let mut stream = PriceStream::subscribe(&["AAPL", "MSFT", "GOOGL"])
+    let mut stream = PriceStream::subscribe(["AAPL", "MSFT", "GOOGL"])
         .await
         .unwrap();
 
@@ -185,10 +185,10 @@ async fn test_news_stream_dynamic_sources_and_multiple_consumers() {
 
     // From streaming.md "Dynamic Sources and Multiple Consumers" section.
     // No network: empty initial source list, so the poll loop stays idle.
-    let stream = NewsStream::subscribe(&[]).await;
+    let stream = NewsStream::subscribe([]).await;
 
-    stream.add_sources(&[FeedSource::WsjMarkets]).await;
-    stream.remove_sources(&[FeedSource::Bloomberg]).await;
+    stream.add_sources([FeedSource::WsjMarkets]).await;
+    stream.remove_sources([FeedSource::Bloomberg]).await;
 
     let other_consumer = stream.resubscribe();
     drop(other_consumer);
@@ -252,7 +252,7 @@ async fn test_multiple_consumers_with_spawn() {
     use tokio::time::{Duration, timeout};
 
     // From streaming.md "Multiple Consumers" section — exact tokio::spawn pattern
-    let mut stream1 = PriceStream::subscribe(&["AAPL", "NVDA"]).await.unwrap();
+    let mut stream1 = PriceStream::subscribe(["AAPL", "NVDA"]).await.unwrap();
     let mut stream2 = stream1.resubscribe();
 
     // Both streams receive the same updates

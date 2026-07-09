@@ -4,7 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -96,11 +96,14 @@ pub async fn crypto_aggregates(
     let query_refs: Vec<(&str, &str)> =
         query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
-    let json = client.get_raw(&path, &query_refs).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "crypto_aggregates".to_string(),
-        context: format!("Failed to parse crypto aggregate response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &query_refs,
+            "crypto_aggregates",
+            "crypto aggregate response",
+        )
+        .await
 }
 
 /// Fetch the previous day's OHLCV bar for a crypto ticker.
@@ -117,11 +120,14 @@ pub async fn crypto_previous_close(
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
 
-    let json = client.get_raw(&path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "crypto_previous_close".to_string(),
-        context: format!("Failed to parse crypto previous close response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &params,
+            "crypto_previous_close",
+            "crypto previous close response",
+        )
+        .await
 }
 
 /// Fetch grouped daily bars for the entire crypto market on a given date.
@@ -141,11 +147,14 @@ pub async fn crypto_grouped_daily(
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
 
-    let json = client.get_raw(&path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "crypto_grouped_daily".to_string(),
-        context: format!("Failed to parse crypto grouped daily response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &params,
+            "crypto_grouped_daily",
+            "crypto grouped daily response",
+        )
+        .await
 }
 
 /// Fetch daily open/close for a crypto pair on a specific date.
@@ -166,11 +175,14 @@ pub async fn crypto_daily_open_close(
         encode_path_segment(date)
     );
 
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "crypto_daily_open_close".to_string(),
-        context: format!("Failed to parse crypto daily open/close response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &[],
+            "crypto_daily_open_close",
+            "crypto daily open/close response",
+        )
+        .await
 }
 
 #[cfg(test)]

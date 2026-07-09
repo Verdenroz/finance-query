@@ -42,7 +42,7 @@ async fn _verify_commodity_api() -> finance_query::Result<()> {
     use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
 
     let providers = Providers::builder()
-        .route(Capability::COMMODITIES, &[Provider::Fmp])
+        .route(Capability::COMMODITIES, [Provider::Fmp])
         .build()
         .await?;
 
@@ -50,5 +50,39 @@ async fn _verify_commodity_api() -> finance_query::Result<()> {
     let _quote: CommodityQuote = gold.quote().await?;
     let _chart: finance_query::Chart = gold.chart(Interval::OneDay, TimeRange::OneMonth).await?;
     let _history: finance_query::Chart = gold.history(TimeRange::OneMonth).await?;
+    Ok(())
+}
+
+// ---------------------------------------------------------------------------
+// Compile-time: Indicators & Risk section of commodities.md
+// ---------------------------------------------------------------------------
+
+/// Verifies the documented `Commodity::indicators`/`indicator`/`risk` flow
+/// type-checks. Never called; exists only for the compiler to type-check.
+#[allow(dead_code)]
+#[cfg(all(feature = "indicators", feature = "risk"))]
+async fn _verify_commodity_indicators_and_risk() -> finance_query::Result<()> {
+    use finance_query::indicators::Indicator;
+    use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+
+    let providers = Providers::builder()
+        .route(Capability::COMMODITIES, [Provider::Fmp])
+        .build()
+        .await?;
+    let gold = providers.commodity("GCUSD");
+
+    let summary = gold
+        .indicators(Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+    let _: Option<f64> = summary.rsi_14;
+
+    let _rsi_21 = gold
+        .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
+        .await?;
+
+    let risk = gold.risk(Interval::OneDay, TimeRange::OneYear).await?;
+    let _: f64 = risk.var_95;
+    let _: f64 = risk.max_drawdown;
+
     Ok(())
 }

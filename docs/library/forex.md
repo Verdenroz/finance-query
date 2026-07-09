@@ -28,7 +28,7 @@ Route `Capability::FOREX` to `Provider::AlphaVantage` and call
 use finance_query::{Capability, Provider, Providers};
 
 let providers = Providers::builder()
-    .route(Capability::FOREX, &[Provider::AlphaVantage])
+    .route(Capability::FOREX, [Provider::AlphaVantage])
     .build()
     .await?;
 
@@ -113,6 +113,39 @@ if let Some(last) = history.candles.last() {
 
 `history(range)` is equivalent to `chart(range.default_interval(), range)`.
 
+## Indicators & Risk
+
+!!! info "Feature flags required"
+    ```toml
+    finance-query = { version = "...", features = ["indicators", "risk"] }
+    ```
+
+Compute technical indicators or a risk summary directly from the pair's chart data:
+
+```rust
+use finance_query::indicators::Indicator;
+use finance_query::{Interval, TimeRange};
+
+let summary = pair
+    .indicators(Interval::OneDay, TimeRange::ThreeMonths)
+    .await?;
+if let Some(rsi) = summary.rsi_14 {
+    println!("RSI(14): {:.2}", rsi);
+}
+
+let rsi_21 = pair
+    .indicator(Indicator::Rsi(21), Interval::OneDay, TimeRange::ThreeMonths)
+    .await?;
+
+let risk = pair.risk(Interval::OneDay, TimeRange::OneYear).await?;
+println!("VaR 95%:      {:.2}%", risk.var_95 * 100.0);
+println!("Max Drawdown: {:.2}%", risk.max_drawdown * 100.0);
+```
+
+`indicators`/`indicator` mirror [`Ticker`](ticker.md)'s API but compute from this
+handle's own chart data. `risk` takes no benchmark parameter — `beta` is always
+`None`, since non-equity handles have no natural benchmark to compare against.
+
 ## Caching
 
 Enable in-memory caching with a TTL to avoid redundant network requests:
@@ -122,7 +155,7 @@ use finance_query::{Capability, Provider, Providers};
 use std::time::Duration;
 
 let providers = Providers::builder()
-    .route(Capability::FOREX, &[Provider::AlphaVantage])
+    .route(Capability::FOREX, [Provider::AlphaVantage])
     .build()
     .await?;
 

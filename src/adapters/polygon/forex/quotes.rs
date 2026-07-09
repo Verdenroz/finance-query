@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 use crate::models::forex::ForexQuote;
 use serde::{Deserialize, Serialize};
 
@@ -89,11 +89,9 @@ pub async fn forex_last_quote(from: &str, to: &str) -> Result<ForexQuoteResponse
         encode_path_segment(from),
         encode_path_segment(to)
     );
-    let json = client.get_raw(&path, &[]).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "forex_last_quote".to_string(),
-        context: format!("Failed to parse forex last quote response: {e}"),
-    })
+    client
+        .get_as(&path, &[], "forex_last_quote", "forex last quote response")
+        .await
 }
 
 /// Fetch forex quote (canonical) for a currency pair.
@@ -156,11 +154,14 @@ pub async fn currency_conversion(
     );
     let amount_str = amount.to_string();
     let params = [("amount", amount_str.as_str())];
-    let json = client.get_raw(&path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "currency_conversion".to_string(),
-        context: format!("Failed to parse currency conversion response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &params,
+            "currency_conversion",
+            "currency conversion response",
+        )
+        .await
 }
 
 #[cfg(test)]

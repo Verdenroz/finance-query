@@ -21,20 +21,14 @@ fn default_frequency() -> String {
     "annual".to_string()
 }
 
-fn parse_frequency(s: &str) -> Frequency {
-    match s.to_lowercase().as_str() {
-        "quarterly" | "q" => Frequency::Quarterly,
-        _ => Frequency::Annual,
-    }
+/// Fallible on purpose: silently defaulting an unrecognized frequency to
+/// `Annual` would mask typos, so invalid input must be rejected by the caller.
+fn parse_frequency(s: &str) -> Option<Frequency> {
+    s.parse().ok()
 }
 
 fn parse_statement_type(s: &str) -> Option<StatementType> {
-    match s.to_lowercase().as_str() {
-        "income" => Some(StatementType::Income),
-        "balance" => Some(StatementType::Balance),
-        "cashflow" | "cash-flow" => Some(StatementType::CashFlow),
-        _ => None,
-    }
+    s.parse().ok()
 }
 
 fn statement_to_gql(statement: StatementType) -> &'static str {
@@ -72,6 +66,14 @@ fn metrics_arg(metrics: Option<&str>) -> String {
 fn invalid_statement_response(statement: &str) -> axum::response::Response {
     let error = serde_json::json!({
         "error": format!("Invalid statement type: '{}'. Valid types: income, balance, cashflow", statement),
+        "status": 400
+    });
+    (StatusCode::BAD_REQUEST, Json(error)).into_response()
+}
+
+fn invalid_frequency_response(frequency: &str) -> axum::response::Response {
+    let error = serde_json::json!({
+        "error": format!("Invalid frequency: '{}'. Valid frequencies: annual, quarterly", frequency),
         "status": 400
     });
     (StatusCode::BAD_REQUEST, Json(error)).into_response()
@@ -115,7 +117,10 @@ pub(crate) async fn get_financials(
     Path((symbol, statement)): Path<(String, String)>,
     Query(params): Query<FinancialsQuery>,
 ) -> impl IntoResponse {
-    let frequency = parse_frequency(&params.frequency);
+    let frequency = match parse_frequency(&params.frequency) {
+        Some(f) => f,
+        None => return invalid_frequency_response(&params.frequency),
+    };
     let statement_type = match parse_statement_type(&statement) {
         Some(st) => st,
         None => return invalid_statement_response(&statement),
@@ -162,7 +167,10 @@ pub(crate) async fn get_batch_financials(
         Some(st) => st,
         None => return invalid_statement_response(&params.statement),
     };
-    let frequency = parse_frequency(&params.frequency);
+    let frequency = match parse_frequency(&params.frequency) {
+        Some(f) => f,
+        None => return invalid_frequency_response(&params.frequency),
+    };
 
     let symbols: Vec<&str> = params.symbols.split(',').map(|s| s.trim()).collect();
     let syms_literal = gql_string_list_literal(&symbols);

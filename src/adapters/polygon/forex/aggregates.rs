@@ -2,7 +2,7 @@
 #![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
-use crate::error::{FinanceError, Result};
+use crate::error::Result;
 
 use super::super::build_client;
 use super::super::models::*;
@@ -51,11 +51,14 @@ pub async fn forex_aggregates(
     let query_refs: Vec<(&str, &str)> =
         query_params.iter().map(|(k, v)| (*k, v.as_str())).collect();
 
-    let json = client.get_raw(&path, &query_refs).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "forex_aggregates".to_string(),
-        context: format!("Failed to parse forex aggregate response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &query_refs,
+            "forex_aggregates",
+            "forex aggregate response",
+        )
+        .await
 }
 
 /// Fetch the previous day's OHLCV bar for a forex ticker.
@@ -72,11 +75,14 @@ pub async fn forex_previous_close(
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
 
-    let json = client.get_raw(&path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "forex_previous_close".to_string(),
-        context: format!("Failed to parse forex previous close response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &params,
+            "forex_previous_close",
+            "forex previous close response",
+        )
+        .await
 }
 
 /// Fetch grouped daily bars for the entire forex market on a given date.
@@ -96,11 +102,14 @@ pub async fn forex_grouped_daily(
     let adj_str = adjusted.unwrap_or(true).to_string();
     let params = [("adjusted", adj_str.as_str())];
 
-    let json = client.get_raw(&path, &params).await?;
-    serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
-        field: "forex_grouped_daily".to_string(),
-        context: format!("Failed to parse forex grouped daily response: {e}"),
-    })
+    client
+        .get_as(
+            &path,
+            &params,
+            "forex_grouped_daily",
+            "forex grouped daily response",
+        )
+        .await
 }
 
 #[cfg(test)]

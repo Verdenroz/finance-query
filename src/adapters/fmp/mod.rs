@@ -14,8 +14,8 @@
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Route fundamentals and quote data to FMP with Yahoo as fallback
 //! let providers = Providers::builder()
-//!     .route(Capability::FUNDAMENTALS, &[Provider::Fmp, Provider::Yahoo])
-//!     .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
+//!     .route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])
+//!     .route(Capability::QUOTE, [Provider::Fmp, Provider::Yahoo])
 //!     .build().await?;
 //!
 //! let ticker = providers.ticker("AAPL").build().await?;
@@ -40,10 +40,8 @@ pub(crate) mod market;
 pub(crate) mod quote; // QUOTE
 pub(crate) mod technicals; // TECHNICALS // MARKET
 
-use crate::error::{FinanceError, Result};
-use crate::rate_limiter::RateLimiter;
-use client::FmpClientBuilder;
-use std::sync::{Arc, OnceLock};
+use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
+use crate::error::Result;
 use std::time::Duration;
 
 pub use models::*;
@@ -51,13 +49,24 @@ pub use models::*;
 /// FMP default rate limit: 5 req/sec.
 const FMP_RATE_PER_SEC: f64 = 5.0;
 
-struct FmpSingleton {
-    api_key: String,
-    timeout: Duration,
-    limiter: Arc<RateLimiter>,
-}
+provider_singleton_state!(
+    name = FmpSingleton,
+    static_name = FMP_SINGLETON,
+    rate_const = FMP_RATE_PER_SEC,
+    provider_key = "fmp",
+    already_init_reason = "FMP client already initialized",
+);
 
-static FMP_SINGLETON: OnceLock<FmpSingleton> = OnceLock::new();
+provider_build_client!(
+    name = FmpSingleton,
+    static_name = FMP_SINGLETON,
+    rate_const = FMP_RATE_PER_SEC,
+    provider_key = "fmp",
+    env_var = "FMP_API_KEY",
+    env_missing_reason = "FMP_API_KEY not set. Call fmp::init(key) or set FMP_API_KEY env var.",
+    builder = client::FmpClientBuilder,
+    client_ty = client::FmpClient,
+);
 
 /// Initialize the global FMP client with an API key.
 ///
@@ -74,51 +83,13 @@ pub fn init(api_key: impl Into<String>) -> Result<()> {
 /// Initialize the FMP client with a custom timeout.
 #[allow(dead_code)]
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
-    FMP_SINGLETON
-        .set(FmpSingleton {
-            api_key: api_key.into(),
-            timeout,
-            limiter: Arc::new(RateLimiter::new(FMP_RATE_PER_SEC)),
-        })
-        .map_err(|_| FinanceError::InvalidParameter {
-            param: "fmp".to_string(),
-            reason: "FMP client already initialized".to_string(),
-        })
-}
-
-/// Build a fresh client from the singleton state.
-pub(crate) fn build_client() -> Result<client::FmpClient> {
-    if FMP_SINGLETON.get().is_none() {
-        let key = std::env::var("FMP_API_KEY").map_err(|_| FinanceError::InvalidParameter {
-            param: "fmp".to_string(),
-            reason: "FMP_API_KEY not set. Call fmp::init(key) or set FMP_API_KEY env var."
-                .to_string(),
-        })?;
-        // init() may have raced ahead; if set fails, use the init()-provided value
-        let _ = FMP_SINGLETON.set(FmpSingleton {
-            api_key: key,
-            timeout: Duration::from_secs(30),
-            limiter: Arc::new(RateLimiter::new(FMP_RATE_PER_SEC)),
-        });
-    }
-    let s = FMP_SINGLETON.get().unwrap(); // SAFETY: set above or init() already called
-    FmpClientBuilder::new(&s.api_key)
-        .timeout(s.timeout)
-        .build_with_limiter(Arc::clone(&s.limiter))
-}
-
-/// Build a test client pointing at a mock server URL.
-#[cfg(test)]
-pub(crate) fn build_test_client(base_url: &str) -> Result<client::FmpClient> {
-    FmpClientBuilder::new("test-key")
-        .timeout(Duration::from_secs(5))
-        .base_url(base_url)
-        .build_with_limiter(Arc::new(RateLimiter::new(100.0)))
+    set_singleton(api_key, timeout)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::FinanceError;
 
     #[test]
     fn test_init_errors_on_double_init() {

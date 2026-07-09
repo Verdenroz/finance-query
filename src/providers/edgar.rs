@@ -11,8 +11,8 @@ pub(crate) struct EdgarProvider;
 
 #[async_trait::async_trait]
 impl super::ProviderAdapter for EdgarProvider {
-    fn id(&self) -> &'static str {
-        "edgar"
+    fn id(&self) -> super::Provider {
+        super::Provider::Edgar
     }
     fn capabilities(&self) -> super::Capability {
         super::Capability::FILINGS

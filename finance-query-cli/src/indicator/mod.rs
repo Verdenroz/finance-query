@@ -4,6 +4,7 @@ mod state;
 
 use crate::error::Result;
 use crate::output::{self, OutputFormat};
+use crate::parse::{parse_interval, parse_range};
 use clap::Parser;
 use crossterm::{
     event::{self, Event},
@@ -637,42 +638,6 @@ fn parse_indicator(s: &str) -> Result<Indicator> {
         _ => Err(crate::error::CliError::InvalidArgument(format!(
             "Unknown indicator '{}'. Use the interactive TUI to browse available indicators.",
             name
-        ))),
-    }
-}
-
-fn parse_interval(s: &str) -> Result<Interval> {
-    match s.to_lowercase().as_str() {
-        "1m" => Ok(Interval::OneMinute),
-        "5m" => Ok(Interval::FiveMinutes),
-        "15m" => Ok(Interval::FifteenMinutes),
-        "1h" => Ok(Interval::OneHour),
-        "1d" => Ok(Interval::OneDay),
-        "1wk" => Ok(Interval::OneWeek),
-        "1mo" => Ok(Interval::OneMonth),
-        _ => Err(crate::error::CliError::InvalidArgument(format!(
-            "Invalid interval '{}'. Valid: 1m, 5m, 15m, 1h, 1d, 1wk, 1mo",
-            s
-        ))),
-    }
-}
-
-fn parse_range(s: &str) -> Result<TimeRange> {
-    match s.to_lowercase().as_str() {
-        "1d" => Ok(TimeRange::OneDay),
-        "5d" => Ok(TimeRange::FiveDays),
-        "1mo" => Ok(TimeRange::OneMonth),
-        "3mo" => Ok(TimeRange::ThreeMonths),
-        "6mo" => Ok(TimeRange::SixMonths),
-        "1y" => Ok(TimeRange::OneYear),
-        "2y" => Ok(TimeRange::TwoYears),
-        "5y" => Ok(TimeRange::FiveYears),
-        "10y" => Ok(TimeRange::TenYears),
-        "ytd" => Ok(TimeRange::YearToDate),
-        "max" => Ok(TimeRange::Max),
-        _ => Err(crate::error::CliError::InvalidArgument(format!(
-            "Invalid range '{}'. Valid: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max",
-            s
         ))),
     }
 }

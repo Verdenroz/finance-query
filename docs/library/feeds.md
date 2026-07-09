@@ -31,7 +31,7 @@ for entry in fed_news.iter().take(5) {
 use finance_query::feeds::{self, FeedSource};
 
 // Aggregate multiple sources concurrently
-let news = feeds::fetch_all(&[
+let news = feeds::fetch_all([
     FeedSource::FederalReserve,
     FeedSource::SecPressReleases,
     FeedSource::MarketWatch,

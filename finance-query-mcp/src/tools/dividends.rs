@@ -68,19 +68,7 @@ async fn get_one_dividends(
         cursor.as_deref(),
     );
     let r = range.as_deref().unwrap_or("max").to_lowercase();
-    let gql_range = match crate::tools::helpers::parse_range(r.as_str()) {
-        finance_query::TimeRange::OneDay => "ONE_DAY",
-        finance_query::TimeRange::FiveDays => "FIVE_DAYS",
-        finance_query::TimeRange::OneMonth => "ONE_MONTH",
-        finance_query::TimeRange::ThreeMonths => "THREE_MONTHS",
-        finance_query::TimeRange::SixMonths => "SIX_MONTHS",
-        finance_query::TimeRange::OneYear => "ONE_YEAR",
-        finance_query::TimeRange::TwoYears => "TWO_YEARS",
-        finance_query::TimeRange::FiveYears => "FIVE_YEARS",
-        finance_query::TimeRange::TenYears => "TEN_YEARS",
-        finance_query::TimeRange::YearToDate => "YEAR_TO_DATE",
-        finance_query::TimeRange::Max => "MAX",
-    };
+    let gql_range = crate::tools::helpers::range_to_gql(&r);
 
     let query = format!(
         "query GetDivs($symbol: String!) {{ ticker(symbol: $symbol) {{ dividends(range: {gql_range}) {selection} }} }}"
@@ -103,19 +91,7 @@ async fn get_many_dividends(
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
     let r = range.as_deref().unwrap_or("1y").to_lowercase();
-    let gql_range = match crate::tools::helpers::parse_range(r.as_str()) {
-        finance_query::TimeRange::OneDay => "ONE_DAY",
-        finance_query::TimeRange::FiveDays => "FIVE_DAYS",
-        finance_query::TimeRange::OneMonth => "ONE_MONTH",
-        finance_query::TimeRange::ThreeMonths => "THREE_MONTHS",
-        finance_query::TimeRange::SixMonths => "SIX_MONTHS",
-        finance_query::TimeRange::OneYear => "ONE_YEAR",
-        finance_query::TimeRange::TwoYears => "TWO_YEARS",
-        finance_query::TimeRange::FiveYears => "FIVE_YEARS",
-        finance_query::TimeRange::TenYears => "TEN_YEARS",
-        finance_query::TimeRange::YearToDate => "YEAR_TO_DATE",
-        finance_query::TimeRange::Max => "MAX",
-    };
+    let gql_range = crate::tools::helpers::range_to_gql(&r);
 
     let field_list = parse_fields(fields);
     // "dividends" here is Vec<GqlDividend> (no per-symbol analytics, unlike

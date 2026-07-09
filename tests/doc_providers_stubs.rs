@@ -16,7 +16,7 @@ use finance_query::Ticker;
 fn _verify_polygon_builder() {
     use finance_query::{Capability, Fetch, Provider, Providers};
     let _providers = Providers::builder()
-        .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+        .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential);
 }
 
@@ -26,7 +26,7 @@ fn _verify_polygon_builder() {
 fn _verify_fmp_builder() {
     use finance_query::{Capability, Fetch, Provider, Providers};
     let _providers = Providers::builder()
-        .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
+        .route(Capability::QUOTE, [Provider::Fmp, Provider::Yahoo])
         .fetch(Fetch::Sequential);
 }
 
@@ -36,10 +36,7 @@ fn _verify_fmp_builder() {
 fn _verify_alphavantage_builder() {
     use finance_query::{Capability, Fetch, Provider, Providers};
     let _providers = Providers::builder()
-        .route(
-            Capability::QUOTE,
-            &[Provider::AlphaVantage, Provider::Yahoo],
-        )
+        .route(Capability::QUOTE, [Provider::AlphaVantage, Provider::Yahoo])
         .fetch(Fetch::Sequential);
 }
 
@@ -59,7 +56,7 @@ fn _verify_yahoo_default() {
 async fn test_polygon_quote() {
     use finance_query::{Capability, Fetch, Provider, Providers, format::Raw};
     let providers = Providers::builder()
-        .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+        .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
         .fetch(Fetch::Sequential)
         .build()
         .await
@@ -75,7 +72,7 @@ async fn test_polygon_quote() {
 async fn test_fmp_quote() {
     use finance_query::{Capability, Fetch, Provider, Providers, format::Raw};
     let providers = Providers::builder()
-        .route(Capability::QUOTE, &[Provider::Fmp, Provider::Yahoo])
+        .route(Capability::QUOTE, [Provider::Fmp, Provider::Yahoo])
         .fetch(Fetch::Sequential)
         .build()
         .await
@@ -91,10 +88,7 @@ async fn test_fmp_quote() {
 async fn test_alphavantage_quote() {
     use finance_query::{Capability, Fetch, Provider, Providers, format::Raw};
     let providers = Providers::builder()
-        .route(
-            Capability::QUOTE,
-            &[Provider::AlphaVantage, Provider::Yahoo],
-        )
+        .route(Capability::QUOTE, [Provider::AlphaVantage, Provider::Yahoo])
         .fetch(Fetch::Sequential)
         .build()
         .await

@@ -4,7 +4,7 @@ use async_graphql::{Context, Object, Result};
 
 use super::{resolve_gql_lang, screener_error_to_gql};
 use crate::AppState;
-use crate::graphql::error::to_gql_error;
+use crate::graphql::error::{exec_gql, from_gql_json, to_gql_error};
 use crate::graphql::types::{
     enums::{GqlLookupType, GqlScreener, GqlValueFormat},
     screener::{GqlCustomScreenerInput, GqlScreenerResults},
@@ -39,7 +39,7 @@ impl RootDiscoveryQuery {
         let region = region
             .as_deref()
             .and_then(|s| s.parse::<finance_query::Region>().ok());
-        let json = crate::services::search::search(
+        exec_gql(crate::services::search::search(
             &state.cache,
             &query,
             quotes,
@@ -52,10 +52,8 @@ impl RootDiscoveryQuery {
             },
             region,
             lang.as_deref(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     /// Type-filtered symbol lookup (equity/ETF/mutual fund/index/future/currency/crypto).
@@ -78,7 +76,7 @@ impl RootDiscoveryQuery {
         let region = region
             .as_deref()
             .and_then(|s| s.parse::<finance_query::Region>().ok());
-        let json = crate::services::search::lookup(
+        exec_gql(crate::services::search::lookup(
             &state.cache,
             &query,
             lookup_type.into(),
@@ -86,10 +84,8 @@ impl RootDiscoveryQuery {
             logo,
             region,
             lang.as_deref(),
-        )
+        ))
         .await
-        .map_err(to_gql_error)?;
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
     }
 
     /// Predefined stock screener results.
@@ -111,7 +107,7 @@ impl RootDiscoveryQuery {
         .await
         .map_err(to_gql_error)?;
         let json = finance_query::ValueFormat::from(format).transform(json);
-        serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))
+        from_gql_json(json)
     }
 
     /// Custom stock/fund screener with flexible filter conditions.
@@ -163,8 +159,7 @@ impl RootDiscoveryQuery {
         let json =
             serde_json::to_value(&results).map_err(|e| async_graphql::Error::new(e.to_string()))?;
         let json = finance_query::ValueFormat::from(format).transform(json);
-        let mut gql_results: GqlScreenerResults =
-            serde_json::from_value(json).map_err(|e| async_graphql::Error::new(e.to_string()))?;
+        let mut gql_results: GqlScreenerResults = from_gql_json(json)?;
         gql_results.page_info = Some(crate::graphql::pagination::offset_page_info(
             input.offset as usize,
             input.size as usize,

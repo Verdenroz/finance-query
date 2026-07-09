@@ -2,7 +2,7 @@
 //!
 //! Run with: `cargo test --test doc_error_handling`
 
-use finance_query::{ErrorCategory, FinanceError};
+use finance_query::{Capability, ErrorCategory, FinanceError, Operation, Provider};
 
 // ---------------------------------------------------------------------------
 // Error enum — compile-time variant existence checks
@@ -49,10 +49,14 @@ fn _verify_error_variants() {
         context: String::new(),
     };
     let _ = FinanceError::NotSupported {
-        provider: "test",
-        operation: "quote",
+        provider: Provider::Yahoo,
+        operation: Operation::Quote,
+        candidates: Vec::new(),
     };
-    let _ = FinanceError::NoProviderAvailable { operation: "chart" };
+    let _ = FinanceError::NoProviderAvailable {
+        operation: Capability::CHART,
+        candidates: Vec::new(),
+    };
 }
 
 // ---------------------------------------------------------------------------
@@ -115,8 +119,9 @@ fn test_non_retriable_errors() {
     );
     assert!(
         !FinanceError::NotSupported {
-            provider: "test",
-            operation: "quote"
+            provider: Provider::Yahoo,
+            operation: Operation::Quote,
+            candidates: Vec::new(),
         }
         .is_retriable()
     );

@@ -17,7 +17,7 @@ use std::time::Duration;
 ///
 /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 /// let providers = Providers::builder()
-///     .route(Capability::QUOTE, &[Provider::Yahoo])
+///     .route(Capability::QUOTE, [Provider::Yahoo])
 ///     .fetch(Fetch::Sequential)
 ///     .build().await?;
 ///
@@ -30,6 +30,15 @@ use std::time::Duration;
 pub struct Providers {
     pub(crate) set: Arc<ProviderSet>,
     lang: String,
+}
+
+impl std::fmt::Debug for Providers {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Providers")
+            .field("set", &self.set)
+            .field("lang", &self.lang)
+            .finish()
+    }
 }
 
 impl Providers {
@@ -136,6 +145,7 @@ impl Providers {
 }
 
 /// Builder for [`Providers`].
+#[derive(Debug)]
 pub struct ProvidersBuilder {
     provider_ids: Vec<Provider>,
     config: ClientConfig,
@@ -166,13 +176,18 @@ impl ProvidersBuilder {
     /// Providers referenced in the route are automatically added to the
     /// initialisation list if not already present. If omitted for a capability,
     /// Yahoo is used as default.
-    pub fn route(mut self, cap: crate::providers::Capability, providers: &[Provider]) -> Self {
-        self.routes.map.insert(cap, providers.to_vec());
-        for provider in providers {
+    pub fn route(
+        mut self,
+        cap: crate::providers::Capability,
+        providers: impl IntoIterator<Item = Provider>,
+    ) -> Self {
+        let providers: Vec<Provider> = providers.into_iter().collect();
+        for provider in &providers {
             if !self.provider_ids.contains(provider) {
                 self.provider_ids.push(*provider);
             }
         }
+        self.routes.map.insert(cap, providers);
         self
     }
 
@@ -190,6 +205,15 @@ impl ProvidersBuilder {
     /// translates text fields on those handles automatically.
     pub fn lang(mut self, lang: impl Into<String>) -> Self {
         self.config.lang = lang.into();
+        self
+    }
+
+    /// Set the region code (e.g., "US", "JP", "DE").
+    ///
+    /// For standard countries, prefer `.region()` instead to ensure correct
+    /// lang/region pairing.
+    pub fn region_code(mut self, region: impl Into<String>) -> Self {
+        self.config.region = region.into();
         self
     }
 

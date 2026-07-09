@@ -45,6 +45,6 @@ impl GqlRecommendationsBatch {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlRecommendation>> {
-        pagination::paginate(self.recommendations.clone(), first, after).await
+        pagination::paginate(&self.recommendations, first, after).await
     }
 }

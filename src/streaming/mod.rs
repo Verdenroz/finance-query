@@ -25,7 +25,7 @@
 //!
 //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
 //! // Subscribe to symbols
-//! let mut stream = PriceStream::subscribe(&["AAPL", "NVDA", "TSLA"]).await?;
+//! let mut stream = PriceStream::subscribe(["AAPL", "NVDA", "TSLA"]).await?;
 //!
 //! // Process updates as they arrive
 //! while let Some(price) = stream.next().await {

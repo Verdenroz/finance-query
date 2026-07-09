@@ -64,7 +64,7 @@ impl GqlDividends {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlDividend>> {
-        pagination::paginate(self.dividends.clone(), first, after).await
+        pagination::paginate(&self.dividends, first, after).await
     }
 }
 
@@ -99,7 +99,7 @@ impl GqlDividendsBatch {
         #[graphql(desc = "Opaque continuation cursor from a previous page's endCursor")]
         after: Option<String>,
     ) -> Result<Page<GqlSymbolDividends>> {
-        pagination::paginate(self.dividends.clone(), first, after).await
+        pagination::paginate(&self.dividends, first, after).await
     }
 }
 

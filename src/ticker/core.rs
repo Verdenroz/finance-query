@@ -459,10 +459,7 @@ impl Ticker {
                 let p = p.clone();
                 async move {
                     let r = p.fetch_similar_symbols(&sym, limit).await?;
-                    let provider = Provider::from_id_str(p.id()).ok_or_else(|| {
-                        FinanceError::InternalError(format!("unknown provider id: {}", p.id()))
-                    })?;
-                    Ok((provider, r))
+                    Ok((p.id(), r))
                 }
             })
             .await?;
@@ -663,7 +660,7 @@ impl Ticker {
     ///
     /// Routes through the provider system; EDGAR is always available as a fallback
     /// (auto-injected when no explicit FILINGS route is set). To prefer Polygon:
-    /// `.route(Capability::FILINGS, &[Provider::Polygon, Provider::Edgar])`.
+    /// `.route(Capability::FILINGS, [Provider::Polygon, Provider::Edgar])`.
     ///
     /// For the full EDGAR submissions response or structured XBRL data, use
     /// [`edgar_submissions`](Self::edgar_submissions) / [`edgar_company_facts`](Self::edgar_company_facts).

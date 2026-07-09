@@ -73,7 +73,7 @@ use finance_query::{Capability, Fetch, Provider, Providers};
 
 // Route quote to Polygon, fall back to Yahoo (routing lives on Providers::builder)
 let providers = Providers::builder()
-    .route(Capability::QUOTE, &[Provider::Polygon, Provider::Yahoo])
+    .route(Capability::QUOTE, [Provider::Polygon, Provider::Yahoo])
     .fetch(Fetch::Sequential)
     .build()
     .await?;
@@ -170,7 +170,7 @@ use finance_query::streaming::PriceStream;
 use futures::StreamExt;
 
 // Subscribe to real-time price updates via WebSocket
-let mut stream = PriceStream::subscribe(&["AAPL", "NVDA", "TSLA"]).await?;
+let mut stream = PriceStream::subscribe(["AAPL", "NVDA", "TSLA"]).await?;
 
 while let Some(price) = stream.next().await {
     println!("{}: ${:.2} ({:+.2}%)",
