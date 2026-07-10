@@ -27,7 +27,7 @@ use tracing::warn;
 /// Rate limit configuration
 #[derive(Debug, Clone)]
 pub struct RateLimitConfig {
-    /// Requests per minute per IP
+    /// Requests per minute, shared globally across all clients (not per-IP).
     pub requests_per_minute: u32,
 }
 
