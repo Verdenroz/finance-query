@@ -328,6 +328,7 @@ jobs:
         with:
           context: .
           file: server/Dockerfile
+          build-args: CARGO_FEATURES=translation
           push: false
           load: true
           tags: financequery:v2-ci
@@ -381,6 +382,7 @@ jobs:
         with:
           context: .
           file: finance-query-mcp/Dockerfile
+          build-args: CARGO_FEATURES=translation
           push: false
           load: true
           tags: financequery:mcp-ci
