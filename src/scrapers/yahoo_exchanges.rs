@@ -5,7 +5,7 @@
 
 use crate::error::{FinanceError, Result};
 use crate::models::market::exchanges::Exchange;
-use scraper::{Html, Selector};
+use crate::scrapers::html;
 use tracing::info;
 
 const EXCHANGES_URL: &str = "https://help.yahoo.com/kb/finance-for-web/SLN2310.html";
@@ -35,27 +35,8 @@ pub async fn scrape_exchanges() -> Result<Vec<Exchange>> {
 }
 
 /// Parse the exchanges HTML table.
-fn parse_exchanges_html(html: &str) -> Result<Vec<Exchange>> {
-    let document = Html::parse_document(html);
-
-    let table_selector =
-        Selector::parse("table").map_err(|_| FinanceError::ResponseStructureError {
-            field: "table".to_string(),
-            context: "Failed to parse table selector".to_string(),
-        })?;
-
-    let row_selector = Selector::parse("tr").map_err(|_| FinanceError::ResponseStructureError {
-        field: "tr".to_string(),
-        context: "Failed to parse row selector".to_string(),
-    })?;
-
-    let cell_selector =
-        Selector::parse("td").map_err(|_| FinanceError::ResponseStructureError {
-            field: "td".to_string(),
-            context: "Failed to parse cell selector".to_string(),
-        })?;
-
-    let table = document.select(&table_selector).next().ok_or_else(|| {
+fn parse_exchanges_html(document: &str) -> Result<Vec<Exchange>> {
+    let table = html::find_first(document, "table").ok_or_else(|| {
         FinanceError::ResponseStructureError {
             field: "table".to_string(),
             context: "No table found in exchanges page".to_string(),
@@ -64,19 +45,19 @@ fn parse_exchanges_html(html: &str) -> Result<Vec<Exchange>> {
 
     let mut exchanges = Vec::new();
 
-    for row in table.select(&row_selector) {
-        let cells: Vec<_> = row.select(&cell_selector).collect();
+    for row in html::find_all(table.inner, "tr") {
+        let cells = html::find_all(row.inner, "td");
 
         // Skip header rows (they use <th> not <td>)
         if cells.len() != 5 {
             continue;
         }
 
-        let country = cells[0].text().collect::<String>().trim().to_string();
-        let market = cells[1].text().collect::<String>().trim().to_string();
-        let suffix = cells[2].text().collect::<String>().trim().to_string();
-        let delay = cells[3].text().collect::<String>().trim().to_string();
-        let data_provider = cells[4].text().collect::<String>().trim().to_string();
+        let country = cells[0].text().trim().to_string();
+        let market = cells[1].text().trim().to_string();
+        let suffix = cells[2].text().trim().to_string();
+        let delay = cells[3].text().trim().to_string();
+        let data_provider = cells[4].text().trim().to_string();
 
         exchanges.push(Exchange {
             country,
@@ -101,6 +82,30 @@ fn parse_exchanges_html(html: &str) -> Result<Vec<Exchange>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parses_exchanges_table_offline() {
+        let html = r#"
+            <html><body>
+            <table>
+              <tr><th>Country</th><th>Market</th><th>Suffix</th><th>Delay</th><th>Provider</th></tr>
+              <tr><td>United States of America</td><td>NASDAQ</td><td></td><td>Real-time</td><td>Nasdaq</td></tr>
+              <tr><td>Japan</td><td>Tokyo Stock Exchange</td><td>.T</td><td>20 min</td><td>Tokyo</td></tr>
+            </table>
+            </body></html>
+        "#;
+
+        let exchanges = parse_exchanges_html(html).unwrap();
+        assert_eq!(exchanges.len(), 2);
+        assert_eq!(exchanges[0].country, "United States of America");
+        assert_eq!(exchanges[1].suffix, ".T");
+    }
+
+    #[test]
+    fn errors_when_no_table_present() {
+        let result = parse_exchanges_html("<html><body>no table here</body></html>");
+        assert!(result.is_err());
+    }
 
     #[tokio::test]
     #[ignore] // Requires network access

@@ -67,9 +67,6 @@ thiserror = "2.0"
 chrono = { version = "0.4", features = ["serde"] }
 chrono-tz = "0.10"
 
-# Progress indicators
-indicatif = "0.18.4"
-
 # Logging
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
