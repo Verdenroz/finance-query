@@ -259,8 +259,8 @@ required-features = ["risk", "backtesting", "translation", "sentiment"]
 
 [profile.release]
 opt-level = 3
-lto = "thin"
-codegen-units = 16
+lto = true
+codegen-units = 1
 strip = true
 
 [profile.dev]
