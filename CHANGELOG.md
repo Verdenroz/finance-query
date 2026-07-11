@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-07-10
+
+Domain handles (`ForexPair`, `CryptoCoin`, `Index`, `FuturesContract`,
+`Commodity`) gain chart/history, indicators, and risk analytics, moving them
+toward parity with `Ticker`. A new financial event calendar aggregates
+earnings, dividends, options expirations, and (with `fred`) economic releases
+across symbols. The `streaming` module gains `NewsStream`, a polled RSS/Atom
+counterpart to `PriceStream`. Several dependencies pulling in outsized
+transitive weight (`feed-rs`, `scraper`, `governor`, `indicatif`) were
+replaced with small hand-rolled implementations or removed outright. Includes
+a handful of breaking API changes — see Changed/Removed below.
+
 ### Added
 
 - **`chart()` / `history()` on domain handles** — `ForexPair`, `CryptoCoin`,
@@ -40,6 +52,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Region::Japan` / `Region::Korea` / `Region::Mexico` / `Region::Qatar` variants
   (verified live against Yahoo's market-time endpoint).
 - `ProvidersBuilder::region_code` for parity with `TickerBuilder`/`TickersBuilder`.
+- **`NewsStream` / `NewsStreamBuilder`** (`streaming` module) — polls RSS/Atom
+  feeds in the background and broadcasts newly discovered entries (deduplicated
+  by URL), mirroring the existing `PriceStream` pattern but for pull-only
+  sources. `PriceStream` and `NewsStream` now share a generic internal
+  `Subscription<T>` broadcast primitive instead of duplicating channel plumbing.
+- `feeds::parse_bytes(bytes, source_name)` — parses already-fetched RSS/Atom
+  bytes without a network round-trip; used internally by `NewsStream` and
+  useful for callers with their own HTTP client/cache/proxy.
 
 ### Changed
 
@@ -63,6 +83,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `candidates: Vec<Provider>` field listing which providers could have served the
   capability. Code matching or destructuring these fields as strings will need
   updating; the `Display` output text is unchanged.
+- Internal: the `scraper` crate (html5ever/selectors/cssparser, 56 transitive
+  crates) replaced with a minimal hand-rolled HTML element matcher
+  (`src/scrapers/html.rs`) behind the Yahoo exchanges/stockanalysis scrapers —
+  same approach as the earlier `feed-rs` → hand-rolled RSS parser move. No
+  public API change.
 
 ### Fixed
 
@@ -86,6 +111,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   parsing is now a hand-rolled, dependency-free extractor (`src/feeds/parser.rs`),
   resolving RUSTSEC-2026-0195.
 - Bumped `crossbeam-epoch` 0.9.18 → 0.9.20 (RUSTSEC-2026-0204).
+- Bumped `anyhow` 1.0.102 → 1.0.103 (RUSTSEC-2026-0190, unsoundness in
+  `Error::downcast_mut()`).
+- Bumped `cxx` 1.0.194 → 1.0.197 (RUSTSEC-2026-0202, unsound), pulled in
+  transitively via `ct2rs` under the `translation-offline` feature.
 
 ## [2.7.1] - 2026-06-20
 

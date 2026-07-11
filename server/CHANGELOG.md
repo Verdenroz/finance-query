@@ -10,6 +10,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-07-10
+
+Every REST and MCP data endpoint is now bridged through one typed GraphQL
+schema, bringing consistent field selection and Relay-style pagination to
+both transports, plus a new financial event calendar endpoint, WebSocket
+feed streaming, and deeper production metrics. Includes breaking REST query
+param renames (snake_case → camelCase) — see Changed below.
+
 ### Added
 
 - **Financial event calendar** — `GET /v2/calendar?symbols=&range=` aggregates
@@ -68,6 +76,21 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   no longer busts the compiled-dependency cache — notably preserving the
   from-source CTranslate2 build used by `translation-offline`, by far the
   most expensive part of the image build.
+- **Rate limiter reimplemented without `governor`** — `server/src/rate_limit.rs`
+  now uses a small hand-rolled token bucket behind a `Mutex` instead of the
+  `governor` crate (50 transitive crates for machinery — keyed/multi-tenant
+  limiting — this server never used). Still one shared, global, non-keyed
+  bucket; observable rate-limiting behavior (burst capacity, refill rate,
+  `429` + `Retry-After`) is unchanged.
+- **Production images temporarily build with `translation` instead of
+  `translation-offline`** (`deploy.yml`, `docker-compose.prod.yml`) — the
+  current VPS only has 2 CPUs and can't spare the headroom CTranslate2
+  inference needs, so the deployed server falls back to dictionary-tier-only
+  translation until the VPS is upsized; `finance-query-v2`'s CPU limit is
+  capped at 2.0 (was 6.0) to match. No code change — `translation-offline`
+  remains fully supported for self-hosted deployments with adequate CPU.
+- Removing `governor` also drops its transitive dependency weight from the
+  server's build; no functional change beyond the rate limiter rewrite above.
 
 ### Fixed
 
@@ -79,6 +102,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
   submissions GraphQL types, an options-parsing correctness bug, and
   discovery/lookup enrichment gaps — all now match the REST responses they
   were bridged from.
+
+### Security
+
+- Bumped `anyhow` 1.0.102 → 1.0.103 (RUSTSEC-2026-0190, unsoundness in
+  `Error::downcast_mut()`), and, when built with `translation-offline`,
+  `cxx` 1.0.194 → 1.0.197 (RUSTSEC-2026-0202, unsound) — both via a
+  workspace-wide lockfile bump (see root `CHANGELOG.md`); no server code
+  change.
 
 ## [2.7.1] - 2026-06-20
 

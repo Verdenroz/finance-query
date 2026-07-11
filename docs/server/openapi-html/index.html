@@ -23,7 +23,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Finance Query v2",
-    "version": "2.7.1",
+    "version": "2.8.0",
     "description": "REST API for fetching financial data from Yahoo Finance, SEC EDGAR, FRED, CoinGecko, and more.\nProvides real-time quotes, historical data, news, options, SEC filings, macroeconomic series, cryptocurrency data, and more.\n\n**Configuration**\n- EDGAR endpoints require `EDGAR_EMAIL` environment variable.\n- FRED endpoints require `FRED_API_KEY` environment variable.\n\n**Data Sources & Attributions**\n- Market data provided by Yahoo Finance. Not affiliated with or endorsed by Yahoo Finance.\n- SEC filing data sourced from the U.S. SEC EDGAR system (https://www.sec.gov). Not affiliated with the SEC.\n- This product uses the FRED\u00ae API but is not endorsed or certified by the Federal Reserve Bank of St. Louis.\n- U.S. Treasury yield data sourced from the U.S. Department of the Treasury (https://home.treasury.gov).\n- Cryptocurrency data provided by CoinGecko (https://www.coingecko.com). Not affiliated with CoinGecko.\n- Fear & Greed Index data provided by alternative.me (https://alternative.me).\n- News feeds sourced from the Federal Reserve, SEC, MarketWatch, Bloomberg, Financial Times, The Guardian, NYT, Investing.com, BEA, ECB, CFPB, WSJ, Fortune, Business Wire, CoinDesk, CoinTelegraph, TechCrunch, and Hacker News. Content remains the property of respective publishers.\n",
     "contact": {
       "name": "Finance Query",
@@ -350,6 +350,12 @@
           },
           {
             "$ref": "#/components/parameters/Lang"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -519,6 +525,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -636,6 +648,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -1070,6 +1088,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -1134,6 +1158,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -1459,6 +1489,27 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "name": "pageLimit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "nullable": true
+            },
+            "description": "Max symbols per page (distinct from `limit`, which caps recommendations\n*per symbol*). Pagination is opt-in: omitting both `pageLimit` and\n`pageCursor` returns every requested symbol's recommendations as a bare\narray, unchanged from pre-pagination behavior.\n"
+          },
+          {
+            "name": "pageCursor",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "nullable": true
+            },
+            "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`."
           }
         ],
         "responses": {
@@ -1510,6 +1561,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -1598,6 +1655,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -1747,6 +1810,12 @@
           },
           {
             "$ref": "#/components/parameters/Lang"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -1805,6 +1874,12 @@
           },
           {
             "$ref": "#/components/parameters/Lang"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -1860,6 +1935,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -2036,6 +2117,20 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "nullable": true
+            },
+            "description": "Max entries per page for holder types with a list (institutional,\nmutualfund, insider-transactions, insider-roster). No-op for\nmajor/insider-purchases (no list). Pagination is opt-in: omitting\nboth `limit` and `cursor` returns the existing response shape unchanged.\n"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -2790,6 +2885,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -2826,7 +2927,7 @@
                     },
                     "filings": {
                       "type": "object",
-                      "description": "Recent filings (up to 1000)"
+                      "description": "Recent filings (up to 1000). Pagination is opt-in: omitting both\n`limit` and `cursor` returns every filing as a bare array, unchanged\nfrom pre-pagination behavior. Passing either returns\n`{ items: [...], pageInfo: {...} }` instead.\n"
                     }
                   }
                 }
@@ -2862,6 +2963,20 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "nullable": true
+            },
+            "description": "Max data points per concept per page, applied uniformly across every\nreturned concept. Pagination is opt-in: omitting both `limit` and\n`cursor` returns every matching data point as a bare array, unchanged\nfrom pre-pagination behavior.\n"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -2949,17 +3064,43 @@
             "description": "End date in YYYY-MM-DD format"
           },
           {
+            "name": "from",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0
+            },
+            "description": "Pagination offset"
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100,
+              "default": 100
+            },
+            "description": "Page size (max 100)"
+          },
+          {
             "$ref": "#/components/parameters/Fields"
           }
         ],
         "responses": {
           "200": {
-            "description": "Search results",
+            "description": "Search results (now includes a `pageInfo` object alongside `totalHits`)",
             "content": {
               "application/json": {
                 "schema": {
                   "type": "object",
                   "properties": {
+                    "pageInfo": {
+                      "$ref": "#/components/schemas/PageInfo"
+                    },
                     "hits": {
                       "type": "object",
                       "properties": {
@@ -3239,6 +3380,20 @@
           },
           {
             "$ref": "#/components/parameters/Lang"
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "nullable": true
+            },
+            "description": "Max quotes per page (applies to the `quotes` results only). Pagination\nis opt-in: omitting both `limit` and `cursor` returns every fetched\nquote (up to `quotes`) as a bare array, unchanged from pre-pagination\nbehavior.\n"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -3608,6 +3763,12 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
@@ -3676,11 +3837,17 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
           "200": {
-            "description": "Treasury yield curve records sorted newest-first",
+            "description": "Treasury yield curve records sorted newest-first. Pagination is\nopt-in: omitting both `limit` and `cursor` returns every row as a\nbare array, unchanged from pre-pagination behavior. Passing either\nreturns `{ items: [...], pageInfo: {...} }` instead.\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -3785,11 +3952,17 @@
           },
           {
             "$ref": "#/components/parameters/Fields"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationLimit"
+          },
+          {
+            "$ref": "#/components/parameters/PaginationCursor"
           }
         ],
         "responses": {
           "200": {
-            "description": "List of coins sorted by market cap descending",
+            "description": "List of coins sorted by market cap descending. Pagination is\nopt-in: omitting both `limit` and `cursor` returns every fetched\ncoin (up to `count`) as a bare array, unchanged from\npre-pagination behavior. Passing either returns\n`{ items: [...], pageInfo: {...} }` instead.\n",
             "content": {
               "application/json": {
                 "schema": {
@@ -4154,9 +4327,50 @@
         },
         "example": "ja",
         "description": "Target language for human-readable text fields (BCP 47 tag, e.g. `ja`, `de`, `zh-Hant`).\nFalls back to the `Accept-Language` header when omitted. English or unsupported\nvalues return untranslated text. Symbols, codes, URLs, and numeric fields are\nnever translated.\n"
+      },
+      "PaginationLimit": {
+        "name": "limit",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "integer",
+          "minimum": 1,
+          "nullable": true
+        },
+        "description": "Max items per page. Pagination is opt-in for REST: omitting both `limit` and\n`cursor` returns every matching item as a bare array/existing response shape,\nunchanged from pre-pagination behavior. Passing either switches the response to\n`{\"items\": [...], \"pageInfo\": {...}}` (or adds `pageInfo` alongside an existing\nenvelope's other fields).\n"
+      },
+      "PaginationCursor": {
+        "name": "cursor",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "nullable": true
+        },
+        "description": "Opaque continuation token from a previous response's `pageInfo.endCursor`.\nOmitted = first page.\n"
       }
     },
     "schemas": {
+      "PageInfo": {
+        "type": "object",
+        "description": "Relay-style pagination metadata, present when a paginated field was requested.",
+        "properties": {
+          "hasNextPage": {
+            "type": "boolean"
+          },
+          "hasPreviousPage": {
+            "type": "boolean"
+          },
+          "startCursor": {
+            "type": "string",
+            "nullable": true
+          },
+          "endCursor": {
+            "type": "string",
+            "nullable": true
+          }
+        }
+      },
       "Quote": {
         "type": "object",
         "description": "Stock quote data",
@@ -5284,6 +5498,15 @@
             "format": "int64",
             "nullable": true,
             "description": "Total number of matching results (only present in custom screener responses, for pagination)"
+          },
+          "pageInfo": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/PageInfo"
+              }
+            ],
+            "nullable": true,
+            "description": "Present only for `/v2/screeners/custom` (predefined `/v2/screeners/{type}`\nhas no underlying offset support upstream, so this is always null there).\n"
           }
         }
       },
