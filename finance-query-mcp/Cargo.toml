@@ -1,6 +1,6 @@
 [package]
 name = "finance-query-mcp"
-version = "0.1.0"
+version = "2.8.0"
 edition = "2024"
 description = "MCP server exposing finance-query tools to AI agents"
 license = "MIT"

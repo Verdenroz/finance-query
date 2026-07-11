@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Removed
+
+- Unused `indicatif` dependency (declared, never referenced anywhere in the CLI source).
+
+### Security
+
+- Bumped `tauri-winrt-notification` 0.7.2 → 0.7.3 (RUSTSEC-2026-0194,
+  RUSTSEC-2026-0195), transitive via `notify-rust` (desktop alert
+  notifications); drops `quick-xml` from that dependency chain entirely.
+
 ## [0.3.0] - 2026-03-09
 
 ### Added

@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+## [2.8.0] - 2026-07-10
+
 Bridges every MCP tool through the same in-process GraphQL schema that powers the REST API, adding consistent field selection and pagination — and folding several paired batch tools into their singular counterparts along the way. **This includes a breaking change to the MCP tool surface**: six tools disappeared (see Changed below).
 
 ### Added
@@ -33,10 +35,19 @@ Bridges every MCP tool through the same in-process GraphQL schema that powers th
   - `get_crypto_coins` → renamed to `get_crypto` (no batch merge; same shape)
 - Every tool's response now flows through the shared GraphQL schema (`finance-query-mcp/src/tools/gql.rs`) instead of hand-rolled fetch/serialize logic per tool, so MCP and REST responses stay structurally consistent going forward.
 - `get_news` responses continue to auto-populate a `sentiment` field per article (VADER, from the `sentiment` feature) and `get_holders`/`get_analysis` now route through the resolvers that also received a debug-build stack-overflow fix on the server side (split multi-branch async closures into monomorphic per-type service functions), benefiting both transports.
+- **Production image temporarily builds with `translation` instead of `translation-offline`** (`deploy.yml`) — the current VPS only has 2 CPUs and can't spare the headroom CTranslate2 inference needs, so the deployed `fq-mcp` falls back to dictionary-tier-only translation until the VPS is upsized. No code change — `translation-offline` remains fully supported for self-hosted deployments with adequate CPU.
 
 ### Fixed
 
 - **`MCP_ALLOWED_HOSTS`** env var / `--allowed-hosts` CLI flag added to `fq-mcp`, merged with the always-allowed loopback hosts and passed to `StreamableHttpServerConfig::with_allowed_hosts`. The hosted server (`finance-query.com/mcp`) was returning 403 on every request because `rmcp`'s streamable HTTP transport defaults to loopback-only DNS-rebinding protection, and the public `Host` header forwarded through the Caddy reverse proxy was being rejected; default (unset) behavior is unchanged.
+
+### Security
+
+- Bumped `anyhow` 1.0.102 → 1.0.103 (RUSTSEC-2026-0190, unsoundness in
+  `Error::downcast_mut()`), and, when built with `translation-offline`,
+  `cxx` 1.0.194 → 1.0.197 (RUSTSEC-2026-0202, unsound) — both via a
+  workspace-wide lockfile bump (see root `CHANGELOG.md`); no MCP code
+  change.
 
 ## [2.7.0] - 2026-06-18
 
