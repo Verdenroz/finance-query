@@ -80,7 +80,7 @@ RUN --mount=type=cache,target=/usr/local/cargo/registry,sharing=locked \
 # Runtime Stage: Minimal runtime image
 # ==============================================================================
 # Base image pinned by digest (tag kept for readability); bumped by Dependabot.
-FROM debian:bookworm-slim@sha256:60eac759739651111db372c07be67863818726f754804b8707c90979bda511df
+FROM debian:bookworm-slim@sha256:7b140f374b289a7c2befc338f42ebe6441b7ea838a042bbd5acbfca6ec875818
 
 # libstdc++6/libgomp1 are required by the CTranslate2 translation backend
 RUN apt-get update && apt-get upgrade -y && apt-get install -y \
