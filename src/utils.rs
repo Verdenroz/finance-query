@@ -2,7 +2,12 @@
 
 use crate::constants::TimeRange;
 use crate::models::chart::{CapitalGain, Dividend, Split};
-use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
+use std::collections::HashMap;
+use std::hash::Hash;
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
+// tokio's Instant tracks the runtime clock, so TTL expiry is testable under
+// `tokio::time::pause`. Outside tests it is std::time::Instant.
+use tokio::time::Instant;
 
 /// Returns the current time as Unix timestamp in seconds.
 #[inline]
@@ -13,11 +18,30 @@ pub(crate) fn now_unix_secs() -> i64 {
         .as_secs() as i64
 }
 
-/// Maximum number of entries before we trigger a stale-entry eviction sweep.
+/// Maximum number of entries before we trigger an eviction sweep.
 ///
 /// Eviction only runs when the map exceeds this size, amortizing the O(n)
 /// retain cost across many inserts instead of running on every single write.
 pub(crate) const EVICTION_THRESHOLD: usize = 64;
+
+/// How long a cached response stays usable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub(crate) enum CacheMode {
+    /// Cache until the owning handle is dropped.
+    #[default]
+    Lifetime,
+    /// Cache for a bounded duration.
+    Ttl(Duration),
+    /// Never cache.
+    Off,
+}
+
+impl CacheMode {
+    #[inline]
+    pub(crate) fn enabled(self) -> bool {
+        !matches!(self, Self::Off)
+    }
+}
 
 /// Wrapper that tracks when a cached value was fetched.
 ///
@@ -40,23 +64,51 @@ impl<T> CacheEntry<T> {
         }
     }
 
-    /// Returns `true` if the entry has not exceeded the given TTL.
+    /// Returns `true` if the entry is still usable under `mode`.
     #[inline]
-    pub(crate) fn is_fresh(&self, ttl: Duration) -> bool {
-        self.fetched_at.elapsed() < ttl
-    }
-
-    /// Returns `true` if the entry exists and has not exceeded the given TTL.
-    ///
-    /// Returns `false` if the entry is `None` or the TTL is `None` (caching disabled).
-    /// This consolidates the common pattern of checking both the TTL and entry existence.
-    #[inline]
-    pub(crate) fn is_fresh_with_ttl(entry: Option<&CacheEntry<T>>, ttl: Option<Duration>) -> bool {
-        match (ttl, entry) {
-            (Some(ttl), Some(e)) => e.is_fresh(ttl),
-            _ => false,
+    pub(crate) fn is_fresh(&self, mode: CacheMode) -> bool {
+        match mode {
+            CacheMode::Lifetime => true,
+            CacheMode::Ttl(ttl) => self.fetched_at.elapsed() < ttl,
+            CacheMode::Off => false,
         }
     }
+
+    /// Returns `true` if the entry exists and is still usable under `mode`.
+    #[inline]
+    pub(crate) fn is_fresh_entry(entry: Option<&CacheEntry<T>>, mode: CacheMode) -> bool {
+        matches!(entry, Some(e) if e.is_fresh(mode))
+    }
+}
+
+/// Insert into a map cache, evicting first if the map has grown past
+/// [`EVICTION_THRESHOLD`]. No-op when caching is off.
+pub(crate) fn cache_insert<K: Eq + Hash, V>(
+    map: &mut HashMap<K, CacheEntry<V>>,
+    key: K,
+    value: V,
+    mode: CacheMode,
+) {
+    if !mode.enabled() {
+        return;
+    }
+    if map.len() >= EVICTION_THRESHOLD {
+        evict(map, mode);
+    }
+    map.insert(key, CacheEntry::new(value));
+}
+
+fn evict<K: Eq + Hash, V>(map: &mut HashMap<K, CacheEntry<V>>, mode: CacheMode) {
+    map.retain(|_, entry| entry.is_fresh(mode));
+    if map.len() < EVICTION_THRESHOLD {
+        return;
+    }
+    // Lifetime entries never go stale, so fall back to dropping the older half
+    // by fetch time — halving amortizes the O(n) sort across many inserts.
+    let mut times: Vec<Instant> = map.values().map(|e| e.fetched_at).collect();
+    times.sort_unstable();
+    let cutoff = times[times.len() / 2];
+    map.retain(|_, entry| entry.fetched_at >= cutoff);
 }
 
 /// Trait for types with a timestamp field
@@ -136,5 +188,55 @@ pub(crate) fn filter_by_range<T: HasTimestamp>(items: Vec<T>, range: TimeRange) 
                 .filter(|item| item.timestamp() >= cutoff)
                 .collect()
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lifetime_mode_is_always_fresh() {
+        let entry = CacheEntry::new(1u32);
+        assert!(entry.is_fresh(CacheMode::Lifetime));
+    }
+
+    #[test]
+    fn off_mode_is_never_fresh() {
+        let entry = CacheEntry::new(1u32);
+        assert!(!entry.is_fresh(CacheMode::Off));
+        assert!(!CacheEntry::is_fresh_entry(Some(&entry), CacheMode::Off));
+    }
+
+    #[test]
+    fn ttl_mode_is_fresh_within_window() {
+        let entry = CacheEntry::new(1u32);
+        assert!(entry.is_fresh(CacheMode::Ttl(Duration::from_secs(60))));
+        assert!(!entry.is_fresh(CacheMode::Ttl(Duration::ZERO)));
+    }
+
+    #[test]
+    fn missing_entry_is_never_fresh() {
+        assert!(!CacheEntry::<u32>::is_fresh_entry(
+            None,
+            CacheMode::Lifetime
+        ));
+    }
+
+    #[test]
+    fn off_mode_writes_nothing() {
+        let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
+        cache_insert(&mut map, 1, 1, CacheMode::Off);
+        assert!(map.is_empty());
+    }
+
+    #[test]
+    fn lifetime_mode_evicts_oldest_past_threshold() {
+        let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
+        for i in 0..200u32 {
+            cache_insert(&mut map, i, i, CacheMode::Lifetime);
+        }
+        assert!(map.len() <= EVICTION_THRESHOLD);
+        assert!(map.contains_key(&199), "newest entry must survive eviction");
     }
 }

@@ -7,6 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `Ticker`, `Tickers`, and the domain handles now cache responses by default
+  for the lifetime of the handle. Previously caching was off unless
+  `.cache(ttl)` was set, so every accessor refetched — which contradicted the
+  documentation. Call `.no_cache()` for the old behavior.
+- Yahoo sessions are now shared per tokio runtime and client configuration.
+  The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
+  authenticated session instead of running a fresh cookie + crumb handshake per
+  call, cutting each `finance::*` call from three HTTP requests to one.
+
+### Added
+
+- `TickerBuilder::no_cache()`, `TickersBuilder::no_cache()`, and `no_cache()`
+  on the domain handles.
+- Automatic crumb refresh: a request that fails authentication re-runs the
+  Yahoo handshake once and retries. If the refresh itself fails, the shared
+  session is dropped so the next caller builds a fresh one.
+
 ## [2.8.0] - 2026-07-10
 
 Domain handles (`ForexPair`, `CryptoCoin`, `Index`, `FuturesContract`,

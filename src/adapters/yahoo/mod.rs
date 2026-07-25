@@ -7,6 +7,7 @@ pub(crate) mod auth;
 pub(crate) mod client;
 pub(crate) mod common;
 pub(crate) mod endpoints;
+pub(crate) mod session;
 
 // Capability-mapped endpoint modules
 pub(crate) mod chart; // CHART

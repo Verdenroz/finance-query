@@ -44,7 +44,8 @@ let tickers = Tickers::builder(vec!["AAPL", "MSFT"])
 | `.proxy(str)` | Set proxy URL |
 || `.max_concurrency(n)` | Max concurrent requests for per-symbol batch ops (default: 10) |
 | `.logo()` | Include company logo URLs in quote responses |
-| `.cache(Duration)` | Enable response caching with TTL (disabled by default) |
+| `.cache(Duration)` | Bound response caching to a TTL (default: cached for the handle's lifetime) |
+| `.no_cache()` | Disable caching — every call fetches fresh data |
 
 #### `max_concurrency`
 
@@ -565,13 +566,13 @@ let msft_chart = tickers.chart("MSFT", Interval::OneDay, TimeRange::OneMonth).aw
 
 ## Caching
 
-`Tickers` caching is **opt-in** — by default every call fetches fresh data. Enable it with `.cache(Duration)` in the builder.
+`Tickers` caching is **on by default** and lasts as long as the handle lives. Use `.cache(Duration)` to bound how long a response is reused, or `.no_cache()` to fetch fresh on every call.
 
 ```rust
 use finance_query::Tickers;
 use std::time::Duration;
 
-// Enable a 30-second TTL on all responses
+// Bound reuse to a 30-second TTL
 let tickers = Tickers::builder(vec!["AAPL", "MSFT"])
     .cache(Duration::from_secs(30))
     .build()

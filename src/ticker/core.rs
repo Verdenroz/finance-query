@@ -33,7 +33,7 @@ use crate::providers::{
 };
 #[cfg(feature = "risk")]
 use crate::risk;
-use crate::utils::{CacheEntry, EVICTION_THRESHOLD, filter_by_range};
+use crate::utils::{CacheEntry, CacheMode, filter_by_range};
 use std::collections::HashMap;
 use std::sync::Arc;
 use std::time::Duration;
@@ -75,7 +75,7 @@ pub struct TickerBuilder {
     config: ClientConfig,
     shared_client: Option<ClientHandle>,
     injected_providers: Option<Arc<ProviderSet>>,
-    cache_ttl: Option<Duration>,
+    cache_mode: CacheMode,
     include_logo: bool,
 }
 
@@ -86,7 +86,7 @@ impl TickerBuilder {
             config: ClientConfig::default(),
             shared_client: None,
             injected_providers: None,
-            cache_ttl: None,
+            cache_mode: CacheMode::default(),
             include_logo: false,
         }
     }
@@ -137,9 +137,17 @@ impl TickerBuilder {
         self.shared_client = Some(handle);
         self
     }
-    /// Enable response caching with a time-to-live.
+    /// Cache responses for `ttl` instead of for the handle's lifetime.
     pub fn cache(mut self, ttl: Duration) -> Self {
-        self.cache_ttl = Some(ttl);
+        self.cache_mode = CacheMode::Ttl(ttl);
+        self
+    }
+    /// Disable caching — every call fetches fresh data.
+    ///
+    /// By default a `Ticker` caches each response for as long as the handle
+    /// lives, so repeated accessor calls reuse one fetch.
+    pub fn no_cache(mut self) -> Self {
+        self.cache_mode = CacheMode::Off;
         self
     }
     /// Include company logo URLs in quote responses.
@@ -178,7 +186,7 @@ impl TickerBuilder {
         Ok(Ticker {
             symbol: self.symbol,
             providers,
-            cache_ttl: self.cache_ttl,
+            cache_mode: self.cache_mode,
             include_logo: self.include_logo,
             #[cfg(feature = "translation")]
             translate_lang,
@@ -199,12 +207,13 @@ impl TickerBuilder {
 
 /// The primary entry point for querying financial data for a single symbol.
 ///
-/// Data is fetched on first access and cached. Use the builder pattern
-/// via [`Ticker::builder`] for custom configuration.
+/// Data is fetched on first access and cached for the lifetime of the handle.
+/// Use the builder via [`Ticker::builder`] for custom configuration, including
+/// [`cache`](TickerBuilder::cache) and [`no_cache`](TickerBuilder::no_cache).
 pub struct Ticker {
     symbol: Arc<str>,
     providers: Arc<ProviderSet>,
-    cache_ttl: Option<Duration>,
+    cache_mode: CacheMode,
     include_logo: bool,
     #[cfg(feature = "translation")]
     translate_lang: Option<crate::translation::Lang>,
@@ -272,30 +281,16 @@ impl Ticker {
     }
 
     fn is_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
-        CacheEntry::is_fresh_with_ttl(entry, self.cache_ttl)
+        CacheEntry::is_fresh_entry(entry, self.cache_mode)
     }
 
-    /// Like `is_cache_fresh`, but works on the shared-cache pattern
-    /// where the entry is populated on first fetch.
-    /// When no TTL is configured, never treats entries as fresh.
-    fn is_shared_cache_fresh<T>(&self, entry: Option<&CacheEntry<T>>) -> bool {
-        match (self.cache_ttl, entry) {
-            (Some(ttl), Some(e)) => e.is_fresh(ttl),
-            _ => false,
-        }
-    }
     fn cache_insert<K: Eq + std::hash::Hash, V>(
         &self,
         map: &mut HashMap<K, CacheEntry<V>>,
         key: K,
         value: V,
     ) {
-        if let Some(ttl) = self.cache_ttl {
-            if map.len() >= EVICTION_THRESHOLD {
-                map.retain(|_, entry| entry.is_fresh(ttl));
-            }
-            map.insert(key, CacheEntry::new(value));
-        }
+        crate::utils::cache_insert(map, key, value, self.cache_mode);
     }
 
     /// Get full quote data, optionally including logo URLs.
@@ -359,7 +354,7 @@ impl Ticker {
             })
             .await?;
         let chart = Self::chart_from_provider_data(data, Some(interval), Some(range));
-        if self.cache_ttl.is_some() {
+        if self.cache_mode.enabled() {
             let mut cache = self.chart_cache.write().await;
             self.cache_insert(&mut cache, (interval, range), chart.clone());
         }
@@ -389,7 +384,7 @@ impl Ticker {
     async fn ensure_events(&self) -> Result<()> {
         {
             let cache = self.events_cache.read().await;
-            if self.is_shared_cache_fresh(cache.as_ref()) {
+            if self.is_cache_fresh(cache.as_ref()) {
                 return Ok(());
             }
         }
@@ -506,7 +501,7 @@ impl Ticker {
             self.translate_response(&mut news).await?;
             news
         };
-        if self.cache_ttl.is_some() {
+        if self.cache_mode.enabled() {
             let mut c = self.news_cache.write().await;
             *c = Some(CacheEntry::new(news.clone()));
         }
@@ -549,7 +544,7 @@ impl Ticker {
                 async move { p.fetch_options(&sym, date).await }
             })
             .await?;
-        if self.cache_ttl.is_some() {
+        if self.cache_mode.enabled() {
             let mut c = self.options_cache.write().await;
             self.cache_insert(&mut c, date, opts.clone());
         }
@@ -580,7 +575,7 @@ impl Ticker {
                 async move { p.fetch_financials(&sym, stmt_type, frequency).await }
             })
             .await?;
-        if self.cache_ttl.is_some() {
+        if self.cache_mode.enabled() {
             let mut c = self.financials_cache.write().await;
             self.cache_insert(&mut c, key, stmt.clone());
         }
@@ -604,7 +599,7 @@ impl Ticker {
         }
         let chart = self.chart(interval, range).await?;
         let ind = indicators::summary::calculate_indicators(&chart.candles);
-        if self.cache_ttl.is_some() {
+        if self.cache_mode.enabled() {
             let mut c = self.indicators_cache.write().await;
             self.cache_insert(&mut c, (interval, range), ind.clone());
         }
@@ -627,7 +622,7 @@ impl Ticker {
         }
         let cik = edgar::resolve_cik(&self.symbol).await?;
         let subs = edgar::submissions(cik).await?;
-        if self.cache_ttl.is_some() {
+        if self.cache_mode.enabled() {
             let mut c = self.edgar_submissions_cache.write().await;
             *c = Some(CacheEntry::new(subs.clone()));
         }
@@ -649,7 +644,7 @@ impl Ticker {
         }
         let cik = edgar::resolve_cik(&self.symbol).await?;
         let facts = edgar::company_facts(cik).await?;
-        if self.cache_ttl.is_some() {
+        if self.cache_mode.enabled() {
             let mut c = self.edgar_facts_cache.write().await;
             *c = Some(CacheEntry::new(facts.clone()));
         }
@@ -820,14 +815,14 @@ impl Ticker {
     ) -> Result<tokio::sync::RwLockReadGuard<'_, Option<CacheEntry<QuoteSummaryResponse>>>> {
         {
             let cache = self.quote_cache.read().await;
-            if self.is_shared_cache_fresh(cache.as_ref()) {
+            if self.is_cache_fresh(cache.as_ref()) {
                 return Ok(cache);
             }
         }
         let _guard = self.quote_fetch.lock().await;
         {
             let cache = self.quote_cache.read().await;
-            if self.is_shared_cache_fresh(cache.as_ref()) {
+            if self.is_cache_fresh(cache.as_ref()) {
                 return Ok(cache);
             }
         }
@@ -876,4 +871,92 @@ super::macros::define_quote_accessors! {
     industry_trend -> IndustryTrend, industry_trend,
     sector_trend -> SectorTrend, sector_trend,
     equity_performance -> EquityPerformance, equity_performance,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::providers::mock::{CountingProvider, provider_set};
+
+    #[tokio::test]
+    async fn default_caches_quote_across_accessors() {
+        let provider = CountingProvider::new();
+        let ticker = Ticker::builder("AAPL")
+            .with_provider_set(provider_set(Arc::clone(&provider)))
+            .build()
+            .await
+            .unwrap();
+
+        let _ = ticker.price().await.unwrap();
+        let _ = ticker.summary_detail().await.unwrap();
+        let _ = ticker.asset_profile().await.unwrap();
+
+        assert_eq!(provider.quotes(), 1);
+    }
+
+    #[tokio::test]
+    async fn no_cache_refetches_every_accessor() {
+        let provider = CountingProvider::new();
+        let ticker = Ticker::builder("AAPL")
+            .with_provider_set(provider_set(Arc::clone(&provider)))
+            .no_cache()
+            .build()
+            .await
+            .unwrap();
+
+        let _ = ticker.price().await.unwrap();
+        let _ = ticker.summary_detail().await.unwrap();
+        let _ = ticker.asset_profile().await.unwrap();
+
+        assert_eq!(provider.quotes(), 3);
+    }
+
+    #[tokio::test]
+    async fn charts_cache_per_interval_and_range() {
+        let provider = CountingProvider::new();
+        let ticker = Ticker::builder("AAPL")
+            .with_provider_set(provider_set(Arc::clone(&provider)))
+            .build()
+            .await
+            .unwrap();
+
+        let _ = ticker
+            .chart(Interval::OneDay, TimeRange::OneMonth)
+            .await
+            .unwrap();
+        let _ = ticker
+            .chart(Interval::OneDay, TimeRange::OneMonth)
+            .await
+            .unwrap();
+        assert_eq!(provider.charts(), 1);
+
+        let _ = ticker
+            .chart(Interval::OneDay, TimeRange::OneYear)
+            .await
+            .unwrap();
+        assert_eq!(provider.charts(), 2);
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn ttl_expires() {
+        let provider = CountingProvider::new();
+        let ticker = Ticker::builder("AAPL")
+            .with_provider_set(provider_set(Arc::clone(&provider)))
+            .cache(Duration::from_secs(60))
+            .build()
+            .await
+            .unwrap();
+
+        let _ = ticker
+            .chart(Interval::OneDay, TimeRange::OneMonth)
+            .await
+            .unwrap();
+        tokio::time::advance(Duration::from_secs(120)).await;
+        let _ = ticker
+            .chart(Interval::OneDay, TimeRange::OneMonth)
+            .await
+            .unwrap();
+
+        assert_eq!(provider.charts(), 2);
+    }
 }

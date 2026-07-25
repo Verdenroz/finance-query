@@ -51,14 +51,30 @@ impl Default for ClientConfig {
 ///
 /// This client handles authentication and provides methods to fetch data from Yahoo Finance.
 pub struct YahooClient {
-    /// Authentication data (crumb + HTTP client with cookies).
-    /// Immutable after construction — no lock needed.
+    /// Authentication data (crumb + HTTP client with cookies). The crumb is
+    /// swappable so an expired one can be refreshed without a new client.
     auth: YahooAuth,
     /// Client configuration
     config: ClientConfig,
 }
 
+/// A shared session outlives a single call, so an expired crumb would poison
+/// every later request — these are retried once after a refresh.
+fn is_auth_error(e: &FinanceError) -> bool {
+    matches!(e, FinanceError::AuthenticationFailed { .. })
+}
+
 impl YahooClient {
+    /// Refresh the crumb for a retry. If the refresh itself fails the session
+    /// is unrecoverable, so drop it and let the next caller build a fresh one.
+    async fn refresh_for_retry(&self) -> Result<()> {
+        if let Err(e) = self.auth.refresh().await {
+            super::session::invalidate(&self.config);
+            return Err(e);
+        }
+        Ok(())
+    }
+
     /// Check response status and return it if successful, or map the error code
     fn check_response(response: reqwest::Response) -> Result<reqwest::Response> {
         let status = response.status();
@@ -128,21 +144,27 @@ impl YahooClient {
     /// - Includes cookies via reqwest's cookie store
     /// - Sets proper headers
     pub async fn request_with_crumb(&self, url: &str) -> Result<reqwest::Response> {
-        let request = self
-            .auth
-            .http_client
-            .get(url)
-            .query(&[("crumb", &self.auth.crumb)]);
-
         debug!("Making request to {}", url);
 
-        // Send request
-        let response = request
-            .send()
-            .await
-            .map_err(|e| self.map_request_error(e))?;
+        let send = || async {
+            let response = self
+                .auth
+                .http_client
+                .get(url)
+                .query(&[("crumb", &*self.auth.crumb())])
+                .send()
+                .await
+                .map_err(|e| self.map_request_error(e))?;
+            Self::check_response(response)
+        };
 
-        Self::check_response(response)
+        match send().await {
+            Err(e) if is_auth_error(&e) => {
+                self.refresh_for_retry().await?;
+                send().await
+            }
+            other => other,
+        }
     }
 
     /// Get the client configuration
@@ -223,30 +245,38 @@ impl YahooClient {
         url: &str,
         body: &T,
     ) -> Result<reqwest::Response> {
-        // Build URL with crumb
-        let url_with_crumb = format!(
-            "{}{}crumb={}",
-            url,
-            if url.contains('?') { "&" } else { "?" },
-            self.auth.crumb
-        );
+        let send = || async {
+            let crumb = self.auth.crumb();
+            let url_with_crumb = format!(
+                "{}{}crumb={}",
+                url,
+                if url.contains('?') { "&" } else { "?" },
+                crumb
+            );
 
-        let request = self
-            .auth
-            .http_client
-            .post(&url_with_crumb)
-            .header("Content-Type", "application/json")
-            .header("x-crumb", &self.auth.crumb)
-            .json(body);
+            debug!("Making POST request to {}", url_with_crumb);
 
-        debug!("Making POST request to {}", url_with_crumb);
+            let response = self
+                .auth
+                .http_client
+                .post(&url_with_crumb)
+                .header("Content-Type", "application/json")
+                .header("x-crumb", &*crumb)
+                .json(body)
+                .send()
+                .await
+                .map_err(|e| self.map_request_error(e))?;
 
-        let response = request
-            .send()
-            .await
-            .map_err(|e| self.map_request_error(e))?;
+            Self::check_response(response)
+        };
 
-        Self::check_response(response)
+        match send().await {
+            Err(e) if is_auth_error(&e) => {
+                self.refresh_for_retry().await?;
+                send().await
+            }
+            other => other,
+        }
     }
 
     /// Make a GET request with query parameters and crumb authentication
@@ -255,24 +285,31 @@ impl YahooClient {
         url: &str,
         params: &T,
     ) -> Result<reqwest::Response> {
-        let request = self
-            .auth
-            .http_client
-            .get(url)
-            .query(&[("crumb", &self.auth.crumb)])
-            .query(params);
-
         debug!(
             "Making request to {} (lang={}, region={})",
             url, self.config.lang, self.config.region
         );
 
-        let response = request
-            .send()
-            .await
-            .map_err(|e| self.map_request_error(e))?;
+        let send = || async {
+            let response = self
+                .auth
+                .http_client
+                .get(url)
+                .query(&[("crumb", &*self.auth.crumb())])
+                .query(params)
+                .send()
+                .await
+                .map_err(|e| self.map_request_error(e))?;
+            Self::check_response(response)
+        };
 
-        Self::check_response(response)
+        match send().await {
+            Err(e) if is_auth_error(&e) => {
+                self.refresh_for_retry().await?;
+                send().await
+            }
+            other => other,
+        }
     }
 
     /// Fetch batch quotes for multiple symbols

@@ -10,27 +10,26 @@
 // ── Caching ─────────────────────────────────────────────────────────
 
 use crate::error::Result;
-use crate::utils::CacheEntry;
+use crate::utils::{CacheEntry, CacheMode};
 use std::collections::HashMap;
-use std::time::Duration;
 use tokio::sync::{Mutex, RwLock};
 
-/// Optional per-handle response cache with request deduplication.
+/// Per-handle response cache with request deduplication.
 ///
 /// Keyed by a `String` so a handle can cache multiple variants (e.g. a
 /// crypto coin priced in different `vs_currency` values); single-result
-/// handles use the empty string. When no TTL is configured (the default),
-/// every call fetches fresh — preserving the stateless behavior.
+/// handles use the empty string. Caches for the handle's lifetime by
+/// default; `.cache(ttl)` bounds that and `.no_cache()` disables it.
 pub(crate) struct DomainCache<V> {
-    ttl: Option<Duration>,
+    mode: CacheMode,
     entries: RwLock<HashMap<String, CacheEntry<V>>>,
     guard: Mutex<()>,
 }
 
 impl<V: Clone> DomainCache<V> {
-    pub(crate) fn new(ttl: Option<Duration>) -> Self {
+    pub(crate) fn new(mode: CacheMode) -> Self {
         Self {
-            ttl,
+            mode,
             entries: RwLock::new(HashMap::new()),
             guard: Mutex::new(()),
         }
@@ -43,12 +42,12 @@ impl<V: Clone> DomainCache<V> {
         F: FnOnce() -> Fut,
         Fut: std::future::Future<Output = Result<V>>,
     {
-        let Some(ttl) = self.ttl else {
+        if !self.mode.enabled() {
             return f().await;
-        };
+        }
 
         if let Some(entry) = self.entries.read().await.get(&key)
-            && entry.is_fresh(ttl)
+            && entry.is_fresh(self.mode)
         {
             return Ok(entry.value.clone());
         }
@@ -56,7 +55,7 @@ impl<V: Clone> DomainCache<V> {
         // Dedup: hold the guard so concurrent identical misses don't all fetch.
         let _g = self.guard.lock().await;
         if let Some(entry) = self.entries.read().await.get(&key)
-            && entry.is_fresh(ttl)
+            && entry.is_fresh(self.mode)
         {
             return Ok(entry.value.clone());
         }
@@ -94,16 +93,25 @@ macro_rules! domain_handle {
                 Self {
                     $field,
                     providers,
-                    cache: crate::domains::DomainCache::new(None),
-                    chart_cache: crate::domains::DomainCache::new(None),
+                    cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
+                    chart_cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
                 }
             }
 
-            /// Cache responses for `ttl`, deduplicating concurrent identical
-            /// requests. Off by default (each call fetches fresh).
+            /// Cache responses for `ttl` instead of for the handle's lifetime,
+            /// deduplicating concurrent identical requests.
             pub fn cache(mut self, ttl: std::time::Duration) -> Self {
-                self.cache = crate::domains::DomainCache::new(Some(ttl));
-                self.chart_cache = crate::domains::DomainCache::new(Some(ttl));
+                let mode = crate::utils::CacheMode::Ttl(ttl);
+                self.cache = crate::domains::DomainCache::new(mode);
+                self.chart_cache = crate::domains::DomainCache::new(mode);
+                self
+            }
+
+            /// Disable caching — every call fetches fresh data.
+            pub fn no_cache(mut self) -> Self {
+                let mode = crate::utils::CacheMode::Off;
+                self.cache = crate::domains::DomainCache::new(mode);
+                self.chart_cache = crate::domains::DomainCache::new(mode);
                 self
             }
 
@@ -142,16 +150,25 @@ macro_rules! domain_handle {
                     $field1,
                     $field2,
                     providers,
-                    cache: crate::domains::DomainCache::new(None),
-                    chart_cache: crate::domains::DomainCache::new(None),
+                    cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
+                    chart_cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
                 }
             }
 
-            /// Cache responses for `ttl`, deduplicating concurrent identical
-            /// requests. Off by default (each call fetches fresh).
+            /// Cache responses for `ttl` instead of for the handle's lifetime,
+            /// deduplicating concurrent identical requests.
             pub fn cache(mut self, ttl: std::time::Duration) -> Self {
-                self.cache = crate::domains::DomainCache::new(Some(ttl));
-                self.chart_cache = crate::domains::DomainCache::new(Some(ttl));
+                let mode = crate::utils::CacheMode::Ttl(ttl);
+                self.cache = crate::domains::DomainCache::new(mode);
+                self.chart_cache = crate::domains::DomainCache::new(mode);
+                self
+            }
+
+            /// Disable caching — every call fetches fresh data.
+            pub fn no_cache(mut self) -> Self {
+                let mode = crate::utils::CacheMode::Off;
+                self.cache = crate::domains::DomainCache::new(mode);
+                self.chart_cache = crate::domains::DomainCache::new(mode);
                 self
             }
 
@@ -184,14 +201,20 @@ macro_rules! domain_handle {
                 Self {
                     $field,
                     providers,
-                    cache: crate::domains::DomainCache::new(None),
+                    cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
                 }
             }
 
-            /// Cache responses for `ttl`, deduplicating concurrent identical
-            /// requests. Off by default (each call fetches fresh).
+            /// Cache responses for `ttl` instead of for the handle's lifetime,
+            /// deduplicating concurrent identical requests.
             pub fn cache(mut self, ttl: std::time::Duration) -> Self {
-                self.cache = crate::domains::DomainCache::new(Some(ttl));
+                self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Ttl(ttl));
+                self
+            }
+
+            /// Disable caching — every call fetches fresh data.
+            pub fn no_cache(mut self) -> Self {
+                self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Off);
                 self
             }
 
@@ -402,6 +425,7 @@ mod tests {
     use crate::error::FinanceError;
     use std::sync::Arc;
     use std::sync::atomic::{AtomicUsize, Ordering};
+    use std::time::Duration;
 
     fn err() -> FinanceError {
         FinanceError::NoProviderAvailable {
@@ -411,8 +435,26 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn no_ttl_fetches_every_call() {
-        let cache: DomainCache<u32> = DomainCache::new(None);
+    async fn default_caches_across_calls() {
+        let cache: DomainCache<u32> = DomainCache::new(CacheMode::default());
+        let calls = Arc::new(AtomicUsize::new(0));
+        for _ in 0..3 {
+            let c = calls.clone();
+            let v = cache
+                .get_or_try(String::new(), move || async move {
+                    c.fetch_add(1, Ordering::SeqCst);
+                    Ok::<u32, FinanceError>(42)
+                })
+                .await
+                .unwrap();
+            assert_eq!(v, 42);
+        }
+        assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn off_fetches_every_call() {
+        let cache: DomainCache<u32> = DomainCache::new(CacheMode::Off);
         let calls = Arc::new(AtomicUsize::new(0));
         for _ in 0..3 {
             let c = calls.clone();
@@ -430,7 +472,7 @@ mod tests {
 
     #[tokio::test]
     async fn ttl_caches_within_window() {
-        let cache: DomainCache<u32> = DomainCache::new(Some(Duration::from_secs(60)));
+        let cache: DomainCache<u32> = DomainCache::new(CacheMode::Ttl(Duration::from_secs(60)));
         let calls = Arc::new(AtomicUsize::new(0));
         for _ in 0..3 {
             let c = calls.clone();
@@ -448,7 +490,7 @@ mod tests {
 
     #[tokio::test]
     async fn distinct_keys_cached_separately() {
-        let cache: DomainCache<String> = DomainCache::new(Some(Duration::from_secs(60)));
+        let cache: DomainCache<String> = DomainCache::new(CacheMode::Ttl(Duration::from_secs(60)));
         let calls = Arc::new(AtomicUsize::new(0));
         for key in ["usd", "eur", "usd", "eur"] {
             let c = calls.clone();
@@ -467,7 +509,7 @@ mod tests {
 
     #[tokio::test]
     async fn errors_are_not_cached() {
-        let cache: DomainCache<u32> = DomainCache::new(Some(Duration::from_secs(60)));
+        let cache: DomainCache<u32> = DomainCache::new(CacheMode::Ttl(Duration::from_secs(60)));
         let calls = Arc::new(AtomicUsize::new(0));
 
         let c = calls.clone();
@@ -494,7 +536,7 @@ mod tests {
     #[tokio::test]
     async fn concurrent_misses_dedup_to_one_fetch() {
         let cache: Arc<DomainCache<u32>> =
-            Arc::new(DomainCache::new(Some(Duration::from_secs(60))));
+            Arc::new(DomainCache::new(CacheMode::Ttl(Duration::from_secs(60))));
         let calls = Arc::new(AtomicUsize::new(0));
         let mut handles = Vec::new();
         for _ in 0..8 {

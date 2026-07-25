@@ -214,7 +214,7 @@ macro_rules! batch_fetch_cached {
         }
 
         // Cache insert
-        if $self.cache_ttl.is_some() {
+        if $self.cache_mode.enabled() {
             let mut cache = $self.$cache_field.write().await;
             for (sym, value) in &parsed {
                 $self.cache_insert(&mut cache, cache_key_fn(sym), value.clone());
