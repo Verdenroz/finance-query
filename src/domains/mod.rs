@@ -12,6 +12,7 @@
 use crate::error::Result;
 use crate::utils::{CacheEntry, CacheMode};
 use std::collections::HashMap;
+use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 
 /// Per-handle response cache with request deduplication.
@@ -23,7 +24,7 @@ use tokio::sync::{Mutex, RwLock};
 pub(crate) struct DomainCache<V> {
     mode: CacheMode,
     entries: RwLock<HashMap<String, CacheEntry<V>>>,
-    guard: Mutex<()>,
+    guards: RwLock<HashMap<String, Arc<Mutex<()>>>>,
 }
 
 impl<V: Clone> DomainCache<V> {
@@ -31,7 +32,7 @@ impl<V: Clone> DomainCache<V> {
         Self {
             mode,
             entries: RwLock::new(HashMap::new()),
-            guard: Mutex::new(()),
+            guards: RwLock::new(HashMap::new()),
         }
     }
 
@@ -52,20 +53,35 @@ impl<V: Clone> DomainCache<V> {
             return Ok(entry.value.clone());
         }
 
-        // Dedup: hold the guard so concurrent identical misses don't all fetch.
-        let _g = self.guard.lock().await;
-        if let Some(entry) = self.entries.read().await.get(&key)
-            && entry.is_fresh(self.mode)
-        {
-            return Ok(entry.value.clone());
-        }
+        // Dedup: hold a per-key guard so concurrent identical misses don't all
+        // fetch, while misses on different keys proceed in parallel.
+        let guard = {
+            let mut g = self.guards.write().await;
+            Arc::clone(g.entry(key.clone()).or_default())
+        };
+        let _g = guard.lock().await;
+        let result = async {
+            if let Some(entry) = self.entries.read().await.get(&key)
+                && entry.is_fresh(self.mode)
+            {
+                return Ok(entry.value.clone());
+            }
 
-        let value = f().await?;
-        self.entries
-            .write()
-            .await
-            .insert(key, CacheEntry::new(value.clone()));
-        Ok(value)
+            let value = f().await?;
+            self.entries
+                .write()
+                .await
+                .insert(key.clone(), CacheEntry::new(value.clone()));
+            Ok(value)
+        }
+        .await;
+
+        // Drop the guard entry on every exit, not just the success path — under
+        // `Ttl`, repeated expiry or error cycles would otherwise accumulate one
+        // `Arc<Mutex<_>>` per key that is never reclaimed.
+        drop(_g);
+        self.guards.write().await.remove(&key);
+        result
     }
 }
 
@@ -557,5 +573,32 @@ mod tests {
             assert_eq!(h.await.unwrap(), 1);
         }
         assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn distinct_keys_do_not_serialize() {
+        let cache: Arc<DomainCache<u32>> = Arc::new(DomainCache::new(CacheMode::default()));
+        let mut handles = Vec::new();
+        for k in ["a", "b", "c", "d"] {
+            let cache = Arc::clone(&cache);
+            handles.push(tokio::spawn(async move {
+                cache
+                    .get_or_try(k.to_string(), || async {
+                        tokio::time::sleep(Duration::from_millis(80)).await;
+                        Ok::<u32, FinanceError>(1)
+                    })
+                    .await
+                    .unwrap()
+            }));
+        }
+        let start = tokio::time::Instant::now();
+        for h in handles {
+            assert_eq!(h.await.unwrap(), 1);
+        }
+        assert!(
+            start.elapsed() < Duration::from_millis(200),
+            "four distinct keys took {:?}; they are serializing",
+            start.elapsed()
+        );
     }
 }

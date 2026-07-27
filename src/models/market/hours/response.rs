@@ -120,8 +120,8 @@ impl MarketHours {
     ///
     /// Converts the nested Yahoo Finance response structure into a clean,
     /// user-friendly format.
-    pub(crate) fn from_response(raw: &serde_json::Value) -> Result<Self, String> {
-        let raw_response: RawHoursResponse = serde_json::from_value(raw.clone())
+    pub(crate) fn from_response(raw: serde_json::Value) -> Result<Self, String> {
+        let raw_response: RawHoursResponse = serde_json::from_value(raw)
             .map_err(|e| format!("Failed to parse hours response: {}", e))?;
 
         let mut markets = Vec::new();

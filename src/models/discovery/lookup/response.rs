@@ -63,8 +63,16 @@ impl LookupResults {
     /// # Ok::<(), serde_json::Error>(())
     /// ```
     pub fn from_json(value: serde_json::Value) -> Result<Self, serde_json::Error> {
-        let raw: RawLookupResponse = serde_json::from_value(value)?;
+        Ok(Self::from_raw(serde_json::from_value(value)?))
+    }
 
+    /// Same reshape as [`from_json`](Self::from_json), straight from the raw
+    /// response body — no `serde_json::Value` tree in between.
+    pub(crate) fn from_slice(bytes: &[u8]) -> Result<Self, serde_json::Error> {
+        Ok(Self::from_raw(serde_json::from_slice(bytes)?))
+    }
+
+    fn from_raw(raw: RawLookupResponse) -> Self {
         let (quotes, start, count) = raw
             .finance
             .and_then(|f| f.result)
@@ -78,11 +86,11 @@ impl LookupResults {
             })
             .unwrap_or_default();
 
-        Ok(LookupResults {
+        LookupResults {
             quotes,
             start,
             count,
-        })
+        }
     }
 
     /// Get all quote results

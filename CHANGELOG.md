@@ -7,12 +7,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+
+- `TrailingStop` and `TrailingTakeProfit` (`backtesting::condition`) no longer
+  implement `Copy`, and both gained a private field. They still implement
+  `Clone`. Code that relied on implicit copies (`let a = ts; use(ts);`) or on
+  struct-literal construction must be updated. Both now carry a per-position
+  running peak/trough cache, which is what removed the O(bars²) rescan from
+  trailing-stop backtests.
+- `Ticker`, `Tickers`, and the domain handles cache responses by default for the
+  lifetime of the handle. Previously caching was off unless `.cache(ttl)` was
+  set, so every accessor refetched — which contradicted the documentation. Call
+  `.no_cache()` for the old behavior.
+- `BacktestEngine::run` and `run_with_dividends` now reject candles that are not
+  sorted ascending by timestamp, with the same `InvalidParameter` error already
+  used for unsorted dividends. Conditions binary-search the candle slice, so an
+  unsorted series previously produced a silently wrong entry index.
+
 ### Changed
 
-- `Ticker`, `Tickers`, and the domain handles now cache responses by default
-  for the lifetime of the handle. Previously caching was off unless
-  `.cache(ttl)` was set, so every accessor refetched — which contradicted the
-  documentation. Call `.no_cache()` for the old behavior.
 - Yahoo sessions are now shared per tokio runtime and client configuration.
   The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
   authenticated session instead of running a fresh cookie + crumb handshake per
@@ -24,7 +37,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   on the domain handles.
 - Automatic crumb refresh: a request that fails authentication re-runs the
   Yahoo handshake once and retries. If the refresh itself fails, the shared
-  session is dropped so the next caller builds a fresh one.
+  session is dropped so the next caller builds a fresh one. HTTP 403 is treated
+  as an authentication failure alongside 401, since Yahoo uses both for a stale
+  crumb.
+
+### Fixed
+
+- `vwma` is computed with rolling sums instead of rescanning the window each
+  bar. Results may differ from previous releases in the last few significant
+  digits; a window whose volumes span extreme magnitudes is now rebuilt rather
+  than returning a value derived from a cancelled-out denominator.
+- A batch quote response whose `result` array contains a non-object element now
+  fails that batch instead of yielding an all-empty quote for it.
 
 ## [2.8.0] - 2026-07-10
 

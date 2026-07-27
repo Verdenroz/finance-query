@@ -87,8 +87,11 @@ impl YahooClient {
     /// HTTP error mapping
     fn map_http_status(status: u16) -> FinanceError {
         match status {
-            401 => FinanceError::AuthenticationFailed {
-                context: "HTTP 401 Unauthorized".to_string(),
+            // Yahoo rejects a stale crumb with either status. Both must map to
+            // `AuthenticationFailed` so the shared session refreshes instead of
+            // failing every later caller on it.
+            401 | 403 => FinanceError::AuthenticationFailed {
+                context: format!("HTTP {status}"),
             },
             404 => FinanceError::SymbolNotFound {
                 symbol: None,
@@ -559,10 +562,9 @@ impl YahooClient {
         query: &str,
         options: &crate::adapters::yahoo::discovery::search::SearchOptions,
     ) -> Result<crate::models::discovery::search::SearchResults> {
-        let json = crate::adapters::yahoo::discovery::search::fetch(self, query, options).await?;
-        Ok(crate::models::discovery::search::SearchResults::from_json(
-            json,
-        )?)
+        let bytes =
+            crate::adapters::yahoo::discovery::search::fetch_bytes(self, query, options).await?;
+        Ok(serde_json::from_slice(&bytes)?)
     }
 
     /// Look up symbols by type (equity, ETF, index, etc.)
@@ -593,10 +595,7 @@ impl YahooClient {
         query: &str,
         options: &crate::adapters::yahoo::discovery::lookup::LookupOptions,
     ) -> Result<crate::models::discovery::lookup::LookupResults> {
-        let json = crate::adapters::yahoo::discovery::lookup::fetch(self, query, options).await?;
-        Ok(crate::models::discovery::lookup::LookupResults::from_json(
-            json,
-        )?)
+        crate::adapters::yahoo::discovery::lookup::fetch_results(self, query, options).await
     }
 
     /// Get recommended/similar quotes for a symbol
@@ -702,7 +701,7 @@ impl YahooClient {
         let json: serde_json::Value = response.json().await?;
 
         crate::models::fundamentals::FinancialStatement::from_response(
-            &json,
+            json,
             symbol,
             statement_type,
             frequency,
@@ -864,7 +863,7 @@ impl YahooClient {
         let url = crate::adapters::yahoo::endpoints::builders::screener(screener_type, count);
         let response = self.request_with_crumb(&url).await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::discovery::screeners::ScreenerResults::from_response(&json).map_err(|e| {
+        crate::models::discovery::screeners::ScreenerResults::from_response(json).map_err(|e| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "screeners".to_string(),
                 context: e,
@@ -905,7 +904,7 @@ impl YahooClient {
         let url = crate::adapters::yahoo::endpoints::builders::custom_screener();
         let response = self.request_post_with_crumb(&url, &query).await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::discovery::screeners::ScreenerResults::from_custom_response(&json).map_err(
+        crate::models::discovery::screeners::ScreenerResults::from_custom_response(json).map_err(
             |e| crate::error::FinanceError::ResponseStructureError {
                 field: "custom_screener".to_string(),
                 context: e,
@@ -944,7 +943,7 @@ impl YahooClient {
         let url = crate::adapters::yahoo::endpoints::builders::sector(sector_type.as_api_path());
         let response = self.request_with_crumb(&url).await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::market::sectors::SectorData::from_response(&json).map_err(|e| {
+        crate::models::market::sectors::SectorData::from_response(json).map_err(|e| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "sector".to_string(),
                 context: e,
@@ -982,7 +981,7 @@ impl YahooClient {
         let url = crate::adapters::yahoo::endpoints::builders::industry(industry_key);
         let response = self.request_with_crumb(&url).await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::market::industries::IndustryData::from_response(&json).map_err(|e| {
+        crate::models::market::industries::IndustryData::from_response(json).map_err(|e| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "industry".to_string(),
                 context: e,
@@ -1026,7 +1025,7 @@ impl YahooClient {
             .request_with_params(crate::adapters::yahoo::endpoints::api::MARKET_TIME, &params)
             .await?;
         let json: serde_json::Value = response.json().await?;
-        crate::models::market::hours::MarketHours::from_response(&json).map_err(|e| {
+        crate::models::market::hours::MarketHours::from_response(json).map_err(|e| {
             crate::error::FinanceError::ResponseStructureError {
                 field: "hours".to_string(),
                 context: e,
@@ -1154,6 +1153,25 @@ impl YahooClient {
 
 #[cfg(test)]
 mod tests {
+
+    #[test]
+    fn stale_crumb_statuses_map_to_auth_failure() {
+        // Both must be retryable: the session is shared and long-lived, so a
+        // status that does not trigger a crumb refresh poisons every caller.
+        for status in [401u16, 403] {
+            assert!(
+                matches!(
+                    YahooClient::map_http_status(status),
+                    FinanceError::AuthenticationFailed { .. }
+                ),
+                "HTTP {status} should be an auth failure"
+            );
+        }
+        assert!(matches!(
+            YahooClient::map_http_status(404),
+            FinanceError::SymbolNotFound { .. }
+        ));
+    }
     use super::*;
 
     #[tokio::test]

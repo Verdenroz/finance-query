@@ -51,7 +51,13 @@ pub(crate) async fn get_or_auth(config: &ClientConfig) -> Result<Arc<YahooClient
 
     let mut map = sessions().lock().unwrap();
     if map.len() >= SESSION_CAP {
-        map.clear();
+        // Drop only sessions nobody else holds — clearing the whole map would
+        // force every live runtime to redo the cookie + crumb handshake, which
+        // is the cost this cache exists to avoid.
+        map.retain(|_, c| Arc::strong_count(c) > 1);
+        if map.len() >= SESSION_CAP {
+            map.clear();
+        }
     }
     // A concurrent caller may have inserted while we authenticated; prefer
     // theirs so every caller on this runtime shares one session.

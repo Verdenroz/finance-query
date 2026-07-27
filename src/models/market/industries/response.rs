@@ -345,9 +345,8 @@ pub struct ResearchReport {
 
 impl IndustryData {
     /// Parse from Yahoo Finance JSON response
-    pub(crate) fn from_response(json: &serde_json::Value) -> Result<Self, String> {
-        let raw: RawIndustryResponse =
-            serde_json::from_value(json.clone()).map_err(|e| e.to_string())?;
+    pub(crate) fn from_response(json: serde_json::Value) -> Result<Self, String> {
+        let raw: RawIndustryResponse = serde_json::from_value(json).map_err(|e| e.to_string())?;
 
         let data = raw.data;
 

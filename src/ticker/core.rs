@@ -1,10 +1,10 @@
 //! Symbol-specific data access from multiple providers.
 
+use crate::adapters::edgar;
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 #[cfg(feature = "backtesting")]
 use crate::backtesting;
 use crate::constants::{Frequency, Interval, Region, StatementType, TimeRange};
-use crate::edgar;
 use crate::error::{FinanceError, Result};
 use crate::format::Both;
 #[cfg(any(feature = "backtesting", feature = "indicators"))]
@@ -195,6 +195,7 @@ impl TickerBuilder {
             chart_cache: Default::default(),
             events_cache: Default::default(),
             news_cache: Default::default(),
+            logo_cache: Default::default(),
             options_cache: Default::default(),
             financials_cache: Default::default(),
             #[cfg(feature = "indicators")]
@@ -222,6 +223,7 @@ pub struct Ticker {
     chart_cache: MapCache<(Interval, TimeRange), Chart>,
     events_cache: Cache<ChartEvents>,
     news_cache: Cache<Vec<News>>,
+    logo_cache: Cache<(Option<String>, Option<String>)>,
     options_cache: MapCache<Option<i64>, Options>,
     financials_cache: MapCache<(StatementType, Frequency), FinancialStatement>,
     #[cfg(feature = "indicators")]
@@ -299,20 +301,33 @@ impl Ticker {
         F: Format,
         Quote<Both>: Into<Quote<F>>,
     {
-        let cache = self.ensure_quote().await?;
+        let logo_fut = async {
+            if !self.include_logo {
+                return (None, None);
+            }
+            if let Some(e) = self.logo_cache.read().await.as_ref()
+                && self.is_cache_fresh(Some(e))
+            {
+                return e.value.clone();
+            }
+            let fetched = match self.providers.first_yahoo() {
+                Ok(y) => y.get_logo_url(&self.symbol).await,
+                Err(_) => (None, None),
+            };
+            // `get_logo_url` swallows transport errors into `(None, None)`, so
+            // caching that would make one blip permanent for the handle's life.
+            let resolved = fetched.0.is_some() || fetched.1.is_some();
+            if resolved && self.cache_mode.enabled() {
+                *self.logo_cache.write().await = Some(CacheEntry::new(fetched.clone()));
+            }
+            fetched
+        };
+
+        let (cache, (logo_url, company_logo_url)) = tokio::join!(self.ensure_quote(), logo_fut);
+        let cache = cache?;
         let summary = cache.as_ref().ok_or_else(|| {
             FinanceError::ApiError("Quote summary cache was empty after fetch".to_string())
         })?;
-        let (logo_url, company_logo_url) = if self.include_logo {
-            if let Ok(yahoo) = self.providers.first_yahoo() {
-                let logos = yahoo.get_logo_url(&self.symbol).await;
-                (logos.0, logos.1)
-            } else {
-                (None, None)
-            }
-        } else {
-            (None, None)
-        };
         let quote = Quote::from_response(&summary.value, logo_url, company_logo_url);
         #[cfg(feature = "translation")]
         let quote = {
@@ -620,8 +635,7 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let cik = edgar::resolve_cik(&self.symbol).await?;
-        let subs = edgar::submissions(cik).await?;
+        let subs = edgar::submissions_for_symbol(&self.symbol).await?;
         if self.cache_mode.enabled() {
             let mut c = self.edgar_submissions_cache.write().await;
             *c = Some(CacheEntry::new(subs.clone()));
@@ -642,8 +656,7 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let cik = edgar::resolve_cik(&self.symbol).await?;
-        let facts = edgar::company_facts(cik).await?;
+        let facts = edgar::company_facts_for_symbol(&self.symbol).await?;
         if self.cache_mode.enabled() {
             let mut c = self.edgar_facts_cache.write().await;
             *c = Some(CacheEntry::new(facts.clone()));
@@ -693,11 +706,11 @@ impl Ticker {
     ) -> backtesting::Result<backtesting::BacktestResult> {
         let config = config.unwrap_or_default();
         config.validate()?;
-        let chart = self
-            .chart(interval, range)
-            .await
-            .map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
-        let dividends = self.dividends(range).await.unwrap_or_default();
+        // Chart and dividends hit disjoint caches and disjoint capabilities
+        // (CHART vs CORPORATE), so neither warms the other.
+        let (chart, dividends) = tokio::join!(self.chart(interval, range), self.dividends(range));
+        let chart = chart.map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
+        let dividends = dividends.unwrap_or_default();
         backtesting::BacktestEngine::new(config).run_with_dividends(
             &self.symbol,
             &chart.candles,
@@ -718,15 +731,22 @@ impl Ticker {
     ) -> backtesting::Result<backtesting::BacktestResult> {
         let config = config.unwrap_or_default();
         config.validate()?;
-        let bench_ticker = Ticker::new(benchmark)
-            .await
-            .map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
-        let (chart, bench_chart) = tokio::try_join!(
+        let bench_fut = async {
+            let bench_ticker = Ticker::new(benchmark).await?;
+            bench_ticker.chart(interval, range).await
+        };
+        // `join!`, not `try_join!`: both charts are awaited to completion and the
+        // errors resolved in a fixed order, so the surfaced error is always the
+        // primary symbol's rather than whichever future happened to fail first.
+        let (chart, bench_chart, dividends) = tokio::join!(
             self.chart(interval, range),
-            bench_ticker.chart(interval, range)
-        )
-        .map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
-        let dividends = self.dividends(range).await.unwrap_or_default();
+            bench_fut,
+            self.dividends(range)
+        );
+        let chart = chart.map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
+        let bench_chart =
+            bench_chart.map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
+        let dividends = dividends.unwrap_or_default();
         backtesting::BacktestEngine::new(config).run_with_benchmark(
             &self.symbol,
             &chart.candles,
@@ -745,15 +765,20 @@ impl Ticker {
         range: TimeRange,
         benchmark: Option<&str>,
     ) -> Result<risk::RiskSummary> {
-        let chart = self.chart(interval, range).await?;
-        let bench_returns = if let Some(sym) = benchmark {
+        let bench_fut = async {
+            let Some(sym) = benchmark else {
+                return Result::Ok(None);
+            };
             let bt = Ticker::new(sym).await?;
-            Some(risk::candles_to_returns(
-                &bt.chart(interval, range).await?.candles,
-            ))
-        } else {
-            None
+            let bench_chart = bt.chart(interval, range).await?;
+            Result::Ok(Some(risk::candles_to_returns(&bench_chart.candles)))
         };
+        // `join!`, not `try_join!`: resolving in a fixed order keeps the primary
+        // symbol's error as the surfaced one, matching the previous sequential
+        // `self.chart(..).await?` ordering.
+        let (chart, bench_returns) = tokio::join!(self.chart(interval, range), bench_fut);
+        let chart = chart?;
+        let bench_returns = bench_returns?;
         Ok(risk::compute_risk_summary(
             &chart.candles,
             bench_returns.as_deref(),
@@ -935,6 +960,23 @@ mod tests {
             .await
             .unwrap();
         assert_eq!(provider.charts(), 2);
+    }
+
+    #[tokio::test]
+    async fn unresolved_logo_is_not_cached() {
+        let provider = CountingProvider::new();
+        let ticker = Ticker::builder("AAPL")
+            .with_provider_set(provider_set(Arc::clone(&provider)))
+            .logo()
+            .build()
+            .await
+            .unwrap();
+
+        let _: Quote<crate::format::Raw> = ticker.quote().await.unwrap();
+        assert!(
+            ticker.logo_cache.read().await.is_none(),
+            "an unresolved logo must not be cached, or one blip is permanent"
+        );
     }
 
     #[tokio::test(start_paused = true)]

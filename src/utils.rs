@@ -103,12 +103,20 @@ fn evict<K: Eq + Hash, V>(map: &mut HashMap<K, CacheEntry<V>>, mode: CacheMode) 
     if map.len() < EVICTION_THRESHOLD {
         return;
     }
-    // Lifetime entries never go stale, so fall back to dropping the older half
-    // by fetch time — halving amortizes the O(n) sort across many inserts.
+    // Lifetime entries never go stale, so fall back to keeping the newest half by
+    // fetch time. The survivor budget is a count, not just a timestamp cutoff:
+    // a coarse or paused clock gives every entry the same `Instant`, and a pure
+    // cutoff comparison would then retain all of them and never evict.
+    let keep = EVICTION_THRESHOLD / 2;
     let mut times: Vec<Instant> = map.values().map(|e| e.fetched_at).collect();
     times.sort_unstable();
-    let cutoff = times[times.len() / 2];
-    map.retain(|_, entry| entry.fetched_at >= cutoff);
+    let cutoff = times[times.len() - keep];
+    let mut kept = 0usize;
+    map.retain(|_, entry| {
+        let survives = entry.fetched_at >= cutoff && kept < keep;
+        kept += usize::from(survives);
+        survives
+    });
 }
 
 /// Trait for types with a timestamp field
@@ -228,6 +236,23 @@ mod tests {
         let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
         cache_insert(&mut map, 1, 1, CacheMode::Off);
         assert!(map.is_empty());
+    }
+
+    #[tokio::test(start_paused = true)]
+    async fn eviction_survives_a_frozen_clock() {
+        // Under `tokio::time::pause` every entry shares one `Instant`. A pure
+        // timestamp cutoff would retain all of them, so the cap must be enforced
+        // by count as well.
+        let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
+        for i in 0..500u32 {
+            cache_insert(&mut map, i, i, CacheMode::Lifetime);
+        }
+        assert!(
+            map.len() <= EVICTION_THRESHOLD,
+            "cache grew to {} with a frozen clock",
+            map.len()
+        );
+        assert!(map.contains_key(&499), "newest entry must survive");
     }
 
     #[test]

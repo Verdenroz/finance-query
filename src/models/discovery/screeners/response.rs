@@ -99,9 +99,9 @@ impl ScreenerResults {
     /// # Errors
     ///
     /// Returns an error if the response contains no screener data.
-    pub(crate) fn from_response(raw: &serde_json::Value) -> Result<Self, String> {
+    pub(crate) fn from_response(raw: serde_json::Value) -> Result<Self, String> {
         // Deserialize the raw response
-        let raw_response: RawScreenersResponse = serde_json::from_value(raw.clone())
+        let raw_response: RawScreenersResponse = serde_json::from_value(raw)
             .map_err(|e| format!("Failed to parse screener response: {}", e))?;
 
         // Extract the first result
@@ -129,9 +129,9 @@ impl ScreenerResults {
     /// # Errors
     ///
     /// Returns an error if the response contains no screener data or has an error.
-    pub(crate) fn from_custom_response(raw: &serde_json::Value) -> Result<Self, String> {
+    pub(crate) fn from_custom_response(raw: serde_json::Value) -> Result<Self, String> {
         // Deserialize the raw response
-        let raw_response: RawCustomScreenerResponse = serde_json::from_value(raw.clone())
+        let raw_response: RawCustomScreenerResponse = serde_json::from_value(raw)
             .map_err(|e| format!("Failed to parse custom screener response: {}", e))?;
 
         // Check for error
@@ -146,14 +146,15 @@ impl ScreenerResults {
             .ok_or_else(|| "No result in response".to_string())?;
 
         let result = results
-            .first()
+            .into_iter()
+            .next()
             .ok_or_else(|| "No screener data in response".to_string())?;
 
         // Convert records to ScreenerQuote using a custom mapping
         // Custom screener returns flat records that need field mapping
         let quotes: Vec<ScreenerQuote> = result
             .records
-            .iter()
+            .into_iter()
             .filter_map(|record| map_custom_record_to_quote(record).ok())
             .collect();
 
@@ -180,21 +181,26 @@ impl ScreenerResults {
     }
 }
 
-fn map_custom_record_to_quote(record: &serde_json::Value) -> Result<ScreenerQuote, String> {
+fn map_custom_record_to_quote(record: serde_json::Value) -> Result<ScreenerQuote, String> {
     use crate::models::quote::FormattedValue;
 
-    // Helper to extract FormattedValue from Yahoo's format
+    let mut record = match record {
+        serde_json::Value::Object(map) => map,
+        _ => return Err("Record is not an object".to_string()),
+    };
+
+    // Helper to extract FormattedValue from Yahoo's format, taking ownership of the field
     fn extract_formatted<T: serde::de::DeserializeOwned + Default>(
-        record: &serde_json::Value,
+        record: &mut serde_json::Map<String, serde_json::Value>,
         field: &str,
     ) -> Option<FormattedValue<T>> {
-        record.get(field).and_then(|v| {
+        record.remove(field).and_then(|v| {
             // Custom screener returns {raw, fmt} or just a value
             if v.is_object() {
-                serde_json::from_value(v.clone()).ok()
+                serde_json::from_value(v).ok()
             } else {
                 // Wrap plain value in FormattedValue
-                serde_json::from_value::<T>(v.clone())
+                serde_json::from_value::<T>(v)
                     .ok()
                     .map(|raw| FormattedValue {
                         raw: Some(raw),
@@ -205,110 +211,123 @@ fn map_custom_record_to_quote(record: &serde_json::Value) -> Result<ScreenerQuot
         })
     }
 
-    fn extract_string(record: &serde_json::Value, field: &str) -> Option<String> {
-        record
-            .get(field)
-            .and_then(|v| v.as_str())
-            .map(|s| s.to_string())
+    fn extract_string(
+        record: &mut serde_json::Map<String, serde_json::Value>,
+        field: &str,
+    ) -> Option<String> {
+        match record.remove(field) {
+            Some(serde_json::Value::String(s)) => Some(s),
+            _ => None,
+        }
     }
 
     // Required fields
-    let symbol = extract_string(record, "ticker")
-        .or_else(|| extract_string(record, "symbol"))
+    let symbol = extract_string(&mut record, "ticker")
+        .or_else(|| extract_string(&mut record, "symbol"))
         .ok_or_else(|| "Missing symbol/ticker field".to_string())?;
 
-    let short_name = extract_string(record, "companyshortname")
-        .or_else(|| extract_string(record, "shortName"))
+    let short_name = extract_string(&mut record, "companyshortname")
+        .or_else(|| extract_string(&mut record, "shortName"))
         .unwrap_or_else(|| symbol.clone());
 
     // Price fields - use intradayprice for custom screener
-    let regular_market_price = extract_formatted::<f64>(record, "intradayprice")
-        .or_else(|| extract_formatted::<f64>(record, "regularMarketPrice"))
+    let regular_market_price = extract_formatted::<f64>(&mut record, "intradayprice")
+        .or_else(|| extract_formatted::<f64>(&mut record, "regularMarketPrice"))
         .unwrap_or_default();
 
-    let regular_market_change = extract_formatted::<f64>(record, "intradaypricechange")
-        .or_else(|| extract_formatted::<f64>(record, "regularMarketChange"))
+    let regular_market_change = extract_formatted::<f64>(&mut record, "intradaypricechange")
+        .or_else(|| extract_formatted::<f64>(&mut record, "regularMarketChange"))
         .unwrap_or_default();
 
-    let regular_market_change_percent = extract_formatted::<f64>(record, "percentchange")
-        .or_else(|| extract_formatted::<f64>(record, "regularMarketChangePercent"))
+    let regular_market_change_percent = extract_formatted::<f64>(&mut record, "percentchange")
+        .or_else(|| extract_formatted::<f64>(&mut record, "regularMarketChangePercent"))
         .unwrap_or_default();
 
     Ok(ScreenerQuote {
         symbol,
         short_name,
-        long_name: extract_string(record, "longName"),
-        display_name: extract_string(record, "displayName"),
-        quote_type: extract_string(record, "quoteType").unwrap_or_else(|| "EQUITY".to_string()),
-        exchange: extract_string(record, "exchange").unwrap_or_default(),
+        long_name: extract_string(&mut record, "longName"),
+        display_name: extract_string(&mut record, "displayName"),
+        quote_type: extract_string(&mut record, "quoteType")
+            .unwrap_or_else(|| "EQUITY".to_string()),
+        exchange: extract_string(&mut record, "exchange").unwrap_or_default(),
         regular_market_price,
         regular_market_change,
         regular_market_change_percent,
-        regular_market_open: extract_formatted(record, "day_open_price")
-            .or_else(|| extract_formatted(record, "regularMarketOpen")),
-        regular_market_day_high: extract_formatted(record, "dayhigh")
-            .or_else(|| extract_formatted(record, "regularMarketDayHigh")),
-        regular_market_day_low: extract_formatted(record, "daylow")
-            .or_else(|| extract_formatted(record, "regularMarketDayLow")),
-        regular_market_previous_close: extract_formatted(record, "regularMarketPreviousClose"),
-        regular_market_time: extract_formatted(record, "regularMarketTime"),
-        regular_market_volume: extract_formatted(record, "dayvolume")
-            .or_else(|| extract_formatted(record, "regularMarketVolume")),
-        average_daily_volume3_month: extract_formatted(record, "avgdailyvol3m")
-            .or_else(|| extract_formatted(record, "averageDailyVolume3Month")),
-        average_daily_volume10_day: extract_formatted(record, "averageDailyVolume10Day"),
-        market_cap: extract_formatted(record, "intradaymarketcap")
-            .or_else(|| extract_formatted(record, "marketCap")),
-        shares_outstanding: extract_formatted(record, "sharesOutstanding"),
-        fifty_two_week_high: extract_formatted(record, "fiftytwowkhigh")
-            .or_else(|| extract_formatted(record, "fiftyTwoWeekHigh")),
-        fifty_two_week_low: extract_formatted(record, "fiftytwowklow")
-            .or_else(|| extract_formatted(record, "fiftyTwoWeekLow")),
-        fifty_two_week_change: extract_formatted(record, "fiftyTwoWeekChange"),
-        fifty_two_week_change_percent: extract_formatted(record, "fiftyTwoWeekChangePercent"),
-        fifty_day_average: extract_formatted(record, "fiftyDayAverage"),
-        fifty_day_average_change: extract_formatted(record, "fiftyDayAverageChange"),
-        fifty_day_average_change_percent: extract_formatted(record, "fiftyDayAverageChangePercent"),
-        two_hundred_day_average: extract_formatted(record, "twoHundredDayAverage"),
-        two_hundred_day_average_change: extract_formatted(record, "twoHundredDayAverageChange"),
+        regular_market_open: extract_formatted(&mut record, "day_open_price")
+            .or_else(|| extract_formatted(&mut record, "regularMarketOpen")),
+        regular_market_day_high: extract_formatted(&mut record, "dayhigh")
+            .or_else(|| extract_formatted(&mut record, "regularMarketDayHigh")),
+        regular_market_day_low: extract_formatted(&mut record, "daylow")
+            .or_else(|| extract_formatted(&mut record, "regularMarketDayLow")),
+        regular_market_previous_close: extract_formatted(&mut record, "regularMarketPreviousClose"),
+        regular_market_time: extract_formatted(&mut record, "regularMarketTime"),
+        regular_market_volume: extract_formatted(&mut record, "dayvolume")
+            .or_else(|| extract_formatted(&mut record, "regularMarketVolume")),
+        average_daily_volume3_month: extract_formatted(&mut record, "avgdailyvol3m")
+            .or_else(|| extract_formatted(&mut record, "averageDailyVolume3Month")),
+        average_daily_volume10_day: extract_formatted(&mut record, "averageDailyVolume10Day"),
+        market_cap: extract_formatted(&mut record, "intradaymarketcap")
+            .or_else(|| extract_formatted(&mut record, "marketCap")),
+        shares_outstanding: extract_formatted(&mut record, "sharesOutstanding"),
+        fifty_two_week_high: extract_formatted(&mut record, "fiftytwowkhigh")
+            .or_else(|| extract_formatted(&mut record, "fiftyTwoWeekHigh")),
+        fifty_two_week_low: extract_formatted(&mut record, "fiftytwowklow")
+            .or_else(|| extract_formatted(&mut record, "fiftyTwoWeekLow")),
+        fifty_two_week_change: extract_formatted(&mut record, "fiftyTwoWeekChange"),
+        fifty_two_week_change_percent: extract_formatted(&mut record, "fiftyTwoWeekChangePercent"),
+        fifty_day_average: extract_formatted(&mut record, "fiftyDayAverage"),
+        fifty_day_average_change: extract_formatted(&mut record, "fiftyDayAverageChange"),
+        fifty_day_average_change_percent: extract_formatted(
+            &mut record,
+            "fiftyDayAverageChangePercent",
+        ),
+        two_hundred_day_average: extract_formatted(&mut record, "twoHundredDayAverage"),
+        two_hundred_day_average_change: extract_formatted(
+            &mut record,
+            "twoHundredDayAverageChange",
+        ),
         two_hundred_day_average_change_percent: extract_formatted(
-            record,
+            &mut record,
             "twoHundredDayAverageChangePercent",
         ),
-        average_analyst_rating: extract_string(record, "averageAnalystRating"),
-        trailing_pe: extract_formatted::<f64>(record, "peratio.lasttwelvemonths")
-            .or_else(|| extract_formatted(record, "trailingPE")),
-        forward_pe: extract_formatted(record, "forwardPE"),
-        price_to_book: extract_formatted(record, "priceToBook"),
-        book_value: extract_formatted(record, "bookValue"),
-        eps_trailing_twelve_months: extract_formatted::<f64>(record, "eps.lasttwelvemonths")
-            .or_else(|| extract_formatted(record, "epsTrailingTwelveMonths")),
-        eps_forward: extract_formatted(record, "epsForward"),
-        eps_current_year: extract_formatted(record, "epsCurrentYear"),
-        price_eps_current_year: extract_formatted(record, "priceEpsCurrentYear"),
-        dividend_yield: extract_formatted::<f64>(record, "annual_dividend_yield")
-            .or_else(|| extract_formatted(record, "dividendYield")),
-        dividend_rate: extract_formatted::<f64>(record, "annual_dividend_rate")
-            .or_else(|| extract_formatted(record, "dividendRate")),
-        dividend_date: extract_formatted(record, "dividendDate"),
-        trailing_annual_dividend_rate: extract_formatted(record, "trailingAnnualDividendRate"),
-        trailing_annual_dividend_yield: extract_formatted(record, "trailingAnnualDividendYield"),
-        bid: extract_formatted(record, "bid"),
-        bid_size: extract_formatted(record, "bidSize"),
-        ask: extract_formatted(record, "ask"),
-        ask_size: extract_formatted(record, "askSize"),
-        post_market_price: extract_formatted(record, "postMarketPrice"),
-        post_market_change: extract_formatted(record, "postMarketChange"),
-        post_market_change_percent: extract_formatted(record, "postMarketChangePercent"),
-        post_market_time: extract_formatted(record, "postMarketTime"),
-        pre_market_price: extract_formatted(record, "preMarketPrice"),
-        pre_market_change: extract_formatted(record, "preMarketChange"),
-        pre_market_change_percent: extract_formatted(record, "preMarketChangePercent"),
-        pre_market_time: extract_formatted(record, "preMarketTime"),
-        earnings_timestamp: extract_formatted(record, "earningsTimestamp"),
-        earnings_timestamp_start: extract_formatted(record, "earningsTimestampStart"),
-        earnings_timestamp_end: extract_formatted(record, "earningsTimestampEnd"),
-        currency: extract_string(record, "quotesCurrency")
-            .or_else(|| extract_string(record, "currency")),
+        average_analyst_rating: extract_string(&mut record, "averageAnalystRating"),
+        trailing_pe: extract_formatted::<f64>(&mut record, "peratio.lasttwelvemonths")
+            .or_else(|| extract_formatted(&mut record, "trailingPE")),
+        forward_pe: extract_formatted(&mut record, "forwardPE"),
+        price_to_book: extract_formatted(&mut record, "priceToBook"),
+        book_value: extract_formatted(&mut record, "bookValue"),
+        eps_trailing_twelve_months: extract_formatted::<f64>(&mut record, "eps.lasttwelvemonths")
+            .or_else(|| extract_formatted(&mut record, "epsTrailingTwelveMonths")),
+        eps_forward: extract_formatted(&mut record, "epsForward"),
+        eps_current_year: extract_formatted(&mut record, "epsCurrentYear"),
+        price_eps_current_year: extract_formatted(&mut record, "priceEpsCurrentYear"),
+        dividend_yield: extract_formatted::<f64>(&mut record, "annual_dividend_yield")
+            .or_else(|| extract_formatted(&mut record, "dividendYield")),
+        dividend_rate: extract_formatted::<f64>(&mut record, "annual_dividend_rate")
+            .or_else(|| extract_formatted(&mut record, "dividendRate")),
+        dividend_date: extract_formatted(&mut record, "dividendDate"),
+        trailing_annual_dividend_rate: extract_formatted(&mut record, "trailingAnnualDividendRate"),
+        trailing_annual_dividend_yield: extract_formatted(
+            &mut record,
+            "trailingAnnualDividendYield",
+        ),
+        bid: extract_formatted(&mut record, "bid"),
+        bid_size: extract_formatted(&mut record, "bidSize"),
+        ask: extract_formatted(&mut record, "ask"),
+        ask_size: extract_formatted(&mut record, "askSize"),
+        post_market_price: extract_formatted(&mut record, "postMarketPrice"),
+        post_market_change: extract_formatted(&mut record, "postMarketChange"),
+        post_market_change_percent: extract_formatted(&mut record, "postMarketChangePercent"),
+        post_market_time: extract_formatted(&mut record, "postMarketTime"),
+        pre_market_price: extract_formatted(&mut record, "preMarketPrice"),
+        pre_market_change: extract_formatted(&mut record, "preMarketChange"),
+        pre_market_change_percent: extract_formatted(&mut record, "preMarketChangePercent"),
+        pre_market_time: extract_formatted(&mut record, "preMarketTime"),
+        earnings_timestamp: extract_formatted(&mut record, "earningsTimestamp"),
+        earnings_timestamp_start: extract_formatted(&mut record, "earningsTimestampStart"),
+        earnings_timestamp_end: extract_formatted(&mut record, "earningsTimestampEnd"),
+        currency: extract_string(&mut record, "quotesCurrency")
+            .or_else(|| extract_string(&mut record, "currency")),
     })
 }

@@ -2,8 +2,11 @@
 
 use super::{Capability, Fetch, Provider, ProviderAdapter, ProviderSet, Routes};
 use crate::error::Result;
+use crate::models::chart::events::ChartEvents;
 use crate::models::chart::{Chart, ChartMeta};
 use crate::models::corporate::news::News;
+use crate::models::options::Options;
+use crate::models::options::response::OptionChainContainer;
 use crate::models::quote::QuoteSummaryResponse;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
@@ -12,6 +15,8 @@ pub(crate) struct CountingProvider {
     quote_calls: AtomicUsize,
     chart_calls: AtomicUsize,
     news_calls: AtomicUsize,
+    events_calls: AtomicUsize,
+    options_calls: AtomicUsize,
 }
 
 impl CountingProvider {
@@ -20,6 +25,8 @@ impl CountingProvider {
             quote_calls: AtomicUsize::new(0),
             chart_calls: AtomicUsize::new(0),
             news_calls: AtomicUsize::new(0),
+            events_calls: AtomicUsize::new(0),
+            options_calls: AtomicUsize::new(0),
         })
     }
 
@@ -35,6 +42,14 @@ impl CountingProvider {
     pub(crate) fn news(&self) -> usize {
         self.news_calls.load(Ordering::SeqCst)
     }
+
+    pub(crate) fn events(&self) -> usize {
+        self.events_calls.load(Ordering::SeqCst)
+    }
+
+    pub(crate) fn options(&self) -> usize {
+        self.options_calls.load(Ordering::SeqCst)
+    }
 }
 
 #[async_trait::async_trait]
@@ -44,7 +59,7 @@ impl ProviderAdapter for CountingProvider {
     }
 
     fn capabilities(&self) -> Capability {
-        Capability::QUOTE | Capability::CHART | Capability::CORPORATE
+        Capability::QUOTE | Capability::CHART | Capability::CORPORATE | Capability::OPTIONS
     }
 
     async fn fetch_quote(&self, _: &str) -> Result<QuoteSummaryResponse> {
@@ -72,6 +87,25 @@ impl ProviderAdapter for CountingProvider {
     async fn fetch_news(&self, _: &str) -> Result<Vec<News>> {
         self.news_calls.fetch_add(1, Ordering::SeqCst);
         Ok(Vec::new())
+    }
+
+    async fn fetch_events(&self, _: &str) -> Result<ChartEvents> {
+        self.events_calls.fetch_add(1, Ordering::SeqCst);
+        // A real network fetch always suspends; without a yield the mock resolves
+        // inline and concurrent callers can never actually interleave.
+        tokio::task::yield_now().await;
+        Ok(ChartEvents::default())
+    }
+
+    async fn fetch_options(&self, _: &str, _: Option<i64>) -> Result<Options> {
+        self.options_calls.fetch_add(1, Ordering::SeqCst);
+        Ok(Options {
+            option_chain: OptionChainContainer {
+                result: Vec::new(),
+                error: None,
+            },
+            provider_id: Some(Provider::Yahoo),
+        })
     }
 }
 

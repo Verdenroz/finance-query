@@ -75,18 +75,17 @@ impl FinancialStatement {
     /// Converts the nested Yahoo Finance response structure into a clean,
     /// user-friendly format by extracting data from timeseries.result[].
     pub(crate) fn from_response(
-        raw: &serde_json::Value,
+        raw: serde_json::Value,
         symbol: &str,
         statement_type: StatementType,
         frequency: Frequency,
     ) -> Result<Self> {
-        let raw_response: RawTimeseriesResponse =
-            serde_json::from_value(raw.clone()).map_err(|e| {
-                crate::error::FinanceError::ResponseStructureError {
-                    field: "timeseries".to_string(),
-                    context: format!("Failed to parse financials response: {}", e),
-                }
-            })?;
+        let raw_response: RawTimeseriesResponse = serde_json::from_value(raw).map_err(|e| {
+            crate::error::FinanceError::ResponseStructureError {
+                field: "timeseries".to_string(),
+                context: format!("Failed to parse financials response: {}", e),
+            }
+        })?;
 
         if raw_response.timeseries.result.is_empty() {
             return Err(crate::error::FinanceError::SymbolNotFound {
@@ -291,7 +290,7 @@ mod tests {
         });
 
         let result = FinancialStatement::from_response(
-            &json,
+            json,
             "AAPL",
             StatementType::Income,
             Frequency::Annual,
@@ -320,7 +319,7 @@ mod tests {
         });
 
         let result = FinancialStatement::from_response(
-            &json,
+            json,
             "INVALID",
             StatementType::Income,
             Frequency::Annual,

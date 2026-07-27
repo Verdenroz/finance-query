@@ -6,7 +6,23 @@
 use crate::error::{FinanceError, Result};
 use regex::Regex;
 use std::collections::HashSet;
+use std::sync::LazyLock;
 use tracing::info;
+
+/// Matches earnings call URLs for any symbol; capture groups 1 and 2 hold the
+/// symbol as it appears in the `/quote/{symbol}` and `{symbol}-Q...` segments
+/// respectively. The `regex` crate has no backreferences, so both are captured
+/// and compared against the requested symbol in Rust instead of in the pattern.
+/// Both symbol positions match any run of non-`/` characters rather than a
+/// fixed class, so the pattern accepts every symbol the old
+/// `regex::escape(symbol)` form did — including `^GSPC` or `ES=F` — and the
+/// exact-match filter below, not the pattern, decides what is kept.
+static EARNINGS_CALL_URL_PATTERN: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
+        r#"(?:https://finance\.yahoo\.com)?/quote/([^/]+)/earnings/([^/]+?)-([Qq]\d)-(\d{4})-earnings_call-(\d+)\.html"#,
+    )
+    .unwrap()
+});
 
 /// Represents an earnings call with its identifiers and metadata.
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize)]
@@ -90,20 +106,18 @@ fn parse_earnings_calls(html: &str, symbol: &str) -> Result<Vec<EarningsCall>> {
     // Match earnings call URLs in the page content
     // Format: /quote/AAPL/earnings/AAPL-Q4-2024-earnings_call-218053.html
     // or full URLs: https://finance.yahoo.com/quote/AAPL/earnings/AAPL-Q4-2024-earnings_call-218053.html
-    let url_pattern = Regex::new(&format!(
-        r#"(?:https://finance\.yahoo\.com)?/quote/{}/earnings/{}-([Qq]\d)-(\d{{4}})-earnings_call-(\d+)\.html"#,
-        regex::escape(symbol),
-        regex::escape(symbol)
-    ))
-    .unwrap();
-
     let mut calls = Vec::new();
     let mut seen_event_ids = HashSet::new();
 
-    for caps in url_pattern.captures_iter(html) {
-        let quarter = caps.get(1).map(|m| m.as_str().to_uppercase());
-        let year = caps.get(2).and_then(|m| m.as_str().parse::<i32>().ok());
-        let event_id = caps[3].to_string();
+    for caps in EARNINGS_CALL_URL_PATTERN.captures_iter(html) {
+        // Case-sensitive, same as the old regex::escape(symbol)-embedded pattern.
+        if &caps[1] != symbol || &caps[2] != symbol {
+            continue;
+        }
+
+        let quarter = caps.get(3).map(|m| m.as_str().to_uppercase());
+        let year = caps.get(4).and_then(|m| m.as_str().parse::<i32>().ok());
+        let event_id = caps[5].to_string();
 
         // Skip duplicates
         if seen_event_ids.contains(&event_id) {
@@ -183,6 +197,58 @@ mod tests {
         assert_eq!(calls.len(), 2);
         assert_eq!(calls[0].event_id, "12345");
         assert_eq!(calls[1].event_id, "12344");
+    }
+
+    #[test]
+    fn test_parse_earnings_calls_filters_other_symbols() {
+        // The shared LazyLock pattern is symbol-agnostic, so it must correctly
+        // exclude URLs belonging to a different symbol found in the same page.
+        let html = r#"
+            {"url":"https://finance.yahoo.com/quote/AAPL/earnings/AAPL-Q4-2024-earnings_call-1.html"}
+            {"url":"https://finance.yahoo.com/quote/MSFT/earnings/MSFT-Q4-2024-earnings_call-2.html"}
+            {"url":"https://finance.yahoo.com/quote/AAPL/earnings/AAPL-Q3-2024-earnings_call-3.html"}
+            {"url":"https://finance.yahoo.com/quote/aapl/earnings/aapl-Q2-2024-earnings_call-4.html"}
+        "#;
+
+        let calls = parse_earnings_calls(html, "AAPL").unwrap();
+        assert_eq!(calls.len(), 2);
+        assert!(calls.iter().all(|c| c.event_id != "2" && c.event_id != "4"));
+        assert_eq!(calls[0].event_id, "1");
+        assert_eq!(calls[1].event_id, "3");
+
+        let msft_calls = parse_earnings_calls(html, "MSFT").unwrap();
+        assert_eq!(msft_calls.len(), 1);
+        assert_eq!(msft_calls[0].event_id, "2");
+    }
+
+    #[test]
+    fn test_parse_earnings_calls_accepts_punctuated_symbols() {
+        // The old pattern interpolated `regex::escape(symbol)`, so it matched any
+        // literal symbol. These would have been dropped by a fixed
+        // `[A-Za-z0-9.\-]+` class; the current pattern must still find them.
+        let html = r#"
+            {"url":"https://finance.yahoo.com/quote/BRK-B/earnings/BRK-B-Q4-2024-earnings_call-10.html"}
+            {"url":"https://finance.yahoo.com/quote/^GSPC/earnings/^GSPC-Q4-2024-earnings_call-11.html"}
+            {"url":"https://finance.yahoo.com/quote/ES=F/earnings/ES=F-Q1-2025-earnings_call-12.html"}
+            {"url":"https://finance.yahoo.com/quote/7203.T/earnings/7203.T-Q2-2025-earnings_call-13.html"}
+        "#;
+
+        for (symbol, event_id) in [
+            ("BRK-B", "10"),
+            ("^GSPC", "11"),
+            ("ES=F", "12"),
+            ("7203.T", "13"),
+        ] {
+            let calls = parse_earnings_calls(html, symbol).unwrap();
+            assert_eq!(calls.len(), 1, "symbol {symbol} was not matched");
+            assert_eq!(calls[0].event_id, event_id);
+        }
+
+        // Widening the class must not weaken the exact-match filter. A prefix of
+        // a real symbol matches nothing, which this function reports as an error
+        // rather than an empty vec.
+        assert!(parse_earnings_calls(html, "BRK").is_err());
+        assert!(parse_earnings_calls(html, "GSPC").is_err());
     }
 
     #[test]

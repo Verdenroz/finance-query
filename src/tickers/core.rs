@@ -301,6 +301,7 @@ impl TickersBuilder {
 
             // Initialize fetch guards for request deduplication
             quotes_fetch: Arc::new(tokio::sync::Mutex::new(())),
+            events_fetch: Arc::new(tokio::sync::Mutex::new(())),
             charts_fetch: Default::default(),
             financials_fetch: Default::default(),
             news_fetch: Arc::new(tokio::sync::Mutex::new(())),
@@ -364,6 +365,7 @@ pub struct Tickers {
 
     // Fetch guards prevent duplicate concurrent requests
     quotes_fetch: FetchGuard,
+    events_fetch: FetchGuard,
     charts_fetch: FetchGuardMap<(Interval, TimeRange)>,
     financials_fetch: FetchGuardMap<(StatementType, Frequency)>,
     news_fetch: FetchGuard,
@@ -977,16 +979,14 @@ impl Tickers {
     /// derived data (not a TTL-bounded cache), so they persist for the lifetime
     /// of the `Tickers` instance even under [`CacheMode::Off`].
     async fn ensure_events_loaded(&self) -> Result<()> {
-        // Check which symbols need event data (existence check, not TTL-based)
-        let symbols_to_fetch: Vec<Arc<str>> = {
-            let cache = self.events_cache.read().await;
-            self.symbols
-                .iter()
-                .filter(|sym| !cache.contains_key(*sym))
-                .cloned()
-                .collect()
-        };
+        if self.events_missing().await.is_empty() {
+            return Ok(());
+        }
 
+        let _fetch_guard = self.events_fetch.lock().await;
+
+        // Double-check: another task may have fetched while we waited
+        let symbols_to_fetch = self.events_missing().await;
         if symbols_to_fetch.is_empty() {
             return Ok(());
         }
@@ -1033,6 +1033,16 @@ impl Tickers {
         }
 
         Ok(())
+    }
+
+    /// Symbols with no entry in the events cache (existence check, not TTL-based).
+    async fn events_missing(&self) -> Vec<Arc<str>> {
+        let cache = self.events_cache.read().await;
+        self.symbols
+            .iter()
+            .filter(|sym| !cache.contains_key(*sym))
+            .cloned()
+            .collect()
     }
 
     /// Batch fetch spark data for all symbols in a single request.
@@ -1535,31 +1545,17 @@ impl Tickers {
         let per_symbol = symbol_strings.into_iter().map(|sym| {
             let providers = Arc::clone(&providers);
             async move {
-                let quote_fut = {
+                let quote = {
                     let sym = sym.clone();
-                    providers.fetch(Capability::QUOTE, move |p| {
-                        let sym = sym.clone();
-                        let p = p.clone();
-                        async move { p.fetch_quote(&sym).await }
-                    })
+                    providers
+                        .fetch(Capability::QUOTE, move |p| {
+                            let sym = sym.clone();
+                            let p = p.clone();
+                            async move { p.fetch_quote(&sym).await }
+                        })
+                        .await
                 };
-                let opts_fut = {
-                    let sym = sym.clone();
-                    providers.fetch(Capability::OPTIONS, move |p| {
-                        let sym = sym.clone();
-                        let p = p.clone();
-                        async move { p.fetch_options(&sym, None).await }
-                    })
-                };
-                let (quote, options) = tokio::join!(quote_fut, opts_fut);
-                let calendar_events = quote.ok().and_then(|q| q.calendar_events);
-                let options = options.ok();
-                crate::models::calendar::build_symbol_events(
-                    &sym,
-                    calendar_events.as_ref(),
-                    options.as_ref(),
-                    window,
-                )
+                (sym, quote.ok().and_then(|q| q.calendar_events))
             }
         });
 
@@ -1567,16 +1563,31 @@ impl Tickers {
             .buffer_unordered(self.max_concurrency)
             .collect::<Vec<_>>();
 
-        // The FRED economic-release fetch is independent of the per-symbol work,
-        // so run it concurrently with the per-symbol stream.
+        // Options go through `self.options`, so a chain already in the options
+        // cache is reused instead of refetched. The FRED economic-release fetch
+        // is independent of both, so run all of them concurrently.
         #[cfg(feature = "fred")]
-        let (per_symbol_events, releases) =
-            tokio::join!(per_symbol_fut, crate::adapters::fred::release_dates());
+        let (per_symbol_quotes, options_resp, releases) = tokio::join!(
+            per_symbol_fut,
+            self.options(None),
+            crate::adapters::fred::release_dates()
+        );
         #[cfg(not(feature = "fred"))]
-        let per_symbol_events = per_symbol_fut.await;
+        let (per_symbol_quotes, options_resp) = tokio::join!(per_symbol_fut, self.options(None));
 
-        let mut events: Vec<crate::models::calendar::CalendarEvent> =
-            per_symbol_events.into_iter().flatten().collect();
+        let options_map = options_resp.map(|r| r.options).unwrap_or_default();
+
+        let mut events: Vec<crate::models::calendar::CalendarEvent> = per_symbol_quotes
+            .into_iter()
+            .flat_map(|(sym, calendar_events)| {
+                crate::models::calendar::build_symbol_events(
+                    &sym,
+                    calendar_events.as_ref(),
+                    options_map.get(&sym),
+                    window,
+                )
+            })
+            .collect();
 
         #[cfg(feature = "fred")]
         if let Ok(releases) = releases {
@@ -1787,19 +1798,13 @@ impl Tickers {
         let config = config.unwrap_or_default();
         config.validate(self.symbols.len())?;
 
-        // Fetch charts for all symbols (uses the batch chart cache)
-        let charts = self
-            .charts(interval, range)
-            .await
-            .map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
-
-        // Fetch dividends for all symbols (events cache is already warm after charts())
+        // Charts and dividends hit disjoint caches and disjoint capabilities
+        // (CHART vs CORPORATE), so neither warms the other.
+        let (charts, dividends_map) =
+            tokio::join!(self.charts(interval, range), self.dividends(range));
+        let charts = charts.map_err(|e| backtesting::BacktestError::ChartError(e.to_string()))?;
         // Treat errors as "no dividends" — dividend processing is best-effort
-        let dividends_map = self
-            .dividends(range)
-            .await
-            .map(|b| b.dividends)
-            .unwrap_or_default();
+        let dividends_map = dividends_map.map(|b| b.dividends).unwrap_or_default();
 
         // Assemble SymbolData slices — skip symbols with no chart data
         let symbol_data: Vec<SymbolData> = self
@@ -1993,6 +1998,46 @@ mod tests {
         let _ = tickers.quotes().await.unwrap();
 
         assert_eq!(provider.quotes(), 4);
+    }
+
+    #[tokio::test]
+    async fn concurrent_event_accessors_fetch_once() {
+        use crate::providers::mock::{CountingProvider, provider_set};
+
+        let provider = CountingProvider::new();
+        let tickers = Tickers::builder(["AAPL", "MSFT"])
+            .with_provider_set(provider_set(Arc::clone(&provider)))
+            .build()
+            .await
+            .unwrap();
+
+        let (d, s) = tokio::join!(
+            tickers.dividends(TimeRange::OneYear),
+            tickers.splits(TimeRange::OneYear)
+        );
+        assert!(d.is_ok() && s.is_ok());
+        assert_eq!(provider.events(), 2, "one event fetch per symbol, not two");
+    }
+
+    #[tokio::test]
+    async fn calendar_reuses_the_options_cache() {
+        use crate::providers::mock::{CountingProvider, provider_set};
+
+        let provider = CountingProvider::new();
+        let tickers = Tickers::builder(["AAPL"])
+            .with_provider_set(provider_set(Arc::clone(&provider)))
+            .build()
+            .await
+            .unwrap();
+
+        let _ = tickers.options(None).await;
+        let before = provider.options();
+        let _ = tickers.calendar(TimeRange::OneMonth).await;
+        assert_eq!(
+            provider.options(),
+            before,
+            "calendar refetched a cached chain"
+        );
     }
 
     #[tokio::test]

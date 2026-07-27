@@ -291,7 +291,7 @@ pub async fn listing_status(status: Option<&str>) -> Result<Vec<ListingEntryDTO>
     };
     let csv = client.get_csv("LISTING_STATUS", &params).await?;
 
-    let mut entries = Vec::new();
+    let mut entries = Vec::with_capacity(csv.lines().count().saturating_sub(1));
     let mut lines = csv.lines();
     let _header = lines.next();
 

@@ -4,6 +4,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use reqwest::{Client, StatusCode};
+use serde::Deserialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use tracing::debug;
@@ -94,19 +95,18 @@ impl FmpClient {
         }
     }
 
-    fn check_body_error(json: &Value) -> Result<()> {
-        // FMP returns errors as {"Error Message": "..."} with 200 status
-        if let Some(msg) = json.get("Error Message").and_then(|v| v.as_str()) {
+    fn check_error_envelope(env: &ErrorEnvelope) -> Result<()> {
+        if let Some(msg) = &env.error_message {
             return Err(FinanceError::InvalidParameter {
                 param: "request".to_string(),
-                reason: msg.to_string(),
+                reason: msg.clone(),
             });
         }
         Ok(())
     }
 
-    /// Execute a GET request to an FMP REST path and return raw JSON.
-    pub async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
+    /// Execute a GET request to an FMP REST path and return the raw response bytes.
+    async fn get_bytes(&self, path: &str, params: &[(&str, &str)]) -> Result<impl AsRef<[u8]>> {
         self.limiter.acquire().await;
 
         let url = format!("{}{}", self.base_url, path);
@@ -118,18 +118,74 @@ impl FmpClient {
 
         Self::check_status(resp.status())?;
 
-        let json: Value = resp.json().await?;
-        Self::check_body_error(&json)?;
-
-        Ok(json)
+        Ok(resp.bytes().await?)
     }
 
-    /// GET and deserialize into `T` directly.
+    /// Execute a GET request to an FMP REST path and return raw JSON.
+    pub async fn get_raw(&self, path: &str, params: &[(&str, &str)]) -> Result<Value> {
+        let bytes = self.get_bytes(path, params).await?;
+        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes.as_ref()) {
+            Self::check_error_envelope(&env)?;
+        }
+
+        Ok(serde_json::from_slice(bytes.as_ref())?)
+    }
+
+    /// GET and deserialize into `T` directly, parsing the response bytes once.
     pub async fn get<T: DeserializeOwned>(&self, path: &str, params: &[(&str, &str)]) -> Result<T> {
-        let json = self.get_raw(path, params).await?;
-        serde_json::from_value(json).map_err(|e| FinanceError::ResponseStructureError {
+        let bytes = self.get_bytes(path, params).await?;
+        let bytes = bytes.as_ref();
+
+        if let Ok(env) = serde_json::from_slice::<ErrorEnvelope>(bytes) {
+            Self::check_error_envelope(&env)?;
+        }
+
+        serde_json::from_slice::<T>(bytes).map_err(|e| FinanceError::ResponseStructureError {
             field: "response".to_string(),
             context: format!("Failed to deserialize FMP response: {e}"),
         })
+    }
+}
+
+/// Cheap-to-parse subset of an FMP response used to detect the
+/// `{"Error Message": "..."}` envelope without touching the full body.
+#[derive(Deserialize)]
+struct ErrorEnvelope {
+    #[serde(rename = "Error Message")]
+    error_message: Option<String>,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn error_envelope_maps_bodies_to_errors() {
+        // `{"Error Message": <str>}` at HTTP 200 is FMP's error shape; anything
+        // else — including a top-level array — must pass through untouched.
+        let cases: [(&str, Option<&str>); 5] = [
+            (
+                r#"{"Error Message":"Invalid API KEY"}"#,
+                Some("Invalid API KEY"),
+            ),
+            (r#"{"Error Message":""}"#, Some("")),
+            (r#"[{"symbol":"AAPL"}]"#, None),
+            (r#"{}"#, None),
+            (r#"{"Error Message":null}"#, None),
+        ];
+        for (body, expected) in cases {
+            let checked = match serde_json::from_slice::<ErrorEnvelope>(body.as_bytes()) {
+                Ok(env) => FmpClient::check_error_envelope(&env),
+                Err(_) => Ok(()),
+            };
+            match (expected, checked) {
+                (None, Ok(())) => {}
+                (Some(msg), Err(FinanceError::InvalidParameter { param, reason })) => {
+                    assert_eq!(param, "request", "body {body}");
+                    assert_eq!(reason, msg, "body {body}");
+                }
+                (e, got) => panic!("body {body}: expected {e:?}, got {got:?}"),
+            }
+        }
     }
 }

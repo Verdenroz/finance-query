@@ -53,6 +53,8 @@
 
 use std::collections::HashMap;
 
+use rayon::prelude::*;
+
 use crate::models::chart::Candle;
 
 use super::super::config::BacktestConfig;
@@ -75,6 +77,12 @@ const DEFAULT_SEED: u64 = 42;
 /// Candidates evaluated per acquisition step. 1 000 reliably finds the UCB
 /// maximum without meaningful overhead (pure floating-point math, no backtests).
 const N_CANDIDATES: usize = 1_000;
+/// Observation count at which parallel candidate scoring starts to pay off.
+/// `Surrogate::predict` loops every observation, so per-call work scales with
+/// this. Below it, rayon's dispatch cost exceeds the benefit: measured
+/// 3.4→4.3 ms at 30 observations and 11.8→12.3 ms at 60, versus 43.2→22.7 ms at
+/// 120 and 114.9→44.0 ms at 200.
+const MIN_OBSERVATIONS_FOR_PARALLEL: usize = 60;
 
 // ── BayesianSearch ────────────────────────────────────────────────────────────
 
@@ -235,22 +243,17 @@ impl BayesianSearch {
                 (0..d).map(|_| rng.next_f64_positive()).collect()
             } else {
                 let surrogate = Surrogate::fit(&observations, beta);
-                // Reuse a single candidate buffer across all N_CANDIDATES evaluations,
-                // eliminating N_CANDIDATES heap allocations per sequential step.
-                let mut candidate = vec![0.0_f64; d];
-                let mut best_ucb = f64::NEG_INFINITY;
-                let mut best = vec![0.0_f64; d];
-                for _ in 0..N_CANDIDATES {
-                    for xi in candidate.iter_mut() {
-                        *xi = rng.next_f64_positive();
-                    }
-                    let ucb = surrogate.acquisition(&candidate);
-                    if ucb > best_ucb {
-                        best_ucb = ucb;
-                        best.copy_from_slice(&candidate);
-                    }
+                // Draw every candidate serially into one flat buffer so the RNG
+                // consumption order — and hence seeded reproducibility — is
+                // identical to a per-candidate sequential scan.
+                let mut candidates = vec![0.0_f64; N_CANDIDATES * d];
+                for xi in candidates.iter_mut() {
+                    *xi = rng.next_f64_positive();
                 }
-                best
+                match argmax_acquisition(&surrogate, &candidates, d) {
+                    Some(i) => candidates[i * d..(i + 1) * d].to_vec(),
+                    None => vec![0.0_f64; d],
+                }
             };
 
             n_evaluations += 1;
@@ -318,6 +321,55 @@ fn update_best(best: &mut Option<f64>, score: f64) {
         Some(b) if score > *b => *b = score,
         _ => {}
     }
+}
+
+/// Index of the highest-UCB candidate in a flat `d`-strided buffer, or `None`
+/// when no candidate is eligible.
+///
+/// Exactly reproduces a sequential `if ucb > best_ucb` scan seeded with
+/// `f64::NEG_INFINITY`: candidates scoring `NaN` or `-∞` never beat that
+/// initial value, so they are mapped to the reduction identity and lose to any
+/// finite score. Ties are broken by lowest index, matching the strict `>` of
+/// the sequential scan. Both comparisons are order-independent, so rayon's
+/// non-deterministic combination order cannot change the winner.
+///
+/// Rayon is engaged only at [`MIN_OBSERVATIONS_FOR_PARALLEL`] observations or
+/// more. Both branches share the same scoring and combining closures, so the
+/// selected index is identical either way.
+fn argmax_acquisition(surrogate: &Surrogate<'_>, candidates: &[f64], d: usize) -> Option<usize> {
+    const NONE: (f64, usize) = (f64::NEG_INFINITY, usize::MAX);
+
+    let score = |(i, c): (usize, &[f64])| {
+        let ucb = surrogate.acquisition(c);
+        if ucb > f64::NEG_INFINITY {
+            (ucb, i)
+        } else {
+            NONE
+        }
+    };
+    let combine = |a: (f64, usize), b: (f64, usize)| {
+        if b.0 > a.0 || (b.0 == a.0 && b.1 < a.1) {
+            b
+        } else {
+            a
+        }
+    };
+
+    let (_, best) = if surrogate.observations.len() >= MIN_OBSERVATIONS_FOR_PARALLEL {
+        candidates
+            .par_chunks(d)
+            .enumerate()
+            .map(score)
+            .reduce(|| NONE, combine)
+    } else {
+        candidates
+            .chunks(d)
+            .enumerate()
+            .map(score)
+            .fold(NONE, combine)
+    };
+
+    (best != usize::MAX).then_some(best)
 }
 
 /// Run one backtest for a unit-hypercube point; returns `None` for
@@ -732,6 +784,168 @@ mod tests {
                 .run("TEST", &candles, &config, |_| SmaCrossover::new(5, 20))
                 .is_err()
         );
+    }
+
+    /// Reference implementation: the exact sequential scan this module used
+    /// before candidate scoring was parallelised.
+    fn argmax_acquisition_sequential(
+        surrogate: &Surrogate<'_>,
+        candidates: &[f64],
+        d: usize,
+    ) -> Option<usize> {
+        let mut best_ucb = f64::NEG_INFINITY;
+        let mut best = None;
+        for (i, c) in candidates.chunks(d).enumerate() {
+            let ucb = surrogate.acquisition(c);
+            if ucb > best_ucb {
+                best_ucb = ucb;
+                best = Some(i);
+            }
+        }
+        best
+    }
+
+    #[test]
+    fn test_argmax_acquisition_matches_sequential_scan() {
+        let mut rng = Xorshift64::new(12345);
+        let obs: Vec<(Vec<f64>, f64)> = (0..12)
+            .map(|_| {
+                (
+                    vec![rng.next_f64_positive(), rng.next_f64_positive()],
+                    rng.next_f64_positive(),
+                )
+            })
+            .collect();
+
+        for seed in [1_u64, 2, 3, 77, 9_999] {
+            let mut rng = Xorshift64::new(seed);
+            let d = 2;
+            let mut candidates = vec![0.0_f64; N_CANDIDATES * d];
+            for xi in candidates.iter_mut() {
+                *xi = rng.next_f64_positive();
+            }
+            let s = Surrogate::fit(&obs, DEFAULT_UCB_BETA);
+            assert_eq!(
+                argmax_acquisition(&s, &candidates, d),
+                argmax_acquisition_sequential(&s, &candidates, d),
+                "seed {seed}: parallel argmax diverged from sequential scan"
+            );
+        }
+    }
+
+    /// Straddles `MIN_OBSERVATIONS_FOR_PARALLEL` so both the sequential fold and
+    /// the rayon reduce are exercised, and both must equal the reference scan.
+    #[test]
+    fn test_argmax_acquisition_agrees_across_parallel_threshold() {
+        let d = 3;
+        let mut rng = Xorshift64::new(4242);
+        let mut candidates = vec![0.0_f64; N_CANDIDATES * d];
+        for xi in candidates.iter_mut() {
+            *xi = rng.next_f64_positive();
+        }
+
+        let all_obs: Vec<(Vec<f64>, f64)> = (0..MIN_OBSERVATIONS_FOR_PARALLEL + 5)
+            .map(|_| {
+                (
+                    (0..d).map(|_| rng.next_f64_positive()).collect(),
+                    rng.next_f64_positive(),
+                )
+            })
+            .collect();
+
+        for n in [
+            MIN_OBSERVATIONS_FOR_PARALLEL - 1,
+            MIN_OBSERVATIONS_FOR_PARALLEL,
+            MIN_OBSERVATIONS_FOR_PARALLEL + 5,
+        ] {
+            let obs = &all_obs[..n];
+            let s = Surrogate::fit(obs, DEFAULT_UCB_BETA);
+            let got = argmax_acquisition(&s, &candidates, d);
+            assert!(got.is_some(), "n={n}: expected a winning candidate");
+            assert_eq!(
+                got,
+                argmax_acquisition_sequential(&s, &candidates, d),
+                "n={n}: diverged from sequential reference (parallel branch taken: {})",
+                n >= MIN_OBSERVATIONS_FOR_PARALLEL
+            );
+        }
+    }
+
+    /// Duplicated candidates score identically; the lowest index must win in
+    /// both the parallel and sequential formulations.
+    #[test]
+    fn test_argmax_acquisition_breaks_ties_by_lowest_index() {
+        let obs = vec![(vec![0.3_f64], 0.4_f64), (vec![0.7], 0.9)];
+        let s = Surrogate::fit(&obs, DEFAULT_UCB_BETA);
+
+        // Three copies of the UCB-maximal point, then a clearly worse one.
+        let candidates = vec![0.7_f64, 0.7, 0.7, 0.3];
+        assert_eq!(argmax_acquisition(&s, &candidates, 1), Some(0));
+        assert_eq!(
+            argmax_acquisition_sequential(&s, &candidates, 1),
+            Some(0),
+            "reference scan disagrees, test fixture is wrong"
+        );
+    }
+
+    /// β = NaN makes every acquisition NaN, so no candidate ever beats the
+    /// initial `NEG_INFINITY`. Both formulations must report "none selected",
+    /// which the caller turns into `vec![0.0; d]`.
+    #[test]
+    fn test_argmax_acquisition_all_nan_selects_nothing() {
+        let obs = vec![(vec![0.3_f64], 0.4_f64), (vec![0.7], 0.9)];
+        let s = Surrogate::fit(&obs, f64::NAN);
+        let candidates = vec![0.1_f64, 0.4, 0.6, 0.9];
+
+        assert!(s.acquisition(&[0.1]).is_nan(), "fixture must produce NaN");
+        assert_eq!(argmax_acquisition(&s, &candidates, 1), None);
+        assert_eq!(argmax_acquisition_sequential(&s, &candidates, 1), None);
+    }
+
+    /// Pins the *selected candidates*, not just the aggregate score: a
+    /// tie-break or RNG-order regression changes which parameter sets get
+    /// evaluated, which shows up as a per-element mismatch here.
+    #[test]
+    fn seeded_bayesian_selects_identical_candidates() {
+        let candles = make_candles(&trending_prices(200));
+        let config = BacktestConfig::builder()
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let search = BayesianSearch::new()
+            .param("fast", ParamRange::int_bounds(3, 12))
+            .param("slow", ParamRange::int_bounds(12, 30))
+            .param("threshold", ParamRange::float_bounds(0.1, 0.9))
+            .max_evaluations(25)
+            .seed(77);
+
+        let factory = |p: &HashMap<String, ParamValue>| {
+            SmaCrossover::new(p["fast"].as_int() as usize, p["slow"].as_int() as usize)
+        };
+
+        let r1 = search
+            .clone()
+            .run("TEST", &candles, &config, factory)
+            .unwrap();
+        let r2 = search.run("TEST", &candles, &config, factory).unwrap();
+
+        assert_eq!(r1.results.len(), r2.results.len());
+        assert!(
+            r1.results.len() > 10,
+            "too few evaluations to be meaningful"
+        );
+
+        for (i, (a, b)) in r1.results.iter().zip(r2.results.iter()).enumerate() {
+            assert_eq!(a.params, b.params, "params diverged at result {i}");
+            assert_eq!(
+                a.result.metrics.total_return_pct, b.result.metrics.total_return_pct,
+                "metrics diverged at result {i}"
+            );
+        }
+        assert_eq!(r1.convergence_curve, r2.convergence_curve);
+        assert_eq!(r1.n_evaluations, r2.n_evaluations);
     }
 
     #[test]

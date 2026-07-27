@@ -337,6 +337,25 @@ pub(crate) fn compute_for_candles(
         return Ok(HashMap::new());
     }
 
+    // Two requests for the same `Indicator` recompute it, and multi-output
+    // variants then overwrite each other's derived keys. Compute each distinct
+    // indicator once and record the names that were dropped: single-output
+    // variants key their result by the caller's name, so a dropped name still
+    // has to resolve — a custom `IndicatorRef` may share an `Indicator` with a
+    // built-in one while using its own key.
+    let (required, aliases) = {
+        let mut uniq: Vec<(String, Indicator)> = Vec::with_capacity(required.len());
+        let mut aliases: Vec<(String, String)> = Vec::new();
+        for (name, ind) in required {
+            match uniq.iter().find(|(_, u)| *u == ind) {
+                Some((kept, _)) if *kept != name => aliases.push((name, kept.clone())),
+                Some(_) => {}
+                None => uniq.push((name, ind)),
+            }
+        }
+        (uniq, aliases)
+    };
+
     let use_hl = required.iter().any(|(_, i)| needs_high_low(i));
     let use_vol = required.iter().any(|(_, i)| needs_volumes(i));
     let use_open = required
@@ -381,10 +400,17 @@ pub(crate) fn compute_for_candles(
 
     let groups = groups?;
     let capacity: usize = groups.iter().map(|v| v.len()).sum();
-    let mut result = HashMap::with_capacity(capacity);
+    let mut result = HashMap::with_capacity(capacity + aliases.len());
     for group in groups {
         for (k, v) in group {
             result.insert(k, v);
+        }
+    }
+    // A multi-output indicator ignores the caller's key, so its kept name is
+    // absent here and the alias is correctly a no-op.
+    for (dropped, kept) in aliases {
+        if let Some(values) = result.get(&kept).cloned() {
+            result.entry(dropped).or_insert(values);
         }
     }
     Ok(result)
@@ -441,6 +467,16 @@ impl BacktestEngine {
         let warmup = strategy.warmup_period();
         if candles.len() < warmup {
             return Err(BacktestError::insufficient_data(warmup, candles.len()));
+        }
+
+        // Validate candle ordering — conditions binary-search this slice to locate
+        // the position entry, and an out-of-order series would silently yield a
+        // wrong index rather than a wrong-but-real one.
+        if !candles.windows(2).all(|w| w[0].timestamp <= w[1].timestamp) {
+            return Err(BacktestError::invalid_param(
+                "candles",
+                "must be sorted by timestamp (ascending)",
+            ));
         }
 
         // Validate dividend ordering — simulation correctness requires ascending timestamps.
@@ -3229,5 +3265,92 @@ mod tests {
             result.trades[0].pnl > 0.0,
             "short trailing stop should exit in profit (entry $100, exit near $88)"
         );
+    }
+
+    #[test]
+    fn unsorted_candles_are_rejected() {
+        let mut candles = make_candles(&[100.0, 101.0, 102.0, 103.0]);
+        candles.swap(1, 2);
+        use crate::backtesting::refs::*;
+        use crate::backtesting::strategy::StrategyBuilder;
+        let strategy = StrategyBuilder::new("s")
+            .entry(price().above(0.0))
+            .exit(price().below(0.0))
+            .build();
+        let err = BacktestEngine::new(BacktestConfig::default())
+            .run("TEST", &candles, strategy)
+            .unwrap_err();
+        assert!(
+            format!("{err}").contains("candles"),
+            "expected a candle-ordering error, got {err}"
+        );
+    }
+
+    #[test]
+    fn distinct_keys_for_one_indicator_both_resolve() {
+        // A custom `IndicatorRef` may pick its own key while requesting the same
+        // `Indicator` as a built-in ref. Deduping the computation must not drop
+        // the second key, or the condition reading it silently never fires.
+        let candles = make_candles(
+            &(0..300)
+                .map(|i| 100.0 + (i % 7) as f64)
+                .collect::<Vec<f64>>(),
+        );
+        let map = compute_for_candles(
+            &candles,
+            vec![
+                ("sma_20".to_string(), Indicator::Sma(20)),
+                ("my_ma".to_string(), Indicator::Sma(20)),
+            ],
+        )
+        .unwrap();
+
+        assert!(map.contains_key("sma_20"));
+        assert!(map.contains_key("my_ma"), "aliased key was dropped");
+        assert_eq!(map.get("sma_20"), map.get("my_ma"));
+    }
+
+    #[test]
+    fn duplicate_indicator_requests_produce_identical_map() {
+        let prices: Vec<f64> = (0..500)
+            .map(|i| 100.0 + (i as f64 * 0.1).sin() * 5.0)
+            .collect();
+        let candles = make_candles(&prices);
+
+        let one = compute_for_candles(
+            &candles,
+            vec![(
+                "bb_u".to_string(),
+                Indicator::Bollinger {
+                    period: 20,
+                    std_dev: 2.0,
+                },
+            )],
+        )
+        .unwrap();
+        let two = compute_for_candles(
+            &candles,
+            vec![
+                (
+                    "bb_u".to_string(),
+                    Indicator::Bollinger {
+                        period: 20,
+                        std_dev: 2.0,
+                    },
+                ),
+                (
+                    "bb_l".to_string(),
+                    Indicator::Bollinger {
+                        period: 20,
+                        std_dev: 2.0,
+                    },
+                ),
+            ],
+        )
+        .unwrap();
+
+        for (k, v) in &one {
+            assert_eq!(two.get(k), Some(v), "key {k} changed when requested twice");
+        }
     }
 }

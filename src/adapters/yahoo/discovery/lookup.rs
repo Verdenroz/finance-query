@@ -117,33 +117,16 @@ impl LookupOptions {
     }
 }
 
-/// Fetch lookup results for a query
+/// Fetch and parse lookup results in a single pass over the body.
 ///
-/// # Arguments
-///
-/// * `client` - The Yahoo Finance client
-/// * `query` - Search query string
-/// * `options` - Lookup configuration options
-///
-/// # Example
-///
-/// ```ignore
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// # let client = finance_query::YahooClient::new(Default::default()).await?;
-/// use finance_query::endpoints::lookup::{fetch, LookupOptions, LookupType};
-/// let options = LookupOptions::new()
-///     .lookup_type(LookupType::Equity)
-///     .count(10)
-///     .include_logo(true);
-/// let results = fetch(&client, "Apple", &options).await?;
-/// # Ok(())
-/// # }
-/// ```
-pub async fn fetch(
+/// Logo enrichment mutates the parsed tree, so that path goes through `Value`
+/// and reshapes from it; the no-logo path deserializes straight from bytes.
+/// Neither path serializes back to bytes.
+pub(crate) async fn fetch_results(
     client: &YahooClient,
     query: &str,
     options: &LookupOptions,
-) -> Result<serde_json::Value> {
+) -> Result<crate::models::discovery::lookup::LookupResults> {
     if query.trim().is_empty() {
         return Err(crate::error::FinanceError::InvalidParameter {
             param: "query".to_string(),
@@ -185,14 +168,17 @@ pub async fn fetch(
 
     let response = client.request_with_params(api::LOOKUP, &params).await?;
 
-    let mut json: serde_json::Value = response.json().await?;
-
-    // If logo is requested, fetch logos for the returned symbols
     if options.include_logo {
-        json = enrich_with_logos(client, json).await?;
+        let json: serde_json::Value = response.json().await?;
+        let json = enrich_with_logos(client, json).await?;
+        Ok(crate::models::discovery::lookup::LookupResults::from_json(
+            json,
+        )?)
+    } else {
+        Ok(crate::models::discovery::lookup::LookupResults::from_slice(
+            &response.bytes().await?,
+        )?)
     }
-
-    Ok(json)
 }
 
 /// Enrich lookup results with logo URLs by fetching from quotes endpoint
@@ -289,15 +275,51 @@ mod tests {
     use super::*;
     use crate::adapters::yahoo::client::ClientConfig;
 
+    #[test]
+    fn lookup_results_parse_from_bytes() {
+        // Realistic minimal lookup payload in Yahoo's actual wire shape
+        // (finance.result[0].documents), including a partial document that
+        // only carries `symbol` to prove optional fields tolerate absence.
+        let body = br#"{
+            "finance": {
+                "result": [{
+                    "documents": [
+                        {"symbol": "AAPL", "shortName": "Apple Inc.", "quoteType": "equity"},
+                        {"symbol": "APLE"}
+                    ],
+                    "start": 0,
+                    "count": 2
+                }]
+            }
+        }"#;
+
+        let parsed = crate::models::discovery::lookup::LookupResults::from_slice(body).unwrap();
+        assert_eq!(parsed.result_count(), 2);
+        assert_eq!(parsed.quotes().len(), 2);
+        assert_eq!(parsed.quotes()[0].symbol, "AAPL");
+        assert_eq!(parsed.quotes()[1].short_name, None);
+        assert_eq!(parsed.start, Some(0));
+    }
+
+    #[test]
+    fn lookup_results_parse_from_bytes_empty_result() {
+        let parsed = crate::models::discovery::lookup::LookupResults::from_slice(
+            br#"{"finance": {"result": []}}"#,
+        )
+        .unwrap();
+        assert!(parsed.is_empty());
+        assert_eq!(parsed.start, None);
+        assert_eq!(parsed.count, None);
+    }
+
     #[tokio::test]
     #[ignore] // Requires network access
     async fn test_fetch_lookup() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let options = LookupOptions::new().count(5);
-        let result = fetch(&client, "Apple", &options).await;
+        let result = fetch_results(&client, "Apple", &options).await;
         assert!(result.is_ok());
-        let json = result.unwrap();
-        assert!(json.get("finance").is_some());
+        assert!(!result.unwrap().quotes().is_empty());
     }
 
     #[tokio::test]
@@ -307,7 +329,7 @@ mod tests {
         let options = LookupOptions::new()
             .lookup_type(LookupType::Equity)
             .count(5);
-        let result = fetch(&client, "NVDA", &options).await;
+        let result = fetch_results(&client, "NVDA", &options).await;
         assert!(result.is_ok());
     }
 
@@ -319,22 +341,11 @@ mod tests {
             .lookup_type(LookupType::Equity)
             .count(3)
             .include_logo(true);
-        let result = fetch(&client, "Apple", &options).await;
+        let result = fetch_results(&client, "Apple", &options).await;
         assert!(result.is_ok());
-        // Check that logos were enriched
-        let json = result.unwrap();
-        if let Some(doc) = json
-            .get("finance")
-            .and_then(|f| f.get("result"))
-            .and_then(|r| r.as_array())
-            .and_then(|arr| arr.first())
-            .and_then(|first| first.get("documents"))
-            .and_then(|docs| docs.as_array())
-            .and_then(|docs| docs.first())
-        {
-            // Logo should be present if symbol was found in quotes
-            println!("Document with logo: {:?}", doc);
-        }
+        // The enrichment path reshapes from `Value`; prove it still yields quotes.
+        let results = result.unwrap();
+        assert!(!results.quotes().is_empty());
     }
 
     #[tokio::test]
@@ -342,7 +353,7 @@ mod tests {
     async fn test_empty_query() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let options = LookupOptions::new();
-        let result = fetch(&client, "", &options).await;
+        let result = fetch_results(&client, "", &options).await;
         assert!(result.is_err());
     }
 }

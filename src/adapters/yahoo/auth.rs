@@ -37,7 +37,7 @@ impl std::fmt::Debug for YahooAuth {
 impl YahooAuth {
     /// The current CSRF crumb token.
     pub(crate) fn crumb(&self) -> Arc<str> {
-        Arc::clone(&self.crumb.read().unwrap())
+        Arc::clone(&self.crumb.read().unwrap_or_else(|e| e.into_inner()))
     }
 
     /// Re-run the handshake on the existing HTTP client, swapping in a new
@@ -62,7 +62,7 @@ impl YahooAuth {
                 context: format!("Failed to refresh crumb: {}", e),
             })?;
 
-        *self.crumb.write().unwrap() = crumb.into();
+        *self.crumb.write().unwrap_or_else(|e| e.into_inner()) = crumb.into();
         Ok(())
     }
 }

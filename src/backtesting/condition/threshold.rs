@@ -314,11 +314,7 @@ impl Condition for HeldForBars {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
             // Count bars since entry
-            let entry_idx = ctx
-                .candles
-                .iter()
-                .position(|c| c.timestamp >= pos.entry_timestamp)
-                .unwrap_or(0);
+            let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
             let bars_held = ctx.index.saturating_sub(entry_idx);
             bars_held >= self.min_bars
         } else {
@@ -339,6 +335,95 @@ impl Condition for HeldForBars {
 #[inline]
 pub fn held_for_bars(min_bars: usize) -> HeldForBars {
     HeldForBars::new(min_bars)
+}
+
+/// Index of the first candle at or after the position's entry.
+///
+/// Candles are sorted ascending, so this is a binary search; the `== len` arm
+/// reproduces the `.unwrap_or(0)` of the linear scan it replaced.
+fn entry_index(candles: &[crate::models::chart::Candle], entry_timestamp: i64) -> usize {
+    let ep = candles.partition_point(|c| c.timestamp < entry_timestamp);
+    if ep == candles.len() { 0 } else { ep }
+}
+
+/// Running peak/trough for the currently-open position.
+///
+/// Cleared on clone: `GridSearch` clones strategies across parallel combos and
+/// must not share one combo's position state with another.
+#[derive(Debug, Default)]
+struct PeakCache(std::sync::Mutex<Option<PeakState>>);
+
+#[derive(Debug, Clone, Copy)]
+struct PeakState {
+    entry_timestamp: i64,
+    scanned_to: usize,
+    high: f64,
+    low: f64,
+    close_high: f64,
+    close_low: f64,
+}
+
+impl Clone for PeakCache {
+    fn clone(&self) -> Self {
+        Self::default()
+    }
+}
+
+impl PeakCache {
+    fn state(
+        &self,
+        candles: &[crate::models::chart::Candle],
+        entry_idx: usize,
+        index: usize,
+        entry_timestamp: i64,
+    ) -> PeakState {
+        let mut slot = self.0.lock().unwrap();
+        let rebuild = match *slot {
+            Some(s) => s.entry_timestamp != entry_timestamp || index < s.scanned_to,
+            None => true,
+        };
+        if rebuild {
+            *slot = Some(PeakState {
+                entry_timestamp,
+                scanned_to: entry_idx,
+                high: f64::NEG_INFINITY,
+                low: f64::INFINITY,
+                close_high: f64::NEG_INFINITY,
+                close_low: f64::INFINITY,
+            });
+        }
+        let s = slot.as_mut().unwrap();
+        for c in &candles[s.scanned_to..=index] {
+            s.high = s.high.max(c.high);
+            s.low = s.low.min(c.low);
+            s.close_high = s.close_high.max(c.close);
+            s.close_low = s.close_low.min(c.close);
+        }
+        s.scanned_to = index + 1;
+        *s
+    }
+
+    fn extremes(
+        &self,
+        candles: &[crate::models::chart::Candle],
+        entry_idx: usize,
+        index: usize,
+        entry_timestamp: i64,
+    ) -> (f64, f64) {
+        let s = self.state(candles, entry_idx, index, entry_timestamp);
+        (s.high, s.low)
+    }
+
+    fn close_extremes(
+        &self,
+        candles: &[crate::models::chart::Candle],
+        entry_idx: usize,
+        index: usize,
+        entry_timestamp: i64,
+    ) -> (f64, f64) {
+        let s = self.state(candles, entry_idx, index, entry_timestamp);
+        (s.close_high, s.close_low)
+    }
 }
 
 /// Condition: trailing stop triggered when price retraces from peak/trough.
@@ -366,10 +451,11 @@ pub fn held_for_bars(min_bars: usize) -> HeldForBars {
 /// // Exit if price drops 3% from highest point since entry
 /// let exit = trailing_stop(0.03);
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct TrailingStop {
     /// Trail percentage (e.g., 0.03 for 3%)
     pub trail_pct: f64,
+    cache: PeakCache,
 }
 
 impl TrailingStop {
@@ -379,7 +465,10 @@ impl TrailingStop {
     ///
     /// * `trail_pct` - Trail percentage (e.g., 0.03 for 3%)
     pub fn new(trail_pct: f64) -> Self {
-        Self { trail_pct }
+        Self {
+            trail_pct,
+            cache: PeakCache::default(),
+        }
     }
 }
 
@@ -387,34 +476,19 @@ impl Condition for TrailingStop {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
             // Find the entry index
-            let entry_idx = ctx
-                .candles
-                .iter()
-                .position(|c| c.timestamp >= pos.entry_timestamp)
-                .unwrap_or(0);
+            let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
 
             // Compute peak/trough from entry to current candle (inclusive)
             let current_close = ctx.close();
+            let (peak, trough) =
+                self.cache
+                    .extremes(ctx.candles, entry_idx, ctx.index, pos.entry_timestamp);
 
             match pos.side {
                 crate::backtesting::position::PositionSide::Long => {
-                    // For long: find highest high since entry
-                    let peak = ctx.candles[entry_idx..=ctx.index]
-                        .iter()
-                        .map(|c| c.high)
-                        .fold(f64::NEG_INFINITY, f64::max);
-
-                    // Trigger if current price is trail_pct below peak
                     current_close <= peak * (1.0 - self.trail_pct)
                 }
                 crate::backtesting::position::PositionSide::Short => {
-                    // For short: find lowest low since entry
-                    let trough = ctx.candles[entry_idx..=ctx.index]
-                        .iter()
-                        .map(|c| c.low)
-                        .fold(f64::INFINITY, f64::min);
-
-                    // Trigger if current price is trail_pct above trough
                     current_close >= trough * (1.0 + self.trail_pct)
                 }
             }
@@ -469,10 +543,11 @@ pub fn trailing_stop(trail_pct: f64) -> TrailingStop {
 /// // Exit if profit drops 2% from highest profit achieved
 /// let exit = trailing_take_profit(0.02);
 /// ```
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 pub struct TrailingTakeProfit {
     /// Trail percentage from peak profit (e.g., 0.02 for 2%)
     pub trail_pct: f64,
+    cache: PeakCache,
 }
 
 impl TrailingTakeProfit {
@@ -482,7 +557,10 @@ impl TrailingTakeProfit {
     ///
     /// * `trail_pct` - Trail percentage from peak profit (e.g., 0.02 for 2%)
     pub fn new(trail_pct: f64) -> Self {
-        Self { trail_pct }
+        Self {
+            trail_pct,
+            cache: PeakCache::default(),
+        }
     }
 }
 
@@ -490,17 +568,19 @@ impl Condition for TrailingTakeProfit {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
             // Find the entry index
-            let entry_idx = ctx
-                .candles
-                .iter()
-                .position(|c| c.timestamp >= pos.entry_timestamp)
-                .unwrap_or(0);
+            let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
 
             // Compute peak profit from entry to current
-            let peak_profit_pct = ctx.candles[entry_idx..=ctx.index]
-                .iter()
-                .map(|c| pos.unrealized_return_pct(c.close))
-                .fold(f64::NEG_INFINITY, f64::max);
+            let (close_high, close_low) =
+                self.cache
+                    .close_extremes(ctx.candles, entry_idx, ctx.index, pos.entry_timestamp);
+            // unrealized_return_pct is monotone in price, so the peak profit is
+            // reached at the window's extreme close for the position's side.
+            let best_close = match pos.side {
+                crate::backtesting::position::PositionSide::Long => close_high,
+                crate::backtesting::position::PositionSide::Short => close_low,
+            };
+            let peak_profit_pct = pos.unrealized_return_pct(best_close);
 
             // Only trigger if we've been in profit and current profit is below peak by trail_pct
             let current_profit_pct = pos.unrealized_return_pct(ctx.close());
@@ -545,6 +625,156 @@ pub fn trailing_take_profit(trail_pct: f64) -> TrailingTakeProfit {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn ramp(n: usize) -> Vec<crate::models::chart::Candle> {
+        (0..n)
+            .map(|i| {
+                let px = 100.0 + i as f64;
+                crate::models::chart::Candle {
+                    timestamp: 1_600_000_000 + i as i64 * 86400,
+                    open: px,
+                    high: px * 1.02,
+                    low: px * 0.98,
+                    close: px,
+                    volume: 1_000,
+                    ..Default::default()
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn entry_index_matches_linear_scan() {
+        let candles = ramp(200);
+        let probes = [
+            0i64,
+            candles[0].timestamp,
+            candles[7].timestamp,
+            candles[7].timestamp + 1,
+            candles[199].timestamp,
+            candles[199].timestamp + 10_000,
+        ];
+        for entry_ts in probes {
+            let linear = candles
+                .iter()
+                .position(|c| c.timestamp >= entry_ts)
+                .unwrap_or(0);
+            let ep = candles.partition_point(|c| c.timestamp < entry_ts);
+            let binary = if ep == candles.len() { 0 } else { ep };
+            assert_eq!(linear, binary, "mismatch for entry_ts={entry_ts}");
+        }
+    }
+
+    fn peak_then_drop(n: usize) -> Vec<crate::models::chart::Candle> {
+        (0..n)
+            .map(|i| {
+                let half = n / 2;
+                let px = if i < half {
+                    100.0 + i as f64
+                } else {
+                    100.0 + half as f64 - (i - half) as f64
+                };
+                crate::models::chart::Candle {
+                    timestamp: 1_600_000_000 + i as i64 * 86400,
+                    open: px,
+                    high: px * 1.02,
+                    low: px * 0.98,
+                    close: px,
+                    volume: 1_000,
+                    ..Default::default()
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn trailing_stop_exit_bars_are_stable() {
+        use crate::backtesting::refs::*;
+        use crate::backtesting::{BacktestConfig, BacktestEngine, StrategyBuilder};
+
+        let candles = peak_then_drop(400);
+        let strat = StrategyBuilder::new("t")
+            .entry(price().above(0.0))
+            .exit(trailing_stop(0.03))
+            .build();
+        let result = BacktestEngine::new(BacktestConfig::default())
+            .run("TEST", &candles, strat)
+            .unwrap();
+        let actual: Vec<(i64, i64)> = result
+            .trades
+            .iter()
+            .map(|t| (t.entry_timestamp, t.exit_timestamp))
+            .collect();
+        let expected: Vec<(i64, i64)> = vec![
+            (1600172800, 1617712000),
+            (1617712000, 1618144000),
+            (1618144000, 1618576000),
+            (1618576000, 1619008000),
+            (1619008000, 1619353600),
+            (1619353600, 1619699200),
+            (1619699200, 1620044800),
+            (1620044800, 1620390400),
+            (1620390400, 1620736000),
+            (1620736000, 1621081600),
+            (1621081600, 1621427200),
+            (1621427200, 1621772800),
+            (1621772800, 1622118400),
+            (1622118400, 1622464000),
+            (1622464000, 1622809600),
+            (1622809600, 1623155200),
+            (1623155200, 1623500800),
+            (1623500800, 1623846400),
+            (1623846400, 1624192000),
+            (1624192000, 1624537600),
+            (1624537600, 1624883200),
+            (1624883200, 1625228800),
+            (1625228800, 1625574400),
+            (1625574400, 1625920000),
+            (1625920000, 1626265600),
+            (1626265600, 1626611200),
+            (1626611200, 1626956800),
+            (1626956800, 1627216000),
+            (1627216000, 1627475200),
+            (1627475200, 1627734400),
+            (1627734400, 1627993600),
+            (1627993600, 1628252800),
+            (1628252800, 1628512000),
+            (1628512000, 1628771200),
+            (1628771200, 1629030400),
+            (1629030400, 1629289600),
+            (1629289600, 1629548800),
+            (1629548800, 1629808000),
+            (1629808000, 1630067200),
+            (1630067200, 1630326400),
+            (1630326400, 1630585600),
+            (1630585600, 1630844800),
+            (1630844800, 1631104000),
+            (1631104000, 1631363200),
+            (1631363200, 1631622400),
+            (1631622400, 1631881600),
+            (1631881600, 1632140800),
+            (1632140800, 1632400000),
+            (1632400000, 1632659200),
+            (1632659200, 1632918400),
+            (1632918400, 1633177600),
+            (1633177600, 1633436800),
+            (1633436800, 1633696000),
+            (1633696000, 1633955200),
+            (1633955200, 1634214400),
+            (1634214400, 1634473600),
+            (1634473600, 1634473600),
+        ];
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn peak_cache_resets_on_clone() {
+        let cache = PeakCache::default();
+        let candles = ramp(10);
+        let _ = cache.extremes(&candles, 0, 5, candles[0].timestamp);
+        let fresh = cache.clone();
+        assert!(fresh.0.lock().unwrap().is_none());
+    }
 
     #[test]
     fn test_stop_loss_description() {
@@ -594,5 +824,48 @@ mod tests {
         assert!(no_position().required_indicators().is_empty());
         assert!(trailing_stop(0.03).required_indicators().is_empty());
         assert!(trailing_take_profit(0.02).required_indicators().is_empty());
+    }
+
+    /// The `TrailingTakeProfit` fast path folds closes into a single extreme and
+    /// evaluates `unrealized_return_pct` once, instead of evaluating it per bar
+    /// and folding the results. That is only exact because the function is
+    /// monotone in price — increasing for longs, decreasing for shorts. Pin it.
+    #[test]
+    fn peak_profit_from_extreme_close_matches_per_bar_fold() {
+        use crate::backtesting::position::{Position, PositionSide};
+        use crate::backtesting::signal::Signal;
+
+        let closes: Vec<f64> = (0..300)
+            .map(|i| 100.0 + (i as f64 * 0.37).sin() * 25.0 + (i as f64 * 0.011))
+            .collect();
+
+        for side in [PositionSide::Long, PositionSide::Short] {
+            for entry_price in [1.0_f64, 87.5, 100.0, 133.25] {
+                let pos = Position::new(
+                    side,
+                    1_600_000_000,
+                    entry_price,
+                    7.0,
+                    0.0,
+                    Signal::long(1_600_000_000, entry_price),
+                );
+
+                let per_bar = closes
+                    .iter()
+                    .map(|&c| pos.unrealized_return_pct(c))
+                    .fold(f64::NEG_INFINITY, f64::max);
+
+                let extreme = match side {
+                    PositionSide::Long => closes.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+                    PositionSide::Short => closes.iter().copied().fold(f64::INFINITY, f64::min),
+                };
+                let single = pos.unrealized_return_pct(extreme);
+
+                assert_eq!(
+                    per_bar, single,
+                    "side={side:?} entry={entry_price}: fold-of-f != f-of-extreme"
+                );
+            }
+        }
     }
 }
