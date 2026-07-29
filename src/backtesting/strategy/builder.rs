@@ -35,6 +35,7 @@ struct BoxedCondition {
     evaluate_fn: Box<dyn Fn(&StrategyContext) -> bool + Send + Sync>,
     required_indicators: Vec<(String, Indicator)>,
     htf_requirements: Vec<HtfIndicatorSpec>,
+    tracks_position_extremes: bool,
     description: String,
 }
 
@@ -42,11 +43,13 @@ impl BoxedCondition {
     fn new<C: Condition>(cond: C) -> Self {
         let required_indicators = cond.required_indicators();
         let htf_requirements = cond.htf_requirements();
+        let tracks_position_extremes = cond.tracks_position_extremes();
         let description = cond.description();
         Self {
             evaluate_fn: Box::new(move |ctx| cond.evaluate(ctx)),
             required_indicators,
             htf_requirements,
+            tracks_position_extremes,
             description,
         }
     }
@@ -61,6 +64,10 @@ impl BoxedCondition {
 
     fn htf_requirements(&self) -> &[HtfIndicatorSpec] {
         &self.htf_requirements
+    }
+
+    fn tracks_position_extremes(&self) -> bool {
+        self.tracks_position_extremes
     }
 
     fn description(&self) -> &str {
@@ -312,6 +319,23 @@ impl<E: Condition, X: Condition> Strategy for CustomStrategy<E, X> {
         let mut seen = HashSet::new();
         reqs.retain(|spec| seen.insert(spec.htf_key.clone()));
         reqs
+    }
+
+    fn tracks_position_extremes(&self) -> bool {
+        self.entry_condition.tracks_position_extremes()
+            || self.exit_condition.tracks_position_extremes()
+            || self
+                .short_entry_condition
+                .as_ref()
+                .is_some_and(|c| c.tracks_position_extremes())
+            || self
+                .short_exit_condition
+                .as_ref()
+                .is_some_and(|c| c.tracks_position_extremes())
+            || self
+                .regime_filter
+                .as_ref()
+                .is_some_and(|c| c.tracks_position_extremes())
     }
 
     fn warmup_period(&self) -> usize {

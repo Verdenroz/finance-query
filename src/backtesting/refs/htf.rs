@@ -157,6 +157,10 @@ impl<C: Condition> Condition for HtfCondition<C> {
         self.specs.clone()
     }
 
+    fn tracks_position_extremes(&self) -> bool {
+        self.inner.tracks_position_extremes()
+    }
+
     fn description(&self) -> String {
         format!("htf({}, {})", self.interval, self.inner.description())
     }

@@ -527,6 +527,9 @@ impl BacktestEngine {
         // need. Owned by the position rather than by any one condition, so every
         // trailing condition on a position reads one shared value.
         let mut extremes: Option<PositionExtremes> = None;
+        // Only strategies with a trailing condition read this, and folding it
+        // per bar is pure overhead for every strategy that doesn't.
+        let track_extremes = strategy.tracks_position_extremes();
 
         // Dividend processing pointer: dividends must be sorted by timestamp.
         // We advance this index forward as the simulation progresses in time.
@@ -549,7 +552,9 @@ impl BacktestEngine {
             );
 
             update_trailing_hwm(position.as_ref(), &mut hwm, candle);
-            update_position_extremes(position.as_ref(), &mut extremes, candle);
+            if track_extremes {
+                update_position_extremes(position.as_ref(), &mut extremes, candle);
+            }
 
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
@@ -684,7 +689,7 @@ impl BacktestEngine {
                 position: position.as_ref(),
                 equity,
                 indicators: &indicators,
-                extremes: position.as_ref().and(extremes),
+                extremes: position.as_ref().and(extremes.as_ref()),
             };
 
             // Get strategy signal

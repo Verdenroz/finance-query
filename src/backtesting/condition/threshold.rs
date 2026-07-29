@@ -356,7 +356,7 @@ fn position_extremes(
     ctx: &StrategyContext,
     pos: &crate::backtesting::position::Position,
 ) -> PositionExtremes {
-    ctx.extremes.unwrap_or_else(|| {
+    ctx.extremes.copied().unwrap_or_else(|| {
         let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
         PositionExtremes::from_candles(&ctx.candles[entry_idx..=ctx.index])
             .unwrap_or_else(|| PositionExtremes::new(ctx.current_candle()))
@@ -434,6 +434,10 @@ impl Condition for TrailingStop {
 
     fn description(&self) -> String {
         format!("trailing stop at {:.1}%", self.trail_pct * 100.0)
+    }
+
+    fn tracks_position_extremes(&self) -> bool {
+        true
     }
 }
 
@@ -525,6 +529,10 @@ impl Condition for TrailingTakeProfit {
 
     fn description(&self) -> String {
         format!("trailing take profit at {:.1}%", self.trail_pct * 100.0)
+    }
+
+    fn tracks_position_extremes(&self) -> bool {
+        true
     }
 }
 
@@ -707,6 +715,53 @@ mod tests {
     }
 
     #[test]
+    fn only_trailing_strategies_opt_into_extremes_tracking() {
+        // The engine folds extremes per bar only when this reports true, so a
+        // trailing condition that loses the flag silently falls back to the
+        // O(bars²) rescan this PR removed — and a strategy without one would
+        // otherwise pay for a value nothing reads.
+        use crate::backtesting::refs::*;
+        use crate::backtesting::strategy::{Strategy, StrategyBuilder};
+
+        assert!(TrailingStop::new(0.05).tracks_position_extremes());
+        assert!(TrailingTakeProfit::new(0.05).tracks_position_extremes());
+        assert!(!stop_loss(0.05).tracks_position_extremes());
+
+        // Composites have to carry it through, in either position.
+        assert!(
+            stop_loss(0.05)
+                .or(trailing_stop(0.03))
+                .tracks_position_extremes()
+        );
+        assert!(
+            trailing_stop(0.03)
+                .and(in_profit())
+                .tracks_position_extremes()
+        );
+        assert!(
+            !stop_loss(0.05)
+                .or(take_profit(0.1))
+                .tracks_position_extremes()
+        );
+
+        // ...and so does the strategy built from them.
+        let trailing = StrategyBuilder::new("trailing")
+            .entry(price().above(0.0))
+            .exit(trailing_stop(0.03))
+            .build();
+        assert!(trailing.tracks_position_extremes());
+
+        let plain = StrategyBuilder::new("plain")
+            .entry(price().above(0.0))
+            .exit(stop_loss(0.05))
+            .build();
+        assert!(
+            !plain.tracks_position_extremes(),
+            "a strategy with no trailing condition must not pay for the tracking"
+        );
+    }
+
+    #[test]
     fn context_extremes_match_a_scan_from_entry() {
         // Conditions read the engine's running extremes when present and fall
         // back to scanning from the entry bar when they aren't. Both paths must
@@ -737,7 +792,7 @@ mod tests {
                 position: Some(&position),
                 equity: 10_000.0,
                 indicators: &indicators,
-                extremes: Some(scanned),
+                extremes: Some(&scanned),
             };
             let without = StrategyContext {
                 candles: &candles[..=index],

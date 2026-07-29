@@ -116,10 +116,10 @@ pub struct StrategyContext<'a> {
 
     /// Price extremes since the open position was entered.
     ///
-    /// `None` when no position is open, or when the context was built outside
-    /// the engine's bar loop — conditions that need it fall back to scanning
-    /// from the entry bar.
-    pub extremes: Option<PositionExtremes>,
+    /// `None` when no position is open, when no condition in the strategy
+    /// reads it, or when the context was built outside the engine's bar loop —
+    /// conditions that need it fall back to scanning from the entry bar.
+    pub extremes: Option<&'a PositionExtremes>,
 }
 
 impl<'a> StrategyContext<'a> {
@@ -372,6 +372,22 @@ pub trait Strategy: Send + Sync {
     fn warmup_period(&self) -> usize {
         1
     }
+
+    /// Whether any of this strategy's conditions read
+    /// [`StrategyContext::extremes`].
+    ///
+    /// The engine folds the running peak/trough per bar only when this is
+    /// `true`, so a strategy with no trailing condition pays nothing for the
+    /// feature. Strategies built with [`StrategyBuilder`] compute this
+    /// automatically. A raw implementation that uses `TrailingStop` or
+    /// `TrailingTakeProfit` still behaves correctly without overriding it —
+    /// those conditions fall back to scanning from the entry bar — but should
+    /// override it to avoid the O(bars²) fallback.
+    ///
+    /// [`StrategyBuilder`]: crate::backtesting::strategy::StrategyBuilder
+    fn tracks_position_extremes(&self) -> bool {
+        false
+    }
 }
 
 impl Strategy for Box<dyn Strategy> {
@@ -392,6 +408,9 @@ impl Strategy for Box<dyn Strategy> {
     }
     fn warmup_period(&self) -> usize {
         (**self).warmup_period()
+    }
+    fn tracks_position_extremes(&self) -> bool {
+        (**self).tracks_position_extremes()
     }
 }
 

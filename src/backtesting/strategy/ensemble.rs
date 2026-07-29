@@ -367,6 +367,12 @@ impl Strategy for EnsembleStrategy {
             .unwrap_or(1)
     }
 
+    fn tracks_position_extremes(&self) -> bool {
+        self.strategies
+            .iter()
+            .any(|(s, _)| s.tracks_position_extremes())
+    }
+
     fn on_candle(&self, ctx: &StrategyContext) -> Signal {
         if self.strategies.is_empty() {
             return Signal::hold();

@@ -93,6 +93,7 @@ impl PortfolioEngine {
         for data in symbol_data {
             let strategy = factory(&data.symbol);
             let warmup = strategy.warmup_period();
+            let track_extremes = strategy.tracks_position_extremes();
             if data.candles.len() < warmup {
                 return Err(BacktestError::insufficient_data(warmup, data.candles.len()));
             }
@@ -127,6 +128,7 @@ impl PortfolioEngine {
                     position: None,
                     hwm: None,
                     extremes: None,
+                    track_extremes,
                     div_idx: 0,
                     trades: vec![],
                     signals: vec![],
@@ -172,7 +174,9 @@ impl PortfolioEngine {
                 // Update HWM for trailing stop using the intrabar extreme so the
                 // trailing stop correctly reflects the best price reached during the bar.
                 update_trailing_hwm(state.position.as_ref(), &mut state.hwm, candle);
-                update_position_extremes(state.position.as_ref(), &mut state.extremes, candle);
+                if state.track_extremes {
+                    update_position_extremes(state.position.as_ref(), &mut state.extremes, candle);
+                }
 
                 // Credit dividends ex-dated on or before this bar
                 while state.div_idx < state.dividends.len()
@@ -287,7 +291,7 @@ impl PortfolioEngine {
                     position: state.position.as_ref(),
                     equity: portfolio_equity,
                     indicators: &state.indicators,
-                    extremes: state.position.as_ref().and(state.extremes),
+                    extremes: state.position.as_ref().and(state.extremes.as_ref()),
                 };
 
                 let signal = state.strategy.on_candle(&ctx);
@@ -905,6 +909,7 @@ struct SymbolState<S: Strategy> {
     position: Option<Position>,
     hwm: Option<f64>,
     extremes: Option<crate::backtesting::strategy::PositionExtremes>,
+    track_extremes: bool,
     div_idx: usize,
     trades: Vec<Trade>,
     signals: Vec<SignalRecord>,
