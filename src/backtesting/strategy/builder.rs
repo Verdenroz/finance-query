@@ -411,6 +411,7 @@ mod tests {
             position: None,
             equity: 10_000.0,
             indicators,
+            extremes: None,
         }
     }
 
@@ -530,6 +531,7 @@ mod tests {
             position: Some(&position),
             equity: 10_000.0,
             indicators: &indicators,
+            extremes: None,
         };
 
         // Exit must fire even though regime filter is false

@@ -47,7 +47,11 @@ pub(crate) async fn get_or_auth(config: &ClientConfig) -> Result<Arc<YahooClient
         return Ok(Arc::clone(client));
     }
 
-    let client = Arc::new(YahooClient::new(config.clone()).await?);
+    let client = Arc::new(
+        YahooClient::new(config.clone())
+            .await?
+            .with_session_key(key.clone()),
+    );
 
     let mut map = sessions().lock().unwrap();
     if map.len() >= SESSION_CAP {
@@ -67,8 +71,19 @@ pub(crate) async fn get_or_auth(config: &ClientConfig) -> Result<Arc<YahooClient
 }
 
 /// Drop the cached session for this runtime and config.
+#[cfg(test)]
 pub(crate) fn invalidate(config: &ClientConfig) {
-    sessions().lock().unwrap().remove(&key_for(config));
+    invalidate_key(&key_for(config));
+}
+
+/// Drop the session cached under `key`.
+///
+/// Callers pass the key the client was stored under rather than recomputing it:
+/// [`key_for`] reads `Handle::current()`, so a client driven from a second
+/// runtime would otherwise evict a different entry (or none) and leave the
+/// broken session cached for its own runtime.
+pub(crate) fn invalidate_key(key: &SessionKey) {
+    sessions().lock().unwrap().remove(key);
 }
 
 #[cfg(test)]

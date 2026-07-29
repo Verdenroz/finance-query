@@ -12,7 +12,7 @@ use super::result::{
     BacktestResult, BenchmarkMetrics, EquityPoint, PerformanceMetrics, SignalRecord,
 };
 use super::signal::{OrderType, PendingOrder, Signal, SignalDirection};
-use super::strategy::{Strategy, StrategyContext};
+use super::strategy::{PositionExtremes, Strategy, StrategyContext};
 
 /// Backtest execution engine.
 ///
@@ -416,6 +416,34 @@ pub(crate) fn compute_for_candles(
     Ok(result)
 }
 
+/// Reject candle or dividend series that are not ascending by timestamp.
+///
+/// Conditions binary-search the candle slice to locate the position entry, so an
+/// out-of-order series would silently yield a wrong index rather than an error.
+/// Dividend crediting walks a forward-only index for the same reason.
+///
+/// Optimisers and walk-forward call this once for the whole series and then use
+/// [`BacktestEngine::simulate`] per candidate, so a sweep pays the O(n) scan once
+/// instead of once per evaluation.
+pub(crate) fn validate_series_order(candles: &[Candle], dividends: &[Dividend]) -> Result<()> {
+    if !candles.windows(2).all(|w| w[0].timestamp <= w[1].timestamp) {
+        return Err(BacktestError::invalid_param(
+            "candles",
+            "must be sorted by timestamp (ascending)",
+        ));
+    }
+    if !dividends
+        .windows(2)
+        .all(|w| w[0].timestamp <= w[1].timestamp)
+    {
+        return Err(BacktestError::invalid_param(
+            "dividends",
+            "must be sorted by timestamp (ascending)",
+        ));
+    }
+    Ok(())
+}
+
 impl BacktestEngine {
     /// Create a new backtest engine with the given configuration
     pub fn new(config: BacktestConfig) -> Self {
@@ -434,6 +462,7 @@ impl BacktestEngine {
         candles: &[Candle],
         strategy: S,
     ) -> Result<BacktestResult> {
+        validate_series_order(candles, &[])?;
         self.simulate(symbol, candles, strategy, &[])
     }
 
@@ -451,13 +480,19 @@ impl BacktestEngine {
         strategy: S,
         dividends: &[Dividend],
     ) -> Result<BacktestResult> {
+        validate_series_order(candles, dividends)?;
         self.simulate(symbol, candles, strategy, dividends)
     }
 
     // ── Core simulation ───────────────────────────────────────────────────────
 
     /// Internal simulation core. All public `run*` methods delegate here.
-    fn simulate<S: Strategy>(
+    ///
+    /// Assumes `candles` and `dividends` are already known to be ascending —
+    /// the public entry points check that via [`validate_series_order`]. Sweeps
+    /// run thousands of simulations over one series, so the O(n) scan is hoisted
+    /// to the boundary rather than repeated per candidate.
+    pub(crate) fn simulate<S: Strategy>(
         &self,
         symbol: &str,
         candles: &[Candle],
@@ -467,27 +502,6 @@ impl BacktestEngine {
         let warmup = strategy.warmup_period();
         if candles.len() < warmup {
             return Err(BacktestError::insufficient_data(warmup, candles.len()));
-        }
-
-        // Validate candle ordering — conditions binary-search this slice to locate
-        // the position entry, and an out-of-order series would silently yield a
-        // wrong index rather than a wrong-but-real one.
-        if !candles.windows(2).all(|w| w[0].timestamp <= w[1].timestamp) {
-            return Err(BacktestError::invalid_param(
-                "candles",
-                "must be sorted by timestamp (ascending)",
-            ));
-        }
-
-        // Validate dividend ordering — simulation correctness requires ascending timestamps.
-        if !dividends
-            .windows(2)
-            .all(|w| w[0].timestamp <= w[1].timestamp)
-        {
-            return Err(BacktestError::invalid_param(
-                "dividends",
-                "must be sorted by timestamp (ascending)",
-            ));
         }
 
         // Pre-compute all required indicators (base timeframe + HTF stretched arrays)
@@ -509,6 +523,10 @@ impl BacktestEngine {
         // High-water mark for the trailing stop: tracks peak price (longs) or
         // trough price (shorts) since entry. Reset to None when no position is open.
         let mut hwm: Option<f64> = None;
+        // The same running scan widened to the four values trailing conditions
+        // need. Owned by the position rather than by any one condition, so every
+        // trailing condition on a position reads one shared value.
+        let mut extremes: Option<PositionExtremes> = None;
 
         // Dividend processing pointer: dividends must be sorted by timestamp.
         // We advance this index forward as the simulation progresses in time.
@@ -531,6 +549,7 @@ impl BacktestEngine {
             );
 
             update_trailing_hwm(position.as_ref(), &mut hwm, candle);
+            update_position_extremes(position.as_ref(), &mut extremes, candle);
 
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
@@ -563,6 +582,7 @@ impl BacktestEngine {
 
                 if executed {
                     hwm = None; // Reset HWM when position is closed
+                    extremes = None;
                     continue; // Skip strategy signal this bar
                 }
             }
@@ -664,6 +684,7 @@ impl BacktestEngine {
                 position: position.as_ref(),
                 equity,
                 indicators: &indicators,
+                extremes: position.as_ref().and(extremes),
             };
 
             // Get strategy signal
@@ -754,11 +775,16 @@ impl BacktestEngine {
                 )
             {
                 hwm = position.as_ref().map(|p| p.entry_price);
+                // Seeded on the next bar rather than from the entry price: the
+                // extremes are bar highs/lows since entry, and the entry bar is
+                // folded in at the top of the loop.
+                extremes = None;
             }
 
             // Reset the trailing-stop HWM whenever a position is closed
             if executed && position.is_none() {
                 hwm = None;
+                extremes = None;
 
                 // Re-evaluate strategy on the same bar after an exit so that
                 // a crossover that simultaneously closes one side and triggers
@@ -769,6 +795,7 @@ impl BacktestEngine {
                     position: None,
                     equity,
                     indicators: &indicators,
+                    extremes: None,
                 };
                 let follow = strategy.on_candle(&ctx2);
                 if !follow.is_hold() && follow.strength.value() >= self.config.min_signal_strength {
@@ -951,6 +978,7 @@ impl BacktestEngine {
         benchmark_symbol: &str,
         benchmark_candles: &[Candle],
     ) -> Result<BacktestResult> {
+        validate_series_order(candles, dividends)?;
         let mut result = self.simulate(symbol, candles, strategy, dividends)?;
         result.benchmark = Some(compute_benchmark_metrics(
             benchmark_symbol,
@@ -1529,6 +1557,26 @@ impl BacktestEngine {
 ///
 /// Cleared to `None` when no position is open so it resets on next entry.
 /// Also used by the portfolio engine.
+/// Fold `candle` into the running extremes for the open position.
+///
+/// Cleared to `None` when no position is open so it resets on the next entry —
+/// the same lifecycle as [`update_trailing_hwm`], which tracks the single value
+/// the intrabar stop needs while this tracks the four the trailing conditions do.
+pub(crate) fn update_position_extremes(
+    position: Option<&Position>,
+    extremes: &mut Option<PositionExtremes>,
+    candle: &Candle,
+) {
+    if position.is_none() {
+        *extremes = None;
+        return;
+    }
+    match extremes {
+        Some(e) => e.update(candle),
+        None => *extremes = Some(PositionExtremes::new(candle)),
+    }
+}
+
 pub(crate) fn update_trailing_hwm(
     position: Option<&Position>,
     hwm: &mut Option<f64>,
@@ -3283,6 +3331,44 @@ mod tests {
         assert!(
             format!("{err}").contains("candles"),
             "expected a candle-ordering error, got {err}"
+        );
+    }
+
+    #[test]
+    fn sweeps_reject_unsorted_candles_at_their_own_entry_point() {
+        // Validation moved off the per-candidate path, so each sweep entry point
+        // has to check the series itself or an unsorted run would slip through.
+        use crate::backtesting::optimizer::{BayesianSearch, GridSearch, ParamRange, ParamValue};
+        use crate::backtesting::refs::*;
+        use crate::backtesting::strategy::StrategyBuilder;
+
+        let mut candles = make_candles(&(0..80).map(|i| 100.0 + i as f64).collect::<Vec<f64>>());
+        candles.swap(1, 2);
+        let config = BacktestConfig::default();
+        let factory = |_: &HashMap<String, ParamValue>| {
+            StrategyBuilder::new("s")
+                .entry(price().above(0.0))
+                .exit(price().below(0.0))
+                .build()
+        };
+
+        let grid_err = GridSearch::new()
+            .param("p", ParamRange::int_range(1, 2, 1))
+            .run("TEST", &candles, &config, factory)
+            .unwrap_err();
+        assert!(
+            format!("{grid_err}").contains("candles"),
+            "grid search should reject unsorted candles, got {grid_err}"
+        );
+
+        let bayes_err = BayesianSearch::new()
+            .param("p", ParamRange::int_range(1, 2, 1))
+            .max_evaluations(4)
+            .run("TEST", &candles, &config, factory)
+            .unwrap_err();
+        assert!(
+            format!("{bayes_err}").contains("candles"),
+            "bayesian search should reject unsorted candles, got {bayes_err}"
         );
     }
 

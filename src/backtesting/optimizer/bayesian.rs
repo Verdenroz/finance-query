@@ -58,7 +58,7 @@ use rayon::prelude::*;
 use crate::models::chart::Candle;
 
 use super::super::config::BacktestConfig;
-use super::super::engine::BacktestEngine;
+use super::super::engine::{BacktestEngine, validate_series_order};
 use super::super::error::{BacktestError, Result};
 use super::super::monte_carlo::Xorshift64;
 use super::super::strategy::Strategy;
@@ -80,9 +80,10 @@ const N_CANDIDATES: usize = 1_000;
 /// Observation count at which parallel candidate scoring starts to pay off.
 /// `Surrogate::predict` loops every observation, so per-call work scales with
 /// this. Below it, rayon's dispatch cost exceeds the benefit: measured
-/// 3.4→4.3 ms at 30 observations and 11.8→12.3 ms at 60, versus 43.2→22.7 ms at
-/// 120 and 114.9→44.0 ms at 200.
-const MIN_OBSERVATIONS_FOR_PARALLEL: usize = 60;
+/// 3.4→4.3 ms at 30 observations and 11.8→12.3 ms at 60 (both regressions),
+/// versus 43.2→22.7 ms at 120 and 114.9→44.0 ms at 200. 120 is the first
+/// measured win, so the gate sits there rather than at the last measured loss.
+const MIN_OBSERVATIONS_FOR_PARALLEL: usize = 120;
 
 // ── BayesianSearch ────────────────────────────────────────────────────────────
 
@@ -189,6 +190,9 @@ impl BayesianSearch {
                 "BayesianSearch requires at least one parameter range",
             ));
         }
+
+        // Checked once here rather than inside every candidate's backtest.
+        validate_series_order(candles, &[])?;
 
         let d = self.params.len();
         let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
@@ -389,7 +393,7 @@ where
 {
     let params = denormalize(norm_point, param_specs);
     let strategy = factory(&params);
-    match BacktestEngine::new(config.clone()).run(symbol, candles, strategy) {
+    match BacktestEngine::new(config.clone()).simulate(symbol, candles, strategy, &[]) {
         Ok(result) => Some(OptimizationResult { params, result }),
         Err(BacktestError::InsufficientData { .. }) => None,
         Err(e) => {

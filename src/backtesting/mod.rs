@@ -124,7 +124,7 @@ pub use signal::{
 };
 
 // Re-export strategy types
-pub use strategy::{Strategy, StrategyContext};
+pub use strategy::{PositionExtremes, Strategy, StrategyContext};
 
 // Re-export strategy builder
 pub use strategy::StrategyBuilder;

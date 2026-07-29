@@ -2,7 +2,7 @@
 //!
 //! This module provides conditions for stop-loss, take-profit, and trailing stops.
 
-use crate::backtesting::strategy::StrategyContext;
+use crate::backtesting::strategy::{PositionExtremes, StrategyContext};
 use crate::indicators::Indicator;
 
 use super::Condition;
@@ -346,84 +346,21 @@ fn entry_index(candles: &[crate::models::chart::Candle], entry_timestamp: i64) -
     if ep == candles.len() { 0 } else { ep }
 }
 
-/// Running peak/trough for the currently-open position.
+/// Extremes since entry for the open position in `ctx`.
 ///
-/// Cleared on clone: `GridSearch` clones strategies across parallel combos and
-/// must not share one combo's position state with another.
-#[derive(Debug, Default)]
-struct PeakCache(std::sync::Mutex<Option<PeakState>>);
-
-#[derive(Debug, Clone, Copy)]
-struct PeakState {
-    entry_timestamp: i64,
-    scanned_to: usize,
-    high: f64,
-    low: f64,
-    close_high: f64,
-    close_low: f64,
-}
-
-impl Clone for PeakCache {
-    fn clone(&self) -> Self {
-        Self::default()
-    }
-}
-
-impl PeakCache {
-    fn state(
-        &self,
-        candles: &[crate::models::chart::Candle],
-        entry_idx: usize,
-        index: usize,
-        entry_timestamp: i64,
-    ) -> PeakState {
-        let mut slot = self.0.lock().unwrap();
-        let rebuild = match *slot {
-            Some(s) => s.entry_timestamp != entry_timestamp || index < s.scanned_to,
-            None => true,
-        };
-        if rebuild {
-            *slot = Some(PeakState {
-                entry_timestamp,
-                scanned_to: entry_idx,
-                high: f64::NEG_INFINITY,
-                low: f64::INFINITY,
-                close_high: f64::NEG_INFINITY,
-                close_low: f64::INFINITY,
-            });
-        }
-        let s = slot.as_mut().unwrap();
-        for c in &candles[s.scanned_to..=index] {
-            s.high = s.high.max(c.high);
-            s.low = s.low.min(c.low);
-            s.close_high = s.close_high.max(c.close);
-            s.close_low = s.close_low.min(c.close);
-        }
-        s.scanned_to = index + 1;
-        *s
-    }
-
-    fn extremes(
-        &self,
-        candles: &[crate::models::chart::Candle],
-        entry_idx: usize,
-        index: usize,
-        entry_timestamp: i64,
-    ) -> (f64, f64) {
-        let s = self.state(candles, entry_idx, index, entry_timestamp);
-        (s.high, s.low)
-    }
-
-    fn close_extremes(
-        &self,
-        candles: &[crate::models::chart::Candle],
-        entry_idx: usize,
-        index: usize,
-        entry_timestamp: i64,
-    ) -> (f64, f64) {
-        let s = self.state(candles, entry_idx, index, entry_timestamp);
-        (s.close_high, s.close_low)
-    }
+/// The engine folds these once per bar and hands them over on the context, so
+/// every trailing condition on a position reads one running value rather than
+/// rescanning the candle history itself. Contexts built outside the engine's bar
+/// loop carry no extremes, so those fall back to a scan from the entry bar.
+fn position_extremes(
+    ctx: &StrategyContext,
+    pos: &crate::backtesting::position::Position,
+) -> PositionExtremes {
+    ctx.extremes.unwrap_or_else(|| {
+        let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
+        PositionExtremes::from_candles(&ctx.candles[entry_idx..=ctx.index])
+            .unwrap_or_else(|| PositionExtremes::new(ctx.current_candle()))
+    })
 }
 
 /// Condition: trailing stop triggered when price retraces from peak/trough.
@@ -451,11 +388,10 @@ impl PeakCache {
 /// // Exit if price drops 3% from highest point since entry
 /// let exit = trailing_stop(0.03);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct TrailingStop {
     /// Trail percentage (e.g., 0.03 for 3%)
     pub trail_pct: f64,
-    cache: PeakCache,
 }
 
 impl TrailingStop {
@@ -465,24 +401,19 @@ impl TrailingStop {
     ///
     /// * `trail_pct` - Trail percentage (e.g., 0.03 for 3%)
     pub fn new(trail_pct: f64) -> Self {
-        Self {
-            trail_pct,
-            cache: PeakCache::default(),
-        }
+        Self { trail_pct }
     }
 }
 
 impl Condition for TrailingStop {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
-            // Find the entry index
-            let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
-
-            // Compute peak/trough from entry to current candle (inclusive)
             let current_close = ctx.close();
-            let (peak, trough) =
-                self.cache
-                    .extremes(ctx.candles, entry_idx, ctx.index, pos.entry_timestamp);
+            let PositionExtremes {
+                high: peak,
+                low: trough,
+                ..
+            } = position_extremes(ctx, pos);
 
             match pos.side {
                 crate::backtesting::position::PositionSide::Long => {
@@ -543,11 +474,10 @@ pub fn trailing_stop(trail_pct: f64) -> TrailingStop {
 /// // Exit if profit drops 2% from highest profit achieved
 /// let exit = trailing_take_profit(0.02);
 /// ```
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct TrailingTakeProfit {
     /// Trail percentage from peak profit (e.g., 0.02 for 2%)
     pub trail_pct: f64,
-    cache: PeakCache,
 }
 
 impl TrailingTakeProfit {
@@ -557,23 +487,18 @@ impl TrailingTakeProfit {
     ///
     /// * `trail_pct` - Trail percentage from peak profit (e.g., 0.02 for 2%)
     pub fn new(trail_pct: f64) -> Self {
-        Self {
-            trail_pct,
-            cache: PeakCache::default(),
-        }
+        Self { trail_pct }
     }
 }
 
 impl Condition for TrailingTakeProfit {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
-            // Find the entry index
-            let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
-
-            // Compute peak profit from entry to current
-            let (close_high, close_low) =
-                self.cache
-                    .close_extremes(ctx.candles, entry_idx, ctx.index, pos.entry_timestamp);
+            let PositionExtremes {
+                close_high,
+                close_low,
+                ..
+            } = position_extremes(ctx, pos);
             // unrealized_return_pct is monotone in price, so the peak profit is
             // reached at the window's extreme close for the position's side.
             let best_close = match pos.side {
@@ -768,12 +693,71 @@ mod tests {
     }
 
     #[test]
-    fn peak_cache_resets_on_clone() {
-        let cache = PeakCache::default();
-        let candles = ramp(10);
-        let _ = cache.extremes(&candles, 0, 5, candles[0].timestamp);
-        let fresh = cache.clone();
-        assert!(fresh.0.lock().unwrap().is_none());
+    fn trailing_conditions_stay_copy() {
+        // The peak lives on the position, not the condition, so these carry no
+        // state and remain plain `Copy` value types.
+        fn assert_copy<T: Copy>(_: &T) {}
+        assert_copy(&TrailingStop::new(0.05));
+        assert_copy(&TrailingTakeProfit::new(0.05));
+
+        let ts = TrailingStop::new(0.05);
+        let a = ts;
+        let b = ts;
+        assert_eq!(a.trail_pct, b.trail_pct);
+    }
+
+    #[test]
+    fn context_extremes_match_a_scan_from_entry() {
+        // Conditions read the engine's running extremes when present and fall
+        // back to scanning from the entry bar when they aren't. Both paths must
+        // produce the same verdict.
+        let candles = ramp(30);
+        let entry_idx = 5usize;
+        let index = 20usize;
+        let position = crate::backtesting::position::Position::new(
+            crate::backtesting::position::PositionSide::Long,
+            candles[entry_idx].timestamp,
+            candles[entry_idx].close,
+            10.0,
+            0.0,
+            crate::backtesting::signal::Signal::long(
+                candles[entry_idx].timestamp,
+                candles[entry_idx].close,
+            ),
+        );
+        let indicators = std::collections::HashMap::new();
+        let scanned = PositionExtremes::from_candles(&candles[entry_idx..=index]).unwrap();
+
+        for pct in [0.001, 0.01, 0.05, 0.5] {
+            let cond = TrailingStop::new(pct);
+            let tp = TrailingTakeProfit::new(pct);
+            let with = StrategyContext {
+                candles: &candles[..=index],
+                index,
+                position: Some(&position),
+                equity: 10_000.0,
+                indicators: &indicators,
+                extremes: Some(scanned),
+            };
+            let without = StrategyContext {
+                candles: &candles[..=index],
+                index,
+                position: Some(&position),
+                equity: 10_000.0,
+                indicators: &indicators,
+                extremes: None,
+            };
+            assert_eq!(
+                cond.evaluate(&with),
+                cond.evaluate(&without),
+                "trailing stop disagreed at {pct}"
+            );
+            assert_eq!(
+                tp.evaluate(&with),
+                tp.evaluate(&without),
+                "trailing take-profit disagreed at {pct}"
+            );
+        }
     }
 
     #[test]

@@ -124,6 +124,7 @@ impl<C: Condition> Condition for HtfCondition<C> {
                     position: ctx.position,
                     equity: ctx.equity,
                     indicators: &mini_indicators,
+                    extremes: ctx.extremes,
                 };
                 return self.inner.evaluate(&htf_ctx);
             }
@@ -223,6 +224,7 @@ impl<C: Condition> HtfCondition<C> {
             position: ctx.position,
             equity: ctx.equity,
             indicators: &htf_indicators,
+            extremes: ctx.extremes,
         };
 
         self.inner.evaluate(&htf_ctx)

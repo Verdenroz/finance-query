@@ -18,11 +18,27 @@ pub(crate) fn now_unix_secs() -> i64 {
         .as_secs() as i64
 }
 
-/// Maximum number of entries before we trigger an eviction sweep.
+/// Default number of entries before we trigger an eviction sweep.
 ///
 /// Eviction only runs when the map exceeds this size, amortizing the O(n)
 /// retain cost across many inserts instead of running on every single write.
+///
+/// This is a floor, not a ceiling: a handle whose working set is inherently
+/// larger — a [`Tickers`] basket keys one entry per symbol — raises it via
+/// [`eviction_threshold_for`], or the cache could never hold a full working set
+/// and would never produce a hit.
+///
+/// [`Tickers`]: crate::Tickers
 pub(crate) const EVICTION_THRESHOLD: usize = 64;
+
+/// Eviction threshold for a cache whose working set is `working_set` entries.
+///
+/// Sized so a full working set survives a sweep: eviction keeps the newest half,
+/// so the threshold must be at least twice the working set.
+#[inline]
+pub(crate) fn eviction_threshold_for(working_set: usize) -> usize {
+    EVICTION_THRESHOLD.max(working_set.saturating_mul(2))
+}
 
 /// How long a cached response stays usable.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
@@ -82,32 +98,37 @@ impl<T> CacheEntry<T> {
 }
 
 /// Insert into a map cache, evicting first if the map has grown past
-/// [`EVICTION_THRESHOLD`]. No-op when caching is off.
+/// `threshold`. No-op when caching is off.
+///
+/// `threshold` comes from [`eviction_threshold_for`] so a handle with a large
+/// working set — a `Tickers` basket of more than 32 symbols — can still hold
+/// every key it needs at once.
 pub(crate) fn cache_insert<K: Eq + Hash, V>(
     map: &mut HashMap<K, CacheEntry<V>>,
     key: K,
     value: V,
     mode: CacheMode,
+    threshold: usize,
 ) {
     if !mode.enabled() {
         return;
     }
-    if map.len() >= EVICTION_THRESHOLD {
-        evict(map, mode);
+    if map.len() >= threshold {
+        evict(map, mode, threshold);
     }
     map.insert(key, CacheEntry::new(value));
 }
 
-fn evict<K: Eq + Hash, V>(map: &mut HashMap<K, CacheEntry<V>>, mode: CacheMode) {
+fn evict<K: Eq + Hash, V>(map: &mut HashMap<K, CacheEntry<V>>, mode: CacheMode, threshold: usize) {
     map.retain(|_, entry| entry.is_fresh(mode));
-    if map.len() < EVICTION_THRESHOLD {
+    if map.len() < threshold {
         return;
     }
     // Lifetime entries never go stale, so fall back to keeping the newest half by
     // fetch time. The survivor budget is a count, not just a timestamp cutoff:
     // a coarse or paused clock gives every entry the same `Instant`, and a pure
     // cutoff comparison would then retain all of them and never evict.
-    let keep = EVICTION_THRESHOLD / 2;
+    let keep = (threshold / 2).max(1);
     let mut times: Vec<Instant> = map.values().map(|e| e.fetched_at).collect();
     times.sort_unstable();
     let cutoff = times[times.len() - keep];
@@ -234,7 +255,7 @@ mod tests {
     #[test]
     fn off_mode_writes_nothing() {
         let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
-        cache_insert(&mut map, 1, 1, CacheMode::Off);
+        cache_insert(&mut map, 1, 1, CacheMode::Off, EVICTION_THRESHOLD);
         assert!(map.is_empty());
     }
 
@@ -245,7 +266,7 @@ mod tests {
         // by count as well.
         let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
         for i in 0..500u32 {
-            cache_insert(&mut map, i, i, CacheMode::Lifetime);
+            cache_insert(&mut map, i, i, CacheMode::Lifetime, EVICTION_THRESHOLD);
         }
         assert!(
             map.len() <= EVICTION_THRESHOLD,
@@ -256,10 +277,45 @@ mod tests {
     }
 
     #[test]
+    fn a_large_working_set_survives_eviction_intact() {
+        // A `Tickers` basket keys one entry per symbol and only serves a hit when
+        // every symbol is fresh. With the fixed 64-entry cap, a 100-symbol basket
+        // was trimmed to 32 on every pass and never registered a single hit.
+        let symbols = 100usize;
+        let threshold = eviction_threshold_for(symbols);
+        let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
+        for i in 0..symbols as u32 {
+            cache_insert(&mut map, i, i, CacheMode::Lifetime, threshold);
+        }
+        assert_eq!(map.len(), symbols, "the whole basket must stay cached");
+        assert!(
+            (0..symbols as u32).all(|i| map.contains_key(&i)),
+            "every symbol must be present for all_cached to hit"
+        );
+    }
+
+    #[test]
+    fn a_large_working_set_is_still_bounded() {
+        // Scaling the threshold must not turn the cache into an unbounded map:
+        // rewriting the basket many times over still evicts.
+        let threshold = eviction_threshold_for(100);
+        let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
+        for i in 0..5_000u32 {
+            cache_insert(&mut map, i, i, CacheMode::Lifetime, threshold);
+        }
+        assert!(
+            map.len() <= threshold,
+            "cache grew to {} past a threshold of {threshold}",
+            map.len()
+        );
+        assert!(map.contains_key(&4_999), "newest entry must survive");
+    }
+
+    #[test]
     fn lifetime_mode_evicts_oldest_past_threshold() {
         let mut map: HashMap<u32, CacheEntry<u32>> = HashMap::new();
         for i in 0..200u32 {
-            cache_insert(&mut map, i, i, CacheMode::Lifetime);
+            cache_insert(&mut map, i, i, CacheMode::Lifetime, EVICTION_THRESHOLD);
         }
         assert!(map.len() <= EVICTION_THRESHOLD);
         assert!(map.contains_key(&199), "newest entry must survive eviction");

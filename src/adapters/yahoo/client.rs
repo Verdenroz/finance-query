@@ -56,6 +56,12 @@ pub struct YahooClient {
     auth: YahooAuth,
     /// Client configuration
     config: ClientConfig,
+    /// The key this client is cached under, when it came from the shared session
+    /// cache. Stored rather than recomputed: `session::key_for` reads the
+    /// *current* runtime, which for a handle used from a second runtime is not
+    /// the one that cached this client — invalidating by a recomputed key would
+    /// evict the wrong entry and leave the broken session in place.
+    session_key: Option<super::session::SessionKey>,
 }
 
 /// A shared session outlives a single call, so an expired crumb would poison
@@ -64,24 +70,61 @@ fn is_auth_error(e: &FinanceError) -> bool {
     matches!(e, FinanceError::AuthenticationFailed { .. })
 }
 
+/// Yahoo describes a rejected crumb in the error body. A 403 without this is a
+/// datacenter-IP block or abuse throttle, which no amount of re-handshaking fixes.
+fn body_blames_the_crumb(body: &str) -> bool {
+    body.to_ascii_lowercase().contains("crumb")
+}
+
 impl YahooClient {
+    /// Tag this client with the session-cache key it is stored under.
+    pub(crate) fn with_session_key(mut self, key: super::session::SessionKey) -> Self {
+        self.session_key = Some(key);
+        self
+    }
+
     /// Refresh the crumb for a retry. If the refresh itself fails the session
     /// is unrecoverable, so drop it and let the next caller build a fresh one.
     async fn refresh_for_retry(&self) -> Result<()> {
         if let Err(e) = self.auth.refresh().await {
-            super::session::invalidate(&self.config);
+            if let Some(key) = &self.session_key {
+                super::session::invalidate_key(key);
+            }
             return Err(e);
         }
         Ok(())
     }
 
-    /// Check response status and return it if successful, or map the error code
-    fn check_response(response: reqwest::Response) -> Result<reqwest::Response> {
+    /// Check response status and return it if successful, or map the error code.
+    ///
+    /// A 401/403 body is read so a stale crumb can be told apart from an IP
+    /// block; every other status maps without touching the body.
+    async fn check_response(response: reqwest::Response) -> Result<reqwest::Response> {
         let status = response.status();
-        if !status.is_success() {
-            return Err(Self::map_http_status(status.as_u16()));
+        if status.is_success() {
+            return Ok(response);
         }
-        Ok(response)
+        let code = status.as_u16();
+        if matches!(code, 401 | 403) {
+            let body = response.text().await.unwrap_or_default();
+            return Err(Self::map_auth_status(code, &body));
+        }
+        Err(Self::map_http_status(code))
+    }
+
+    /// Map a 401/403 using the response body to tell a stale crumb apart from a
+    /// block. Only the crumb case is retryable.
+    fn map_auth_status(status: u16, body: &str) -> FinanceError {
+        if status == 401 || body_blames_the_crumb(body) {
+            FinanceError::AuthenticationFailed {
+                context: format!("HTTP {status}"),
+            }
+        } else {
+            // 403 with no mention of the crumb: an IP block or abuse throttle.
+            // Refreshing would cost a handshake, a retry, and an invalidated
+            // shared session per blocked request — worst exactly when throttled.
+            FinanceError::UnexpectedResponse(format!("HTTP {status}"))
+        }
     }
 
     /// HTTP error mapping
@@ -137,7 +180,11 @@ impl YahooClient {
         // Authenticate with the provided configuration (timeout, proxy)
         let auth = YahooAuth::authenticate_with_config(&config).await?;
 
-        Ok(Self { auth, config })
+        Ok(Self {
+            auth,
+            config,
+            session_key: None,
+        })
     }
 
     /// Make a GET request to Yahoo Finance with authentication
@@ -158,7 +205,7 @@ impl YahooClient {
                 .send()
                 .await
                 .map_err(|e| self.map_request_error(e))?;
-            Self::check_response(response)
+            Self::check_response(response).await
         };
 
         match send().await {
@@ -179,16 +226,20 @@ impl YahooClient {
 
     /// Fetch logo URLs for a symbol
     ///
-    /// Returns (logoUrl, companyLogoUrl) if available, None for each if not found or on error.
-    /// This uses the /v7/finance/quote endpoint with selective fields for efficiency.
+    /// Returns `(logoUrl, companyLogoUrl)`, each `None` when Yahoo has no logo
+    /// for the symbol. This uses the /v7/finance/quote endpoint with selective
+    /// fields for efficiency.
+    ///
+    /// # Errors
+    ///
+    /// Returns the transport or response error rather than folding it into
+    /// `(None, None)`. Callers cache the result, and a successful "this symbol
+    /// has no logo" is cacheable where a failed request is not — collapsing the
+    /// two made every logo-less symbol refetch on every call.
     ///
     /// # Arguments
     ///
     /// * `symbol` - Stock symbol (e.g., "AAPL", "TSLA")
-    ///
-    /// # Returns
-    ///
-    /// Tuple of (logoUrl, companyLogoUrl), each as Option<String>
     ///
     /// # Example
     ///
@@ -196,35 +247,32 @@ impl YahooClient {
     /// # use finance_query::{YahooClient, ClientConfig};
     /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
     /// let client = YahooClient::new(ClientConfig::default()).await?;
-    /// let (logo_url, company_logo_url) = client.get_logo_url("AAPL").await;
+    /// let (logo_url, company_logo_url) = client.get_logo_url("AAPL").await?;
     /// if let Some(url) = logo_url {
     ///     println!("Logo URL: {}", url);
     /// }
     /// # Ok(())
     /// # }
     /// ```
-    pub async fn get_logo_url(&self, symbol: &str) -> (Option<String>, Option<String>) {
-        let json = match crate::adapters::yahoo::quote::quotes::fetch_with_fields(
+    pub async fn get_logo_url(&self, symbol: &str) -> Result<(Option<String>, Option<String>)> {
+        let json = crate::adapters::yahoo::quote::quotes::fetch_with_fields(
             self,
             &[symbol],
             Some(&["logoUrl", "companyLogoUrl"]),
             false,
             true,
         )
-        .await
-        {
-            Ok(j) => j,
-            Err(_) => return (None, None),
-        };
+        .await?;
 
-        let result = match json
+        // A symbol Yahoo knows nothing about is a legitimate empty answer, not
+        // a failure — it caches like any other resolved lookup.
+        let Some(result) = json
             .get("quoteResponse")
             .and_then(|qr| qr.get("result"))
             .and_then(|r| r.as_array())
             .and_then(|arr| arr.first())
-        {
-            Some(r) => r,
-            None => return (None, None),
+        else {
+            return Ok((None, None));
         };
 
         let logo_url = result
@@ -237,7 +285,7 @@ impl YahooClient {
             .and_then(|v| v.as_str())
             .map(|s| s.to_string());
 
-        (logo_url, company_logo_url)
+        Ok((logo_url, company_logo_url))
     }
 
     /// Make a POST request with JSON body and crumb authentication
@@ -270,7 +318,7 @@ impl YahooClient {
                 .await
                 .map_err(|e| self.map_request_error(e))?;
 
-            Self::check_response(response)
+            Self::check_response(response).await
         };
 
         match send().await {
@@ -303,7 +351,7 @@ impl YahooClient {
                 .send()
                 .await
                 .map_err(|e| self.map_request_error(e))?;
-            Self::check_response(response)
+            Self::check_response(response).await
         };
 
         match send().await {
@@ -1172,6 +1220,49 @@ mod tests {
             FinanceError::SymbolNotFound { .. }
         ));
     }
+
+    #[test]
+    fn a_403_is_retryable_only_when_the_body_blames_the_crumb() {
+        // Yahoo serves 403 for datacenter-IP blocks and abuse throttling too.
+        // Treating those as auth failures costs a handshake plus a retry per
+        // blocked request and invalidates the shared session on top — the exact
+        // work the session cache exists to avoid, precisely when throttled.
+        let crumb_body =
+            r#"{"finance":{"error":{"code":"Unauthorized","description":"Invalid Crumb"}}}"#;
+        assert!(matches!(
+            YahooClient::map_auth_status(403, crumb_body),
+            FinanceError::AuthenticationFailed { .. }
+        ));
+
+        let blocked_body = "Forbidden: your IP has been blocked";
+        assert!(
+            matches!(
+                YahooClient::map_auth_status(403, blocked_body),
+                FinanceError::UnexpectedResponse(_)
+            ),
+            "a non-crumb 403 must not trigger a refresh"
+        );
+
+        // 401 is unambiguous, body or not.
+        for body in [crumb_body, blocked_body, ""] {
+            assert!(matches!(
+                YahooClient::map_auth_status(401, body),
+                FinanceError::AuthenticationFailed { .. }
+            ));
+        }
+    }
+
+    #[test]
+    fn only_a_crumb_403_is_treated_as_retryable_by_the_request_path() {
+        assert!(!is_auth_error(&YahooClient::map_auth_status(
+            403, "blocked"
+        )));
+        assert!(is_auth_error(&YahooClient::map_auth_status(
+            403,
+            "Invalid Crumb"
+        )));
+    }
+
     use super::*;
 
     #[tokio::test]

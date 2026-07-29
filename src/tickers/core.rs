@@ -487,6 +487,11 @@ impl Tickers {
     }
 
     /// Insert into a map cache, amortizing eviction.
+    ///
+    /// The eviction threshold scales with the basket size. These caches key one
+    /// entry per symbol and `all_cached` only serves a hit when *every* symbol is
+    /// fresh, so a fixed cap below the basket size would evict part of the basket
+    /// on every pass and the handle would never register a single cache hit.
     #[inline]
     fn cache_insert<K: Eq + std::hash::Hash, V>(
         &self,
@@ -494,7 +499,13 @@ impl Tickers {
         key: K,
         value: V,
     ) {
-        crate::utils::cache_insert(map, key, value, self.cache_mode);
+        crate::utils::cache_insert(
+            map,
+            key,
+            value,
+            self.cache_mode,
+            crate::utils::eviction_threshold_for(self.symbols.len()),
+        );
     }
 
     /// Batch fetch quotes for all symbols.

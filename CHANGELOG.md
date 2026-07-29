@@ -9,12 +9,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking
 
-- `TrailingStop` and `TrailingTakeProfit` (`backtesting::condition`) no longer
-  implement `Copy`, and both gained a private field. They still implement
-  `Clone`. Code that relied on implicit copies (`let a = ts; use(ts);`) or on
-  struct-literal construction must be updated. Both now carry a per-position
-  running peak/trough cache, which is what removed the O(bars²) rescan from
-  trailing-stop backtests.
 - `Ticker`, `Tickers`, and the domain handles cache responses by default for the
   lifetime of the handle. Previously caching was off unless `.cache(ttl)` was
   set, so every accessor refetched — which contradicted the documentation. Call
@@ -22,7 +16,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `BacktestEngine::run` and `run_with_dividends` now reject candles that are not
   sorted ascending by timestamp, with the same `InvalidParameter` error already
   used for unsorted dividends. Conditions binary-search the candle slice, so an
-  unsorted series previously produced a silently wrong entry index.
+  unsorted series previously produced a silently wrong entry index. `GridSearch`,
+  `BayesianSearch`, and `WalkForward` apply the same check once per series rather
+  than once per candidate.
+- A Yahoo HTTP 403 whose body names the crumb now surfaces as
+  `AuthenticationFailed` rather than `UnexpectedResponse`, so the shared session
+  refreshes instead of failing every later caller on it. A 403 that does *not*
+  mention the crumb — a datacenter-IP block or abuse throttle — keeps mapping to
+  `UnexpectedResponse`, since no handshake can clear it and retrying would cost
+  an extra handshake and a discarded session per blocked request.
 
 ### Changed
 
@@ -35,11 +37,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `TickerBuilder::no_cache()`, `TickersBuilder::no_cache()`, and `no_cache()`
   on the domain handles.
+- `backtesting::PositionExtremes` and `StrategyContext::extremes` — the highest
+  and lowest bar high/low/close since the open position was entered. The engine
+  folds these once per bar, so `TrailingStop` and `TrailingTakeProfit` read one
+  shared running value instead of rescanning the candle history per bar
+  (O(bars²) → O(bars)). Both conditions stay `Copy`. Custom conditions can read
+  `ctx.extremes`; it is `None` outside the engine's bar loop.
 - Automatic crumb refresh: a request that fails authentication re-runs the
   Yahoo handshake once and retries. If the refresh itself fails, the shared
-  session is dropped so the next caller builds a fresh one. HTTP 403 is treated
-  as an authentication failure alongside 401, since Yahoo uses both for a stale
-  crumb.
+  session is dropped so the next caller builds a fresh one.
 
 ### Fixed
 

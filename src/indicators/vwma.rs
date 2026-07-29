@@ -70,10 +70,11 @@ pub fn vwma(data: &[f64], volumes: &[f64], period: usize) -> Result<Vec<Option<f
             volume_sum -= volumes[drop];
         }
         if i + 1 >= period {
-            // Volumes are non-negative, so a non-positive running sum can only
-            // come from cancellation; the same is true of a sum that has shrunk
-            // far below the bar's own volume.
-            if volume_sum <= 0.0 || volume_sum < volumes[i] {
+            // Volumes and price*volume terms are non-negative, so a non-positive
+            // running sum can only come from cancellation; the same is true of a
+            // sum that has shrunk below the bar's own contribution.
+            let term = data[i] * volumes[i];
+            if volume_sum <= 0.0 || volume_sum < volumes[i] || pv_sum < 0.0 || pv_sum < term {
                 (pv_sum, volume_sum) = rebuild(i);
             }
         }
@@ -133,6 +134,20 @@ mod tests {
         assert_eq!(got, want, "rolling diverged from a full rescan");
         assert_eq!(got[3], Some(12.0));
         assert_eq!(got[4], Some(13.0));
+    }
+
+    #[test]
+    fn rolling_survives_numerator_cancellation() {
+        // The volumes are ordinary here, so only the numerator cancels: a price
+        // outlier swamps the later price*volume terms and subtracting it back
+        // out leaves a numerator near zero unless the window is rebuilt.
+        let data = [1e20, 10.0, 11.0, 12.0, 13.0];
+        let volumes = [1.0; 5];
+        let got = vwma(&data, &volumes, 3).unwrap();
+        let want = vwma_reference(&data, &volumes, 3);
+        assert_eq!(got, want, "rolling diverged from a full rescan");
+        assert_eq!(got[3], Some(11.0));
+        assert_eq!(got[4], Some(12.0));
     }
 
     #[test]

@@ -68,10 +68,13 @@ impl<V: Clone> DomainCache<V> {
             }
 
             let value = f().await?;
-            self.entries
-                .write()
-                .await
-                .insert(key.clone(), CacheEntry::new(value.clone()));
+            crate::utils::cache_insert(
+                &mut *self.entries.write().await,
+                key.clone(),
+                value.clone(),
+                self.mode,
+                crate::utils::EVICTION_THRESHOLD,
+            );
             Ok(value)
         }
         .await;
@@ -79,8 +82,21 @@ impl<V: Clone> DomainCache<V> {
         // Drop the guard entry on every exit, not just the success path — under
         // `Ttl`, repeated expiry or error cycles would otherwise accumulate one
         // `Arc<Mutex<_>>` per key that is never reclaimed.
+        //
+        // Only when nobody else holds it, though. Waiters clone the `Arc` before
+        // blocking on it, so an unconditional remove lets a waiter and a fresh
+        // arrival end up on two different mutexes and fetch the same key
+        // concurrently — the dedup this guard exists for.
         drop(_g);
-        self.guards.write().await.remove(&key);
+        drop(guard);
+        {
+            let mut guards = self.guards.write().await;
+            // Our own clone is gone, so a count of 1 means the map is the only
+            // holder: no waiter is parked on this key and dropping it is safe.
+            if guards.get(&key).is_some_and(|g| Arc::strong_count(g) == 1) {
+                guards.remove(&key);
+            }
+        }
         result
     }
 }
@@ -573,6 +589,65 @@ mod tests {
             assert_eq!(h.await.unwrap(), 1);
         }
         assert_eq!(calls.load(Ordering::SeqCst), 1);
+    }
+
+    #[tokio::test]
+    async fn failed_fetches_still_dedup_for_waiters() {
+        // The guard entry is dropped on the error path too, but waiters have
+        // already cloned the `Arc`. Removing it unconditionally would let a
+        // waiter and a fresh arrival hold two different mutexes and fetch the
+        // same key at once.
+        let cache: Arc<DomainCache<u32>> =
+            Arc::new(DomainCache::new(CacheMode::Ttl(Duration::from_secs(60))));
+        let in_flight = Arc::new(AtomicUsize::new(0));
+        let overlap = Arc::new(AtomicUsize::new(0));
+
+        let mut handles = Vec::new();
+        for i in 0..8 {
+            let cache = Arc::clone(&cache);
+            let in_flight = Arc::clone(&in_flight);
+            let overlap = Arc::clone(&overlap);
+            handles.push(tokio::spawn(async move {
+                cache
+                    .get_or_try("k".to_string(), move || async move {
+                        if in_flight.fetch_add(1, Ordering::SeqCst) > 0 {
+                            overlap.fetch_add(1, Ordering::SeqCst);
+                        }
+                        tokio::time::sleep(Duration::from_millis(20)).await;
+                        in_flight.fetch_sub(1, Ordering::SeqCst);
+                        // Every attempt fails, so nothing is ever written to
+                        // `entries` and each waiter runs its own fetch in turn.
+                        Err::<u32, FinanceError>(FinanceError::ApiError(format!("boom {i}")))
+                    })
+                    .await
+            }));
+        }
+        for h in handles {
+            assert!(h.await.unwrap().is_err());
+        }
+        assert_eq!(
+            overlap.load(Ordering::SeqCst),
+            0,
+            "fetches for one key overlapped; the dedup guard was dropped too early"
+        );
+    }
+
+    #[tokio::test]
+    async fn entries_are_bounded_under_lifetime_caching() {
+        // Nothing expires under `Lifetime`, so without an eviction sweep this map
+        // grows without limit for a handle queried across many keys.
+        let cache: DomainCache<u32> = DomainCache::new(CacheMode::Lifetime);
+        for i in 0..500u32 {
+            cache
+                .get_or_try(i.to_string(), || async move { Ok::<u32, FinanceError>(i) })
+                .await
+                .unwrap();
+        }
+        let len = cache.entries.read().await.len();
+        assert!(
+            len <= crate::utils::EVICTION_THRESHOLD,
+            "domain cache grew to {len} entries"
+        );
     }
 
     #[tokio::test]

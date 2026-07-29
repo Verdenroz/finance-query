@@ -4,7 +4,7 @@ use std::cmp::Ordering;
 use std::collections::{BTreeSet, HashMap, HashSet};
 
 use crate::backtesting::config::BacktestConfig;
-use crate::backtesting::engine::{BacktestEngine, update_trailing_hwm};
+use crate::backtesting::engine::{BacktestEngine, update_position_extremes, update_trailing_hwm};
 use crate::backtesting::error::{BacktestError, Result};
 use crate::backtesting::position::{Position, PositionSide, Trade};
 use crate::backtesting::result::{BacktestResult, EquityPoint, PerformanceMetrics, SignalRecord};
@@ -126,6 +126,7 @@ impl PortfolioEngine {
                     warmup,
                     position: None,
                     hwm: None,
+                    extremes: None,
                     div_idx: 0,
                     trades: vec![],
                     signals: vec![],
@@ -171,6 +172,7 @@ impl PortfolioEngine {
                 // Update HWM for trailing stop using the intrabar extreme so the
                 // trailing stop correctly reflects the best price reached during the bar.
                 update_trailing_hwm(state.position.as_ref(), &mut state.hwm, candle);
+                update_position_extremes(state.position.as_ref(), &mut state.extremes, candle);
 
                 // Credit dividends ex-dated on or before this bar
                 while state.div_idx < state.dividends.len()
@@ -240,6 +242,7 @@ impl PortfolioEngine {
                 state.realized_pnl += trade.pnl;
                 state.trades.push(trade);
                 state.hwm = None;
+                state.extremes = None;
                 state.signals.push(SignalRecord {
                     timestamp,
                     price: fill_price,
@@ -284,6 +287,7 @@ impl PortfolioEngine {
                     position: state.position.as_ref(),
                     equity: portfolio_equity,
                     indicators: &state.indicators,
+                    extremes: state.position.as_ref().and(state.extremes),
                 };
 
                 let signal = state.strategy.on_candle(&ctx);
@@ -342,6 +346,7 @@ impl PortfolioEngine {
                                 state.realized_pnl += trade.pnl;
                                 state.trades.push(trade);
                                 state.hwm = None;
+                                state.extremes = None;
                                 state.signals.push(SignalRecord {
                                     timestamp: signal.timestamp,
                                     price: signal.price,
@@ -453,6 +458,7 @@ impl PortfolioEngine {
                                     let trade = if fraction >= 1.0 {
                                         let pos = state.position.take().unwrap();
                                         state.hwm = None;
+                                        state.extremes = None;
                                         pos.close_with_tax(
                                             fill_candle.timestamp,
                                             exit_price,
@@ -655,6 +661,7 @@ impl PortfolioEngine {
                     signal.clone(),
                 ));
                 state.hwm = Some(entry_price);
+                state.extremes = None;
                 state.signals.push(SignalRecord {
                     timestamp: signal.timestamp,
                     price: signal_price,
@@ -772,6 +779,7 @@ impl PortfolioEngine {
                     state.realized_pnl += trade.pnl;
                     state.trades.push(trade);
                     state.hwm = None;
+                    state.extremes = None;
 
                     let sym_equity = state.sym_initial_capital + state.realized_pnl;
                     sync_terminal_equity_point(
@@ -896,6 +904,7 @@ struct SymbolState<S: Strategy> {
     warmup: usize,
     position: Option<Position>,
     hwm: Option<f64>,
+    extremes: Option<crate::backtesting::strategy::PositionExtremes>,
     div_idx: usize,
     trades: Vec<Trade>,
     signals: Vec<SignalRecord>,

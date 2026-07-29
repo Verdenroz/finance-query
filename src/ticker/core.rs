@@ -292,7 +292,13 @@ impl Ticker {
         key: K,
         value: V,
     ) {
-        crate::utils::cache_insert(map, key, value, self.cache_mode);
+        crate::utils::cache_insert(
+            map,
+            key,
+            value,
+            self.cache_mode,
+            crate::utils::EVICTION_THRESHOLD,
+        );
     }
 
     /// Get full quote data, optionally including logo URLs.
@@ -312,15 +318,21 @@ impl Ticker {
             }
             let fetched = match self.providers.first_yahoo() {
                 Ok(y) => y.get_logo_url(&self.symbol).await,
-                Err(_) => (None, None),
+                Err(e) => Err(e),
             };
-            // `get_logo_url` swallows transport errors into `(None, None)`, so
-            // caching that would make one blip permanent for the handle's life.
-            let resolved = fetched.0.is_some() || fetched.1.is_some();
-            if resolved && self.cache_mode.enabled() {
-                *self.logo_cache.write().await = Some(CacheEntry::new(fetched.clone()));
+            // Only a successful lookup is cached. A symbol that genuinely has no
+            // logo resolves to `(None, None)` and caches like any other answer;
+            // a transport error does not, so one blip can't become permanent for
+            // the handle's life.
+            match fetched {
+                Ok(logos) => {
+                    if self.cache_mode.enabled() {
+                        *self.logo_cache.write().await = Some(CacheEntry::new(logos.clone()));
+                    }
+                    logos
+                }
+                Err(_) => (None, None),
             }
-            fetched
         };
 
         let (cache, (logo_url, company_logo_url)) = tokio::join!(self.ensure_quote(), logo_fut);

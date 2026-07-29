@@ -44,6 +44,56 @@ pub use prebuilt::{
     SuperTrendFollow,
 };
 
+/// Price extremes reached since the open position was entered.
+///
+/// The peak since entry belongs to the position, not to any one condition, so
+/// the engine tracks it once per bar and every trailing condition reads the same
+/// value instead of each keeping its own running scan.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct PositionExtremes {
+    /// Highest bar high since entry.
+    pub high: f64,
+    /// Lowest bar low since entry.
+    pub low: f64,
+    /// Highest bar close since entry.
+    pub close_high: f64,
+    /// Lowest bar close since entry.
+    pub close_low: f64,
+}
+
+impl PositionExtremes {
+    /// Seed the extremes from the entry bar.
+    pub(crate) fn new(candle: &Candle) -> Self {
+        Self {
+            high: candle.high,
+            low: candle.low,
+            close_high: candle.close,
+            close_low: candle.close,
+        }
+    }
+
+    /// Fold another bar into the running extremes.
+    pub(crate) fn update(&mut self, candle: &Candle) {
+        self.high = self.high.max(candle.high);
+        self.low = self.low.min(candle.low);
+        self.close_high = self.close_high.max(candle.close);
+        self.close_low = self.close_low.min(candle.close);
+    }
+
+    /// Fold every candle in `range` into fresh extremes.
+    ///
+    /// Used when a context is built outside the engine's bar loop and no running
+    /// value is available.
+    pub(crate) fn from_candles(candles: &[Candle]) -> Option<Self> {
+        let (first, rest) = candles.split_first()?;
+        let mut extremes = Self::new(first);
+        for c in rest {
+            extremes.update(c);
+        }
+        Some(extremes)
+    }
+}
+
 /// Context passed to strategy on each candle.
 ///
 /// Provides access to historical data, current position, and pre-computed indicators.
@@ -63,6 +113,13 @@ pub struct StrategyContext<'a> {
 
     /// Pre-computed indicator values (keyed by indicator name)
     pub indicators: &'a HashMap<String, Vec<Option<f64>>>,
+
+    /// Price extremes since the open position was entered.
+    ///
+    /// `None` when no position is open, or when the context was built outside
+    /// the engine's bar loop — conditions that need it fall back to scanning
+    /// from the entry bar.
+    pub extremes: Option<PositionExtremes>,
 }
 
 impl<'a> StrategyContext<'a> {
@@ -405,6 +462,7 @@ mod tests {
             position: None,
             equity: 10000.0,
             indicators: &indicators,
+            extremes: None,
         };
 
         // fast was 9 (below slow 10), now 11 (above slow 10) -> crossed above
