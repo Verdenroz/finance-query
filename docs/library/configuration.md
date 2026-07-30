@@ -13,7 +13,7 @@ Yahoo Finance provides different data based on regional settings. Finance Query 
 
 The easiest way to set regional settings is using the `Region` enum, which automatically pairs the correct language and region codes:
 
-```rust no_run covers=finance_query::constants::Region
+```rust no_run covers=finance_query::constants::enums::region::Region
 use finance_query::{Ticker, Region};
 
 #[tokio::main]
@@ -41,7 +41,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 **Supported Regions:**
 
-<!-- soothfast:bind finance_query::constants::Region -->
+<!-- soothfast:bind finance_query::constants::enums::region::Region -->
 
 | Region | Language Code | Region Code |
 |---------|---------------|-------------|
@@ -180,12 +180,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
 ### Chart Intervals
 
-<!-- soothfast:bind finance_query::constants::Interval -->
+<!-- soothfast:bind finance_query::constants::enums::interval::Interval -->
 When fetching chart data, choose an appropriate interval. This block runs as a
 real test — every variant below exists on `Interval`:
 <!-- /soothfast:bind -->
 
-```rust capture-output covers=finance_query::constants::Interval
+```rust capture-output covers=finance_query::constants::enums::interval::Interval
 use finance_query::Interval;
 
 // Intraday trading
@@ -212,12 +212,12 @@ OneDay.as_str()    = "1d"
 
 ### Time Ranges
 
-<!-- soothfast:bind finance_query::constants::TimeRange -->
+<!-- soothfast:bind finance_query::constants::enums::time_range::TimeRange -->
 Time ranges span from a single day to the full available history — this block
 also runs as a real test against the `TimeRange` enum:
 <!-- /soothfast:bind -->
 
-```rust capture-output covers=finance_query::constants::TimeRange
+```rust capture-output covers=finance_query::constants::enums::time_range::TimeRange
 use finance_query::TimeRange;
 
 // Short term

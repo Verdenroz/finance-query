@@ -881,6 +881,16 @@ CHANGED  finance_query::tickers::core::TickersBuilder (body)
 | `finance_query::translation_translate_with` | n/a | 3.47µs | 3.52µs | 77 | n/a |
 
 
+### Changed
+
+- Split eight oversized source files into focused modules ([#279]). `constants.rs`,
+  `backtesting/refs/computed.rs`, `backtesting/result.rs`, `backtesting/engine.rs`,
+  `tickers/core.rs`, and the CLI's `dashboard/render.rs`, `backtest/results.rs`, and
+  `backtest/state.rs` each became a directory of focused modules. No public API change
+  and no behavior change — every existing path is preserved via re-exports.
+
+[#279]: https://github.com/Verdenroz/finance-query/issues/279
+
 ## [2.8.0] - 2026-07-10
 
 Domain handles (`ForexPair`, `CryptoCoin`, `Index`, `FuturesContract`,

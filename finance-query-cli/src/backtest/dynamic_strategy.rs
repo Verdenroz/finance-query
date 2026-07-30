@@ -500,7 +500,7 @@ fn htf_indicator_key(interval: Interval, ind: &BuiltIndicator) -> String {
 /// Compute the context key string for a `BuiltIndicator`.
 ///
 /// These key formats must exactly match what the library's `IndicatorRef`
-/// implementations produce (see `src/backtesting/refs/computed.rs` and engine.rs).
+/// implementations produce (see `src/backtesting/refs/computed/` and `src/backtesting/engine/`).
 fn indicator_key(ind: &BuiltIndicator) -> String {
     let p = |i: usize| ind.param_values.get(i).copied().unwrap_or(0.0) as usize;
     let pf = |i: usize| ind.param_values.get(i).copied().unwrap_or(0.0);
