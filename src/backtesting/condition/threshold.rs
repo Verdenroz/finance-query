@@ -2,7 +2,7 @@
 //!
 //! This module provides conditions for stop-loss, take-profit, and trailing stops.
 
-use crate::backtesting::strategy::StrategyContext;
+use crate::backtesting::strategy::{PositionExtremes, StrategyContext};
 use crate::indicators::Indicator;
 
 use super::Condition;
@@ -314,11 +314,7 @@ impl Condition for HeldForBars {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
             // Count bars since entry
-            let entry_idx = ctx
-                .candles
-                .iter()
-                .position(|c| c.timestamp >= pos.entry_timestamp)
-                .unwrap_or(0);
+            let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
             let bars_held = ctx.index.saturating_sub(entry_idx);
             bars_held >= self.min_bars
         } else {
@@ -339,6 +335,32 @@ impl Condition for HeldForBars {
 #[inline]
 pub fn held_for_bars(min_bars: usize) -> HeldForBars {
     HeldForBars::new(min_bars)
+}
+
+/// Index of the first candle at or after the position's entry.
+///
+/// Candles are sorted ascending, so this is a binary search; the `== len` arm
+/// reproduces the `.unwrap_or(0)` of the linear scan it replaced.
+fn entry_index(candles: &[crate::models::chart::Candle], entry_timestamp: i64) -> usize {
+    let ep = candles.partition_point(|c| c.timestamp < entry_timestamp);
+    if ep == candles.len() { 0 } else { ep }
+}
+
+/// Extremes since entry for the open position in `ctx`.
+///
+/// The engine folds these once per bar and hands them over on the context, so
+/// every trailing condition on a position reads one running value rather than
+/// rescanning the candle history itself. Contexts built outside the engine's bar
+/// loop carry no extremes, so those fall back to a scan from the entry bar.
+fn position_extremes(
+    ctx: &StrategyContext,
+    pos: &crate::backtesting::position::Position,
+) -> PositionExtremes {
+    ctx.extremes.copied().unwrap_or_else(|| {
+        let entry_idx = entry_index(ctx.candles, pos.entry_timestamp);
+        PositionExtremes::from_candles(&ctx.candles[entry_idx..=ctx.index])
+            .unwrap_or_else(|| PositionExtremes::new(ctx.current_candle()))
+    })
 }
 
 /// Condition: trailing stop triggered when price retraces from peak/trough.
@@ -386,35 +408,18 @@ impl TrailingStop {
 impl Condition for TrailingStop {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
-            // Find the entry index
-            let entry_idx = ctx
-                .candles
-                .iter()
-                .position(|c| c.timestamp >= pos.entry_timestamp)
-                .unwrap_or(0);
-
-            // Compute peak/trough from entry to current candle (inclusive)
             let current_close = ctx.close();
+            let PositionExtremes {
+                high: peak,
+                low: trough,
+                ..
+            } = position_extremes(ctx, pos);
 
             match pos.side {
                 crate::backtesting::position::PositionSide::Long => {
-                    // For long: find highest high since entry
-                    let peak = ctx.candles[entry_idx..=ctx.index]
-                        .iter()
-                        .map(|c| c.high)
-                        .fold(f64::NEG_INFINITY, f64::max);
-
-                    // Trigger if current price is trail_pct below peak
                     current_close <= peak * (1.0 - self.trail_pct)
                 }
                 crate::backtesting::position::PositionSide::Short => {
-                    // For short: find lowest low since entry
-                    let trough = ctx.candles[entry_idx..=ctx.index]
-                        .iter()
-                        .map(|c| c.low)
-                        .fold(f64::INFINITY, f64::min);
-
-                    // Trigger if current price is trail_pct above trough
                     current_close >= trough * (1.0 + self.trail_pct)
                 }
             }
@@ -429,6 +434,10 @@ impl Condition for TrailingStop {
 
     fn description(&self) -> String {
         format!("trailing stop at {:.1}%", self.trail_pct * 100.0)
+    }
+
+    fn tracks_position_extremes(&self) -> bool {
+        true
     }
 }
 
@@ -489,18 +498,18 @@ impl TrailingTakeProfit {
 impl Condition for TrailingTakeProfit {
     fn evaluate(&self, ctx: &StrategyContext) -> bool {
         if let Some(pos) = ctx.position {
-            // Find the entry index
-            let entry_idx = ctx
-                .candles
-                .iter()
-                .position(|c| c.timestamp >= pos.entry_timestamp)
-                .unwrap_or(0);
-
-            // Compute peak profit from entry to current
-            let peak_profit_pct = ctx.candles[entry_idx..=ctx.index]
-                .iter()
-                .map(|c| pos.unrealized_return_pct(c.close))
-                .fold(f64::NEG_INFINITY, f64::max);
+            let PositionExtremes {
+                close_high,
+                close_low,
+                ..
+            } = position_extremes(ctx, pos);
+            // unrealized_return_pct is monotone in price, so the peak profit is
+            // reached at the window's extreme close for the position's side.
+            let best_close = match pos.side {
+                crate::backtesting::position::PositionSide::Long => close_high,
+                crate::backtesting::position::PositionSide::Short => close_low,
+            };
+            let peak_profit_pct = pos.unrealized_return_pct(best_close);
 
             // Only trigger if we've been in profit and current profit is below peak by trail_pct
             let current_profit_pct = pos.unrealized_return_pct(ctx.close());
@@ -520,6 +529,10 @@ impl Condition for TrailingTakeProfit {
 
     fn description(&self) -> String {
         format!("trailing take profit at {:.1}%", self.trail_pct * 100.0)
+    }
+
+    fn tracks_position_extremes(&self) -> bool {
+        true
     }
 }
 
@@ -545,6 +558,262 @@ pub fn trailing_take_profit(trail_pct: f64) -> TrailingTakeProfit {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn ramp(n: usize) -> Vec<crate::models::chart::Candle> {
+        (0..n)
+            .map(|i| {
+                let px = 100.0 + i as f64;
+                crate::models::chart::Candle {
+                    timestamp: 1_600_000_000 + i as i64 * 86400,
+                    open: px,
+                    high: px * 1.02,
+                    low: px * 0.98,
+                    close: px,
+                    volume: 1_000,
+                    ..Default::default()
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn entry_index_matches_linear_scan() {
+        let candles = ramp(200);
+        let probes = [
+            0i64,
+            candles[0].timestamp,
+            candles[7].timestamp,
+            candles[7].timestamp + 1,
+            candles[199].timestamp,
+            candles[199].timestamp + 10_000,
+        ];
+        for entry_ts in probes {
+            let linear = candles
+                .iter()
+                .position(|c| c.timestamp >= entry_ts)
+                .unwrap_or(0);
+            let ep = candles.partition_point(|c| c.timestamp < entry_ts);
+            let binary = if ep == candles.len() { 0 } else { ep };
+            assert_eq!(linear, binary, "mismatch for entry_ts={entry_ts}");
+        }
+    }
+
+    fn peak_then_drop(n: usize) -> Vec<crate::models::chart::Candle> {
+        (0..n)
+            .map(|i| {
+                let half = n / 2;
+                let px = if i < half {
+                    100.0 + i as f64
+                } else {
+                    100.0 + half as f64 - (i - half) as f64
+                };
+                crate::models::chart::Candle {
+                    timestamp: 1_600_000_000 + i as i64 * 86400,
+                    open: px,
+                    high: px * 1.02,
+                    low: px * 0.98,
+                    close: px,
+                    volume: 1_000,
+                    ..Default::default()
+                }
+            })
+            .collect()
+    }
+
+    #[test]
+    fn trailing_stop_exit_bars_are_stable() {
+        use crate::backtesting::refs::*;
+        use crate::backtesting::{BacktestConfig, BacktestEngine, StrategyBuilder};
+
+        let candles = peak_then_drop(400);
+        let strat = StrategyBuilder::new("t")
+            .entry(price().above(0.0))
+            .exit(trailing_stop(0.03))
+            .build();
+        let result = BacktestEngine::new(BacktestConfig::default())
+            .run("TEST", &candles, strat)
+            .unwrap();
+        let actual: Vec<(i64, i64)> = result
+            .trades
+            .iter()
+            .map(|t| (t.entry_timestamp, t.exit_timestamp))
+            .collect();
+        let expected: Vec<(i64, i64)> = vec![
+            (1600172800, 1617712000),
+            (1617712000, 1618144000),
+            (1618144000, 1618576000),
+            (1618576000, 1619008000),
+            (1619008000, 1619353600),
+            (1619353600, 1619699200),
+            (1619699200, 1620044800),
+            (1620044800, 1620390400),
+            (1620390400, 1620736000),
+            (1620736000, 1621081600),
+            (1621081600, 1621427200),
+            (1621427200, 1621772800),
+            (1621772800, 1622118400),
+            (1622118400, 1622464000),
+            (1622464000, 1622809600),
+            (1622809600, 1623155200),
+            (1623155200, 1623500800),
+            (1623500800, 1623846400),
+            (1623846400, 1624192000),
+            (1624192000, 1624537600),
+            (1624537600, 1624883200),
+            (1624883200, 1625228800),
+            (1625228800, 1625574400),
+            (1625574400, 1625920000),
+            (1625920000, 1626265600),
+            (1626265600, 1626611200),
+            (1626611200, 1626956800),
+            (1626956800, 1627216000),
+            (1627216000, 1627475200),
+            (1627475200, 1627734400),
+            (1627734400, 1627993600),
+            (1627993600, 1628252800),
+            (1628252800, 1628512000),
+            (1628512000, 1628771200),
+            (1628771200, 1629030400),
+            (1629030400, 1629289600),
+            (1629289600, 1629548800),
+            (1629548800, 1629808000),
+            (1629808000, 1630067200),
+            (1630067200, 1630326400),
+            (1630326400, 1630585600),
+            (1630585600, 1630844800),
+            (1630844800, 1631104000),
+            (1631104000, 1631363200),
+            (1631363200, 1631622400),
+            (1631622400, 1631881600),
+            (1631881600, 1632140800),
+            (1632140800, 1632400000),
+            (1632400000, 1632659200),
+            (1632659200, 1632918400),
+            (1632918400, 1633177600),
+            (1633177600, 1633436800),
+            (1633436800, 1633696000),
+            (1633696000, 1633955200),
+            (1633955200, 1634214400),
+            (1634214400, 1634473600),
+            (1634473600, 1634473600),
+        ];
+        assert_eq!(actual, expected);
+    }
+
+    #[test]
+    fn trailing_conditions_stay_copy() {
+        // The peak lives on the position, not the condition, so these carry no
+        // state and remain plain `Copy` value types.
+        fn assert_copy<T: Copy>(_: &T) {}
+        assert_copy(&TrailingStop::new(0.05));
+        assert_copy(&TrailingTakeProfit::new(0.05));
+
+        let ts = TrailingStop::new(0.05);
+        let a = ts;
+        let b = ts;
+        assert_eq!(a.trail_pct, b.trail_pct);
+    }
+
+    #[test]
+    fn only_trailing_strategies_opt_into_extremes_tracking() {
+        // The engine folds extremes per bar only when this reports true, so a
+        // trailing condition that loses the flag silently falls back to the
+        // O(bars²) rescan this PR removed — and a strategy without one would
+        // otherwise pay for a value nothing reads.
+        use crate::backtesting::refs::*;
+        use crate::backtesting::strategy::{Strategy, StrategyBuilder};
+
+        assert!(TrailingStop::new(0.05).tracks_position_extremes());
+        assert!(TrailingTakeProfit::new(0.05).tracks_position_extremes());
+        assert!(!stop_loss(0.05).tracks_position_extremes());
+
+        // Composites have to carry it through, in either position.
+        assert!(
+            stop_loss(0.05)
+                .or(trailing_stop(0.03))
+                .tracks_position_extremes()
+        );
+        assert!(
+            trailing_stop(0.03)
+                .and(in_profit())
+                .tracks_position_extremes()
+        );
+        assert!(
+            !stop_loss(0.05)
+                .or(take_profit(0.1))
+                .tracks_position_extremes()
+        );
+
+        // ...and so does the strategy built from them.
+        let trailing = StrategyBuilder::new("trailing")
+            .entry(price().above(0.0))
+            .exit(trailing_stop(0.03))
+            .build();
+        assert!(trailing.tracks_position_extremes());
+
+        let plain = StrategyBuilder::new("plain")
+            .entry(price().above(0.0))
+            .exit(stop_loss(0.05))
+            .build();
+        assert!(
+            !plain.tracks_position_extremes(),
+            "a strategy with no trailing condition must not pay for the tracking"
+        );
+    }
+
+    #[test]
+    fn context_extremes_match_a_scan_from_entry() {
+        // Conditions read the engine's running extremes when present and fall
+        // back to scanning from the entry bar when they aren't. Both paths must
+        // produce the same verdict.
+        let candles = ramp(30);
+        let entry_idx = 5usize;
+        let index = 20usize;
+        let position = crate::backtesting::position::Position::new(
+            crate::backtesting::position::PositionSide::Long,
+            candles[entry_idx].timestamp,
+            candles[entry_idx].close,
+            10.0,
+            0.0,
+            crate::backtesting::signal::Signal::long(
+                candles[entry_idx].timestamp,
+                candles[entry_idx].close,
+            ),
+        );
+        let indicators = std::collections::HashMap::new();
+        let scanned = PositionExtremes::from_candles(&candles[entry_idx..=index]).unwrap();
+
+        for pct in [0.001, 0.01, 0.05, 0.5] {
+            let cond = TrailingStop::new(pct);
+            let tp = TrailingTakeProfit::new(pct);
+            let with = StrategyContext {
+                candles: &candles[..=index],
+                index,
+                position: Some(&position),
+                equity: 10_000.0,
+                indicators: &indicators,
+                extremes: Some(&scanned),
+            };
+            let without = StrategyContext {
+                candles: &candles[..=index],
+                index,
+                position: Some(&position),
+                equity: 10_000.0,
+                indicators: &indicators,
+                extremes: None,
+            };
+            assert_eq!(
+                cond.evaluate(&with),
+                cond.evaluate(&without),
+                "trailing stop disagreed at {pct}"
+            );
+            assert_eq!(
+                tp.evaluate(&with),
+                tp.evaluate(&without),
+                "trailing take-profit disagreed at {pct}"
+            );
+        }
+    }
 
     #[test]
     fn test_stop_loss_description() {
@@ -594,5 +863,48 @@ mod tests {
         assert!(no_position().required_indicators().is_empty());
         assert!(trailing_stop(0.03).required_indicators().is_empty());
         assert!(trailing_take_profit(0.02).required_indicators().is_empty());
+    }
+
+    /// The `TrailingTakeProfit` fast path folds closes into a single extreme and
+    /// evaluates `unrealized_return_pct` once, instead of evaluating it per bar
+    /// and folding the results. That is only exact because the function is
+    /// monotone in price — increasing for longs, decreasing for shorts. Pin it.
+    #[test]
+    fn peak_profit_from_extreme_close_matches_per_bar_fold() {
+        use crate::backtesting::position::{Position, PositionSide};
+        use crate::backtesting::signal::Signal;
+
+        let closes: Vec<f64> = (0..300)
+            .map(|i| 100.0 + (i as f64 * 0.37).sin() * 25.0 + (i as f64 * 0.011))
+            .collect();
+
+        for side in [PositionSide::Long, PositionSide::Short] {
+            for entry_price in [1.0_f64, 87.5, 100.0, 133.25] {
+                let pos = Position::new(
+                    side,
+                    1_600_000_000,
+                    entry_price,
+                    7.0,
+                    0.0,
+                    Signal::long(1_600_000_000, entry_price),
+                );
+
+                let per_bar = closes
+                    .iter()
+                    .map(|&c| pos.unrealized_return_pct(c))
+                    .fold(f64::NEG_INFINITY, f64::max);
+
+                let extreme = match side {
+                    PositionSide::Long => closes.iter().copied().fold(f64::NEG_INFINITY, f64::max),
+                    PositionSide::Short => closes.iter().copied().fold(f64::INFINITY, f64::min),
+                };
+                let single = pos.unrealized_return_pct(extreme);
+
+                assert_eq!(
+                    per_bar, single,
+                    "side={side:?} entry={entry_price}: fold-of-f != f-of-extreme"
+                );
+            }
+        }
     }
 }

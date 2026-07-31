@@ -129,8 +129,11 @@ pub async fn fetch_canonical_quote(
 }
 
 /// Convert historical daily price DTOs into canonical Chart candles.
+///
+/// FMP serves newest-first; candles are returned ascending by timestamp, which
+/// is what the backtesting engine and every consumer of `Chart` expect.
 fn historical_to_candles(historical: Vec<HistoricalPriceDTO>) -> Vec<crate::models::chart::Candle> {
-    historical
+    let mut candles: Vec<crate::models::chart::Candle> = historical
         .into_iter()
         .filter_map(|r| {
             let ts = chrono::NaiveDate::parse_from_str(r.date.as_deref()?, "%Y-%m-%d")
@@ -149,12 +152,16 @@ fn historical_to_candles(historical: Vec<HistoricalPriceDTO>) -> Vec<crate::mode
                 provider_id: Some(crate::providers::Provider::Fmp),
             })
         })
-        .collect()
+        .collect();
+    candles.sort_unstable_by_key(|c| c.timestamp);
+    candles
 }
 
 /// Convert intraday price DTOs into canonical Chart candles.
+///
+/// As with the daily series, FMP serves newest-first and callers expect ascending.
 fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::chart::Candle> {
-    intraday
+    let mut candles: Vec<crate::models::chart::Candle> = intraday
         .into_iter()
         .filter_map(|r| {
             let ts = chrono::NaiveDateTime::parse_from_str(r.date.as_deref()?, "%Y-%m-%d %H:%M:%S")
@@ -172,7 +179,9 @@ fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::ch
                 provider_id: Some(crate::providers::Provider::Fmp),
             })
         })
-        .collect()
+        .collect();
+    candles.sort_unstable_by_key(|c| c.timestamp);
+    candles
 }
 
 /// Fetch canonical daily chart data with date range.
@@ -532,6 +541,41 @@ mod tests {
             candles[0].provider_id,
             Some(crate::providers::Provider::Fmp)
         );
+    }
+
+    #[test]
+    fn candle_conversion_sorts_fmp_newest_first_payloads_ascending() {
+        // FMP serves newest-first. BacktestEngine::run rejects unsorted candles,
+        // so the bridge has to normalise rather than pass the payload order through.
+        let resp: HistoricalPriceResponseDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "historical": [
+                {"date": "2024-01-04", "open": 1.0, "high": 1.0, "low": 1.0, "close": 3.0, "volume": 3},
+                {"date": "2024-01-03", "open": 1.0, "high": 1.0, "low": 1.0, "close": 2.0, "volume": 2},
+                {"date": "2024-01-02", "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0, "volume": 1}
+            ]
+        }))
+        .unwrap();
+
+        let candles = historical_to_candles(resp.historical);
+        assert!(
+            candles.windows(2).all(|w| w[0].timestamp <= w[1].timestamp),
+            "daily candles must be ascending"
+        );
+        assert_eq!(candles[0].close, 1.0);
+
+        let points: Vec<IntradayPriceDTO> = serde_json::from_value(serde_json::json!([
+            {"date": "2024-01-02 09:35:00", "open": 1.0, "high": 1.0, "low": 1.0, "close": 2.0},
+            {"date": "2024-01-02 09:30:00", "open": 1.0, "high": 1.0, "low": 1.0, "close": 1.0}
+        ]))
+        .unwrap();
+
+        let candles = intraday_to_candles(points);
+        assert!(
+            candles.windows(2).all(|w| w[0].timestamp <= w[1].timestamp),
+            "intraday candles must be ascending"
+        );
+        assert_eq!(candles[0].close, 1.0);
     }
 
     #[test]

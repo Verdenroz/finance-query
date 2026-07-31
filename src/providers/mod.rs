@@ -2,6 +2,9 @@
 
 pub mod config;
 
+#[cfg(test)]
+pub(crate) mod mock;
+
 #[cfg(feature = "alphavantage")]
 pub(crate) mod alphavantage;
 #[cfg(feature = "crypto")]

@@ -154,9 +154,8 @@ pub async fn options_chain_snapshot(
 }
 
 /// Helper: parse a "YYYY-MM-DD" date string into a Unix timestamp.
-fn parse_date(d: &Option<String>) -> i64 {
-    d.as_ref()
-        .and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
+fn parse_date(d: Option<&str>) -> i64 {
+    d.and_then(|s| chrono::NaiveDate::parse_from_str(s, "%Y-%m-%d").ok())
         .and_then(|dt| dt.and_hms_opt(0, 0, 0))
         .map(|dt| dt.and_utc().timestamp())
         .unwrap_or(0)
@@ -194,9 +193,8 @@ fn map_snapshot_to_contract(s: &OptionsSnapshotDTO) -> OptionContract {
         contract_size: None,
         expiration: details
             .as_ref()
-            .and_then(|d| d.expiration_date.as_ref())
-            .map(|s| Some(parse_date(&Some(s.clone()))))
-            .unwrap_or(None),
+            .and_then(|d| d.expiration_date.as_deref())
+            .map(|s| parse_date(Some(s))),
         last_trade_date: None,
         implied_volatility: s.implied_volatility,
         in_the_money: None,
@@ -218,12 +216,11 @@ pub async fn fetch_options_response(symbol: &str, date: Option<i64>) -> Result<O
     let expiration_dates: Vec<i64> = snapshots
         .iter()
         .filter_map(|s| {
-            let ts = s
-                .details
-                .as_ref()
-                .and_then(|d| d.expiration_date.as_ref())
-                .map(|s| parse_date(&Some(s.clone())))
-                .unwrap_or(0);
+            let ts = parse_date(
+                s.details
+                    .as_ref()
+                    .and_then(|d| d.expiration_date.as_deref()),
+            );
             if ts > 0 { Some(ts) } else { None }
         })
         .collect::<std::collections::BTreeSet<_>>()
@@ -278,6 +275,20 @@ pub async fn options_contract_snapshot(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn parse_date_handles_none_and_garbage() {
+        assert_eq!(parse_date(None), 0);
+        assert_eq!(parse_date(Some("not-a-date")), 0);
+
+        let expected = chrono::NaiveDate::from_ymd_opt(2026, 1, 15)
+            .unwrap()
+            .and_hms_opt(0, 0, 0)
+            .unwrap()
+            .and_utc()
+            .timestamp();
+        assert_eq!(parse_date(Some("2026-01-15")), expected);
+    }
 
     #[tokio::test]
     async fn test_options_chain_snapshot_mock() {

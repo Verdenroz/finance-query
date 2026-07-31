@@ -7,6 +7,55 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Breaking
+
+- `Ticker`, `Tickers`, and the domain handles cache responses by default for the
+  lifetime of the handle. Previously caching was off unless `.cache(ttl)` was
+  set, so every accessor refetched — which contradicted the documentation. Call
+  `.no_cache()` for the old behavior.
+- `BacktestEngine::run` and `run_with_dividends` now reject candles that are not
+  sorted ascending by timestamp, with the same `InvalidParameter` error already
+  used for unsorted dividends. Conditions binary-search the candle slice, so an
+  unsorted series previously produced a silently wrong entry index. `GridSearch`,
+  `BayesianSearch`, and `WalkForward` apply the same check once per series rather
+  than once per candidate.
+- A Yahoo HTTP 403 whose body names the crumb now surfaces as
+  `AuthenticationFailed` rather than `UnexpectedResponse`, so the shared session
+  refreshes instead of failing every later caller on it. A 403 that does *not*
+  mention the crumb — a datacenter-IP block or abuse throttle — keeps mapping to
+  `UnexpectedResponse`, since no handshake can clear it and retrying would cost
+  an extra handshake and a discarded session per blocked request.
+
+### Changed
+
+- Yahoo sessions are now shared per tokio runtime and client configuration.
+  The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
+  authenticated session instead of running a fresh cookie + crumb handshake per
+  call, cutting each `finance::*` call from three HTTP requests to one.
+
+### Added
+
+- `TickerBuilder::no_cache()`, `TickersBuilder::no_cache()`, and `no_cache()`
+  on the domain handles.
+- `backtesting::PositionExtremes` and `StrategyContext::extremes` — the highest
+  and lowest bar high/low/close since the open position was entered. The engine
+  folds these once per bar, so `TrailingStop` and `TrailingTakeProfit` read one
+  shared running value instead of rescanning the candle history per bar
+  (O(bars²) → O(bars)). Both conditions stay `Copy`. Custom conditions can read
+  `ctx.extremes`; it is `None` outside the engine's bar loop.
+- Automatic crumb refresh: a request that fails authentication re-runs the
+  Yahoo handshake once and retries. If the refresh itself fails, the shared
+  session is dropped so the next caller builds a fresh one.
+
+### Fixed
+
+- `vwma` is computed with rolling sums instead of rescanning the window each
+  bar. Results may differ from previous releases in the last few significant
+  digits; a window whose volumes span extreme magnitudes is now rebuilt rather
+  than returning a value derived from a cancelled-out denominator.
+- A batch quote response whose `result` array contains a non-object element now
+  fails that batch instead of yielding an all-empty quote for it.
+
 ## [2.8.0] - 2026-07-10
 
 Domain handles (`ForexPair`, `CryptoCoin`, `Index`, `FuturesContract`,

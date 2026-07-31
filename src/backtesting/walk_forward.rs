@@ -48,6 +48,7 @@
 
 use std::collections::HashMap;
 
+use rayon::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::models::chart::Candle;
@@ -167,58 +168,39 @@ impl WalkForwardConfig {
         F: Send + Sync,
     {
         self.validate(candles.len())?;
+        // Checked once for the whole series; every window is a slice of it.
+        crate::backtesting::engine::validate_series_order(candles, &[])?;
 
         let step = self.step_bars.unwrap_or(self.out_of_sample_bars);
         let total_bars = self.in_sample_bars + self.out_of_sample_bars;
 
         // Slide the window through the candle series
-        let mut windows: Vec<WindowResult> = Vec::new();
-        let mut opt_reports: Vec<OptimizationReport> = Vec::new();
-        let mut window_idx = 0;
-        let mut start = 0;
+        let starts: Vec<usize> = {
+            let mut v = Vec::new();
+            let mut start = 0usize;
+            while start + total_bars <= candles.len() {
+                v.push(start);
+                start += step;
+            }
+            v
+        };
 
-        while start + total_bars <= candles.len() {
-            let is_end = start + self.in_sample_bars;
-            let oos_end = is_end + self.out_of_sample_bars;
+        let mut windows: Vec<WindowResult> = Vec::with_capacity(starts.len());
+        let mut opt_reports: Vec<OptimizationReport> = Vec::with_capacity(starts.len());
 
-            let is_candles = &candles[start..is_end];
-            let oos_candles = &candles[is_end..oos_end];
+        // Collect every result rather than short-circuiting: rayon does not
+        // define which error wins a fallible collect, and callers rely on the
+        // lowest-index window's failure being the one reported.
+        let results: Vec<Result<(WindowResult, OptimizationReport)>> = starts
+            .par_iter()
+            .enumerate()
+            .map(|(idx, &start)| self.run_one_window(idx, start, symbol, candles, &factory))
+            .collect();
 
-            // Optimise on the in-sample slice
-            let opt_report = self
-                .grid
-                .run(symbol, is_candles, &self.config, &factory)
-                .map_err(|e| {
-                    BacktestError::invalid_param(
-                        "walk_forward",
-                        format!("window {window_idx} optimisation failed: {e}"),
-                    )
-                })?;
-
-            let best_params = opt_report.best.params.clone();
-            let is_result = opt_report.best.result.clone();
-
-            // Test on the out-of-sample slice using the best parameters
-            let oos_strategy = factory(&best_params);
-            let oos_result = crate::backtesting::BacktestEngine::new(self.config.clone())
-                .run(symbol, oos_candles, oos_strategy)
-                .map_err(|e| {
-                    BacktestError::invalid_param(
-                        "walk_forward",
-                        format!("window {window_idx} OOS run failed: {e}"),
-                    )
-                })?;
-
-            windows.push(WindowResult {
-                window: window_idx,
-                optimized_params: best_params,
-                in_sample: is_result,
-                out_of_sample: oos_result,
-            });
-            opt_reports.push(opt_report);
-
-            start += step;
-            window_idx += 1;
+        for r in results {
+            let (w, o) = r?;
+            windows.push(w);
+            opt_reports.push(o);
         }
 
         if windows.is_empty() {
@@ -243,6 +225,62 @@ impl WalkForwardConfig {
             consistency_ratio,
             optimization_reports: opt_reports,
         })
+    }
+
+    /// Run the optimisation and out-of-sample test for a single window.
+    fn run_one_window<S, F>(
+        &self,
+        window_idx: usize,
+        start: usize,
+        symbol: &str,
+        candles: &[Candle],
+        factory: &F,
+    ) -> Result<(WindowResult, OptimizationReport)>
+    where
+        S: Strategy + Clone + Send,
+        F: Fn(&HashMap<String, ParamValue>) -> S,
+        F: Send + Sync,
+    {
+        let is_end = start + self.in_sample_bars;
+        let oos_end = is_end + self.out_of_sample_bars;
+
+        let is_candles = &candles[start..is_end];
+        let oos_candles = &candles[is_end..oos_end];
+
+        // Optimise on the in-sample slice
+        let opt_report = self
+            .grid
+            .run(symbol, is_candles, &self.config, factory)
+            .map_err(|e| {
+                BacktestError::invalid_param(
+                    "walk_forward",
+                    format!("window {window_idx} optimisation failed: {e}"),
+                )
+            })?;
+
+        let best_params = opt_report.best.params.clone();
+        let is_result = opt_report.best.result.clone();
+
+        // Test on the out-of-sample slice using the best parameters
+        let oos_strategy = factory(&best_params);
+        let oos_result = crate::backtesting::BacktestEngine::new(self.config.clone())
+            .simulate(symbol, oos_candles, oos_strategy, &[])
+            .map_err(|e| {
+                BacktestError::invalid_param(
+                    "walk_forward",
+                    format!("window {window_idx} OOS run failed: {e}"),
+                )
+            })?;
+
+        Ok((
+            WindowResult {
+                window: window_idx,
+                optimized_params: best_params,
+                in_sample: is_result,
+                out_of_sample: oos_result,
+            },
+            opt_report,
+        ))
     }
 
     /// Validate the configuration before running.
@@ -464,6 +502,86 @@ mod tests {
 
         assert!(report.windows.len() >= 2);
         assert_eq!(report.optimization_reports.len(), report.windows.len());
+    }
+
+    #[test]
+    fn walk_forward_windows_are_order_stable() {
+        let candles = make_candles(&trending_prices(900));
+        let config = BacktestConfig::builder()
+            .commission_pct(0.0)
+            .slippage_pct(0.0)
+            .build()
+            .unwrap();
+
+        let run = || {
+            let grid = GridSearch::new()
+                .param("fast", ParamRange::int_range(3, 9, 3))
+                .param("slow", ParamRange::int_range(10, 20, 10))
+                .optimize_for(OptimizeMetric::TotalReturn);
+            WalkForwardConfig::new(grid, config.clone())
+                .in_sample_bars(200)
+                .out_of_sample_bars(100)
+                .run("TEST", &candles, |params| {
+                    SmaCrossover::new(
+                        params["fast"].as_int() as usize,
+                        params["slow"].as_int() as usize,
+                    )
+                })
+                .unwrap()
+        };
+
+        let a = run();
+        let b = run();
+        assert!(
+            a.windows.len() >= 3,
+            "need multiple windows to test ordering"
+        );
+        assert_eq!(a.windows.len(), b.windows.len());
+        for (i, (x, y)) in a.windows.iter().zip(b.windows.iter()).enumerate() {
+            assert_eq!(x.window, i, "window index out of order at position {i}");
+            assert_eq!(y.window, i, "window index out of order at position {i}");
+            assert_eq!(
+                x.optimized_params, y.optimized_params,
+                "window {i} diverged"
+            );
+            assert_eq!(
+                x.out_of_sample.metrics.total_return_pct, y.out_of_sample.metrics.total_return_pct,
+                "window {i} diverged"
+            );
+            assert_eq!(
+                x.out_of_sample.start_timestamp, y.out_of_sample.start_timestamp,
+                "window {i} diverged"
+            );
+            assert_eq!(
+                x.out_of_sample.end_timestamp, y.out_of_sample.end_timestamp,
+                "window {i} diverged"
+            );
+            assert_eq!(
+                x.in_sample.metrics.total_return_pct, y.in_sample.metrics.total_return_pct,
+                "window {i} diverged"
+            );
+        }
+
+        for pair in a.windows.windows(2) {
+            assert!(
+                pair[0].out_of_sample.start_timestamp < pair[1].out_of_sample.start_timestamp,
+                "windows not in chronological order: {} >= {}",
+                pair[0].out_of_sample.start_timestamp,
+                pair[1].out_of_sample.start_timestamp
+            );
+        }
+
+        assert_eq!(a.optimization_reports.len(), a.windows.len());
+        for (i, (x, y)) in a
+            .optimization_reports
+            .iter()
+            .zip(b.optimization_reports.iter())
+            .enumerate()
+        {
+            assert_eq!(x.best.params, y.best.params, "opt report {i} diverged");
+        }
+
+        assert_eq!(a.consistency_ratio, b.consistency_ratio);
     }
 
     #[test]

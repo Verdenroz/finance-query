@@ -332,6 +332,27 @@ pub async fn search(
 }
 
 // ============================================================================
+// Compound operations
+// ============================================================================
+
+/// Resolve `symbol` to a CIK and fetch its submissions using a single client.
+///
+/// Collapses the two HTTP connection pools (and TLS handshakes) that calling
+/// [`resolve_cik`] then [`submissions`] would otherwise pay for into one.
+pub(crate) async fn submissions_for_symbol(symbol: &str) -> Result<EdgarSubmissions> {
+    let client = build_client()?;
+    let cik = client.resolve_cik(symbol).await?;
+    client.submissions(cik).await
+}
+
+/// Resolve `symbol` to a CIK and fetch its XBRL company facts using a single client.
+pub(crate) async fn company_facts_for_symbol(symbol: &str) -> Result<CompanyFacts> {
+    let client = build_client()?;
+    let cik = client.resolve_cik(symbol).await?;
+    client.company_facts(cik).await
+}
+
+// ============================================================================
 // Canonical model conversion functions
 // ============================================================================
 
@@ -341,8 +362,7 @@ pub async fn fetch_filings_response(
 ) -> Result<crate::models::filings::ProviderFilings> {
     use crate::models::filings::{ProviderFiling, ProviderFilings};
 
-    let cik_num = resolve_cik(symbol).await?;
-    let subs = submissions(cik_num).await?;
+    let subs = submissions_for_symbol(symbol).await?;
 
     let cik = subs.cik.clone().unwrap_or_default();
     let company_name = subs.name.clone();

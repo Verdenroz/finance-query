@@ -19,11 +19,16 @@ pub fn historical_var(returns: &[f64], confidence: f64) -> Option<f64> {
     let mut sorted = returns.to_vec();
     sorted.sort_by(|a, b| a.total_cmp(b));
 
-    // The `(1 - confidence)` worst-case percentile
+    historical_var_sorted(&sorted, confidence)
+}
+
+/// `historical_var` over an already-sorted slice.
+pub(crate) fn historical_var_sorted(sorted: &[f64], confidence: f64) -> Option<f64> {
+    if sorted.is_empty() {
+        return None;
+    }
     let idx = ((1.0 - confidence) * sorted.len() as f64) as usize;
     let idx = idx.min(sorted.len() - 1);
-
-    // VaR is expressed as a positive loss
     Some(-sorted[idx])
 }
 
@@ -38,20 +43,13 @@ pub fn historical_var(returns: &[f64], confidence: f64) -> Option<f64> {
 ///
 /// Returns `None` when fewer than 2 observations are provided.
 pub fn parametric_var(returns: &[f64], confidence: f64) -> Option<f64> {
-    if returns.len() < 2 {
-        return None;
-    }
+    let (mean, std_dev) = super::ratios::mean_and_std(returns)?;
+    Some(parametric_var_with_stats(mean, std_dev, confidence))
+}
 
-    let mean = returns.iter().sum::<f64>() / returns.len() as f64;
-    let variance =
-        returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (returns.len() - 1) as f64;
-    let std_dev = variance.sqrt();
-
-    // Approximate normal quantile (z-score) for common confidence levels
-    let z = normal_quantile(confidence);
-
-    // VaR = -(mean - z * std_dev)
-    Some(-(mean - z * std_dev))
+/// `parametric_var` given a precomputed mean and standard deviation.
+pub(crate) fn parametric_var_with_stats(mean: f64, std_dev: f64, confidence: f64) -> f64 {
+    -(mean - normal_quantile(confidence) * std_dev)
 }
 
 /// Approximate inverse normal CDF (quantile function) for confidence levels in [0.90, 0.999].

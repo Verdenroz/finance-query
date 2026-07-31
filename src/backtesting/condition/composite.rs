@@ -43,6 +43,10 @@ impl<C1: Condition, C2: Condition> Condition for And<C1, C2> {
         reqs
     }
 
+    fn tracks_position_extremes(&self) -> bool {
+        self.left.tracks_position_extremes() || self.right.tracks_position_extremes()
+    }
+
     fn description(&self) -> String {
         format!(
             "({} AND {})",
@@ -88,6 +92,10 @@ impl<C1: Condition, C2: Condition> Condition for Or<C1, C2> {
         reqs
     }
 
+    fn tracks_position_extremes(&self) -> bool {
+        self.left.tracks_position_extremes() || self.right.tracks_position_extremes()
+    }
+
     fn description(&self) -> String {
         format!(
             "({} OR {})",
@@ -121,6 +129,10 @@ impl<C: Condition> Condition for Not<C> {
 
     fn htf_requirements(&self) -> Vec<HtfIndicatorSpec> {
         self.inner.htf_requirements()
+    }
+
+    fn tracks_position_extremes(&self) -> bool {
+        self.inner.tracks_position_extremes()
     }
 
     fn description(&self) -> String {

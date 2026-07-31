@@ -495,34 +495,10 @@ pub async fn fetch_chart_response(
         _ => time_series_daily(symbol, None).await?,
     };
 
-    let candles: Vec<Candle> = ts
-        .entries
-        .into_iter()
-        .map(|bar| {
-            let ts_val = chrono::NaiveDateTime::parse_from_str(
-                &format!("{} 00:00:00", bar.timestamp),
-                "%Y-%m-%d %H:%M:%S",
-            )
-            .ok()
-            .map(|dt| dt.and_utc().timestamp())
-            .unwrap_or(0);
-            Candle {
-                timestamp: ts_val,
-                open: bar.open,
-                high: bar.high,
-                low: bar.low,
-                close: bar.close,
-                volume: bar.volume as i64,
-                adj_close: None,
-                provider_id: Some(crate::Provider::AlphaVantage),
-            }
-        })
-        .collect();
-
     Ok(Chart {
         symbol: symbol.to_string(),
         meta: Default::default(),
-        candles,
+        candles: entries_to_candles(ts.entries),
         interval: None,
         range: None,
         provider_id: Some(crate::Provider::AlphaVantage),
@@ -541,37 +517,59 @@ pub async fn fetch_chart_range_response(
 
     let ts = time_series_daily(symbol, Some(super::models::OutputSize::Full)).await?;
 
-    let candles: Vec<Candle> = ts
+    let in_range: Vec<_> = ts
         .entries
         .into_iter()
         .filter(|bar| bar.timestamp >= from_date && bar.timestamp <= to_date)
-        .map(|bar| {
-            let ts_val = chrono::NaiveDate::parse_from_str(&bar.timestamp, "%Y-%m-%d")
-                .ok()
-                .and_then(|d| d.and_hms_opt(0, 0, 0))
-                .map(|dt| dt.and_utc().timestamp())
-                .unwrap_or(0);
-            Candle {
-                timestamp: ts_val,
-                open: bar.open,
-                high: bar.high,
-                low: bar.low,
-                close: bar.close,
-                volume: bar.volume as i64,
-                adj_close: None,
-                provider_id: Some(crate::Provider::AlphaVantage),
-            }
-        })
         .collect();
 
     Ok(Chart {
         symbol: symbol.to_string(),
         meta: Default::default(),
-        candles,
+        candles: entries_to_candles(in_range),
         interval: None,
         range: None,
         provider_id: Some(crate::Provider::AlphaVantage),
     })
+}
+
+/// Convert time series entries into canonical candles, ascending by timestamp.
+///
+/// The DTO layer sorts entries newest-first, but `BacktestEngine::run` rejects
+/// candles that are not ascending, so the chart bridge normalises here.
+fn entries_to_candles(entries: Vec<TimeSeriesEntryDTO>) -> Vec<Candle> {
+    let mut candles: Vec<Candle> = entries
+        .into_iter()
+        .map(|bar| Candle {
+            timestamp: parse_entry_timestamp(&bar.timestamp),
+            open: bar.open,
+            high: bar.high,
+            low: bar.low,
+            close: bar.close,
+            volume: bar.volume as i64,
+            adj_close: None,
+            provider_id: Some(crate::Provider::AlphaVantage),
+        })
+        .collect();
+    candles.sort_unstable_by_key(|c| c.timestamp);
+    candles
+}
+
+/// Parse an Alpha Vantage time series key into a Unix timestamp.
+///
+/// Daily series are keyed `YYYY-MM-DD`; intraday series carry a time component.
+/// An unparseable key yields 0 rather than dropping the bar, matching the
+/// previous behaviour.
+fn parse_entry_timestamp(key: &str) -> i64 {
+    chrono::NaiveDateTime::parse_from_str(key, "%Y-%m-%d %H:%M:%S")
+        .ok()
+        .or_else(|| {
+            chrono::NaiveDate::parse_from_str(key, "%Y-%m-%d")
+                .ok()
+                .and_then(|d| d.and_hms_opt(0, 0, 0))
+        })
+        .map(|dt| dt.and_utc().timestamp())
+        .unwrap_or(0)
 }
 
 /// Convert a Unix timestamp to a YYYY-MM-DD date string.
@@ -584,6 +582,55 @@ fn timestamp_to_date_string(ts: i64) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn entry(timestamp: &str, close: f64) -> TimeSeriesEntryDTO {
+        TimeSeriesEntryDTO {
+            timestamp: timestamp.to_string(),
+            open: close,
+            high: close,
+            low: close,
+            close,
+            volume: 1.0,
+        }
+    }
+
+    #[test]
+    fn entries_to_candles_sorts_newest_first_entries_ascending() {
+        // parse_time_series sorts descending; BacktestEngine::run rejects that order.
+        let candles = entries_to_candles(vec![
+            entry("2024-01-04", 3.0),
+            entry("2024-01-03", 2.0),
+            entry("2024-01-02", 1.0),
+        ]);
+        assert!(
+            candles.windows(2).all(|w| w[0].timestamp <= w[1].timestamp),
+            "candles must be ascending"
+        );
+        assert_eq!(candles[0].close, 1.0);
+        assert_eq!(candles[2].close, 3.0);
+    }
+
+    #[test]
+    fn entries_to_candles_keeps_intraday_time_of_day() {
+        // Intraday keys carry a time component; collapsing them to midnight
+        // would flatten every bar of a session onto one timestamp.
+        let candles = entries_to_candles(vec![
+            entry("2024-01-02 09:35:00", 2.0),
+            entry("2024-01-02 09:30:00", 1.0),
+        ]);
+        assert_eq!(candles[0].timestamp, 1_704_187_800);
+        assert_eq!(candles[1].timestamp, 1_704_188_100);
+        assert_ne!(
+            candles[0].timestamp, candles[1].timestamp,
+            "intraday bars must keep distinct timestamps"
+        );
+    }
+
+    #[test]
+    fn parse_entry_timestamp_falls_back_to_zero_on_garbage() {
+        assert_eq!(parse_entry_timestamp("not-a-date"), 0);
+        assert_eq!(parse_entry_timestamp("2024-01-02"), 1_704_153_600);
+    }
 
     #[test]
     fn test_parse_time_series_daily() {

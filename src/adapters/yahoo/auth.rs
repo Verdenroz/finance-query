@@ -2,7 +2,8 @@ use super::client::ClientConfig;
 use crate::adapters::yahoo::endpoints::{api, base};
 use crate::error::{FinanceError, Result};
 use reqwest::Proxy;
-use std::time::{Duration, Instant};
+use std::sync::{Arc, RwLock};
+use std::time::Duration;
 use tracing::{debug, info, warn};
 
 // ============================================================================
@@ -15,21 +16,12 @@ const USER_AGENT: &str = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/
 /// Timeout for authentication requests
 const AUTH_TIMEOUT: Duration = Duration::from_secs(15);
 
-/// Minimum interval between auth refreshes (prevent excessive refreshing)
-#[cfg(test)]
-const MIN_REFRESH_INTERVAL: Duration = Duration::from_secs(30);
-
-/// Maximum age of auth before considering it stale
-#[cfg(test)]
-const AUTH_MAX_AGE: Duration = Duration::from_secs(3600); // 1 hour
-
 /// Yahoo Finance authentication data
-#[derive(Clone)]
 pub struct YahooAuth {
-    /// CSRF crumb token
-    pub crumb: String,
-    /// Last time auth was refreshed
-    pub last_refresh: Instant,
+    /// CSRF crumb token. Swappable so a long-lived session can re-auth in
+    /// place when Yahoo expires the crumb.
+    crumb: RwLock<Arc<str>>,
+    refresh_guard: tokio::sync::Mutex<()>,
     /// HTTP client with cookies
     pub(crate) http_client: reqwest::Client,
 }
@@ -37,9 +29,41 @@ pub struct YahooAuth {
 impl std::fmt::Debug for YahooAuth {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("YahooAuth")
-            .field("crumb", &self.crumb)
-            .field("last_refresh", &self.last_refresh)
+            .field("crumb", &&*self.crumb())
             .finish()
+    }
+}
+
+impl YahooAuth {
+    /// The current CSRF crumb token.
+    pub(crate) fn crumb(&self) -> Arc<str> {
+        Arc::clone(&self.crumb.read().unwrap_or_else(|e| e.into_inner()))
+    }
+
+    /// Re-run the handshake on the existing HTTP client, swapping in a new
+    /// crumb. Concurrent callers collapse to one refresh.
+    pub(crate) async fn refresh(&self) -> Result<()> {
+        let before = self.crumb();
+        let _g = self.refresh_guard.lock().await;
+        if !Arc::ptr_eq(&before, &self.crumb()) {
+            return Ok(());
+        }
+
+        self.http_client
+            .get(base::YAHOO_FC)
+            .send()
+            .await
+            .map_err(|e| {
+                FinanceError::InternalError(format!("Failed to establish session: {}", e))
+            })?;
+        let crumb = get_crumb(&self.http_client, api::CRUMB_QUERY1)
+            .await
+            .map_err(|e| FinanceError::AuthenticationFailed {
+                context: format!("Failed to refresh crumb: {}", e),
+            })?;
+
+        *self.crumb.write().unwrap_or_else(|e| e.into_inner()) = crumb.into();
+        Ok(())
     }
 }
 
@@ -86,22 +110,10 @@ impl YahooAuth {
 
         info!("Successfully authenticated with Yahoo Finance");
         Ok(Self {
-            crumb,
-            last_refresh: Instant::now(),
+            crumb: RwLock::new(crumb.into()),
+            refresh_guard: tokio::sync::Mutex::new(()),
             http_client: client,
         })
-    }
-
-    /// Check if authentication is still valid
-    #[cfg(test)]
-    pub fn is_expired(&self) -> bool {
-        self.last_refresh.elapsed() > AUTH_MAX_AGE
-    }
-
-    /// Check if enough time has passed to allow refresh
-    #[cfg(test)]
-    pub fn can_refresh(&self) -> bool {
-        self.last_refresh.elapsed() >= MIN_REFRESH_INTERVAL
     }
 }
 
@@ -149,31 +161,21 @@ mod tests {
         assert!(auth.is_ok());
 
         let auth = auth.unwrap();
-        assert!(!auth.crumb.is_empty());
-        assert!(!auth.crumb.contains("<html"));
+        let crumb = auth.crumb();
+        assert!(!crumb.is_empty());
+        assert!(!crumb.contains("<html"));
     }
 
-    #[test]
-    fn test_is_expired() {
-        let client = reqwest::Client::new();
-        let auth = YahooAuth {
-            crumb: "test".to_string(),
-            last_refresh: Instant::now() - std::time::Duration::from_secs(7200),
-            http_client: client,
-        };
-
-        assert!(auth.is_expired());
-    }
-
-    #[test]
-    fn test_can_refresh() {
-        let client = reqwest::Client::new();
-        let auth = YahooAuth {
-            crumb: "test".to_string(),
-            last_refresh: Instant::now() - std::time::Duration::from_secs(60),
-            http_client: client,
-        };
-
-        assert!(auth.can_refresh());
+    #[tokio::test]
+    #[ignore = "requires network access"]
+    async fn refresh_replaces_the_crumb() {
+        let auth = YahooAuth::authenticate_with_config(&ClientConfig::default())
+            .await
+            .unwrap();
+        let before = auth.crumb();
+        auth.refresh().await.unwrap();
+        let after = auth.crumb();
+        assert!(!after.is_empty());
+        assert!(!Arc::ptr_eq(&before, &after));
     }
 }

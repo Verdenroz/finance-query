@@ -15,19 +15,31 @@
 ///
 /// Returns `None` when fewer than 2 observations or standard deviation is zero.
 pub fn sharpe_ratio(returns: &[f64], risk_free_rate: f64, periods_per_year: f64) -> Option<f64> {
+    let (mean, std_dev) = mean_and_std(returns)?;
+    sharpe_with_stats(mean, std_dev, risk_free_rate, periods_per_year)
+}
+
+/// Sample mean and standard deviation (n-1 denominator).
+pub(crate) fn mean_and_std(returns: &[f64]) -> Option<(f64, f64)> {
     if returns.len() < 2 {
         return None;
     }
-
     let mean = returns.iter().sum::<f64>() / returns.len() as f64;
     let variance =
         returns.iter().map(|r| (r - mean).powi(2)).sum::<f64>() / (returns.len() - 1) as f64;
-    let std_dev = variance.sqrt();
+    Some((mean, variance.sqrt()))
+}
 
+/// `sharpe_ratio` given a precomputed mean and standard deviation.
+pub(crate) fn sharpe_with_stats(
+    mean: f64,
+    std_dev: f64,
+    risk_free_rate: f64,
+    periods_per_year: f64,
+) -> Option<f64> {
     if std_dev == 0.0 {
         return None;
     }
-
     Some((mean - risk_free_rate) / std_dev * periods_per_year.sqrt())
 }
 

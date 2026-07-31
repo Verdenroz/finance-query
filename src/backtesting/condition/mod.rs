@@ -96,6 +96,19 @@ pub trait Condition: Clone + Send + Sync + 'static {
         vec![]
     }
 
+    /// Whether this condition reads [`StrategyContext::extremes`].
+    ///
+    /// The engine folds the running peak/trough per bar only when some condition
+    /// says it needs it, so a strategy without a trailing condition pays nothing.
+    /// A condition that returns `false` but reads `ctx.extremes` anyway still
+    /// gets a correct answer — the read falls back to scanning from the entry
+    /// bar — but pays the O(bars²) cost this flag exists to avoid.
+    ///
+    /// [`StrategyContext::extremes`]: crate::backtesting::StrategyContext::extremes
+    fn tracks_position_extremes(&self) -> bool {
+        false
+    }
+
     /// Get a human-readable description of this condition.
     ///
     /// This is used for logging, debugging, and signal reporting.

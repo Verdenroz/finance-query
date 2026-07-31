@@ -12,7 +12,7 @@ use super::result::{
     BacktestResult, BenchmarkMetrics, EquityPoint, PerformanceMetrics, SignalRecord,
 };
 use super::signal::{OrderType, PendingOrder, Signal, SignalDirection};
-use super::strategy::{Strategy, StrategyContext};
+use super::strategy::{PositionExtremes, Strategy, StrategyContext};
 
 /// Backtest execution engine.
 ///
@@ -337,6 +337,25 @@ pub(crate) fn compute_for_candles(
         return Ok(HashMap::new());
     }
 
+    // Two requests for the same `Indicator` recompute it, and multi-output
+    // variants then overwrite each other's derived keys. Compute each distinct
+    // indicator once and record the names that were dropped: single-output
+    // variants key their result by the caller's name, so a dropped name still
+    // has to resolve — a custom `IndicatorRef` may share an `Indicator` with a
+    // built-in one while using its own key.
+    let (required, aliases) = {
+        let mut uniq: Vec<(String, Indicator)> = Vec::with_capacity(required.len());
+        let mut aliases: Vec<(String, String)> = Vec::new();
+        for (name, ind) in required {
+            match uniq.iter().find(|(_, u)| *u == ind) {
+                Some((kept, _)) if *kept != name => aliases.push((name, kept.clone())),
+                Some(_) => {}
+                None => uniq.push((name, ind)),
+            }
+        }
+        (uniq, aliases)
+    };
+
     let use_hl = required.iter().any(|(_, i)| needs_high_low(i));
     let use_vol = required.iter().any(|(_, i)| needs_volumes(i));
     let use_open = required
@@ -381,13 +400,48 @@ pub(crate) fn compute_for_candles(
 
     let groups = groups?;
     let capacity: usize = groups.iter().map(|v| v.len()).sum();
-    let mut result = HashMap::with_capacity(capacity);
+    let mut result = HashMap::with_capacity(capacity + aliases.len());
     for group in groups {
         for (k, v) in group {
             result.insert(k, v);
         }
     }
+    // A multi-output indicator ignores the caller's key, so its kept name is
+    // absent here and the alias is correctly a no-op.
+    for (dropped, kept) in aliases {
+        if let Some(values) = result.get(&kept).cloned() {
+            result.entry(dropped).or_insert(values);
+        }
+    }
     Ok(result)
+}
+
+/// Reject candle or dividend series that are not ascending by timestamp.
+///
+/// Conditions binary-search the candle slice to locate the position entry, so an
+/// out-of-order series would silently yield a wrong index rather than an error.
+/// Dividend crediting walks a forward-only index for the same reason.
+///
+/// Optimisers and walk-forward call this once for the whole series and then use
+/// [`BacktestEngine::simulate`] per candidate, so a sweep pays the O(n) scan once
+/// instead of once per evaluation.
+pub(crate) fn validate_series_order(candles: &[Candle], dividends: &[Dividend]) -> Result<()> {
+    if !candles.windows(2).all(|w| w[0].timestamp <= w[1].timestamp) {
+        return Err(BacktestError::invalid_param(
+            "candles",
+            "must be sorted by timestamp (ascending)",
+        ));
+    }
+    if !dividends
+        .windows(2)
+        .all(|w| w[0].timestamp <= w[1].timestamp)
+    {
+        return Err(BacktestError::invalid_param(
+            "dividends",
+            "must be sorted by timestamp (ascending)",
+        ));
+    }
+    Ok(())
 }
 
 impl BacktestEngine {
@@ -408,6 +462,7 @@ impl BacktestEngine {
         candles: &[Candle],
         strategy: S,
     ) -> Result<BacktestResult> {
+        validate_series_order(candles, &[])?;
         self.simulate(symbol, candles, strategy, &[])
     }
 
@@ -425,13 +480,19 @@ impl BacktestEngine {
         strategy: S,
         dividends: &[Dividend],
     ) -> Result<BacktestResult> {
+        validate_series_order(candles, dividends)?;
         self.simulate(symbol, candles, strategy, dividends)
     }
 
     // ── Core simulation ───────────────────────────────────────────────────────
 
     /// Internal simulation core. All public `run*` methods delegate here.
-    fn simulate<S: Strategy>(
+    ///
+    /// Assumes `candles` and `dividends` are already known to be ascending —
+    /// the public entry points check that via [`validate_series_order`]. Sweeps
+    /// run thousands of simulations over one series, so the O(n) scan is hoisted
+    /// to the boundary rather than repeated per candidate.
+    pub(crate) fn simulate<S: Strategy>(
         &self,
         symbol: &str,
         candles: &[Candle],
@@ -441,17 +502,6 @@ impl BacktestEngine {
         let warmup = strategy.warmup_period();
         if candles.len() < warmup {
             return Err(BacktestError::insufficient_data(warmup, candles.len()));
-        }
-
-        // Validate dividend ordering — simulation correctness requires ascending timestamps.
-        if !dividends
-            .windows(2)
-            .all(|w| w[0].timestamp <= w[1].timestamp)
-        {
-            return Err(BacktestError::invalid_param(
-                "dividends",
-                "must be sorted by timestamp (ascending)",
-            ));
         }
 
         // Pre-compute all required indicators (base timeframe + HTF stretched arrays)
@@ -473,6 +523,13 @@ impl BacktestEngine {
         // High-water mark for the trailing stop: tracks peak price (longs) or
         // trough price (shorts) since entry. Reset to None when no position is open.
         let mut hwm: Option<f64> = None;
+        // The same running scan widened to the four values trailing conditions
+        // need. Owned by the position rather than by any one condition, so every
+        // trailing condition on a position reads one shared value.
+        let mut extremes: Option<PositionExtremes> = None;
+        // Only strategies with a trailing condition read this, and folding it
+        // per bar is pure overhead for every strategy that doesn't.
+        let track_extremes = strategy.tracks_position_extremes();
 
         // Dividend processing pointer: dividends must be sorted by timestamp.
         // We advance this index forward as the simulation progresses in time.
@@ -495,6 +552,20 @@ impl BacktestEngine {
             );
 
             update_trailing_hwm(position.as_ref(), &mut hwm, candle);
+            if track_extremes {
+                // Pending orders fill after this has run for their bar, so the
+                // bar a limit/stop entry opened on would never be folded in.
+                // Rebuilding from the entry bar on the first update after an
+                // entry keeps this in step with the scan in `threshold.rs`.
+                if extremes.is_none()
+                    && let Some(pos) = position.as_ref()
+                {
+                    let entry =
+                        candles[..=i].partition_point(|c| c.timestamp < pos.entry_timestamp);
+                    extremes = PositionExtremes::from_candles(&candles[entry..=i]);
+                }
+                update_position_extremes(position.as_ref(), &mut extremes, candle);
+            }
 
             // Credit dividend income for any dividends ex-dated on or before this bar.
             self.credit_dividends(&mut position, candle, dividends, &mut div_idx);
@@ -527,6 +598,7 @@ impl BacktestEngine {
 
                 if executed {
                     hwm = None; // Reset HWM when position is closed
+                    extremes = None;
                     continue; // Skip strategy signal this bar
                 }
             }
@@ -628,6 +700,7 @@ impl BacktestEngine {
                 position: position.as_ref(),
                 equity,
                 indicators: &indicators,
+                extremes: position.as_ref().and(extremes.as_ref()),
             };
 
             // Get strategy signal
@@ -718,11 +791,16 @@ impl BacktestEngine {
                 )
             {
                 hwm = position.as_ref().map(|p| p.entry_price);
+                // Seeded on the next bar rather than from the entry price: the
+                // extremes are bar highs/lows since entry, and the entry bar is
+                // folded in at the top of the loop.
+                extremes = None;
             }
 
             // Reset the trailing-stop HWM whenever a position is closed
             if executed && position.is_none() {
                 hwm = None;
+                extremes = None;
 
                 // Re-evaluate strategy on the same bar after an exit so that
                 // a crossover that simultaneously closes one side and triggers
@@ -733,6 +811,7 @@ impl BacktestEngine {
                     position: None,
                     equity,
                     indicators: &indicators,
+                    extremes: None,
                 };
                 let follow = strategy.on_candle(&ctx2);
                 if !follow.is_hold() && follow.strength.value() >= self.config.min_signal_strength {
@@ -915,6 +994,7 @@ impl BacktestEngine {
         benchmark_symbol: &str,
         benchmark_candles: &[Candle],
     ) -> Result<BacktestResult> {
+        validate_series_order(candles, dividends)?;
         let mut result = self.simulate(symbol, candles, strategy, dividends)?;
         result.benchmark = Some(compute_benchmark_metrics(
             benchmark_symbol,
@@ -1493,6 +1573,26 @@ impl BacktestEngine {
 ///
 /// Cleared to `None` when no position is open so it resets on next entry.
 /// Also used by the portfolio engine.
+/// Fold `candle` into the running extremes for the open position.
+///
+/// Cleared to `None` when no position is open so it resets on the next entry —
+/// the same lifecycle as [`update_trailing_hwm`], which tracks the single value
+/// the intrabar stop needs while this tracks the four the trailing conditions do.
+pub(crate) fn update_position_extremes(
+    position: Option<&Position>,
+    extremes: &mut Option<PositionExtremes>,
+    candle: &Candle,
+) {
+    if position.is_none() {
+        *extremes = None;
+        return;
+    }
+    match extremes {
+        Some(e) => e.update(candle),
+        None => *extremes = Some(PositionExtremes::new(candle)),
+    }
+}
+
 pub(crate) fn update_trailing_hwm(
     position: Option<&Position>,
     hwm: &mut Option<f64>,
@@ -3229,5 +3329,282 @@ mod tests {
             result.trades[0].pnl > 0.0,
             "short trailing stop should exit in profit (entry $100, exit near $88)"
         );
+    }
+
+    #[test]
+    fn unsorted_candles_are_rejected() {
+        let mut candles = make_candles(&[100.0, 101.0, 102.0, 103.0]);
+        candles.swap(1, 2);
+        use crate::backtesting::refs::*;
+        use crate::backtesting::strategy::StrategyBuilder;
+        let strategy = StrategyBuilder::new("s")
+            .entry(price().above(0.0))
+            .exit(price().below(0.0))
+            .build();
+        let err = BacktestEngine::new(BacktestConfig::default())
+            .run("TEST", &candles, strategy)
+            .unwrap_err();
+        assert!(
+            format!("{err}").contains("candles"),
+            "expected a candle-ordering error, got {err}"
+        );
+    }
+
+    /// Enters once via a limit order, then exits on a trailing stop.
+    ///
+    /// `track` selects which path supplies the peak: `true` uses the engine's
+    /// running extremes, `false` makes the condition fall back to scanning from
+    /// the entry bar. Both must agree.
+    #[derive(Clone)]
+    struct LimitEntryTrailing {
+        track: bool,
+        trail: crate::backtesting::condition::TrailingStop,
+        limit: f64,
+    }
+
+    impl Strategy for LimitEntryTrailing {
+        fn name(&self) -> &str {
+            "limit-entry-trailing"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            use crate::backtesting::condition::Condition;
+            if ctx.position.is_none() {
+                if ctx.index == 0 {
+                    return Signal::buy_limit(ctx.timestamp(), ctx.close(), self.limit);
+                }
+                return Signal::hold();
+            }
+            if self.trail.evaluate(ctx) {
+                return ctx.signal_exit();
+            }
+            Signal::hold()
+        }
+
+        fn tracks_position_extremes(&self) -> bool {
+            self.track
+        }
+    }
+
+    #[test]
+    fn a_limit_entry_counts_its_own_fill_bar_in_the_peak() {
+        // Pending orders fill partway through a bar, after the engine has
+        // already folded that bar's extremes for a still-empty position. The
+        // fill bar carries the highest high here, so skipping it lowers the
+        // peak and moves the trailing-stop exit.
+        let candles = vec![
+            // bar 0: signal bar, queues the limit order
+            Candle {
+                timestamp: 0,
+                open: 100.0,
+                high: 100.0,
+                low: 100.0,
+                close: 100.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            // bar 1: dips to 95 (fills), then spikes to 130 — the peak
+            Candle {
+                timestamp: 1,
+                open: 99.0,
+                high: 130.0,
+                low: 94.0,
+                close: 120.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 2,
+                open: 119.0,
+                high: 121.0,
+                low: 115.0,
+                close: 116.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 3,
+                open: 115.0,
+                high: 116.0,
+                low: 110.0,
+                close: 111.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 4,
+                open: 110.0,
+                high: 111.0,
+                low: 104.0,
+                close: 105.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 5,
+                open: 104.0,
+                high: 105.0,
+                low: 100.0,
+                close: 101.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+        ];
+
+        let config = BacktestConfig {
+            initial_capital: 10_000.0,
+            ..Default::default()
+        };
+        let run = |track: bool| {
+            BacktestEngine::new(config.clone())
+                .run(
+                    "TEST",
+                    &candles,
+                    LimitEntryTrailing {
+                        track,
+                        trail: crate::backtesting::condition::TrailingStop::new(0.10),
+                        limit: 95.0,
+                    },
+                )
+                .unwrap()
+        };
+
+        let engine_path = run(true);
+        let scan_path = run(false);
+
+        assert_eq!(
+            engine_path.trades.len(),
+            1,
+            "the limit order should fill and the trailing stop should close it"
+        );
+        assert_eq!(
+            engine_path.trades.len(),
+            scan_path.trades.len(),
+            "the two peak sources disagreed on whether a trade closed"
+        );
+        assert_eq!(
+            engine_path.trades[0].exit_timestamp, scan_path.trades[0].exit_timestamp,
+            "engine-tracked extremes and the entry-bar scan chose different exits"
+        );
+        assert_eq!(
+            engine_path.trades[0].pnl, scan_path.trades[0].pnl,
+            "same exit bar should mean same P&L"
+        );
+    }
+
+    #[test]
+    fn sweeps_reject_unsorted_candles_at_their_own_entry_point() {
+        // Validation moved off the per-candidate path, so each sweep entry point
+        // has to check the series itself or an unsorted run would slip through.
+        use crate::backtesting::optimizer::{BayesianSearch, GridSearch, ParamRange, ParamValue};
+        use crate::backtesting::refs::*;
+        use crate::backtesting::strategy::StrategyBuilder;
+
+        let mut candles = make_candles(&(0..80).map(|i| 100.0 + i as f64).collect::<Vec<f64>>());
+        candles.swap(1, 2);
+        let config = BacktestConfig::default();
+        let factory = |_: &HashMap<String, ParamValue>| {
+            StrategyBuilder::new("s")
+                .entry(price().above(0.0))
+                .exit(price().below(0.0))
+                .build()
+        };
+
+        let grid_err = GridSearch::new()
+            .param("p", ParamRange::int_range(1, 2, 1))
+            .run("TEST", &candles, &config, factory)
+            .unwrap_err();
+        assert!(
+            format!("{grid_err}").contains("candles"),
+            "grid search should reject unsorted candles, got {grid_err}"
+        );
+
+        let bayes_err = BayesianSearch::new()
+            .param("p", ParamRange::int_range(1, 2, 1))
+            .max_evaluations(4)
+            .run("TEST", &candles, &config, factory)
+            .unwrap_err();
+        assert!(
+            format!("{bayes_err}").contains("candles"),
+            "bayesian search should reject unsorted candles, got {bayes_err}"
+        );
+    }
+
+    #[test]
+    fn distinct_keys_for_one_indicator_both_resolve() {
+        // A custom `IndicatorRef` may pick its own key while requesting the same
+        // `Indicator` as a built-in ref. Deduping the computation must not drop
+        // the second key, or the condition reading it silently never fires.
+        let candles = make_candles(
+            &(0..300)
+                .map(|i| 100.0 + (i % 7) as f64)
+                .collect::<Vec<f64>>(),
+        );
+        let map = compute_for_candles(
+            &candles,
+            vec![
+                ("sma_20".to_string(), Indicator::Sma(20)),
+                ("my_ma".to_string(), Indicator::Sma(20)),
+            ],
+        )
+        .unwrap();
+
+        assert!(map.contains_key("sma_20"));
+        assert!(map.contains_key("my_ma"), "aliased key was dropped");
+        assert_eq!(map.get("sma_20"), map.get("my_ma"));
+    }
+
+    #[test]
+    fn duplicate_indicator_requests_produce_identical_map() {
+        let prices: Vec<f64> = (0..500)
+            .map(|i| 100.0 + (i as f64 * 0.1).sin() * 5.0)
+            .collect();
+        let candles = make_candles(&prices);
+
+        let one = compute_for_candles(
+            &candles,
+            vec![(
+                "bb_u".to_string(),
+                Indicator::Bollinger {
+                    period: 20,
+                    std_dev: 2.0,
+                },
+            )],
+        )
+        .unwrap();
+        let two = compute_for_candles(
+            &candles,
+            vec![
+                (
+                    "bb_u".to_string(),
+                    Indicator::Bollinger {
+                        period: 20,
+                        std_dev: 2.0,
+                    },
+                ),
+                (
+                    "bb_l".to_string(),
+                    Indicator::Bollinger {
+                        period: 20,
+                        std_dev: 2.0,
+                    },
+                ),
+            ],
+        )
+        .unwrap();
+
+        for (k, v) in &one {
+            assert_eq!(two.get(k), Some(v), "key {k} changed when requested twice");
+        }
     }
 }

@@ -5,9 +5,31 @@ use super::endpoints::api;
 use crate::adapters::yahoo::client::YahooClient;
 use crate::constants::{Interval, TimeRange};
 use crate::error::{FinanceError, Result};
+use futures::stream::StreamExt;
 use tracing::{debug, info};
 
 const CHART_EVENTS: &str = "div|split|capitalGain";
+
+/// 3650 days (~10 years; ignores leap years for simplicity).
+/// Yahoo Finance truncates max-range daily/weekly responses, so we walk
+/// the full history in chunks of this size. Drift across multi-decade
+/// histories may add 1 extra request; correctness is preserved by the
+/// dedup pass at the end of `fetch_max_chunked`.
+const CHUNK_SIZE_SECONDS: i64 = 3650 * 24 * 60 * 60;
+
+/// Yahoo rate-limits aggressively and chunk counts are typically 2-5, so a
+/// higher cap buys nothing and risks 429s.
+const MAX_CHUNK_CONCURRENCY: usize = 4;
+
+/// Ceiling on Max-range chunk requests in flight across the whole process.
+///
+/// `buffer_unordered(MAX_CHUNK_CONCURRENCY)` bounds one chart's fan-out, but a
+/// batch call already runs up to `Tickers::max_concurrency` charts at once, and
+/// the two would multiply. This keeps the product bounded.
+fn chunk_permits() -> &'static tokio::sync::Semaphore {
+    static PERMITS: std::sync::OnceLock<tokio::sync::Semaphore> = std::sync::OnceLock::new();
+    PERMITS.get_or_init(|| tokio::sync::Semaphore::new(MAX_CHUNK_CONCURRENCY * 2))
+}
 
 /// Yahoo Finance intraday limits (empirically verified).
 ///
@@ -140,21 +162,38 @@ async fn fetch_max_chunked(
 
     // Step 2: Chunk into ~10-year periods
     let now = chrono::Utc::now().timestamp();
-    // 3650 days (~10 years; ignores leap years for simplicity).
-    // Yahoo Finance truncates max-range daily/weekly responses, so we walk
-    // the full history in chunks of this size. Drift across multi-decade
-    // histories may add 1 extra request; correctness is preserved by the
-    // dedup pass at the end of fetch_max_chunked.
-    const CHUNK_SIZE_SECONDS: i64 = 3650 * 24 * 60 * 60;
+    let bounds = max_chunk_bounds(earliest_timestamp, now);
 
-    let mut period1 = earliest_timestamp;
+    let mut chunks: Vec<(i64, Result<serde_json::Value>)> =
+        futures::stream::iter(bounds.into_iter().map(|(p1, p2)| async move {
+            let _permit = chunk_permits().acquire().await;
+            (p1, fetch_with_dates(client, symbol, interval, p1, p2).await)
+        }))
+        .buffer_unordered(MAX_CHUNK_CONCURRENCY)
+        .collect()
+        .await;
+
+    // `buffer_unordered` completes out of order; the merge appends blindly and
+    // the dedup only collapses *consecutive* duplicates, so restore chronology.
+    chunks.sort_by_key(|(p1, _)| *p1);
+
     let mut merged_result = init_chart_response();
+    for (_, chunk_data) in chunks {
+        merge_chart_data(&mut merged_result, chunk_data?)?;
+    }
+
+    dedup_timestamps_in_place(&mut merged_result)?;
+    Ok(merged_result)
+}
+
+/// Materialize the `(period1, period2)` boundaries for a Max-range chunked fetch.
+fn max_chunk_bounds(earliest: i64, now: i64) -> Vec<(i64, i64)> {
+    let mut bounds = Vec::new();
+    let mut period1 = earliest;
 
     loop {
         let period2 = (period1 + CHUNK_SIZE_SECONDS).min(now);
-
-        let chunk_data = fetch_with_dates(client, symbol, interval, period1, period2).await?;
-        merge_chart_data(&mut merged_result, chunk_data)?;
+        bounds.push((period1, period2));
 
         if period2 >= now {
             break;
@@ -163,8 +202,7 @@ async fn fetch_max_chunked(
         period1 = period2 + 1;
     }
 
-    dedup_timestamps_in_place(&mut merged_result)?;
-    Ok(merged_result)
+    bounds
 }
 
 /// Extract the earliest timestamp from a chart response.
@@ -809,6 +847,89 @@ mod tests {
                 .len(),
             3
         );
+    }
+
+    #[test]
+    fn chunk_bounds_cover_the_range_without_gaps() {
+        // Reference implementation: the original sequential `loop` in
+        // `fetch_max_chunked`, reproduced to pin the iteration count.
+        fn reference_iteration_count(earliest: i64, now: i64) -> usize {
+            let mut period1 = earliest;
+            let mut count = 0usize;
+            loop {
+                let period2 = (period1 + CHUNK_SIZE_SECONDS).min(now);
+                count += 1;
+                if period2 >= now {
+                    break;
+                }
+                period1 = period2 + 1;
+            }
+            count
+        }
+
+        let day = 24 * 60 * 60i64;
+        let cases: [(i64, i64); 6] = [
+            // Shorter than one chunk (~1 year).
+            (1_000_000_000, 1_000_000_000 + 365 * day),
+            // Exactly one chunk.
+            (1_000_000_000, 1_000_000_000 + CHUNK_SIZE_SECONDS),
+            // One chunk plus a one-second remainder.
+            (1_000_000_000, 1_000_000_000 + CHUNK_SIZE_SECONDS + 1),
+            // Several chunks plus a remainder (~34 years, AAPL-like history).
+            (
+                345_479_400,
+                345_479_400 + 3 * CHUNK_SIZE_SECONDS + 500 * day,
+            ),
+            // Exactly several chunks (boundary arithmetic includes the +1 gaps).
+            (0, 4 * CHUNK_SIZE_SECONDS),
+            // Degenerate: earliest == now.
+            (1_700_000_000, 1_700_000_000),
+        ];
+
+        for (earliest, now) in cases {
+            let bounds = max_chunk_bounds(earliest, now);
+
+            assert!(!bounds.is_empty(), "no bounds for ({earliest}, {now})");
+            assert_eq!(
+                bounds.len(),
+                reference_iteration_count(earliest, now),
+                "chunk count drifted for ({earliest}, {now})"
+            );
+            assert_eq!(
+                bounds[0].0, earliest,
+                "first bound must start at earliest for ({earliest}, {now})"
+            );
+            assert_eq!(
+                bounds[bounds.len() - 1].1,
+                now,
+                "last bound must end at now for ({earliest}, {now})"
+            );
+
+            for w in bounds.windows(2) {
+                let (prev_start, prev_end) = w[0];
+                let (start, end) = w[1];
+                assert!(prev_end > prev_start, "empty chunk in ({earliest}, {now})");
+                assert!(end >= start, "inverted chunk in ({earliest}, {now})");
+                // Successive chunks abut exactly: no gap in coverage (period2 is
+                // inclusive, so the next chunk starts one second later) and no overlap.
+                assert_eq!(
+                    start,
+                    prev_end + 1,
+                    "gap or overlap between chunks for ({earliest}, {now})"
+                );
+                assert_eq!(
+                    prev_end - prev_start,
+                    CHUNK_SIZE_SECONDS,
+                    "non-final chunk must be a full chunk for ({earliest}, {now})"
+                );
+            }
+
+            let last = bounds[bounds.len() - 1];
+            assert!(
+                last.1 - last.0 <= CHUNK_SIZE_SECONDS,
+                "final chunk exceeds chunk size for ({earliest}, {now})"
+            );
+        }
     }
 
     #[test]

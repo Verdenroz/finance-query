@@ -145,11 +145,17 @@ pub(crate) fn compute_risk_summary_with_periods(
 ) -> RiskSummary {
     let returns = candles_to_returns(candles);
 
-    let var_95 = historical_var(&returns, 0.95).unwrap_or(0.0);
-    let var_99 = historical_var(&returns, 0.99).unwrap_or(0.0);
-    let parametric_var_95 = parametric_var(&returns, 0.95).unwrap_or(0.0);
+    let mut sorted = returns.clone();
+    sorted.sort_by(|a, b| a.total_cmp(b));
+    let stats = ratios::mean_and_std(&returns);
 
-    let sharpe = sharpe_ratio(&returns, 0.0, periods_per_year);
+    let var_95 = var::historical_var_sorted(&sorted, 0.95).unwrap_or(0.0);
+    let var_99 = var::historical_var_sorted(&sorted, 0.99).unwrap_or(0.0);
+    let parametric_var_95 = stats
+        .map(|(m, s)| var::parametric_var_with_stats(m, s, 0.95))
+        .unwrap_or(0.0);
+
+    let sharpe = stats.and_then(|(m, s)| ratios::sharpe_with_stats(m, s, 0.0, periods_per_year));
     let sortino = sortino_ratio(&returns, 0.0, periods_per_year);
 
     let dd = max_drawdown(&returns);
@@ -209,6 +215,24 @@ mod tests {
     }
 
     #[test]
+    fn test_candles_to_returns_empty_and_single() {
+        assert!(candles_to_returns(&[]).is_empty());
+        assert!(candles_to_returns(&[make_candle(100.0)]).is_empty());
+
+        let empty_summary = compute_risk_summary(&[], None);
+        assert_eq!(empty_summary.var_95, 0.0);
+        assert_eq!(empty_summary.var_99, 0.0);
+        assert_eq!(empty_summary.parametric_var_95, 0.0);
+        assert!(empty_summary.sharpe.is_none());
+
+        let single_summary = compute_risk_summary(&[make_candle(100.0)], None);
+        assert_eq!(single_summary.var_95, 0.0);
+        assert_eq!(single_summary.var_99, 0.0);
+        assert_eq!(single_summary.parametric_var_95, 0.0);
+        assert!(single_summary.sharpe.is_none());
+    }
+
+    #[test]
     fn test_periods_per_year_by_calendar() {
         use crate::Interval;
         // Daily differs by asset class; calendar periodicity is shared.
@@ -243,5 +267,35 @@ mod tests {
         let crypto = compute_risk_summary_with_periods(&candles, None, 365.0);
         assert!(daily.sharpe.is_some() && crypto.sharpe.is_some());
         assert!(crypto.sharpe.unwrap() > daily.sharpe.unwrap());
+    }
+
+    #[test]
+    fn shared_stats_match_standalone_functions() {
+        let returns: Vec<f64> = (0..2_000)
+            .map(|i| ((i as f64 * 0.37).sin()) * 0.02 - 0.0001)
+            .collect();
+
+        let mut sorted = returns.clone();
+        sorted.sort_by(|a, b| a.total_cmp(b));
+        let (mean, std_dev) = crate::risk::ratios::mean_and_std(&returns).unwrap();
+
+        assert_eq!(
+            crate::risk::var::historical_var_sorted(&sorted, 0.95),
+            crate::risk::historical_var(&returns, 0.95)
+        );
+        assert_eq!(
+            crate::risk::var::historical_var_sorted(&sorted, 0.99),
+            crate::risk::historical_var(&returns, 0.99)
+        );
+        assert_eq!(
+            Some(crate::risk::var::parametric_var_with_stats(
+                mean, std_dev, 0.95
+            )),
+            crate::risk::parametric_var(&returns, 0.95)
+        );
+        assert_eq!(
+            crate::risk::ratios::sharpe_with_stats(mean, std_dev, 0.0, 252.0),
+            crate::risk::sharpe_ratio(&returns, 0.0, 252.0)
+        );
     }
 }

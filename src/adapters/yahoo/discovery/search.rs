@@ -113,15 +113,17 @@ impl SearchOptions {
 /// # let client = finance_query::YahooClient::new(Default::default()).await?;
 /// use finance_query::endpoints::search::{fetch, SearchOptions};
 /// let options = SearchOptions::new().quotes_count(10).news_count(5);
-/// let results = fetch(&client, "Apple", &options).await?;
+/// let results = client.search("Apple", &options).await?;
 /// # Ok(())
 /// # }
 /// ```
-pub async fn fetch(
+/// Same request as [`fetch`], but hands back the raw body so callers can
+/// deserialize straight into a typed struct instead of via `serde_json::Value`.
+pub(crate) async fn fetch_bytes(
     client: &YahooClient,
     query: &str,
     options: &SearchOptions,
-) -> Result<serde_json::Value> {
+) -> Result<impl std::ops::Deref<Target = [u8]>> {
     if query.trim().is_empty() {
         return Err(crate::error::FinanceError::InvalidParameter {
             param: "query".to_string(),
@@ -169,7 +171,7 @@ pub async fn fetch(
 
     let response = client.request_with_params(api::SEARCH, &params).await?;
 
-    Ok(response.json().await?)
+    Ok(response.bytes().await?)
 }
 
 #[cfg(test)]
@@ -182,10 +184,10 @@ mod tests {
     async fn test_fetch_search() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let options = SearchOptions::new().quotes_count(5);
-        let result = fetch(&client, "Apple", &options).await;
-        assert!(result.is_ok());
-        let json = result.unwrap();
-        assert!(json.get("quotes").is_some());
+        let bytes = fetch_bytes(&client, "Apple", &options).await.unwrap();
+        let results: crate::models::discovery::search::SearchResults =
+            serde_json::from_slice(&bytes).unwrap();
+        assert!(!results.quotes.0.is_empty());
     }
 
     #[tokio::test]
@@ -196,10 +198,35 @@ mod tests {
             .quotes_count(5)
             .news_count(3)
             .enable_research_reports(true);
-        let result = fetch(&client, "NVDA", &options).await;
-        assert!(result.is_ok());
-        let json = result.unwrap();
-        assert!(json.get("quotes").is_some());
+        let bytes = fetch_bytes(&client, "NVDA", &options).await.unwrap();
+        let results: crate::models::discovery::search::SearchResults =
+            serde_json::from_slice(&bytes).unwrap();
+        assert!(!results.quotes.0.is_empty());
+    }
+
+    #[test]
+    fn search_results_parse_from_slice() {
+        use crate::models::discovery::search::SearchResults;
+
+        // Realistic minimal search payload: top-level fields plus one quote
+        // that only carries the always-present `symbol`, mirroring a partial
+        // Yahoo response missing most optional fields.
+        let body = br#"{
+            "count": 2,
+            "quotes": [
+                {"symbol": "AAPL", "shortName": "Apple Inc.", "quoteType": "EQUITY"},
+                {"symbol": "AAPU"}
+            ],
+            "news": [],
+            "totalTime": 42
+        }"#;
+
+        let parsed: SearchResults = serde_json::from_slice(body).unwrap();
+        assert_eq!(parsed.result_count(), 2);
+        assert_eq!(parsed.quotes.len(), 2);
+        assert_eq!(parsed.quotes[0].symbol, "AAPL");
+        assert_eq!(parsed.quotes[1].short_name, None);
+        assert!(parsed.news.is_empty());
     }
 
     #[tokio::test]
@@ -207,7 +234,7 @@ mod tests {
     async fn test_empty_query() {
         let client = YahooClient::new(ClientConfig::default()).await.unwrap();
         let options = SearchOptions::new();
-        let result = fetch(&client, "", &options).await;
+        let result = fetch_bytes(&client, "", &options).await;
         assert!(result.is_err());
     }
 }

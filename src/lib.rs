@@ -42,14 +42,15 @@
 //! }
 //! ```
 //!
-//! ## Lazy Loading
+//! ## Lazy Loading and Caching
 //!
-//! The library uses lazy loading:
-//! - **Quote data**: All ~30 quote modules fetched together on first property access
-//! - **Chart data**: Fetched per (interval, range) combination and cached
-//! - **Recommendations**: Fetched once and cached
+//! The library fetches on demand and caches by default:
+//! - **Quote data**: all quote modules fetched together on first property access, then reused
+//! - **Chart data**: fetched and cached per (interval, range) combination
+//! - **Recommendations**: fetched once and cached
 //!
-//! This approach minimizes network requests while keeping memory usage efficient.
+//! A handle caches for as long as it lives. Use `.cache(ttl)` on the builder to
+//! bound that, or `.no_cache()` to fetch fresh on every call.
 
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]

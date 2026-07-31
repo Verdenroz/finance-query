@@ -148,7 +148,9 @@ handle's own chart data. `risk` takes no benchmark parameter — `beta` is alway
 
 ## Caching
 
-Enable in-memory caching with a TTL to avoid redundant network requests:
+Caching is **on by default** and lasts as long as the handle lives. Use
+`.cache(Duration)` to bound how long a response is reused, or `.no_cache()` to
+fetch fresh on every call.
 
 ```rust
 use finance_query::{Capability, Provider, Providers};
@@ -159,13 +161,20 @@ let providers = Providers::builder()
     .build()
     .await?;
 
+// Default: the first call hits the network, every later call is served from
+// cache for as long as this handle is alive.
+let pair = providers.forex("EUR", "USD");
+let _q1 = pair.quote().await?;
+let _q2 = pair.quote().await?; // served from cache
+
+// Bound reuse to a 60-second TTL instead.
 let pair = providers
     .forex("EUR", "USD")
     .cache(Duration::from_secs(60));
 
-// First call hits the network; subsequent calls within 60 s are cached.
-let _q1 = pair.quote().await?;
-let _q2 = pair.quote().await?; // served from cache
+// Or opt out entirely — every call fetches fresh.
+let pair = providers.forex("EUR", "USD").no_cache();
+let _fresh = pair.quote().await?;
 ```
 
 ## See Also

@@ -38,7 +38,7 @@ use rayon::prelude::*;
 use crate::models::chart::Candle;
 
 use super::super::config::BacktestConfig;
-use super::super::engine::BacktestEngine;
+use super::super::engine::{BacktestEngine, validate_series_order};
 use super::super::error::{BacktestError, Result};
 use super::super::strategy::Strategy;
 use super::{
@@ -117,6 +117,9 @@ impl GridSearch {
             ));
         }
 
+        // Checked once here rather than inside every combination's backtest.
+        validate_series_order(candles, &[])?;
+
         let metric = self.metric.unwrap_or(OptimizeMetric::SharpeRatio);
 
         let expanded: Vec<(&str, Vec<ParamValue>)> = self
@@ -148,7 +151,7 @@ impl GridSearch {
             .into_par_iter()
             .filter_map(|params| {
                 let strategy = factory(&params);
-                match BacktestEngine::new(config.clone()).run(symbol, candles, strategy) {
+                match BacktestEngine::new(config.clone()).simulate(symbol, candles, strategy, &[]) {
                     Ok(result) => Some(OptimizationResult { params, result }),
                     Err(BacktestError::InsufficientData { .. }) => None,
                     Err(e) => {

@@ -15,7 +15,7 @@ pub(crate) struct YahooProvider {
 impl YahooProvider {
     pub(crate) async fn new(config: &ClientConfig) -> Result<Self> {
         Ok(Self {
-            client: Arc::new(YahooClient::new(config.clone()).await?),
+            client: crate::adapters::yahoo::session::get_or_auth(config).await?,
         })
     }
 

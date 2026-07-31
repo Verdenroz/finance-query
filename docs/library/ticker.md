@@ -58,7 +58,8 @@ let ticker = Ticker::builder("AAPL")
 - `.timeout(Duration)` - Set HTTP request timeout
 - `.proxy(String)` - Set proxy URL
 - `.logo()` - Fetch company logo URLs alongside quote data
-- `.cache(Duration)` - Enable in-memory caching with the given TTL (time-to-live)
+- `.cache(Duration)` - Bound in-memory caching to the given TTL (default: cached for the handle's lifetime)
+- `.no_cache()` - Disable caching — every call fetches fresh data
 
 See [Configuration](configuration.md) for details on available regions and settings.
 See [Multi-Provider Architecture](providers/index.md) for provider configuration.
@@ -755,20 +756,30 @@ for meta in &all_transcripts {
 
 Understanding how Ticker caches data is important for efficient usage.
 
-### In-Memory Cache (Optional)
+### In-Memory Cache
 
-Enable with `.cache(Duration)` on the builder. Disabled by default.
+Caching is **on by default** and lasts as long as the `Ticker` handle lives. Fetched data is stored in an `Arc<RwLock<...>>` cache inside the `Ticker`.
+
+Use `.cache(Duration)` to bound how long a response is reused, or `.no_cache()` to fetch fresh on every call.
 
 ```rust
 use std::time::Duration;
 
+// Default: cached for the lifetime of the handle
+let ticker = Ticker::new("AAPL").await?;
+
+// Bounded: entries expire after 5 minutes
 let ticker = Ticker::builder("AAPL")
-    .cache(Duration::from_secs(300))  // 5-minute TTL
+    .cache(Duration::from_secs(300))
+    .build()
+    .await?;
+
+// Off: every accessor issues a fresh request
+let ticker = Ticker::builder("AAPL")
+    .no_cache()
     .build()
     .await?;
 ```
-
-When enabled, all fetched data is stored in an `Arc<RwLock<...>>` cache inside the `Ticker` and automatically invalidated after the TTL.
 
 ### Quote Summary Modules
 
