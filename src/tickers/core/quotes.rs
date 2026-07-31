@@ -14,7 +14,7 @@ impl Tickers {
     /// Dispatches through the configured provider set. When logos are enabled,
     /// fetches logo URLs in parallel via the Yahoo client.
     ///
-    /// Use [`TickersBuilder::logo()`](TickersBuilder::logo) to enable logo fetching
+    /// Use [`TickersBuilder::logo()`](super::TickersBuilder::logo) to enable logo fetching
     /// for this tickers instance.
     pub async fn quotes(&self) -> Result<BatchQuotesResponse> {
         // Fast path: check if all symbols are cached

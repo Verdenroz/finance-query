@@ -47,7 +47,7 @@ impl BacktestResult {
     /// means it is 20% below the highest value seen so far.
     ///
     /// **This is not a sliding-window computation.** Values are read directly
-    /// from the precomputed [`EquityPoint::drawdown_pct`] field, which tracks
+    /// from the precomputed [`EquityPoint::drawdown_pct`](super::EquityPoint::drawdown_pct) field, which tracks
     /// the running-peak drawdown since the backtest began.  To compute the
     /// *maximum* drawdown within a rolling N-bar window (regime-change
     /// detection), iterate over [`BacktestResult::equity_curve`] manually.
