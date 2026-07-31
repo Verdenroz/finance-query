@@ -553,6 +553,17 @@ impl BacktestEngine {
 
             update_trailing_hwm(position.as_ref(), &mut hwm, candle);
             if track_extremes {
+                // Pending orders fill after this has run for their bar, so the
+                // bar a limit/stop entry opened on would never be folded in.
+                // Rebuilding from the entry bar on the first update after an
+                // entry keeps this in step with the scan in `threshold.rs`.
+                if extremes.is_none()
+                    && let Some(pos) = position.as_ref()
+                {
+                    let entry =
+                        candles[..=i].partition_point(|c| c.timestamp < pos.entry_timestamp);
+                    extremes = PositionExtremes::from_candles(&candles[entry..=i]);
+                }
                 update_position_extremes(position.as_ref(), &mut extremes, candle);
             }
 
@@ -3336,6 +3347,158 @@ mod tests {
         assert!(
             format!("{err}").contains("candles"),
             "expected a candle-ordering error, got {err}"
+        );
+    }
+
+    /// Enters once via a limit order, then exits on a trailing stop.
+    ///
+    /// `track` selects which path supplies the peak: `true` uses the engine's
+    /// running extremes, `false` makes the condition fall back to scanning from
+    /// the entry bar. Both must agree.
+    #[derive(Clone)]
+    struct LimitEntryTrailing {
+        track: bool,
+        trail: crate::backtesting::condition::TrailingStop,
+        limit: f64,
+    }
+
+    impl Strategy for LimitEntryTrailing {
+        fn name(&self) -> &str {
+            "limit-entry-trailing"
+        }
+
+        fn required_indicators(&self) -> Vec<(String, Indicator)> {
+            vec![]
+        }
+
+        fn on_candle(&self, ctx: &StrategyContext) -> Signal {
+            use crate::backtesting::condition::Condition;
+            if ctx.position.is_none() {
+                if ctx.index == 0 {
+                    return Signal::buy_limit(ctx.timestamp(), ctx.close(), self.limit);
+                }
+                return Signal::hold();
+            }
+            if self.trail.evaluate(ctx) {
+                return ctx.signal_exit();
+            }
+            Signal::hold()
+        }
+
+        fn tracks_position_extremes(&self) -> bool {
+            self.track
+        }
+    }
+
+    #[test]
+    fn a_limit_entry_counts_its_own_fill_bar_in_the_peak() {
+        // Pending orders fill partway through a bar, after the engine has
+        // already folded that bar's extremes for a still-empty position. The
+        // fill bar carries the highest high here, so skipping it lowers the
+        // peak and moves the trailing-stop exit.
+        let candles = vec![
+            // bar 0: signal bar, queues the limit order
+            Candle {
+                timestamp: 0,
+                open: 100.0,
+                high: 100.0,
+                low: 100.0,
+                close: 100.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            // bar 1: dips to 95 (fills), then spikes to 130 — the peak
+            Candle {
+                timestamp: 1,
+                open: 99.0,
+                high: 130.0,
+                low: 94.0,
+                close: 120.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 2,
+                open: 119.0,
+                high: 121.0,
+                low: 115.0,
+                close: 116.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 3,
+                open: 115.0,
+                high: 116.0,
+                low: 110.0,
+                close: 111.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 4,
+                open: 110.0,
+                high: 111.0,
+                low: 104.0,
+                close: 105.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+            Candle {
+                timestamp: 5,
+                open: 104.0,
+                high: 105.0,
+                low: 100.0,
+                close: 101.0,
+                volume: 1000,
+                adj_close: None,
+                provider_id: None,
+            },
+        ];
+
+        let config = BacktestConfig {
+            initial_capital: 10_000.0,
+            ..Default::default()
+        };
+        let run = |track: bool| {
+            BacktestEngine::new(config.clone())
+                .run(
+                    "TEST",
+                    &candles,
+                    LimitEntryTrailing {
+                        track,
+                        trail: crate::backtesting::condition::TrailingStop::new(0.10),
+                        limit: 95.0,
+                    },
+                )
+                .unwrap()
+        };
+
+        let engine_path = run(true);
+        let scan_path = run(false);
+
+        assert_eq!(
+            engine_path.trades.len(),
+            1,
+            "the limit order should fill and the trailing stop should close it"
+        );
+        assert_eq!(
+            engine_path.trades.len(),
+            scan_path.trades.len(),
+            "the two peak sources disagreed on whether a trade closed"
+        );
+        assert_eq!(
+            engine_path.trades[0].exit_timestamp, scan_path.trades[0].exit_timestamp,
+            "engine-tracked extremes and the entry-bar scan chose different exits"
+        );
+        assert_eq!(
+            engine_path.trades[0].pnl, scan_path.trades[0].pnl,
+            "same exit bar should mean same P&L"
         );
     }
 
