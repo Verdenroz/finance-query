@@ -541,7 +541,7 @@ pub(crate) fn parse_chart_data(
             low: c.low,
             close: c.close,
             volume: c.volume.max(0),
-            adj_close: None,
+            adj_close: c.adj_close,
             provider_id: Some(Provider::Yahoo),
         })
         .collect();
@@ -930,6 +930,34 @@ mod tests {
                 "final chunk exceeds chunk size for ({earliest}, {now})"
             );
         }
+    }
+
+    #[test]
+    fn test_parse_chart_data_preserves_adj_close() {
+        let json = serde_json::json!({
+            "chart": {
+                "result": [{
+                    "meta": {"symbol": "AAPL", "currency": "USD"},
+                    "timestamp": [1609459200, 1609545600],
+                    "indicators": {
+                        "quote": [{
+                            "open": [130.0, 131.0],
+                            "high": [133.0, 134.0],
+                            "low": [129.0, 130.0],
+                            "close": [132.0, 133.0],
+                            "volume": [100000000, 90000000]
+                        }],
+                        "adjclose": [{
+                            "adjclose": [131.5, 132.5]
+                        }]
+                    }
+                }]
+            }
+        });
+
+        let chart = parse_chart_data(json, "AAPL").unwrap();
+        assert_eq!(chart.candles[0].adj_close, Some(131.5));
+        assert_eq!(chart.candles[1].adj_close, Some(132.5));
     }
 
     #[test]

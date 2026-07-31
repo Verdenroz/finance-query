@@ -448,7 +448,7 @@ impl YahooClient {
                 low: c.low,
                 close: c.close,
                 volume: c.volume.max(0),
-                adj_close: None,
+                adj_close: c.adj_close,
                 provider_id: Some(crate::Provider::Yahoo),
             })
             .collect();
@@ -547,7 +547,7 @@ impl YahooClient {
                 low: c.low,
                 close: c.close,
                 volume: c.volume.max(0),
-                adj_close: None,
+                adj_close: c.adj_close,
                 provider_id: Some(crate::Provider::Yahoo),
             })
             .collect();
