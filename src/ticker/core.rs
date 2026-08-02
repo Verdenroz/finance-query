@@ -794,6 +794,28 @@ impl Ticker {
             .await
     }
 
+    /// Fetch the company's own press releases via the configured
+    /// [`Capability::CORPORATE`] provider (currently FMP only). Distinct from
+    /// [`news`](Self::news), which returns press coverage.
+    pub async fn press_releases(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::CORPORATE, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_corporate()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::PressReleases))?
+                        .fetch_press_releases(&symbol, limit)
+                        .await
+                }
+            })
+            .await
+    }
+
     #[cfg(feature = "indicators")]
     /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(

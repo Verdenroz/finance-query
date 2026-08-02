@@ -175,7 +175,7 @@ pub use models::discovery::reference::{
 };
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use models::market::performance::{
-    IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
+    IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
 
 pub use error::{ErrorCategory, FinanceError, Result};
@@ -201,6 +201,7 @@ pub use models::{
     chart::Chart,
     chart::spark::Spark,
     corporate::news::News,
+    corporate::press_release::PressRelease,
     corporate::recommendation::Recommendation,
     corporate::transcript::{Transcript, TranscriptWithMeta},
     discovery::lookup::LookupResults,

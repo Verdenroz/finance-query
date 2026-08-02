@@ -54,6 +54,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Filing text: `providers.filings("AAPL").sections(accession, form)` returns
   the sectioned 10-K/8-K text of a filing and `.risk_factors()` the extracted
   risk factors (Polygon; EDGAR still serves metadata).
+- `Ticker::press_releases(limit)` — the company's own releases, distinct from
+  press coverage via `news()` (FMP).
+- `providers.calendar().holidays()` — upcoming market holidays and early
+  closes as a new `CalendarKind::MarketHoliday` (Polygon).
+- `providers.market().sector_performance_history(limit)` (FMP), and market
+  movers gained a second provider: Alpha Vantage now serves
+  `gainers()`/`losers()`/`most_active()` as a fallback route.
 - Three market-wide capabilities and handles on the Providers API (each needs
   at least one of the `fmp`/`polygon`/`alphavantage` features):
   `Capability::DISCOVERY` with `providers.discovery()` (symbol search,

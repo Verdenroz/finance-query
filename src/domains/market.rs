@@ -99,6 +99,12 @@ impl MarketCalendar {
     pub async fn economic(&self, from: &str, to: &str) -> Result<Vec<MarketCalendarEntry>> {
         self.fetch(CalendarKind::Economic, from, to).await
     }
+
+    /// Upcoming market holidays and early closes. Providers return their
+    /// upcoming set, so no date range is taken.
+    pub async fn holidays(&self) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::MarketHoliday, "", "").await
+    }
 }
 
 /// Market-wide performance statistics backed by configured data providers.
@@ -128,6 +134,26 @@ impl Market {
                             p.not_supported(crate::providers::Operation::SectorPerformance)
                         })?
                         .fetch_sector_performance()
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Historical aggregate sector performance, most recent first.
+    pub async fn sector_performance_history(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+        self.providers
+            .fetch(Capability::MARKET, move |p| {
+                let p = p.clone();
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::SectorPerformanceHistory)
+                        })?
+                        .fetch_sector_performance_history(limit)
                         .await
                 }
             })

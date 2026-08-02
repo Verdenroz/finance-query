@@ -88,7 +88,7 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
         frequency: crate::Frequency,
     ) -> Result<crate::models::fundamentals::FinancialStatement>;
 
-    /// Fetch short-interest settlement reports, most recent first.
+    /// Fetch bi-monthly short-interest settlement reports.
     async fn fetch_short_interest(
         &self,
         _symbol: &str,
@@ -128,6 +128,15 @@ pub(crate) trait CorporateProvider: ProviderCore {
         _limit: u32,
     ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
         Err(self.not_supported(Operation::Recommendations))
+    }
+
+    /// Fetch the company's own press releases.
+    async fn fetch_press_releases(
+        &self,
+        _symbol: &str,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+        Err(self.not_supported(Operation::PressReleases))
     }
 }
 
@@ -220,27 +229,45 @@ pub(crate) trait CalendarProvider: ProviderCore {
 }
 
 /// [`Capability::MARKET`] — sector/industry performance and movers.
+///
+/// Movers is the required primary (every current implementor serves it);
+/// the sector/industry statistics default to `NotSupported` since coverage
+/// is ragged (FMP serves all of them, Alpha Vantage only movers).
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 #[async_trait::async_trait]
 pub(crate) trait MarketProvider: ProviderCore {
-    /// Fetch aggregate performance for every sector.
-    async fn fetch_sector_performance(
-        &self,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>>;
-
-    /// Fetch sector price/earnings ratios.
-    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>>;
-
-    /// Fetch industry price/earnings ratios.
-    async fn fetch_industry_pe(
-        &self,
-    ) -> Result<Vec<crate::models::market::performance::IndustryPe>>;
-
     /// Fetch the market movers list for `direction`.
     async fn fetch_market_movers(
         &self,
         direction: crate::models::market::performance::MoverDirection,
     ) -> Result<Vec<crate::models::market::performance::MoverQuote>>;
+
+    /// Fetch aggregate performance for every sector.
+    async fn fetch_sector_performance(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+        Err(self.not_supported(Operation::SectorPerformance))
+    }
+
+    /// Fetch historical aggregate sector performance, most recent first.
+    async fn fetch_sector_performance_history(
+        &self,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+        Err(self.not_supported(Operation::SectorPerformanceHistory))
+    }
+
+    /// Fetch sector price/earnings ratios.
+    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
+        Err(self.not_supported(Operation::SectorPerformance))
+    }
+
+    /// Fetch industry price/earnings ratios.
+    async fn fetch_industry_pe(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {
+        Err(self.not_supported(Operation::SectorPerformance))
+    }
 }
 
 /// [`Capability::CRYPTO`] — cryptocurrency quotes.

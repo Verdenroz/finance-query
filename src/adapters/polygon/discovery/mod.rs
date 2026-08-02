@@ -152,7 +152,6 @@ pub struct Exchange {
 /// Market holiday.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: market holidays land with #300 (CalendarKind::MarketHoliday)
 pub struct MarketHolidayDTO {
     /// Holiday name.
     pub name: Option<String>,
@@ -302,7 +301,6 @@ pub async fn exchanges(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<E
 }
 
 /// Fetch upcoming market holidays.
-#[allow(dead_code)] // unrouted: market holidays land with #300 (CalendarKind::MarketHoliday)
 pub async fn market_holidays() -> Result<Vec<MarketHolidayDTO>> {
     let client = build_client()?;
     client
@@ -315,9 +313,68 @@ pub async fn market_holidays() -> Result<Vec<MarketHolidayDTO>> {
         .await
 }
 
+/// Fetch upcoming market holidays as canonical calendar entries.
+pub async fn fetch_market_holidays_response()
+-> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+    Ok(market_holidays()
+        .await?
+        .into_iter()
+        .map(holiday_to_canonical)
+        .collect())
+}
+
+/// Convert one holiday DTO into a canonical calendar entry.
+fn holiday_to_canonical(
+    h: MarketHolidayDTO,
+) -> crate::models::calendar::market::MarketCalendarEntry {
+    use crate::models::calendar::market::{CalendarDetail, MarketCalendarEntry};
+    MarketCalendarEntry {
+        symbol: None,
+        date: h.date,
+        detail: CalendarDetail::MarketHoliday {
+            name: h.name,
+            exchange: h.exchange,
+            status: h.status,
+            open: h.open,
+            close: h.close,
+        },
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn holiday_maps_to_calendar_entry() {
+        use crate::models::calendar::market::CalendarDetail;
+        let entry = holiday_to_canonical(
+            serde_json::from_value(serde_json::json!({
+                "name": "Thanksgiving",
+                "date": "2026-11-26",
+                "exchange": "NYSE",
+                "status": "closed"
+            }))
+            .unwrap(),
+        );
+        assert_eq!(entry.date.as_deref(), Some("2026-11-26"));
+        assert!(entry.symbol.is_none());
+        match entry.detail {
+            CalendarDetail::MarketHoliday {
+                name,
+                exchange,
+                status,
+                open,
+                close,
+            } => {
+                assert_eq!(name.as_deref(), Some("Thanksgiving"));
+                assert_eq!(exchange.as_deref(), Some("NYSE"));
+                assert_eq!(status.as_deref(), Some("closed"));
+                assert!(open.is_none() && close.is_none());
+            }
+            other => panic!("wrong detail: {other:?}"),
+        }
+    }
 
     #[tokio::test]
     async fn test_ticker_details_mock() {

@@ -27,6 +27,16 @@ pub struct SectorPerformance {
     pub change_percent: Option<f64>,
 }
 
+/// One day of aggregate performance across every sector.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct SectorPerformanceHistory {
+    /// Date (`YYYY-MM-DD`).
+    pub date: Option<String>,
+    /// Per-sector percentage change on that date.
+    pub sectors: Vec<SectorPerformance>,
+}
+
 /// A sector's aggregate price/earnings ratio.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]

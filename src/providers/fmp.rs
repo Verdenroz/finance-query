@@ -124,6 +124,14 @@ impl CorporateProvider for FmpProvider {
     ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
         crate::adapters::fmp::quote::fetch_canonical_similar_symbols(symbol, limit).await
     }
+
+    async fn fetch_press_releases(
+        &self,
+        symbol: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+        crate::adapters::fmp::corporate::fetch_press_releases_response(symbol, limit).await
+    }
 }
 
 #[async_trait::async_trait]
@@ -159,6 +167,24 @@ impl CalendarProvider for FmpProvider {
 
 #[async_trait::async_trait]
 impl MarketProvider for FmpProvider {
+    async fn fetch_market_movers(
+        &self,
+        direction: crate::models::market::performance::MoverDirection,
+    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        crate::adapters::fmp::market::market_performance::fetch_market_movers_response(direction)
+            .await
+    }
+
+    async fn fetch_sector_performance_history(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+        crate::adapters::fmp::market::market_performance::fetch_sector_performance_history_response(
+            limit,
+        )
+        .await
+    }
+
     async fn fetch_sector_performance(
         &self,
     ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
@@ -173,14 +199,6 @@ impl MarketProvider for FmpProvider {
         &self,
     ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {
         crate::adapters::fmp::market::market_performance::fetch_industry_pe_response().await
-    }
-
-    async fn fetch_market_movers(
-        &self,
-        direction: crate::models::market::performance::MoverDirection,
-    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
-        crate::adapters::fmp::market::market_performance::fetch_market_movers_response(direction)
-            .await
     }
 }
 

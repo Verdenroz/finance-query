@@ -35,7 +35,6 @@ pub struct StockNewsDTO {
 /// Press release.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: press releases / category news land with #300
 pub struct PressReleaseDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -99,7 +98,6 @@ pub async fn stock_news(tickers: &str, limit: u32) -> Result<Vec<StockNewsDTO>> 
 }
 
 /// Fetch press releases for a symbol.
-#[allow(dead_code)] // unrouted: press releases / category news land with #300
 pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressReleaseDTO>> {
     let client = build_client()?;
     let path = format!("/api/v3/press-releases/{}", encode_path_segment(symbol));
@@ -108,7 +106,7 @@ pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressRelease
 }
 
 /// Fetch crypto news.
-#[allow(dead_code)] // unrouted: press releases / category news land with #300
+#[allow(dead_code)] // unrouted: category news deliberately deferred (#300 optional)
 pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
     let size_str = limit.to_string();
@@ -118,13 +116,30 @@ pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
 }
 
 /// Fetch forex news.
-#[allow(dead_code)] // unrouted: press releases / category news land with #300
+#[allow(dead_code)] // unrouted: category news deliberately deferred (#300 optional)
 pub async fn forex_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
     let size_str = limit.to_string();
     client
         .get("/api/v4/forex_news", &[("page", "0"), ("size", &size_str)])
         .await
+}
+
+/// Fetch canonical press releases for a symbol.
+pub async fn fetch_press_releases_response(
+    symbol: &str,
+    limit: u32,
+) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+    let dtos = press_releases(symbol, limit).await?;
+    Ok(dtos
+        .into_iter()
+        .map(|d| crate::models::corporate::press_release::PressRelease {
+            symbol: d.symbol.or_else(|| Some(symbol.to_string())),
+            date: d.date,
+            title: d.title,
+            text: d.text,
+        })
+        .collect())
 }
 
 #[cfg(test)]

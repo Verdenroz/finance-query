@@ -1,9 +1,9 @@
 //! Polygon.io provider implementation.
 
 use super::{
-    ChartProvider, CorporateProvider, CryptoProvider, DiscoveryProvider, EconomicProvider,
-    FilingsProvider, ForexProvider, FundamentalsProvider, FuturesProvider, IndicesProvider,
-    OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
+    CalendarProvider, ChartProvider, CorporateProvider, CryptoProvider, DiscoveryProvider,
+    EconomicProvider, FilingsProvider, ForexProvider, FundamentalsProvider, FuturesProvider,
+    IndicesProvider, OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::polygon;
 use crate::error::FinanceError;
@@ -198,6 +198,24 @@ impl FilingsProvider for PolygonProvider {
 }
 
 #[async_trait::async_trait]
+impl CalendarProvider for PolygonProvider {
+    /// Polygon serves the holiday calendar only; other kinds fall through to
+    /// the next routed provider. Holidays are date-bounded upstream (Polygon
+    /// returns the upcoming set), so `from`/`to` are ignored.
+    async fn fetch_market_calendar(
+        &self,
+        kind: crate::models::calendar::market::CalendarKind,
+        _from: &str,
+        _to: &str,
+    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+        if kind != crate::models::calendar::market::CalendarKind::MarketHoliday {
+            return Err(self.not_supported(kind.operation()));
+        }
+        polygon::fetch_market_holidays_response().await
+    }
+}
+
+#[async_trait::async_trait]
 impl CryptoProvider for PolygonProvider {
     async fn fetch_crypto_quote(
         &self,
@@ -265,6 +283,9 @@ impl ProviderAdapter for PolygonProvider {
         Some(self)
     }
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
+        Some(self)
+    }
+    fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         Some(self)
     }
 }

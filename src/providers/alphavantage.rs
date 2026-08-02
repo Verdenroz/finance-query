@@ -5,8 +5,8 @@
 
 use super::{
     ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider, EconomicProvider,
-    ForexProvider, FundamentalsProvider, OptionsProvider, ProviderAdapter, ProviderCore,
-    QuoteProvider,
+    ForexProvider, FundamentalsProvider, MarketProvider, OptionsProvider, ProviderAdapter,
+    ProviderCore, QuoteProvider,
 };
 use crate::adapters::alphavantage as av;
 use crate::error::Result;
@@ -136,6 +136,16 @@ impl EconomicProvider for AlphaVantageProvider {
 }
 
 #[async_trait::async_trait]
+impl MarketProvider for AlphaVantageProvider {
+    async fn fetch_market_movers(
+        &self,
+        direction: crate::models::market::performance::MoverDirection,
+    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        av::fetch_market_movers_response(direction).await
+    }
+}
+
+#[async_trait::async_trait]
 impl ProviderAdapter for AlphaVantageProvider {
     async fn initialize(&self) -> Result<()> {
         let key = std::env::var("ALPHAVANTAGE_API_KEY").map_err(|_| {
@@ -174,6 +184,9 @@ impl ProviderAdapter for AlphaVantageProvider {
         Some(self)
     }
     fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
+        Some(self)
+    }
+    fn as_market(&self) -> Option<&dyn MarketProvider> {
         Some(self)
     }
 }
