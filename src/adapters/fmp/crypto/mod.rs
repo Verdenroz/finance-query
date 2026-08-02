@@ -6,7 +6,7 @@ use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
-use crate::adapters::fmp::models::{FmpQuoteDTO, HistoricalPriceResponseDTO, IntradayPriceDTO};
+use crate::adapters::fmp::models::FmpQuoteDTO;
 
 /// Convert FMP quote DTOs into a canonical CryptoQuote.
 fn crypto_quote_to_canonical(
@@ -69,89 +69,9 @@ pub async fn crypto_quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {
     client.get(&path, &[]).await
 }
 
-/// List all available cryptocurrency pairs.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn crypto_available() -> Result<Vec<AvailableSymbolDTO>> {
-    let client = build_client()?;
-    client
-        .get("/api/v3/symbol/available-cryptocurrencies", &[])
-        .await
-}
-
-/// Fetch daily historical prices for a cryptocurrency.
-///
-/// * `symbol` - e.g., `"BTCUSD"`
-/// * `params` - Optional query params such as `from`, `to`
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn crypto_historical(
-    symbol: &str,
-    params: &[(&str, &str)],
-) -> Result<HistoricalPriceResponseDTO> {
-    let client = build_client()?;
-    let path = format!(
-        "/api/v3/historical-price-full/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, params).await
-}
-
-/// Fetch intraday prices for a cryptocurrency.
-///
-/// * `symbol` - e.g., `"BTCUSD"`
-/// * `interval` - e.g., `"1min"`, `"5min"`, `"15min"`, `"30min"`, `"1hour"`, `"4hour"`
-/// * `params` - Optional query params such as `from`, `to`
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn crypto_intraday(
-    symbol: &str,
-    interval: &str,
-    params: &[(&str, &str)],
-) -> Result<Vec<IntradayPriceDTO>> {
-    let client = build_client()?;
-    let path = format!(
-        "/api/v3/historical-chart/{}/{}",
-        encode_path_segment(interval),
-        encode_path_segment(symbol)
-    );
-    client.get(&path, params).await
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[tokio::test]
-    async fn test_crypto_available_mock() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/api/v3/symbol/available-cryptocurrencies")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apikey".into(),
-                "test-key".into(),
-            )]))
-            .with_status(200)
-            .with_body(
-                serde_json::json!([
-                    {
-                        "symbol": "BTCUSD",
-                        "name": "Bitcoin USD",
-                        "currency": "USD",
-                        "stockExchange": "CCC",
-                        "exchangeShortName": "CRYPTO"
-                    }
-                ])
-                .to_string(),
-            )
-            .create_async()
-            .await;
-
-        let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let result: Vec<AvailableSymbolDTO> = client
-            .get("/api/v3/symbol/available-cryptocurrencies", &[])
-            .await
-            .unwrap();
-        assert_eq!(result.len(), 1);
-        assert_eq!(result[0].symbol.as_deref(), Some("BTCUSD"));
-    }
 
     /// Mocked HTTP → `Vec<FmpQuoteDTO>` → `crypto_quote_to_canonical`, covering
     /// the full `fetch_canonical_crypto_quote` pipeline without a network call.

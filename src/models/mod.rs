@@ -56,6 +56,3 @@ pub mod futures;
 /// Stock market index data models — Polygon / FMP.
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub mod indices;
-/// Technical analysis indicator models (SMA, EMA, RSI, MACD, etc.).
-#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
-pub mod technicals;

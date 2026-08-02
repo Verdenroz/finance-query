@@ -46,58 +46,6 @@ pub struct Split {
     pub split_to: Option<f64>,
 }
 
-/// IPO event.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: IPO feed served by FMP via CALENDAR; Polygon route unused
-pub struct Ipo {
-    /// Ticker symbol.
-    pub ticker: Option<String>,
-    /// Company name.
-    pub name: Option<String>,
-    /// Listing date.
-    pub listing_date: Option<String>,
-    /// IPO price.
-    pub ipo_price: Option<f64>,
-    /// Currency.
-    pub currency: Option<String>,
-    /// Exchange.
-    pub primary_exchange: Option<String>,
-    /// Share price range low.
-    pub lot_size: Option<u64>,
-    /// IPO status.
-    pub ipo_status: Option<String>,
-}
-
-/// Ticker event.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: ticker-event feed has no capability route yet
-pub struct TickerEventDTO {
-    /// Event type.
-    #[serde(rename = "type")]
-    pub event_type: Option<String>,
-    /// Event date.
-    pub date: Option<String>,
-    /// Ticker change details.
-    pub ticker_change: Option<serde_json::Value>,
-}
-
-/// Ticker events response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: ticker-event feed has no capability route yet
-pub struct TickerEventsResponseDTO {
-    /// Request ID.
-    pub request_id: Option<String>,
-    /// Response status.
-    pub status: Option<String>,
-    /// Ticker name.
-    pub name: Option<String>,
-    /// Events list.
-    pub events: Option<Vec<TickerEventDTO>>,
-}
-
 /// Fetch historical dividends.
 pub async fn stock_dividends(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<Dividend>> {
     let client = build_client()?;
@@ -108,23 +56,6 @@ pub async fn stock_dividends(params: &[(&str, &str)]) -> Result<PaginatedRespons
 pub async fn stock_splits(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<Split>> {
     let client = build_client()?;
     client.get("/v3/reference/splits", params).await
-}
-
-/// Fetch IPO data.
-#[allow(dead_code)] // unrouted: IPO feed served by FMP via CALENDAR; Polygon route unused
-pub async fn stock_ipos(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<Ipo>> {
-    let client = build_client()?;
-    client.get("/v1/reference/ipos", params).await
-}
-
-/// Fetch ticker events (name changes, mergers, etc.).
-#[allow(dead_code)] // unrouted: ticker-event feed has no capability route yet
-pub async fn stock_ticker_events(ticker: &str) -> Result<TickerEventsResponseDTO> {
-    let client = build_client()?;
-    let path = format!("/vX/reference/tickers/{}/events", ticker);
-    client
-        .get_as(&path, &[], "ticker_events", "ticker events")
-        .await
 }
 
 /// Helper to parse a "YYYY-MM-DD" date string into a Unix timestamp.

@@ -2,11 +2,10 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
-use crate::adapters::fmp::models::{FmpQuoteDTO, HistoricalPriceResponseDTO};
+use crate::adapters::fmp::models::FmpQuoteDTO;
 
 /// Convert FMP quote DTOs into a canonical IndexQuote.
 fn index_quote_to_canonical(
@@ -35,7 +34,7 @@ pub async fn fetch_canonical_index_quote(
 /// A constituent of a major index (S&P 500, Nasdaq, Dow Jones).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: index constituents land with #297
 pub struct IndexConstituentDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -61,7 +60,7 @@ pub struct IndexConstituentDTO {
 /// A historical change in index constituency.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: index constituents land with #297
 pub struct HistoricalConstituentDTO {
     /// Date of the change.
     pub date: Option<String>,
@@ -81,57 +80,40 @@ pub struct HistoricalConstituentDTO {
 }
 
 /// Fetch real-time quotes for all major indexes.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn major_indexes_quote() -> Result<Vec<FmpQuoteDTO>> {
     let client = build_client()?;
     client.get("/api/v3/quotes/index", &[]).await
 }
 
 /// Fetch current S&P 500 constituents.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn sp500_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/sp500_constituent", &[]).await
 }
 
 /// Fetch current Nasdaq constituents.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn nasdaq_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/nasdaq_constituent", &[]).await
 }
 
 /// Fetch current Dow Jones constituents.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn dow_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/dowjones_constituent", &[]).await
 }
 
 /// Fetch historical S&P 500 constituent changes.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
     let client = build_client()?;
     client
         .get("/api/v3/historical/sp500_constituent", &[])
         .await
-}
-
-/// Fetch daily historical prices for an index.
-///
-/// * `symbol` - e.g., `"^GSPC"` (S&P 500)
-/// * `params` - Optional query params such as `from`, `to`
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn index_historical(
-    symbol: &str,
-    params: &[(&str, &str)],
-) -> Result<HistoricalPriceResponseDTO> {
-    let client = build_client()?;
-    let path = format!(
-        "/api/v3/historical-price-full/{}",
-        encode_path_segment(symbol)
-    );
-    client.get(&path, params).await
 }
 
 #[cfg(test)]
@@ -200,7 +182,10 @@ mod tests {
             .await;
 
         let client = crate::adapters::fmp::build_test_client(&server.url()).unwrap();
-        let path = format!("/api/v3/quote/{}", encode_path_segment("^GSPC"));
+        let path = format!(
+            "/api/v3/quote/{}",
+            crate::adapters::common::encode_path_segment("^GSPC")
+        );
         let quotes: Vec<FmpQuoteDTO> = client.get(&path, &[]).await.unwrap();
 
         let quote = index_quote_to_canonical("^GSPC", &quotes);

@@ -149,34 +149,10 @@ pub struct Exchange {
     pub url: Option<String>,
 }
 
-/// Condition code.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub struct Condition {
-    /// Condition ID.
-    pub id: Option<i32>,
-    /// Condition type.
-    #[serde(rename = "type")]
-    pub condition_type: Option<String>,
-    /// Name.
-    pub name: Option<String>,
-    /// Description.
-    pub description: Option<String>,
-    /// Asset class.
-    pub asset_class: Option<String>,
-    /// SIP mapping.
-    pub sip_mapping: Option<serde_json::Value>,
-    /// Data types.
-    pub data_types: Option<Vec<String>>,
-    /// Legacy flag.
-    pub legacy: Option<bool>,
-}
-
 /// Market holiday.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: market holidays land with #300 (CalendarKind::MarketHoliday)
 pub struct MarketHolidayDTO {
     /// Holiday name.
     pub name: Option<String>,
@@ -190,28 +166,6 @@ pub struct MarketHolidayDTO {
     pub open: Option<String>,
     /// Close time (if early close).
     pub close: Option<String>,
-}
-
-/// Market status for exchanges.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub struct MarketStatusResponseDTO {
-    /// After hours trading.
-    #[serde(rename = "afterHours")]
-    pub after_hours: Option<bool>,
-    /// Early hours trading.
-    #[serde(rename = "earlyHours")]
-    pub early_hours: Option<bool>,
-    /// Market status (e.g., `"open"`, `"closed"`).
-    pub market: Option<String>,
-    /// Server time.
-    #[serde(rename = "serverTime")]
-    pub server_time: Option<String>,
-    /// Individual exchange statuses.
-    pub exchanges: Option<serde_json::Value>,
-    /// Individual currency statuses.
-    pub currencies: Option<serde_json::Value>,
 }
 
 /// Fetch all tickers.
@@ -347,15 +301,8 @@ pub async fn exchanges(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<E
     client.get("/v3/reference/exchanges", params).await
 }
 
-/// Fetch condition codes.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn condition_codes(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<Condition>> {
-    let client = build_client()?;
-    client.get("/v3/reference/conditions", params).await
-}
-
 /// Fetch upcoming market holidays.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: market holidays land with #300 (CalendarKind::MarketHoliday)
 pub async fn market_holidays() -> Result<Vec<MarketHolidayDTO>> {
     let client = build_client()?;
     client
@@ -364,20 +311,6 @@ pub async fn market_holidays() -> Result<Vec<MarketHolidayDTO>> {
             &[],
             "market_holidays",
             "market holidays",
-        )
-        .await
-}
-
-/// Fetch current market status.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn market_status() -> Result<MarketStatusResponseDTO> {
-    let client = build_client()?;
-    client
-        .get_as(
-            "/v1/marketstatus/now",
-            &[],
-            "market_status",
-            "market status",
         )
         .await
 }
@@ -423,33 +356,5 @@ mod tests {
         assert_eq!(details.name.as_deref(), Some("Apple Inc."));
         assert_eq!(details.ticker.as_deref(), Some("AAPL"));
         assert!((details.market_cap.unwrap() - 2850000000000.0).abs() < 1.0);
-    }
-
-    #[tokio::test]
-    async fn test_market_status_mock() {
-        let mut server = mockito::Server::new_async().await;
-        let _mock = server
-            .mock("GET", "/v1/marketstatus/now")
-            .match_query(mockito::Matcher::AllOf(vec![mockito::Matcher::UrlEncoded(
-                "apiKey".into(),
-                "test-key".into(),
-            )]))
-            .with_status(200)
-            .with_body(
-                serde_json::json!({
-                    "market": "open",
-                    "earlyHours": false,
-                    "afterHours": false,
-                    "serverTime": "2024-01-15T12:00:00-05:00"
-                })
-                .to_string(),
-            )
-            .create_async()
-            .await;
-
-        let client = super::super::build_test_client(&server.url()).unwrap();
-        let json = client.get_raw("/v1/marketstatus/now", &[]).await.unwrap();
-        let resp: MarketStatusResponseDTO = serde_json::from_value(json).unwrap();
-        assert_eq!(resp.market.as_deref(), Some("open"));
     }
 }

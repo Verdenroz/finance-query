@@ -2,7 +2,6 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -66,18 +65,6 @@ pub struct SearchResultDTO {
     /// Short exchange name.
     #[serde(rename = "exchangeShortName")]
     pub exchange_short_name: Option<String>,
-}
-
-/// A result from the CIK search endpoint.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub struct CikResultDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Company CIK number.
-    #[serde(rename = "companyCik")]
-    pub company_cik: Option<String>,
 }
 
 /// Screen stocks by various financial criteria.
@@ -160,16 +147,6 @@ pub async fn fetch_screener_response(
             })
         })
         .collect())
-}
-
-/// Look up a company by CIK number.
-///
-/// * `cik` - CIK number (e.g., `"0000320193"`)
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn cik_search(cik: &str) -> Result<Vec<CikResultDTO>> {
-    let client = build_client()?;
-    let path = format!("/api/v3/cik/{}", encode_path_segment(cik));
-    client.get(&path, &[]).await
 }
 
 #[cfg(test)]

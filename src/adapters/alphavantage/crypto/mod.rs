@@ -86,61 +86,12 @@ fn parse_crypto_series(
     })
 }
 
-/// Fetch intraday cryptocurrency time series.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn crypto_intraday(
-    symbol: &str,
-    market: &str,
-    interval: AvInterval,
-    output_size: Option<OutputSize>,
-) -> Result<CryptoTimeSeriesDTO> {
-    let client = build_client()?;
-    let mut params = vec![
-        ("symbol", symbol),
-        ("market", market),
-        ("interval", interval.as_str()),
-    ];
-    let os_str;
-    if let Some(os) = output_size {
-        os_str = os.as_str().to_string();
-        params.push(("outputsize", &os_str));
-    }
-    let json = client.get("CRYPTO_INTRADAY", &params).await?;
-    parse_crypto_series(&json, symbol, market)
-}
-
 /// Fetch daily cryptocurrency time series.
 pub async fn crypto_daily(symbol: &str, market: &str) -> Result<CryptoTimeSeriesDTO> {
     let client = build_client()?;
     let json = client
         .get(
             "DIGITAL_CURRENCY_DAILY",
-            &[("symbol", symbol), ("market", market)],
-        )
-        .await?;
-    parse_crypto_series(&json, symbol, market)
-}
-
-/// Fetch weekly cryptocurrency time series.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn crypto_weekly(symbol: &str, market: &str) -> Result<CryptoTimeSeriesDTO> {
-    let client = build_client()?;
-    let json = client
-        .get(
-            "DIGITAL_CURRENCY_WEEKLY",
-            &[("symbol", symbol), ("market", market)],
-        )
-        .await?;
-    parse_crypto_series(&json, symbol, market)
-}
-
-/// Fetch monthly cryptocurrency time series.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn crypto_monthly(symbol: &str, market: &str) -> Result<CryptoTimeSeriesDTO> {
-    let client = build_client()?;
-    let json = client
-        .get(
-            "DIGITAL_CURRENCY_MONTHLY",
             &[("symbol", symbol), ("market", market)],
         )
         .await?;

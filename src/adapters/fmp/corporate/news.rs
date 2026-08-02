@@ -32,46 +32,10 @@ pub struct StockNewsDTO {
     pub url: Option<String>,
 }
 
-/// FMP article from their own editorial.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub struct FmpArticleDTO {
-    /// Article title.
-    pub title: Option<String>,
-    /// Article date.
-    pub date: Option<String>,
-    /// Article content.
-    pub content: Option<String>,
-    /// Tickers mentioned.
-    pub tickers: Option<String>,
-    /// Article image URL.
-    pub image: Option<String>,
-    /// Article link.
-    pub link: Option<String>,
-    /// Author.
-    pub author: Option<String>,
-    /// Site name.
-    pub site: Option<String>,
-}
-
-/// FMP articles response wrapper (paginated).
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub struct FmpArticlesResponseDTO {
-    /// Content articles.
-    pub content: Option<Vec<FmpArticleDTO>>,
-    /// Page number.
-    pub page: Option<u32>,
-    /// Page size.
-    pub size: Option<u32>,
-}
-
 /// Press release.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: press releases / category news land with #300
 pub struct PressReleaseDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -134,25 +98,8 @@ pub async fn stock_news(tickers: &str, limit: u32) -> Result<Vec<StockNewsDTO>> 
         .await
 }
 
-/// Fetch FMP editorial articles.
-///
-/// * `page` - Page number (0-indexed)
-/// * `size` - Page size
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
-pub async fn fmp_articles(page: u32, size: u32) -> Result<FmpArticlesResponseDTO> {
-    let client = build_client()?;
-    let page_str = page.to_string();
-    let size_str = size.to_string();
-    client
-        .get(
-            "/api/v3/fmp/articles",
-            &[("page", &*page_str), ("size", &*size_str)],
-        )
-        .await
-}
-
 /// Fetch press releases for a symbol.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: press releases / category news land with #300
 pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressReleaseDTO>> {
     let client = build_client()?;
     let path = format!("/api/v3/press-releases/{}", encode_path_segment(symbol));
@@ -161,7 +108,7 @@ pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressRelease
 }
 
 /// Fetch crypto news.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: press releases / category news land with #300
 pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
     let size_str = limit.to_string();
@@ -171,7 +118,7 @@ pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
 }
 
 /// Fetch forex news.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: press releases / category news land with #300
 pub async fn forex_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
     let size_str = limit.to_string();

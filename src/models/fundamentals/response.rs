@@ -16,7 +16,7 @@ struct RawTimeseriesResponse {
 #[derive(Debug, Clone, Deserialize)]
 struct RawTimeseries {
     result: Vec<RawTimeseriesResult>,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // serde completeness field; never read
     error: Option<serde_json::Value>,
 }
 

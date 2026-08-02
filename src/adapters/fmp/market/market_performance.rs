@@ -52,7 +52,7 @@ pub struct SectorPerformanceDTO {
 /// Historical sector performance entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: sector-performance history lands with #300
 pub struct HistoricalSectorPerformanceDTO {
     /// Date.
     pub date: Option<String>,
@@ -133,7 +133,7 @@ pub async fn sector_performance() -> Result<Vec<SectorPerformanceDTO>> {
 }
 
 /// Fetch historical sector performance.
-#[allow(dead_code)] // unrouted: no capability route or consumer yet
+#[allow(dead_code)] // unrouted: sector-performance history lands with #300
 pub async fn historical_sector_performance(
     limit: u32,
 ) -> Result<Vec<HistoricalSectorPerformanceDTO>> {

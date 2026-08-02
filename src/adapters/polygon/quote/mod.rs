@@ -104,21 +104,6 @@ pub async fn stock_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsRespo
         .await
 }
 
-/// Fetch top gainers or losers snapshot.
-///
-/// * `direction` - `"gainers"` or `"losers"`
-#[allow(dead_code)] // unrouted: movers served by FMP via MARKET; Polygon route unused
-pub async fn stock_top_movers(direction: &str) -> Result<SnapshotsResponseDTO> {
-    let client = build_client()?;
-    let path = format!(
-        "/v2/snapshot/locale/us/markets/stocks/{}",
-        encode_path_segment(direction)
-    );
-    client
-        .get_as(&path, &[], "top_movers", "top movers response")
-        .await
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
