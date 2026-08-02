@@ -212,34 +212,65 @@ impl Capability {
         (self.0 & other.0) == other.0
     }
 
+    /// Every single-bit capability paired with its name — the one place names
+    /// and bits meet. `name()`, `Display`, and the bit-uniqueness test all
+    /// derive from this table.
+    const ALL: [(Self, &'static str); 15] = [
+        (Self::QUOTE, "quote"),
+        (Self::CHART, "chart"),
+        (Self::FUNDAMENTALS, "fundamentals"),
+        (Self::CORPORATE, "corporate"),
+        (Self::OPTIONS, "options"),
+        (Self::DISCOVERY, "discovery"),
+        (Self::CRYPTO, "crypto"),
+        (Self::ECONOMIC, "economic"),
+        (Self::CALENDAR, "calendar"),
+        (Self::MARKET, "market"),
+        (Self::FOREX, "forex"),
+        (Self::INDICES, "indices"),
+        (Self::FUTURES, "futures"),
+        (Self::COMMODITIES, "commodities"),
+        (Self::FILINGS, "filings"),
+    ];
+
     /// Returns a short lowercase name for this capability (e.g., `"quote"`, `"chart"`).
     ///
-    /// Returns `"unknown"` for combined capability flags or unrecognised bits.
+    /// Returns `"unknown"` for combined capability flags or unrecognised bits;
+    /// [`Display`](std::fmt::Display) spells combined sets out instead (e.g.
+    /// `"quote|chart"`).
     pub fn name(self) -> &'static str {
-        match self.0 {
-            x if x == Self::QUOTE.0 => "quote",
-            x if x == Self::CHART.0 => "chart",
-            x if x == Self::FUNDAMENTALS.0 => "fundamentals",
-            x if x == Self::CORPORATE.0 => "corporate",
-            x if x == Self::OPTIONS.0 => "options",
-            x if x == Self::DISCOVERY.0 => "discovery",
-            x if x == Self::CRYPTO.0 => "crypto",
-            x if x == Self::ECONOMIC.0 => "economic",
-            x if x == Self::CALENDAR.0 => "calendar",
-            x if x == Self::MARKET.0 => "market",
-            x if x == Self::FOREX.0 => "forex",
-            x if x == Self::INDICES.0 => "indices",
-            x if x == Self::FUTURES.0 => "futures",
-            x if x == Self::COMMODITIES.0 => "commodities",
-            x if x == Self::FILINGS.0 => "filings",
-            _ => "unknown",
-        }
+        Self::ALL
+            .iter()
+            .find(|(cap, _)| cap.0 == self.0)
+            .map(|(_, name)| *name)
+            .unwrap_or("unknown")
     }
 }
 
 impl std::fmt::Display for Capability {
+    /// Single capabilities print their [`name`](Capability::name); combined
+    /// sets are spelled out `|`-separated (e.g. `"quote|chart"`) rather than
+    /// collapsing to `"unknown"`.
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(self.name())
+        let mut remaining = self.0;
+        let mut first = true;
+        for (cap, name) in Self::ALL {
+            if remaining & cap.0 != 0 {
+                if !first {
+                    f.write_str("|")?;
+                }
+                f.write_str(name)?;
+                first = false;
+                remaining &= !cap.0;
+            }
+        }
+        if first || remaining != 0 {
+            if !first {
+                f.write_str("|")?;
+            }
+            f.write_str("unknown")?;
+        }
+        Ok(())
     }
 }
 
@@ -486,8 +517,17 @@ impl ProviderSet {
         }
     }
 
-    fn finish_err(cap: Capability, last: Option<FinanceError>) -> FinanceError {
-        last.unwrap_or_else(|| Self::no_provider(cap))
+    /// Real provider failures outrank `NotSupported` (which just means "next
+    /// candidate"), but when *every* candidate lacked the operation, surface
+    /// the precise per-operation `NotSupported` instead of collapsing to a
+    /// capability-level `NoProviderAvailable`.
+    fn finish_err(
+        cap: Capability,
+        last: Option<FinanceError>,
+        unsupported: Option<FinanceError>,
+    ) -> FinanceError {
+        last.or(unsupported)
+            .unwrap_or_else(|| Self::no_provider(cap))
     }
 
     pub(crate) async fn fetch<T, F, Fut>(&self, cap: Capability, f: F) -> Result<T>
@@ -502,14 +542,15 @@ impl ProviderSet {
         match self.routes.fetch {
             Fetch::Sequential => {
                 let mut last = None;
+                let mut unsupported = None;
                 for p in &candidates {
                     match f(p).await {
                         Ok(v) => return Ok(v),
-                        Err(FinanceError::NotSupported { .. }) => continue,
+                        Err(e @ FinanceError::NotSupported { .. }) => unsupported = Some(e),
                         Err(e) => last = Some(e),
                     }
                 }
-                Err(Self::finish_err(cap, last))
+                Err(Self::finish_err(cap, last, unsupported))
             }
             Fetch::Parallel => {
                 let mut futs = futures::stream::FuturesUnordered::new();
@@ -517,14 +558,15 @@ impl ProviderSet {
                     futs.push(f(p));
                 }
                 let mut last = None;
+                let mut unsupported = None;
                 while let Some(r) = futs.next().await {
                     match r {
                         Ok(v) => return Ok(v),
-                        Err(FinanceError::NotSupported { .. }) => continue,
+                        Err(e @ FinanceError::NotSupported { .. }) => unsupported = Some(e),
                         Err(e) => last = Some(e),
                     }
                 }
-                Err(Self::finish_err(cap, last))
+                Err(Self::finish_err(cap, last, unsupported))
             }
         }
     }
@@ -860,5 +902,129 @@ mod tests {
             .union(Capability::CORPORATE)
             .union(Capability::OPTIONS);
         assert_eq!(yahoo::CAPS, expected);
+    }
+
+    #[test]
+    fn capability_bits_are_distinct_single_bits() {
+        for (i, (a, name_a)) in Capability::ALL.iter().enumerate() {
+            assert_eq!(a.0.count_ones(), 1, "{name_a} is not a single bit");
+            for (b, name_b) in &Capability::ALL[i + 1..] {
+                assert_ne!(a.0, b.0, "{name_a} and {name_b} share a bit");
+            }
+        }
+    }
+
+    #[test]
+    fn display_spells_out_combined_capabilities() {
+        assert_eq!(Capability::QUOTE.to_string(), "quote");
+        assert_eq!(
+            (Capability::QUOTE | Capability::CHART).to_string(),
+            "quote|chart"
+        );
+        assert_eq!(
+            (Capability::FILINGS | Capability::CORPORATE).to_string(),
+            "corporate|filings"
+        );
+        assert_eq!(Capability::NONE.to_string(), "unknown");
+        // name() keeps its documented single-bit contract.
+        assert_eq!((Capability::QUOTE | Capability::CHART).name(), "unknown");
+    }
+
+    #[tokio::test]
+    async fn all_candidates_unsupported_surfaces_precise_operation() {
+        // NoSparkProvider supports CHART but not spark: the final error must
+        // name the spark operation, not collapse to NoProviderAvailable(CHART).
+        let set = ProviderSet::new(
+            vec![Arc::new(NoSparkProvider)],
+            None,
+            Routes::new(Fetch::Sequential),
+        );
+        let err = set
+            .fetch(Capability::CHART, |p| {
+                let p = p.clone();
+                async move {
+                    p.as_chart()
+                        .ok_or_else(|| p.not_supported(Operation::Spark))?
+                        .fetch_spark(
+                            &["AAPL"],
+                            crate::Interval::OneDay,
+                            crate::TimeRange::FiveDays,
+                        )
+                        .await
+                }
+            })
+            .await
+            .unwrap_err();
+        assert!(matches!(
+            err,
+            FinanceError::NotSupported {
+                operation: Operation::Spark,
+                ..
+            }
+        ));
+    }
+
+    #[tokio::test]
+    async fn real_errors_outrank_not_supported_in_final_error() {
+        // Two candidates: one lacking the op (NotSupported), one failing for
+        // real. The real failure is the actionable error and must win.
+        struct FailingChartProvider;
+        impl ProviderCore for FailingChartProvider {
+            fn id(&self) -> Provider {
+                Provider::Edgar
+            }
+        }
+        #[async_trait::async_trait]
+        impl ChartProvider for FailingChartProvider {
+            async fn fetch_chart(
+                &self,
+                _: &str,
+                _: crate::Interval,
+                _: crate::TimeRange,
+            ) -> Result<crate::models::chart::Chart> {
+                Err(FinanceError::ApiError("upstream 500".into()))
+            }
+            async fn fetch_spark(
+                &self,
+                _: &[&str],
+                _: crate::Interval,
+                _: crate::TimeRange,
+            ) -> Result<Vec<(String, crate::models::chart::spark::Spark)>> {
+                Err(FinanceError::ApiError("upstream 500".into()))
+            }
+        }
+        #[async_trait::async_trait]
+        impl ProviderAdapter for FailingChartProvider {
+            fn as_chart(&self) -> Option<&dyn ChartProvider> {
+                Some(self)
+            }
+        }
+
+        let mut routes = Routes::new(Fetch::Sequential);
+        routes
+            .map
+            .insert(Capability::CHART, vec![Provider::Yahoo, Provider::Edgar]);
+        let set = ProviderSet::new(
+            vec![Arc::new(NoSparkProvider), Arc::new(FailingChartProvider)],
+            None,
+            routes,
+        );
+        let err = set
+            .fetch(Capability::CHART, |p| {
+                let p = p.clone();
+                async move {
+                    p.as_chart()
+                        .ok_or_else(|| p.not_supported(Operation::Spark))?
+                        .fetch_spark(
+                            &["AAPL"],
+                            crate::Interval::OneDay,
+                            crate::TimeRange::FiveDays,
+                        )
+                        .await
+                }
+            })
+            .await
+            .unwrap_err();
+        assert!(matches!(err, FinanceError::ApiError(_)), "got {err:?}");
     }
 }
