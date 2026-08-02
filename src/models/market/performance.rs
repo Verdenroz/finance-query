@@ -85,11 +85,12 @@ pub struct MoverQuote {
 ///
 /// FMP returns sector performance as a preformatted string, unlike its movers
 /// endpoints which return a bare number.
+#[cfg(feature = "fmp")]
 pub(crate) fn parse_percent(raw: Option<&str>) -> Option<f64> {
     raw?.trim().trim_end_matches('%').trim().parse().ok()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "fmp"))]
 mod tests {
     use super::*;
 

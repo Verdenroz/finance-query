@@ -158,8 +158,9 @@ let sec   = providers.filings("AAPL");                        // → Filings
 ```
 
 Three handles are market-wide rather than symbol-scoped, so their factories take
-no argument (each requires at least one of the `fmp`, `polygon`, or
-`alphavantage` features):
+no argument. `market()` is always available (movers are served keylessly from
+Yahoo's screeners); `discovery()` and `calendar()` require at least one of the
+`fmp`, `polygon`, or `alphavantage` features:
 
 ```rust,ignore
 let disco = providers.discovery();   // → Discovery: symbol search, reference data, screeners

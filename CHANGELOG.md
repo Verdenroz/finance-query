@@ -59,8 +59,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `providers.calendar().holidays()` — upcoming market holidays and early
   closes as a new `CalendarKind::MarketHoliday` (Polygon).
 - `providers.market().sector_performance_history(limit)` (FMP), and market
-  movers gained a second provider: Alpha Vantage now serves
-  `gainers()`/`losers()`/`most_active()` as a fallback route.
+  movers now work on the default keyless route: Yahoo serves
+  `gainers()`/`losers()`/`most_active()` derived from its predefined
+  screeners, with Alpha Vantage as a second keyed route. `providers.market()`
+  and the mover/sector models are available without any provider feature.
 - Three market-wide capabilities and handles on the Providers API (each needs
   at least one of the `fmp`/`polygon`/`alphavantage` features):
   `Capability::DISCOVERY` with `providers.discovery()` (symbol search,

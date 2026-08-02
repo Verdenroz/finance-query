@@ -232,8 +232,7 @@ pub(crate) trait CalendarProvider: ProviderCore {
 ///
 /// Movers is the required primary (every current implementor serves it);
 /// the sector/industry statistics default to `NotSupported` since coverage
-/// is ragged (FMP serves all of them, Alpha Vantage only movers).
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+/// is ragged (FMP serves all of them; Yahoo and Alpha Vantage only movers).
 #[async_trait::async_trait]
 pub(crate) trait MarketProvider: ProviderCore {
     /// Fetch the market movers list for `direction`.
@@ -389,7 +388,6 @@ pub(crate) trait ProviderAdapter: ProviderCore {
     fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         None
     }
-    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
     fn as_market(&self) -> Option<&dyn MarketProvider> {
         None
     }
@@ -445,6 +443,9 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         if self.as_filings().is_some() {
             caps = caps | Capability::FILINGS;
         }
+        if self.as_market().is_some() {
+            caps = caps | Capability::MARKET;
+        }
         #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
         {
             if self.as_discovery().is_some() {
@@ -452,9 +453,6 @@ pub(crate) trait ProviderAdapter: ProviderCore {
             }
             if self.as_calendar().is_some() {
                 caps = caps | Capability::CALENDAR;
-            }
-            if self.as_market().is_some() {
-                caps = caps | Capability::MARKET;
             }
         }
         #[cfg(any(

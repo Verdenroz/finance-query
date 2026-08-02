@@ -939,7 +939,8 @@ mod tests {
             .union(Capability::CHART)
             .union(Capability::FUNDAMENTALS)
             .union(Capability::CORPORATE)
-            .union(Capability::OPTIONS);
+            .union(Capability::OPTIONS)
+            .union(Capability::MARKET);
         assert_eq!(yahoo::CAPS, expected);
     }
 

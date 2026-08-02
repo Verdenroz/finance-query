@@ -6,6 +6,7 @@
 use std::sync::Arc;
 
 use crate::error::Result;
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 use crate::models::calendar::market::{CalendarKind, MarketCalendarEntry};
 use crate::models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
@@ -19,11 +20,13 @@ use crate::providers::{Capability, ProviderSet};
 /// timeline, these span the whole market over a date range.
 ///
 /// Created via [`Providers::calendar`](crate::Providers::calendar).
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub struct MarketCalendar {
     providers: Arc<ProviderSet>,
     cache: crate::domains::DomainCache<Vec<MarketCalendarEntry>>,
 }
 
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 impl MarketCalendar {
     pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
         Self {
