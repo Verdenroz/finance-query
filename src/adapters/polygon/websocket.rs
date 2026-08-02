@@ -1,5 +1,4 @@
 //! Polygon.io WebSocket streaming for real-time market data (internal).
-#![allow(dead_code)]
 //!
 //! Provides real-time trades, quotes, and aggregate bars for stocks, options, forex,
 //! crypto, futures, and indices. This module is an internal adapter — use the public

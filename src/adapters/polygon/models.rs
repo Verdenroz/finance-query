@@ -1,5 +1,4 @@
 //! Shared types for Polygon.io API responses.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -40,8 +39,6 @@ pub struct PaginatedResponseDTO<T> {
 /// Timespan unit for aggregate bar requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Timespan {
-    /// 1 second
-    Second,
     /// 1 minute
     Minute,
     /// 1 hour
@@ -53,8 +50,10 @@ pub enum Timespan {
     /// 1 month
     Month,
     /// 1 quarter
+    #[allow(dead_code)] // no crate Interval maps here yet; kept for Polygon API parity
     Quarter,
     /// 1 year
+    #[allow(dead_code)] // no crate Interval maps here yet; kept for Polygon API parity
     Year,
 }
 
@@ -62,7 +61,6 @@ impl Timespan {
     /// Convert to Polygon API parameter string.
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Second => "second",
             Self::Minute => "minute",
             Self::Hour => "hour",
             Self::Day => "day",
@@ -70,44 +68,6 @@ impl Timespan {
             Self::Month => "month",
             Self::Quarter => "quarter",
             Self::Year => "year",
-        }
-    }
-}
-
-/// Sort direction for paginated results.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Sort {
-    /// Ascending (oldest first)
-    Asc,
-    /// Descending (newest first)
-    Desc,
-}
-
-impl Sort {
-    /// Convert to Polygon API parameter string.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Asc => "asc",
-            Self::Desc => "desc",
-        }
-    }
-}
-
-/// Order parameter for some endpoints.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Order {
-    /// Ascending
-    Asc,
-    /// Descending
-    Desc,
-}
-
-impl Order {
-    /// Convert to Polygon API parameter string.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Asc => "asc",
-            Self::Desc => "desc",
         }
     }
 }
@@ -412,60 +372,29 @@ pub struct SnapshotsResponseDTO {
 }
 
 // ============================================================================
-// Technical indicator types
-// ============================================================================
-
-/// A single technical indicator data point.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct IndicatorValueDTO {
-    /// Timestamp.
-    pub timestamp: Option<i64>,
-    /// Indicator value.
-    pub value: Option<f64>,
-    /// Signal value (MACD).
-    pub signal: Option<f64>,
-    /// Histogram value (MACD).
-    pub histogram: Option<f64>,
-}
-
-/// Technical indicator response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct IndicatorResponseDTO {
-    /// Response status.
-    pub status: Option<String>,
-    /// Request ID.
-    pub request_id: Option<String>,
-    /// Indicator results.
-    pub results: Option<IndicatorResultsDTO>,
-    /// Next page URL.
-    pub next_url: Option<String>,
-}
-
-/// Nested indicator results containing underlying data and values.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct IndicatorResultsDTO {
-    /// Underlying aggregate bars.
-    pub underlying: Option<IndicatorUnderlyingDTO>,
-    /// Indicator values.
-    pub values: Option<Vec<IndicatorValueDTO>>,
-}
-
-/// Underlying data for indicator responses.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct IndicatorUnderlyingDTO {
-    /// Underlying aggregate bars URL.
-    pub url: Option<String>,
-    /// Underlying aggregates.
-    pub aggregates: Option<Vec<AggBarDTO>>,
-}
-
-// ============================================================================
 // Optional aggregate parameters
 // ============================================================================
+
+/// Sort direction for aggregate bar requests.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // consumed via AggregateParams.sort; no in-crate caller sets it yet
+pub enum Sort {
+    /// Ascending (oldest first)
+    Asc,
+    /// Descending (newest first)
+    Desc,
+}
+
+impl Sort {
+    /// Convert to Polygon API parameter string.
+    #[allow(dead_code)] // consumed via AggregateParams.sort; no in-crate caller sets it yet
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Asc => "asc",
+            Self::Desc => "desc",
+        }
+    }
+}
 
 /// Optional parameters for aggregate bar requests.
 #[derive(Debug, Clone, Default)]

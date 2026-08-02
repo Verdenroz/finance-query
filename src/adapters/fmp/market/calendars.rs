@@ -1,6 +1,5 @@
 //! Calendar endpoints: earnings, IPO, stock split, dividend, and economic calendars.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -177,6 +176,114 @@ pub async fn economic_calendar(from: &str, to: &str) -> Result<Vec<EconomicCalen
     client
         .get("/api/v3/economic_calendar", &[("from", from), ("to", to)])
         .await
+}
+
+/// Fetch a market-wide calendar and map it to provider-neutral entries.
+pub async fn fetch_market_calendar_response(
+    kind: crate::models::calendar::market::CalendarKind,
+    from: &str,
+    to: &str,
+) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+    use crate::models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
+
+    let entry = |symbol: Option<String>, date: Option<String>, detail: CalendarDetail| {
+        MarketCalendarEntry {
+            symbol,
+            date,
+            detail,
+        }
+    };
+
+    Ok(match kind {
+        CalendarKind::Earnings => earnings_calendar(from, to)
+            .await?
+            .into_iter()
+            .map(|e| {
+                entry(
+                    e.symbol,
+                    e.date,
+                    CalendarDetail::Earnings {
+                        eps: e.eps,
+                        eps_estimated: e.eps_estimated,
+                        revenue: e.revenue,
+                        revenue_estimated: e.revenue_estimated,
+                        fiscal_date_ending: e.fiscal_date_ending,
+                        time: e.time,
+                    },
+                )
+            })
+            .collect(),
+        CalendarKind::Ipo => ipo_calendar(from, to)
+            .await?
+            .into_iter()
+            .map(|e| {
+                entry(
+                    e.symbol,
+                    e.date,
+                    CalendarDetail::Ipo {
+                        company: e.company,
+                        exchange: e.exchange,
+                        actions: e.actions,
+                        shares: e.shares,
+                        price_range: e.price_range,
+                        market_cap: e.market_cap,
+                    },
+                )
+            })
+            .collect(),
+        CalendarKind::Dividend => dividend_calendar(from, to)
+            .await?
+            .into_iter()
+            .map(|e| {
+                entry(
+                    e.symbol,
+                    e.date,
+                    CalendarDetail::Dividend {
+                        dividend: e.dividend,
+                        adj_dividend: e.adj_dividend,
+                        record_date: e.record_date,
+                        payment_date: e.payment_date,
+                        declaration_date: e.declaration_date,
+                    },
+                )
+            })
+            .collect(),
+        CalendarKind::Split => stock_split_calendar(from, to)
+            .await?
+            .into_iter()
+            .map(|e| {
+                entry(
+                    e.symbol,
+                    e.date,
+                    CalendarDetail::Split {
+                        numerator: e.numerator,
+                        denominator: e.denominator,
+                    },
+                )
+            })
+            .collect(),
+        // Economic releases are market-wide, so they carry no symbol.
+        CalendarKind::Economic => economic_calendar(from, to)
+            .await?
+            .into_iter()
+            .map(|e| {
+                entry(
+                    None,
+                    e.date,
+                    CalendarDetail::Economic {
+                        event: e.event,
+                        country: e.country,
+                        actual: e.actual,
+                        previous: e.previous,
+                        estimate: e.estimate,
+                        change: e.change,
+                        change_percentage: e.change_percentage,
+                        impact: e.impact,
+                    },
+                )
+            })
+            .collect(),
+    })
 }
 
 #[cfg(test)]

@@ -1,5 +1,4 @@
 //! Fundamental data endpoints: company overview, financials, earnings, dividends, splits, calendars.
-#![allow(dead_code)]
 
 use crate::error::{FinanceError, Result};
 use std::collections::HashMap;
@@ -8,6 +7,7 @@ use super::build_client;
 use super::models::*;
 
 /// Fetch company overview and fundamentals.
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn company_overview(symbol: &str) -> Result<CompanyOverviewDTO> {
     let client = build_client()?;
     let json = client.get("OVERVIEW", &[("symbol", symbol)]).await?;
@@ -80,6 +80,7 @@ pub async fn company_overview(symbol: &str) -> Result<CompanyOverviewDTO> {
 }
 
 /// Fetch ETF profile and top holdings.
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn etf_profile(symbol: &str) -> Result<EtfProfileDTO> {
     let client = build_client()?;
     let json = client.get("ETF_PROFILE", &[("symbol", symbol)]).await?;
@@ -188,6 +189,7 @@ async fn fetch_financial_statement(symbol: &str, function: &str) -> Result<Finan
 }
 
 /// Fetch earnings history (annual and quarterly EPS data).
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn earnings(symbol: &str) -> Result<EarningsHistoryDTO> {
     let client = build_client()?;
     let json = client.get("EARNINGS", &[("symbol", symbol)]).await?;
@@ -283,6 +285,7 @@ fn parse_split_csv(csv: &str) -> Result<Vec<SplitEventDTO>> {
 /// Fetch listing status (active or delisted).
 ///
 /// * `status` - `"active"` (default) or `"delisted"`
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn listing_status(status: Option<&str>) -> Result<Vec<ListingEntryDTO>> {
     let client = build_client()?;
     let params: Vec<(&str, &str)> = match status {

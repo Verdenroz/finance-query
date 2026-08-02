@@ -19,6 +19,8 @@ impl EconomicIndicator {
             self,
             series_id,
             ECONOMIC,
+            as_economic,
+            EconomicSeries,
             fetch_economic_series,
             crate::models::economic::EconomicSeries
         )

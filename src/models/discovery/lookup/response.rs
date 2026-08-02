@@ -16,7 +16,7 @@ struct RawLookupResponse {
 #[serde(rename_all = "camelCase")]
 struct RawFinanceResult {
     result: Option<Vec<RawLookupResult>>,
-    #[allow(dead_code)]
+    #[allow(dead_code)] // serde completeness field; never read
     error: Option<serde_json::Value>,
 }
 

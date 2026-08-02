@@ -7,10 +7,10 @@ use crate::models::quote::{FormattedValue, Price, QuoteSummaryResponse};
 use super::build_client;
 use super::models::*;
 
+#[allow(dead_code)] // unrouted: tick-level trades land with #250
 pub mod trades;
 
 /// Fetch snapshot for a single stock ticker.
-#[allow(dead_code)] // called from fetch_quote_response; single-ticker quote routing pending
 pub async fn stock_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
     let client = build_client()?;
     let path = format!(
@@ -22,11 +22,11 @@ pub async fn stock_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
         .await
 }
 
-/// Fetch quote summary response (canonical) for a stock ticker.
-#[allow(dead_code)] // called from providers::polygon::fetch_quote; single-ticker quote routing pending
-pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> {
-    let snap = stock_snapshot(symbol).await?;
-    let day = snap.ticker.as_ref().and_then(|t| t.day.as_ref());
+/// Build a canonical quote response from one ticker snapshot.
+///
+/// Shared by the single-ticker and batch paths so both surface identical fields.
+fn snapshot_to_canonical(symbol: &str, snap: Option<&TickerSnapshotDTO>) -> QuoteSummaryResponse {
+    let day = snap.and_then(|t| t.day.as_ref());
     let price = Price {
         regular_market_price: day.and_then(|d| d.close).map(|v| FormattedValue {
             raw: Some(v),
@@ -55,17 +55,43 @@ pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> 
         }),
         ..Default::default()
     };
-    Ok(QuoteSummaryResponse {
+    QuoteSummaryResponse {
         symbol: symbol.to_string(),
         price: Some(price),
         ..Default::default()
-    })
+    }
+}
+
+/// Fetch quote summary response (canonical) for a stock ticker.
+pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> {
+    let snap = stock_snapshot(symbol).await?;
+    Ok(snapshot_to_canonical(symbol, snap.ticker.as_ref()))
+}
+
+/// Fetch canonical quotes for many tickers in one snapshot request.
+///
+/// Polygon's snapshot endpoint takes a comma-separated `tickers` filter, so an
+/// N-symbol batch costs one request instead of N against the 5 req/sec tier.
+pub async fn fetch_quotes_batch_response(
+    symbols: &[&str],
+) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+    let joined = symbols.join(",");
+    let snaps = stock_snapshots_all(Some(&joined)).await?;
+    Ok(snaps
+        .tickers
+        .unwrap_or_default()
+        .iter()
+        .filter_map(|t| {
+            let symbol = t.ticker.clone()?;
+            let quote = snapshot_to_canonical(&symbol, Some(t));
+            Some((symbol, quote))
+        })
+        .collect())
 }
 
 /// Fetch snapshots for all US stock tickers.
 ///
 /// * `tickers` - Optional comma-separated list of tickers to filter
-#[allow(dead_code)]
 pub async fn stock_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsResponseDTO> {
     let client = build_client()?;
     let path = "/v2/snapshot/locale/us/markets/stocks/tickers";
@@ -75,21 +101,6 @@ pub async fn stock_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsRespo
     };
     client
         .get_as(path, &params, "snapshots", "snapshots response")
-        .await
-}
-
-/// Fetch top gainers or losers snapshot.
-///
-/// * `direction` - `"gainers"` or `"losers"`
-#[allow(dead_code)]
-pub async fn stock_top_movers(direction: &str) -> Result<SnapshotsResponseDTO> {
-    let client = build_client()?;
-    let path = format!(
-        "/v2/snapshot/locale/us/markets/stocks/{}",
-        encode_path_segment(direction)
-    );
-    client
-        .get_as(&path, &[], "top_movers", "top movers response")
         .await
 }
 

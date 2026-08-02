@@ -21,6 +21,8 @@ impl Index {
             self,
             symbol,
             INDICES,
+            as_indices,
+            IndicesQuote,
             fetch_indices_quote,
             crate::models::indices::IndexQuote
         )

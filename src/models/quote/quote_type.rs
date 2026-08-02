@@ -3,8 +3,11 @@
 /// Contains metadata about the symbol including exchange, type, and timezone information.
 use serde::{Deserialize, Serialize};
 
-/// Response wrapper for quote type endpoint
-#[allow(dead_code)]
+/// Response wrapper for the quote type endpoint.
+///
+/// Deliberately minimal: the only consumer is transcript lookup
+/// (`adapters::yahoo::corporate::transcripts::get_quartr_id`), and serde
+/// ignores the many response fields nothing reads.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct QuoteTypeResponse {
@@ -13,42 +16,15 @@ pub(crate) struct QuoteTypeResponse {
 }
 
 /// Container for quote type results
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub(crate) struct QuoteTypeContainer {
     /// Quote type results
     pub result: Vec<QuoteTypeResult>,
-    /// Error if any
-    pub error: Option<serde_json::Value>,
 }
 
 /// Quote type result for a symbol
-#[allow(dead_code)]
 #[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub(crate) struct QuoteTypeResult {
-    /// Stock symbol
-    pub symbol: String,
-    /// Quote type (EQUITY, ETF, etc.)
-    pub quote_type: Option<String>,
-    /// Exchange
-    pub exchange: Option<String>,
-    /// Short name
-    pub short_name: Option<String>,
-    /// Long name
-    pub long_name: Option<String>,
-    /// Message board ID
-    pub message_board_id: Option<String>,
-    /// Exchange timezone name
-    pub exchange_timezone_name: Option<String>,
-    /// Exchange timezone short name
-    pub exchange_timezone_short_name: Option<String>,
-    /// GMT offset in milliseconds (returned as string by Yahoo)
-    pub gmt_off_set_milliseconds: Option<String>,
-    /// Market
-    pub market: Option<String>,
-    /// Is EsgPopulated
-    pub is_esg_populated: Option<bool>,
     /// Quartr ID (company ID for earnings transcripts)
     #[serde(rename = "quartrId")]
     pub quartr_id: Option<String>,

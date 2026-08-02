@@ -1,5 +1,4 @@
 //! Stock aggregate bar endpoints: OHLCV bars, daily summary, previous close.
-#![allow(dead_code)]
 
 use crate::Provider;
 use crate::adapters::common::encode_path_segment;
@@ -168,6 +167,7 @@ pub async fn fetch_chart_range_response(
 /// Fetch the previous day's OHLCV bar for a stock ticker.
 ///
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
+#[allow(dead_code)] // unrouted: grouped-daily aggregates routed by #245
 pub async fn stock_previous_close(
     ticker: &str,
     adjusted: Option<bool>,
@@ -187,6 +187,7 @@ pub async fn stock_previous_close(
 ///
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
+#[allow(dead_code)] // unrouted: grouped-daily aggregates routed by #245
 pub async fn stock_grouped_daily(
     date: &str,
     adjusted: Option<bool>,
@@ -210,6 +211,7 @@ pub async fn stock_grouped_daily(
 /// * `ticker` - Stock ticker symbol (e.g., `"AAPL"`)
 /// * `date` - Date as `"YYYY-MM-DD"`
 /// * `adjusted` - Whether results are adjusted for splits (default: true)
+#[allow(dead_code)] // unrouted: grouped-daily aggregates routed by #245
 pub async fn stock_daily_open_close(
     ticker: &str,
     date: &str,

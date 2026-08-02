@@ -20,6 +20,8 @@ impl Filings {
             self,
             symbol,
             FILINGS,
+            as_filings,
+            Filings,
             fetch_filings,
             crate::models::filings::ProviderFilings
         )

@@ -128,14 +128,18 @@ pub use domains::EconomicIndicator;
 #[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
 pub use domains::ForexPair;
 
-// Remaining Capability handles — indices, futures, commodities, filings
+// Remaining Capability handles — indices, futures, commodities, filings, discovery
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use domains::Commodity;
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub use domains::Discovery;
 pub use domains::Filings;
 #[cfg(feature = "polygon")]
 pub use domains::FuturesContract;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use domains::Index;
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub use domains::{Market, MarketCalendar};
 
 // Provider-specific financial data functions
 // (FMP, Polygon, Alpha Vantage — defined in the finance module)
@@ -162,6 +166,18 @@ pub use tickers::BatchIndicatorsResponse;
 // ============================================================================
 // Error types and results
 // ============================================================================
+// Capability-routed response types (DISCOVERY / CALENDAR / MARKET)
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub use models::calendar::market::{CalendarDetail, CalendarKind, MarketCalendarEntry};
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub use models::discovery::reference::{
+    ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
+};
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub use models::market::performance::{
+    IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
+};
+
 pub use error::{ErrorCategory, FinanceError, Result};
 
 // ============================================================================

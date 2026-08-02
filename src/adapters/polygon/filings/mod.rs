@@ -1,5 +1,4 @@
 //! SEC filing endpoints: 10-K sections, 8-K text, EDGAR index, risk factors.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -33,6 +32,7 @@ pub struct FilingEntryDTO {
 /// SEC filing section content.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub struct FilingSectionDTO {
     /// Section key/name.
     pub section: Option<String>,
@@ -43,6 +43,7 @@ pub struct FilingSectionDTO {
 /// Risk factor entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub struct RiskFactorDTO {
     /// Risk factor title.
     pub title: Option<String>,
@@ -57,6 +58,7 @@ pub struct RiskFactorDTO {
 /// Risk category.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub struct RiskCategoryDTO {
     /// Category name.
     pub name: Option<String>,
@@ -67,6 +69,7 @@ pub struct RiskCategoryDTO {
 /// Filing sections response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub struct FilingSectionsResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
@@ -107,6 +110,7 @@ pub async fn fetch_filings_response(symbol: &str) -> Result<ProviderFilings> {
 }
 
 /// Fetch 10-K filing section content.
+#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub async fn filing_10k_sections(
     accession_number: &str,
     params: &[(&str, &str)],
@@ -122,6 +126,7 @@ pub async fn filing_10k_sections(
 }
 
 /// Fetch 8-K filing text.
+#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub async fn filing_8k_text(
     accession_number: &str,
     params: &[(&str, &str)],
@@ -135,12 +140,14 @@ pub async fn filing_8k_text(
 }
 
 /// Fetch risk factors from SEC filings.
+#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub async fn risk_factors(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<RiskFactorDTO>> {
     let client = build_client()?;
     client.get("/v1/reference/sec/risk-factors", params).await
 }
 
 /// Fetch risk factor categories.
+#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub async fn risk_categories() -> Result<PaginatedResponseDTO<RiskCategoryDTO>> {
     let client = build_client()?;
     client.get("/v1/reference/sec/risk-categories", &[]).await

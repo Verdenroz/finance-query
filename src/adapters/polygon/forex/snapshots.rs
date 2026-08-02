@@ -1,5 +1,4 @@
 //! Forex snapshot endpoints: all tickers, single ticker, top movers.
-#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;

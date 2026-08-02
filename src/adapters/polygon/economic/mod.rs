@@ -1,5 +1,4 @@
 //! Economic indicator endpoints: inflation, labor market, treasury yields.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

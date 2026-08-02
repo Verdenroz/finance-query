@@ -1,7 +1,4 @@
 //! FMP price and historical data endpoints.
-#![allow(dead_code)]
-
-use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
@@ -13,45 +10,6 @@ use crate::adapters::fmp::models::{
 // ============================================================================
 // Additional response types
 // ============================================================================
-
-/// Stock price change from FMP.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct StockPriceChangeDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// 1-day price change.
-    #[serde(rename = "1D")]
-    pub one_day: Option<f64>,
-    /// 5-day price change.
-    #[serde(rename = "5D")]
-    pub five_day: Option<f64>,
-    /// 1-month price change.
-    #[serde(rename = "1M")]
-    pub one_month: Option<f64>,
-    /// 3-month price change.
-    #[serde(rename = "3M")]
-    pub three_month: Option<f64>,
-    /// 6-month price change.
-    #[serde(rename = "6M")]
-    pub six_month: Option<f64>,
-    /// Year-to-date price change.
-    pub ytd: Option<f64>,
-    /// 1-year price change.
-    #[serde(rename = "1Y")]
-    pub one_year: Option<f64>,
-    /// 3-year price change.
-    #[serde(rename = "3Y")]
-    pub three_year: Option<f64>,
-    /// 5-year price change.
-    #[serde(rename = "5Y")]
-    pub five_year: Option<f64>,
-    /// 10-year price change.
-    #[serde(rename = "10Y")]
-    pub ten_year: Option<f64>,
-    /// Max price change.
-    pub max: Option<f64>,
-}
 
 /// Optional parameters for historical price queries.
 #[derive(Debug, Clone, Default)]
@@ -128,6 +86,25 @@ pub async fn fetch_canonical_quote(
     Ok(quote_to_canonical(symbol, &quotes))
 }
 
+/// Fetch canonical quote summaries for many symbols in one request.
+///
+/// FMP's `/api/v3/quote` accepts a comma-separated symbol list, so an N-symbol
+/// batch costs one request instead of N against the 250 req/day tier.
+pub async fn fetch_canonical_quotes_batch(
+    symbols: &[&str],
+) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
+    let quotes = batch_quote(symbols).await?;
+    Ok(quotes
+        .iter()
+        .map(|q| {
+            (
+                q.symbol.clone(),
+                quote_to_canonical(&q.symbol, std::slice::from_ref(q)),
+            )
+        })
+        .collect())
+}
+
 /// Convert historical daily price DTOs into canonical Chart candles.
 ///
 /// FMP serves newest-first; candles are returned ascending by timestamp, which
@@ -184,30 +161,6 @@ fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::ch
     candles
 }
 
-/// Fetch canonical daily chart data with date range.
-pub async fn fetch_daily_chart_canonical(
-    symbol: &str,
-    from: Option<&str>,
-    to: Option<&str>,
-) -> Result<crate::models::chart::Chart> {
-    let params = from.and_then(|f| {
-        to.map(|t| HistoricalPriceParams {
-            from: Some(f.to_string()),
-            to: Some(t.to_string()),
-        })
-    });
-    let resp = historical_price_daily(symbol, params).await?;
-    let candles = historical_to_candles(resp.historical);
-    Ok(crate::models::chart::Chart {
-        symbol: symbol.to_string(),
-        meta: Default::default(),
-        candles,
-        interval: None,
-        range: None,
-        provider_id: Some(crate::providers::Provider::Fmp),
-    })
-}
-
 /// Fetch canonical chart candles from daily historical price data.
 pub async fn fetch_daily_chart_candles(
     symbol: &str,
@@ -245,17 +198,6 @@ pub async fn batch_quote(symbols: &[&str]) -> Result<Vec<FmpQuoteDTO>> {
     client
         .get(
             &format!("/api/v3/quote/{}", encode_path_segment(&joined)),
-            &[],
-        )
-        .await
-}
-
-/// Fetch stock price change percentages for a symbol.
-pub async fn stock_price(symbol: &str) -> Result<Vec<StockPriceChangeDTO>> {
-    let client = crate::adapters::fmp::build_client()?;
-    client
-        .get(
-            &format!("/api/v3/stock-price-change/{}", encode_path_segment(symbol)),
             &[],
         )
         .await

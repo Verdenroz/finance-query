@@ -1,5 +1,4 @@
 //! ETF Global partner data: analytics, constituents, fund flows, profiles, taxonomies.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

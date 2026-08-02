@@ -1,6 +1,5 @@
 //! Benzinga partner data: analyst ratings, insights, bull/bear, consensus, guidance, earnings, news.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;

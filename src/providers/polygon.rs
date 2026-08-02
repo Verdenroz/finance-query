@@ -1,5 +1,10 @@
 //! Polygon.io provider implementation.
 
+use super::{
+    ChartProvider, CorporateProvider, CryptoProvider, DiscoveryProvider, EconomicProvider,
+    FilingsProvider, ForexProvider, FundamentalsProvider, FuturesProvider, IndicesProvider,
+    OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
+};
 use crate::adapters::polygon;
 use crate::error::FinanceError;
 use crate::error::Result;
@@ -7,40 +12,28 @@ use crate::models::quote::QuoteSummaryResponse;
 
 pub(crate) struct PolygonProvider;
 
-#[async_trait::async_trait]
-impl super::ProviderAdapter for PolygonProvider {
+impl ProviderCore for PolygonProvider {
     fn id(&self) -> super::Provider {
         super::Provider::Polygon
     }
-    fn capabilities(&self) -> super::Capability {
-        super::Capability::QUOTE
-            | super::Capability::CHART
-            | super::Capability::FUNDAMENTALS
-            | super::Capability::CORPORATE
-            | super::Capability::OPTIONS
-            | super::Capability::CRYPTO
-            | super::Capability::FOREX
-            | super::Capability::FUTURES
-            | super::Capability::INDICES
-            | super::Capability::FILINGS
-            | super::Capability::ECONOMIC
-    }
+}
 
-    async fn initialize(&self) -> Result<()> {
-        let key = std::env::var("POLYGON_API_KEY").map_err(|_| FinanceError::InvalidParameter {
-            param: "polygon".into(),
-            reason:
-                "POLYGON_API_KEY not set. Set the environment variable or call polygon::init(key)."
-                    .into(),
-        })?;
-        let _ = polygon::init(key);
-        Ok(())
-    }
-
+#[async_trait::async_trait]
+impl QuoteProvider for PolygonProvider {
     async fn fetch_quote(&self, symbol: &str) -> Result<QuoteSummaryResponse> {
         polygon::fetch_quote_response(symbol).await
     }
 
+    async fn fetch_quotes_batch(
+        &self,
+        symbols: &[&str],
+    ) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+        polygon::fetch_quotes_batch_response(symbols).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ChartProvider for PolygonProvider {
     async fn fetch_chart(
         &self,
         symbol: &str,
@@ -50,6 +43,31 @@ impl super::ProviderAdapter for PolygonProvider {
         polygon::fetch_chart_response(symbol, interval, range).await
     }
 
+    async fn fetch_chart_range(
+        &self,
+        symbol: &str,
+        interval: crate::Interval,
+        start: i64,
+        end: i64,
+    ) -> Result<crate::models::chart::Chart> {
+        polygon::fetch_chart_range_response(symbol, interval, start, end).await
+    }
+}
+
+#[async_trait::async_trait]
+impl FundamentalsProvider for PolygonProvider {
+    async fn fetch_financials(
+        &self,
+        symbol: &str,
+        stmt_type: crate::StatementType,
+        frequency: crate::Frequency,
+    ) -> Result<crate::models::fundamentals::FinancialStatement> {
+        polygon::fetch_financials_response(symbol, stmt_type, frequency).await
+    }
+}
+
+#[async_trait::async_trait]
+impl CorporateProvider for PolygonProvider {
     async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
         polygon::fetch_news_response(symbol).await
     }
@@ -61,41 +79,6 @@ impl super::ProviderAdapter for PolygonProvider {
         polygon::fetch_events_response(symbol).await
     }
 
-    // ── Financials ────────────────────────────────────────────────
-
-    async fn fetch_financials(
-        &self,
-        symbol: &str,
-        stmt_type: crate::StatementType,
-        frequency: crate::Frequency,
-    ) -> Result<crate::models::fundamentals::FinancialStatement> {
-        polygon::fetch_financials_response(symbol, stmt_type, frequency).await
-    }
-
-    // ── Chart Range ───────────────────────────────────────────────
-
-    async fn fetch_chart_range(
-        &self,
-        symbol: &str,
-        interval: crate::Interval,
-        start: i64,
-        end: i64,
-    ) -> Result<crate::models::chart::Chart> {
-        polygon::fetch_chart_range_response(symbol, interval, start, end).await
-    }
-
-    // ── Options ───────────────────────────────────────────────────
-
-    async fn fetch_options(
-        &self,
-        symbol: &str,
-        date: Option<i64>,
-    ) -> Result<crate::models::options::Options> {
-        polygon::fetch_options_response(symbol, date).await
-    }
-
-    // ── Recommendations ───────────────────────────────────────────
-
     async fn fetch_similar_symbols(
         &self,
         symbol: &str,
@@ -103,9 +86,45 @@ impl super::ProviderAdapter for PolygonProvider {
     ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
         polygon::fetch_similar_symbols_response(symbol, limit).await
     }
+}
 
-    // ── Forex ─────────────────────────────────────────────────────
+#[async_trait::async_trait]
+impl OptionsProvider for PolygonProvider {
+    async fn fetch_options(
+        &self,
+        symbol: &str,
+        date: Option<i64>,
+    ) -> Result<crate::models::options::Options> {
+        polygon::fetch_options_response(symbol, date).await
+    }
+}
 
+#[async_trait::async_trait]
+impl DiscoveryProvider for PolygonProvider {
+    async fn fetch_symbol_search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        polygon::fetch_symbol_search_response(query, limit).await
+    }
+
+    async fn fetch_symbol_details(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::discovery::reference::SymbolDetails> {
+        polygon::fetch_symbol_details_response(symbol).await
+    }
+
+    async fn fetch_exchanges(
+        &self,
+    ) -> Result<Vec<crate::models::discovery::reference::ExchangeInfo>> {
+        polygon::fetch_exchanges_response().await
+    }
+}
+
+#[async_trait::async_trait]
+impl ForexProvider for PolygonProvider {
     async fn fetch_forex_quote(
         &self,
         from: &str,
@@ -113,33 +132,37 @@ impl super::ProviderAdapter for PolygonProvider {
     ) -> Result<crate::models::forex::ForexQuote> {
         polygon::fetch_forex_quote_response(from, to).await
     }
+}
 
-    // ── Futures ───────────────────────────────────────────────────
-
+#[async_trait::async_trait]
+impl FuturesProvider for PolygonProvider {
     async fn fetch_futures_quote(
         &self,
         symbol: &str,
     ) -> Result<crate::models::futures::FuturesQuote> {
         polygon::fetch_futures_quote_response(symbol).await
     }
+}
 
-    // ── Indices ───────────────────────────────────────────────────
-
+#[async_trait::async_trait]
+impl IndicesProvider for PolygonProvider {
     async fn fetch_indices_quote(
         &self,
         symbol: &str,
     ) -> Result<crate::models::indices::IndexQuote> {
         polygon::fetch_indices_quote_response(symbol).await
     }
+}
 
-    // ── Filings ───────────────────────────────────────────────────
-
+#[async_trait::async_trait]
+impl FilingsProvider for PolygonProvider {
     async fn fetch_filings(&self, symbol: &str) -> Result<crate::models::filings::ProviderFilings> {
         polygon::fetch_filings_response(symbol).await
     }
+}
 
-    // ── Crypto ────────────────────────────────────────────────────
-
+#[async_trait::async_trait]
+impl CryptoProvider for PolygonProvider {
     async fn fetch_crypto_quote(
         &self,
         from: &str,
@@ -147,13 +170,65 @@ impl super::ProviderAdapter for PolygonProvider {
     ) -> Result<crate::models::crypto::CryptoQuote> {
         polygon::fetch_crypto_quote_response(from, to).await
     }
+}
 
-    // ── Economic ──────────────────────────────────────────────────
-
+#[async_trait::async_trait]
+impl EconomicProvider for PolygonProvider {
     async fn fetch_economic_series(
         &self,
         series_id: &str,
     ) -> Result<crate::models::economic::EconomicSeries> {
         polygon::fetch_economic_series_response(series_id).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ProviderAdapter for PolygonProvider {
+    async fn initialize(&self) -> Result<()> {
+        let key = std::env::var("POLYGON_API_KEY").map_err(|_| FinanceError::InvalidParameter {
+            param: "polygon".into(),
+            reason:
+                "POLYGON_API_KEY not set. Set the environment variable or call polygon::init(key)."
+                    .into(),
+        })?;
+        let _ = polygon::init(key);
+        Ok(())
+    }
+
+    fn as_quote(&self) -> Option<&dyn QuoteProvider> {
+        Some(self)
+    }
+    fn as_chart(&self) -> Option<&dyn ChartProvider> {
+        Some(self)
+    }
+    fn as_fundamentals(&self) -> Option<&dyn FundamentalsProvider> {
+        Some(self)
+    }
+    fn as_corporate(&self) -> Option<&dyn CorporateProvider> {
+        Some(self)
+    }
+    fn as_options(&self) -> Option<&dyn OptionsProvider> {
+        Some(self)
+    }
+    fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
+        Some(self)
+    }
+    fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
+        Some(self)
+    }
+    fn as_economic(&self) -> Option<&dyn EconomicProvider> {
+        Some(self)
+    }
+    fn as_forex(&self) -> Option<&dyn ForexProvider> {
+        Some(self)
+    }
+    fn as_indices(&self) -> Option<&dyn IndicesProvider> {
+        Some(self)
+    }
+    fn as_futures(&self) -> Option<&dyn FuturesProvider> {
+        Some(self)
+    }
+    fn as_filings(&self) -> Option<&dyn FilingsProvider> {
+        Some(self)
     }
 }

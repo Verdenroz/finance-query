@@ -157,6 +157,16 @@ let wheat = providers.commodity("WHEAT");                     // → Commodity
 let sec   = providers.filings("AAPL");                        // → Filings
 ```
 
+Three handles are market-wide rather than symbol-scoped, so their factories take
+no argument (each requires at least one of the `fmp`, `polygon`, or
+`alphavantage` features):
+
+```rust,ignore
+let disco = providers.discovery();   // → Discovery: symbol search, reference data, screeners
+let cal   = providers.calendar();    // → MarketCalendar: earnings/IPO/dividend/split/economic calendars
+let mkt   = providers.market();      // → Market: sector performance, movers
+```
+
 ### Domain Handle Methods
 
 | Handle | Method | Returns |
@@ -168,6 +178,9 @@ let sec   = providers.filings("AAPL");                        // → Filings
 | `FuturesContract` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `FuturesQuote` · `Chart` |
 | `Commodity` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `CommodityQuote` · `Chart` |
 | `Filings` | `.get()` | `ProviderFilings` |
+| `Discovery` | `.search(query, limit)` · `.details(symbol)` · `.exchanges()` · `.screener(filters)` | `Vec<SymbolMatch>` · `SymbolDetails` · `Vec<ExchangeInfo>` · `Vec<ScreenerMatch>` |
+| `MarketCalendar` | `.earnings(from, to)` · `.ipos(..)` · `.dividends(..)` · `.splits(..)` · `.economic(..)` | `Vec<MarketCalendarEntry>` |
+| `Market` | `.sector_performance()` · `.sector_pe()` · `.industry_pe()` · `.gainers()` · `.losers()` · `.most_active()` | `Vec<SectorPerformance>` · `Vec<SectorPe>` · `Vec<IndustryPe>` · `Vec<MoverQuote>` |
 
 All chart-capable handles route through `Capability::CHART` (Yahoo by default) and cache per `(symbol, interval, range)` when `.cache(ttl)` is set. `history(range)` is sugar for `chart(range.default_interval(), range)`. The handle's identifier is passed to the chart route as-is, so it must be a chart-route symbol (e.g. `^GSPC`, `NQ=F`, `GC=F`); `CryptoCoin` builds `"{ID}-{VS}"` (e.g. `"BTC-USD"`), which resolves on Yahoo only for ticker-style ids.
 

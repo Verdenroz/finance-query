@@ -1,5 +1,4 @@
 //! Alpha Intelligence endpoints: news sentiment, earnings call transcripts, top movers.
-#![allow(dead_code)]
 
 use crate::error::{FinanceError, Result};
 
@@ -108,6 +107,7 @@ pub async fn news_sentiment(
 ///
 /// * `symbol` - Ticker symbol (e.g., `"AAPL"`)
 /// * `quarter` - Quarter identifier in `YYYYQN` format (e.g., `"2024Q1"`)
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn earnings_call_transcript(
     symbol: &str,
     quarter: &str,
@@ -134,6 +134,7 @@ pub async fn earnings_call_transcript(
 }
 
 /// Fetch top gainers, losers, and most actively traded tickers.
+#[allow(dead_code)] // unrouted: AV movers land with #300 (MarketProvider::fetch_market_movers)
 pub async fn top_gainers_losers() -> Result<TopMoversDTO> {
     let client = build_client()?;
     let json = client.get("TOP_GAINERS_LOSERS", &[]).await?;

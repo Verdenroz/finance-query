@@ -1,6 +1,5 @@
 //! Institutional ownership endpoints: institutional holders, ETF holders, mutual fund holders, Form 13F.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;

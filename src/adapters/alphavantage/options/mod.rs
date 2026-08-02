@@ -1,6 +1,5 @@
 //! US options data endpoints: realtime and historical options chains.
 
-#![allow(dead_code)]
 use crate::error::{FinanceError, Result};
 
 use super::build_client;

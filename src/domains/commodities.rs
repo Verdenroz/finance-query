@@ -21,6 +21,8 @@ impl Commodity {
             self,
             symbol,
             COMMODITIES,
+            as_commodities,
+            CommoditiesQuote,
             fetch_commodities_quote,
             crate::models::commodities::CommodityQuote
         )

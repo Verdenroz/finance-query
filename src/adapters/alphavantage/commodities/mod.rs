@@ -1,6 +1,5 @@
 //! Commodity price endpoints: oil, gas, metals, agriculture, and composite index.
 
-#![allow(dead_code)]
 use crate::error::{FinanceError, Result};
 
 use super::build_client;
@@ -64,63 +63,6 @@ pub(crate) async fn fetch_commodity(
     };
     let json = client.get(function, &params).await?;
     parse_commodity_series(&json)
-}
-
-/// Fetch WTI crude oil prices.
-///
-/// * `interval` - `None` for monthly (default), or `"daily"`, `"weekly"`, `"monthly"`
-pub async fn commodity_wti(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("WTI", interval).await
-}
-
-/// Fetch Brent crude oil prices.
-pub async fn commodity_brent(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("BRENT", interval).await
-}
-
-/// Fetch natural gas prices.
-pub async fn commodity_natural_gas(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("NATURAL_GAS", interval).await
-}
-
-/// Fetch copper prices.
-pub async fn commodity_copper(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("COPPER", interval).await
-}
-
-/// Fetch aluminum prices.
-pub async fn commodity_aluminum(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("ALUMINUM", interval).await
-}
-
-/// Fetch wheat prices.
-pub async fn commodity_wheat(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("WHEAT", interval).await
-}
-
-/// Fetch corn prices.
-pub async fn commodity_corn(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("CORN", interval).await
-}
-
-/// Fetch cotton prices.
-pub async fn commodity_cotton(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("COTTON", interval).await
-}
-
-/// Fetch sugar prices.
-pub async fn commodity_sugar(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("SUGAR", interval).await
-}
-
-/// Fetch coffee prices.
-pub async fn commodity_coffee(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("COFFEE", interval).await
-}
-
-/// Fetch the global commodities index.
-pub async fn commodity_all_commodities(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
-    fetch_commodity("ALL_COMMODITIES", interval).await
 }
 
 // ============================================================================

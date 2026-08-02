@@ -1,5 +1,4 @@
 //! Options snapshot endpoints: options chain, single contract snapshot.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -126,6 +125,7 @@ pub struct OptionsSnapshotDTO {
 /// Response wrapper for a single options contract snapshot.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: cross-market snapshots routed by #244
 pub struct OptionsContractSnapshotResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
@@ -252,6 +252,7 @@ pub async fn fetch_options_response(symbol: &str, date: Option<i64>) -> Result<O
 ///
 /// * `underlying` - Underlying stock ticker (e.g., `"AAPL"`)
 /// * `contract` - Options contract ticker (e.g., `"O:AAPL250117C00150000"`)
+#[allow(dead_code)] // unrouted: cross-market snapshots routed by #244
 pub async fn options_contract_snapshot(
     underlying: &str,
     contract: &str,

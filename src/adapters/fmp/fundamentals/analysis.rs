@@ -1,6 +1,5 @@
 //! FMP financial analysis endpoints (ratios, metrics, DCF, ratings, growth).
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;

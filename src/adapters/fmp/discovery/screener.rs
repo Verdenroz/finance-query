@@ -1,9 +1,7 @@
 //! Stock screener, symbol search, and CIK lookup endpoints for Financial Modeling Prep.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
 use crate::adapters::fmp::build_client;
@@ -69,17 +67,6 @@ pub struct SearchResultDTO {
     pub exchange_short_name: Option<String>,
 }
 
-/// A result from the CIK search endpoint.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct CikResultDTO {
-    /// Ticker symbol.
-    pub symbol: Option<String>,
-    /// Company CIK number.
-    #[serde(rename = "companyCik")]
-    pub company_cik: Option<String>,
-}
-
 /// Screen stocks by various financial criteria.
 ///
 /// * `params` - Query params such as `marketCapMoreThan`, `sector`, `industry`, `country`, `exchange`, `limit`, etc.
@@ -110,13 +97,56 @@ pub async fn symbol_search(
     client.get("/api/v3/search", &params).await
 }
 
-/// Look up a company by CIK number.
-///
-/// * `cik` - CIK number (e.g., `"0000320193"`)
-pub async fn cik_search(cik: &str) -> Result<Vec<CikResultDTO>> {
-    let client = build_client()?;
-    let path = format!("/api/v3/cik/{}", encode_path_segment(cik));
-    client.get(&path, &[]).await
+/// Search symbols and return provider-neutral matches.
+pub async fn fetch_symbol_search_response(
+    query: &str,
+    limit: u32,
+) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+    use crate::models::discovery::reference::SymbolMatch;
+    let results = symbol_search(query, Some(limit), None).await?;
+    Ok(results
+        .into_iter()
+        .filter_map(|r| {
+            Some(SymbolMatch {
+                symbol: r.symbol?,
+                name: r.name,
+                // Prefer the short code (e.g. "NASDAQ") over the long venue name.
+                exchange: r.exchange_short_name.or(r.stock_exchange),
+                asset_type: None,
+                currency: r.currency,
+                active: None,
+            })
+        })
+        .collect())
+}
+
+/// Run a screener query and return provider-neutral matches.
+pub async fn fetch_screener_response(
+    filters: &crate::models::discovery::reference::ScreenerFilters,
+) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
+    use crate::models::discovery::reference::ScreenerMatch;
+    let owned = filters.to_query();
+    let params: Vec<(&str, &str)> = owned.iter().map(|(k, v)| (*k, v.as_str())).collect();
+    let results = stock_screener(&params).await?;
+    Ok(results
+        .into_iter()
+        .filter_map(|r| {
+            Some(ScreenerMatch {
+                symbol: r.symbol?,
+                name: r.company_name,
+                price: r.price,
+                market_cap: r.market_cap,
+                sector: r.sector,
+                industry: r.industry,
+                beta: r.beta,
+                volume: r.volume,
+                exchange: r.exchange_short_name.or(r.exchange),
+                country: r.country,
+                is_etf: r.is_etf,
+                is_actively_trading: r.is_actively_trading,
+            })
+        })
+        .collect())
 }
 
 #[cfg(test)]

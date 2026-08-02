@@ -1,5 +1,4 @@
 //! FMP company information endpoints.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -13,6 +12,7 @@ use crate::error::Result;
 /// Company profile from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub struct CompanyProfileDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -104,6 +104,7 @@ pub struct CompanyProfileDTO {
 /// Key executive from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub struct KeyExecutiveDTO {
     /// Executive title.
     pub title: Option<String>,
@@ -127,6 +128,7 @@ pub struct KeyExecutiveDTO {
 /// Market capitalization from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub struct MarketCapDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -140,6 +142,7 @@ pub struct MarketCapDTO {
 /// Company outlook from FMP (v4 endpoint).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub struct CompanyOutlookDTO {
     /// Profile section.
     pub profile: Option<CompanyProfileDTO>,
@@ -174,6 +177,7 @@ pub struct StockPeersDTO {
 /// Delisted company from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub struct DelistedCompanyDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -195,6 +199,7 @@ pub struct DelistedCompanyDTO {
 // ============================================================================
 
 /// Fetch company profile for a symbol.
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfileDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
@@ -206,6 +211,7 @@ pub async fn company_profile(symbol: &str) -> Result<Vec<CompanyProfileDTO>> {
 }
 
 /// Fetch key executives for a symbol.
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutiveDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
@@ -217,6 +223,7 @@ pub async fn key_executives(symbol: &str) -> Result<Vec<KeyExecutiveDTO>> {
 }
 
 /// Fetch market capitalization for a symbol.
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn market_cap(symbol: &str) -> Result<Vec<MarketCapDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client
@@ -231,6 +238,7 @@ pub async fn market_cap(symbol: &str) -> Result<Vec<MarketCapDTO>> {
 }
 
 /// Fetch historical market capitalization for a symbol.
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn historical_market_cap(symbol: &str, limit: Option<u32>) -> Result<Vec<MarketCapDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     let limit_str = limit.unwrap_or(100).to_string();
@@ -275,6 +283,7 @@ pub async fn fetch_canonical_similar_symbols(
 }
 
 /// Fetch company outlook for a symbol (v4 endpoint).
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn company_outlook(symbol: &str) -> Result<CompanyOutlookDTO> {
     let client = crate::adapters::fmp::build_client()?;
     client
@@ -291,6 +300,7 @@ pub async fn stock_peers(symbol: &str) -> Result<Vec<StockPeersDTO>> {
 }
 
 /// Fetch delisted companies.
+#[allow(dead_code)] // unrouted: FMP ownership/governance surface lands with #243
 pub async fn delisted_companies(limit: Option<u32>) -> Result<Vec<DelistedCompanyDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     let limit_str = limit.unwrap_or(100).to_string();

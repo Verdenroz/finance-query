@@ -39,7 +39,6 @@ pub(crate) mod forex;
 pub(crate) mod fundamentals;
 pub(crate) mod options;
 pub(crate) mod quote;
-pub(crate) mod technicals;
 
 use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
 use crate::error::Result;
@@ -90,13 +89,13 @@ provider_build_client!(
 /// # Errors
 ///
 /// Returns [`FinanceError::InvalidParameter`] if already initialized.
-#[allow(dead_code)]
+#[allow(dead_code)] // public init path for direct adapter use; ProviderSet initialises via env var
 pub fn init(api_key: impl Into<String>) -> Result<()> {
     init_with_timeout(api_key, Duration::from_secs(30))
 }
 
 /// Initialize the Alpha Vantage client with a custom timeout.
-#[allow(dead_code)]
+#[allow(dead_code)] // public init path for direct adapter use; ProviderSet initialises via env var
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
     set_singleton(api_key, timeout)
 }

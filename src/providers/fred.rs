@@ -1,19 +1,28 @@
 //! FRED (Federal Reserve Economic Data) provider implementation.
 
+use super::{EconomicProvider, ProviderAdapter, ProviderCore};
 use crate::error::Result;
 
 pub(crate) struct FredProvider;
 
-#[async_trait::async_trait]
-impl super::ProviderAdapter for FredProvider {
+impl ProviderCore for FredProvider {
     fn id(&self) -> super::Provider {
         super::Provider::Fred
     }
+}
 
-    fn capabilities(&self) -> super::Capability {
-        super::Capability::ECONOMIC
+#[async_trait::async_trait]
+impl EconomicProvider for FredProvider {
+    async fn fetch_economic_series(
+        &self,
+        series_id: &str,
+    ) -> Result<crate::models::economic::EconomicSeries> {
+        crate::adapters::fred::fetch_economic_series_response(series_id).await
     }
+}
 
+#[async_trait::async_trait]
+impl ProviderAdapter for FredProvider {
     async fn initialize(&self) -> crate::error::Result<()> {
         let key = std::env::var("FRED_API_KEY").map_err(|_| {
             crate::error::FinanceError::InvalidParameter {
@@ -29,10 +38,7 @@ impl super::ProviderAdapter for FredProvider {
         Ok(())
     }
 
-    async fn fetch_economic_series(
-        &self,
-        series_id: &str,
-    ) -> Result<crate::models::economic::EconomicSeries> {
-        crate::adapters::fred::fetch_economic_series_response(series_id).await
+    fn as_economic(&self) -> Option<&dyn EconomicProvider> {
+        Some(self)
     }
 }

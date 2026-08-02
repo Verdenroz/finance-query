@@ -28,7 +28,7 @@ pub struct IndexQuote {
 /// A constituent (member) of a major stock market index.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)]
+#[allow(dead_code)] // unrouted: populated by index constituents (#297)
 pub struct IndexConstituent {
     /// Ticker symbol of the constituent company
     pub symbol: String,

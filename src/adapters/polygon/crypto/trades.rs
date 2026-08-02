@@ -1,5 +1,4 @@
 //! Crypto trade endpoints: last trade, historical trades.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

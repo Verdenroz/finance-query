@@ -1,6 +1,5 @@
 //! Market performance endpoints: sector/industry PE, sector performance, gainers/losers/actives.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -53,6 +52,7 @@ pub struct SectorPerformanceDTO {
 /// Historical sector performance entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: sector-performance history lands with #300
 pub struct HistoricalSectorPerformanceDTO {
     /// Date.
     pub date: Option<String>,
@@ -133,6 +133,7 @@ pub async fn sector_performance() -> Result<Vec<SectorPerformanceDTO>> {
 }
 
 /// Fetch historical sector performance.
+#[allow(dead_code)] // unrouted: sector-performance history lands with #300
 pub async fn historical_sector_performance(
     limit: u32,
 ) -> Result<Vec<HistoricalSectorPerformanceDTO>> {
@@ -162,6 +163,82 @@ pub async fn stock_market_losers() -> Result<Vec<MarketMoverDTO>> {
 pub async fn stock_market_most_active() -> Result<Vec<MarketMoverDTO>> {
     let client = build_client()?;
     client.get("/api/v3/stock_market/actives", &[]).await
+}
+
+/// Fetch sector performance and map to provider-neutral entries.
+pub async fn fetch_sector_performance_response()
+-> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+    use crate::models::market::performance::{SectorPerformance, parse_percent};
+    Ok(sector_performance()
+        .await?
+        .into_iter()
+        .filter_map(|s| {
+            Some(SectorPerformance {
+                sector: s.sector?,
+                change_percent: parse_percent(s.changes_percentage.as_deref()),
+            })
+        })
+        .collect())
+}
+
+/// Fetch market movers for `direction` and map to provider-neutral entries.
+pub async fn fetch_market_movers_response(
+    direction: crate::models::market::performance::MoverDirection,
+) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+    use crate::models::market::performance::{MoverDirection, MoverQuote};
+    let movers = match direction {
+        MoverDirection::Gainers => stock_market_gainers().await?,
+        MoverDirection::Losers => stock_market_losers().await?,
+        MoverDirection::MostActive => stock_market_most_active().await?,
+    };
+    Ok(movers
+        .into_iter()
+        .filter_map(|m| {
+            Some(MoverQuote {
+                symbol: m.symbol?,
+                name: m.name,
+                price: m.price,
+                change: m.change,
+                change_percent: m.changes_percentage,
+            })
+        })
+        .collect())
+}
+
+/// Fetch sector price/earnings ratios and map to provider-neutral entries.
+pub async fn fetch_sector_pe_response() -> Result<Vec<crate::models::market::performance::SectorPe>>
+{
+    use crate::models::market::performance::SectorPe;
+    Ok(sectors_pe()
+        .await?
+        .into_iter()
+        .filter_map(|s| {
+            Some(SectorPe {
+                sector: s.sector?,
+                exchange: s.exchange,
+                pe: s.pe,
+                date: s.date,
+            })
+        })
+        .collect())
+}
+
+/// Fetch industry price/earnings ratios and map to provider-neutral entries.
+pub async fn fetch_industry_pe_response()
+-> Result<Vec<crate::models::market::performance::IndustryPe>> {
+    use crate::models::market::performance::IndustryPe;
+    Ok(industries_pe()
+        .await?
+        .into_iter()
+        .filter_map(|s| {
+            Some(IndustryPe {
+                industry: s.industry?,
+                exchange: s.exchange,
+                pe: s.pe,
+                date: s.date,
+            })
+        })
+        .collect())
 }
 
 #[cfg(test)]

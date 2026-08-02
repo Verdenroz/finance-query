@@ -36,9 +36,8 @@ pub(crate) mod discovery; // DISCOVERY
 pub(crate) mod forex; // FOREX
 pub(crate) mod fundamentals; // FUNDAMENTALS
 pub(crate) mod indices; // INDICES
-pub(crate) mod market;
+pub(crate) mod market; // CALENDAR + MARKET
 pub(crate) mod quote; // QUOTE
-pub(crate) mod technicals; // TECHNICALS // MARKET
 
 use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
 use crate::error::Result;
@@ -75,13 +74,13 @@ provider_build_client!(
 /// # Errors
 ///
 /// Returns [`FinanceError::InvalidParameter`] if already initialized.
-#[allow(dead_code)]
+#[allow(dead_code)] // public init path for direct adapter use; ProviderSet initialises via env var
 pub fn init(api_key: impl Into<String>) -> Result<()> {
     init_with_timeout(api_key, Duration::from_secs(30))
 }
 
 /// Initialize the FMP client with a custom timeout.
-#[allow(dead_code)]
+#[allow(dead_code)] // public init path for direct adapter use; ProviderSet initialises via env var
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
     set_singleton(api_key, timeout)
 }

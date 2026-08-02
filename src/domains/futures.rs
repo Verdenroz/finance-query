@@ -21,6 +21,8 @@ impl FuturesContract {
             self,
             symbol,
             FUTURES,
+            as_futures,
+            FuturesQuote,
             fetch_futures_quote,
             crate::models::futures::FuturesQuote
         )

@@ -1,5 +1,4 @@
 //! Shared types and deserialization helpers for Alpha Vantage responses.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -7,7 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 ///
 /// Alpha Vantage returns numeric values as strings, and uses `"None"` or `"."`
 /// for missing data.
-#[allow(dead_code)]
+#[allow(dead_code)] // serde helper retained for DTOs whose endpoints are not yet routed
 pub(crate) fn deserialize_optional_f64<'de, D>(
     deserializer: D,
 ) -> std::result::Result<Option<f64>, D::Error>
@@ -22,7 +21,7 @@ where
 }
 
 /// Deserialize a string to `f64`, defaulting to `0.0` on failure.
-#[allow(dead_code)]
+#[allow(dead_code)] // serde helper retained for DTOs whose endpoints are not yet routed
 pub(crate) fn deserialize_f64_from_str<'de, D>(
     deserializer: D,
 ) -> std::result::Result<f64, D::Error>
@@ -39,6 +38,7 @@ where
 
 /// Time interval for Alpha Vantage time series and indicator requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(clippy::enum_variant_names)] // variants mirror AV API interval strings
 pub enum AvInterval {
     /// 1-minute intervals
     OneMin,
@@ -50,12 +50,6 @@ pub enum AvInterval {
     ThirtyMin,
     /// 60-minute intervals
     SixtyMin,
-    /// Daily intervals
-    Daily,
-    /// Weekly intervals
-    Weekly,
-    /// Monthly intervals
-    Monthly,
 }
 
 impl AvInterval {
@@ -67,34 +61,6 @@ impl AvInterval {
             Self::FifteenMin => "15min",
             Self::ThirtyMin => "30min",
             Self::SixtyMin => "60min",
-            Self::Daily => "daily",
-            Self::Weekly => "weekly",
-            Self::Monthly => "monthly",
-        }
-    }
-}
-
-/// Price series type for technical indicator calculations.
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum SeriesType {
-    /// Close price
-    Close,
-    /// Open price
-    Open,
-    /// High price
-    High,
-    /// Low price
-    Low,
-}
-
-impl SeriesType {
-    /// Convert to the Alpha Vantage API parameter string.
-    pub fn as_str(&self) -> &'static str {
-        match self {
-            Self::Close => "close",
-            Self::Open => "open",
-            Self::High => "high",
-            Self::Low => "low",
         }
     }
 }
@@ -102,9 +68,8 @@ impl SeriesType {
 /// Output size for time series requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum OutputSize {
-    /// Returns the latest 100 data points (default).
-    Compact,
-    /// Returns up to 20+ years of historical data.
+    /// Returns up to 20+ years of historical data (the compact 100-point
+    /// variant is the API default and never requested explicitly).
     Full,
 }
 
@@ -112,7 +77,6 @@ impl OutputSize {
     /// Convert to the Alpha Vantage API parameter string.
     pub fn as_str(&self) -> &'static str {
         match self {
-            Self::Compact => "compact",
             Self::Full => "full",
         }
     }
@@ -143,6 +107,7 @@ pub struct TimeSeriesEntryDTO {
 /// A single adjusted OHLCV data point including dividend and split information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct AdjustedTimeSeriesEntryDTO {
     /// Timestamp or date string
     pub timestamp: String,
@@ -179,6 +144,7 @@ pub struct TimeSeriesDTO {
 /// Adjusted time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct AdjustedTimeSeriesDTO {
     /// Symbol (e.g., `"AAPL"`)
     pub symbol: String,
@@ -251,6 +217,7 @@ pub struct BulkQuoteDTO {
 /// A single match result from a symbol search.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct SymbolMatchDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -279,6 +246,7 @@ pub struct SymbolMatchDTO {
 /// Status of a single market/exchange.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct MarketStatusDTO {
     /// Market type (e.g., `"Equity"`, `"Forex"`)
     pub market_type: String,
@@ -397,6 +365,7 @@ pub struct TickerSentimentDTO {
 /// Earnings call transcript.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EarningsCallTranscriptDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -409,6 +378,7 @@ pub struct EarningsCallTranscriptDTO {
 /// A top gainer, loser, or most actively traded ticker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: AV movers land with #300
 pub struct TopMoverTickerDTO {
     /// Ticker symbol
     pub ticker: String,
@@ -425,6 +395,7 @@ pub struct TopMoverTickerDTO {
 /// Top gainers, losers, and most actively traded tickers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: AV movers land with #300
 pub struct TopMoversDTO {
     /// Last updated timestamp
     pub last_updated: String,
@@ -443,6 +414,7 @@ pub struct TopMoversDTO {
 /// Company overview / profile.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct CompanyOverviewDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -527,6 +499,7 @@ pub struct CompanyOverviewDTO {
 /// ETF profile and holdings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EtfProfileDTO {
     /// ETF symbol
     pub symbol: String,
@@ -551,6 +524,7 @@ pub struct EtfProfileDTO {
 /// A single ETF holding.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EtfHoldingDTO {
     /// Symbol of the held security
     pub symbol: Option<String>,
@@ -614,6 +588,7 @@ pub struct SplitEventDTO {
 /// Earnings data for a single quarter.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EarningsDataDTO {
     /// Fiscal date ending
     pub fiscal_date_ending: Option<String>,
@@ -632,6 +607,7 @@ pub struct EarningsDataDTO {
 /// Earnings history with annual and quarterly data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EarningsHistoryDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -678,6 +654,7 @@ pub struct IpoCalendarEntryDTO {
 /// Listing status entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct ListingEntryDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -719,36 +696,6 @@ pub struct ExchangeRateDTO {
     pub bid_price: f64,
     /// Ask price
     pub ask_price: f64,
-}
-
-/// A single forex time series data point.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct ForexEntryDTO {
-    /// Timestamp or date string
-    pub timestamp: String,
-    /// Opening price
-    pub open: f64,
-    /// Highest price
-    pub high: f64,
-    /// Lowest price
-    pub low: f64,
-    /// Closing price
-    pub close: f64,
-}
-
-/// Forex time series response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct ForexTimeSeriesDTO {
-    /// Source currency code
-    pub from_symbol: String,
-    /// Target currency code
-    pub to_symbol: String,
-    /// Last refreshed timestamp
-    pub last_refreshed: String,
-    /// Data entries
-    pub entries: Vec<ForexEntryDTO>,
 }
 
 // ============================================================================
@@ -841,35 +788,4 @@ pub struct EconomicSeriesDTO {
     pub unit: String,
     /// Data points
     pub data: Vec<EconomicDataPointDTO>,
-}
-
-// ============================================================================
-// Technical indicators
-// ============================================================================
-
-/// A single technical indicator data point.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct IndicatorDataPointDTO {
-    /// Timestamp or date string
-    pub timestamp: String,
-    /// Indicator values as key-value pairs (keys vary by indicator).
-    /// e.g., for SMA: `{"SMA": 150.5}`, for BBANDS: `{"Real Upper Band": ..., "Real Middle Band": ..., "Real Lower Band": ...}`
-    pub values: std::collections::HashMap<String, f64>,
-}
-
-/// Technical indicator response.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[non_exhaustive]
-pub struct TechnicalIndicatorDTO {
-    /// Indicator function name (e.g., `"SMA"`, `"RSI"`, `"MACD"`)
-    pub indicator: String,
-    /// Symbol
-    pub symbol: String,
-    /// Last refreshed timestamp
-    pub last_refreshed: String,
-    /// Interval used
-    pub interval: String,
-    /// Data points
-    pub data: Vec<IndicatorDataPointDTO>,
 }

@@ -1,0 +1,200 @@
+//! Market-wide calendar and performance handles.
+//!
+//! Created via [`Providers::calendar`](crate::Providers::calendar) and
+//! [`Providers::market`](crate::Providers::market).
+
+use std::sync::Arc;
+
+use crate::error::Result;
+use crate::models::calendar::market::{CalendarKind, MarketCalendarEntry};
+use crate::models::market::performance::{
+    IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
+};
+use crate::providers::{Capability, ProviderSet};
+
+/// Market-wide event calendars backed by configured data providers.
+///
+/// Routes through [`Capability::CALENDAR`]. Unlike
+/// [`Ticker::calendar`](crate::Ticker::calendar), which builds a per-symbol
+/// timeline, these span the whole market over a date range.
+///
+/// Created via [`Providers::calendar`](crate::Providers::calendar).
+pub struct MarketCalendar {
+    providers: Arc<ProviderSet>,
+    cache: crate::domains::DomainCache<Vec<MarketCalendarEntry>>,
+}
+
+impl MarketCalendar {
+    pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
+        Self {
+            providers,
+            cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
+        }
+    }
+
+    /// Cache responses for `ttl` instead of for the handle's lifetime,
+    /// deduplicating concurrent identical requests.
+    pub fn cache(mut self, ttl: std::time::Duration) -> Self {
+        self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Ttl(ttl));
+        self
+    }
+
+    /// Disable caching — every call fetches fresh data.
+    pub fn no_cache(mut self) -> Self {
+        self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Off);
+        self
+    }
+
+    /// Fetch a calendar of `kind` over `[from, to]` (`YYYY-MM-DD` dates).
+    ///
+    /// Cached per `(kind, from, to)`.
+    pub async fn fetch(
+        &self,
+        kind: CalendarKind,
+        from: &str,
+        to: &str,
+    ) -> Result<Vec<MarketCalendarEntry>> {
+        let key = format!("{kind:?}\u{1f}{from}\u{1f}{to}");
+        let providers = Arc::clone(&self.providers);
+        let (from, to) = (from.to_string(), to.to_string());
+        self.cache
+            .get_or_try(key, move || async move {
+                providers
+                    .fetch(Capability::CALENDAR, move |p| {
+                        let (from, to) = (from.clone(), to.clone());
+                        let p = p.clone();
+                        async move {
+                            p.as_calendar()
+                                .ok_or_else(|| p.not_supported(kind.operation()))?
+                                .fetch_market_calendar(kind, &from, &to)
+                                .await
+                        }
+                    })
+                    .await
+            })
+            .await
+    }
+
+    /// Earnings releases scheduled or reported over `[from, to]`.
+    pub async fn earnings(&self, from: &str, to: &str) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::Earnings, from, to).await
+    }
+
+    /// Initial public offerings over `[from, to]`.
+    pub async fn ipos(&self, from: &str, to: &str) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::Ipo, from, to).await
+    }
+
+    /// Dividend payments over `[from, to]`.
+    pub async fn dividends(&self, from: &str, to: &str) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::Dividend, from, to).await
+    }
+
+    /// Stock splits over `[from, to]`.
+    pub async fn splits(&self, from: &str, to: &str) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::Split, from, to).await
+    }
+
+    /// Macro-economic releases over `[from, to]`.
+    pub async fn economic(&self, from: &str, to: &str) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::Economic, from, to).await
+    }
+}
+
+/// Market-wide performance statistics backed by configured data providers.
+///
+/// Routes through [`Capability::MARKET`]. Unlike [`crate::finance::sector`] and
+/// [`crate::finance::market_summary`] — Yahoo-only convenience shortcuts — these
+/// honour the configured provider priority.
+///
+/// Created via [`Providers::market`](crate::Providers::market).
+pub struct Market {
+    providers: Arc<ProviderSet>,
+}
+
+impl Market {
+    pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
+        Self { providers }
+    }
+
+    /// Aggregate performance for every sector.
+    pub async fn sector_performance(&self) -> Result<Vec<SectorPerformance>> {
+        self.providers
+            .fetch(Capability::MARKET, |p| {
+                let p = p.clone();
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::SectorPerformance)
+                        })?
+                        .fetch_sector_performance()
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Price/earnings ratios by sector.
+    pub async fn sector_pe(&self) -> Result<Vec<SectorPe>> {
+        self.providers
+            .fetch(Capability::MARKET, |p| {
+                let p = p.clone();
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::SectorPerformance)
+                        })?
+                        .fetch_sector_pe()
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Price/earnings ratios by industry.
+    pub async fn industry_pe(&self) -> Result<Vec<IndustryPe>> {
+        self.providers
+            .fetch(Capability::MARKET, |p| {
+                let p = p.clone();
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::SectorPerformance)
+                        })?
+                        .fetch_industry_pe()
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Market movers for `direction`.
+    pub async fn movers(&self, direction: MoverDirection) -> Result<Vec<MoverQuote>> {
+        self.providers
+            .fetch(Capability::MARKET, |p| {
+                let p = p.clone();
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::MarketMovers))?
+                        .fetch_market_movers(direction)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Largest percentage gainers.
+    pub async fn gainers(&self) -> Result<Vec<MoverQuote>> {
+        self.movers(MoverDirection::Gainers).await
+    }
+
+    /// Largest percentage losers.
+    pub async fn losers(&self) -> Result<Vec<MoverQuote>> {
+        self.movers(MoverDirection::Losers).await
+    }
+
+    /// Highest traded volume.
+    pub async fn most_active(&self) -> Result<Vec<MoverQuote>> {
+        self.movers(MoverDirection::MostActive).await
+    }
+}

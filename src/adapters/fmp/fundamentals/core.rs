@@ -1,5 +1,4 @@
 //! FMP financial statement endpoints.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -536,80 +535,6 @@ pub async fn cash_flow(
                 encode_path_segment(symbol)
             ),
             &[("period", period.as_str()), ("limit", &limit_str)],
-        )
-        .await
-}
-
-/// Fetch income statements as reported for a symbol.
-pub async fn income_statement_as_reported(
-    symbol: &str,
-    period: Period,
-    limit: Option<u32>,
-) -> Result<Vec<serde_json::Value>> {
-    let client = crate::adapters::fmp::build_client()?;
-    let limit_str = limit.unwrap_or(4).to_string();
-    client
-        .get(
-            &format!(
-                "/api/v3/income-statement-as-reported/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("period", period.as_str()), ("limit", &limit_str)],
-        )
-        .await
-}
-
-/// Fetch balance sheet statements as reported for a symbol.
-pub async fn balance_sheet_as_reported(
-    symbol: &str,
-    period: Period,
-    limit: Option<u32>,
-) -> Result<Vec<serde_json::Value>> {
-    let client = crate::adapters::fmp::build_client()?;
-    let limit_str = limit.unwrap_or(4).to_string();
-    client
-        .get(
-            &format!(
-                "/api/v3/balance-sheet-statement-as-reported/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("period", period.as_str()), ("limit", &limit_str)],
-        )
-        .await
-}
-
-/// Fetch cash flow statements as reported for a symbol.
-pub async fn cash_flow_as_reported(
-    symbol: &str,
-    period: Period,
-    limit: Option<u32>,
-) -> Result<Vec<serde_json::Value>> {
-    let client = crate::adapters::fmp::build_client()?;
-    let limit_str = limit.unwrap_or(4).to_string();
-    client
-        .get(
-            &format!(
-                "/api/v3/cash-flow-statement-as-reported/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("period", period.as_str()), ("limit", &limit_str)],
-        )
-        .await
-}
-
-/// Fetch full financial statement as reported for a symbol.
-pub async fn full_financial_statement(
-    symbol: &str,
-    period: Period,
-) -> Result<Vec<serde_json::Value>> {
-    let client = crate::adapters::fmp::build_client()?;
-    client
-        .get(
-            &format!(
-                "/api/v3/financial-statement-full-as-reported/{}",
-                encode_path_segment(symbol)
-            ),
-            &[("period", period.as_str())],
         )
         .await
 }

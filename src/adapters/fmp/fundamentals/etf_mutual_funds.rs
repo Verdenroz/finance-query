@@ -1,6 +1,5 @@
 //! ETF and mutual fund endpoints for Financial Modeling Prep.
 
-#![allow(dead_code)]
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 

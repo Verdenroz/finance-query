@@ -1,5 +1,4 @@
 //! Index aggregate bar endpoints: OHLCV bars, previous close, daily open/close.
-#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
