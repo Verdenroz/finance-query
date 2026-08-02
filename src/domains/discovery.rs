@@ -63,7 +63,14 @@ impl Discovery {
                     .fetch(Capability::DISCOVERY, move |p| {
                         let query = query.clone();
                         let p = p.clone();
-                        async move { p.fetch_symbol_search(&query, limit).await }
+                        async move {
+                            p.as_discovery()
+                                .ok_or_else(|| {
+                                    p.not_supported(crate::providers::Operation::SymbolSearch)
+                                })?
+                                .fetch_symbol_search(&query, limit)
+                                .await
+                        }
                     })
                     .await
             })
@@ -81,7 +88,14 @@ impl Discovery {
                     .fetch(Capability::DISCOVERY, move |p| {
                         let symbol = symbol.clone();
                         let p = p.clone();
-                        async move { p.fetch_symbol_details(&symbol).await }
+                        async move {
+                            p.as_discovery()
+                                .ok_or_else(|| {
+                                    p.not_supported(crate::providers::Operation::SymbolDetails)
+                                })?
+                                .fetch_symbol_details(&symbol)
+                                .await
+                        }
                     })
                     .await
             })
@@ -93,7 +107,12 @@ impl Discovery {
         self.providers
             .fetch(Capability::DISCOVERY, |p| {
                 let p = p.clone();
-                async move { p.fetch_exchanges().await }
+                async move {
+                    p.as_discovery()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Exchanges))?
+                        .fetch_exchanges()
+                        .await
+                }
             })
             .await
     }
@@ -107,7 +126,12 @@ impl Discovery {
             .fetch(Capability::DISCOVERY, |p| {
                 let p = p.clone();
                 let filters = filters.clone();
-                async move { p.fetch_screener(&filters).await }
+                async move {
+                    p.as_discovery()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Screener))?
+                        .fetch_screener(&filters)
+                        .await
+                }
             })
             .await
     }

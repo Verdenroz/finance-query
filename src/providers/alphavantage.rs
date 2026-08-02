@@ -3,29 +3,140 @@
 //! Thin delegate — all DTO→canonical conversion logic lives
 //! in the adapter functions under `crate::adapters::alphavantage::*`.
 
+use super::{
+    ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider, EconomicProvider,
+    ForexProvider, FundamentalsProvider, OptionsProvider, ProviderAdapter, ProviderCore,
+    QuoteProvider,
+};
 use crate::adapters::alphavantage as av;
 use crate::error::Result;
 use crate::models::quote::QuoteSummaryResponse;
 
 pub(crate) struct AlphaVantageProvider;
 
-#[async_trait::async_trait]
-impl super::ProviderAdapter for AlphaVantageProvider {
+impl ProviderCore for AlphaVantageProvider {
     fn id(&self) -> super::Provider {
         super::Provider::AlphaVantage
     }
-    fn capabilities(&self) -> super::Capability {
-        super::Capability::QUOTE
-            | super::Capability::CHART
-            | super::Capability::FUNDAMENTALS
-            | super::Capability::CORPORATE
-            | super::Capability::OPTIONS
-            | super::Capability::CRYPTO
-            | super::Capability::FOREX
-            | super::Capability::COMMODITIES
-            | super::Capability::ECONOMIC
+}
+
+#[async_trait::async_trait]
+impl QuoteProvider for AlphaVantageProvider {
+    async fn fetch_quote(&self, symbol: &str) -> Result<QuoteSummaryResponse> {
+        av::fetch_quote_response(symbol).await
     }
 
+    async fn fetch_quotes_batch(
+        &self,
+        symbols: &[&str],
+    ) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+        av::fetch_quotes_batch_response(symbols).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ChartProvider for AlphaVantageProvider {
+    async fn fetch_chart(
+        &self,
+        symbol: &str,
+        interval: crate::Interval,
+        range: crate::TimeRange,
+    ) -> Result<crate::models::chart::Chart> {
+        av::fetch_chart_response(symbol, interval, range).await
+    }
+
+    async fn fetch_chart_range(
+        &self,
+        symbol: &str,
+        interval: crate::Interval,
+        start: i64,
+        end: i64,
+    ) -> Result<crate::models::chart::Chart> {
+        av::fetch_chart_range_response(symbol, interval, start, end).await
+    }
+}
+
+#[async_trait::async_trait]
+impl FundamentalsProvider for AlphaVantageProvider {
+    async fn fetch_financials(
+        &self,
+        symbol: &str,
+        stmt_type: crate::StatementType,
+        frequency: crate::Frequency,
+    ) -> Result<crate::models::fundamentals::FinancialStatement> {
+        av::fetch_financials_response(symbol, stmt_type, frequency).await
+    }
+}
+
+#[async_trait::async_trait]
+impl CorporateProvider for AlphaVantageProvider {
+    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
+        av::fetch_news_response(symbol).await
+    }
+
+    async fn fetch_events(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::chart::events::ChartEvents> {
+        av::fetch_events_response(symbol).await
+    }
+}
+
+#[async_trait::async_trait]
+impl OptionsProvider for AlphaVantageProvider {
+    async fn fetch_options(
+        &self,
+        symbol: &str,
+        date: Option<i64>,
+    ) -> Result<crate::models::options::Options> {
+        av::fetch_options_response(symbol, date).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ForexProvider for AlphaVantageProvider {
+    async fn fetch_forex_quote(
+        &self,
+        from: &str,
+        to: &str,
+    ) -> Result<crate::models::forex::ForexQuote> {
+        av::fetch_forex_quote_response(from, to).await
+    }
+}
+
+#[async_trait::async_trait]
+impl CommoditiesProvider for AlphaVantageProvider {
+    async fn fetch_commodities_quote(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::commodities::CommodityQuote> {
+        av::fetch_commodities_quote_response(symbol).await
+    }
+}
+
+#[async_trait::async_trait]
+impl CryptoProvider for AlphaVantageProvider {
+    async fn fetch_crypto_quote(
+        &self,
+        symbol: &str,
+        market: &str,
+    ) -> Result<crate::models::crypto::CryptoQuote> {
+        av::fetch_crypto_quote_response(symbol, market).await
+    }
+}
+
+#[async_trait::async_trait]
+impl EconomicProvider for AlphaVantageProvider {
+    async fn fetch_economic_series(
+        &self,
+        series_id: &str,
+    ) -> Result<crate::models::economic::EconomicSeries> {
+        av::fetch_economic_series_response(series_id).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ProviderAdapter for AlphaVantageProvider {
     async fn initialize(&self) -> Result<()> {
         let key = std::env::var("ALPHAVANTAGE_API_KEY").map_err(|_| {
             crate::error::FinanceError::InvalidParameter {
@@ -38,97 +149,31 @@ impl super::ProviderAdapter for AlphaVantageProvider {
         Ok(())
     }
 
-    async fn fetch_quote(&self, symbol: &str) -> Result<QuoteSummaryResponse> {
-        av::fetch_quote_response(symbol).await
+    fn as_quote(&self) -> Option<&dyn QuoteProvider> {
+        Some(self)
     }
-
-    async fn fetch_quotes_batch(
-        &self,
-        symbols: &[&str],
-    ) -> Result<Vec<(String, QuoteSummaryResponse)>> {
-        av::fetch_quotes_batch_response(symbols).await
+    fn as_chart(&self) -> Option<&dyn ChartProvider> {
+        Some(self)
     }
-
-    async fn fetch_chart(
-        &self,
-        symbol: &str,
-        interval: crate::Interval,
-        range: crate::TimeRange,
-    ) -> Result<crate::models::chart::Chart> {
-        av::fetch_chart_response(symbol, interval, range).await
+    fn as_fundamentals(&self) -> Option<&dyn FundamentalsProvider> {
+        Some(self)
     }
-
-    async fn fetch_financials(
-        &self,
-        symbol: &str,
-        stmt_type: crate::StatementType,
-        frequency: crate::Frequency,
-    ) -> Result<crate::models::fundamentals::FinancialStatement> {
-        av::fetch_financials_response(symbol, stmt_type, frequency).await
+    fn as_corporate(&self) -> Option<&dyn CorporateProvider> {
+        Some(self)
     }
-
-    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
-        av::fetch_news_response(symbol).await
+    fn as_options(&self) -> Option<&dyn OptionsProvider> {
+        Some(self)
     }
-
-    async fn fetch_events(
-        &self,
-        symbol: &str,
-    ) -> Result<crate::models::chart::events::ChartEvents> {
-        av::fetch_events_response(symbol).await
+    fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
+        Some(self)
     }
-
-    async fn fetch_chart_range(
-        &self,
-        symbol: &str,
-        interval: crate::Interval,
-        start: i64,
-        end: i64,
-    ) -> Result<crate::models::chart::Chart> {
-        av::fetch_chart_range_response(symbol, interval, start, end).await
+    fn as_economic(&self) -> Option<&dyn EconomicProvider> {
+        Some(self)
     }
-
-    async fn fetch_forex_quote(
-        &self,
-        from: &str,
-        to: &str,
-    ) -> Result<crate::models::forex::ForexQuote> {
-        av::fetch_forex_quote_response(from, to).await
+    fn as_forex(&self) -> Option<&dyn ForexProvider> {
+        Some(self)
     }
-
-    async fn fetch_commodities_quote(
-        &self,
-        symbol: &str,
-    ) -> Result<crate::models::commodities::CommodityQuote> {
-        av::fetch_commodities_quote_response(symbol).await
-    }
-
-    // ── Options ──────────────────────────────────────────────
-
-    async fn fetch_options(
-        &self,
-        symbol: &str,
-        date: Option<i64>,
-    ) -> Result<crate::models::options::Options> {
-        av::fetch_options_response(symbol, date).await
-    }
-
-    // ── Crypto ────────────────────────────────────────────────
-
-    async fn fetch_crypto_quote(
-        &self,
-        symbol: &str,
-        market: &str,
-    ) -> Result<crate::models::crypto::CryptoQuote> {
-        av::fetch_crypto_quote_response(symbol, market).await
-    }
-
-    // ── Economic ──────────────────────────────────────────────
-
-    async fn fetch_economic_series(
-        &self,
-        series_id: &str,
-    ) -> Result<crate::models::economic::EconomicSeries> {
-        av::fetch_economic_series_response(series_id).await
+    fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
+        Some(self)
     }
 }

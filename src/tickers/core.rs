@@ -583,7 +583,12 @@ impl Tickers {
                         let p = p.clone();
                         async move {
                             let syms_ref: Vec<&str> = syms.iter().map(String::as_str).collect();
-                            p.fetch_quotes_batch(&syms_ref).await
+                            p.as_quote()
+                                .ok_or_else(|| {
+                                    p.not_supported(crate::providers::Operation::QuotesBatch)
+                                })?
+                                .fetch_quotes_batch(&syms_ref)
+                                .await
                         }
                     })
                     .await
@@ -607,7 +612,12 @@ impl Tickers {
                     let p = p.clone();
                     async move {
                         let syms_ref: Vec<&str> = syms.iter().map(String::as_str).collect();
-                        p.fetch_quotes_batch(&syms_ref).await
+                        p.as_quote()
+                            .ok_or_else(|| {
+                                p.not_supported(crate::providers::Operation::QuotesBatch)
+                            })?
+                            .fetch_quotes_batch(&syms_ref)
+                            .await
                     }
                 })
                 .await;
@@ -695,7 +705,14 @@ impl Tickers {
                         .fetch(Capability::QUOTE, |p| {
                             let sym = sym.clone();
                             let p = p.clone();
-                            async move { p.fetch_quote(&sym).await }
+                            async move {
+                                p.as_quote()
+                                    .ok_or_else(|| {
+                                        p.not_supported(crate::providers::Operation::Quote)
+                                    })?
+                                    .fetch_quote(&sym)
+                                    .await
+                            }
                         })
                         .await;
                     (sym, result)
@@ -839,7 +856,14 @@ impl Tickers {
                         .fetch(Capability::CHART, |p| {
                             let sym = sym.clone();
                             let p = p.clone();
-                            async move { p.fetch_chart(&sym, interval, range).await }
+                            async move {
+                                p.as_chart()
+                                    .ok_or_else(|| {
+                                        p.not_supported(crate::providers::Operation::Chart)
+                                    })?
+                                    .fetch_chart(&sym, interval, range)
+                                    .await
+                            }
                         })
                         .await;
                     (symbol, result)
@@ -950,7 +974,14 @@ impl Tickers {
                         .fetch(Capability::CHART, |p| {
                             let sym = sym.clone();
                             let p = p.clone();
-                            async move { p.fetch_chart_range(&sym, interval, start, end).await }
+                            async move {
+                                p.as_chart()
+                                    .ok_or_else(|| {
+                                        p.not_supported(crate::providers::Operation::ChartRange)
+                                    })?
+                                    .fetch_chart_range(&sym, interval, start, end)
+                                    .await
+                            }
                         })
                         .await;
                     (symbol, result)
@@ -1014,7 +1045,14 @@ impl Tickers {
                         .fetch(Capability::CORPORATE, |p| {
                             let sym = sym.clone();
                             let p = p.clone();
-                            async move { p.fetch_events(&sym).await }
+                            async move {
+                                p.as_corporate()
+                                    .ok_or_else(|| {
+                                        p.not_supported(crate::providers::Operation::Events)
+                                    })?
+                                    .fetch_events(&sym)
+                                    .await
+                            }
                         })
                         .await;
                     (symbol, result)
@@ -1137,7 +1175,10 @@ impl Tickers {
                 let p = p.clone();
                 async move {
                     let syms_ref: Vec<&str> = syms.iter().map(String::as_str).collect();
-                    p.fetch_spark(&syms_ref, interval, range).await
+                    p.as_chart()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Spark))?
+                        .fetch_spark(&syms_ref, interval, range)
+                        .await
                 }
             })
             .await;
@@ -1360,22 +1401,24 @@ impl Tickers {
         frequency: Frequency,
     ) -> Result<BatchFinancialsResponse> {
         batch_fetch_cached!(self;
-            cache: financials_cache,
-            guard: map(financials_fetch, (statement_type, frequency)),
-            key: |s| (s.clone(), statement_type, frequency),
-            response: BatchFinancialsResponse.financials,
-            fetch: |providers, symbol| {
-                let sym = symbol.to_string();
-                providers.fetch(Capability::FUNDAMENTALS, move |p| {
-                    let sym = sym.clone();
-                    let p = p.clone();
-                    async move {
-                        p.fetch_financials(&sym, statement_type, frequency)
-                            .await
-                    }
-                }).await
-            },
-        )
+                cache: financials_cache,
+                guard: map(financials_fetch, (statement_type, frequency)),
+                key: |s| (s.clone(), statement_type, frequency),
+                response: BatchFinancialsResponse.financials,
+                fetch: |providers, symbol| {
+                    let sym = symbol.to_string();
+                    providers.fetch(Capability::FUNDAMENTALS, move |p| {
+                        let sym = sym.clone();
+                        let p = p.clone();
+                        async move {
+                            p.as_fundamentals()
+        .ok_or_else(|| p.not_supported(crate::providers::Operation::Financials))?
+        .fetch_financials(&sym, statement_type, frequency)
+                                .await
+                        }
+                    }).await
+                },
+            )
     }
 
     /// Batch fetch news articles for all symbols
@@ -1403,23 +1446,25 @@ impl Tickers {
     /// ```
     pub async fn news(&self) -> Result<BatchNewsResponse> {
         batch_fetch_cached!(self;
-            cache: news_cache,
-            guard: simple(news_fetch),
-            key: |s| s.clone(),
-            response: BatchNewsResponse.news,
-            fetch: |providers, symbol| {
-                let sym = symbol.to_string();
-                providers.fetch(Capability::CORPORATE, move |p| {
-                    let sym = sym.clone();
-                    let p = p.clone();
-                    async move {
-                        p.fetch_news(&sym)
-                            .await
-                            .map(|data| data.into_iter().collect::<Vec<News>>())
-                    }
-                }).await
-            },
-        )
+                cache: news_cache,
+                guard: simple(news_fetch),
+                key: |s| s.clone(),
+                response: BatchNewsResponse.news,
+                fetch: |providers, symbol| {
+                    let sym = symbol.to_string();
+                    providers.fetch(Capability::CORPORATE, move |p| {
+                        let sym = sym.clone();
+                        let p = p.clone();
+                        async move {
+                            p.as_corporate()
+        .ok_or_else(|| p.not_supported(crate::providers::Operation::News))?
+        .fetch_news(&sym)
+                                .await
+                                .map(|data| data.into_iter().collect::<Vec<News>>())
+                        }
+                    }).await
+                },
+            )
     }
 
     /// Batch fetch recommendations for all symbols
@@ -1452,27 +1497,29 @@ impl Tickers {
     /// ```
     pub async fn recommendations(&self, limit: u32) -> Result<BatchRecommendationsResponse> {
         batch_fetch_cached!(self;
-            cache: recommendations_cache,
-            guard: map(recommendations_fetch, limit),
-            key: |s| (s.clone(), limit),
-            response: BatchRecommendationsResponse.recommendations,
-            fetch: |providers, symbol| {
-                let sym = symbol.to_string();
-                providers.fetch(Capability::CORPORATE, move |p| {
-                    let sym = sym.clone();
-                    let p = p.clone();
-                    async move {
-                        let items = p.fetch_similar_symbols(&sym, limit).await?;
-                        Ok(recommendation_from_similar(
-                            sym,
-                            Some(p.id()),
-                            items,
-                            Some(limit),
-                        ))
-                    }
-                }).await
-            },
-        )
+                cache: recommendations_cache,
+                guard: map(recommendations_fetch, limit),
+                key: |s| (s.clone(), limit),
+                response: BatchRecommendationsResponse.recommendations,
+                fetch: |providers, symbol| {
+                    let sym = symbol.to_string();
+                    providers.fetch(Capability::CORPORATE, move |p| {
+                        let sym = sym.clone();
+                        let p = p.clone();
+                        async move {
+                            let items = p.as_corporate()
+        .ok_or_else(|| p.not_supported(crate::providers::Operation::Recommendations))?
+        .fetch_similar_symbols(&sym, limit).await?;
+                            Ok(recommendation_from_similar(
+                                sym,
+                                Some(p.id()),
+                                items,
+                                Some(limit),
+                            ))
+                        }
+                    }).await
+                },
+            )
     }
 
     /// Batch fetch options chains for all symbols
@@ -1501,21 +1548,23 @@ impl Tickers {
     /// ```
     pub async fn options(&self, date: Option<i64>) -> Result<BatchOptionsResponse> {
         batch_fetch_cached!(self;
-            cache: options_cache,
-            guard: map(options_fetch, date),
-            key: |s| (s.clone(), date),
-            response: BatchOptionsResponse.options,
-            fetch: |providers, symbol| {
-                let sym = symbol.to_string();
-                providers.fetch(Capability::OPTIONS, move |p| {
-                    let sym = sym.clone();
-                    let p = p.clone();
-                    async move {
-                        p.fetch_options(&sym, date).await
-                    }
-                }).await
-            },
-        )
+                cache: options_cache,
+                guard: map(options_fetch, date),
+                key: |s| (s.clone(), date),
+                response: BatchOptionsResponse.options,
+                fetch: |providers, symbol| {
+                    let sym = symbol.to_string();
+                    providers.fetch(Capability::OPTIONS, move |p| {
+                        let sym = sym.clone();
+                        let p = p.clone();
+                        async move {
+                            p.as_options()
+        .ok_or_else(|| p.not_supported(crate::providers::Operation::Options))?
+        .fetch_options(&sym, date).await
+                        }
+                    }).await
+                },
+            )
     }
 
     /// Aggregate upcoming financial events across all symbols into a single
@@ -1562,7 +1611,14 @@ impl Tickers {
                         .fetch(Capability::QUOTE, move |p| {
                             let sym = sym.clone();
                             let p = p.clone();
-                            async move { p.fetch_quote(&sym).await }
+                            async move {
+                                p.as_quote()
+                                    .ok_or_else(|| {
+                                        p.not_supported(crate::providers::Operation::Quote)
+                                    })?
+                                    .fetch_quote(&sym)
+                                    .await
+                            }
                         })
                         .await
                 };

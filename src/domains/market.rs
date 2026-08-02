@@ -63,7 +63,12 @@ impl MarketCalendar {
                     .fetch(Capability::CALENDAR, move |p| {
                         let (from, to) = (from.clone(), to.clone());
                         let p = p.clone();
-                        async move { p.fetch_market_calendar(kind, &from, &to).await }
+                        async move {
+                            p.as_calendar()
+                                .ok_or_else(|| p.not_supported(kind.operation()))?
+                                .fetch_market_calendar(kind, &from, &to)
+                                .await
+                        }
                     })
                     .await
             })
@@ -117,7 +122,14 @@ impl Market {
         self.providers
             .fetch(Capability::MARKET, |p| {
                 let p = p.clone();
-                async move { p.fetch_sector_performance().await }
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::SectorPerformance)
+                        })?
+                        .fetch_sector_performance()
+                        .await
+                }
             })
             .await
     }
@@ -127,7 +139,14 @@ impl Market {
         self.providers
             .fetch(Capability::MARKET, |p| {
                 let p = p.clone();
-                async move { p.fetch_sector_pe().await }
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::SectorPerformance)
+                        })?
+                        .fetch_sector_pe()
+                        .await
+                }
             })
             .await
     }
@@ -137,7 +156,14 @@ impl Market {
         self.providers
             .fetch(Capability::MARKET, |p| {
                 let p = p.clone();
-                async move { p.fetch_industry_pe().await }
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::SectorPerformance)
+                        })?
+                        .fetch_industry_pe()
+                        .await
+                }
             })
             .await
     }
@@ -147,7 +173,12 @@ impl Market {
         self.providers
             .fetch(Capability::MARKET, |p| {
                 let p = p.clone();
-                async move { p.fetch_market_movers(direction).await }
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::MarketMovers))?
+                        .fetch_market_movers(direction)
+                        .await
+                }
             })
             .await
     }

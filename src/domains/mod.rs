@@ -260,8 +260,11 @@ macro_rules! domain_handle {
 
 /// Fetch via the provider dispatch — single symbol field, no extra args.
 /// Routes through the handle's cache. Use inside a method body.
+/// `$acc` is the `ProviderAdapter` capability accessor (e.g. `as_economic`)
+/// and `$op` the [`Operation`](crate::providers::Operation) reported when a
+/// routed provider lacks it.
 macro_rules! fetch_via {
-    ($self:expr, $field:ident, $cap:ident, $fetch:ident, $ret:ty) => {{
+    ($self:expr, $field:ident, $cap:ident, $acc:ident, $op:ident, $fetch:ident, $ret:ty) => {{
         let __sym = $self.$field.clone();
         let __providers = std::sync::Arc::clone(&$self.providers);
         $self
@@ -271,7 +274,12 @@ macro_rules! fetch_via {
                     .fetch(crate::providers::Capability::$cap, move |p| {
                         let __s = __sym.clone();
                         let p = p.clone();
-                        async move { p.$fetch(&__s).await }
+                        async move {
+                            p.$acc()
+                                .ok_or_else(|| p.not_supported(crate::providers::Operation::$op))?
+                                .$fetch(&__s)
+                                .await
+                        }
                     })
                     .await
             })
@@ -283,7 +291,7 @@ macro_rules! fetch_via {
 /// `from`/`to`), cached under the empty-string key. Use inside a method body.
 #[allow(unused_macros)]
 macro_rules! fetch_via_two {
-    ($self:expr, $field1:ident, $field2:ident, $cap:ident, $fetch:ident, $ret:ty) => {{
+    ($self:expr, $field1:ident, $field2:ident, $cap:ident, $acc:ident, $op:ident, $fetch:ident, $ret:ty) => {{
         let __a = $self.$field1.clone();
         let __b = $self.$field2.clone();
         let __providers = std::sync::Arc::clone(&$self.providers);
@@ -295,7 +303,12 @@ macro_rules! fetch_via_two {
                         let __x = __a.clone();
                         let __y = __b.clone();
                         let p = p.clone();
-                        async move { p.$fetch(&__x, &__y).await }
+                        async move {
+                            p.$acc()
+                                .ok_or_else(|| p.not_supported(crate::providers::Operation::$op))?
+                                .$fetch(&__x, &__y)
+                                .await
+                        }
                     })
                     .await
             })
@@ -307,7 +320,7 @@ macro_rules! fetch_via_two {
 /// keyed in the cache by that argument.
 #[allow(unused_macros)]
 macro_rules! fetch_via_with {
-    ($self:expr, $field:ident, $cap:ident, $fetch:ident, $arg:expr, $ret:ty) => {{
+    ($self:expr, $field:ident, $cap:ident, $acc:ident, $op:ident, $fetch:ident, $arg:expr, $ret:ty) => {{
         let __sym = $self.$field.clone();
         let __arg = ($arg).to_string();
         let __providers = std::sync::Arc::clone(&$self.providers);
@@ -319,7 +332,12 @@ macro_rules! fetch_via_with {
                         let __s = __sym.clone();
                         let __a = __arg.clone();
                         let p = p.clone();
-                        async move { p.$fetch(&__s, &__a).await }
+                        async move {
+                            p.$acc()
+                                .ok_or_else(|| p.not_supported(crate::providers::Operation::$op))?
+                                .$fetch(&__s, &__a)
+                                .await
+                        }
                     })
                     .await
             })
@@ -344,7 +362,12 @@ macro_rules! fetch_chart_via {
                     .fetch(crate::providers::Capability::CHART, move |p| {
                         let __s = __sym.clone();
                         let p = p.clone();
-                        async move { p.fetch_chart(&__s, __interval, __range).await }
+                        async move {
+                            p.as_chart()
+                                .ok_or_else(|| p.not_supported(crate::providers::Operation::Chart))?
+                                .fetch_chart(&__s, __interval, __range)
+                                .await
+                        }
                     })
                     .await
             })

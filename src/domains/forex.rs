@@ -27,6 +27,8 @@ impl ForexPair {
             from,
             to,
             FOREX,
+            as_forex,
+            ForexQuote,
             fetch_forex_quote,
             crate::models::forex::ForexQuote
         )

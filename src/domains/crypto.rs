@@ -21,6 +21,8 @@ impl CryptoCoin {
             self,
             id,
             CRYPTO,
+            as_crypto,
+            CryptoQuote,
             fetch_crypto_quote,
             vs_currency,
             crate::models::crypto::CryptoQuote

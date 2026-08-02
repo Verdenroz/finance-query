@@ -377,7 +377,12 @@ impl Ticker {
             .fetch(Capability::CHART, move |p| {
                 let sym = sym.clone();
                 let p = p.clone();
-                async move { p.fetch_chart(&sym, interval, range).await }
+                async move {
+                    p.as_chart()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Chart))?
+                        .fetch_chart(&sym, interval, range)
+                        .await
+                }
             })
             .await?;
         let chart = Self::chart_from_provider_data(data, Some(interval), Some(range));
@@ -402,7 +407,12 @@ impl Ticker {
             .fetch(Capability::CHART, move |p| {
                 let sym = sym.clone();
                 let p = p.clone();
-                async move { p.fetch_chart_range(&sym, interval, start, end).await }
+                async move {
+                    p.as_chart()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ChartRange))?
+                        .fetch_chart_range(&sym, interval, start, end)
+                        .await
+                }
             })
             .await?;
         Ok(Self::chart_from_provider_data(data, Some(interval), None))
@@ -421,7 +431,12 @@ impl Ticker {
             .fetch(Capability::CORPORATE, move |p| {
                 let sym = sym.clone();
                 let p = p.clone();
-                async move { p.fetch_events(&sym).await }
+                async move {
+                    p.as_corporate()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Events))?
+                        .fetch_events(&sym)
+                        .await
+                }
             })
             .await?;
         let mut cache = self.events_cache.write().await;
@@ -480,7 +495,13 @@ impl Ticker {
                 let sym = sym.clone();
                 let p = p.clone();
                 async move {
-                    let r = p.fetch_similar_symbols(&sym, limit).await?;
+                    let r = p
+                        .as_corporate()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::Recommendations)
+                        })?
+                        .fetch_similar_symbols(&sym, limit)
+                        .await?;
                     Ok((p.id(), r))
                 }
             })
@@ -509,7 +530,12 @@ impl Ticker {
             .fetch(Capability::CORPORATE, move |p| {
                 let sym = sym.clone();
                 let p = p.clone();
-                async move { p.fetch_news(&sym).await }
+                async move {
+                    p.as_corporate()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::News))?
+                        .fetch_news(&sym)
+                        .await
+                }
             })
             .await?;
         let news = data;
@@ -568,7 +594,12 @@ impl Ticker {
             .fetch(Capability::OPTIONS, move |p| {
                 let sym = sym.clone();
                 let p = p.clone();
-                async move { p.fetch_options(&sym, date).await }
+                async move {
+                    p.as_options()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Options))?
+                        .fetch_options(&sym, date)
+                        .await
+                }
             })
             .await?;
         if self.cache_mode.enabled() {
@@ -599,7 +630,12 @@ impl Ticker {
             .fetch(Capability::FUNDAMENTALS, move |p| {
                 let sym = sym.clone();
                 let p = p.clone();
-                async move { p.fetch_financials(&sym, stmt_type, frequency).await }
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Financials))?
+                        .fetch_financials(&sym, stmt_type, frequency)
+                        .await
+                }
             })
             .await?;
         if self.cache_mode.enabled() {
@@ -690,7 +726,12 @@ impl Ticker {
             .fetch(Capability::FILINGS, move |p| {
                 let symbol = symbol.clone();
                 let p = p.clone();
-                async move { p.fetch_filings(&symbol).await }
+                async move {
+                    p.as_filings()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Filings))?
+                        .fetch_filings(&symbol)
+                        .await
+                }
             })
             .await
     }
@@ -869,7 +910,12 @@ impl Ticker {
             .fetch(Capability::QUOTE, move |p| {
                 let sym = sym.clone();
                 let p = p.clone();
-                async move { p.fetch_quote(&sym).await }
+                async move {
+                    p.as_quote()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Quote))?
+                        .fetch_quote(&sym)
+                        .await
+                }
             })
             .await?;
         {

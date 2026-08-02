@@ -1,41 +1,22 @@
 //! Financial Modeling Prep (FMP) provider implementation.
 
-use super::Provider;
+use super::{
+    CalendarProvider, ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider,
+    DiscoveryProvider, ForexProvider, FundamentalsProvider, IndicesProvider, MarketProvider,
+    Provider, ProviderAdapter, ProviderCore, QuoteProvider,
+};
 use crate::error::Result;
 
 pub(crate) struct FmpProvider;
 
-#[async_trait::async_trait]
-impl super::ProviderAdapter for FmpProvider {
+impl ProviderCore for FmpProvider {
     fn id(&self) -> Provider {
         Provider::Fmp
     }
-    fn capabilities(&self) -> super::Capability {
-        super::Capability::QUOTE
-            | super::Capability::CHART
-            | super::Capability::FUNDAMENTALS
-            | super::Capability::CORPORATE
-            | super::Capability::INDICES
-            | super::Capability::COMMODITIES
-            | super::Capability::FOREX
-            | super::Capability::CRYPTO
-            | super::Capability::DISCOVERY
-            | super::Capability::CALENDAR
-            | super::Capability::MARKET
-    }
+}
 
-    async fn initialize(&self) -> Result<()> {
-        let key = std::env::var("FMP_API_KEY").map_err(|_| {
-            crate::error::FinanceError::InvalidParameter {
-                param: "fmp".into(),
-                reason: "FMP_API_KEY not set. Set the environment variable or call fmp::init(key)."
-                    .into(),
-            }
-        })?;
-        let _ = crate::adapters::fmp::init(key);
-        Ok(())
-    }
-
+#[async_trait::async_trait]
+impl QuoteProvider for FmpProvider {
     async fn fetch_quote(
         &self,
         symbol: &str,
@@ -49,56 +30,10 @@ impl super::ProviderAdapter for FmpProvider {
     ) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
         crate::adapters::fmp::quote::fetch_canonical_quotes_batch(symbols).await
     }
+}
 
-    async fn fetch_symbol_search(
-        &self,
-        query: &str,
-        limit: u32,
-    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
-        crate::adapters::fmp::discovery::screener::fetch_symbol_search_response(query, limit).await
-    }
-
-    async fn fetch_screener(
-        &self,
-        filters: &crate::models::discovery::reference::ScreenerFilters,
-    ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
-        crate::adapters::fmp::discovery::screener::fetch_screener_response(filters).await
-    }
-
-    async fn fetch_market_calendar(
-        &self,
-        kind: crate::models::calendar::market::CalendarKind,
-        from: &str,
-        to: &str,
-    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
-        crate::adapters::fmp::market::calendars::fetch_market_calendar_response(kind, from, to)
-            .await
-    }
-
-    async fn fetch_sector_performance(
-        &self,
-    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
-        crate::adapters::fmp::market::market_performance::fetch_sector_performance_response().await
-    }
-
-    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
-        crate::adapters::fmp::market::market_performance::fetch_sector_pe_response().await
-    }
-
-    async fn fetch_industry_pe(
-        &self,
-    ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {
-        crate::adapters::fmp::market::market_performance::fetch_industry_pe_response().await
-    }
-
-    async fn fetch_market_movers(
-        &self,
-        direction: crate::models::market::performance::MoverDirection,
-    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
-        crate::adapters::fmp::market::market_performance::fetch_market_movers_response(direction)
-            .await
-    }
-
+#[async_trait::async_trait]
+impl ChartProvider for FmpProvider {
     async fn fetch_chart(
         &self,
         symbol: &str,
@@ -106,32 +41,7 @@ impl super::ProviderAdapter for FmpProvider {
         range: crate::TimeRange,
     ) -> Result<crate::models::chart::Chart> {
         let (from, to) = range_dates(range);
-
-        let candles: Vec<crate::models::chart::Candle> = match interval {
-            crate::Interval::OneDay
-            | crate::Interval::OneWeek
-            | crate::Interval::OneMonth
-            | crate::Interval::ThreeMonths => {
-                let params = crate::adapters::fmp::quote::HistoricalPriceParams {
-                    from: Some(from),
-                    to: Some(to),
-                };
-                crate::adapters::fmp::quote::fetch_daily_chart_candles(symbol, Some(params)).await?
-            }
-            _ => {
-                let interval_str = fmp_interval_str(interval);
-                let params = crate::adapters::fmp::quote::HistoricalPriceParams {
-                    from: Some(from),
-                    to: Some(to),
-                };
-                crate::adapters::fmp::quote::fetch_intraday_chart_candles(
-                    symbol,
-                    interval_str,
-                    Some(params),
-                )
-                .await?
-            }
-        };
+        let candles = fetch_candles(symbol, interval, from, to).await?;
 
         Ok(crate::models::chart::Chart {
             symbol: symbol.to_string(),
@@ -152,32 +62,7 @@ impl super::ProviderAdapter for FmpProvider {
     ) -> Result<crate::models::chart::Chart> {
         let from = timestamp_to_date_str(start);
         let to = timestamp_to_date_str(end);
-
-        let candles: Vec<crate::models::chart::Candle> = match interval {
-            crate::Interval::OneDay
-            | crate::Interval::OneWeek
-            | crate::Interval::OneMonth
-            | crate::Interval::ThreeMonths => {
-                let params = crate::adapters::fmp::quote::HistoricalPriceParams {
-                    from: Some(from),
-                    to: Some(to),
-                };
-                crate::adapters::fmp::quote::fetch_daily_chart_candles(symbol, Some(params)).await?
-            }
-            _ => {
-                let interval_str = fmp_interval_str(interval);
-                let params = crate::adapters::fmp::quote::HistoricalPriceParams {
-                    from: Some(from),
-                    to: Some(to),
-                };
-                crate::adapters::fmp::quote::fetch_intraday_chart_candles(
-                    symbol,
-                    interval_str,
-                    Some(params),
-                )
-                .await?
-            }
-        };
+        let candles = fetch_candles(symbol, interval, from, to).await?;
 
         Ok(crate::models::chart::Chart {
             symbol: symbol.to_string(),
@@ -188,7 +73,10 @@ impl super::ProviderAdapter for FmpProvider {
             provider_id: Some(Provider::Fmp),
         })
     }
+}
 
+#[async_trait::async_trait]
+impl FundamentalsProvider for FmpProvider {
     async fn fetch_financials(
         &self,
         symbol: &str,
@@ -214,16 +102,19 @@ impl super::ProviderAdapter for FmpProvider {
             data,
         ))
     }
+}
+
+#[async_trait::async_trait]
+impl CorporateProvider for FmpProvider {
+    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
+        crate::adapters::fmp::corporate::fetch_canonical_news(symbol, 50).await
+    }
 
     async fn fetch_events(
         &self,
         symbol: &str,
     ) -> Result<crate::models::chart::events::ChartEvents> {
         crate::adapters::fmp::corporate::fetch_canonical_events(symbol).await
-    }
-
-    async fn fetch_news(&self, symbol: &str) -> Result<Vec<crate::models::corporate::news::News>> {
-        crate::adapters::fmp::corporate::fetch_canonical_news(symbol, 50).await
     }
 
     async fn fetch_similar_symbols(
@@ -233,7 +124,68 @@ impl super::ProviderAdapter for FmpProvider {
     ) -> Result<Vec<crate::models::corporate::recommendation::SimilarSymbol>> {
         crate::adapters::fmp::quote::fetch_canonical_similar_symbols(symbol, limit).await
     }
+}
 
+#[async_trait::async_trait]
+impl DiscoveryProvider for FmpProvider {
+    async fn fetch_symbol_search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        crate::adapters::fmp::discovery::screener::fetch_symbol_search_response(query, limit).await
+    }
+
+    async fn fetch_screener(
+        &self,
+        filters: &crate::models::discovery::reference::ScreenerFilters,
+    ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
+        crate::adapters::fmp::discovery::screener::fetch_screener_response(filters).await
+    }
+}
+
+#[async_trait::async_trait]
+impl CalendarProvider for FmpProvider {
+    async fn fetch_market_calendar(
+        &self,
+        kind: crate::models::calendar::market::CalendarKind,
+        from: &str,
+        to: &str,
+    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+        crate::adapters::fmp::market::calendars::fetch_market_calendar_response(kind, from, to)
+            .await
+    }
+}
+
+#[async_trait::async_trait]
+impl MarketProvider for FmpProvider {
+    async fn fetch_sector_performance(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+        crate::adapters::fmp::market::market_performance::fetch_sector_performance_response().await
+    }
+
+    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
+        crate::adapters::fmp::market::market_performance::fetch_sector_pe_response().await
+    }
+
+    async fn fetch_industry_pe(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {
+        crate::adapters::fmp::market::market_performance::fetch_industry_pe_response().await
+    }
+
+    async fn fetch_market_movers(
+        &self,
+        direction: crate::models::market::performance::MoverDirection,
+    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        crate::adapters::fmp::market::market_performance::fetch_market_movers_response(direction)
+            .await
+    }
+}
+
+#[async_trait::async_trait]
+impl ForexProvider for FmpProvider {
     async fn fetch_forex_quote(
         &self,
         from: &str,
@@ -241,29 +193,115 @@ impl super::ProviderAdapter for FmpProvider {
     ) -> Result<crate::models::forex::ForexQuote> {
         crate::adapters::fmp::forex::fetch_canonical_forex_quote(from, to).await
     }
+}
 
+#[async_trait::async_trait]
+impl IndicesProvider for FmpProvider {
     async fn fetch_indices_quote(
         &self,
         symbol: &str,
     ) -> Result<crate::models::indices::IndexQuote> {
         crate::adapters::fmp::indices::fetch_canonical_index_quote(symbol).await
     }
+}
 
+#[async_trait::async_trait]
+impl CommoditiesProvider for FmpProvider {
     async fn fetch_commodities_quote(
         &self,
         symbol: &str,
     ) -> Result<crate::models::commodities::CommodityQuote> {
         crate::adapters::fmp::commodities::fetch_canonical_commodity_quote(symbol).await
     }
+}
 
-    // ── Crypto ─────────────────────────────────────────────────
-
+#[async_trait::async_trait]
+impl CryptoProvider for FmpProvider {
     async fn fetch_crypto_quote(
         &self,
         id: &str,
         vs_currency: &str,
     ) -> Result<crate::models::crypto::CryptoQuote> {
         crate::adapters::fmp::crypto::fetch_canonical_crypto_quote(id, vs_currency).await
+    }
+}
+
+#[async_trait::async_trait]
+impl ProviderAdapter for FmpProvider {
+    async fn initialize(&self) -> Result<()> {
+        let key = std::env::var("FMP_API_KEY").map_err(|_| {
+            crate::error::FinanceError::InvalidParameter {
+                param: "fmp".into(),
+                reason: "FMP_API_KEY not set. Set the environment variable or call fmp::init(key)."
+                    .into(),
+            }
+        })?;
+        let _ = crate::adapters::fmp::init(key);
+        Ok(())
+    }
+
+    fn as_quote(&self) -> Option<&dyn QuoteProvider> {
+        Some(self)
+    }
+    fn as_chart(&self) -> Option<&dyn ChartProvider> {
+        Some(self)
+    }
+    fn as_fundamentals(&self) -> Option<&dyn FundamentalsProvider> {
+        Some(self)
+    }
+    fn as_corporate(&self) -> Option<&dyn CorporateProvider> {
+        Some(self)
+    }
+    fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
+        Some(self)
+    }
+    fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
+        Some(self)
+    }
+    fn as_market(&self) -> Option<&dyn MarketProvider> {
+        Some(self)
+    }
+    fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
+        Some(self)
+    }
+    fn as_forex(&self) -> Option<&dyn ForexProvider> {
+        Some(self)
+    }
+    fn as_indices(&self) -> Option<&dyn IndicesProvider> {
+        Some(self)
+    }
+    fn as_commodities(&self) -> Option<&dyn CommoditiesProvider> {
+        Some(self)
+    }
+}
+
+/// Fetch daily or intraday candles for `[from, to]`, picking the endpoint by
+/// interval granularity.
+async fn fetch_candles(
+    symbol: &str,
+    interval: crate::Interval,
+    from: String,
+    to: String,
+) -> Result<Vec<crate::models::chart::Candle>> {
+    let params = crate::adapters::fmp::quote::HistoricalPriceParams {
+        from: Some(from),
+        to: Some(to),
+    };
+    match interval {
+        crate::Interval::OneDay
+        | crate::Interval::OneWeek
+        | crate::Interval::OneMonth
+        | crate::Interval::ThreeMonths => {
+            crate::adapters::fmp::quote::fetch_daily_chart_candles(symbol, Some(params)).await
+        }
+        _ => {
+            crate::adapters::fmp::quote::fetch_intraday_chart_candles(
+                symbol,
+                fmp_interval_str(interval),
+                Some(params),
+            )
+            .await
+        }
     }
 }
 
