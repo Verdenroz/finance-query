@@ -28,6 +28,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- `Capability` values combining several bits display as `"quote|chart"`
+  instead of `"unknown"`; `Capability::name()` keeps its documented
+  single-bit contract.
+- When no routed provider supports the specific operation, the error now
+  names that operation and the providers that could serve it
+  (`NotSupported`) instead of the generic capability-level
+  `NoProviderAvailable`.
 - Yahoo sessions are now shared per tokio runtime and client configuration.
   The `finance::*` functions and `Ticker`/`Tickers` construction reuse one
   authenticated session instead of running a fresh cookie + crumb handshake per
@@ -35,6 +42,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Three market-wide capabilities and handles on the Providers API (each needs
+  at least one of the `fmp`/`polygon`/`alphavantage` features):
+  `Capability::DISCOVERY` with `providers.discovery()` (symbol search,
+  reference data, exchanges, screeners), `Capability::CALENDAR` with
+  `providers.calendar()` (market-wide earnings/IPO/dividend/split/economic
+  calendars), and `Capability::MARKET` with `providers.market()`
+  (sector/industry performance and movers).
+- Batch quotes for FMP, Polygon, and Alpha Vantage. Routing `QUOTE` to a
+  non-Yahoo provider previously fell back to one request per symbol; a
+  10-symbol batch now costs one request instead of ten.
 - `TickerBuilder::no_cache()`, `TickersBuilder::no_cache()`, and `no_cache()`
   on the domain handles.
 - `backtesting::PositionExtremes` and `StrategyContext::extremes` — the highest
@@ -49,6 +66,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- `finance::hours()` no longer labels every region's market "U.S. markets".
+  Yahoo returns correct per-region session times but hardcodes the U.S.
+  label; the name (and its occurrence in the status message) is now derived
+  from the market id, so `region=JP` reads "Japanese markets".
 - `vwma` is computed with rolling sums instead of rescanning the window each
   bar. Results may differ from previous releases in the last few significant
   digits; a window whose volumes span extreme magnitudes is now rebuilt rather

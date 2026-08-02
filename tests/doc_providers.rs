@@ -29,6 +29,20 @@ fn _verify_provider_enum() {
 }
 
 // ---------------------------------------------------------------------------
+// Market-wide handles — compile-time factory verification
+// ---------------------------------------------------------------------------
+
+/// Verifies the market-wide factories and handle types documented in
+/// providers/index.md ("Three handles are market-wide...").
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+#[allow(dead_code)]
+fn _verify_market_wide_handles(providers: &finance_query::Providers) {
+    let _disco: finance_query::Discovery = providers.discovery();
+    let _cal: finance_query::MarketCalendar = providers.calendar();
+    let _mkt: finance_query::Market = providers.market();
+}
+
+// ---------------------------------------------------------------------------
 // Fetch — compile-time type checks
 // ---------------------------------------------------------------------------
 
