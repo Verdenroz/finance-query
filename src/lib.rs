@@ -208,7 +208,8 @@ pub use models::{
     discovery::search::SearchResults,
     discovery::trending::TrendingQuote,
     filings::{
-        CompanyFacts, EdgarSearchResults, EdgarSubmissions, ProviderFiling, ProviderFilings,
+        CompanyFacts, EdgarSearchResults, EdgarSubmissions, FilingSection, FilingSectionForm,
+        ProviderFiling, ProviderFilings, RiskFactor,
     },
     fundamentals::{FinancialStatement, ShareFloat, ShortInterest, ShortVolume},
     market::currencies::Currency,

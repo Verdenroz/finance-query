@@ -371,6 +371,10 @@ pub enum Operation {
     ShortVolume,
     /// Share float and shares outstanding.
     ShareFloat,
+    /// Sectioned text of an SEC filing.
+    FilingSections,
+    /// Risk factors extracted from SEC filings.
+    RiskFactors,
 }
 
 impl Operation {
@@ -410,6 +414,8 @@ impl Operation {
             Self::ShortInterest => "short_interest",
             Self::ShortVolume => "short_volume",
             Self::ShareFloat => "share_float",
+            Self::FilingSections => "filing_sections",
+            Self::RiskFactors => "risk_factors",
         }
     }
 
@@ -431,7 +437,7 @@ impl Operation {
             }
             Self::FuturesQuote => Capability::FUTURES,
             Self::CommoditiesQuote => Capability::COMMODITIES,
-            Self::Filings => Capability::FILINGS,
+            Self::Filings | Self::FilingSections | Self::RiskFactors => Capability::FILINGS,
             Self::SymbolSearch | Self::SymbolDetails | Self::Exchanges | Self::Screener => {
                 Capability::DISCOVERY
             }

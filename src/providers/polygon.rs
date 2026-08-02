@@ -180,6 +180,21 @@ impl FilingsProvider for PolygonProvider {
     async fn fetch_filings(&self, symbol: &str) -> Result<crate::models::filings::ProviderFilings> {
         polygon::fetch_filings_response(symbol).await
     }
+
+    async fn fetch_filing_sections(
+        &self,
+        accession_number: &str,
+        form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        polygon::fetch_filing_sections_response(accession_number, form).await
+    }
+
+    async fn fetch_risk_factors(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::filings::RiskFactor>> {
+        polygon::fetch_risk_factors_response(symbol).await
+    }
 }
 
 #[async_trait::async_trait]

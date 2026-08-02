@@ -51,6 +51,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   derives short interest (current + prior-month snapshots) and float from
   key statistics keylessly; Polygon adds the full history and daily short
   volume.
+- Filing text: `providers.filings("AAPL").sections(accession, form)` returns
+  the sectioned 10-K/8-K text of a filing and `.risk_factors()` the extracted
+  risk factors (Polygon; EDGAR still serves metadata).
 - Three market-wide capabilities and handles on the Providers API (each needs
   at least one of the `fmp`/`polygon`/`alphavantage` features):
   `Capability::DISCOVERY` with `providers.discovery()` (symbol search,

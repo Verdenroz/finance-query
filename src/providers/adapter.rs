@@ -145,6 +145,23 @@ pub(crate) trait OptionsProvider: ProviderCore {
 #[async_trait::async_trait]
 pub(crate) trait FilingsProvider: ProviderCore {
     async fn fetch_filings(&self, symbol: &str) -> Result<crate::models::filings::ProviderFilings>;
+
+    /// Fetch the sectioned text of one filing by accession number.
+    async fn fetch_filing_sections(
+        &self,
+        _accession_number: &str,
+        _form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        Err(self.not_supported(Operation::FilingSections))
+    }
+
+    /// Fetch risk factors extracted from a symbol's SEC filings.
+    async fn fetch_risk_factors(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::filings::RiskFactor>> {
+        Err(self.not_supported(Operation::RiskFactors))
+    }
 }
 
 // ── Capability traits (feature-gated) ───────────────────────────────
