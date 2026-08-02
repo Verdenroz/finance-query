@@ -134,6 +134,21 @@ pub struct StreamAggregate {
     pub z: Option<u64>,
 }
 
+/// A real-time index value message (`indices` cluster).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct StreamIndexValue {
+    /// Event type (e.g., `"V"`).
+    pub ev: Option<String>,
+    /// Index ticker (e.g., `"I:SPX"`). Sent as `T`, not `sym`, on this cluster.
+    #[serde(rename = "T")]
+    pub ticker: Option<String>,
+    /// Index value.
+    pub val: Option<f64>,
+    /// Timestamp (milliseconds).
+    pub t: Option<i64>,
+}
+
 /// A parsed WebSocket message from Polygon.
 #[derive(Debug, Clone)]
 pub enum PolygonMessage {
@@ -143,6 +158,8 @@ pub enum PolygonMessage {
     Quote(StreamQuote),
     /// Aggregate bar (per-second or per-minute).
     Aggregate(StreamAggregate),
+    /// Index value (`indices` cluster).
+    IndexValue(StreamIndexValue),
     /// Status/control message (auth, subscription confirmations).
     Status(serde_json::Value),
     /// Unknown/unparsed message.
@@ -170,6 +187,7 @@ impl PolygonStreamBuilder {
     /// - `Q.*` — Quotes (e.g., `"Q.AAPL"`)
     /// - `A.*` — Per-second aggregates (e.g., `"A.AAPL"`)
     /// - `AM.*` — Per-minute aggregates (e.g., `"AM.AAPL"`)
+    /// - `V.*` — Index values, `indices` cluster only (e.g., `"V.I:SPX"`)
     pub fn subscribe(mut self, channels: &[&str]) -> Self {
         self.subscriptions
             .extend(channels.iter().map(|s| s.to_string()));
@@ -309,6 +327,11 @@ fn parse_message(text: &str) -> PolygonMessage {
                     return PolygonMessage::Aggregate(agg);
                 }
             }
+            "V" => {
+                if let Ok(value) = serde_json::from_value(event) {
+                    return PolygonMessage::IndexValue(value);
+                }
+            }
             "status" => {
                 return PolygonMessage::Status(event);
             }
@@ -361,6 +384,26 @@ mod tests {
             }
             other => panic!("Expected Aggregate, got {:?}", other),
         }
+    }
+
+    #[test]
+    fn test_parse_index_value_message() {
+        let msg = r#"[{"ev":"V","val":3988.5,"T":"I:SPX","t":1678220098130}]"#;
+        match parse_message(msg) {
+            PolygonMessage::IndexValue(v) => {
+                assert_eq!(v.ev.as_deref(), Some("V"));
+                assert_eq!(v.ticker.as_deref(), Some("I:SPX"));
+                assert!((v.val.unwrap() - 3988.5).abs() < 0.01);
+                assert_eq!(v.t, Some(1678220098130));
+            }
+            other => panic!("Expected IndexValue, got {:?}", other),
+        }
+    }
+
+    #[test]
+    fn test_index_value_not_dropped_as_unknown() {
+        let msg = r#"[{"ev":"V","val":3988.5,"T":"I:SPX","t":1678220098130}]"#;
+        assert!(!matches!(parse_message(msg), PolygonMessage::Unknown(_)));
     }
 
     #[test]
