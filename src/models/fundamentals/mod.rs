@@ -7,6 +7,10 @@
 mod response;
 pub use response::FinancialStatement;
 
+// Short interest / short volume / share float (provider-routed)
+mod short_activity;
+pub use short_activity::{ShareFloat, ShortInterest, ShortVolume};
+
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod balance_sheet_history;
 pub(crate) mod cashflow_statement_history;

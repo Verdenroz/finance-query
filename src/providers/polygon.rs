@@ -64,6 +64,27 @@ impl FundamentalsProvider for PolygonProvider {
     ) -> Result<crate::models::fundamentals::FinancialStatement> {
         polygon::fetch_financials_response(symbol, stmt_type, frequency).await
     }
+
+    async fn fetch_short_interest(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+        polygon::fetch_short_interest_response(symbol).await
+    }
+
+    async fn fetch_short_volume(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+        polygon::fetch_short_volume_response(symbol).await
+    }
+
+    async fn fetch_share_float(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::ShareFloat> {
+        polygon::fetch_share_float_response(symbol).await
+    }
 }
 
 #[async_trait::async_trait]

@@ -124,8 +124,88 @@ impl ChartProvider for YahooProvider {
     }
 }
 
+/// Convert a Yahoo epoch timestamp to a `YYYY-MM-DD` date string.
+fn epoch_to_date(ts: i64) -> Option<String> {
+    chrono::DateTime::from_timestamp(ts, 0).map(|dt| dt.format("%Y-%m-%d").to_string())
+}
+
 #[async_trait::async_trait]
 impl FundamentalsProvider for YahooProvider {
+    /// Derived from `defaultKeyStatistics` rather than a dedicated endpoint:
+    /// Yahoo reports the current and prior-month settlement snapshots (with
+    /// `shortRatio` as days-to-cover), so the default keyless route serves
+    /// short interest without an API key. Route to Polygon for deeper history.
+    async fn fetch_short_interest(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        let stats = resp.default_key_statistics.ok_or_else(|| {
+            crate::error::FinanceError::ResponseStructureError {
+                field: "defaultKeyStatistics".into(),
+                context: format!("no key statistics returned for {symbol}"),
+            }
+        })?;
+
+        let mut out = Vec::new();
+        if let Some(shares) = stats.shares_short.as_ref().and_then(|v| v.raw) {
+            out.push(crate::models::fundamentals::ShortInterest {
+                settlement_date: stats
+                    .date_short_interest
+                    .as_ref()
+                    .and_then(|v| v.raw)
+                    .and_then(epoch_to_date),
+                short_interest: Some(shares as f64),
+                avg_daily_volume: None,
+                days_to_cover: stats.short_ratio.as_ref().and_then(|v| v.raw),
+            });
+        }
+        if let Some(shares) = stats.shares_short_prior_month.as_ref().and_then(|v| v.raw) {
+            out.push(crate::models::fundamentals::ShortInterest {
+                settlement_date: stats
+                    .shares_short_previous_month_date
+                    .as_ref()
+                    .and_then(|v| v.raw)
+                    .and_then(epoch_to_date),
+                short_interest: Some(shares as f64),
+                avg_daily_volume: None,
+                days_to_cover: None,
+            });
+        }
+        Ok(out)
+    }
+
+    /// Derived from `defaultKeyStatistics` (`floatShares` /
+    /// `sharesOutstanding`) rather than a dedicated endpoint.
+    async fn fetch_share_float(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::ShareFloat> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        let stats = resp.default_key_statistics.ok_or_else(|| {
+            crate::error::FinanceError::ResponseStructureError {
+                field: "defaultKeyStatistics".into(),
+                context: format!("no key statistics returned for {symbol}"),
+            }
+        })?;
+        Ok(crate::models::fundamentals::ShareFloat {
+            symbol: Some(symbol.to_string()),
+            float_shares: stats
+                .float_shares
+                .as_ref()
+                .and_then(|v| v.raw)
+                .map(|r| r as f64),
+            outstanding_shares: stats
+                .shares_outstanding
+                .as_ref()
+                .and_then(|v| v.raw)
+                .map(|r| r as f64),
+            date: None,
+        })
+    }
+
     async fn fetch_financials(
         &self,
         symbol: &str,

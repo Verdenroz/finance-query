@@ -365,6 +365,12 @@ pub enum Operation {
     IndexConstituents,
     /// Historical constituent changes of a major index.
     IndexConstituentChanges,
+    /// Short interest (settlement-date positions).
+    ShortInterest,
+    /// Daily short volume.
+    ShortVolume,
+    /// Share float and shares outstanding.
+    ShareFloat,
 }
 
 impl Operation {
@@ -401,6 +407,9 @@ impl Operation {
             Self::MarketMovers => "market_movers",
             Self::IndexConstituents => "index_constituents",
             Self::IndexConstituentChanges => "index_constituent_changes",
+            Self::ShortInterest => "short_interest",
+            Self::ShortVolume => "short_volume",
+            Self::ShareFloat => "share_float",
         }
     }
 
@@ -409,7 +418,9 @@ impl Operation {
         match self {
             Self::Quote | Self::QuotesBatch => Capability::QUOTE,
             Self::Chart | Self::ChartRange | Self::Spark => Capability::CHART,
-            Self::Financials => Capability::FUNDAMENTALS,
+            Self::Financials | Self::ShortInterest | Self::ShortVolume | Self::ShareFloat => {
+                Capability::FUNDAMENTALS
+            }
             Self::News | Self::Recommendations | Self::Events => Capability::CORPORATE,
             Self::Options => Capability::OPTIONS,
             Self::CryptoQuote => Capability::CRYPTO,

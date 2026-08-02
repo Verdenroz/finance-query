@@ -78,7 +78,7 @@ pub(crate) trait ChartProvider: ProviderCore {
     }
 }
 
-/// [`Capability::FUNDAMENTALS`] — financial statements.
+/// [`Capability::FUNDAMENTALS`] — financial statements and share-supply data.
 #[async_trait::async_trait]
 pub(crate) trait FundamentalsProvider: ProviderCore {
     async fn fetch_financials(
@@ -87,6 +87,30 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
         stmt_type: crate::StatementType,
         frequency: crate::Frequency,
     ) -> Result<crate::models::fundamentals::FinancialStatement>;
+
+    /// Fetch short-interest settlement reports, most recent first.
+    async fn fetch_short_interest(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+        Err(self.not_supported(Operation::ShortInterest))
+    }
+
+    /// Fetch daily short-volume data.
+    async fn fetch_short_volume(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+        Err(self.not_supported(Operation::ShortVolume))
+    }
+
+    /// Fetch share float and shares outstanding.
+    async fn fetch_share_float(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::ShareFloat> {
+        Err(self.not_supported(Operation::ShareFloat))
+    }
 }
 
 /// [`Capability::CORPORATE`] — news, corporate events, similar-symbol

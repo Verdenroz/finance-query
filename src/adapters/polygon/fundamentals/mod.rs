@@ -38,7 +38,6 @@ pub struct FinancialResultDTO {
 /// Short interest data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: short interest/volume/float land with #298
 pub struct ShortInterestDTO {
     /// Settlement date.
     pub settlement_date: Option<String>,
@@ -53,7 +52,6 @@ pub struct ShortInterestDTO {
 /// Short volume data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: short interest/volume/float land with #298
 pub struct ShortVolumeDTO {
     /// Date.
     pub date: Option<String>,
@@ -68,7 +66,6 @@ pub struct ShortVolumeDTO {
 /// Float data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: short interest/volume/float land with #298
 pub struct FloatDataDTO {
     /// Ticker symbol.
     pub ticker: Option<String>,
@@ -152,7 +149,6 @@ pub async fn fetch_financials_response(
 }
 
 /// Fetch short interest data for a stock ticker.
-#[allow(dead_code)] // unrouted: short interest/volume/float land with #298
 pub async fn stock_short_interest(
     ticker: &str,
     params: &[(&str, &str)],
@@ -166,7 +162,6 @@ pub async fn stock_short_interest(
 }
 
 /// Fetch short volume data for a stock ticker.
-#[allow(dead_code)] // unrouted: short interest/volume/float land with #298
 pub async fn stock_short_volume(
     ticker: &str,
     params: &[(&str, &str)],
@@ -177,11 +172,68 @@ pub async fn stock_short_volume(
 }
 
 /// Fetch float data for a stock ticker.
-#[allow(dead_code)] // unrouted: short interest/volume/float land with #298
 pub async fn stock_float(ticker: &str) -> Result<PaginatedResponseDTO<FloatDataDTO>> {
     let client = build_client()?;
     let path = format!("/v3/reference/float/{}", encode_path_segment(ticker));
     client.get(&path, &[]).await
+}
+
+/// Fetch canonical short-interest reports for a stock ticker.
+pub async fn fetch_short_interest_response(
+    symbol: &str,
+) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+    let paginated = stock_short_interest(symbol, &[("limit", "50")]).await?;
+    Ok(paginated
+        .results
+        .unwrap_or_default()
+        .into_iter()
+        .map(|d| crate::models::fundamentals::ShortInterest {
+            settlement_date: d.settlement_date,
+            short_interest: d.short_interest,
+            avg_daily_volume: d.avg_daily_volume,
+            days_to_cover: d.days_to_cover,
+        })
+        .collect())
+}
+
+/// Fetch canonical daily short-volume data for a stock ticker.
+pub async fn fetch_short_volume_response(
+    symbol: &str,
+) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+    let paginated = stock_short_volume(symbol, &[("limit", "50")]).await?;
+    Ok(paginated
+        .results
+        .unwrap_or_default()
+        .into_iter()
+        .map(|d| crate::models::fundamentals::ShortVolume {
+            date: d.date,
+            short_volume: d.short_volume,
+            short_exempt_volume: d.short_exempt_volume,
+            total_volume: d.total_volume,
+        })
+        .collect())
+}
+
+/// Fetch canonical share float / shares outstanding for a stock ticker.
+pub async fn fetch_share_float_response(
+    symbol: &str,
+) -> Result<crate::models::fundamentals::ShareFloat> {
+    let paginated = stock_float(symbol).await?;
+    let d = paginated
+        .results
+        .unwrap_or_default()
+        .into_iter()
+        .next()
+        .ok_or_else(|| crate::error::FinanceError::ResponseStructureError {
+            field: "results".into(),
+            context: format!("no float data returned for {symbol}"),
+        })?;
+    Ok(crate::models::fundamentals::ShareFloat {
+        symbol: d.ticker.or_else(|| Some(symbol.to_string())),
+        float_shares: d.float_shares,
+        outstanding_shares: d.outstanding_shares,
+        date: d.date,
+    })
 }
 
 #[cfg(test)]

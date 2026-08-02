@@ -210,7 +210,7 @@ pub use models::{
     filings::{
         CompanyFacts, EdgarSearchResults, EdgarSubmissions, ProviderFiling, ProviderFilings,
     },
-    fundamentals::FinancialStatement,
+    fundamentals::{FinancialStatement, ShareFloat, ShortInterest, ShortVolume},
     market::currencies::Currency,
     market::exchanges::Exchange,
     market::hours::MarketHours,
