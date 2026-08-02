@@ -42,6 +42,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Index constituents: `providers.index("^GSPC").constituents()` and
+  `.constituent_changes()` list the current members and membership history of
+  the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).
+  `MajorIndex::from_symbol` maps common symbol spellings.
 - Three market-wide capabilities and handles on the Providers API (each needs
   at least one of the `fmp`/`polygon`/`alphavantage` features):
   `Capability::DISCOVERY` with `providers.discovery()` (symbol search,

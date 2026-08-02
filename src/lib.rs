@@ -241,7 +241,7 @@ pub use models::forex::ForexQuote;
 #[cfg(feature = "polygon")]
 pub use models::futures::FuturesQuote;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
-pub use models::indices::IndexQuote;
+pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
 
 // ============================================================================
 // Nested types - Commonly accessed fields within response types

@@ -245,6 +245,22 @@ pub(crate) trait ForexProvider: ProviderCore {
 pub(crate) trait IndicesProvider: ProviderCore {
     async fn fetch_indices_quote(&self, symbol: &str)
     -> Result<crate::models::indices::IndexQuote>;
+
+    /// Fetch the current constituents of a major index.
+    async fn fetch_index_constituents(
+        &self,
+        _index: crate::models::indices::MajorIndex,
+    ) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+        Err(self.not_supported(Operation::IndexConstituents))
+    }
+
+    /// Fetch historical constituent changes of a major index.
+    async fn fetch_index_constituent_changes(
+        &self,
+        _index: crate::models::indices::MajorIndex,
+    ) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+        Err(self.not_supported(Operation::IndexConstituentChanges))
+    }
 }
 
 /// [`Capability::FUTURES`] — futures contract quotes.

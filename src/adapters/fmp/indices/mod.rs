@@ -34,7 +34,6 @@ pub async fn fetch_canonical_index_quote(
 /// A constituent of a major index (S&P 500, Nasdaq, Dow Jones).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: index constituents land with #297
 pub struct IndexConstituentDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -60,7 +59,6 @@ pub struct IndexConstituentDTO {
 /// A historical change in index constituency.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: index constituents land with #297
 pub struct HistoricalConstituentDTO {
     /// Date of the change.
     pub date: Option<String>,
@@ -80,35 +78,31 @@ pub struct HistoricalConstituentDTO {
 }
 
 /// Fetch real-time quotes for all major indexes.
-#[allow(dead_code)] // unrouted: index constituents land with #297
+#[allow(dead_code)] // unrouted: batch index quotes deliberately deferred (#297 optional)
 pub async fn major_indexes_quote() -> Result<Vec<FmpQuoteDTO>> {
     let client = build_client()?;
     client.get("/api/v3/quotes/index", &[]).await
 }
 
 /// Fetch current S&P 500 constituents.
-#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn sp500_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/sp500_constituent", &[]).await
 }
 
 /// Fetch current Nasdaq constituents.
-#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn nasdaq_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/nasdaq_constituent", &[]).await
 }
 
 /// Fetch current Dow Jones constituents.
-#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn dow_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/dowjones_constituent", &[]).await
 }
 
 /// Fetch historical S&P 500 constituent changes.
-#[allow(dead_code)] // unrouted: index constituents land with #297
 pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
     let client = build_client()?;
     client
@@ -116,9 +110,89 @@ pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
         .await
 }
 
+/// Convert a constituent DTO into the canonical model.
+fn constituent_to_canonical(c: IndexConstituentDTO) -> crate::models::indices::IndexConstituent {
+    crate::models::indices::IndexConstituent {
+        symbol: c.symbol.unwrap_or_default(),
+        name: c.name,
+        sector: c.sector,
+        sub_sector: c.sub_sector,
+        headquarters: c.head_quarter,
+        date_first_added: c.date_first_added,
+        cik: c.cik,
+        founded: c.founded,
+    }
+}
+
+/// Fetch canonical constituents for a major index.
+pub async fn fetch_index_constituents_response(
+    index: crate::models::indices::MajorIndex,
+) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+    use crate::models::indices::MajorIndex;
+    let dtos = match index {
+        MajorIndex::Sp500 => sp500_constituents().await?,
+        MajorIndex::Nasdaq100 => nasdaq_constituents().await?,
+        MajorIndex::DowJones => dow_constituents().await?,
+    };
+    Ok(dtos.into_iter().map(constituent_to_canonical).collect())
+}
+
+/// Fetch canonical historical constituent changes for a major index.
+///
+/// FMP publishes historical changes for the S&P 500 only.
+pub async fn fetch_index_constituent_changes_response(
+    index: crate::models::indices::MajorIndex,
+) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+    use crate::models::indices::MajorIndex;
+    let dtos = match index {
+        MajorIndex::Sp500 => historical_sp500().await?,
+        other => {
+            return Err(crate::error::FinanceError::InvalidParameter {
+                param: "index".into(),
+                reason: format!(
+                    "FMP provides historical constituent changes for the S&P 500 only, not {other}"
+                ),
+            });
+        }
+    };
+    Ok(dtos
+        .into_iter()
+        .map(|c| crate::models::indices::IndexConstituentChange {
+            date: c.date,
+            symbol: c.symbol,
+            added_security: c.added_security,
+            removed_ticker: c.removed_ticker,
+            removed_security: c.removed_security,
+            reason: c.reason,
+        })
+        .collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn constituent_maps_all_fields() {
+        let dto: IndexConstituentDTO = serde_json::from_value(serde_json::json!({
+            "symbol": "AAPL",
+            "name": "Apple Inc.",
+            "sector": "Information Technology",
+            "subSector": "Technology Hardware",
+            "headQuarter": "Cupertino, CA",
+            "dateFirstAdded": "1982-11-30",
+            "cik": "0000320193",
+            "founded": "1976"
+        }))
+        .unwrap();
+        let c = constituent_to_canonical(dto);
+        assert_eq!(c.symbol, "AAPL");
+        assert_eq!(c.sub_sector.as_deref(), Some("Technology Hardware"));
+        assert_eq!(c.headquarters.as_deref(), Some("Cupertino, CA"));
+        assert_eq!(c.date_first_added.as_deref(), Some("1982-11-30"));
+        assert_eq!(c.cik.as_deref(), Some("0000320193"));
+        assert_eq!(c.founded.as_deref(), Some("1976"));
+    }
 
     #[tokio::test]
     async fn test_sp500_constituents_mock() {

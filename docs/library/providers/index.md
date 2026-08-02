@@ -174,7 +174,7 @@ let mkt   = providers.market();      // → Market: sector performance, movers
 | `ForexPair` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `ForexQuote` · `Chart` |
 | `CryptoCoin` | `.quote(vs_currency)` · `.chart(vs_currency, interval, range)` · `.history(vs_currency, range)` | `CryptoQuote` · `Chart` |
 | `EconomicIndicator` | `.series()` | `EconomicSeries` |
-| `Index` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `IndexQuote` · `Chart` |
+| `Index` | `.quote()` · `.chart(interval, range)` · `.history(range)` · `.constituents()` · `.constituent_changes()` | `IndexQuote` · `Chart` · `Vec<IndexConstituent>` · `Vec<IndexConstituentChange>` |
 | `FuturesContract` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `FuturesQuote` · `Chart` |
 | `Commodity` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `CommodityQuote` · `Chart` |
 | `Filings` | `.get()` | `ProviderFilings` |

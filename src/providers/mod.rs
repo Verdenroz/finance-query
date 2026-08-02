@@ -361,6 +361,10 @@ pub enum Operation {
     SectorPerformance,
     /// Market movers — gainers, losers, most active.
     MarketMovers,
+    /// Current constituents of a major index.
+    IndexConstituents,
+    /// Historical constituent changes of a major index.
+    IndexConstituentChanges,
 }
 
 impl Operation {
@@ -395,6 +399,8 @@ impl Operation {
             Self::EconomicCalendar => "economic_calendar",
             Self::SectorPerformance => "sector_performance",
             Self::MarketMovers => "market_movers",
+            Self::IndexConstituents => "index_constituents",
+            Self::IndexConstituentChanges => "index_constituent_changes",
         }
     }
 
@@ -409,7 +415,9 @@ impl Operation {
             Self::CryptoQuote => Capability::CRYPTO,
             Self::EconomicSeries => Capability::ECONOMIC,
             Self::ForexQuote => Capability::FOREX,
-            Self::IndicesQuote => Capability::INDICES,
+            Self::IndicesQuote | Self::IndexConstituents | Self::IndexConstituentChanges => {
+                Capability::INDICES
+            }
             Self::FuturesQuote => Capability::FUTURES,
             Self::CommoditiesQuote => Capability::COMMODITIES,
             Self::Filings => Capability::FILINGS,

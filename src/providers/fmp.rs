@@ -203,6 +203,20 @@ impl IndicesProvider for FmpProvider {
     ) -> Result<crate::models::indices::IndexQuote> {
         crate::adapters::fmp::indices::fetch_canonical_index_quote(symbol).await
     }
+
+    async fn fetch_index_constituents(
+        &self,
+        index: crate::models::indices::MajorIndex,
+    ) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+        crate::adapters::fmp::indices::fetch_index_constituents_response(index).await
+    }
+
+    async fn fetch_index_constituent_changes(
+        &self,
+        index: crate::models::indices::MajorIndex,
+    ) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+        crate::adapters::fmp::indices::fetch_index_constituent_changes_response(index).await
+    }
 }
 
 #[async_trait::async_trait]
