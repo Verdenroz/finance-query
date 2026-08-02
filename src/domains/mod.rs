@@ -418,6 +418,8 @@ pub(crate) mod commodities;
     feature = "polygon"
 ))]
 pub(crate) mod crypto;
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub(crate) mod discovery;
 #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
 pub(crate) mod economic;
 pub(crate) mod filings;
@@ -427,6 +429,8 @@ pub(crate) mod forex;
 pub(crate) mod futures;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub(crate) mod indices;
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub(crate) mod market;
 
 // ── Re-exports ──────────────────────────────────────────────────────
 
@@ -439,6 +443,8 @@ pub use commodities::Commodity;
     feature = "polygon"
 ))]
 pub use crypto::CryptoCoin;
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub use discovery::Discovery;
 #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
 pub use economic::EconomicIndicator;
 pub use filings::Filings;
@@ -448,6 +454,8 @@ pub use forex::ForexPair;
 pub use futures::FuturesContract;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use indices::Index;
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub use market::{Market, MarketCalendar};
 
 // ── Tests ───────────────────────────────────────────────────────────
 

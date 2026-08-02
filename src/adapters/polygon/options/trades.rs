@@ -1,5 +1,4 @@
 //! Options trade and quote endpoints: last trade, historical trades, historical quotes.
-#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;

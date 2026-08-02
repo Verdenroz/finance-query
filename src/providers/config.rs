@@ -135,6 +135,34 @@ impl Providers {
         crate::domains::Commodity::with_providers(symbol.into().into(), Arc::clone(&self.set))
     }
 
+    /// Create a [`Discovery`](crate::Discovery) handle backed by this provider set.
+    ///
+    /// Routes symbol search, reference data, and screening through
+    /// [`Capability::DISCOVERY`](crate::Capability::DISCOVERY). Distinct from
+    /// [`crate::finance::search`], which is a Yahoo-only shortcut.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    pub fn discovery(&self) -> crate::domains::Discovery {
+        crate::domains::Discovery::with_providers(Arc::clone(&self.set))
+    }
+
+    /// Create a [`MarketCalendar`](crate::MarketCalendar) handle backed by this provider set.
+    ///
+    /// Routes market-wide earnings/IPO/dividend/split/economic calendars
+    /// through [`Capability::CALENDAR`](crate::Capability::CALENDAR).
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    pub fn calendar(&self) -> crate::domains::MarketCalendar {
+        crate::domains::MarketCalendar::with_providers(Arc::clone(&self.set))
+    }
+
+    /// Create a [`Market`](crate::Market) handle backed by this provider set.
+    ///
+    /// Routes sector/industry performance and movers through
+    /// [`Capability::MARKET`](crate::Capability::MARKET).
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    pub fn market(&self) -> crate::domains::Market {
+        crate::domains::Market::with_providers(Arc::clone(&self.set))
+    }
+
     /// Create a [`Filings`](crate::Filings) handle backed by this provider set.
     ///
     /// Always available — EDGAR is auto-injected when no other FILINGS provider

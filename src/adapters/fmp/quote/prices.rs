@@ -1,5 +1,4 @@
 //! FMP price and historical data endpoints.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -17,6 +16,7 @@ use crate::adapters::fmp::models::{
 /// Stock price change from FMP.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct StockPriceChangeDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -128,6 +128,25 @@ pub async fn fetch_canonical_quote(
     Ok(quote_to_canonical(symbol, &quotes))
 }
 
+/// Fetch canonical quote summaries for many symbols in one request.
+///
+/// FMP's `/api/v3/quote` accepts a comma-separated symbol list, so an N-symbol
+/// batch costs one request instead of N against the 250 req/day tier.
+pub async fn fetch_canonical_quotes_batch(
+    symbols: &[&str],
+) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
+    let quotes = batch_quote(symbols).await?;
+    Ok(quotes
+        .iter()
+        .map(|q| {
+            (
+                q.symbol.clone(),
+                quote_to_canonical(&q.symbol, std::slice::from_ref(q)),
+            )
+        })
+        .collect())
+}
+
 /// Convert historical daily price DTOs into canonical Chart candles.
 ///
 /// FMP serves newest-first; candles are returned ascending by timestamp, which
@@ -185,6 +204,7 @@ fn intraday_to_candles(intraday: Vec<IntradayPriceDTO>) -> Vec<crate::models::ch
 }
 
 /// Fetch canonical daily chart data with date range.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn fetch_daily_chart_canonical(
     symbol: &str,
     from: Option<&str>,
@@ -251,6 +271,7 @@ pub async fn batch_quote(symbols: &[&str]) -> Result<Vec<FmpQuoteDTO>> {
 }
 
 /// Fetch stock price change percentages for a symbol.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn stock_price(symbol: &str) -> Result<Vec<StockPriceChangeDTO>> {
     let client = crate::adapters::fmp::build_client()?;
     client

@@ -1,6 +1,5 @@
 //! Commodity price endpoints: oil, gas, metals, agriculture, and composite index.
 
-#![allow(dead_code)]
 use crate::error::{FinanceError, Result};
 
 use super::build_client;
@@ -69,56 +68,67 @@ pub(crate) async fn fetch_commodity(
 /// Fetch WTI crude oil prices.
 ///
 /// * `interval` - `None` for monthly (default), or `"daily"`, `"weekly"`, `"monthly"`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_wti(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("WTI", interval).await
 }
 
 /// Fetch Brent crude oil prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_brent(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("BRENT", interval).await
 }
 
 /// Fetch natural gas prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_natural_gas(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("NATURAL_GAS", interval).await
 }
 
 /// Fetch copper prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_copper(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("COPPER", interval).await
 }
 
 /// Fetch aluminum prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_aluminum(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("ALUMINUM", interval).await
 }
 
 /// Fetch wheat prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_wheat(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("WHEAT", interval).await
 }
 
 /// Fetch corn prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_corn(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("CORN", interval).await
 }
 
 /// Fetch cotton prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_cotton(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("COTTON", interval).await
 }
 
 /// Fetch sugar prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_sugar(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("SUGAR", interval).await
 }
 
 /// Fetch coffee prices.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_coffee(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("COFFEE", interval).await
 }
 
 /// Fetch the global commodities index.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_all_commodities(interval: Option<&str>) -> Result<CommoditySeriesDTO> {
     fetch_commodity("ALL_COMMODITIES", interval).await
 }

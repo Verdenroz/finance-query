@@ -1,5 +1,4 @@
 //! Crypto snapshot endpoints: all tickers, single ticker, top movers.
-#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
@@ -11,6 +10,7 @@ use super::super::models::*;
 /// Fetch snapshots for all crypto tickers.
 ///
 /// * `tickers` - Optional comma-separated list of tickers to filter (e.g., `"X:BTCUSD,X:ETHUSD"`)
+#[allow(dead_code)] // unrouted: cross-market snapshots routed by #244
 pub async fn crypto_snapshots_all(tickers: Option<&str>) -> Result<SnapshotsResponseDTO> {
     let client = build_client()?;
     let path = "/v2/snapshot/locale/global/markets/crypto/tickers";
@@ -85,6 +85,7 @@ fn snapshot_to_quote(ticker: String, resp: SingleSnapshotResponseDTO) -> CryptoQ
 /// Fetch top gainers or losers for crypto.
 ///
 /// * `direction` - `"gainers"` or `"losers"`
+#[allow(dead_code)] // unrouted: cross-market snapshots routed by #244
 pub async fn crypto_top_movers(direction: &str) -> Result<SnapshotsResponseDTO> {
     let client = build_client()?;
     let path = format!(

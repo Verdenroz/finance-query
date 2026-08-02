@@ -3,7 +3,6 @@
 //! Scaffolding — metadata-only endpoint. For live pricing, use
 //! `options::snapshots::options_chain_snapshot` which is wired through
 //! the Polygon provider's `fetch_options`.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -55,7 +54,7 @@ pub struct OptionsContractDTO {
 /// Response wrapper for a single options contract detail.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)]
+#[allow(dead_code)] // unrouted: options contract reference data has no capability route yet
 pub struct OptionsContractResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
@@ -71,6 +70,7 @@ pub struct OptionsContractResponseDTO {
 ///
 /// * `params` - Query params such as `underlying_ticker`, `contract_type`,
 ///   `expiration_date`, `strike_price`, `expired`, `order`, `limit`, `sort`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn options_contracts(
     params: &[(&str, &str)],
 ) -> Result<PaginatedResponseDTO<OptionsContractDTO>> {
@@ -82,7 +82,7 @@ pub async fn options_contracts(
 /// Fetch details for a single options contract.
 ///
 /// * `ticker` - Options ticker symbol with `O:` prefix (e.g., `"O:AAPL250117C00150000"`)
-#[allow(dead_code)]
+#[allow(dead_code)] // unrouted: options contract reference data has no capability route yet
 pub async fn options_contract_details(ticker: &str) -> Result<OptionsContractResponseDTO> {
     let client = build_client()?;
     let path = format!(

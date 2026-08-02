@@ -1,5 +1,4 @@
 //! Futures aggregate bar endpoints: OHLCV bars.
-#![allow(dead_code)]
 
 use crate::error::Result;
 

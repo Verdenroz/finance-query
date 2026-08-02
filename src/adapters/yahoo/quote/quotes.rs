@@ -29,7 +29,7 @@ use tracing::info;
 /// # Ok(())
 /// # }
 /// ```
-#[allow(dead_code)]
+#[allow(dead_code)] // raw-JSON variant kept alongside the typed fetch; no current caller
 pub(crate) async fn fetch(client: &YahooClient, symbols: &[&str]) -> Result<serde_json::Value> {
     crate::adapters::yahoo::common::validate_symbols(symbols)?;
 
@@ -80,7 +80,7 @@ pub(crate) async fn fetch(client: &YahooClient, symbols: &[&str]) -> Result<serd
 /// # Ok(())
 /// # }
 /// ```
-#[allow(dead_code)]
+#[allow(dead_code)] // field-filtered variant kept for callers needing partial quotes
 pub(crate) async fn fetch_with_fields(
     client: &YahooClient,
     symbols: &[&str],

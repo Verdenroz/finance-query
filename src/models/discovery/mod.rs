@@ -4,6 +4,9 @@
 
 /// Type-filtered symbol lookup.
 pub mod lookup;
+/// Provider-routed symbol reference data (search, details, exchanges, screener).
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub mod reference;
 /// Predefined and custom screeners.
 pub mod screeners;
 /// Full-text symbol and news search.

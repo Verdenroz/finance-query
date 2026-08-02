@@ -1,5 +1,4 @@
 //! Stock fundamental data: balance sheets, cash flow, income statements, ratios, short interest, float.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -39,6 +38,7 @@ pub struct FinancialResultDTO {
 /// Short interest data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct ShortInterestDTO {
     /// Settlement date.
     pub settlement_date: Option<String>,
@@ -53,6 +53,7 @@ pub struct ShortInterestDTO {
 /// Short volume data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct ShortVolumeDTO {
     /// Date.
     pub date: Option<String>,
@@ -67,6 +68,7 @@ pub struct ShortVolumeDTO {
 /// Float data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct FloatDataDTO {
     /// Ticker symbol.
     pub ticker: Option<String>,
@@ -81,6 +83,7 @@ pub struct FloatDataDTO {
 /// Financial ratios.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct FinancialRatiosDTO {
     /// Ticker.
     pub ticker: Option<String>,
@@ -165,6 +168,7 @@ pub async fn fetch_financials_response(
 }
 
 /// Fetch short interest data for a stock ticker.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn stock_short_interest(
     ticker: &str,
     params: &[(&str, &str)],
@@ -178,6 +182,7 @@ pub async fn stock_short_interest(
 }
 
 /// Fetch short volume data for a stock ticker.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn stock_short_volume(
     ticker: &str,
     params: &[(&str, &str)],
@@ -188,6 +193,7 @@ pub async fn stock_short_volume(
 }
 
 /// Fetch float data for a stock ticker.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn stock_float(ticker: &str) -> Result<PaginatedResponseDTO<FloatDataDTO>> {
     let client = build_client()?;
     let path = format!("/v3/reference/float/{}", encode_path_segment(ticker));
@@ -195,6 +201,7 @@ pub async fn stock_float(ticker: &str) -> Result<PaginatedResponseDTO<FloatDataD
 }
 
 /// Fetch financial ratios for a stock ticker.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn stock_ratios(
     ticker: &str,
     params: &[(&str, &str)],

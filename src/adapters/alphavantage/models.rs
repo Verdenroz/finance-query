@@ -1,5 +1,4 @@
 //! Shared types and deserialization helpers for Alpha Vantage responses.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Deserializer, Serialize};
 
@@ -7,7 +6,7 @@ use serde::{Deserialize, Deserializer, Serialize};
 ///
 /// Alpha Vantage returns numeric values as strings, and uses `"None"` or `"."`
 /// for missing data.
-#[allow(dead_code)]
+#[allow(dead_code)] // serde helper retained for DTOs whose endpoints are not yet routed
 pub(crate) fn deserialize_optional_f64<'de, D>(
     deserializer: D,
 ) -> std::result::Result<Option<f64>, D::Error>
@@ -22,7 +21,7 @@ where
 }
 
 /// Deserialize a string to `f64`, defaulting to `0.0` on failure.
-#[allow(dead_code)]
+#[allow(dead_code)] // serde helper retained for DTOs whose endpoints are not yet routed
 pub(crate) fn deserialize_f64_from_str<'de, D>(
     deserializer: D,
 ) -> std::result::Result<f64, D::Error>
@@ -39,6 +38,7 @@ where
 
 /// Time interval for Alpha Vantage time series and indicator requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // unrouted: variants unused until their endpoints are routed
 pub enum AvInterval {
     /// 1-minute intervals
     OneMin,
@@ -51,6 +51,7 @@ pub enum AvInterval {
     /// 60-minute intervals
     SixtyMin,
     /// Daily intervals
+    #[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
     Daily,
     /// Weekly intervals
     Weekly,
@@ -76,6 +77,7 @@ impl AvInterval {
 
 /// Price series type for technical indicator calculations.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub enum SeriesType {
     /// Close price
     Close,
@@ -89,6 +91,7 @@ pub enum SeriesType {
 
 impl SeriesType {
     /// Convert to the Alpha Vantage API parameter string.
+    #[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Close => "close",
@@ -101,8 +104,10 @@ impl SeriesType {
 
 /// Output size for time series requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // unrouted: variants unused until their endpoints are routed
 pub enum OutputSize {
     /// Returns the latest 100 data points (default).
+    #[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
     Compact,
     /// Returns up to 20+ years of historical data.
     Full,
@@ -143,6 +148,7 @@ pub struct TimeSeriesEntryDTO {
 /// A single adjusted OHLCV data point including dividend and split information.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct AdjustedTimeSeriesEntryDTO {
     /// Timestamp or date string
     pub timestamp: String,
@@ -179,6 +185,7 @@ pub struct TimeSeriesDTO {
 /// Adjusted time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct AdjustedTimeSeriesDTO {
     /// Symbol (e.g., `"AAPL"`)
     pub symbol: String,
@@ -251,6 +258,7 @@ pub struct BulkQuoteDTO {
 /// A single match result from a symbol search.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct SymbolMatchDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -279,6 +287,7 @@ pub struct SymbolMatchDTO {
 /// Status of a single market/exchange.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct MarketStatusDTO {
     /// Market type (e.g., `"Equity"`, `"Forex"`)
     pub market_type: String,
@@ -397,6 +406,7 @@ pub struct TickerSentimentDTO {
 /// Earnings call transcript.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EarningsCallTranscriptDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -409,6 +419,7 @@ pub struct EarningsCallTranscriptDTO {
 /// A top gainer, loser, or most actively traded ticker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct TopMoverTickerDTO {
     /// Ticker symbol
     pub ticker: String,
@@ -425,6 +436,7 @@ pub struct TopMoverTickerDTO {
 /// Top gainers, losers, and most actively traded tickers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct TopMoversDTO {
     /// Last updated timestamp
     pub last_updated: String,
@@ -443,6 +455,7 @@ pub struct TopMoversDTO {
 /// Company overview / profile.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct CompanyOverviewDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -527,6 +540,7 @@ pub struct CompanyOverviewDTO {
 /// ETF profile and holdings.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EtfProfileDTO {
     /// ETF symbol
     pub symbol: String,
@@ -551,6 +565,7 @@ pub struct EtfProfileDTO {
 /// A single ETF holding.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EtfHoldingDTO {
     /// Symbol of the held security
     pub symbol: Option<String>,
@@ -614,6 +629,7 @@ pub struct SplitEventDTO {
 /// Earnings data for a single quarter.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EarningsDataDTO {
     /// Fiscal date ending
     pub fiscal_date_ending: Option<String>,
@@ -632,6 +648,7 @@ pub struct EarningsDataDTO {
 /// Earnings history with annual and quarterly data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct EarningsHistoryDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -678,6 +695,7 @@ pub struct IpoCalendarEntryDTO {
 /// Listing status entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct ListingEntryDTO {
     /// Ticker symbol
     pub symbol: String,
@@ -724,6 +742,7 @@ pub struct ExchangeRateDTO {
 /// A single forex time series data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct ForexEntryDTO {
     /// Timestamp or date string
     pub timestamp: String,
@@ -740,6 +759,7 @@ pub struct ForexEntryDTO {
 /// Forex time series response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct ForexTimeSeriesDTO {
     /// Source currency code
     pub from_symbol: String,
@@ -850,6 +870,7 @@ pub struct EconomicSeriesDTO {
 /// A single technical indicator data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct IndicatorDataPointDTO {
     /// Timestamp or date string
     pub timestamp: String,
@@ -861,6 +882,7 @@ pub struct IndicatorDataPointDTO {
 /// Technical indicator response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct TechnicalIndicatorDTO {
     /// Indicator function name (e.g., `"SMA"`, `"RSI"`, `"MACD"`)
     pub indicator: String,

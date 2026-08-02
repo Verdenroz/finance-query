@@ -1,5 +1,4 @@
 //! Shared types for Polygon.io API responses.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -39,8 +38,10 @@ pub struct PaginatedResponseDTO<T> {
 
 /// Timespan unit for aggregate bar requests.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // unrouted: variants unused until their endpoints are routed
 pub enum Timespan {
     /// 1 second
+    #[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
     Second,
     /// 1 minute
     Minute,
@@ -76,8 +77,10 @@ impl Timespan {
 
 /// Sort direction for paginated results.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // unrouted: variants unused until their endpoints are routed
 pub enum Sort {
     /// Ascending (oldest first)
+    #[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
     Asc,
     /// Descending (newest first)
     Desc,
@@ -95,6 +98,7 @@ impl Sort {
 
 /// Order parameter for some endpoints.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub enum Order {
     /// Ascending
     Asc,
@@ -104,6 +108,7 @@ pub enum Order {
 
 impl Order {
     /// Convert to Polygon API parameter string.
+    #[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
     pub fn as_str(&self) -> &'static str {
         match self {
             Self::Asc => "asc",
@@ -418,6 +423,7 @@ pub struct SnapshotsResponseDTO {
 /// A single technical indicator data point.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct IndicatorValueDTO {
     /// Timestamp.
     pub timestamp: Option<i64>,
@@ -432,6 +438,7 @@ pub struct IndicatorValueDTO {
 /// Technical indicator response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct IndicatorResponseDTO {
     /// Response status.
     pub status: Option<String>,
@@ -446,6 +453,7 @@ pub struct IndicatorResponseDTO {
 /// Nested indicator results containing underlying data and values.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct IndicatorResultsDTO {
     /// Underlying aggregate bars.
     pub underlying: Option<IndicatorUnderlyingDTO>,
@@ -456,6 +464,7 @@ pub struct IndicatorResultsDTO {
 /// Underlying data for indicator responses.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: DTO for an endpoint with no capability route yet
 pub struct IndicatorUnderlyingDTO {
     /// Underlying aggregate bars URL.
     pub url: Option<String>,

@@ -1,6 +1,5 @@
 //! Insider trading, congressional trading, CIK mapping, and fail-to-deliver endpoints.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
@@ -51,6 +50,7 @@ pub struct InsiderTradeDTO {
 /// CIK mapping entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub struct CikMappingDTO {
     /// Reporting CIK.
     #[serde(rename = "reportingCik")]
@@ -69,6 +69,7 @@ pub struct CikMappingDTO {
 /// Fail-to-deliver record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub struct FailToDeliverDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -87,6 +88,7 @@ pub struct FailToDeliverDTO {
 /// Congressional/senate trading record.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub struct CongressionalTradeDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -135,6 +137,7 @@ pub async fn insider_trading(symbol: &str, limit: u32) -> Result<Vec<InsiderTrad
 }
 
 /// Fetch the insider trading RSS feed.
+#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
     let client = build_client()?;
     let limit_str = limit.to_string();
@@ -144,6 +147,7 @@ pub async fn insider_trading_rss(limit: u32) -> Result<Vec<InsiderTradeDTO>> {
 }
 
 /// Search CIK mappings by name.
+#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub async fn cik_mapper(name: &str) -> Result<Vec<CikMappingDTO>> {
     let client = build_client()?;
     client
@@ -152,6 +156,7 @@ pub async fn cik_mapper(name: &str) -> Result<Vec<CikMappingDTO>> {
 }
 
 /// Fetch CIK mapping by company name/identifier.
+#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub async fn cik_mapper_by_company(name: &str) -> Result<Vec<CikMappingDTO>> {
     let client = build_client()?;
     let path = format!("/api/v4/mapper-cik-company/{}", encode_path_segment(name));
@@ -159,6 +164,7 @@ pub async fn cik_mapper_by_company(name: &str) -> Result<Vec<CikMappingDTO>> {
 }
 
 /// Fetch fail-to-deliver data for a symbol.
+#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub async fn fail_to_deliver(symbol: &str) -> Result<Vec<FailToDeliverDTO>> {
     let client = build_client()?;
     client
@@ -167,6 +173,7 @@ pub async fn fail_to_deliver(symbol: &str) -> Result<Vec<FailToDeliverDTO>> {
 }
 
 /// Fetch congressional (senate) trading data for a symbol.
+#[allow(dead_code)] // unrouted: insider-transaction surface lands with #243/#264
 pub async fn congressional_trading(symbol: &str) -> Result<Vec<CongressionalTradeDTO>> {
     let client = build_client()?;
     client

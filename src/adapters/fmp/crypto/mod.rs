@@ -1,6 +1,5 @@
 //! Cryptocurrency endpoints for Financial Modeling Prep.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
@@ -71,6 +70,7 @@ pub async fn crypto_quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {
 }
 
 /// List all available cryptocurrency pairs.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn crypto_available() -> Result<Vec<AvailableSymbolDTO>> {
     let client = build_client()?;
     client
@@ -82,6 +82,7 @@ pub async fn crypto_available() -> Result<Vec<AvailableSymbolDTO>> {
 ///
 /// * `symbol` - e.g., `"BTCUSD"`
 /// * `params` - Optional query params such as `from`, `to`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn crypto_historical(
     symbol: &str,
     params: &[(&str, &str)],
@@ -99,6 +100,7 @@ pub async fn crypto_historical(
 /// * `symbol` - e.g., `"BTCUSD"`
 /// * `interval` - e.g., `"1min"`, `"5min"`, `"15min"`, `"30min"`, `"1hour"`, `"4hour"`
 /// * `params` - Optional query params such as `from`, `to`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn crypto_intraday(
     symbol: &str,
     interval: &str,

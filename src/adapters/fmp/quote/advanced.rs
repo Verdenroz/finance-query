@@ -1,6 +1,5 @@
 //! Advanced endpoints for Financial Modeling Prep (SIC codes, COT reports).
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;

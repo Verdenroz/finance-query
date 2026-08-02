@@ -1,6 +1,5 @@
 //! Commodities endpoints for Financial Modeling Prep.
 
-#![allow(dead_code)]
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
@@ -43,6 +42,7 @@ pub async fn commodity_quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {
 }
 
 /// List all available commodities.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_available() -> Result<Vec<AvailableSymbolDTO>> {
     let client = build_client()?;
     client
@@ -54,6 +54,7 @@ pub async fn commodity_available() -> Result<Vec<AvailableSymbolDTO>> {
 ///
 /// * `symbol` - e.g., `"GCUSD"`
 /// * `params` - Optional query params such as `from`, `to`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn commodity_historical(
     symbol: &str,
     params: &[(&str, &str)],

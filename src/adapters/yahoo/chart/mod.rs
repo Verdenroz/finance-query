@@ -47,7 +47,7 @@ fn chunk_permits() -> &'static tokio::sync::Semaphore {
 /// - 1h:         max age 728d, single request covers full window
 /// - 1d+:        no restriction
 // Test-only infrastructure — validates empirically determined Yahoo API limits.
-#[allow(dead_code)]
+#[allow(dead_code)] // kept for interval-limit lookups; no current caller
 pub(crate) fn intraday_limit(interval: Interval) -> Option<(i64, &'static [TimeRange])> {
     match interval {
         Interval::OneMinute => Some((29 * 24 * 3600, &[TimeRange::OneDay, TimeRange::FiveDays])),

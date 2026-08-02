@@ -1,6 +1,5 @@
 //! Economic indicator endpoints: GDP, CPI, Treasury yield, unemployment, etc.
 
-#![allow(dead_code)]
 use crate::error::{FinanceError, Result};
 
 use super::build_client;

@@ -1,5 +1,4 @@
 //! Futures reference data endpoints: contracts, products, schedules.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

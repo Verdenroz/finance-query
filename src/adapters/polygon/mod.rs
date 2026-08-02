@@ -35,10 +35,9 @@ mod discovery; // DISCOVERY
 mod economic; // ECONOMIC
 mod filings; // FILINGS
 mod fundamentals; // FUNDAMENTALS
-mod market; // MARKET
+#[allow(dead_code)] // unrouted: ETF Global partner data; ETF surface lands with #264
+mod market;
 mod quote; // QUOTE
-mod sentiment; // SENTIMENT
-mod technicals; // TECHNICALS
 
 // Asset-class subdirectory modules
 mod crypto; // CRYPTO
@@ -47,6 +46,7 @@ mod futures; // FUTURES
 mod indices; // INDICES
 mod options; // OPTIONS
 
+#[allow(dead_code)] // unrouted: PriceStream is Yahoo-backed; Polygon streaming lands with #247/#250
 pub(crate) mod websocket;
 
 use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
@@ -101,13 +101,13 @@ provider_build_client!(
 /// # Errors
 ///
 /// Returns [`FinanceError::InvalidParameter`] if already initialized.
-#[allow(dead_code)]
+#[allow(dead_code)] // public init path for direct adapter use; ProviderSet initialises via env var
 pub fn init(api_key: impl Into<String>) -> Result<()> {
     init_with_timeout(api_key, Duration::from_secs(30))
 }
 
 /// Initialize the Polygon client with a custom timeout.
-#[allow(dead_code)]
+#[allow(dead_code)] // public init path for direct adapter use; ProviderSet initialises via env var
 pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Result<()> {
     set_singleton(api_key, timeout)
 }

@@ -1,5 +1,4 @@
 //! TMX/Wall Street Horizon corporate events: earnings, dividends, conferences, splits.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 

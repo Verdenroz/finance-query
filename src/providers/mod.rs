@@ -140,6 +140,7 @@ impl Provider {
                     | Capability::INDICES
                     | Capability::FILINGS
                     | Capability::ECONOMIC
+                    | Capability::DISCOVERY
             }
             #[cfg(feature = "fmp")]
             Self::Fmp => {
@@ -151,6 +152,9 @@ impl Provider {
                     | Capability::COMMODITIES
                     | Capability::FOREX
                     | Capability::CRYPTO
+                    | Capability::DISCOVERY
+                    | Capability::CALENDAR
+                    | Capability::MARKET
             }
             #[cfg(feature = "alphavantage")]
             Self::AlphaVantage => {
@@ -206,13 +210,15 @@ impl Capability {
     pub const CORPORATE: Self = Self(1 << 3);
     /// Options chains and contract data.
     pub const OPTIONS: Self = Self(1 << 4);
-    // bit 5 reserved for future use
+    /// Symbol discovery — search, screeners, exchange and ticker reference data.
+    pub const DISCOVERY: Self = Self(1 << 5);
 
     /// Cryptocurrency quotes and market data.
     pub const CRYPTO: Self = Self(1 << 6);
     /// Macro-economic data series (FRED, GDP, CPI, etc.).
     pub const ECONOMIC: Self = Self(1 << 7);
-    // bit 8 reserved for future use
+    /// Market-wide calendars — earnings, IPOs, dividends, splits, economic events.
+    pub const CALENDAR: Self = Self(1 << 8);
 
     /// Foreign exchange currency pair quotes.
     pub const FOREX: Self = Self(1 << 9);
@@ -222,7 +228,8 @@ impl Capability {
     pub const FUTURES: Self = Self(1 << 11);
     /// Commodity price quotes (gold, oil, etc.).
     pub const COMMODITIES: Self = Self(1 << 12);
-    // bit 13 reserved for future use
+    /// Market-wide statistics — sector/industry performance and movers.
+    pub const MARKET: Self = Self(1 << 13);
 
     /// SEC EDGAR filing data.
     pub const FILINGS: Self = Self(1 << 14);
@@ -242,8 +249,11 @@ impl Capability {
             x if x == Self::FUNDAMENTALS.0 => "fundamentals",
             x if x == Self::CORPORATE.0 => "corporate",
             x if x == Self::OPTIONS.0 => "options",
+            x if x == Self::DISCOVERY.0 => "discovery",
             x if x == Self::CRYPTO.0 => "crypto",
             x if x == Self::ECONOMIC.0 => "economic",
+            x if x == Self::CALENDAR.0 => "calendar",
+            x if x == Self::MARKET.0 => "market",
             x if x == Self::FOREX.0 => "forex",
             x if x == Self::INDICES.0 => "indices",
             x if x == Self::FUTURES.0 => "futures",
@@ -325,6 +335,28 @@ pub enum Operation {
     CommoditiesQuote,
     /// SEC EDGAR filing data.
     Filings,
+    /// Symbol search by free-text query.
+    SymbolSearch,
+    /// Detailed reference data for one symbol.
+    SymbolDetails,
+    /// Tradable exchange listing.
+    Exchanges,
+    /// Screener query over the provider's universe.
+    Screener,
+    /// Market-wide earnings calendar.
+    EarningsCalendar,
+    /// Market-wide IPO calendar.
+    IpoCalendar,
+    /// Market-wide dividend calendar.
+    DividendCalendar,
+    /// Market-wide stock split calendar.
+    SplitCalendar,
+    /// Market-wide economic event calendar.
+    EconomicCalendar,
+    /// Sector and industry performance statistics.
+    SectorPerformance,
+    /// Market movers — gainers, losers, most active.
+    MarketMovers,
 }
 
 impl Operation {
@@ -348,6 +380,17 @@ impl Operation {
             Self::FuturesQuote => "futures_quote",
             Self::CommoditiesQuote => "commodities_quote",
             Self::Filings => "filings",
+            Self::SymbolSearch => "symbol_search",
+            Self::SymbolDetails => "symbol_details",
+            Self::Exchanges => "exchanges",
+            Self::Screener => "screener",
+            Self::EarningsCalendar => "earnings_calendar",
+            Self::IpoCalendar => "ipo_calendar",
+            Self::DividendCalendar => "dividend_calendar",
+            Self::SplitCalendar => "split_calendar",
+            Self::EconomicCalendar => "economic_calendar",
+            Self::SectorPerformance => "sector_performance",
+            Self::MarketMovers => "market_movers",
         }
     }
 
@@ -366,6 +409,15 @@ impl Operation {
             Self::FuturesQuote => Capability::FUTURES,
             Self::CommoditiesQuote => Capability::COMMODITIES,
             Self::Filings => Capability::FILINGS,
+            Self::SymbolSearch | Self::SymbolDetails | Self::Exchanges | Self::Screener => {
+                Capability::DISCOVERY
+            }
+            Self::EarningsCalendar
+            | Self::IpoCalendar
+            | Self::DividendCalendar
+            | Self::SplitCalendar
+            | Self::EconomicCalendar => Capability::CALENDAR,
+            Self::SectorPerformance | Self::MarketMovers => Capability::MARKET,
         }
     }
 }
@@ -468,6 +520,88 @@ pub(crate) trait ProviderAdapter: Send + Sync {
     /// (price module only) since batch endpoints don't return full quoteSummary data.
     async fn fetch_quotes_batch(&self, _: &[&str]) -> Result<Vec<(String, QuoteSummaryResponse)>> {
         Err(self.not_supported(Operation::QuotesBatch))
+    }
+
+    /// Search the provider's symbol universe by free-text query.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_symbol_search(
+        &self,
+        _: &str,
+        _: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        Err(self.not_supported(Operation::SymbolSearch))
+    }
+
+    /// Fetch detailed reference data for a single symbol.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_symbol_details(
+        &self,
+        _: &str,
+    ) -> Result<crate::models::discovery::reference::SymbolDetails> {
+        Err(self.not_supported(Operation::SymbolDetails))
+    }
+
+    /// Fetch the provider's tradable exchange listing.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_exchanges(
+        &self,
+    ) -> Result<Vec<crate::models::discovery::reference::ExchangeInfo>> {
+        Err(self.not_supported(Operation::Exchanges))
+    }
+
+    /// Run a screener query over the provider's universe.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_screener(
+        &self,
+        _: &crate::models::discovery::reference::ScreenerFilters,
+    ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
+        Err(self.not_supported(Operation::Screener))
+    }
+
+    /// Fetch a market-wide calendar over `[from, to]` (`YYYY-MM-DD` dates).
+    ///
+    /// One method rather than one per kind — providers serve all kinds from the
+    /// same calendar family, and `kind.operation()` still reports the precise
+    /// [`Operation`] in `NotSupported` errors.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_market_calendar(
+        &self,
+        kind: crate::models::calendar::market::CalendarKind,
+        _from: &str,
+        _to: &str,
+    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+        Err(self.not_supported(kind.operation()))
+    }
+
+    /// Fetch aggregate performance for every sector.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_sector_performance(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+        Err(self.not_supported(Operation::SectorPerformance))
+    }
+
+    /// Fetch sector price/earnings ratios.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
+        Err(self.not_supported(Operation::SectorPerformance))
+    }
+
+    /// Fetch industry price/earnings ratios.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_industry_pe(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {
+        Err(self.not_supported(Operation::SectorPerformance))
+    }
+
+    /// Fetch the market movers list for `direction`.
+    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    async fn fetch_market_movers(
+        &self,
+        _: crate::models::market::performance::MoverDirection,
+    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        Err(self.not_supported(Operation::MarketMovers))
     }
 
     /// Fetch lightweight sparkline data for multiple symbols in a single request.

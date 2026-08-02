@@ -1,6 +1,5 @@
 //! Forex (foreign exchange) endpoints: exchange rates and FX time series.
 
-#![allow(dead_code)]
 use crate::error::{FinanceError, Result};
 
 use super::build_client;
@@ -76,6 +75,7 @@ fn parse_exchange_rate(
 }
 
 /// Helper to parse FX time series responses.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 fn parse_fx_series(
     json: &serde_json::Value,
     from_symbol: &str,
@@ -129,6 +129,7 @@ fn parse_fx_series(
 }
 
 /// Fetch intraday FX time series.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn fx_intraday(
     from_symbol: &str,
     to_symbol: &str,
@@ -151,6 +152,7 @@ pub async fn fx_intraday(
 }
 
 /// Fetch daily FX time series.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn fx_daily(
     from_symbol: &str,
     to_symbol: &str,
@@ -168,6 +170,7 @@ pub async fn fx_daily(
 }
 
 /// Fetch weekly FX time series.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn fx_weekly(from_symbol: &str, to_symbol: &str) -> Result<ForexTimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -180,6 +183,7 @@ pub async fn fx_weekly(from_symbol: &str, to_symbol: &str) -> Result<ForexTimeSe
 }
 
 /// Fetch monthly FX time series.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn fx_monthly(from_symbol: &str, to_symbol: &str) -> Result<ForexTimeSeriesDTO> {
     let client = build_client()?;
     let json = client

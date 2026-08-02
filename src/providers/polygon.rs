@@ -24,6 +24,7 @@ impl super::ProviderAdapter for PolygonProvider {
             | super::Capability::INDICES
             | super::Capability::FILINGS
             | super::Capability::ECONOMIC
+            | super::Capability::DISCOVERY
     }
 
     async fn initialize(&self) -> Result<()> {
@@ -39,6 +40,34 @@ impl super::ProviderAdapter for PolygonProvider {
 
     async fn fetch_quote(&self, symbol: &str) -> Result<QuoteSummaryResponse> {
         polygon::fetch_quote_response(symbol).await
+    }
+
+    async fn fetch_quotes_batch(
+        &self,
+        symbols: &[&str],
+    ) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+        polygon::fetch_quotes_batch_response(symbols).await
+    }
+
+    async fn fetch_symbol_search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        polygon::fetch_symbol_search_response(query, limit).await
+    }
+
+    async fn fetch_symbol_details(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::discovery::reference::SymbolDetails> {
+        polygon::fetch_symbol_details_response(symbol).await
+    }
+
+    async fn fetch_exchanges(
+        &self,
+    ) -> Result<Vec<crate::models::discovery::reference::ExchangeInfo>> {
+        polygon::fetch_exchanges_response().await
     }
 
     async fn fetch_chart(

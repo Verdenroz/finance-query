@@ -1,6 +1,5 @@
 //! Analyst estimates, recommendations, earnings surprises, grades, and transcripts.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
@@ -84,6 +83,7 @@ pub struct AnalystRecommendationDTO {
 /// Earnings surprise entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub struct EarningsSurpriseDTO {
     /// Date.
     pub date: Option<String>,
@@ -100,6 +100,7 @@ pub struct EarningsSurpriseDTO {
 /// Stock grade entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub struct StockGradeDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -119,6 +120,7 @@ pub struct StockGradeDTO {
 /// Earnings call transcript entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub struct EarningsTranscriptDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -135,6 +137,7 @@ pub struct EarningsTranscriptDTO {
 /// Earnings transcript list entry (available transcripts).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub struct EarningsTranscriptRefDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -178,6 +181,7 @@ pub async fn analyst_recommendations(symbol: &str) -> Result<Vec<AnalystRecommen
 }
 
 /// Fetch earnings surprises for a symbol.
+#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn earnings_surprises(symbol: &str) -> Result<Vec<EarningsSurpriseDTO>> {
     let client = build_client()?;
     let path = format!("/api/v3/earnings-surprises/{}", encode_path_segment(symbol));
@@ -185,6 +189,7 @@ pub async fn earnings_surprises(symbol: &str) -> Result<Vec<EarningsSurpriseDTO>
 }
 
 /// Fetch stock grade history for a symbol.
+#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn stock_grade(symbol: &str, limit: u32) -> Result<Vec<StockGradeDTO>> {
     let client = build_client()?;
     let path = format!("/api/v3/grade/{}", encode_path_segment(symbol));
@@ -196,6 +201,7 @@ pub async fn stock_grade(symbol: &str, limit: u32) -> Result<Vec<StockGradeDTO>>
 ///
 /// * `quarter` - Quarter number (1-4)
 /// * `year` - Year (e.g., 2024)
+#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn earnings_transcript(
     symbol: &str,
     quarter: u32,
@@ -212,6 +218,7 @@ pub async fn earnings_transcript(
 }
 
 /// Fetch a list of available earnings transcripts for a symbol.
+#[allow(dead_code)] // unrouted: analyst-consensus rollups land with #241
 pub async fn earnings_transcript_list(symbol: &str) -> Result<Vec<EarningsTranscriptRefDTO>> {
     let client = build_client()?;
     client

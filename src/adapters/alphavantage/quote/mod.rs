@@ -1,5 +1,4 @@
 //! Core stock time series endpoints: intraday, daily, weekly, monthly, quotes, search, market status.
-#![allow(dead_code)]
 
 use crate::error::{FinanceError, Result};
 use crate::models::chart::{Candle, Chart};
@@ -45,6 +44,7 @@ fn parse_time_series(
 }
 
 /// Helper to parse adjusted OHLCV entries.
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 fn parse_adjusted_time_series(
     json: &serde_json::Value,
     series_key: &str,
@@ -160,6 +160,7 @@ pub async fn time_series_daily(
 }
 
 /// Fetch daily adjusted time series (includes dividends and splits).
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_daily_adjusted(
     symbol: &str,
     output_size: Option<OutputSize>,
@@ -182,6 +183,7 @@ pub async fn time_series_daily_adjusted(
 }
 
 /// Fetch weekly time series (raw, unadjusted).
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_weekly(symbol: &str) -> Result<TimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -197,6 +199,7 @@ pub async fn time_series_weekly(symbol: &str) -> Result<TimeSeriesDTO> {
 }
 
 /// Fetch weekly adjusted time series.
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_weekly_adjusted(symbol: &str) -> Result<AdjustedTimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -212,6 +215,7 @@ pub async fn time_series_weekly_adjusted(symbol: &str) -> Result<AdjustedTimeSer
 }
 
 /// Fetch monthly time series (raw, unadjusted).
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_monthly(symbol: &str) -> Result<TimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -227,6 +231,7 @@ pub async fn time_series_monthly(symbol: &str) -> Result<TimeSeriesDTO> {
 }
 
 /// Fetch monthly adjusted time series.
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn time_series_monthly_adjusted(symbol: &str) -> Result<AdjustedTimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -346,6 +351,7 @@ pub async fn realtime_bulk_quotes(symbols: &str) -> Result<Vec<BulkQuoteDTO>> {
 }
 
 /// Search for symbols matching the given keywords.
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn symbol_search(keywords: &str) -> Result<Vec<SymbolMatchDTO>> {
     let client = build_client()?;
     let json = client
@@ -379,6 +385,7 @@ pub async fn symbol_search(keywords: &str) -> Result<Vec<SymbolMatchDTO>> {
 }
 
 /// Fetch the current market status of major global exchanges.
+#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn market_status() -> Result<Vec<MarketStatusDTO>> {
     let client = build_client()?;
     let json = client.get("MARKET_STATUS", &[]).await?;
@@ -468,6 +475,57 @@ pub async fn fetch_quote_response(symbol: &str) -> Result<QuoteSummaryResponse> 
         price: Some(price),
         ..Default::default()
     })
+}
+
+/// Build a canonical quote response from one bulk-quote entry.
+fn bulk_quote_to_canonical(q: &BulkQuoteDTO) -> QuoteSummaryResponse {
+    let raw = |v: Option<f64>| {
+        v.map(|v| FormattedValue {
+            raw: Some(v),
+            fmt: None,
+            long_fmt: None,
+        })
+    };
+    let price = Price {
+        regular_market_price: raw(q.price),
+        regular_market_change: raw(q.change),
+        regular_market_change_percent: raw(q
+            .change_percent
+            .as_deref()
+            .and_then(|v| v.trim_end_matches('%').parse().ok())),
+        regular_market_volume: q.volume.map(|v| FormattedValue {
+            raw: Some(v as i64),
+            fmt: None,
+            long_fmt: None,
+        }),
+        regular_market_previous_close: raw(q.previous_close),
+        regular_market_open: raw(q.open),
+        regular_market_day_high: raw(q.high),
+        regular_market_day_low: raw(q.low),
+        ..Default::default()
+    };
+    QuoteSummaryResponse {
+        symbol: q.symbol.clone(),
+        price: Some(price),
+        ..Default::default()
+    }
+}
+
+/// Fetch canonical quote summaries for many symbols in one request.
+///
+/// Alpha Vantage's `REALTIME_BULK_QUOTES` takes up to 100 comma-separated
+/// symbols, so an N-symbol batch costs one request instead of N — material on
+/// the 25 req/day free tier. Note this endpoint is premium-only; on a free key
+/// it errors and `ProviderSet` falls back to per-symbol fetches.
+pub async fn fetch_quotes_batch_response(
+    symbols: &[&str],
+) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+    let joined = symbols.join(",");
+    let quotes = realtime_bulk_quotes(&joined).await?;
+    Ok(quotes
+        .iter()
+        .map(|q| (q.symbol.clone(), bulk_quote_to_canonical(q)))
+        .collect())
 }
 
 /// Fetch canonical Chart from a symbol with interval/range.

@@ -1,5 +1,4 @@
 //! FMP financial statement endpoints.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -541,6 +540,7 @@ pub async fn cash_flow(
 }
 
 /// Fetch income statements as reported for a symbol.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn income_statement_as_reported(
     symbol: &str,
     period: Period,
@@ -560,6 +560,7 @@ pub async fn income_statement_as_reported(
 }
 
 /// Fetch balance sheet statements as reported for a symbol.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn balance_sheet_as_reported(
     symbol: &str,
     period: Period,
@@ -579,6 +580,7 @@ pub async fn balance_sheet_as_reported(
 }
 
 /// Fetch cash flow statements as reported for a symbol.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn cash_flow_as_reported(
     symbol: &str,
     period: Period,
@@ -598,6 +600,7 @@ pub async fn cash_flow_as_reported(
 }
 
 /// Fetch full financial statement as reported for a symbol.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn full_financial_statement(
     symbol: &str,
     period: Period,

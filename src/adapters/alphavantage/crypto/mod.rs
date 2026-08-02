@@ -1,6 +1,5 @@
 //! Cryptocurrency endpoints: exchange rates and crypto time series.
 
-#![allow(dead_code)]
 use crate::error::{FinanceError, Result};
 
 use super::build_client;
@@ -88,6 +87,7 @@ fn parse_crypto_series(
 }
 
 /// Fetch intraday cryptocurrency time series.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn crypto_intraday(
     symbol: &str,
     market: &str,
@@ -122,6 +122,7 @@ pub async fn crypto_daily(symbol: &str, market: &str) -> Result<CryptoTimeSeries
 }
 
 /// Fetch weekly cryptocurrency time series.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn crypto_weekly(symbol: &str, market: &str) -> Result<CryptoTimeSeriesDTO> {
     let client = build_client()?;
     let json = client
@@ -134,6 +135,7 @@ pub async fn crypto_weekly(symbol: &str, market: &str) -> Result<CryptoTimeSerie
 }
 
 /// Fetch monthly cryptocurrency time series.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn crypto_monthly(symbol: &str, market: &str) -> Result<CryptoTimeSeriesDTO> {
     let client = build_client()?;
     let json = client

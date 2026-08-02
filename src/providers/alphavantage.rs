@@ -42,6 +42,13 @@ impl super::ProviderAdapter for AlphaVantageProvider {
         av::fetch_quote_response(symbol).await
     }
 
+    async fn fetch_quotes_batch(
+        &self,
+        symbols: &[&str],
+    ) -> Result<Vec<(String, QuoteSummaryResponse)>> {
+        av::fetch_quotes_batch_response(symbols).await
+    }
+
     async fn fetch_chart(
         &self,
         symbol: &str,

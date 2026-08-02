@@ -1,6 +1,5 @@
 //! Stock list and tradable symbol endpoints for Financial Modeling Prep.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::error::Result;
@@ -10,6 +9,7 @@ use crate::adapters::fmp::build_client;
 /// An entry from the stock/ETF list endpoints.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct StockListEntryDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -28,24 +28,28 @@ pub struct StockListEntryDTO {
 }
 
 /// Fetch the full list of stocks.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn symbols_list() -> Result<Vec<StockListEntryDTO>> {
     let client = build_client()?;
     client.get("/api/v3/stock/list", &[]).await
 }
 
 /// Fetch all tradable symbols.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn tradable_symbols_list() -> Result<Vec<StockListEntryDTO>> {
     let client = build_client()?;
     client.get("/api/v3/available-traded/list", &[]).await
 }
 
 /// Fetch the full list of ETFs.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn etf_list() -> Result<Vec<StockListEntryDTO>> {
     let client = build_client()?;
     client.get("/api/v3/etf/list", &[]).await
 }
 
 /// Fetch symbols that have financial statements available.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn financial_statement_symbols() -> Result<Vec<String>> {
     let client = build_client()?;
     client

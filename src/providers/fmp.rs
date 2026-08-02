@@ -19,6 +19,9 @@ impl super::ProviderAdapter for FmpProvider {
             | super::Capability::COMMODITIES
             | super::Capability::FOREX
             | super::Capability::CRYPTO
+            | super::Capability::DISCOVERY
+            | super::Capability::CALENDAR
+            | super::Capability::MARKET
     }
 
     async fn initialize(&self) -> Result<()> {
@@ -38,6 +41,62 @@ impl super::ProviderAdapter for FmpProvider {
         symbol: &str,
     ) -> Result<crate::models::quote::QuoteSummaryResponse> {
         crate::adapters::fmp::quote::fetch_canonical_quote(symbol).await
+    }
+
+    async fn fetch_quotes_batch(
+        &self,
+        symbols: &[&str],
+    ) -> Result<Vec<(String, crate::models::quote::QuoteSummaryResponse)>> {
+        crate::adapters::fmp::quote::fetch_canonical_quotes_batch(symbols).await
+    }
+
+    async fn fetch_symbol_search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        crate::adapters::fmp::discovery::screener::fetch_symbol_search_response(query, limit).await
+    }
+
+    async fn fetch_screener(
+        &self,
+        filters: &crate::models::discovery::reference::ScreenerFilters,
+    ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
+        crate::adapters::fmp::discovery::screener::fetch_screener_response(filters).await
+    }
+
+    async fn fetch_market_calendar(
+        &self,
+        kind: crate::models::calendar::market::CalendarKind,
+        from: &str,
+        to: &str,
+    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+        crate::adapters::fmp::market::calendars::fetch_market_calendar_response(kind, from, to)
+            .await
+    }
+
+    async fn fetch_sector_performance(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformance>> {
+        crate::adapters::fmp::market::market_performance::fetch_sector_performance_response().await
+    }
+
+    async fn fetch_sector_pe(&self) -> Result<Vec<crate::models::market::performance::SectorPe>> {
+        crate::adapters::fmp::market::market_performance::fetch_sector_pe_response().await
+    }
+
+    async fn fetch_industry_pe(
+        &self,
+    ) -> Result<Vec<crate::models::market::performance::IndustryPe>> {
+        crate::adapters::fmp::market::market_performance::fetch_industry_pe_response().await
+    }
+
+    async fn fetch_market_movers(
+        &self,
+        direction: crate::models::market::performance::MoverDirection,
+    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        crate::adapters::fmp::market::market_performance::fetch_market_movers_response(direction)
+            .await
     }
 
     async fn fetch_chart(

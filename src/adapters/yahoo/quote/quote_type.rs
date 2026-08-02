@@ -23,7 +23,7 @@ use tracing::info;
 /// # Ok(())
 /// # }
 /// ```
-#[allow(dead_code)]
+#[allow(dead_code)] // raw-JSON variant kept alongside the typed fetch; no current caller
 pub(crate) async fn fetch(client: &YahooClient, symbol: &str) -> Result<serde_json::Value> {
     crate::adapters::yahoo::common::validate_symbol(symbol)?;
 

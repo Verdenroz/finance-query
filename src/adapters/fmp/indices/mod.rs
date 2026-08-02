@@ -1,6 +1,5 @@
 //! Index endpoints for Financial Modeling Prep.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;
@@ -36,6 +35,7 @@ pub async fn fetch_canonical_index_quote(
 /// A constituent of a major index (S&P 500, Nasdaq, Dow Jones).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct IndexConstituentDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -61,6 +61,7 @@ pub struct IndexConstituentDTO {
 /// A historical change in index constituency.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct HistoricalConstituentDTO {
     /// Date of the change.
     pub date: Option<String>,
@@ -80,30 +81,35 @@ pub struct HistoricalConstituentDTO {
 }
 
 /// Fetch real-time quotes for all major indexes.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn major_indexes_quote() -> Result<Vec<FmpQuoteDTO>> {
     let client = build_client()?;
     client.get("/api/v3/quotes/index", &[]).await
 }
 
 /// Fetch current S&P 500 constituents.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn sp500_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/sp500_constituent", &[]).await
 }
 
 /// Fetch current Nasdaq constituents.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn nasdaq_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/nasdaq_constituent", &[]).await
 }
 
 /// Fetch current Dow Jones constituents.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn dow_constituents() -> Result<Vec<IndexConstituentDTO>> {
     let client = build_client()?;
     client.get("/api/v3/dowjones_constituent", &[]).await
 }
 
 /// Fetch historical S&P 500 constituent changes.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
     let client = build_client()?;
     client
@@ -115,6 +121,7 @@ pub async fn historical_sp500() -> Result<Vec<HistoricalConstituentDTO>> {
 ///
 /// * `symbol` - e.g., `"^GSPC"` (S&P 500)
 /// * `params` - Optional query params such as `from`, `to`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn index_historical(
     symbol: &str,
     params: &[(&str, &str)],

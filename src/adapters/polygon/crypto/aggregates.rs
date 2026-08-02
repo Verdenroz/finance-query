@@ -1,6 +1,5 @@
 //! Crypto aggregate bar endpoints: OHLCV bars, previous close, grouped daily, daily open/close.
 
-#![allow(dead_code)]
 use serde::{Deserialize, Serialize};
 
 use crate::adapters::common::encode_path_segment;

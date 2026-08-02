@@ -1,6 +1,5 @@
 //! Bulk and batch endpoints for Financial Modeling Prep.
 
-#![allow(dead_code)]
 use serde_json::Value;
 
 use crate::error::Result;

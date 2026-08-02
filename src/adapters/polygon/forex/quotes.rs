@@ -1,5 +1,4 @@
 //! Forex quote endpoints: last quote, historical quotes, currency conversion.
-#![allow(dead_code)]
 
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
@@ -42,6 +41,7 @@ pub struct ForexQuoteResponseDTO {
 /// Currency conversion last price data.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct ConversionLastDTO {
     /// Bid price.
     pub bid: Option<f64>,
@@ -56,6 +56,7 @@ pub struct ConversionLastDTO {
 /// Response for the currency conversion endpoint.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct CurrencyConversionDTO {
     /// Response status.
     pub status: Option<String>,
@@ -125,6 +126,7 @@ fn last_quote_to_canonical(from: &str, to: &str, resp: ForexQuoteResponseDTO) ->
 ///
 /// * `ticker` - Forex ticker symbol with `C:` prefix (e.g., `"C:EURUSD"`)
 /// * `params` - Optional query params: `timestamp`, `order`, `limit`, `sort`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn forex_quotes(
     ticker: &str,
     params: &[(&str, &str)],
@@ -141,6 +143,7 @@ pub async fn forex_quotes(
 /// * `from` - Base currency code (e.g., `"EUR"`)
 /// * `to` - QuoteDTO currency code (e.g., `"USD"`)
 /// * `amount` - Amount to convert
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn currency_conversion(
     from: &str,
     to: &str,

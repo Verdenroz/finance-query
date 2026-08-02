@@ -1,6 +1,5 @@
 //! Forex endpoints for Financial Modeling Prep.
 
-#![allow(dead_code)]
 use crate::adapters::common::encode_path_segment;
 use crate::error::Result;
 
@@ -50,6 +49,7 @@ pub async fn forex_quote(symbol: &str) -> Result<Vec<FmpQuoteDTO>> {
 }
 
 /// List all available forex currency pairs.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn forex_available() -> Result<Vec<AvailableSymbolDTO>> {
     let client = build_client()?;
     client
@@ -61,6 +61,7 @@ pub async fn forex_available() -> Result<Vec<AvailableSymbolDTO>> {
 ///
 /// * `symbol` - e.g., `"EURUSD"`
 /// * `params` - Optional query params such as `from`, `to`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn forex_historical(
     symbol: &str,
     params: &[(&str, &str)],
@@ -78,6 +79,7 @@ pub async fn forex_historical(
 /// * `symbol` - e.g., `"EURUSD"`
 /// * `interval` - e.g., `"1min"`, `"5min"`, `"15min"`, `"30min"`, `"1hour"`, `"4hour"`
 /// * `params` - Optional query params such as `from`, `to`
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn forex_intraday(
     symbol: &str,
     interval: &str,

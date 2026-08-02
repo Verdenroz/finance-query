@@ -49,7 +49,7 @@ pub struct Split {
 /// IPO event.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)]
+#[allow(dead_code)] // unrouted: IPO feed served by FMP via CALENDAR; Polygon route unused
 pub struct Ipo {
     /// Ticker symbol.
     pub ticker: Option<String>,
@@ -72,7 +72,7 @@ pub struct Ipo {
 /// Ticker event.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)]
+#[allow(dead_code)] // unrouted: ticker-event feed has no capability route yet
 pub struct TickerEventDTO {
     /// Event type.
     #[serde(rename = "type")]
@@ -86,7 +86,7 @@ pub struct TickerEventDTO {
 /// Ticker events response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)]
+#[allow(dead_code)] // unrouted: ticker-event feed has no capability route yet
 pub struct TickerEventsResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
@@ -111,14 +111,14 @@ pub async fn stock_splits(params: &[(&str, &str)]) -> Result<PaginatedResponseDT
 }
 
 /// Fetch IPO data.
-#[allow(dead_code)]
+#[allow(dead_code)] // unrouted: IPO feed served by FMP via CALENDAR; Polygon route unused
 pub async fn stock_ipos(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<Ipo>> {
     let client = build_client()?;
     client.get("/v1/reference/ipos", params).await
 }
 
 /// Fetch ticker events (name changes, mergers, etc.).
-#[allow(dead_code)]
+#[allow(dead_code)] // unrouted: ticker-event feed has no capability route yet
 pub async fn stock_ticker_events(ticker: &str) -> Result<TickerEventsResponseDTO> {
     let client = build_client()?;
     let path = format!("/vX/reference/tickers/{}/events", ticker);

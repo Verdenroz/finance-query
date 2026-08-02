@@ -2,7 +2,6 @@
 //!
 //! Market summary, sectors, industries, hours, currencies, exchanges, and index trends.
 
-/// Currency pair data.
 pub mod currencies;
 /// Exchange information.
 pub mod exchanges;
@@ -12,6 +11,10 @@ pub mod hours;
 pub mod industries;
 /// Market summary (indices, commodities, forex overview).
 pub mod market_summary;
+/// Currency pair data.
+/// Market-wide performance statistics routed through `Capability::MARKET`.
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+pub mod performance;
 /// Sector-level market data.
 pub mod sectors;
 

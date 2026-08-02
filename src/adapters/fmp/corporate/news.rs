@@ -1,5 +1,4 @@
 //! News endpoints: stock news, FMP articles, press releases, crypto news, forex news.
-#![allow(dead_code)]
 
 use serde::{Deserialize, Serialize};
 
@@ -36,6 +35,7 @@ pub struct StockNewsDTO {
 /// FMP article from their own editorial.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct FmpArticleDTO {
     /// Article title.
     pub title: Option<String>,
@@ -58,6 +58,7 @@ pub struct FmpArticleDTO {
 /// FMP articles response wrapper (paginated).
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct FmpArticlesResponseDTO {
     /// Content articles.
     pub content: Option<Vec<FmpArticleDTO>>,
@@ -70,6 +71,7 @@ pub struct FmpArticlesResponseDTO {
 /// Press release.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub struct PressReleaseDTO {
     /// Ticker symbol.
     pub symbol: Option<String>,
@@ -136,6 +138,7 @@ pub async fn stock_news(tickers: &str, limit: u32) -> Result<Vec<StockNewsDTO>> 
 ///
 /// * `page` - Page number (0-indexed)
 /// * `size` - Page size
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn fmp_articles(page: u32, size: u32) -> Result<FmpArticlesResponseDTO> {
     let client = build_client()?;
     let page_str = page.to_string();
@@ -149,6 +152,7 @@ pub async fn fmp_articles(page: u32, size: u32) -> Result<FmpArticlesResponseDTO
 }
 
 /// Fetch press releases for a symbol.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressReleaseDTO>> {
     let client = build_client()?;
     let path = format!("/api/v3/press-releases/{}", encode_path_segment(symbol));
@@ -157,6 +161,7 @@ pub async fn press_releases(symbol: &str, limit: u32) -> Result<Vec<PressRelease
 }
 
 /// Fetch crypto news.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
     let size_str = limit.to_string();
@@ -166,6 +171,7 @@ pub async fn crypto_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
 }
 
 /// Fetch forex news.
+#[allow(dead_code)] // unrouted: no capability route or consumer yet
 pub async fn forex_news(limit: u32) -> Result<Vec<StockNewsDTO>> {
     let client = build_client()?;
     let size_str = limit.to_string();
