@@ -1,7 +1,7 @@
 //! GraphQL type for real-time price streaming updates.
 
 use async_graphql::{Enum, InputObject, SimpleObject};
-use finance_query::streaming::{AlertCondition, AlertEvent, AlertRule, PriceUpdate};
+use finance_query::streaming::{AlertConditionKind, AlertEvent, AlertRule, PriceUpdate};
 use serde::Deserialize;
 
 /// A real-time price update from the streaming WebSocket, mirroring `PriceUpdate`.
@@ -85,6 +85,10 @@ impl From<PriceUpdate> for GqlPriceUpdate {
 }
 
 /// Threshold predicate for a price alert subscription.
+///
+/// Mirrors [`AlertConditionKind`] one-for-one; the `From` impls below are
+/// exhaustive both ways, so a new library predicate fails to compile here
+/// instead of silently degrading.
 #[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
 #[graphql(rename_items = "SCREAMING_SNAKE_CASE")]
 pub enum GqlAlertConditionKind {
@@ -119,21 +123,37 @@ pub struct GqlAlertRuleInput {
     pub repeat: bool,
 }
 
+impl From<GqlAlertConditionKind> for AlertConditionKind {
+    fn from(kind: GqlAlertConditionKind) -> Self {
+        match kind {
+            GqlAlertConditionKind::CrossesAbove => Self::CrossesAbove,
+            GqlAlertConditionKind::CrossesBelow => Self::CrossesBelow,
+            GqlAlertConditionKind::PriceAbove => Self::PriceAbove,
+            GqlAlertConditionKind::PriceBelow => Self::PriceBelow,
+            GqlAlertConditionKind::PercentChangeAbove => Self::PercentChangeAbove,
+            GqlAlertConditionKind::PercentChangeBelow => Self::PercentChangeBelow,
+            GqlAlertConditionKind::VolumeAbove => Self::VolumeAbove,
+        }
+    }
+}
+
+impl From<AlertConditionKind> for GqlAlertConditionKind {
+    fn from(kind: AlertConditionKind) -> Self {
+        match kind {
+            AlertConditionKind::CrossesAbove => Self::CrossesAbove,
+            AlertConditionKind::CrossesBelow => Self::CrossesBelow,
+            AlertConditionKind::PriceAbove => Self::PriceAbove,
+            AlertConditionKind::PriceBelow => Self::PriceBelow,
+            AlertConditionKind::PercentChangeAbove => Self::PercentChangeAbove,
+            AlertConditionKind::PercentChangeBelow => Self::PercentChangeBelow,
+            AlertConditionKind::VolumeAbove => Self::VolumeAbove,
+        }
+    }
+}
+
 impl From<GqlAlertRuleInput> for AlertRule {
     fn from(input: GqlAlertRuleInput) -> Self {
-        let condition = match input.condition {
-            GqlAlertConditionKind::CrossesAbove => AlertCondition::CrossesAbove(input.value),
-            GqlAlertConditionKind::CrossesBelow => AlertCondition::CrossesBelow(input.value),
-            GqlAlertConditionKind::PriceAbove => AlertCondition::PriceAbove(input.value),
-            GqlAlertConditionKind::PriceBelow => AlertCondition::PriceBelow(input.value),
-            GqlAlertConditionKind::PercentChangeAbove => {
-                AlertCondition::PercentChangeAbove(input.value)
-            }
-            GqlAlertConditionKind::PercentChangeBelow => {
-                AlertCondition::PercentChangeBelow(input.value)
-            }
-            GqlAlertConditionKind::VolumeAbove => AlertCondition::VolumeAbove(input.value as i64),
-        };
+        let condition = AlertConditionKind::from(input.condition).with_value(input.value);
         let rule = AlertRule::new(input.symbol, condition);
         if input.repeat { rule.repeating() } else { rule }
     }
@@ -163,11 +183,10 @@ pub struct GqlAlertEvent {
 
 impl From<AlertEvent> for GqlAlertEvent {
     fn from(event: AlertEvent) -> Self {
-        let (condition, threshold) = split_condition(event.condition);
         Self {
             symbol: event.symbol,
-            condition,
-            threshold,
+            condition: event.condition.kind().into(),
+            threshold: event.condition.threshold(),
             price: event.price,
             previous_price: event.previous_price,
             change_percent: event.change_percent,
@@ -177,26 +196,10 @@ impl From<AlertEvent> for GqlAlertEvent {
     }
 }
 
-/// Flatten the library's data-carrying condition into GraphQL's
-/// enum-plus-scalar shape.
-fn split_condition(condition: AlertCondition) -> (GqlAlertConditionKind, f64) {
-    match condition {
-        AlertCondition::CrossesAbove(v) => (GqlAlertConditionKind::CrossesAbove, v),
-        AlertCondition::CrossesBelow(v) => (GqlAlertConditionKind::CrossesBelow, v),
-        AlertCondition::PriceAbove(v) => (GqlAlertConditionKind::PriceAbove, v),
-        AlertCondition::PriceBelow(v) => (GqlAlertConditionKind::PriceBelow, v),
-        AlertCondition::PercentChangeAbove(v) => (GqlAlertConditionKind::PercentChangeAbove, v),
-        AlertCondition::PercentChangeBelow(v) => (GqlAlertConditionKind::PercentChangeBelow, v),
-        AlertCondition::VolumeAbove(v) => (GqlAlertConditionKind::VolumeAbove, v as f64),
-        // `AlertCondition` is #[non_exhaustive]; new variants degrade to a
-        // price-above alert rather than failing the subscription.
-        _ => (GqlAlertConditionKind::PriceAbove, 0.0),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
+    use finance_query::streaming::AlertCondition;
 
     fn input(condition: GqlAlertConditionKind, value: f64, repeat: bool) -> GqlAlertRuleInput {
         GqlAlertRuleInput {
@@ -224,7 +227,10 @@ mod tests {
         let rule: AlertRule = input(GqlAlertConditionKind::VolumeAbove, 1_000.0, false).into();
         assert_eq!(rule.condition, AlertCondition::VolumeAbove(1_000));
         assert_eq!(
-            split_condition(rule.condition),
+            (
+                GqlAlertConditionKind::from(rule.condition.kind()),
+                rule.condition.threshold()
+            ),
             (GqlAlertConditionKind::VolumeAbove, 1_000.0)
         );
     }

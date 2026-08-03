@@ -8,6 +8,7 @@ use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 use std::time::Duration;
 
+use futures::StreamExt;
 use tokio::sync::{RwLock, broadcast, mpsc};
 use tracing::warn;
 
@@ -19,7 +20,11 @@ use crate::streaming::options::{
 };
 use crate::streaming::source::{StreamCommand, StreamSource};
 
-use super::{AssetClass, run_polygon_session};
+use super::{AssetClass, SessionHandler, prune_symbols, run_polygon_session};
+
+/// Concurrent chain snapshots per refresh tick — Polygon's own rate limiter
+/// still paces the requests.
+const SNAPSHOT_CONCURRENCY: usize = 8;
 
 /// Live options-chain source backed by Polygon's options cluster.
 pub(crate) struct PolygonOptionsSource {
@@ -52,14 +57,13 @@ impl StreamSource<OptionContractUpdate> for PolygonOptionsSource {
             ))
         });
 
-        let mut merger = ContractMerger::default();
         let result = run_polygon_session(
             AssetClass::Options,
             AssetClass::Options.price_channels(),
             subscriptions,
             broadcast_tx,
             command_rx,
-            move |msg| merger.apply(msg).into_iter().collect(),
+            ContractMerger::default(),
         )
         .await;
 
@@ -77,6 +81,18 @@ pub(crate) struct ContractMerger {
     contracts: HashMap<String, OptionContractUpdate>,
 }
 
+impl SessionHandler<OptionContractUpdate> for ContractMerger {
+    fn on_event(&mut self, msg: PolygonMessage) -> Vec<OptionContractUpdate> {
+        self.apply(msg).into_iter().collect()
+    }
+
+    /// A wildcard subscription accumulates one entry per contract in the
+    /// chain — thousands per underlying if never pruned.
+    fn on_unsubscribe(&mut self, removed: &[String]) {
+        prune_symbols(&mut self.contracts, AssetClass::Options, removed);
+    }
+}
+
 impl ContractMerger {
     fn entry(&mut self, symbol: &str) -> Option<&mut OptionContractUpdate> {
         if !self.contracts.contains_key(symbol) {
@@ -91,8 +107,7 @@ impl ContractMerger {
     pub(crate) fn apply(&mut self, msg: PolygonMessage) -> Option<OptionContractUpdate> {
         match msg {
             PolygonMessage::Trade(trade) => {
-                let symbol = trade.symbol()?.to_string();
-                let contract = self.entry(&symbol)?;
+                let contract = self.entry(trade.symbol()?)?;
                 contract.last_price = trade.p.or(contract.last_price);
                 contract.last_size = trade.s.or(contract.last_size);
                 if let Some(t) = trade.t {
@@ -101,8 +116,7 @@ impl ContractMerger {
                 Some(contract.clone())
             }
             PolygonMessage::Quote(quote) => {
-                let symbol = quote.symbol()?.to_string();
-                let contract = self.entry(&symbol)?;
+                let contract = self.entry(quote.symbol()?)?;
                 contract.bid = quote.bp.or(contract.bid);
                 contract.ask = quote.ap.or(contract.ask);
                 contract.bid_size = quote.bs.or(contract.bid_size);
@@ -158,21 +172,31 @@ async fn refresh_snapshots(
         // Snapshot the set first — never hold the lock across the HTTP call.
         let subscribed: Vec<String> = subscriptions.read().await.iter().cloned().collect();
 
-        for underlying in underlyings(subscribed) {
-            match options_chain_snapshot(&underlying, &[("limit", "250")]).await {
-                Ok(page) => {
-                    for update in page
-                        .results
-                        .unwrap_or_default()
-                        .iter()
-                        .filter_map(snapshot_to_update)
-                    {
-                        let _ = broadcast_tx.send(update);
+        // Independent HTTP calls — serialising them would make one refresh
+        // tick take as long as the sum of every underlying's round-trip.
+        let sender = &broadcast_tx;
+        futures::stream::iter(underlyings(subscribed))
+            .map(|underlying| async move {
+                let page = options_chain_snapshot(&underlying, &[("limit", "250")]).await;
+                (underlying, page)
+            })
+            .buffer_unordered(SNAPSHOT_CONCURRENCY)
+            .for_each(|(underlying, page)| async move {
+                match page {
+                    Ok(page) => {
+                        for update in page
+                            .results
+                            .unwrap_or_default()
+                            .iter()
+                            .filter_map(snapshot_to_update)
+                        {
+                            let _ = sender.send(update);
+                        }
                     }
+                    Err(e) => warn!("options snapshot refresh failed for {underlying}: {e}"),
                 }
-                Err(e) => warn!("options snapshot refresh failed for {underlying}: {e}"),
-            }
-        }
+            })
+            .await;
     }
 }
 
@@ -292,6 +316,24 @@ mod tests {
         }))
         .expect("fixture should deserialize");
         assert!(snapshot_to_update(&dto).unwrap().greeks.is_none());
+    }
+
+    #[test]
+    fn unsubscribing_an_underlying_evicts_its_whole_chain() {
+        let mut merger = ContractMerger::default();
+        merger.apply(event(
+            r#"[{"ev":"T","sym":"O:AAPL250117C00150000","p":3.3,"t":1}]"#,
+        ));
+        merger.apply(event(
+            r#"[{"ev":"T","sym":"O:SPY261218P00512500","p":1.1,"t":2}]"#,
+        ));
+        assert_eq!(merger.contracts.len(), 2);
+
+        merger.on_unsubscribe(&["AAPL".to_string()]);
+        assert_eq!(
+            merger.contracts.keys().collect::<Vec<_>>(),
+            vec!["O:SPY261218P00512500"]
+        );
     }
 
     #[test]

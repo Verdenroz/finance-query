@@ -126,10 +126,25 @@ impl FredClient {
 
     /// Fetch all observations for a FRED series by ID (e.g., `"FEDFUNDS"`, `"CPIAUCSL"`).
     pub async fn series(&self, series_id: &str) -> Result<MacroSeries> {
+        self.observations(series_id, "").await
+    }
+
+    /// Fetch only the most recent observation for a series.
+    ///
+    /// Pollers reading one value would otherwise download the whole history.
+    pub async fn latest_observation(&self, series_id: &str) -> Result<Option<MacroObservation>> {
+        let series = self
+            .observations(series_id, "&sort_order=desc&limit=1")
+            .await?;
+        Ok(series.observations.into_iter().next())
+    }
+
+    /// Query `series/observations`, appending `extra` query parameters.
+    async fn observations(&self, series_id: &str, extra: &str) -> Result<MacroSeries> {
         self.limiter.acquire().await;
 
         let url = format!(
-            "{}/series/observations?series_id={series_id}&api_key={}&file_type=json",
+            "{}/series/observations?series_id={series_id}&api_key={}&file_type=json{extra}",
             self.base_url, self.api_key
         );
 

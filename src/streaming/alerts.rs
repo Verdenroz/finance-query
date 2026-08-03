@@ -6,14 +6,16 @@
 //! composes with any `Stream<Item = PriceUpdate>` (including a server-side
 //! shared hub stream) rather than being welded to one transport.
 
-use std::collections::{HashMap, VecDeque};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::pin::Pin;
+use std::str::FromStr;
 use std::task::{Context, Poll};
 
 use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 
 use super::pricing::PriceUpdate;
+use crate::error::FinanceError;
 
 /// A predicate over incoming price ticks.
 #[derive(Clone, Copy, Debug, PartialEq, Serialize, Deserialize)]
@@ -36,7 +38,111 @@ pub enum AlertCondition {
     VolumeAbove(i64),
 }
 
+/// Which predicate an [`AlertCondition`] applies, without its threshold.
+///
+/// Deliberately **exhaustive** (no `#[non_exhaustive]`): transports that
+/// project a condition onto a flat `kind` + `value` pair must fail to compile
+/// when a predicate is added, rather than silently degrading it.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum AlertConditionKind {
+    /// See [`AlertCondition::CrossesAbove`].
+    CrossesAbove,
+    /// See [`AlertCondition::CrossesBelow`].
+    CrossesBelow,
+    /// See [`AlertCondition::PriceAbove`].
+    PriceAbove,
+    /// See [`AlertCondition::PriceBelow`].
+    PriceBelow,
+    /// See [`AlertCondition::PercentChangeAbove`].
+    PercentChangeAbove,
+    /// See [`AlertCondition::PercentChangeBelow`].
+    PercentChangeBelow,
+    /// See [`AlertCondition::VolumeAbove`].
+    VolumeAbove,
+}
+
+impl AlertConditionKind {
+    /// Pair this predicate with a threshold to get a usable condition.
+    pub fn with_value(self, value: f64) -> AlertCondition {
+        match self {
+            Self::CrossesAbove => AlertCondition::CrossesAbove(value),
+            Self::CrossesBelow => AlertCondition::CrossesBelow(value),
+            Self::PriceAbove => AlertCondition::PriceAbove(value),
+            Self::PriceBelow => AlertCondition::PriceBelow(value),
+            Self::PercentChangeAbove => AlertCondition::PercentChangeAbove(value),
+            Self::PercentChangeBelow => AlertCondition::PercentChangeBelow(value),
+            Self::VolumeAbove => AlertCondition::VolumeAbove(value as i64),
+        }
+    }
+
+    /// Wire name of this predicate (`"crossesAbove"`, …).
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::CrossesAbove => "crossesAbove",
+            Self::CrossesBelow => "crossesBelow",
+            Self::PriceAbove => "priceAbove",
+            Self::PriceBelow => "priceBelow",
+            Self::PercentChangeAbove => "percentChangeAbove",
+            Self::PercentChangeBelow => "percentChangeBelow",
+            Self::VolumeAbove => "volumeAbove",
+        }
+    }
+}
+
+impl std::fmt::Display for AlertConditionKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
+impl FromStr for AlertConditionKind {
+    type Err = FinanceError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "crossesAbove" => Ok(Self::CrossesAbove),
+            "crossesBelow" => Ok(Self::CrossesBelow),
+            "priceAbove" => Ok(Self::PriceAbove),
+            "priceBelow" => Ok(Self::PriceBelow),
+            "percentChangeAbove" => Ok(Self::PercentChangeAbove),
+            "percentChangeBelow" => Ok(Self::PercentChangeBelow),
+            "volumeAbove" => Ok(Self::VolumeAbove),
+            other => Err(FinanceError::InvalidParameter {
+                param: "condition".to_string(),
+                reason: format!("unknown alert condition: {other}"),
+            }),
+        }
+    }
+}
+
 impl AlertCondition {
+    /// Which predicate this condition applies.
+    pub fn kind(&self) -> AlertConditionKind {
+        match *self {
+            Self::CrossesAbove(_) => AlertConditionKind::CrossesAbove,
+            Self::CrossesBelow(_) => AlertConditionKind::CrossesBelow,
+            Self::PriceAbove(_) => AlertConditionKind::PriceAbove,
+            Self::PriceBelow(_) => AlertConditionKind::PriceBelow,
+            Self::PercentChangeAbove(_) => AlertConditionKind::PercentChangeAbove,
+            Self::PercentChangeBelow(_) => AlertConditionKind::PercentChangeBelow,
+            Self::VolumeAbove(_) => AlertConditionKind::VolumeAbove,
+        }
+    }
+
+    /// Threshold this condition compares against.
+    pub fn threshold(&self) -> f64 {
+        match *self {
+            Self::CrossesAbove(t)
+            | Self::CrossesBelow(t)
+            | Self::PriceAbove(t)
+            | Self::PriceBelow(t)
+            | Self::PercentChangeAbove(t)
+            | Self::PercentChangeBelow(t) => t,
+            Self::VolumeAbove(t) => t as f64,
+        }
+    }
+
     /// Whether the condition holds for this tick.
     ///
     /// `previous` is the last price seen for the symbol; crossing conditions
@@ -122,17 +228,22 @@ struct RuleState {
 /// hub, for instance) can apply alerts without re-wrapping the stream.
 pub struct AlertEvaluator {
     rules: Vec<RuleState>,
+    /// Symbols any rule watches — a shared feed carries far more than these,
+    /// and untracked ids must not accumulate history.
+    watched: HashSet<String>,
     last_price: HashMap<String, f32>,
 }
 
 impl AlertEvaluator {
     /// Build an evaluator from a rule set.
     pub fn new(rules: impl IntoIterator<Item = AlertRule>) -> Self {
+        let rules: Vec<RuleState> = rules
+            .into_iter()
+            .map(|rule| RuleState { rule, armed: true })
+            .collect();
         Self {
-            rules: rules
-                .into_iter()
-                .map(|rule| RuleState { rule, armed: true })
-                .collect(),
+            watched: rules.iter().map(|s| s.rule.symbol.clone()).collect(),
+            rules,
             last_price: HashMap::new(),
         }
     }
@@ -157,6 +268,9 @@ impl AlertEvaluator {
 
     /// Feed one tick, returning the alerts it triggered.
     pub fn evaluate(&mut self, update: &PriceUpdate) -> Vec<AlertEvent> {
+        if !self.watched.contains(&update.id) {
+            return Vec::new();
+        }
         let previous = self.last_price.get(&update.id).copied();
         let mut fired = Vec::new();
 
@@ -184,7 +298,12 @@ impl AlertEvaluator {
         // Heartbeats and other priceless ticks must not poison the crossing
         // history with a zero.
         if update.price != 0.0 {
-            self.last_price.insert(update.id.clone(), update.price);
+            match self.last_price.get_mut(&update.id) {
+                Some(last) => *last = update.price,
+                None => {
+                    self.last_price.insert(update.id.clone(), update.price);
+                }
+            }
         }
         fired
     }
@@ -361,6 +480,50 @@ mod tests {
         // A heartbeat-style tick with no price must not reset the baseline.
         evaluator.evaluate(&tick("AAPL", 0.0));
         assert_eq!(evaluator.evaluate(&tick("AAPL", 151.0)).len(), 1);
+    }
+
+    #[test]
+    fn unwatched_symbols_leave_no_trace() {
+        let mut evaluator =
+            AlertEvaluator::new([AlertRule::new("AAPL", AlertCondition::CrossesAbove(150.0))]);
+        // A shared hub carries every symbol any client subscribed to.
+        assert!(evaluator.evaluate(&tick("TSLA", 400.0)).is_empty());
+        assert!(!evaluator.last_price.contains_key("TSLA"));
+    }
+
+    #[test]
+    fn conditions_project_onto_kind_and_threshold() {
+        for condition in [
+            AlertCondition::CrossesAbove(1.5),
+            AlertCondition::CrossesBelow(1.5),
+            AlertCondition::PriceAbove(1.5),
+            AlertCondition::PriceBelow(1.5),
+            AlertCondition::PercentChangeAbove(1.5),
+            AlertCondition::PercentChangeBelow(1.5),
+        ] {
+            let round_tripped = condition.kind().with_value(condition.threshold());
+            assert_eq!(round_tripped, condition);
+        }
+
+        let volume = AlertCondition::VolumeAbove(1_000);
+        assert_eq!(volume.kind(), AlertConditionKind::VolumeAbove);
+        assert_eq!(volume.kind().with_value(volume.threshold()), volume);
+    }
+
+    #[test]
+    fn condition_kinds_round_trip_through_their_wire_names() {
+        for kind in [
+            AlertConditionKind::CrossesAbove,
+            AlertConditionKind::CrossesBelow,
+            AlertConditionKind::PriceAbove,
+            AlertConditionKind::PriceBelow,
+            AlertConditionKind::PercentChangeAbove,
+            AlertConditionKind::PercentChangeBelow,
+            AlertConditionKind::VolumeAbove,
+        ] {
+            assert_eq!(kind.as_str().parse::<AlertConditionKind>().unwrap(), kind);
+        }
+        assert!("wat".parse::<AlertConditionKind>().is_err());
     }
 
     #[tokio::test]

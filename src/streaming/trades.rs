@@ -4,20 +4,14 @@
 //! tick; this stream pushes every individual print, which is what
 //! execution-quality and microstructure work needs.
 
-use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
 use std::time::Duration;
 
-use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 
 use super::client::StreamResult;
-use super::handle::SourceStream;
+use super::handle::{RECONNECT_BACKOFF, SourceStream, stream_builder, stream_handle};
 use super::polygon::{AssetClass, PolygonTradeSource};
-
-/// Reconnection backoff, matching [`PriceStream`](super::PriceStream).
-const RECONNECT_BACKOFF_SECS: u64 = 3;
 
 /// Channel capacity — trade prints are the highest-volume feed here.
 const CHANNEL_CAPACITY: usize = 4096;
@@ -50,29 +44,31 @@ impl TradeTick {
     }
 }
 
-/// A subscription to every trade print for the given symbols.
-///
-/// Requires the `polygon` feature and [`polygon::init`](crate::polygon::init).
-/// This is a companion to [`PriceStream`](super::PriceStream), not a
-/// replacement — most consumers want the coalesced tick.
-///
-/// # Example
-///
-/// ```no_run
-/// use finance_query::streaming::TradeStream;
-/// use futures::StreamExt;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let mut trades = TradeStream::subscribe(["AAPL"]).await?;
-///
-/// while let Some(trade) = trades.next().await {
-///     println!("{} {} @ {}", trade.symbol, trade.size, trade.price);
-/// }
-/// # Ok(())
-/// # }
-/// ```
-pub struct TradeStream {
-    inner: SourceStream<TradeTick>,
+stream_handle! {
+    /// A subscription to every trade print for the given symbols.
+    ///
+    /// Requires the `polygon` feature and [`polygon::init`](crate::polygon::init).
+    /// This is a companion to [`PriceStream`](super::PriceStream), not a
+    /// replacement — most consumers want the coalesced tick.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::streaming::TradeStream;
+    /// use futures::StreamExt;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut trades = TradeStream::subscribe(["AAPL"]).await?;
+    ///
+    /// while let Some(trade) = trades.next().await {
+    ///     println!("{} {} @ {}", trade.symbol, trade.size, trade.price);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    TradeStream(TradeTick);
+    add: add_symbols = "Add symbols to the subscription.",
+    remove: remove_symbols = "Remove symbols from the subscription.",
 }
 
 impl TradeStream {
@@ -83,44 +79,6 @@ impl TradeStream {
         I: IntoIterator<Item = S>,
     {
         TradeStreamBuilder::new().symbols(symbols).build().await
-    }
-
-    /// Create an independent receiver sharing this subscription's connection.
-    pub fn resubscribe(&self) -> Self {
-        TradeStream {
-            inner: self.inner.resubscribe(),
-        }
-    }
-
-    /// Add symbols to the subscription.
-    pub async fn add_symbols<S, I>(&self, symbols: I)
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.inner.add(symbols).await;
-    }
-
-    /// Remove symbols from the subscription.
-    pub async fn remove_symbols<S, I>(&self, symbols: I)
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.inner.remove(symbols).await;
-    }
-
-    /// Close the stream and disconnect.
-    pub async fn close(&self) {
-        self.inner.close().await;
-    }
-}
-
-impl Stream for TradeStream {
-    type Item = TradeTick;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Pin::new(&mut self.inner).poll_next(cx)
     }
 }
 
@@ -137,18 +95,8 @@ impl TradeStreamBuilder {
         Self {
             symbols: Vec::new(),
             asset_class: AssetClass::Stocks,
-            retry_delay: Duration::from_secs(RECONNECT_BACKOFF_SECS),
+            retry_delay: RECONNECT_BACKOFF,
         }
-    }
-
-    /// Add symbols to subscribe to.
-    pub fn symbols<S, I>(mut self, symbols: I) -> Self
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.symbols.extend(symbols.into_iter().map(Into::into));
-        self
     }
 
     /// Choose the asset class (default: [`AssetClass::Stocks`]).
@@ -157,12 +105,6 @@ impl TradeStreamBuilder {
     /// rejected at [`build`](Self::build).
     pub fn asset_class(mut self, class: AssetClass) -> Self {
         self.asset_class = class;
-        self
-    }
-
-    /// Set the delay between reconnection attempts (default: 3s).
-    pub fn retry(mut self, delay: Duration) -> Self {
-        self.retry_delay = delay;
         self
     }
 
@@ -180,11 +122,7 @@ impl TradeStreamBuilder {
     }
 }
 
-impl Default for TradeStreamBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+stream_builder!(TradeStreamBuilder, symbols = "Add symbols to subscribe to.");
 
 #[cfg(test)]
 mod tests {

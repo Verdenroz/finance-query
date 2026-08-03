@@ -42,13 +42,21 @@ use axum::{
     },
     response::IntoResponse,
 };
-use finance_query::streaming::{AlertCondition, AlertEvaluator, AlertRule};
-use finance_query_server::{AppState, metrics};
+use finance_query::FinanceError;
+use finance_query::streaming::{AlertConditionKind, AlertEvaluator, AlertEvent, AlertRule};
+use finance_query_server::{AppState, SharedTick, StreamHub, TickStream, metrics};
+use futures_util::stream::{SplitSink, SplitStream};
 use futures_util::{SinkExt, StreamExt};
 use serde::Deserialize;
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::fmt::Display;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex, RwLock};
+use tokio::sync::mpsc;
 use tracing::{error, info, warn};
+
+/// Outbound control-message channel depth.
+const OUTBOUND_CAPACITY: usize = 32;
 
 /// Stream command from client
 #[derive(Debug, Deserialize)]
@@ -72,17 +80,11 @@ struct WsAlertRule {
 
 impl WsAlertRule {
     fn parse(&self) -> Result<AlertRule, String> {
-        let condition = match self.condition.as_str() {
-            "crossesAbove" => AlertCondition::CrossesAbove(self.value),
-            "crossesBelow" => AlertCondition::CrossesBelow(self.value),
-            "priceAbove" => AlertCondition::PriceAbove(self.value),
-            "priceBelow" => AlertCondition::PriceBelow(self.value),
-            "percentChangeAbove" => AlertCondition::PercentChangeAbove(self.value),
-            "percentChangeBelow" => AlertCondition::PercentChangeBelow(self.value),
-            "volumeAbove" => AlertCondition::VolumeAbove(self.value as i64),
-            other => return Err(format!("unknown alert condition: {other}")),
-        };
-        let rule = AlertRule::new(self.symbol.clone(), condition);
+        let kind: AlertConditionKind = self
+            .condition
+            .parse()
+            .map_err(|e: FinanceError| e.to_string())?;
+        let rule = AlertRule::new(self.symbol.clone(), kind.with_value(self.value));
         Ok(if self.repeat { rule.repeating() } else { rule })
     }
 }
@@ -90,6 +92,109 @@ impl WsAlertRule {
 /// Turn wire rules into library rules, reporting the first bad condition.
 fn parse_rules(rules: &[WsAlertRule]) -> Result<Vec<AlertRule>, String> {
     rules.iter().map(WsAlertRule::parse).collect()
+}
+
+/// One `{"error": ...}` frame.
+fn error_msg(e: impl Display) -> Message {
+    Message::Text(
+        serde_json::json!({ "error": e.to_string() })
+            .to_string()
+            .into(),
+    )
+}
+
+/// Per-connection state shared by this client's send and receive tasks.
+///
+/// The locks are `std`, not `tokio`: no guard is ever held across an `await`,
+/// so an async lock would add waker bookkeeping to the per-tick delivery path
+/// for nothing.
+struct ClientState {
+    subscriptions: RwLock<HashSet<String>>,
+    evaluator: Mutex<Option<AlertEvaluator>>,
+    /// Mirrors `evaluator.is_some()` so delivery skips the lock entirely for
+    /// the common case of a client with no rules.
+    has_rules: AtomicBool,
+}
+
+impl ClientState {
+    fn new(symbols: &[String], rules: Option<Vec<AlertRule>>) -> Self {
+        Self {
+            subscriptions: RwLock::new(symbols.iter().cloned().collect()),
+            has_rules: AtomicBool::new(rules.is_some()),
+            evaluator: Mutex::new(rules.map(AlertEvaluator::new)),
+        }
+    }
+
+    fn wants(&self, symbol: &str) -> bool {
+        self.subscriptions
+            .read()
+            .expect("subscription lock poisoned")
+            .contains(symbol)
+    }
+
+    fn len(&self) -> usize {
+        self.subscriptions
+            .read()
+            .expect("subscription lock poisoned")
+            .len()
+    }
+
+    fn snapshot(&self) -> Vec<String> {
+        self.subscriptions
+            .read()
+            .expect("subscription lock poisoned")
+            .iter()
+            .cloned()
+            .collect()
+    }
+
+    /// Add `symbols`, returning only those not already subscribed.
+    fn add(&self, symbols: Vec<String>) -> Vec<String> {
+        let mut subs = self
+            .subscriptions
+            .write()
+            .expect("subscription lock poisoned");
+        symbols
+            .into_iter()
+            .filter(|s| subs.insert(s.clone()))
+            .collect()
+    }
+
+    /// Remove `symbols`, returning only those that were actually subscribed.
+    fn remove(&self, symbols: Vec<String>) -> Vec<String> {
+        let mut subs = self
+            .subscriptions
+            .write()
+            .expect("subscription lock poisoned");
+        symbols.into_iter().filter(|s| subs.remove(s)).collect()
+    }
+
+    fn extend(&self, symbols: Vec<String>) {
+        self.subscriptions
+            .write()
+            .expect("subscription lock poisoned")
+            .extend(symbols);
+    }
+
+    /// Install a rule set; an empty one reverts the socket to raw ticks.
+    fn set_rules(&self, rules: Vec<AlertRule>) {
+        let mut guard = self.evaluator.lock().expect("evaluator lock poisoned");
+        *guard = (!rules.is_empty()).then(|| AlertEvaluator::new(rules));
+        // Flagged under the lock, so a reader that sees `true` finds the rules.
+        self.has_rules.store(guard.is_some(), Ordering::Release);
+    }
+
+    /// Alerts this tick fired, or `None` when the client wants raw ticks.
+    fn evaluate(&self, tick: &SharedTick) -> Option<Vec<AlertEvent>> {
+        if !self.has_rules.load(Ordering::Acquire) {
+            return None;
+        }
+        self.evaluator
+            .lock()
+            .expect("evaluator lock poisoned")
+            .as_mut()
+            .map(|e| e.evaluate(tick.update()))
+    }
 }
 
 /// RAII guard to decrement WebSocket connection count on drop
@@ -116,257 +221,221 @@ async fn handle_stream_socket(state: AppState, mut socket: WebSocket) {
     let _guard = ConnectionGuard; // Ensures connection count is decremented on exit
     info!("New streaming WebSocket connection");
 
-    // Wait for the initial subscribe/alerts message
-    let (symbols, initial_rules) = match wait_for_subscription(&mut socket).await {
-        Some(start) => {
-            metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
-            start
-        }
-        None => {
-            warn!("WebSocket closed before subscription");
-            return;
-        }
+    let Some((symbols, initial_rules)) = wait_for_subscription(&mut socket).await else {
+        warn!("WebSocket closed before subscription");
+        return;
     };
-
-    let evaluator = Arc::new(tokio::sync::Mutex::new(
-        initial_rules.map(AlertEvaluator::new),
-    ));
-
+    metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
     info!("Starting stream for symbols: {:?}", symbols);
     metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(symbols.len() as f64);
 
-    // Ref-counted subscribe (shared upstream stream).
-    if let Err(e) = state.stream_hub.subscribe_symbols(&symbols).await {
-        error!("Failed to create shared price stream: {}", e);
-        let _ = socket
-            .send(Message::Text(
-                serde_json::json!({"error": e.to_string()})
-                    .to_string()
-                    .into(),
-            ))
-            .await;
+    let Some(hub_stream) = open_hub_stream(&state, &symbols, &mut socket).await else {
         return;
-    }
-
-    let mut hub_stream = match state.stream_hub.resubscribe().await {
-        Some(s) => s,
-        None => {
-            let _ = socket
-                .send(Message::Text(
-                    serde_json::json!({"error": "stream unavailable"})
-                        .to_string()
-                        .into(),
-                ))
-                .await;
-            return;
-        }
     };
 
-    let subscriptions = Arc::new(tokio::sync::RwLock::new(
-        symbols.iter().cloned().collect::<HashSet<String>>(),
+    let client = Arc::new(ClientState::new(&symbols, initial_rules));
+    let (out_tx, out_rx) = mpsc::channel::<Message>(OUTBOUND_CAPACITY);
+    let (sender, receiver) = socket.split();
+
+    let mut send_task = tokio::spawn(run_send_task(
+        sender,
+        hub_stream,
+        out_rx,
+        Arc::clone(&client),
     ));
-
-    let (out_tx, mut out_rx) = tokio::sync::mpsc::channel::<Message>(32);
-
-    // Split socket for concurrent read/write
-    let (mut sender, mut receiver) = socket.split();
-
-    // Spawn task to forward filtered price updates + outbound messages to client
-    let subscriptions_for_send = Arc::clone(&subscriptions);
-    let evaluator_for_send = Arc::clone(&evaluator);
-    let mut send_task = tokio::spawn(async move {
-        use futures_util::stream::StreamExt;
-        loop {
-            tokio::select! {
-                msg = out_rx.recv() => {
-                    match msg {
-                        Some(msg) => {
-                            if sender.send(msg).await.is_err() {
-                                break;
-                            }
-                        }
-                        None => {
-                            // Control channel closed.
-                            break;
-                        }
-                    }
-                }
-
-                maybe_price = hub_stream.next() => {
-                    match maybe_price {
-                        Some(price) => {
-                            let should_send = {
-                                let subs = subscriptions_for_send.read().await;
-                                subs.contains(&price.id)
-                            };
-                            if !should_send {
-                                continue;
-                            }
-
-                            // Evaluate under the lock, send outside it.
-                            let alerts = {
-                                let mut guard = evaluator_for_send.lock().await;
-                                guard.as_mut().map(|e| e.evaluate(&price))
-                            };
-
-                            let payloads: Vec<String> = match alerts {
-                                Some(events) => events
-                                    .iter()
-                                    .map(|e| serde_json::to_string(e).unwrap_or_default())
-                                    .collect(),
-                                None => vec![serde_json::to_string(&price).unwrap_or_default()],
-                            };
-
-                            for payload in payloads {
-                                if sender.send(Message::Text(payload.into())).await.is_err() {
-                                    return;
-                                }
-                                metrics::WEBSOCKET_MESSAGES_SENT.inc();
-                            }
-                        }
-                        None => break,
-                    }
-                }
-            }
-        }
-    });
-
-    // Handle incoming messages (subscribe/unsubscribe)
-    let subscriptions_for_recv = Arc::clone(&subscriptions);
-    let evaluator_for_recv = Arc::clone(&evaluator);
-    let stream_hub = state.stream_hub.clone();
-    let mut recv_task = tokio::spawn(async move {
-        while let Some(Ok(msg)) = receiver.next().await {
-            match msg {
-                Message::Text(text) => {
-                    if let Ok(cmd) = serde_json::from_str::<StreamCommand>(&text) {
-                        metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
-                        info!("Received stream command: {:?}", cmd);
-
-                        if let Some(symbols) = cmd.subscribe {
-                            let mut newly_added: Vec<String> = Vec::new();
-                            {
-                                let mut subs = subscriptions_for_recv.write().await;
-                                for s in symbols {
-                                    if subs.insert(s.clone()) {
-                                        newly_added.push(s);
-                                    }
-                                }
-                            }
-
-                            if !newly_added.is_empty() {
-                                if let Err(e) = stream_hub.subscribe_symbols(&newly_added).await {
-                                    error!("Failed to subscribe symbols: {}", e);
-                                    {
-                                        let mut subs = subscriptions_for_recv.write().await;
-                                        for s in &newly_added {
-                                            subs.remove(s);
-                                        }
-                                    }
-                                    let _ = out_tx
-                                        .send(Message::Text(
-                                            serde_json::json!({"error": e.to_string()})
-                                                .to_string()
-                                                .into(),
-                                        ))
-                                        .await;
-                                } else {
-                                    // Update symbol count on successful subscription
-                                    let count = {
-                                        let subs = subscriptions_for_recv.read().await;
-                                        subs.len()
-                                    };
-                                    metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(count as f64);
-                                }
-                            }
-                        }
-
-                        if let Some(rules) = cmd.alerts {
-                            match parse_rules(&rules) {
-                                Ok(parsed) => {
-                                    let extra: Vec<String> = parsed
-                                        .iter()
-                                        .map(|r| r.symbol.clone())
-                                        .filter(|s| !s.is_empty())
-                                        .collect();
-                                    if !extra.is_empty()
-                                        && let Err(e) = stream_hub.subscribe_symbols(&extra).await
-                                    {
-                                        error!("Failed to subscribe alert symbols: {}", e);
-                                    } else {
-                                        let mut subs = subscriptions_for_recv.write().await;
-                                        subs.extend(extra);
-                                    }
-                                    // An empty rule set reverts to raw ticks.
-                                    let mut guard = evaluator_for_recv.lock().await;
-                                    *guard =
-                                        (!parsed.is_empty()).then(|| AlertEvaluator::new(parsed));
-                                }
-                                Err(message) => {
-                                    let _ = out_tx
-                                        .send(Message::Text(
-                                            serde_json::json!({"error": message})
-                                                .to_string()
-                                                .into(),
-                                        ))
-                                        .await;
-                                }
-                            }
-                        }
-
-                        if let Some(symbols) = cmd.unsubscribe {
-                            let mut removed: Vec<String> = Vec::new();
-                            {
-                                let mut subs = subscriptions_for_recv.write().await;
-                                for s in symbols {
-                                    if subs.remove(&s) {
-                                        removed.push(s);
-                                    }
-                                }
-                            }
-
-                            if !removed.is_empty() {
-                                stream_hub.unsubscribe_symbols(&removed).await;
-                                // Update symbol count after unsubscription
-                                let count = {
-                                    let subs = subscriptions_for_recv.read().await;
-                                    subs.len()
-                                };
-                                metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(count as f64);
-                            }
-                        }
-                    }
-                }
-                Message::Close(_) => {
-                    info!("WebSocket closed by client");
-                    break;
-                }
-                _ => {}
-            }
-        }
-    });
+    let mut recv_task = tokio::spawn(run_recv_task(
+        receiver,
+        Arc::clone(&client),
+        state.stream_hub.clone(),
+        out_tx,
+    ));
 
     // Wait for either task to complete, then ensure per-client resources are torn down.
     tokio::select! {
         _ = &mut send_task => info!("Send task completed"),
         _ = &mut recv_task => info!("Receive task completed"),
     }
-
-    // Ensure tasks stop promptly.
     send_task.abort();
     recv_task.abort();
 
     // Release this client's active subscriptions from the global hub.
-    let symbols_to_release: Vec<String> = {
-        let subs = subscriptions.read().await;
-        subs.iter().cloned().collect()
-    };
     state
         .stream_hub
-        .unsubscribe_symbols(&symbols_to_release)
+        .unsubscribe_symbols(&client.snapshot())
         .await;
-
     info!("WebSocket stream connection closed");
+}
+
+/// Ref-counted subscribe plus a receiver on the shared hub, reporting failure
+/// to the client rather than closing silently.
+async fn open_hub_stream(
+    state: &AppState,
+    symbols: &[String],
+    socket: &mut WebSocket,
+) -> Option<TickStream> {
+    if let Err(e) = state.stream_hub.subscribe_symbols(symbols).await {
+        error!("Failed to create shared price stream: {}", e);
+        let _ = socket.send(error_msg(e)).await;
+        return None;
+    }
+    match state.stream_hub.resubscribe().await {
+        Some(stream) => Some(stream),
+        None => {
+            let _ = socket.send(error_msg("stream unavailable")).await;
+            None
+        }
+    }
+}
+
+/// Forward filtered price updates and outbound control messages to the client.
+async fn run_send_task(
+    mut sender: SplitSink<WebSocket, Message>,
+    mut hub_stream: TickStream,
+    mut out_rx: mpsc::Receiver<Message>,
+    client: Arc<ClientState>,
+) {
+    loop {
+        tokio::select! {
+            msg = out_rx.recv() => {
+                // Control channel closed.
+                let Some(msg) = msg else { break };
+                if sender.send(msg).await.is_err() {
+                    break;
+                }
+            }
+
+            maybe_tick = hub_stream.next() => {
+                let Some(tick) = maybe_tick else { break };
+                if !client.wants(&tick.update().id) {
+                    continue;
+                }
+                if !deliver(&mut sender, &client, &tick).await {
+                    break;
+                }
+            }
+        }
+    }
+}
+
+/// Send one tick (or the alerts it fired); `false` once the socket is gone.
+///
+/// Raw ticks reuse the hub's shared JSON — alert payloads are per-client by
+/// nature, but rare enough that serializing them here costs nothing.
+async fn deliver(
+    sender: &mut SplitSink<WebSocket, Message>,
+    client: &ClientState,
+    tick: &SharedTick,
+) -> bool {
+    let payloads: Vec<Arc<str>> = match client.evaluate(tick) {
+        Some(events) => events
+            .iter()
+            .map(|e| Arc::from(serde_json::to_string(e).unwrap_or_default()))
+            .collect(),
+        None => vec![tick.json()],
+    };
+
+    for payload in payloads {
+        if sender
+            .send(Message::Text(payload.as_ref().into()))
+            .await
+            .is_err()
+        {
+            return false;
+        }
+        metrics::WEBSOCKET_MESSAGES_SENT.inc();
+    }
+    true
+}
+
+/// Handle incoming subscribe/unsubscribe/alerts commands.
+async fn run_recv_task(
+    mut receiver: SplitStream<WebSocket>,
+    client: Arc<ClientState>,
+    hub: StreamHub,
+    out_tx: mpsc::Sender<Message>,
+) {
+    while let Some(Ok(msg)) = receiver.next().await {
+        if matches!(msg, Message::Close(_)) {
+            info!("WebSocket closed by client");
+            break;
+        }
+        let Message::Text(text) = msg else {
+            continue;
+        };
+        let Ok(cmd) = serde_json::from_str::<StreamCommand>(&text) else {
+            continue;
+        };
+        metrics::WEBSOCKET_MESSAGES_RECEIVED.inc();
+        info!("Received stream command: {:?}", cmd);
+
+        if let Some(symbols) = cmd.subscribe {
+            apply_subscribe(symbols, &client, &hub, &out_tx).await;
+        }
+        if let Some(rules) = cmd.alerts {
+            apply_alerts(&rules, &client, &hub, &out_tx).await;
+        }
+        if let Some(symbols) = cmd.unsubscribe {
+            apply_unsubscribe(symbols, &client, &hub).await;
+        }
+    }
+}
+
+async fn apply_subscribe(
+    symbols: Vec<String>,
+    client: &ClientState,
+    hub: &StreamHub,
+    out_tx: &mpsc::Sender<Message>,
+) {
+    let added = client.add(symbols);
+    if added.is_empty() {
+        return;
+    }
+    if let Err(e) = hub.subscribe_symbols(&added).await {
+        error!("Failed to subscribe symbols: {}", e);
+        client.remove(added);
+        let _ = out_tx.send(error_msg(e)).await;
+        return;
+    }
+    metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(client.len() as f64);
+}
+
+async fn apply_alerts(
+    rules: &[WsAlertRule],
+    client: &ClientState,
+    hub: &StreamHub,
+    out_tx: &mpsc::Sender<Message>,
+) {
+    let parsed = match parse_rules(rules) {
+        Ok(parsed) => parsed,
+        Err(message) => {
+            let _ = out_tx.send(error_msg(message)).await;
+            return;
+        }
+    };
+
+    // Alert symbols need their own upstream subscription — a client may alert
+    // on a symbol it never asked for ticks on.
+    let extra: Vec<String> = parsed
+        .iter()
+        .map(|r| r.symbol.clone())
+        .filter(|s| !s.is_empty())
+        .collect();
+    if !extra.is_empty() {
+        match hub.subscribe_symbols(&extra).await {
+            Ok(()) => client.extend(extra),
+            Err(e) => error!("Failed to subscribe alert symbols: {}", e),
+        }
+    }
+    client.set_rules(parsed);
+}
+
+async fn apply_unsubscribe(symbols: Vec<String>, client: &ClientState, hub: &StreamHub) {
+    let removed = client.remove(symbols);
+    if removed.is_empty() {
+        return;
+    }
+    hub.unsubscribe_symbols(&removed).await;
+    metrics::WEBSOCKET_SYMBOLS_SUBSCRIBED.set(client.len() as f64);
 }
 
 /// Wait for the first message carrying symbols and/or alert rules.
@@ -388,11 +457,7 @@ async fn wait_for_subscription(
         let rules = match cmd.alerts.as_deref().map(parse_rules) {
             Some(Ok(parsed)) if !parsed.is_empty() => Some(parsed),
             Some(Err(message)) => {
-                let _ = socket
-                    .send(Message::Text(
-                        serde_json::json!({"error": message}).to_string().into(),
-                    ))
-                    .await;
+                let _ = socket.send(error_msg(message)).await;
                 continue;
             }
             _ => None,
@@ -417,6 +482,7 @@ async fn wait_for_subscription(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use finance_query::streaming::AlertCondition;
 
     fn command(json: &str) -> StreamCommand {
         serde_json::from_str(json).expect("command should deserialize")

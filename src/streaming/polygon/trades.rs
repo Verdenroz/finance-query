@@ -10,7 +10,7 @@ use crate::streaming::client::{StreamError, StreamResult};
 use crate::streaming::source::{StreamCommand, StreamSource};
 use crate::streaming::trades::TradeTick;
 
-use super::{AssetClass, run_polygon_session};
+use super::{AssetClass, Decode, run_polygon_session};
 
 /// Trade-print source for one Polygon cluster.
 pub(crate) struct PolygonTradeSource {
@@ -46,7 +46,7 @@ impl StreamSource<TradeTick> for PolygonTradeSource {
             subscriptions,
             broadcast_tx,
             command_rx,
-            |msg| to_tick(msg).into_iter().collect(),
+            Decode(|msg| to_tick(msg).into_iter().collect()),
         )
         .await
     }
@@ -57,13 +57,14 @@ pub(crate) fn to_tick(msg: PolygonMessage) -> Option<TradeTick> {
     let PolygonMessage::Trade(trade) = msg else {
         return None;
     };
+    let symbol = trade.symbol()?.to_string();
     Some(TradeTick {
-        symbol: trade.symbol()?.to_string(),
+        symbol,
         price: trade.p?,
         size: trade.s.unwrap_or_default(),
         exchange: trade.x,
-        conditions: trade.c.clone().unwrap_or_default(),
-        trade_id: trade.i.clone(),
+        conditions: trade.c.unwrap_or_default(),
+        trade_id: trade.i,
         time: trade.t.unwrap_or_default(),
     })
 }

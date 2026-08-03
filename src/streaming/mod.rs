@@ -44,6 +44,7 @@ mod batch;
 #[cfg(feature = "polygon")]
 mod book;
 mod client;
+#[cfg(feature = "fred")]
 mod economic;
 mod handle;
 mod news;
@@ -58,12 +59,16 @@ mod subscription;
 mod trades;
 mod yahoo;
 
-pub use alerts::{AlertCondition, AlertEvaluator, AlertEvent, AlertExt, AlertRule, AlertStream};
+pub use alerts::{
+    AlertCondition, AlertConditionKind, AlertEvaluator, AlertEvent, AlertExt, AlertRule,
+    AlertStream,
+};
 pub use batch::{Batched, StreamBatchExt};
 #[cfg(feature = "polygon")]
 pub use book::{BookLevel, DepthStream, DepthStreamBuilder, OrderBookUpdate};
 pub use client::{PriceSource, PriceStream, PriceStreamBuilder, StreamError, StreamResult};
-pub use economic::{EconomicRelease, EconomicStream, EconomicStreamBuilder};
+#[cfg(feature = "fred")]
+pub use economic::{EconomicStream, EconomicStreamBuilder, SeriesUpdate};
 pub use news::{NewsStream, NewsStreamBuilder};
 #[cfg(feature = "polygon")]
 pub use options::{Greeks, OptionContractUpdate, OptionsChainStream, OptionsChainStreamBuilder};

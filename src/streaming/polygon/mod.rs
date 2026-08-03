@@ -10,7 +10,7 @@ mod options;
 mod price;
 mod trades;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use futures::StreamExt;
@@ -130,21 +130,63 @@ pub(crate) fn channels_for(
         .collect()
 }
 
-/// Run one connected Polygon session, mapping wire events to `T` via `map`.
+/// Decodes wire events into `T`, and drops any per-symbol state on unsubscribe.
 ///
-/// `map` is `FnMut` so sources can carry per-session state (e.g. merging a
-/// quote and a trade into one snapshot) without a second broadcast hop.
-pub(crate) async fn run_polygon_session<T, M>(
+/// Stateful because sources merge several event types into one snapshot per
+/// symbol; that state must not outlive the subscription that created it.
+pub(crate) trait SessionHandler<T>: Send {
+    /// Decode one wire event.
+    fn on_event(&mut self, msg: PolygonMessage) -> Vec<T>;
+
+    /// Forget state for symbols that just left the subscription set.
+    fn on_unsubscribe(&mut self, _removed: &[String]) {}
+}
+
+/// Adapts a stateless decode function to [`SessionHandler`].
+pub(crate) struct Decode<F>(pub(crate) F);
+
+impl<T, F> SessionHandler<T> for Decode<F>
+where
+    F: FnMut(PolygonMessage) -> Vec<T> + Send,
+{
+    fn on_event(&mut self, msg: PolygonMessage) -> Vec<T> {
+        (self.0)(msg)
+    }
+}
+
+/// `true` when a wire symbol — possibly an `O:AAPL*` wildcard — covers `key`.
+fn covers(pattern: &str, key: &str) -> bool {
+    match pattern.strip_suffix('*') {
+        Some(prefix) => key.starts_with(prefix),
+        None => key == pattern,
+    }
+}
+
+/// Drop per-symbol state for symbols that just left the subscription set.
+///
+/// Keys are wire symbols, so user input is normalised the same way the
+/// subscription was; an options wildcard prunes the whole chain it created.
+pub(crate) fn prune_symbols<V>(
+    state: &mut HashMap<String, V>,
+    class: AssetClass,
+    removed: &[String],
+) {
+    let patterns: Vec<String> = removed.iter().map(|s| class.wire_symbol(s)).collect();
+    state.retain(|key, _| !patterns.iter().any(|p| covers(p, key)));
+}
+
+/// Run one connected Polygon session, decoding wire events via `handler`.
+pub(crate) async fn run_polygon_session<T, H>(
     class: AssetClass,
     prefixes: &[&str],
     subscriptions: &Arc<RwLock<HashSet<String>>>,
     broadcast_tx: &broadcast::Sender<T>,
     command_rx: &mut mpsc::Receiver<StreamCommand>,
-    mut map: M,
+    mut handler: H,
 ) -> StreamResult<()>
 where
     T: Clone + Send + 'static,
-    M: FnMut(PolygonMessage) -> Vec<T> + Send,
+    H: SessionHandler<T>,
 {
     let initial: Vec<String> = subscriptions.read().await.iter().cloned().collect();
     let channels = channels_for(class, prefixes, initial);
@@ -168,7 +210,7 @@ where
                     PolygonMessage::Status(status) => debug!("polygon status: {status}"),
                     PolygonMessage::Unknown(raw) => warn!("unparsed polygon frame: {raw}"),
                     msg => {
-                        for item in map(msg) {
+                        for item in handler.on_event(msg) {
                             let _ = broadcast_tx.send(item);
                         }
                     }
@@ -182,10 +224,15 @@ where
                 if changed.is_empty() {
                     continue;
                 }
+                let subscribing = matches!(cmd, StreamCommand::Subscribe(_));
+                if !subscribing {
+                    handler.on_unsubscribe(&changed);
+                }
                 let channels = channels_for(class, prefixes, changed);
-                let result = match cmd {
-                    StreamCommand::Subscribe(_) => sender.subscribe_channels(&channels).await,
-                    _ => sender.unsubscribe_channels(&channels).await,
+                let result = if subscribing {
+                    sender.subscribe_channels(&channels).await
+                } else {
+                    sender.unsubscribe_channels(&channels).await
                 };
                 if let Err(e) = result {
                     return Err(StreamError::WebSocketError(e.to_string()));
@@ -219,6 +266,26 @@ mod tests {
         );
         assert_eq!(AssetClass::Options.wire_symbol("aapl"), "O:AAPL*");
         assert_eq!(AssetClass::Options.wire_symbol("O:AAPL*"), "O:AAPL*");
+    }
+
+    #[test]
+    fn pruning_drops_exact_and_wildcard_matches() {
+        let mut state: HashMap<String, u8> = HashMap::from([
+            ("O:AAPL250117C00150000".to_string(), 1),
+            ("O:AAPL250117P00150000".to_string(), 2),
+            ("O:SPY250117C00500000".to_string(), 3),
+        ]);
+
+        // A bare underlying was subscribed as the `O:AAPL*` wildcard, so it
+        // must take the whole chain with it.
+        prune_symbols(&mut state, AssetClass::Options, &["AAPL".to_string()]);
+        assert_eq!(state.len(), 1);
+        assert!(state.contains_key("O:SPY250117C00500000"));
+
+        let mut equities: HashMap<String, u8> =
+            HashMap::from([("AAPL".to_string(), 1), ("NVDA".to_string(), 2)]);
+        prune_symbols(&mut equities, AssetClass::Stocks, &["aapl".to_string()]);
+        assert_eq!(equities.keys().collect::<Vec<_>>(), vec!["NVDA"]);
     }
 
     #[test]

@@ -3,20 +3,14 @@
 //! Top-of-book bid/ask is all [`PriceUpdate`](super::PriceUpdate) can carry;
 //! this stream pushes the full ladder of price levels per side.
 
-use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
 use std::time::Duration;
 
-use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 
 use super::client::StreamResult;
-use super::handle::SourceStream;
+use super::handle::{RECONNECT_BACKOFF, SourceStream, stream_builder, stream_handle};
 use super::polygon::PolygonBookSource;
-
-/// Reconnection backoff, matching [`PriceStream`](super::PriceStream).
-const RECONNECT_BACKOFF_SECS: u64 = 3;
 
 /// Channel capacity — book updates are large but less frequent than prints.
 const CHANNEL_CAPACITY: usize = 1024;
@@ -79,29 +73,31 @@ impl OrderBookUpdate {
     }
 }
 
-/// A subscription to level-2 order-book depth.
-///
-/// Backed by Polygon's crypto level-2 feed (`XL2`) — the one cluster that
-/// publishes depth — so pairs are crypto pairs (`"BTC-USD"`). Requires the
-/// `polygon` feature and [`polygon::init`](crate::polygon::init).
-///
-/// # Example
-///
-/// ```no_run
-/// use finance_query::streaming::DepthStream;
-/// use futures::StreamExt;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let mut books = DepthStream::subscribe(["BTC-USD"]).await?;
-///
-/// while let Some(book) = books.next().await {
-///     println!("{} spread {:?}", book.symbol, book.spread());
-/// }
-/// # Ok(())
-/// # }
-/// ```
-pub struct DepthStream {
-    inner: SourceStream<OrderBookUpdate>,
+stream_handle! {
+    /// A subscription to level-2 order-book depth.
+    ///
+    /// Backed by Polygon's crypto level-2 feed (`XL2`) — the one cluster that
+    /// publishes depth — so pairs are crypto pairs (`"BTC-USD"`). Requires the
+    /// `polygon` feature and [`polygon::init`](crate::polygon::init).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::streaming::DepthStream;
+    /// use futures::StreamExt;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut books = DepthStream::subscribe(["BTC-USD"]).await?;
+    ///
+    /// while let Some(book) = books.next().await {
+    ///     println!("{} spread {:?}", book.symbol, book.spread());
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    DepthStream(OrderBookUpdate);
+    add: add_pairs = "Add pairs to the subscription.",
+    remove: remove_pairs = "Remove pairs from the subscription.",
 }
 
 impl DepthStream {
@@ -112,44 +108,6 @@ impl DepthStream {
         I: IntoIterator<Item = S>,
     {
         DepthStreamBuilder::new().pairs(pairs).build().await
-    }
-
-    /// Create an independent receiver sharing this subscription's connection.
-    pub fn resubscribe(&self) -> Self {
-        DepthStream {
-            inner: self.inner.resubscribe(),
-        }
-    }
-
-    /// Add pairs to the subscription.
-    pub async fn add_pairs<S, I>(&self, pairs: I)
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.inner.add(pairs).await;
-    }
-
-    /// Remove pairs from the subscription.
-    pub async fn remove_pairs<S, I>(&self, pairs: I)
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.inner.remove(pairs).await;
-    }
-
-    /// Close the stream and disconnect.
-    pub async fn close(&self) {
-        self.inner.close().await;
-    }
-}
-
-impl Stream for DepthStream {
-    type Item = OrderBookUpdate;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Pin::new(&mut self.inner).poll_next(cx)
     }
 }
 
@@ -164,24 +122,8 @@ impl DepthStreamBuilder {
     pub fn new() -> Self {
         Self {
             pairs: Vec::new(),
-            retry_delay: Duration::from_secs(RECONNECT_BACKOFF_SECS),
+            retry_delay: RECONNECT_BACKOFF,
         }
-    }
-
-    /// Add crypto pairs to subscribe to.
-    pub fn pairs<S, I>(mut self, pairs: I) -> Self
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.pairs.extend(pairs.into_iter().map(Into::into));
-        self
-    }
-
-    /// Set the delay between reconnection attempts (default: 3s).
-    pub fn retry(mut self, delay: Duration) -> Self {
-        self.retry_delay = delay;
-        self
     }
 
     /// Build and start the stream.
@@ -197,11 +139,10 @@ impl DepthStreamBuilder {
     }
 }
 
-impl Default for DepthStreamBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+stream_builder!(
+    DepthStreamBuilder,
+    pairs = "Add crypto pairs to subscribe to."
+);
 
 #[cfg(test)]
 mod tests {

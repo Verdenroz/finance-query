@@ -6,13 +6,12 @@
 //! `Stream` adapter, so it composes with every handle in this module instead
 //! of being a per-stream delivery mode.
 
-use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 use std::time::Duration;
 
 use futures::stream::Stream;
-use tokio::time::{Instant, Sleep, sleep_until};
+use tokio_stream::adapters::ChunksTimeout;
 
 /// Default cap on items per batch when none is given.
 const DEFAULT_MAX_BATCH: usize = 512;
@@ -22,82 +21,41 @@ const DEFAULT_MAX_BATCH: usize = 512;
 /// A batch is emitted when the window since the batch's first item elapses, or
 /// as soon as `max_items` is reached — whichever comes first. Empty batches are
 /// never emitted, and any partial batch is flushed when the source ends.
+///
+/// Boxed rather than a plain newtype so the handle stays `Unpin` — callers
+/// `.next()` it directly, without pinning it first.
 pub struct Batched<S>
 where
     S: Stream,
 {
-    inner: S,
-    window: Duration,
-    max_items: usize,
-    buffer: Vec<S::Item>,
-    deadline: Option<Pin<Box<Sleep>>>,
-    exhausted: bool,
+    inner: Pin<Box<ChunksTimeout<S>>>,
 }
 
 impl<S> Batched<S>
 where
-    S: Stream + Unpin,
+    S: Stream,
 {
     /// Batch `inner` over `window`, emitting early once `max_items` accumulate.
     pub fn new(inner: S, window: Duration, max_items: usize) -> Self {
-        Self {
-            inner,
-            window,
-            max_items: max_items.max(1),
-            buffer: Vec::new(),
-            deadline: None,
-            exhausted: false,
-        }
-    }
+        // Scoped: a module-level import would collide with `futures::StreamExt`.
+        use tokio_stream::StreamExt as _;
 
-    fn take_batch(&mut self) -> Vec<S::Item> {
-        self.deadline = None;
-        std::mem::take(&mut self.buffer)
+        Self {
+            // `chunks_timeout` panics on a zero cap; a zero-sized batch is
+            // meaningless, so clamp rather than propagate the panic.
+            inner: Box::pin(inner.chunks_timeout(max_items.max(1), window)),
+        }
     }
 }
 
 impl<S> Stream for Batched<S>
 where
-    S: Stream + Unpin,
-    S::Item: Unpin,
+    S: Stream,
 {
     type Item = Vec<S::Item>;
 
-    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = self.get_mut();
-
-        loop {
-            if this.exhausted {
-                return if this.buffer.is_empty() {
-                    Poll::Ready(None)
-                } else {
-                    Poll::Ready(Some(this.take_batch()))
-                };
-            }
-
-            match Pin::new(&mut this.inner).poll_next(cx) {
-                Poll::Ready(Some(item)) => {
-                    this.buffer.push(item);
-                    if this.deadline.is_none() {
-                        this.deadline = Some(Box::pin(sleep_until(Instant::now() + this.window)));
-                    }
-                    if this.buffer.len() >= this.max_items {
-                        return Poll::Ready(Some(this.take_batch()));
-                    }
-                }
-                Poll::Ready(None) => this.exhausted = true,
-                Poll::Pending => break,
-            }
-        }
-
-        // Source is idle: emit once the current batch's window expires.
-        if let Some(deadline) = this.deadline.as_mut()
-            && deadline.as_mut().poll(cx).is_ready()
-        {
-            return Poll::Ready(Some(this.take_batch()));
-        }
-
-        Poll::Pending
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        self.inner.as_mut().poll_next(cx)
     }
 }
 

@@ -14,7 +14,7 @@ use crate::streaming::client::StreamResult;
 use crate::streaming::pricing::{MarketHoursType, PriceUpdate, QuoteType};
 use crate::streaming::source::{StreamCommand, StreamSource};
 
-use super::{AssetClass, run_polygon_session};
+use super::{AssetClass, SessionHandler, prune_symbols, run_polygon_session};
 
 /// Real-time price source backed by one Polygon cluster.
 pub(crate) struct PolygonPriceSource {
@@ -39,14 +39,13 @@ impl StreamSource<PriceUpdate> for PolygonPriceSource {
         broadcast_tx: &broadcast::Sender<PriceUpdate>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
     ) -> StreamResult<()> {
-        let mut merger = PriceMerger::new(self.class);
         run_polygon_session(
             self.class,
             self.class.price_channels(),
             subscriptions,
             broadcast_tx,
             command_rx,
-            move |msg| merger.apply(msg).into_iter().collect(),
+            PriceMerger::new(self.class),
         )
         .await
     }
@@ -54,13 +53,25 @@ impl StreamSource<PriceUpdate> for PolygonPriceSource {
 
 /// Folds per-event Polygon messages into one snapshot per symbol.
 pub(crate) struct PriceMerger {
+    class: AssetClass,
     quote_type: QuoteType,
     snapshots: HashMap<String, PriceUpdate>,
+}
+
+impl SessionHandler<PriceUpdate> for PriceMerger {
+    fn on_event(&mut self, msg: PolygonMessage) -> Vec<PriceUpdate> {
+        self.apply(msg).into_iter().collect()
+    }
+
+    fn on_unsubscribe(&mut self, removed: &[String]) {
+        prune_symbols(&mut self.snapshots, self.class, removed);
+    }
 }
 
 impl PriceMerger {
     pub(crate) fn new(class: AssetClass) -> Self {
         Self {
+            class,
             quote_type: match class {
                 AssetClass::Stocks => QuoteType::Equity,
                 AssetClass::Options => QuoteType::Option,
@@ -73,26 +84,29 @@ impl PriceMerger {
         }
     }
 
+    /// Snapshot for `symbol`, created on first sight.
+    ///
+    /// Keyed by `&str` so a cache hit costs no allocation; borrowck needs the
+    /// second lookup to hand back the mutable borrow.
     fn entry(&mut self, symbol: &str) -> &mut PriceUpdate {
-        let quote_type = self.quote_type;
-        self.snapshots.entry(symbol.to_string()).or_insert_with(|| {
+        if !self.snapshots.contains_key(symbol) {
             let mut update = PriceUpdate {
                 id: symbol.to_string(),
-                quote_type,
+                quote_type: self.quote_type,
                 market_hours: MarketHoursType::RegularMarket,
                 ..Default::default()
             };
             update.currency = default_currency(symbol).to_string();
-            update
-        })
+            self.snapshots.insert(symbol.to_string(), update);
+        }
+        self.snapshots.get_mut(symbol).expect("inserted above")
     }
 
     /// Merge one event, returning the updated snapshot when it carried a price.
     pub(crate) fn apply(&mut self, msg: PolygonMessage) -> Option<PriceUpdate> {
         match msg {
             PolygonMessage::Trade(trade) => {
-                let symbol = trade.symbol()?.to_string();
-                let snapshot = self.entry(&symbol);
+                let snapshot = self.entry(trade.symbol()?);
                 if let Some(p) = trade.p {
                     snapshot.price = p as f32;
                 }
@@ -108,8 +122,7 @@ impl PriceMerger {
                 Some(snapshot.clone())
             }
             PolygonMessage::Quote(quote) => {
-                let symbol = quote.symbol()?.to_string();
-                let snapshot = self.entry(&symbol);
+                let snapshot = self.entry(quote.symbol()?);
                 if let Some(bp) = quote.bp {
                     snapshot.bid = bp as f32;
                 }
@@ -132,8 +145,7 @@ impl PriceMerger {
                 Some(snapshot.clone())
             }
             PolygonMessage::ForexQuote(quote) => {
-                let symbol = quote.p.clone()?;
-                let snapshot = self.entry(&symbol);
+                let snapshot = self.entry(quote.p.as_deref()?);
                 if let Some(b) = quote.b {
                     snapshot.bid = b as f32;
                 }
@@ -149,8 +161,7 @@ impl PriceMerger {
                 Some(snapshot.clone())
             }
             PolygonMessage::Aggregate(agg) => {
-                let symbol = agg.symbol()?.to_string();
-                let snapshot = self.entry(&symbol);
+                let snapshot = self.entry(agg.symbol()?);
                 if let Some(c) = agg.c {
                     snapshot.price = c as f32;
                 }
@@ -177,8 +188,7 @@ impl PriceMerger {
                 Some(snapshot.clone())
             }
             PolygonMessage::IndexValue(index) => {
-                let symbol = index.ticker.clone()?;
-                let snapshot = self.entry(&symbol);
+                let snapshot = self.entry(index.ticker.as_deref()?);
                 if let Some(val) = index.val {
                     snapshot.price = val as f32;
                 }
@@ -287,6 +297,20 @@ mod tests {
         assert_eq!(snapshot.id, "I:SPX");
         assert!((snapshot.price - 3988.5).abs() < 0.01);
         assert_eq!(snapshot.quote_type, QuoteType::Index);
+    }
+
+    #[test]
+    fn unsubscribing_evicts_the_symbol_snapshot() {
+        let mut merger = PriceMerger::new(AssetClass::Stocks);
+        let frame = r#"[{"ev":"T","sym":"AAPL","p":186.19,"t":1},
+                        {"ev":"T","sym":"NVDA","p":95.0,"t":2}]"#;
+        for msg in events(frame) {
+            merger.apply(msg);
+        }
+        assert_eq!(merger.snapshots.len(), 2);
+
+        merger.on_unsubscribe(&["aapl".to_string()]);
+        assert_eq!(merger.snapshots.keys().collect::<Vec<_>>(), vec!["NVDA"]);
     }
 
     #[test]

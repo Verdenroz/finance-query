@@ -10,15 +10,80 @@ pub mod services;
 
 use finance_query::FinanceError;
 use finance_query::feeds::FeedSource;
-use finance_query::streaming::{NewsStream, PriceStream};
+use finance_query::streaming::{NewsStream, PriceStream, PriceUpdate};
+use futures_util::{Stream, StreamExt};
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
+use std::pin::Pin;
+use std::sync::{Arc, OnceLock};
+use std::task::{Context, Poll};
+use tokio::sync::broadcast;
+use tokio_stream::wrappers::BroadcastStream;
+
+/// Fan-out channel depth, matching the library's own price-stream capacity.
+const FANOUT_CAPACITY: usize = 1024;
 
 #[derive(Clone)]
 pub struct AppState {
     pub cache: cache::Cache,
     pub stream_hub: StreamHub,
     pub feed_hub: FeedHub,
+}
+
+/// One price tick plus its wire JSON, shared by every connected client.
+///
+/// Serializing per client rebuilt identical JSON once per client per tick; the
+/// first consumer that needs the wire form now builds it for all of them, and
+/// consumers that never need it (GraphQL) pay nothing.
+pub struct SharedTick {
+    update: PriceUpdate,
+    json: OnceLock<Arc<str>>,
+}
+
+impl SharedTick {
+    fn new(update: PriceUpdate) -> Self {
+        Self {
+            update,
+            json: OnceLock::new(),
+        }
+    }
+
+    /// The decoded tick.
+    pub fn update(&self) -> &PriceUpdate {
+        &self.update
+    }
+
+    /// The tick's JSON encoding, built once and shared.
+    pub fn json(&self) -> Arc<str> {
+        self.json
+            .get_or_init(|| {
+                serde_json::to_string(&self.update)
+                    .unwrap_or_default()
+                    .into()
+            })
+            .clone()
+    }
+}
+
+/// A per-client receiver over the hub's shared tick fan-out.
+pub struct TickStream {
+    inner: BroadcastStream<Arc<SharedTick>>,
+}
+
+impl Stream for TickStream {
+    type Item = Arc<SharedTick>;
+
+    fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
+        let this = self.get_mut();
+        loop {
+            match Pin::new(&mut this.inner).poll_next(cx) {
+                Poll::Ready(Some(Ok(tick))) => return Poll::Ready(Some(tick)),
+                // A lag means this client missed ticks, not that the feed ended.
+                Poll::Ready(Some(Err(_))) => continue,
+                Poll::Ready(None) => return Poll::Ready(None),
+                Poll::Pending => return Poll::Pending,
+            }
+        }
+    }
 }
 
 /// Process-wide hub that maintains a single upstream Yahoo Finance stream.
@@ -33,7 +98,17 @@ pub struct StreamHub {
 #[derive(Default)]
 struct StreamHubInner {
     upstream: Option<PriceStream>,
+    /// Re-broadcast of `upstream` carrying shareable ticks.
+    fanout: Option<broadcast::Sender<Arc<SharedTick>>>,
+    pump: Option<tokio::task::JoinHandle<()>>,
     symbol_ref_counts: HashMap<String, usize>,
+}
+
+/// Read the upstream stream once and hand every client the same tick.
+async fn pump_ticks(mut upstream: PriceStream, fanout: broadcast::Sender<Arc<SharedTick>>) {
+    while let Some(update) = upstream.next().await {
+        let _ = fanout.send(Arc::new(SharedTick::new(update)));
+    }
 }
 
 impl StreamHub {
@@ -42,9 +117,11 @@ impl StreamHub {
         Self::default()
     }
 
-    pub async fn resubscribe(&self) -> Option<PriceStream> {
+    pub async fn resubscribe(&self) -> Option<TickStream> {
         let inner = self.inner.lock().await;
-        inner.upstream.as_ref().map(|s| s.resubscribe())
+        inner.fanout.as_ref().map(|fanout| TickStream {
+            inner: BroadcastStream::new(fanout.subscribe()),
+        })
     }
 
     pub async fn subscribe_symbols(&self, symbols: &[String]) -> Result<(), FinanceError> {
@@ -75,6 +152,12 @@ impl StreamHub {
         // Create upstream stream if this is the first active subscription.
         if inner.upstream.is_none() {
             let stream = PriceStream::subscribe(unique.iter().map(|s| s.as_str())).await?;
+            let (fanout, _) = broadcast::channel(FANOUT_CAPACITY);
+            inner.pump = Some(tokio::spawn(pump_ticks(
+                stream.resubscribe(),
+                fanout.clone(),
+            )));
+            inner.fanout = Some(fanout);
             inner.upstream = Some(stream);
             return Ok(());
         }
@@ -131,10 +214,14 @@ impl StreamHub {
         }
 
         // If nothing is subscribed anywhere, close upstream to stop background tasks.
-        if inner.symbol_ref_counts.is_empty()
-            && let Some(upstream) = inner.upstream.take()
-        {
-            upstream.close().await;
+        if inner.symbol_ref_counts.is_empty() {
+            if let Some(pump) = inner.pump.take() {
+                pump.abort();
+            }
+            inner.fanout = None;
+            if let Some(upstream) = inner.upstream.take() {
+                upstream.close().await;
+            }
         }
     }
 }

@@ -436,12 +436,8 @@ pub(crate) fn parse_messages(text: &str) -> Vec<PolygonMessage> {
 
     let mut out = Vec::with_capacity(events.len());
     for event in events {
-        let ev = event
-            .get("ev")
-            .and_then(|v| v.as_str())
-            .unwrap_or("")
-            .to_string();
-        let parsed = match ev.as_str() {
+        let ev = event.get("ev").and_then(|v| v.as_str()).unwrap_or("");
+        let parsed = match ev {
             "T" | "XT" => serde_json::from_value(event)
                 .ok()
                 .map(PolygonMessage::Trade),

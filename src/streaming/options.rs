@@ -4,21 +4,15 @@
 //! many contracts per underlying, each with its own quote, open interest and
 //! greeks — a shape a single-symbol price tick cannot carry.
 
-use std::pin::Pin;
 use std::sync::Arc;
-use std::task::{Context, Poll};
 use std::time::Duration;
 
-use futures::stream::Stream;
 use serde::{Deserialize, Serialize};
 
 use super::client::StreamResult;
-use super::handle::SourceStream;
+use super::handle::{RECONNECT_BACKOFF, SourceStream, stream_builder, stream_handle};
 use super::polygon::PolygonOptionsSource;
 use super::pricing::OptionType;
-
-/// Reconnection backoff, matching [`PriceStream`](super::PriceStream).
-const RECONNECT_BACKOFF_SECS: u64 = 3;
 
 /// Channel capacity — a wide chain fans out many contracts per tick.
 const CHANNEL_CAPACITY: usize = 2048;
@@ -145,29 +139,31 @@ pub(crate) fn parse_contract_symbol(symbol: &str) -> Option<ContractParts> {
     })
 }
 
-/// A live subscription to one or more options chains.
-///
-/// Subscribe by underlying (`"AAPL"`) to follow the whole chain, or by full
-/// OCC symbol (`"O:AAPL250117C00150000"`) to follow single contracts.
-/// Requires the `polygon` feature and [`polygon::init`](crate::polygon::init).
-///
-/// # Example
-///
-/// ```no_run
-/// use finance_query::streaming::OptionsChainStream;
-/// use futures::StreamExt;
-///
-/// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
-/// let mut stream = OptionsChainStream::subscribe(["AAPL"]).await?;
-///
-/// while let Some(contract) = stream.next().await {
-///     println!("{} {:?}/{:?}", contract.contract_symbol, contract.bid, contract.ask);
-/// }
-/// # Ok(())
-/// # }
-/// ```
-pub struct OptionsChainStream {
-    inner: SourceStream<OptionContractUpdate>,
+stream_handle! {
+    /// A live subscription to one or more options chains.
+    ///
+    /// Subscribe by underlying (`"AAPL"`) to follow the whole chain, or by full
+    /// OCC symbol (`"O:AAPL250117C00150000"`) to follow single contracts.
+    /// Requires the `polygon` feature and [`polygon::init`](crate::polygon::init).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use finance_query::streaming::OptionsChainStream;
+    /// use futures::StreamExt;
+    ///
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// let mut stream = OptionsChainStream::subscribe(["AAPL"]).await?;
+    ///
+    /// while let Some(contract) = stream.next().await {
+    ///     println!("{} {:?}/{:?}", contract.contract_symbol, contract.bid, contract.ask);
+    /// }
+    /// # Ok(())
+    /// # }
+    /// ```
+    OptionsChainStream(OptionContractUpdate);
+    add: add = "Add underlyings or contracts to the subscription.",
+    remove: remove = "Remove underlyings or contracts from the subscription.",
 }
 
 impl OptionsChainStream {
@@ -181,44 +177,6 @@ impl OptionsChainStream {
             .underlyings(underlyings)
             .build()
             .await
-    }
-
-    /// Create an independent receiver sharing this subscription's connection.
-    pub fn resubscribe(&self) -> Self {
-        OptionsChainStream {
-            inner: self.inner.resubscribe(),
-        }
-    }
-
-    /// Add underlyings or contracts to the subscription.
-    pub async fn add<S, I>(&self, symbols: I)
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.inner.add(symbols).await;
-    }
-
-    /// Remove underlyings or contracts from the subscription.
-    pub async fn remove<S, I>(&self, symbols: I)
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.inner.remove(symbols).await;
-    }
-
-    /// Close the stream and disconnect.
-    pub async fn close(&self) {
-        self.inner.close().await;
-    }
-}
-
-impl Stream for OptionsChainStream {
-    type Item = OptionContractUpdate;
-
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        Pin::new(&mut self.inner).poll_next(cx)
     }
 }
 
@@ -234,25 +192,9 @@ impl OptionsChainStreamBuilder {
     pub fn new() -> Self {
         Self {
             underlyings: Vec::new(),
-            retry_delay: Duration::from_secs(RECONNECT_BACKOFF_SECS),
+            retry_delay: RECONNECT_BACKOFF,
             greeks_refresh: Some(DEFAULT_GREEKS_REFRESH),
         }
-    }
-
-    /// Add underlyings (or full OCC contract symbols) to follow.
-    pub fn underlyings<S, I>(mut self, symbols: I) -> Self
-    where
-        S: Into<String>,
-        I: IntoIterator<Item = S>,
-    {
-        self.underlyings.extend(symbols.into_iter().map(Into::into));
-        self
-    }
-
-    /// Set the delay between reconnection attempts (default: 3s).
-    pub fn retry(mut self, delay: Duration) -> Self {
-        self.retry_delay = delay;
-        self
     }
 
     /// Interval between greeks/open-interest snapshot refreshes.
@@ -278,11 +220,10 @@ impl OptionsChainStreamBuilder {
     }
 }
 
-impl Default for OptionsChainStreamBuilder {
-    fn default() -> Self {
-        Self::new()
-    }
-}
+stream_builder!(
+    OptionsChainStreamBuilder,
+    underlyings = "Add underlyings (or full OCC contract symbols) to follow."
+);
 
 #[cfg(test)]
 mod tests {

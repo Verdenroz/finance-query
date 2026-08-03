@@ -10,7 +10,7 @@ use crate::streaming::book::{BookLevel, OrderBookUpdate};
 use crate::streaming::client::StreamResult;
 use crate::streaming::source::{StreamCommand, StreamSource};
 
-use super::{AssetClass, run_polygon_session};
+use super::{AssetClass, Decode, run_polygon_session};
 
 /// Depth-of-book channel — only the crypto cluster publishes level 2.
 const BOOK_CHANNEL: &str = "XL2";
@@ -36,7 +36,7 @@ impl StreamSource<OrderBookUpdate> for PolygonBookSource {
             subscriptions,
             broadcast_tx,
             command_rx,
-            |msg| to_book(msg).into_iter().collect(),
+            Decode(|msg| to_book(msg).into_iter().collect()),
         )
         .await
     }
