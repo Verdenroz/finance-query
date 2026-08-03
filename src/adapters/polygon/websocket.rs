@@ -231,6 +231,7 @@ pub enum PolygonMessage {
     /// Forex quote (`forex` cluster).
     ForexQuote(StreamForexQuote),
     /// Level-2 order book (`crypto` cluster).
+    #[allow(dead_code)] // read by the depth-of-book source (#250)
     Level2(StreamLevel2),
     /// Index value (`indices` cluster).
     IndexValue(StreamIndexValue),

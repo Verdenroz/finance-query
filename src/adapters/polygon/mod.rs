@@ -44,9 +44,8 @@ mod crypto; // CRYPTO
 mod forex; // FOREX
 mod futures; // FUTURES
 mod indices; // INDICES
-mod options; // OPTIONS
+pub(crate) mod options; // OPTIONS
 
-#[allow(dead_code)] // unrouted: PriceStream is Yahoo-backed; Polygon streaming lands with #247/#250
 pub(crate) mod websocket;
 
 use crate::adapters::singleton::{provider_build_client, provider_singleton_state};

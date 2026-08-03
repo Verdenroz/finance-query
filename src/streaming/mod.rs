@@ -45,6 +45,8 @@ mod economic;
 mod handle;
 mod news;
 #[cfg(feature = "polygon")]
+mod options;
+#[cfg(feature = "polygon")]
 mod polygon;
 mod pricing;
 mod source;
@@ -55,6 +57,8 @@ pub use batch::{Batched, StreamBatchExt};
 pub use client::{PriceSource, PriceStream, PriceStreamBuilder, StreamError, StreamResult};
 pub use economic::{EconomicRelease, EconomicStream, EconomicStreamBuilder};
 pub use news::{NewsStream, NewsStreamBuilder};
+#[cfg(feature = "polygon")]
+pub use options::{Greeks, OptionContractUpdate, OptionsChainStream, OptionsChainStreamBuilder};
 #[cfg(feature = "polygon")]
 pub use polygon::AssetClass;
 pub use pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};

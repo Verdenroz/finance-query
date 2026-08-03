@@ -5,6 +5,7 @@
 //! here reuses the existing [`PolygonStream`] adapter — the only Polygon
 //! WebSocket client in the crate.
 
+mod options;
 mod price;
 
 use std::collections::HashSet;
@@ -19,6 +20,7 @@ use crate::adapters::polygon::websocket::{ClusterDTO, PolygonMessage, PolygonStr
 use super::client::{StreamError, StreamResult};
 use super::source::{StreamCommand, apply_command};
 
+pub(crate) use options::PolygonOptionsSource;
 pub(crate) use price::PolygonPriceSource;
 
 /// Asset class of a Polygon real-time cluster.
@@ -77,12 +79,22 @@ impl AssetClass {
     }
 
     /// Put a user-supplied symbol into the cluster's wire format.
+    ///
+    /// A bare options underlying (no digits) becomes an `O:AAPL*` wildcard so
+    /// the whole chain is followed; a full OCC symbol stays exact.
     pub(crate) fn wire_symbol(self, symbol: &str) -> String {
-        let symbol = symbol.trim();
+        let symbol = symbol.trim().to_uppercase();
         match self {
-            Self::Indices if !symbol.starts_with("I:") => format!("I:{}", symbol.to_uppercase()),
-            Self::Options if !symbol.starts_with("O:") => format!("O:{}", symbol.to_uppercase()),
-            _ => symbol.to_uppercase(),
+            Self::Indices if !symbol.starts_with("I:") => format!("I:{symbol}"),
+            Self::Options => {
+                let body = symbol.strip_prefix("O:").unwrap_or(&symbol);
+                if body.chars().any(|c| c.is_ascii_digit()) {
+                    format!("O:{body}")
+                } else {
+                    format!("O:{}*", body.trim_end_matches('*'))
+                }
+            }
+            _ => symbol,
         }
     }
 }
@@ -191,6 +203,8 @@ mod tests {
             AssetClass::Options.wire_symbol("AAPL250117C00150000"),
             "O:AAPL250117C00150000"
         );
+        assert_eq!(AssetClass::Options.wire_symbol("aapl"), "O:AAPL*");
+        assert_eq!(AssetClass::Options.wire_symbol("O:AAPL*"), "O:AAPL*");
     }
 
     #[test]
