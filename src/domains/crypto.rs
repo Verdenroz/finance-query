@@ -82,6 +82,12 @@ impl CryptoCoin {
     /// the default Yahoo route only when the handle's id is the coin's *ticker*
     /// (`providers.crypto("BTC")`); coins identified by a CoinGecko id should
     /// route `Capability::CHART` to a crypto-aware provider.
+    ///
+    /// With the `crypto` feature, `.route(Capability::CHART,
+    /// [Provider::CoinGecko])` serves history keylessly by coin id. CoinGecko
+    /// picks its own bar granularity from the requested range, so `interval` is
+    /// advisory there, and its OHLC endpoint carries no volume — those candles
+    /// report `volume: 0`.
     pub async fn chart(
         &self,
         vs_currency: &str,

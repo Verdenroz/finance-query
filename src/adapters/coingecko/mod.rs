@@ -24,6 +24,7 @@
 //! # }
 //! ```
 
+pub(crate) mod chart; // CHART
 mod client;
 mod models;
 

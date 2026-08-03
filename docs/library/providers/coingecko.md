@@ -74,6 +74,39 @@ To discover IDs programmatically, call the CoinGecko `/coins/list` endpoint.
 | `circulating_supply` | `Option<f64>` | Circulating supply |
 | `image` | `Option<String>` | URL to the coin's logo image |
 
+## Price History (keyless `CHART` route)
+
+Route `Capability::CHART` to CoinGecko and `CryptoCoin` serves OHLC history by
+coin id, without any API key:
+
+```rust,ignore
+use finance_query::{Capability, Interval, Provider, Providers, TimeRange};
+
+let providers = Providers::builder()
+    .route(Capability::CHART, [Provider::CoinGecko])
+    .build()
+    .await?;
+
+let chart = providers
+    .crypto("bitcoin")
+    .history("usd", TimeRange::ThreeMonths)
+    .await?;
+println!("{} candles", chart.candles.len());
+```
+
+Two properties of CoinGecko's public `/ohlc` endpoint carry through:
+
+- **`interval` is advisory.** CoinGecko selects bar granularity from the day
+  span alone — 30 minutes for 1–2 days, 4 hours for 3–30 days, 4 days beyond
+  that. Ranges are mapped onto its accepted spans (`1`, `7`, `30`, `90`, `180`,
+  `365`, `max`); anything past a year becomes `max`.
+- **Candles have no volume.** `/ohlc` does not report it, so `volume` is `0`
+  rather than a figure interpolated from a differently-bucketed series. Volume
+  ratio indicators (OBV, VWMA) are meaningless on these candles.
+
+The handle's id and quote currency are recombined as `"{id}-{vs}"` and split on
+the last hyphen, so hyphenated CoinGecko ids (`usd-coin`, `staked-ether`) work.
+
 ## Rate Limits
 
 The CoinGecko free tier allows **30 requests per minute**. The client enforces this automatically — calls that would exceed the limit will wait until the window resets.

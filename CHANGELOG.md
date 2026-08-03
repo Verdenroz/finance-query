@@ -117,6 +117,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- Keyless crypto price history: `Provider::CoinGecko` now serves
+  `Capability::CHART`, so `.route(Capability::CHART, [Provider::CoinGecko])`
+  makes `providers.crypto("bitcoin").history("usd", range)` work without an API
+  key. CoinGecko picks bar granularity from the range (so `interval` is
+  advisory) and its OHLC endpoint reports no volume, so those candles carry
+  `volume: 0` rather than an interpolated figure.
 - Primary-source ownership data from EDGAR, keyless:
   `providers.filings("AAPL").insider_trades(limit)` parses Form 3/4/5 ownership
   XML into typed `InsiderTrade` rows (insider, role, transaction code, shares,
