@@ -39,6 +39,16 @@ pub(crate) trait QuoteProvider: ProviderCore {
     async fn fetch_quotes_batch(&self, _: &[&str]) -> Result<Vec<(String, QuoteSummaryResponse)>> {
         Err(self.not_supported(Operation::QuotesBatch))
     }
+
+    /// Fetch a snapshot for symbols spanning several asset classes in one
+    /// request. Rows the provider could not resolve are returned with
+    /// `error` set rather than dropped.
+    async fn fetch_unified_snapshot(
+        &self,
+        _symbols: &[&str],
+    ) -> Result<Vec<crate::models::quote::snapshot::MarketSnapshot>> {
+        Err(self.not_supported(Operation::UnifiedSnapshot))
+    }
 }
 
 /// [`Capability::CHART`] — historical OHLCV candles and sparklines.

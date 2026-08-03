@@ -506,6 +506,8 @@ pub enum Operation {
     ExecutiveCompensation,
     /// Reported employee headcount.
     EmployeeCount,
+    /// Cross-market snapshot for symbols spanning several asset classes.
+    UnifiedSnapshot,
 }
 
 impl Operation {
@@ -561,13 +563,14 @@ impl Operation {
             Self::RatiosTtm => "ratios_ttm",
             Self::ExecutiveCompensation => "executive_compensation",
             Self::EmployeeCount => "employee_count",
+            Self::UnifiedSnapshot => "unified_snapshot",
         }
     }
 
     /// The coarser [`Capability`] bit this operation falls under.
     pub fn capability(self) -> Capability {
         match self {
-            Self::Quote | Self::QuotesBatch => Capability::QUOTE,
+            Self::Quote | Self::QuotesBatch | Self::UnifiedSnapshot => Capability::QUOTE,
             Self::Chart | Self::ChartRange | Self::Spark => Capability::CHART,
             Self::Financials
             | Self::ShortInterest

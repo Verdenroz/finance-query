@@ -491,6 +491,7 @@ pub(crate) mod futures;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub(crate) mod indices;
 pub(crate) mod market;
+pub(crate) mod snapshot;
 
 // ── Re-exports ──────────────────────────────────────────────────────
 
@@ -532,6 +533,7 @@ pub use indices::Index;
 pub use market::Market;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use market::MarketCalendar;
+pub use snapshot::Snapshot;
 
 // ── Tests ───────────────────────────────────────────────────────────
 

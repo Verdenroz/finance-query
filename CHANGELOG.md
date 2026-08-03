@@ -117,6 +117,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- Cross-market snapshots: `providers.snapshot().get(&["AAPL", "X:BTCUSD",
+  "I:SPX"])` answers a mixed watchlist in one request through the `QUOTE` route
+  (Polygon's `/v3/snapshot`, max 250 symbols) instead of one request per asset
+  class. Unresolvable symbols come back as rows with `error` set rather than
+  being dropped. New public models `MarketSnapshot` and `AssetClass`, and a new
+  `Snapshot` handle.
 - Analyst consensus on `Ticker`: `price_target_consensus()` (high/low/mean/median
   target), `price_target_summary()` (how many targets were published last
   month/quarter/year/all time and their averages), and `rating_consensus()`

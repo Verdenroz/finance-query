@@ -179,6 +179,15 @@ impl Providers {
         crate::domains::Market::with_providers(Arc::clone(&self.set))
     }
 
+    /// Create a [`Snapshot`](crate::Snapshot) handle backed by this provider set.
+    ///
+    /// Routes cross-market snapshots through
+    /// [`Capability::QUOTE`](crate::Capability::QUOTE). Needs a provider whose
+    /// snapshot endpoint spans asset classes — currently Polygon only.
+    pub fn snapshot(&self) -> crate::domains::Snapshot {
+        crate::domains::Snapshot::with_providers(Arc::clone(&self.set))
+    }
+
     /// Create a [`Filings`](crate::Filings) handle backed by this provider set.
     ///
     /// Always available — EDGAR is auto-injected when no other FILINGS provider
