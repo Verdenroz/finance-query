@@ -271,8 +271,9 @@ pub(crate) trait MarketProvider: ProviderCore {
 
 /// [`Capability::CRYPTO`] — cryptocurrency quotes.
 #[cfg(any(
-    feature = "crypto",
     feature = "alphavantage",
+    feature = "binance",
+    feature = "crypto",
     feature = "fmp",
     feature = "polygon"
 ))]
@@ -404,8 +405,9 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         None
     }
     #[cfg(any(
-        feature = "crypto",
         feature = "alphavantage",
+        feature = "binance",
+        feature = "crypto",
         feature = "fmp",
         feature = "polygon"
     ))]
@@ -480,8 +482,9 @@ pub(crate) trait ProviderAdapter: ProviderCore {
             }
         }
         #[cfg(any(
-            feature = "crypto",
             feature = "alphavantage",
+            feature = "binance",
+            feature = "crypto",
             feature = "fmp",
             feature = "polygon"
         ))]

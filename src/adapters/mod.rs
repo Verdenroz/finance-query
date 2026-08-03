@@ -21,6 +21,7 @@
 //! | `fiscaldata` | [US Treasury FiscalData](https://fiscaldata.treasury.gov/) | Keyless | 50+ datasets | Federal debt, average interest rates, daily Treasury statements |
 //! | `bls` | [BLS Public Data](https://www.bls.gov/developers/) | Keyless (25/day) or keyed (500/day) | 1 | CPI, unemployment, payrolls, wages, PPI from the primary source |
 //! | `frankfurter` | [Frankfurter](https://frankfurter.dev/) | Keyless | 1 | ECB daily reference exchange rates — the only keyless forex route |
+//! | `binance` | [Binance public data](https://data-api.binance.vision/) | Keyless | 2 | Exchange-grade crypto quotes and arbitrary-interval OHLCV (geo-blocked in some regions) |
 //! | *(always)* | [SEC EDGAR](https://www.sec.gov/edgar) | 10 req/sec | 5+ | Filing history, XBRL financials, full-text search (keyless, requires contact email) |
 //!
 //! # Quick comparison
@@ -75,6 +76,10 @@ pub(crate) mod bls;
 /// Frankfurter ECB reference exchange rates (keyless, requires `frankfurter` feature).
 #[cfg(feature = "frankfurter")]
 pub(crate) mod frankfurter;
+
+/// Binance public market data (keyless, requires `binance` feature).
+#[cfg(feature = "binance")]
+pub(crate) mod binance;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;

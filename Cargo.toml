@@ -113,6 +113,7 @@ full = [
     "fiscaldata",
     "bls",
     "frankfurter",
+    "binance",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -132,6 +133,8 @@ fiscaldata = []
 bls = []
 # Enable Frankfurter ECB reference exchange rates (keyless forex)
 frankfurter = []
+# Enable Binance public market data (keyless crypto quotes + OHLCV)
+binance = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -176,6 +179,7 @@ features = [
     "fiscaldata",
     "bls",
     "frankfurter",
+    "binance",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

@@ -38,8 +38,9 @@ pub mod sentiment;
 pub mod commodities;
 /// Cryptocurrency market data — CoinGecko, Alpha Vantage, FMP, Polygon.
 #[cfg(any(
-    feature = "crypto",
     feature = "alphavantage",
+    feature = "binance",
+    feature = "crypto",
     feature = "fmp",
     feature = "polygon"
 ))]

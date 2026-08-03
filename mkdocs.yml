@@ -80,6 +80,7 @@ nav:
           - US Treasury FiscalData: library/providers/fiscaldata.md
           - BLS: library/providers/bls.md
           - Frankfurter: library/providers/frankfurter.md
+          - Binance: library/providers/binance.md
       - Domains:
           - Crypto: library/crypto.md
           - Forex: library/forex.md

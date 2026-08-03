@@ -436,6 +436,7 @@ macro_rules! impl_chartable_analytics {
 pub(crate) mod commodities;
 #[cfg(any(
     feature = "alphavantage",
+    feature = "binance",
     feature = "crypto",
     feature = "fmp",
     feature = "polygon"
@@ -472,6 +473,7 @@ pub(crate) mod market;
 pub use commodities::Commodity;
 #[cfg(any(
     feature = "alphavantage",
+    feature = "binance",
     feature = "crypto",
     feature = "fmp",
     feature = "polygon"

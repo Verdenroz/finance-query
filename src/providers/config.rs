@@ -86,6 +86,7 @@ impl Providers {
     /// Create a [`CryptoCoin`](crate::CryptoCoin) handle backed by this provider set.
     #[cfg(any(
         feature = "alphavantage",
+        feature = "binance",
         feature = "crypto",
         feature = "fmp",
         feature = "polygon"

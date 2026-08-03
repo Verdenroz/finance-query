@@ -72,6 +72,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   ECB rates are a daily reference fix, so quotes carry a price and a change
   against the previous *published* day but no bid/ask. A pair of identical
   currencies is answered locally with `1.0` rather than Frankfurter's HTTP 422.
+- **Binance public market data** (`binance` feature, keyless) —
+  `Provider::Binance` serves `Capability::CRYPTO` (rolling 24-hour quotes) and
+  `Capability::CHART` (arbitrary-interval OHLCV), the first keyless source of
+  exchange-grade crypto data. Symbols normalise across every spelling the
+  library uses (`bitcoin`, `BTC`, `BTC-USD`, `BTCUSDT`); note that Binance
+  lists no USD spot markets, so `"usd"` maps to the USDT stablecoin. Windows
+  longer than Binance's 1000-candle page cap are walked automatically (up to
+  10,000 candles). A geo-block (HTTP 451) is reported as such and names Kraken
+  as the alternative.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

@@ -118,6 +118,7 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 // Domain-specific query handles — constructable via Providers factory methods.
 #[cfg(any(
     feature = "alphavantage",
+    feature = "binance",
     feature = "crypto",
     feature = "fmp",
     feature = "polygon"
@@ -242,8 +243,9 @@ pub use models::sentiment::{Sentiment, SentimentLabel, analyze as analyze_sentim
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use models::commodities::CommodityQuote;
 #[cfg(any(
-    feature = "crypto",
     feature = "alphavantage",
+    feature = "binance",
+    feature = "crypto",
     feature = "fmp",
     feature = "polygon"
 ))]

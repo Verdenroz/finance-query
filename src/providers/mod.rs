@@ -8,6 +8,8 @@ pub(crate) mod mock;
 
 #[cfg(feature = "alphavantage")]
 pub(crate) mod alphavantage;
+#[cfg(feature = "binance")]
+pub(crate) mod binance;
 #[cfg(feature = "bls")]
 pub(crate) mod bls;
 #[cfg(feature = "crypto")]
@@ -73,6 +75,9 @@ pub enum Provider {
     /// Frankfurter ECB reference exchange rates (requires `frankfurter` feature, keyless).
     #[cfg(feature = "frankfurter")]
     Frankfurter,
+    /// Binance public market data (requires `binance` feature, keyless).
+    #[cfg(feature = "binance")]
+    Binance,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -102,6 +107,8 @@ impl Provider {
             "bls" => Some(Self::Bls),
             #[cfg(feature = "frankfurter")]
             "frankfurter" => Some(Self::Frankfurter),
+            #[cfg(feature = "binance")]
+            "binance" => Some(Self::Binance),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -129,6 +136,8 @@ impl Provider {
             Self::Bls => "bls",
             #[cfg(feature = "frankfurter")]
             Self::Frankfurter => "frankfurter",
+            #[cfg(feature = "binance")]
+            Self::Binance => "binance",
             Self::Edgar => "edgar",
         }
     }
@@ -157,6 +166,8 @@ impl Provider {
         v.push(Self::Bls);
         #[cfg(feature = "frankfurter")]
         v.push(Self::Frankfurter);
+        #[cfg(feature = "binance")]
+        v.push(Self::Binance);
         v.push(Self::Edgar);
         v
     }
@@ -189,6 +200,8 @@ impl Provider {
             Self::Bls => ProviderAdapter::capabilities(&bls::BlsProvider),
             #[cfg(feature = "frankfurter")]
             Self::Frankfurter => ProviderAdapter::capabilities(&frankfurter::FrankfurterProvider),
+            #[cfg(feature = "binance")]
+            Self::Binance => ProviderAdapter::capabilities(&binance::BinanceProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -885,6 +898,8 @@ pub(crate) async fn build_providers(
             Provider::Bls => Arc::new(bls::BlsProvider),
             #[cfg(feature = "frankfurter")]
             Provider::Frankfurter => Arc::new(frankfurter::FrankfurterProvider),
+            #[cfg(feature = "binance")]
+            Provider::Binance => Arc::new(binance::BinanceProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

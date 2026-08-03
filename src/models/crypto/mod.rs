@@ -38,6 +38,7 @@ pub struct CryptoQuote {
 /// A cryptocurrency quote from CoinGecko.
 ///
 /// Obtain via [`crypto::coins`](crate::crypto::coins) or [`crypto::coin`](crate::crypto::coin).
+#[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CoinQuote {
