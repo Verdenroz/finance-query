@@ -28,6 +28,7 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **BLS** | `bls` | Keyless 25/day, keyed 500/day | `BLS_API_KEY` *(optional)* |
 | **Frankfurter** | `frankfurter` | Keyless | *(keyless)* |
 | **Binance** | `binance` | Keyless | *(keyless)* |
+| **Kraken** | `kraken` | Keyless | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 
 ```toml

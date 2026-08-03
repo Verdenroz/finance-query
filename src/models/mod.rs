@@ -42,6 +42,7 @@ pub mod commodities;
     feature = "binance",
     feature = "crypto",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 pub mod crypto;

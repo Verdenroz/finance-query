@@ -81,6 +81,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   longer than Binance's 1000-candle page cap are walked automatically (up to
   10,000 candles). A geo-block (HTTP 451) is reported as such and names Kraken
   as the alternative.
+- **Kraken public market data** (`kraken` feature, keyless) —
+  `Provider::Kraken` serves `Capability::CRYPTO` and `Capability::CHART` from
+  endpoints that are keyless *and* reachable from the US, unlike Binance. With
+  both providers, `CRYPTO` finally has a real `Fetch::Sequential` fallback
+  chain. Kraken's own conventions (`XBT` for Bitcoin, `XDG` for Dogecoin, the
+  legacy `X`/`Z` pair prefixes) are translated in both directions, so callers
+  pass normal tickers. Kraken caps `/OHLC` at ~720 candles ending at the
+  present with no way to page further back — deep history needs Binance or a
+  keyed provider.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

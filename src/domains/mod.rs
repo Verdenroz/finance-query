@@ -439,6 +439,7 @@ pub(crate) mod commodities;
     feature = "binance",
     feature = "crypto",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 pub(crate) mod crypto;
@@ -476,6 +477,7 @@ pub use commodities::Commodity;
     feature = "binance",
     feature = "crypto",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 pub use crypto::CryptoCoin;

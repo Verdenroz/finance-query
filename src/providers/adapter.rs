@@ -275,6 +275,7 @@ pub(crate) trait MarketProvider: ProviderCore {
     feature = "binance",
     feature = "crypto",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 #[async_trait::async_trait]
@@ -409,6 +410,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         feature = "binance",
         feature = "crypto",
         feature = "fmp",
+        feature = "kraken",
         feature = "polygon"
     ))]
     fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
@@ -486,6 +488,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
             feature = "binance",
             feature = "crypto",
             feature = "fmp",
+            feature = "kraken",
             feature = "polygon"
         ))]
         if self.as_crypto().is_some() {

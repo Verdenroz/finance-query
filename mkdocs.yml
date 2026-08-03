@@ -81,6 +81,7 @@ nav:
           - BLS: library/providers/bls.md
           - Frankfurter: library/providers/frankfurter.md
           - Binance: library/providers/binance.md
+          - Kraken: library/providers/kraken.md
       - Domains:
           - Crypto: library/crypto.md
           - Forex: library/forex.md

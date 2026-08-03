@@ -121,6 +121,7 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
     feature = "binance",
     feature = "crypto",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 pub use domains::CryptoCoin;
@@ -247,6 +248,7 @@ pub use models::commodities::CommodityQuote;
     feature = "binance",
     feature = "crypto",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 pub use models::crypto::CryptoQuote;

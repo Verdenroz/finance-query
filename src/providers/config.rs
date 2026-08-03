@@ -89,6 +89,7 @@ impl Providers {
         feature = "binance",
         feature = "crypto",
         feature = "fmp",
+        feature = "kraken",
         feature = "polygon"
     ))]
     pub fn crypto(&self, id: impl Into<String>) -> crate::domains::CryptoCoin {
