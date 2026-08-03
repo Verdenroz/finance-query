@@ -24,6 +24,7 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **CoinGecko** | `crypto` | 30 req/min | *(keyless)* |
 | **FRED** | `fred` | 120 req/min | `FRED_API_KEY` |
 | **World Bank** | `worldbank` | Keyless | *(keyless)* |
+| **US Treasury FiscalData** | `fiscaldata` | Keyless | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 
 ```toml

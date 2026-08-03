@@ -50,6 +50,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   against the world aggregate `WLD`. Annual/quarterly/monthly period labels are
   normalised to the `YYYY-MM-DD` start of the period and observations are
   returned oldest-first, matching every other `ECONOMIC` provider.
+- **US Treasury FiscalData** (`fiscaldata` feature, keyless) —
+  `Provider::FiscalData` serves `Capability::ECONOMIC` from the Treasury's own
+  publishing platform: federal debt (`"DEBT_TO_PENNY"`), average interest rates,
+  and Daily Treasury Statement cash balances. Six curated series ids cover the
+  common cases; any other dataset is reachable through the passthrough form
+  `"<dataset path>:<value column>"`. FiscalData encodes numbers as strings and
+  marks missing figures with the literal string `"null"` — both are normalised.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

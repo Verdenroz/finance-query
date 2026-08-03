@@ -11,6 +11,8 @@ pub(crate) mod alphavantage;
 #[cfg(feature = "crypto")]
 pub(crate) mod coingecko;
 pub(crate) mod edgar;
+#[cfg(feature = "fiscaldata")]
+pub(crate) mod fiscaldata;
 #[cfg(feature = "fmp")]
 pub(crate) mod fmp;
 #[cfg(feature = "fred")]
@@ -57,6 +59,9 @@ pub enum Provider {
     /// World Bank Open Data global macro indicators (requires `worldbank` feature, keyless).
     #[cfg(feature = "worldbank")]
     WorldBank,
+    /// US Treasury FiscalData (requires `fiscaldata` feature, keyless).
+    #[cfg(feature = "fiscaldata")]
+    FiscalData,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -80,6 +85,8 @@ impl Provider {
             "fred" => Some(Self::Fred),
             #[cfg(feature = "worldbank")]
             "worldbank" => Some(Self::WorldBank),
+            #[cfg(feature = "fiscaldata")]
+            "fiscaldata" => Some(Self::FiscalData),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -101,6 +108,8 @@ impl Provider {
             Self::Fred => "fred",
             #[cfg(feature = "worldbank")]
             Self::WorldBank => "worldbank",
+            #[cfg(feature = "fiscaldata")]
+            Self::FiscalData => "fiscaldata",
             Self::Edgar => "edgar",
         }
     }
@@ -123,6 +132,8 @@ impl Provider {
         v.push(Self::Fred);
         #[cfg(feature = "worldbank")]
         v.push(Self::WorldBank);
+        #[cfg(feature = "fiscaldata")]
+        v.push(Self::FiscalData);
         v.push(Self::Edgar);
         v
     }
@@ -149,6 +160,8 @@ impl Provider {
             Self::Fred => ProviderAdapter::capabilities(&fred::FredProvider),
             #[cfg(feature = "worldbank")]
             Self::WorldBank => ProviderAdapter::capabilities(&worldbank::WorldBankProvider),
+            #[cfg(feature = "fiscaldata")]
+            Self::FiscalData => ProviderAdapter::capabilities(&fiscaldata::FiscalDataProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -839,6 +852,8 @@ pub(crate) async fn build_providers(
             Provider::Fred => Arc::new(fred::FredProvider),
             #[cfg(feature = "worldbank")]
             Provider::WorldBank => Arc::new(worldbank::WorldBankProvider),
+            #[cfg(feature = "fiscaldata")]
+            Provider::FiscalData => Arc::new(fiscaldata::FiscalDataProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

@@ -125,6 +125,7 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 pub use domains::CryptoCoin;
 #[cfg(any(
     feature = "alphavantage",
+    feature = "fiscaldata",
     feature = "fred",
     feature = "polygon",
     feature = "worldbank"
@@ -243,6 +244,7 @@ pub use models::commodities::CommodityQuote;
 pub use models::crypto::CryptoQuote;
 #[cfg(any(
     feature = "alphavantage",
+    feature = "fiscaldata",
     feature = "fred",
     feature = "polygon",
     feature = "worldbank"

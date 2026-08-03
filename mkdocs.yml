@@ -77,6 +77,7 @@ nav:
           - EDGAR: library/providers/edgar.md
           - FRED: library/providers/fred.md
           - World Bank: library/providers/worldbank.md
+          - US Treasury FiscalData: library/providers/fiscaldata.md
       - Domains:
           - Crypto: library/crypto.md
           - Forex: library/forex.md

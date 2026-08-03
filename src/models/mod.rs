@@ -47,6 +47,7 @@ pub mod crypto;
 /// Macro-economic data — FRED, Alpha Vantage, Polygon.
 #[cfg(any(
     feature = "alphavantage",
+    feature = "fiscaldata",
     feature = "fred",
     feature = "polygon",
     feature = "worldbank"

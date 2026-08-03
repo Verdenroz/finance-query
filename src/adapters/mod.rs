@@ -18,6 +18,7 @@
 //! | `crypto` | [CoinGecko](https://www.coingecko.com/) | 30 req/min | 2 | Top coins by market cap, single coin quotes (keyless) |
 //! | `fred` | [FRED](https://fred.stlouisfed.org/) | 120 req/min | 2+ | 800k+ macro time series, US Treasury yield curve |
 //! | `worldbank` | [World Bank Open Data](https://data.worldbank.org/) | Keyless | 1 | ~1,600 global development/macro indicators across 200+ economies |
+//! | `fiscaldata` | [US Treasury FiscalData](https://fiscaldata.treasury.gov/) | Keyless | 50+ datasets | Federal debt, average interest rates, daily Treasury statements |
 //! | *(always)* | [SEC EDGAR](https://www.sec.gov/edgar) | 10 req/sec | 5+ | Filing history, XBRL financials, full-text search (keyless, requires contact email) |
 //!
 //! # Quick comparison
@@ -60,6 +61,10 @@ pub(crate) mod fred;
 /// World Bank Open Data global macro indicators (keyless, requires `worldbank` feature).
 #[cfg(feature = "worldbank")]
 pub(crate) mod worldbank;
+
+/// US Treasury FiscalData federal fiscal statistics (keyless, requires `fiscaldata` feature).
+#[cfg(feature = "fiscaldata")]
+pub(crate) mod fiscaldata;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;
