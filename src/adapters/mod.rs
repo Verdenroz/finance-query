@@ -25,6 +25,7 @@
 //! | `kraken` | [Kraken public data](https://api.kraken.com/) | Keyless | 2 | Crypto quotes and OHLC candles; US-accessible complement to Binance |
 //! | `finra` | [FINRA Query API](https://developer.finra.org/) | Keyless (non-commercial) | 1 | Daily short-sale volume by security, from the primary source |
 //! | `openfigi` | [OpenFIGI](https://www.openfigi.com/api) | Keyless (25 req/min) | 1 | CUSIP/ISIN/SEDOL/FIGI to ticker resolution |
+//! | `defi` | [DefiLlama](https://defillama.com/docs/api) | Keyless | 3 | Protocol TVL (current + history), chain rankings, stablecoin supplies |
 //! | *(always)* | [SEC EDGAR](https://www.sec.gov/edgar) | 10 req/sec | 5+ | Filing history, XBRL financials, full-text search (keyless, requires contact email) |
 //!
 //! # Quick comparison
@@ -95,6 +96,10 @@ pub(crate) mod finra;
 /// OpenFIGI security-identifier mapping (keyless, requires `openfigi` feature).
 #[cfg(feature = "openfigi")]
 pub(crate) mod openfigi;
+
+/// DefiLlama DeFi TVL and stablecoin data (keyless, requires `defi` feature).
+#[cfg(feature = "defi")]
+pub(crate) mod defillama;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;

@@ -107,6 +107,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rather than behind the Providers API because resolution is not tied to a
   symbol handle and maps onto no `Capability`. `OPENFIGI_API_KEY` is optional
   and only raises the quota.
+- **DefiLlama** (`defi` feature, keyless) — the library's first on-chain data.
+  `Provider::DefiLlama` adds `CryptoCoin::tvl()` and `.tvl_history()` under
+  `Capability::CRYPTO` (protocol TVL, per-chain split, 1d/7d change, market
+  cap), and a new crate-level `defi` module carries the market-wide views:
+  `defi::chains()` and `defi::stablecoins()`, both ranked largest-first. New
+  public models `ProtocolTvl`, `ChainAllocation`, `TvlPoint`, `ChainTvl`, and
+  `StablecoinSupply`. Per-chain allocations exclude DefiLlama's breakdown keys
+  (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
+  double-count. DefiLlama serves no prices, so `quote()` falls through to
+  another routed provider.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

@@ -167,6 +167,48 @@ pub mod openfigi {
     }
 }
 
+#[cfg(feature = "defi")]
+pub mod defi {
+    //! Market-wide DeFi data via DefiLlama (requires `defi` feature, keyless).
+    //!
+    //! Chain rankings and stablecoin supplies describe the market as a whole,
+    //! not one asset, so there is no symbol handle to hang them off — they sit
+    //! at the crate root the way [`edgar`](crate::edgar) and
+    //! [`fred`](crate::fred) do.
+    //!
+    //! Protocol-shaped data *is* symbol-shaped and lives on
+    //! [`CryptoCoin::tvl`](crate::CryptoCoin::tvl) instead.
+    //!
+    //! ```no_run
+    //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    //! use finance_query::defi;
+    //!
+    //! for chain in defi::chains().await?.into_iter().take(5) {
+    //!     println!("{}: ${:?}", chain.name, chain.tvl);
+    //! }
+    //! # Ok(())
+    //! # }
+    //! ```
+
+    use crate::error::Result;
+    pub use crate::models::crypto::defi::{
+        ChainAllocation, ChainTvl, ProtocolTvl, StablecoinSupply, TvlPoint,
+    };
+
+    /// Fetch aggregate total value locked for every chain, largest first.
+    pub async fn chains() -> Result<Vec<ChainTvl>> {
+        crate::adapters::defillama::chains().await
+    }
+
+    /// Fetch circulating supply for every tracked stablecoin, largest first.
+    ///
+    /// Supplies are denominated in the coin's pegged asset — read `peg_type`
+    /// before summing across coins pegged to different currencies.
+    pub async fn stablecoins() -> Result<Vec<StablecoinSupply>> {
+        crate::adapters::defillama::stablecoins().await
+    }
+}
+
 pub mod feeds;
 
 #[cfg(feature = "risk")]
@@ -188,6 +230,7 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
     feature = "alphavantage",
     feature = "binance",
     feature = "crypto",
+    feature = "defi",
     feature = "fmp",
     feature = "kraken",
     feature = "polygon"
@@ -315,6 +358,7 @@ pub use models::commodities::CommodityQuote;
     feature = "alphavantage",
     feature = "binance",
     feature = "crypto",
+    feature = "defi",
     feature = "fmp",
     feature = "kraken",
     feature = "polygon"

@@ -2,6 +2,10 @@
 //!
 //! Canonical public types for cryptocurrency quotes from multiple providers.
 
+/// DeFi protocol and chain models — DefiLlama.
+#[cfg(feature = "defi")]
+pub mod defi;
+
 use serde::{Deserialize, Serialize};
 
 /// A provider-agnostic cryptocurrency quote.

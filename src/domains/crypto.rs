@@ -29,6 +29,54 @@ impl CryptoCoin {
         )
     }
 
+    /// Fetch total value locked for this handle read as a **DeFi protocol
+    /// slug** (e.g. `providers.crypto("aave")`).
+    ///
+    /// Routed through `Capability::CRYPTO`; only DefiLlama serves it, so route
+    /// `CRYPTO` to include [`Provider::DefiLlama`](crate::Provider::DefiLlama).
+    /// The id is a protocol slug here, not a coin id — most DefiLlama slugs
+    /// happen to match their CoinGecko id, but not all do.
+    #[cfg(feature = "defi")]
+    pub async fn tvl(&self) -> Result<crate::models::crypto::defi::ProtocolTvl> {
+        let __sym = self.id.clone();
+        let __providers = std::sync::Arc::clone(&self.providers);
+        __providers
+            .fetch(crate::providers::Capability::CRYPTO, move |p| {
+                let __s = __sym.clone();
+                let p = p.clone();
+                async move {
+                    p.as_crypto()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ProtocolTvl))?
+                        .fetch_protocol_tvl(&__s)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch this protocol's full TVL history, oldest first.
+    ///
+    /// Same routing and slug semantics as [`tvl`](Self::tvl).
+    #[cfg(feature = "defi")]
+    pub async fn tvl_history(&self) -> Result<Vec<crate::models::crypto::defi::TvlPoint>> {
+        let __sym = self.id.clone();
+        let __providers = std::sync::Arc::clone(&self.providers);
+        __providers
+            .fetch(crate::providers::Capability::CRYPTO, move |p| {
+                let __s = __sym.clone();
+                let p = p.clone();
+                async move {
+                    p.as_crypto()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::ProtocolTvlHistory)
+                        })?
+                        .fetch_protocol_tvl_history(&__s)
+                        .await
+                }
+            })
+            .await
+    }
+
     /// Fetch historical OHLCV candles for this coin priced in `vs_currency`.
     ///
     /// Unlike [`quote`](Self::quote) (which uses the coin *id*, e.g.

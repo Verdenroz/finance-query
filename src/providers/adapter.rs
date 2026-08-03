@@ -274,6 +274,7 @@ pub(crate) trait MarketProvider: ProviderCore {
     feature = "alphavantage",
     feature = "binance",
     feature = "crypto",
+    feature = "defi",
     feature = "fmp",
     feature = "kraken",
     feature = "polygon"
@@ -285,6 +286,24 @@ pub(crate) trait CryptoProvider: ProviderCore {
         id: &str,
         vs_currency: &str,
     ) -> Result<crate::models::crypto::CryptoQuote>;
+
+    /// Fetch total value locked in a DeFi protocol.
+    #[cfg(feature = "defi")]
+    async fn fetch_protocol_tvl(
+        &self,
+        _protocol: &str,
+    ) -> Result<crate::models::crypto::defi::ProtocolTvl> {
+        Err(self.not_supported(Operation::ProtocolTvl))
+    }
+
+    /// Fetch a DeFi protocol's TVL history, oldest first.
+    #[cfg(feature = "defi")]
+    async fn fetch_protocol_tvl_history(
+        &self,
+        _protocol: &str,
+    ) -> Result<Vec<crate::models::crypto::defi::TvlPoint>> {
+        Err(self.not_supported(Operation::ProtocolTvlHistory))
+    }
 }
 
 /// [`Capability::ECONOMIC`] — macro-economic data series.
@@ -409,6 +428,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         feature = "alphavantage",
         feature = "binance",
         feature = "crypto",
+        feature = "defi",
         feature = "fmp",
         feature = "kraken",
         feature = "polygon"
@@ -487,6 +507,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
             feature = "alphavantage",
             feature = "binance",
             feature = "crypto",
+            feature = "defi",
             feature = "fmp",
             feature = "kraken",
             feature = "polygon"

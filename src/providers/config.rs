@@ -88,6 +88,7 @@ impl Providers {
         feature = "alphavantage",
         feature = "binance",
         feature = "crypto",
+        feature = "defi",
         feature = "fmp",
         feature = "kraken",
         feature = "polygon"
