@@ -885,6 +885,46 @@ impl Ticker {
             .await
     }
 
+    /// Fetch the trailing-twelve-month key-metrics snapshot via the configured
+    /// [`Capability::FUNDAMENTALS`] provider (currently FMP only).
+    ///
+    /// A TTM snapshot is a single always-current rollup, so callers do not need
+    /// to fetch the latest fiscal period and reason about whether it is still
+    /// current — see [`financials`](Self::financials) for the period series.
+    pub async fn key_metrics_ttm(&self) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::KeyMetricsTtm))?
+                        .fetch_key_metrics_ttm(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch the trailing-twelve-month financial-ratios snapshot via the
+    /// configured [`Capability::FUNDAMENTALS`] provider (currently FMP only).
+    pub async fn ratios_ttm(&self) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::RatiosTtm))?
+                        .fetch_ratios_ttm(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
     #[cfg(feature = "indicators")]
     /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(

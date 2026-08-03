@@ -131,6 +131,22 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
     ) -> Result<crate::models::fundamentals::RatingConsensus> {
         Err(self.not_supported(Operation::RatingConsensus))
     }
+
+    /// Fetch the trailing-twelve-month key-metrics snapshot.
+    async fn fetch_key_metrics_ttm(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+        Err(self.not_supported(Operation::KeyMetricsTtm))
+    }
+
+    /// Fetch the trailing-twelve-month ratios snapshot.
+    async fn fetch_ratios_ttm(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+        Err(self.not_supported(Operation::RatiosTtm))
+    }
 }
 
 /// [`Capability::CORPORATE`] — news, corporate events, similar-symbol

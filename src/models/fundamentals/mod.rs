@@ -15,6 +15,10 @@ pub use short_activity::{ShareFloat, ShortInterest, ShortVolume};
 mod consensus;
 pub use consensus::{PriceTargetConsensus, PriceTargetSummary, RatingConsensus};
 
+// Trailing-twelve-month snapshots (provider-routed)
+mod ttm;
+pub use ttm::{FinancialRatiosTtm, KeyMetricsTtm};
+
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod balance_sheet_history;
 pub(crate) mod cashflow_statement_history;

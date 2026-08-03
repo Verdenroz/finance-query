@@ -123,6 +123,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (grade distribution plus a headline label) via the `FUNDAMENTALS` route (FMP).
   These are the provider's own panel-wide rollups, not the raw per-analyst grade
   actions already available through `UpgradeDowngradeHistory`.
+- TTM fundamentals snapshots on `Ticker`: `key_metrics_ttm()` and `ratios_ttm()`
+  return a single always-current trailing-twelve-month rollup via the
+  `FUNDAMENTALS` route (FMP), instead of requiring callers to fetch the latest
+  fiscal period and reason about whether it is still current. New public models
+  `KeyMetricsTtm` and `FinancialRatiosTtm`.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

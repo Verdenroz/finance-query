@@ -125,6 +125,20 @@ impl FundamentalsProvider for FmpProvider {
     ) -> Result<crate::models::fundamentals::RatingConsensus> {
         crate::adapters::fmp::fundamentals::consensus::fetch_rating_consensus_response(symbol).await
     }
+
+    async fn fetch_key_metrics_ttm(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+        crate::adapters::fmp::fundamentals::ttm::fetch_key_metrics_ttm_response(symbol).await
+    }
+
+    async fn fetch_ratios_ttm(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+        crate::adapters::fmp::fundamentals::ttm::fetch_ratios_ttm_response(symbol).await
+    }
 }
 
 #[async_trait::async_trait]

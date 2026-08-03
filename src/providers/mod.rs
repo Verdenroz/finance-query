@@ -498,6 +498,10 @@ pub enum Operation {
     PriceTargetSummary,
     /// Aggregated analyst rating consensus.
     RatingConsensus,
+    /// Trailing-twelve-month key-metrics snapshot.
+    KeyMetricsTtm,
+    /// Trailing-twelve-month ratios snapshot.
+    RatiosTtm,
 }
 
 impl Operation {
@@ -549,6 +553,8 @@ impl Operation {
             Self::PriceTargetConsensus => "price_target_consensus",
             Self::PriceTargetSummary => "price_target_summary",
             Self::RatingConsensus => "rating_consensus",
+            Self::KeyMetricsTtm => "key_metrics_ttm",
+            Self::RatiosTtm => "ratios_ttm",
         }
     }
 
@@ -563,7 +569,9 @@ impl Operation {
             | Self::ShareFloat
             | Self::PriceTargetConsensus
             | Self::PriceTargetSummary
-            | Self::RatingConsensus => Capability::FUNDAMENTALS,
+            | Self::RatingConsensus
+            | Self::KeyMetricsTtm
+            | Self::RatiosTtm => Capability::FUNDAMENTALS,
             Self::News | Self::Recommendations | Self::Events | Self::PressReleases => {
                 Capability::CORPORATE
             }
