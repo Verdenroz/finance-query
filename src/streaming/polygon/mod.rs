@@ -5,8 +5,10 @@
 //! here reuses the existing [`PolygonStream`] adapter — the only Polygon
 //! WebSocket client in the crate.
 
+mod book;
 mod options;
 mod price;
+mod trades;
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -20,8 +22,10 @@ use crate::adapters::polygon::websocket::{ClusterDTO, PolygonMessage, PolygonStr
 use super::client::{StreamError, StreamResult};
 use super::source::{StreamCommand, apply_command};
 
+pub(crate) use book::PolygonBookSource;
 pub(crate) use options::PolygonOptionsSource;
 pub(crate) use price::PolygonPriceSource;
+pub(crate) use trades::PolygonTradeSource;
 
 /// Asset class of a Polygon real-time cluster.
 ///
@@ -64,6 +68,16 @@ impl AssetClass {
             Self::Forex => &["C", "CA"],
             Self::Crypto => &["XT", "XQ"],
             Self::Indices => &["V"],
+        }
+    }
+
+    /// Channel carrying individual trade prints, where the class has one.
+    pub(crate) fn trade_channel(self) -> Option<&'static str> {
+        match self {
+            Self::Stocks | Self::Options | Self::Futures => Some("T"),
+            Self::Crypto => Some("XT"),
+            // Forex and indices publish no per-trade prints.
+            Self::Forex | Self::Indices => None,
         }
     }
 

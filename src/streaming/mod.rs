@@ -40,6 +40,8 @@
 //! ```
 
 mod batch;
+#[cfg(feature = "polygon")]
+mod book;
 mod client;
 mod economic;
 mod handle;
@@ -51,9 +53,13 @@ mod polygon;
 mod pricing;
 mod source;
 mod subscription;
+#[cfg(feature = "polygon")]
+mod trades;
 mod yahoo;
 
 pub use batch::{Batched, StreamBatchExt};
+#[cfg(feature = "polygon")]
+pub use book::{BookLevel, DepthStream, DepthStreamBuilder, OrderBookUpdate};
 pub use client::{PriceSource, PriceStream, PriceStreamBuilder, StreamError, StreamResult};
 pub use economic::{EconomicRelease, EconomicStream, EconomicStreamBuilder};
 pub use news::{NewsStream, NewsStreamBuilder};
@@ -62,3 +68,5 @@ pub use options::{Greeks, OptionContractUpdate, OptionsChainStream, OptionsChain
 #[cfg(feature = "polygon")]
 pub use polygon::AssetClass;
 pub use pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
+#[cfg(feature = "polygon")]
+pub use trades::{TradeStream, TradeStreamBuilder, TradeTick};
