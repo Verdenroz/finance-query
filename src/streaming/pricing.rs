@@ -303,7 +303,7 @@ impl PricingData {
 ///
 /// This is the user-facing struct with properly typed enum fields
 /// that serialize to readable strings like `"EQUITY"` or `"CRYPTOCURRENCY"`.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 #[allow(missing_docs)]
 pub struct PriceUpdate {

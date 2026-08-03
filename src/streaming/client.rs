@@ -11,9 +11,9 @@ use std::time::Duration;
 
 use futures::stream::Stream;
 
+use super::handle::SourceStream;
 use super::pricing::PriceUpdate;
-use super::source::{StreamCommand, StreamSource, run_stream_loop};
-use super::subscription::Subscription;
+use super::source::StreamSource;
 use super::yahoo::YahooStreamSource;
 use crate::error::FinanceError;
 
@@ -85,7 +85,7 @@ const CHANNEL_CAPACITY: usize = 1024;
 /// # }
 /// ```
 pub struct PriceStream {
-    inner: Subscription<PriceUpdate, StreamCommand>,
+    inner: SourceStream<PriceUpdate>,
 }
 
 impl PriceStream {
@@ -123,7 +123,7 @@ impl PriceStream {
     /// Yahoo is the default ([`subscribe`](Self::subscribe)); this is the
     /// generic entry point shared with [`PriceStreamBuilder`].
     pub(crate) async fn subscribe_with_source<S, I>(
-        source: Arc<dyn StreamSource>,
+        source: Arc<dyn StreamSource<PriceUpdate>>,
         symbols: I,
         retry_delay: Duration,
     ) -> StreamResult<Self>
@@ -133,22 +133,9 @@ impl PriceStream {
     {
         let initial_symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
 
-        let inner = Subscription::start(
-            CHANNEL_CAPACITY,
-            32,
-            move |broadcast_tx, command_rx| async move {
-                let _ = run_stream_loop(
-                    source,
-                    initial_symbols,
-                    broadcast_tx,
-                    command_rx,
-                    retry_delay,
-                )
-                .await;
-            },
-        );
-
-        Ok(PriceStream { inner })
+        Ok(PriceStream {
+            inner: SourceStream::start(source, initial_symbols, retry_delay, CHANNEL_CAPACITY),
+        })
     }
 
     /// Create a new receiver for this stream.
@@ -178,8 +165,7 @@ impl PriceStream {
         S: Into<String>,
         I: IntoIterator<Item = S>,
     {
-        let symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
-        self.inner.send(StreamCommand::Subscribe(symbols)).await;
+        self.inner.add(symbols).await;
     }
 
     /// Remove symbols from the subscription.
@@ -200,13 +186,12 @@ impl PriceStream {
         S: Into<String>,
         I: IntoIterator<Item = S>,
     {
-        let symbols: Vec<String> = symbols.into_iter().map(Into::into).collect();
-        self.inner.send(StreamCommand::Unsubscribe(symbols)).await;
+        self.inner.remove(symbols).await;
     }
 
     /// Close the stream and disconnect from the WebSocket.
     pub async fn close(&self) {
-        self.inner.send(StreamCommand::Close).await;
+        self.inner.close().await;
     }
 }
 
@@ -218,10 +203,27 @@ impl Stream for PriceStream {
     }
 }
 
+/// Which upstream backend a [`PriceStream`] connects to.
+///
+/// Yahoo multiplexes every asset class onto one connection; Polygon runs a
+/// separate cluster per asset class, so its variant carries the class to use.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+#[non_exhaustive]
+pub enum PriceSource {
+    /// Yahoo Finance WebSocket — keyless, all asset classes (default).
+    #[default]
+    Yahoo,
+    /// Polygon.io real-time cluster for one asset class. Requires
+    /// [`polygon::init`](crate::polygon::init).
+    #[cfg(feature = "polygon")]
+    Polygon(crate::streaming::AssetClass),
+}
+
 /// Builder for creating price streams with custom configuration
 pub struct PriceStreamBuilder {
     symbols: Vec<String>,
     retry_delay: Duration,
+    source: PriceSource,
 }
 
 impl PriceStreamBuilder {
@@ -230,7 +232,30 @@ impl PriceStreamBuilder {
         Self {
             symbols: Vec::new(),
             retry_delay: Duration::from_secs(RECONNECT_BACKOFF_SECS),
+            source: PriceSource::Yahoo,
         }
+    }
+
+    /// Choose the upstream backend (default: [`PriceSource::Yahoo`]).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// # #[cfg(feature = "polygon")]
+    /// # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    /// use finance_query::streaming::{AssetClass, PriceSource, PriceStreamBuilder};
+    ///
+    /// let stream = PriceStreamBuilder::new()
+    ///     .symbols(["BTC-USD"])
+    ///     .source(PriceSource::Polygon(AssetClass::Crypto))
+    ///     .build()
+    ///     .await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn source(mut self, source: PriceSource) -> Self {
+        self.source = source;
+        self
     }
 
     /// Add symbols to subscribe to
@@ -249,14 +274,14 @@ impl PriceStreamBuilder {
         self
     }
 
-    /// Build and start the price stream (Yahoo-backed).
+    /// Build and start the price stream using the configured source.
     pub async fn build(self) -> StreamResult<PriceStream> {
-        PriceStream::subscribe_with_source(
-            Arc::new(YahooStreamSource),
-            self.symbols,
-            self.retry_delay,
-        )
-        .await
+        let source: Arc<dyn StreamSource<PriceUpdate>> = match self.source {
+            PriceSource::Yahoo => Arc::new(YahooStreamSource),
+            #[cfg(feature = "polygon")]
+            PriceSource::Polygon(class) => Arc::new(super::polygon::PolygonPriceSource::new(class)),
+        };
+        PriceStream::subscribe_with_source(source, self.symbols, self.retry_delay).await
     }
 }
 

@@ -17,7 +17,7 @@ use tracing::{debug, error, info, warn};
 
 use super::client::{StreamError, StreamResult};
 use super::pricing::{PriceUpdate, PricingData, PricingDecodeError};
-use super::source::{StreamCommand, StreamSource};
+use super::source::{StreamCommand, StreamSource, apply_command};
 
 /// Yahoo Finance WebSocket URL.
 const YAHOO_WS_URL: &str = "wss://streamer.finance.yahoo.com/?version=2";
@@ -29,7 +29,7 @@ const HEARTBEAT_INTERVAL_SECS: u64 = 15;
 pub(crate) struct YahooStreamSource;
 
 #[async_trait::async_trait]
-impl StreamSource for YahooStreamSource {
+impl StreamSource<PriceUpdate> for YahooStreamSource {
     fn id(&self) -> &'static str {
         "yahoo"
     }
@@ -138,45 +138,20 @@ async fn connect_and_stream(
 
             // Handle commands (subscribe/unsubscribe)
             Some(cmd) = command_rx.recv() => {
-                match cmd {
-                    StreamCommand::Subscribe(symbols) => {
-                        let mut newly_added = Vec::new();
-                        {
-                            let mut subs = subscriptions.write().await;
-                            for s in &symbols {
-                                if subs.insert(s.clone()) {
-                                    newly_added.push(s.clone());
-                                }
-                            }
-                        }
-                        if !newly_added.is_empty() {
-                            let msg = serde_json::json!({ "subscribe": newly_added });
-                            let _ = write.send(Message::Text(msg.to_string().into())).await;
-                            info!("Added subscriptions: {:?}", newly_added);
-                        }
-                    }
-                    StreamCommand::Unsubscribe(symbols) => {
-                        let mut actually_removed = Vec::new();
-                        {
-                            let mut subs = subscriptions.write().await;
-                            for s in &symbols {
-                                if subs.remove(s) {
-                                    actually_removed.push(s.clone());
-                                }
-                            }
-                        }
-                        if !actually_removed.is_empty() {
-                            let msg = serde_json::json!({ "unsubscribe": actually_removed });
-                            let _ = write.send(Message::Text(msg.to_string().into())).await;
-                            info!("Removed subscriptions: {:?}", actually_removed);
-                        }
-                    }
-                    StreamCommand::Close => {
-                        info!("Received close command");
-                        let _ = write.send(Message::Close(None)).await;
-                        return Ok(());
-                    }
+                let Some(changed) = apply_command(&cmd, subscriptions).await else {
+                    info!("Received close command");
+                    let _ = write.send(Message::Close(None)).await;
+                    return Ok(());
+                };
+                if changed.is_empty() {
+                    continue;
                 }
+                let msg = match cmd {
+                    StreamCommand::Subscribe(_) => serde_json::json!({ "subscribe": changed }),
+                    _ => serde_json::json!({ "unsubscribe": changed }),
+                };
+                let _ = write.send(Message::Text(msg.to_string().into())).await;
+                info!("Subscription change applied: {:?}", changed);
             }
 
             else => break,

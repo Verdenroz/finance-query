@@ -39,13 +39,22 @@
 //! # }
 //! ```
 
+mod batch;
 mod client;
+mod economic;
+mod handle;
 mod news;
+#[cfg(feature = "polygon")]
+mod polygon;
 mod pricing;
 mod source;
 mod subscription;
 mod yahoo;
 
-pub use client::{PriceStream, PriceStreamBuilder, StreamError, StreamResult};
+pub use batch::{Batched, StreamBatchExt};
+pub use client::{PriceSource, PriceStream, PriceStreamBuilder, StreamError, StreamResult};
+pub use economic::{EconomicRelease, EconomicStream, EconomicStreamBuilder};
 pub use news::{NewsStream, NewsStreamBuilder};
+#[cfg(feature = "polygon")]
+pub use polygon::AssetClass;
 pub use pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
