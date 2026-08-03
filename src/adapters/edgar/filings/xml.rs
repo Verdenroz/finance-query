@@ -8,7 +8,7 @@
 //! because EDGAR ownership/13F schemas have no colliding local names.
 
 use crate::error::{FinanceError, Result};
-use crate::feeds::parser::{find_byte, trim_ascii, unescape};
+use crate::feeds::parser::{find, find_byte, trim_ascii, unescape};
 
 /// One element: its local name, its own text, and its child elements.
 #[derive(Debug, Default, Clone)]
@@ -109,11 +109,11 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<XmlNode> {
         // Comments, CDATA, doctypes, and processing instructions carry no
         // structure we need; skip to their own terminator.
         if bytes[open..].starts_with(b"<!--") {
-            i = find_seq(bytes, open + 4, b"-->").ok_or_else(|| err("unterminated comment"))? + 3;
+            i = find(bytes, open + 4, b"-->").ok_or_else(|| err("unterminated comment"))? + 3;
             continue;
         }
         if bytes[open..].starts_with(b"<![CDATA[") {
-            let end = find_seq(bytes, open + 9, b"]]>").ok_or_else(|| err("unterminated CDATA"))?;
+            let end = find(bytes, open + 9, b"]]>").ok_or_else(|| err("unterminated CDATA"))?;
             if let Some(node) = stack.last_mut() {
                 node.text
                     .push_str(&String::from_utf8_lossy(&bytes[open + 9..end]));
@@ -177,16 +177,6 @@ pub(crate) fn parse(bytes: &[u8]) -> Result<XmlNode> {
         return Err(err("unclosed elements at end of document"));
     }
     root.ok_or_else(|| err("no root element"))
-}
-
-fn find_seq(haystack: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
-    if from > haystack.len() {
-        return None;
-    }
-    haystack[from..]
-        .windows(needle.len())
-        .position(|w| w == needle)
-        .map(|p| p + from)
 }
 
 #[cfg(test)]

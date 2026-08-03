@@ -6,8 +6,8 @@
 
 use serde::{Deserialize, Serialize};
 
-use crate::adapters::fmp::build_client;
-use crate::error::{FinanceError, Result};
+use crate::adapters::fmp::{build_client, first_or_missing};
+use crate::error::Result;
 use crate::models::fundamentals::{PriceTargetConsensus, PriceTargetSummary, RatingConsensus};
 
 // ============================================================================
@@ -120,17 +120,6 @@ pub async fn upgrades_downgrades_consensus(symbol: &str) -> Result<Vec<RatingCon
 // Canonical conversions
 // ============================================================================
 
-/// FMP wraps each consensus rollup in a single-element array; an empty one
-/// means the symbol has no analyst coverage in FMP's universe.
-fn first_or_missing<T>(rows: Vec<T>, symbol: &str, field: &str) -> Result<T> {
-    rows.into_iter()
-        .next()
-        .ok_or_else(|| FinanceError::SymbolNotFound {
-            symbol: Some(symbol.to_string()),
-            context: format!("FMP returned no {field} for {symbol}"),
-        })
-}
-
 pub(crate) fn to_price_target_consensus(
     dto: PriceTargetConsensusDTO,
     symbol: &str,
@@ -197,6 +186,7 @@ pub async fn fetch_rating_consensus_response(symbol: &str) -> Result<RatingConse
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::error::FinanceError;
 
     #[test]
     fn price_target_consensus_maps_every_field() {

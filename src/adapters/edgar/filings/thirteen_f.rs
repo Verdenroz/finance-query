@@ -4,7 +4,7 @@
 //! fetch costs one submissions call, one index lookup, and one document fetch.
 
 use super::xml::{self, XmlNode};
-use crate::adapters::edgar::{build_client, submissions_for_symbol};
+use crate::adapters::edgar::{build_client, submissions_for_symbol_with};
 use crate::error::{FinanceError, Result};
 use crate::models::filings::InstitutionalHolding;
 
@@ -75,7 +75,10 @@ pub(crate) fn pick_information_table(names: &[String]) -> Option<&String> {
 pub async fn fetch_institutional_holdings_response(
     symbol: &str,
 ) -> Result<Vec<InstitutionalHolding>> {
-    let subs = submissions_for_symbol(symbol).await?;
+    // One client for all three requests (CIK lookup, index, document) so the
+    // connection pool survives the whole call.
+    let client = build_client()?;
+    let subs = submissions_for_symbol_with(&client, symbol).await?;
     let cik = subs.cik.clone().unwrap_or_default();
     let filing = subs
         .filings
@@ -90,7 +93,7 @@ pub async fn fetch_institutional_holdings_response(
         })?;
 
     let accession = filing.accession_number.clone();
-    let index = crate::adapters::edgar::filing_index(&accession).await?;
+    let index = client.filing_index(&accession).await?;
     let names: Vec<String> = index
         .directory
         .item
@@ -109,7 +112,7 @@ pub async fn fetch_institutional_holdings_response(
         accession.replace('-', ""),
         doc_name
     );
-    let bytes = build_client()?.get_document(&url).await?;
+    let bytes = client.get_document(&url).await?;
     let report_date = (!filing.report_date.is_empty()).then(|| filing.report_date.clone());
     parse_information_table(&bytes, Some(accession), report_date)
 }

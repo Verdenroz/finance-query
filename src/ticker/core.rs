@@ -26,6 +26,7 @@ use crate::models::quote::{
     TopHoldings, UpgradeDowngradeHistory,
 };
 
+use super::macros::ticker_fetch;
 use crate::providers::types::recommendation_from_similar;
 use crate::providers::yahoo::YahooProvider;
 use crate::providers::{
@@ -371,20 +372,7 @@ impl Ticker {
                 return Ok(entry.value.clone());
             }
         }
-        let sym = self.symbol.clone();
-        let data = self
-            .providers
-            .fetch(Capability::CHART, move |p| {
-                let sym = sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_chart()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Chart))?
-                        .fetch_chart(&sym, interval, range)
-                        .await
-                }
-            })
-            .await?;
+        let data = ticker_fetch!(self, CHART, as_chart, Chart, fetch_chart, interval, range)?;
         let chart = Self::chart_from_provider_data(data, Some(interval), Some(range));
         if self.cache_mode.enabled() {
             let mut cache = self.chart_cache.write().await;
@@ -401,20 +389,16 @@ impl Ticker {
                 reason: format!("end ({end}) must be > start ({start})"),
             });
         }
-        let sym = self.symbol.clone();
-        let data = self
-            .providers
-            .fetch(Capability::CHART, move |p| {
-                let sym = sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_chart()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ChartRange))?
-                        .fetch_chart_range(&sym, interval, start, end)
-                        .await
-                }
-            })
-            .await?;
+        let data = ticker_fetch!(
+            self,
+            CHART,
+            as_chart,
+            ChartRange,
+            fetch_chart_range,
+            interval,
+            start,
+            end
+        )?;
         Ok(Self::chart_from_provider_data(data, Some(interval), None))
     }
 
@@ -425,20 +409,7 @@ impl Ticker {
                 return Ok(());
             }
         }
-        let sym = self.symbol.clone();
-        let events = self
-            .providers
-            .fetch(Capability::CORPORATE, move |p| {
-                let sym = sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_corporate()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Events))?
-                        .fetch_events(&sym)
-                        .await
-                }
-            })
-            .await?;
+        let events = ticker_fetch!(self, CORPORATE, as_corporate, Events, fetch_events)?;
         let mut cache = self.events_cache.write().await;
         *cache = Some(CacheEntry::new(events));
         Ok(())
@@ -524,20 +495,7 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let sym = self.symbol.clone();
-        let data = self
-            .providers
-            .fetch(Capability::CORPORATE, move |p| {
-                let sym = sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_corporate()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::News))?
-                        .fetch_news(&sym)
-                        .await
-                }
-            })
-            .await?;
+        let data = ticker_fetch!(self, CORPORATE, as_corporate, News, fetch_news)?;
         let news = data;
         // Score titles before translation — VADER is English-lexicon based.
         #[cfg(feature = "sentiment")]
@@ -588,20 +546,7 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let sym = self.symbol.clone();
-        let opts = self
-            .providers
-            .fetch(Capability::OPTIONS, move |p| {
-                let sym = sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_options()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Options))?
-                        .fetch_options(&sym, date)
-                        .await
-                }
-            })
-            .await?;
+        let opts = ticker_fetch!(self, OPTIONS, as_options, Options, fetch_options, date)?;
         if self.cache_mode.enabled() {
             let mut c = self.options_cache.write().await;
             self.cache_insert(&mut c, date, opts.clone());
@@ -624,20 +569,15 @@ impl Ticker {
                 return Ok(e.value.clone());
             }
         }
-        let sym = self.symbol.clone();
-        let stmt = self
-            .providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let sym = sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Financials))?
-                        .fetch_financials(&sym, stmt_type, frequency)
-                        .await
-                }
-            })
-            .await?;
+        let stmt = ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            Financials,
+            fetch_financials,
+            stmt_type,
+            frequency
+        )?;
         if self.cache_mode.enabled() {
             let mut c = self.financials_cache.write().await;
             self.cache_insert(&mut c, key, stmt.clone());
@@ -721,19 +661,7 @@ impl Ticker {
     /// For the full EDGAR submissions response or structured XBRL data, use
     /// [`edgar_submissions`](Self::edgar_submissions) / [`edgar_company_facts`](Self::edgar_company_facts).
     pub async fn filings(&self) -> Result<ProviderFilings> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FILINGS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_filings()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Filings))?
-                        .fetch_filings(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(self, FILINGS, as_filings, Filings, fetch_filings)
     }
 
     /// Fetch short-interest settlement reports via the configured
@@ -742,56 +670,38 @@ impl Ticker {
     /// route to Polygon for the full bi-monthly history:
     /// `.route(Capability::FUNDAMENTALS, [Provider::Polygon, Provider::Yahoo])`.
     pub async fn short_interest(&self) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ShortInterest))?
-                        .fetch_short_interest(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            ShortInterest,
+            fetch_short_interest
+        )
     }
 
     /// Fetch daily short-volume data via the configured
     /// [`Capability::FUNDAMENTALS`] provider (currently Polygon only).
     pub async fn short_volume(&self) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ShortVolume))?
-                        .fetch_short_volume(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            ShortVolume,
+            fetch_short_volume
+        )
     }
 
     /// Fetch share float and shares outstanding via the configured
     /// [`Capability::FUNDAMENTALS`] provider (Yahoo-derived on the default
     /// route; Polygon serves it too).
     pub async fn share_float(&self) -> Result<crate::models::fundamentals::ShareFloat> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ShareFloat))?
-                        .fetch_share_float(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            ShareFloat,
+            fetch_share_float
+        )
     }
 
     /// Fetch the company's own press releases via the configured
@@ -801,19 +711,14 @@ impl Ticker {
         &self,
         limit: u32,
     ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::CORPORATE, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_corporate()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::PressReleases))?
-                        .fetch_press_releases(&symbol, limit)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            CORPORATE,
+            as_corporate,
+            PressReleases,
+            fetch_press_releases,
+            limit
+        )
     }
 
     /// Fetch the aggregated analyst price-target consensus (high/low/mean/median)
@@ -823,21 +728,13 @@ impl Ticker {
     pub async fn price_target_consensus(
         &self,
     ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::PriceTargetConsensus)
-                        })?
-                        .fetch_price_target_consensus(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            PriceTargetConsensus,
+            fetch_price_target_consensus
+        )
     }
 
     /// Fetch price-target publication activity over trailing windows (last
@@ -846,21 +743,13 @@ impl Ticker {
     pub async fn price_target_summary(
         &self,
     ) -> Result<crate::models::fundamentals::PriceTargetSummary> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::PriceTargetSummary)
-                        })?
-                        .fetch_price_target_summary(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            PriceTargetSummary,
+            fetch_price_target_summary
+        )
     }
 
     /// Fetch the aggregated analyst rating consensus (grade distribution plus a
@@ -868,21 +757,13 @@ impl Ticker {
     /// (currently FMP only). Distinct from
     /// [`recommendations`](Self::recommendations), which returns similar symbols.
     pub async fn rating_consensus(&self) -> Result<crate::models::fundamentals::RatingConsensus> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::RatingConsensus)
-                        })?
-                        .fetch_rating_consensus(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            RatingConsensus,
+            fetch_rating_consensus
+        )
     }
 
     /// Fetch the trailing-twelve-month key-metrics snapshot via the configured
@@ -892,37 +773,25 @@ impl Ticker {
     /// to fetch the latest fiscal period and reason about whether it is still
     /// current — see [`financials`](Self::financials) for the period series.
     pub async fn key_metrics_ttm(&self) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::KeyMetricsTtm))?
-                        .fetch_key_metrics_ttm(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            KeyMetricsTtm,
+            fetch_key_metrics_ttm
+        )
     }
 
     /// Fetch the trailing-twelve-month financial-ratios snapshot via the
     /// configured [`Capability::FUNDAMENTALS`] provider (currently FMP only).
     pub async fn ratios_ttm(&self) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::RatiosTtm))?
-                        .fetch_ratios_ttm(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            RatiosTtm,
+            fetch_ratios_ttm
+        )
     }
 
     /// Fetch reported executive compensation (most recent fiscal year first)
@@ -931,21 +800,13 @@ impl Ticker {
     pub async fn executive_compensation(
         &self,
     ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::CORPORATE, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_corporate()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::ExecutiveCompensation)
-                        })?
-                        .fetch_executive_compensation(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            CORPORATE,
+            as_corporate,
+            ExecutiveCompensation,
+            fetch_executive_compensation
+        )
     }
 
     /// Fetch reported employee headcount history (most recent period first) via
@@ -954,19 +815,13 @@ impl Ticker {
     pub async fn employee_count(
         &self,
     ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::CORPORATE, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_corporate()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::EmployeeCount))?
-                        .fetch_employee_count(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            CORPORATE,
+            as_corporate,
+            EmployeeCount,
+            fetch_employee_count
+        )
     }
 
     /// Fetch this fund's profile and portfolio holdings via the configured
@@ -976,19 +831,13 @@ impl Ticker {
     /// Holdings come back heaviest-first. Errors for a symbol that is not a
     /// fund.
     pub async fn etf_profile(&self) -> Result<crate::models::fundamentals::EtfProfile> {
-        let symbol = self.symbol.clone();
-        self.providers
-            .fetch(Capability::FUNDAMENTALS, move |p| {
-                let symbol = symbol.clone();
-                let p = p.clone();
-                async move {
-                    p.as_fundamentals()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::EtfProfile))?
-                        .fetch_etf_profile(&symbol)
-                        .await
-                }
-            })
-            .await
+        ticker_fetch!(
+            self,
+            FUNDAMENTALS,
+            as_fundamentals,
+            EtfProfile,
+            fetch_etf_profile
+        )
     }
 
     #[cfg(feature = "indicators")]
@@ -1159,20 +1008,7 @@ impl Ticker {
                 return Ok(cache);
             }
         }
-        let sym = self.symbol.clone();
-        let summary = self
-            .providers
-            .fetch(Capability::QUOTE, move |p| {
-                let sym = sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_quote()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Quote))?
-                        .fetch_quote(&sym)
-                        .await
-                }
-            })
-            .await?;
+        let summary = ticker_fetch!(self, QUOTE, as_quote, Quote, fetch_quote)?;
         {
             let mut cache = self.quote_cache.write().await;
             *cache = Some(CacheEntry::new(summary));

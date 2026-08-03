@@ -79,47 +79,40 @@ impl EconomicCatalog {
     /// Search the series catalog by free text, most popular first.
     pub async fn search(&self, query: &str, limit: u32) -> Result<Vec<EconomicSeriesMatch>> {
         let query = query.to_string();
-        self.providers
-            .fetch(Capability::ECONOMIC, move |p| {
-                let query = query.clone();
-                let p = p.clone();
-                async move {
-                    p.as_economic()
-                        .ok_or_else(|| p.not_supported(Operation::EconomicSearch))?
-                        .fetch_economic_search(&query, limit)
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            ECONOMIC,
+            as_economic,
+            EconomicSearch,
+            fetch_economic_search,
+            [query],
+            &query,
+            limit
+        )
     }
 
     /// List the child categories of `parent_id`. Pass `0` for the root.
     pub async fn categories(&self, parent_id: i64) -> Result<Vec<EconomicCategory>> {
-        self.providers
-            .fetch(Capability::ECONOMIC, move |p| {
-                let p = p.clone();
-                async move {
-                    p.as_economic()
-                        .ok_or_else(|| p.not_supported(Operation::EconomicCategories))?
-                        .fetch_economic_categories(parent_id)
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            ECONOMIC,
+            as_economic,
+            EconomicCategories,
+            fetch_economic_categories,
+            [],
+            parent_id
+        )
     }
 
     /// List every scheduled data release the provider publishes.
     pub async fn releases(&self) -> Result<Vec<EconomicRelease>> {
-        self.providers
-            .fetch(Capability::ECONOMIC, move |p| {
-                let p = p.clone();
-                async move {
-                    p.as_economic()
-                        .ok_or_else(|| p.not_supported(Operation::EconomicReleases))?
-                        .fetch_economic_releases()
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            ECONOMIC,
+            as_economic,
+            EconomicReleases,
+            fetch_economic_releases,
+            []
+        )
     }
 }

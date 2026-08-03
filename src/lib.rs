@@ -263,6 +263,7 @@ pub use domains::Filings;
 pub use domains::FuturesContract;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use domains::Index;
+#[cfg(feature = "polygon")]
 pub use domains::Snapshot;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use domains::{Market, MarketCalendar};
@@ -353,7 +354,6 @@ pub use models::{
     market::sectors::SectorData,
     options::Options,
     quote::Quote,
-    quote::snapshot::{AssetClass, MarketSnapshot},
     sentiment::{FearAndGreed, FearGreedLabel, SymbolSentiment},
 };
 // Offline VADER sentiment scoring (feature-gated)
@@ -394,6 +394,8 @@ pub use models::forex::ForexQuote;
 pub use models::futures::FuturesQuote;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
+#[cfg(feature = "polygon")]
+pub use models::quote::snapshot::{AssetClass, MarketSnapshot};
 
 // ============================================================================
 // Nested types - Commonly accessed fields within response types

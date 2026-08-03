@@ -123,7 +123,7 @@ fn parse_date(raw: &str) -> Option<String> {
         .map(|dt| dt.to_rfc3339())
 }
 
-fn find(haystack: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
+pub(crate) fn find(haystack: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
     if from > haystack.len() {
         return None;
     }

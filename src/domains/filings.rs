@@ -54,20 +54,16 @@ impl Filings {
     /// Full-text search over this filer's filings via the FILINGS route
     /// (currently EDGAR only). Not cached.
     ///
-    /// The handle's symbol is resolved to a CIK and applied as a filter unless
-    /// `filters` already names one. Use [`search_all`](Self::search_all) to
-    /// search every filer instead.
+    /// The handle's symbol scopes the search unless `filters` already names a
+    /// filer identifier; the routed provider resolves it however its own index
+    /// requires. Use [`search_all`](Self::search_all) to search every filer.
     pub async fn search(
         &self,
         query: &str,
         filters: crate::models::filings::FilingSearchFilters,
     ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
-        let mut filters = filters;
-        if filters.cik.is_none() {
-            let cik = crate::adapters::edgar::resolve_cik(self.symbol()).await?;
-            filters.cik = Some(format!("{cik:010}"));
-        }
-        self.search_all(query, filters).await
+        let symbol: String = self.symbol().to_string();
+        self.dispatch_search(Some(symbol), query, filters).await
     }
 
     /// Full-text search across every filer via the FILINGS route (currently
@@ -81,17 +77,27 @@ impl Filings {
         query: &str,
         filters: crate::models::filings::FilingSearchFilters,
     ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        self.dispatch_search(None, query, filters).await
+    }
+
+    async fn dispatch_search(
+        &self,
+        symbol: Option<String>,
+        query: &str,
+        filters: crate::models::filings::FilingSearchFilters,
+    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
         let query = query.to_string();
         let filters = std::sync::Arc::new(filters);
         self.providers
             .fetch(crate::providers::Capability::FILINGS, move |p| {
+                let symbol = symbol.clone();
                 let query = query.clone();
                 let filters = std::sync::Arc::clone(&filters);
                 let p = p.clone();
                 async move {
                     p.as_filings()
                         .ok_or_else(|| p.not_supported(crate::providers::Operation::FilingSearch))?
-                        .fetch_filing_search(&query, &filters)
+                        .fetch_filing_search(symbol.as_deref(), &query, &filters)
                         .await
                 }
             })

@@ -24,11 +24,14 @@ impl FilingsProvider for EdgarProvider {
 
     async fn fetch_filing_search(
         &self,
+        symbol: Option<&str>,
         query: &str,
         filters: &crate::models::filings::FilingSearchFilters,
     ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
-        crate::adapters::edgar::filings::full_text::fetch_filing_search_response(query, filters)
-            .await
+        crate::adapters::edgar::filings::full_text::fetch_filing_search_response(
+            symbol, query, filters,
+        )
+        .await
     }
 
     async fn fetch_insider_trades(

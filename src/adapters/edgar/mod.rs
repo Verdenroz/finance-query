@@ -341,7 +341,17 @@ pub async fn search(
 /// Collapses the two HTTP connection pools (and TLS handshakes) that calling
 /// [`resolve_cik`] then [`submissions`] would otherwise pay for into one.
 pub(crate) async fn submissions_for_symbol(symbol: &str) -> Result<EdgarSubmissions> {
-    let client = build_client()?;
+    submissions_for_symbol_with(&build_client()?, symbol).await
+}
+
+/// [`submissions_for_symbol`] against a caller-supplied client.
+///
+/// Callers that make further EDGAR requests off the same submissions list keep
+/// one connection pool for the whole sequence instead of one per request.
+async fn submissions_for_symbol_with(
+    client: &client::EdgarClient,
+    symbol: &str,
+) -> Result<EdgarSubmissions> {
     let cik = client.resolve_cik(symbol).await?;
     client.submissions(cik).await
 }

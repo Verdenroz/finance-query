@@ -34,17 +34,26 @@ fn hit_url(id: Option<&str>, ciks: &[String]) -> Option<String> {
 }
 
 pub(crate) fn to_search_hit(hit: EdgarSearchHit) -> FilingSearchHit {
-    let source = hit._source;
-    let ciks = source.as_ref().map(|s| s.ciks.clone()).unwrap_or_default();
+    // Destructure once so each field moves out; EFTS returns up to 100 hits per
+    // search and cloning every field off a borrowed source adds up.
+    let (accession_number, form, filed_date, period_ending, company_names, ciks) = match hit._source
+    {
+        Some(s) => (
+            s.adsh,
+            s.form,
+            s.file_date,
+            s.period_ending,
+            s.display_names,
+            s.ciks,
+        ),
+        None => (None, None, None, None, Vec::new(), Vec::new()),
+    };
     FilingSearchHit {
-        accession_number: source.as_ref().and_then(|s| s.adsh.clone()),
-        form: source.as_ref().and_then(|s| s.form.clone()),
-        filed_date: source.as_ref().and_then(|s| s.file_date.clone()),
-        period_ending: source.as_ref().and_then(|s| s.period_ending.clone()),
-        company_names: source
-            .as_ref()
-            .map(|s| s.display_names.clone())
-            .unwrap_or_default(),
+        accession_number,
+        form,
+        filed_date,
+        period_ending,
+        company_names,
         url: hit_url(hit._id.as_deref(), &ciks),
         ciks,
         score: hit._score,
@@ -62,7 +71,11 @@ pub(crate) fn to_search_hits(results: EdgarSearchResults) -> Vec<FilingSearchHit
 }
 
 /// Run a full-text search over EDGAR filings and return canonical hits.
+///
+/// `symbol` scopes the search to one filer. EFTS is keyed by CIK, so resolving
+/// it is EDGAR's own business — the routed handle never sees the identifier.
 pub async fn fetch_filing_search_response(
+    symbol: Option<&str>,
     query: &str,
     filters: &FilingSearchFilters,
 ) -> Result<Vec<FilingSearchHit>> {
@@ -72,7 +85,13 @@ pub async fn fetch_filing_search_response(
         .map(|f| f.iter().map(String::as_str).collect());
     let size = filters.limit.map(|l| l.min(MAX_SIZE) as usize);
 
-    let results = build_client()?
+    let client = build_client()?;
+    let resolved_cik = match (&filters.cik, symbol) {
+        (None, Some(sym)) => Some(format!("{:010}", client.resolve_cik(sym).await?)),
+        _ => None,
+    };
+
+    let results = client
         .search_filtered(
             query,
             forms.as_deref(),
@@ -80,7 +99,7 @@ pub async fn fetch_filing_search_response(
             filters.end_date.as_deref(),
             None,
             size,
-            filters.cik.as_deref(),
+            resolved_cik.as_deref().or(filters.cik.as_deref()),
         )
         .await?;
 

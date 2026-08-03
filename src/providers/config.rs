@@ -195,7 +195,9 @@ impl Providers {
     ///
     /// Routes cross-market snapshots through
     /// [`Capability::QUOTE`](crate::Capability::QUOTE). Needs a provider whose
-    /// snapshot endpoint spans asset classes — currently Polygon only.
+    /// snapshot endpoint spans asset classes — currently Polygon only, which is
+    /// why the handle is gated on that feature.
+    #[cfg(feature = "polygon")]
     pub fn snapshot(&self) -> crate::domains::Snapshot {
         crate::domains::Snapshot::with_providers(Arc::clone(&self.set))
     }

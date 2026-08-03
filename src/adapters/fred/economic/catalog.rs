@@ -18,36 +18,15 @@ use crate::models::economic::{
 // Response types
 // ============================================================================
 
+// FRED's entry payloads are already snake_case and field-for-field identical
+// to the public models, so the envelopes deserialize straight into them.
+
 /// `/series/search` and `/series` envelope.
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "camelCase")]
 pub struct SeriesSearchResponseDTO {
     /// Matching series. FRED spells the key `seriess` (sic).
     #[serde(default)]
-    pub seriess: Vec<SeriesDTO>,
-}
-
-/// One series entry.
-#[derive(Debug, Clone, Deserialize)]
-pub struct SeriesDTO {
-    /// Series id.
-    pub id: String,
-    /// Title.
-    pub title: Option<String>,
-    /// Reporting frequency, long form.
-    pub frequency: Option<String>,
-    /// Units, long form.
-    pub units: Option<String>,
-    /// Seasonal adjustment, long form.
-    pub seasonal_adjustment: Option<String>,
-    /// Earliest observation date.
-    pub observation_start: Option<String>,
-    /// Latest observation date.
-    pub observation_end: Option<String>,
-    /// FRED popularity score.
-    pub popularity: Option<i64>,
-    /// Free-text notes.
-    pub notes: Option<String>,
+    pub seriess: Vec<EconomicSeriesMatch>,
 }
 
 /// `/category/children` envelope.
@@ -55,18 +34,7 @@ pub struct SeriesDTO {
 pub struct CategoriesResponseDTO {
     /// Child categories.
     #[serde(default)]
-    pub categories: Vec<CategoryDTO>,
-}
-
-/// One category entry.
-#[derive(Debug, Clone, Deserialize)]
-pub struct CategoryDTO {
-    /// Category id.
-    pub id: i64,
-    /// Category name.
-    pub name: Option<String>,
-    /// Parent category id.
-    pub parent_id: Option<i64>,
+    pub categories: Vec<EconomicCategory>,
 }
 
 /// `/releases` envelope.
@@ -74,20 +42,7 @@ pub struct CategoryDTO {
 pub struct ReleasesResponseDTO {
     /// Releases.
     #[serde(default)]
-    pub releases: Vec<ReleaseDTO>,
-}
-
-/// One release entry.
-#[derive(Debug, Clone, Deserialize)]
-pub struct ReleaseDTO {
-    /// Release id.
-    pub id: i64,
-    /// Release name.
-    pub name: Option<String>,
-    /// Whether a press release accompanies it.
-    pub press_release: Option<bool>,
-    /// Publisher link.
-    pub link: Option<String>,
+    pub releases: Vec<EconomicRelease>,
 }
 
 /// `/series/observations` envelope.
@@ -108,39 +63,8 @@ pub struct ObservationDTO {
 }
 
 // ============================================================================
-// Canonical conversions
+// Observation conversion
 // ============================================================================
-
-pub(crate) fn to_series_match(dto: SeriesDTO) -> EconomicSeriesMatch {
-    EconomicSeriesMatch {
-        id: dto.id,
-        title: dto.title,
-        frequency: dto.frequency,
-        units: dto.units,
-        seasonal_adjustment: dto.seasonal_adjustment,
-        observation_start: dto.observation_start,
-        observation_end: dto.observation_end,
-        popularity: dto.popularity,
-        notes: dto.notes,
-    }
-}
-
-pub(crate) fn to_category(dto: CategoryDTO) -> EconomicCategory {
-    EconomicCategory {
-        id: dto.id,
-        name: dto.name,
-        parent_id: dto.parent_id,
-    }
-}
-
-pub(crate) fn to_release(dto: ReleaseDTO) -> EconomicRelease {
-    EconomicRelease {
-        id: dto.id,
-        name: dto.name,
-        press_release: dto.press_release,
-        link: dto.link,
-    }
-}
 
 pub(crate) fn to_observations(dto: ObservationsResponseDTO) -> Vec<MacroObservation> {
     dto.observations
@@ -172,7 +96,7 @@ pub async fn search(query: &str, limit: u32) -> Result<Vec<EconomicSeriesMatch>>
             ],
         )
         .await?;
-    Ok(resp.seriess.into_iter().map(to_series_match).collect())
+    Ok(resp.seriess)
 }
 
 /// List the child categories of `parent_id`. FRED's root category is `0`.
@@ -181,13 +105,13 @@ pub async fn categories(parent_id: i64) -> Result<Vec<EconomicCategory>> {
     let resp: CategoriesResponseDTO = build_client()?
         .get_json("category/children", &[("category_id", &id)])
         .await?;
-    Ok(resp.categories.into_iter().map(to_category).collect())
+    Ok(resp.categories)
 }
 
 /// List every economic-data release FRED publishes.
 pub async fn releases() -> Result<Vec<EconomicRelease>> {
     let resp: ReleasesResponseDTO = build_client()?.get_json("releases", &[]).await?;
-    Ok(resp.releases.into_iter().map(to_release).collect())
+    Ok(resp.releases)
 }
 
 /// Fetch a series as it stood on `date` (`YYYY-MM-DD`) — ALFRED's vintage view.
@@ -236,7 +160,7 @@ mod tests {
         }))
         .unwrap();
 
-        let out = to_series_match(resp.seriess.into_iter().next().unwrap());
+        let out = resp.seriess.into_iter().next().unwrap();
         assert_eq!(out.id, "GDPC1");
         assert_eq!(out.title.as_deref(), Some("Real Gross Domestic Product"));
         assert_eq!(out.frequency.as_deref(), Some("Quarterly"));
@@ -261,7 +185,7 @@ mod tests {
             "categories": [{ "id": 32992, "name": "Money, Banking, & Finance", "parent_id": 0 }]
         }))
         .unwrap();
-        let cat = to_category(cats.categories.into_iter().next().unwrap());
+        let cat = cats.categories.into_iter().next().unwrap();
         assert_eq!(cat.id, 32992);
         assert_eq!(cat.parent_id, Some(0));
 
@@ -274,7 +198,7 @@ mod tests {
             }]
         }))
         .unwrap();
-        let rel = to_release(rels.releases.into_iter().next().unwrap());
+        let rel = rels.releases.into_iter().next().unwrap();
         assert_eq!(rel.name.as_deref(), Some("Employment Situation"));
         assert_eq!(rel.press_release, Some(true));
     }

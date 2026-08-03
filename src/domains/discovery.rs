@@ -8,48 +8,25 @@ use crate::error::Result;
 use crate::models::discovery::reference::{
     ExchangeInfo, ScreenerFilters, ScreenerMatch, SymbolDetails, SymbolMatch,
 };
-use crate::providers::{Capability, ProviderSet};
+use crate::providers::Capability;
 
-/// Symbol discovery backed by configured data providers.
-///
-/// Unlike [`crate::finance::search`] — a Yahoo-only convenience shortcut —
-/// this routes through [`Capability::DISCOVERY`], so it honours the provider
-/// priority configured on [`Providers::builder`](crate::Providers::builder)
-/// and falls back across providers.
-///
-/// Created via [`Providers::discovery`](crate::Providers::discovery).
-pub struct Discovery {
-    providers: Arc<ProviderSet>,
-    cache: crate::domains::DomainCache<Vec<SymbolMatch>>,
-    details_cache: crate::domains::DomainCache<SymbolDetails>,
+domain_handle! {
+    /// Symbol discovery backed by configured data providers.
+    ///
+    /// Unlike [`crate::finance::search`] — a Yahoo-only convenience shortcut —
+    /// this routes through [`Capability::DISCOVERY`], so it honours the provider
+    /// priority configured on [`Providers::builder`](crate::Providers::builder)
+    /// and falls back across providers.
+    ///
+    /// Created via [`Providers::discovery`](crate::Providers::discovery).
+    pub struct Discovery
+    caches: {
+        cache: Vec<SymbolMatch>,
+        details_cache: SymbolDetails,
+    }
 }
 
 impl Discovery {
-    pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
-        Self {
-            providers,
-            cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
-            details_cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
-        }
-    }
-
-    /// Cache responses for `ttl` instead of for the handle's lifetime,
-    /// deduplicating concurrent identical requests.
-    pub fn cache(mut self, ttl: std::time::Duration) -> Self {
-        let mode = crate::utils::CacheMode::Ttl(ttl);
-        self.cache = crate::domains::DomainCache::new(mode);
-        self.details_cache = crate::domains::DomainCache::new(mode);
-        self
-    }
-
-    /// Disable caching — every call fetches fresh data.
-    pub fn no_cache(mut self) -> Self {
-        let mode = crate::utils::CacheMode::Off;
-        self.cache = crate::domains::DomainCache::new(mode);
-        self.details_cache = crate::domains::DomainCache::new(mode);
-        self
-    }
-
     /// Search the configured providers' symbol universe.
     ///
     /// Results are cached per `(query, limit)` pair.
@@ -104,17 +81,14 @@ impl Discovery {
 
     /// Fetch the tradable exchange listing.
     pub async fn exchanges(&self) -> Result<Vec<ExchangeInfo>> {
-        self.providers
-            .fetch(Capability::DISCOVERY, |p| {
-                let p = p.clone();
-                async move {
-                    p.as_discovery()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Exchanges))?
-                        .fetch_exchanges()
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            DISCOVERY,
+            as_discovery,
+            Exchanges,
+            fetch_exchanges,
+            []
+        )
     }
 
     /// Fetch the providers' whole listed-security universe.
@@ -152,17 +126,15 @@ impl Discovery {
     /// Not cached — screener filters are open-ended and results are
     /// price-sensitive, so every call fetches fresh.
     pub async fn screener(&self, filters: &ScreenerFilters) -> Result<Vec<ScreenerMatch>> {
-        self.providers
-            .fetch(Capability::DISCOVERY, |p| {
-                let p = p.clone();
-                let filters = filters.clone();
-                async move {
-                    p.as_discovery()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::Screener))?
-                        .fetch_screener(&filters)
-                        .await
-                }
-            })
-            .await
+        let filters = filters.clone();
+        dispatch_via!(
+            self,
+            DISCOVERY,
+            as_discovery,
+            Screener,
+            fetch_screener,
+            [filters],
+            &filters
+        )
     }
 }

@@ -6,44 +6,24 @@ use std::sync::Arc;
 
 use crate::error::Result;
 use crate::models::quote::snapshot::MarketSnapshot;
-use crate::providers::{Capability, Operation, ProviderSet};
+use crate::providers::{Capability, Operation};
 
-/// Snapshots for a watchlist spanning several asset classes, from one request.
-///
-/// Routes through [`Capability::QUOTE`]. Unlike
-/// [`Tickers`](crate::Tickers) — which is equity-shaped and returns full quote
-/// summaries — this takes provider-spelled symbols from any market (`"AAPL"`,
-/// `"X:BTCUSD"`, `"I:SPX"`, `"C:EURUSD"`, `"O:NCLH221014C00005000"`) and
-/// returns one flattened row each. Polygon is currently the only provider whose
-/// snapshot endpoint spans markets.
-///
-/// Created via [`Providers::snapshot`](crate::Providers::snapshot).
-pub struct Snapshot {
-    providers: Arc<ProviderSet>,
-    cache: crate::domains::DomainCache<Vec<MarketSnapshot>>,
+domain_handle! {
+    /// Snapshots for a watchlist spanning several asset classes, from one request.
+    ///
+    /// Routes through [`Capability::QUOTE`]. Unlike
+    /// [`Tickers`](crate::Tickers) — which is equity-shaped and returns full quote
+    /// summaries — this takes provider-spelled symbols from any market (`"AAPL"`,
+    /// `"X:BTCUSD"`, `"I:SPX"`, `"C:EURUSD"`, `"O:NCLH221014C00005000"`) and
+    /// returns one flattened row each. Polygon is currently the only provider whose
+    /// snapshot endpoint spans markets.
+    ///
+    /// Created via [`Providers::snapshot`](crate::Providers::snapshot).
+    pub struct Snapshot
+    caches: { cache: Vec<MarketSnapshot> }
 }
 
 impl Snapshot {
-    pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
-        Self {
-            providers,
-            cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
-        }
-    }
-
-    /// Cache responses for `ttl` instead of for the handle's lifetime,
-    /// deduplicating concurrent identical requests.
-    pub fn cache(mut self, ttl: std::time::Duration) -> Self {
-        self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Ttl(ttl));
-        self
-    }
-
-    /// Disable caching — every call fetches fresh data.
-    pub fn no_cache(mut self) -> Self {
-        self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Off);
-        self
-    }
-
     /// Fetch snapshots for `symbols`, which may span asset classes.
     ///
     /// Cached per symbol list. Symbols the provider could not resolve come back

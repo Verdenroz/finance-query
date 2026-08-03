@@ -43,6 +43,7 @@ pub(crate) trait QuoteProvider: ProviderCore {
     /// Fetch a snapshot for symbols spanning several asset classes in one
     /// request. Rows the provider could not resolve are returned with
     /// `error` set rather than dropped.
+    #[cfg(feature = "polygon")]
     async fn fetch_unified_snapshot(
         &self,
         _symbols: &[&str],
@@ -243,8 +244,13 @@ pub(crate) trait FilingsProvider: ProviderCore {
     }
 
     /// Search filing *text* rather than looking filings up by filer.
+    ///
+    /// `symbol` scopes the search to one filer; the provider resolves it to
+    /// whatever identifier its own index is keyed by (a CIK, for EDGAR).
+    /// `None` searches every filer.
     async fn fetch_filing_search(
         &self,
+        _symbol: Option<&str>,
         _query: &str,
         _filters: &crate::models::filings::FilingSearchFilters,
     ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {

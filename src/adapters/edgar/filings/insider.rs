@@ -7,7 +7,8 @@
 use futures::stream::{self, StreamExt};
 
 use super::xml::{self, XmlNode};
-use crate::adapters::edgar::{build_client, submissions_for_symbol};
+use crate::adapters::edgar::client::EdgarClient;
+use crate::adapters::edgar::{build_client, submissions_for_symbol_with};
 use crate::error::Result;
 use crate::models::filings::InsiderTrade;
 
@@ -112,7 +113,11 @@ pub(crate) fn pick_ownership_xml(names: &[String]) -> Option<&String> {
 
 /// Fetch and parse recent Form 3/4/5 filings for a symbol, newest first.
 pub async fn fetch_insider_trades_response(symbol: &str, limit: u32) -> Result<Vec<InsiderTrade>> {
-    let subs = submissions_for_symbol(symbol).await?;
+    // One client for the whole call: `limit` filings cost two requests each, and
+    // a fresh client per request discards the pool before it is ever reused.
+    let client = build_client()?;
+    let client = &client;
+    let subs = submissions_for_symbol_with(client, symbol).await?;
     let cik = subs.cik.clone().unwrap_or_default();
     let filings = subs
         .filings
@@ -131,7 +136,7 @@ pub async fn fetch_insider_trades_response(symbol: &str, limit: u32) -> Result<V
             let cik = cik.clone();
             async move {
                 let accession = filing.accession_number.clone();
-                match fetch_one(&cik, &accession).await {
+                match fetch_one(client, &cik, &accession).await {
                     Ok(t) => t,
                     // One unparseable filing must not sink the whole history —
                     // ownership XML schemas vary across two decades of filings.
@@ -149,8 +154,8 @@ pub async fn fetch_insider_trades_response(symbol: &str, limit: u32) -> Result<V
     Ok(trades.into_iter().flatten().collect())
 }
 
-async fn fetch_one(cik: &str, accession: &str) -> Result<Vec<InsiderTrade>> {
-    let index = crate::adapters::edgar::filing_index(accession).await?;
+async fn fetch_one(client: &EdgarClient, cik: &str, accession: &str) -> Result<Vec<InsiderTrade>> {
+    let index = client.filing_index(accession).await?;
     let names: Vec<String> = index
         .directory
         .item
@@ -167,7 +172,7 @@ async fn fetch_one(cik: &str, accession: &str) -> Result<Vec<InsiderTrade>> {
         accession.replace('-', ""),
         doc_name
     );
-    let bytes = build_client()?.get_document(&url).await?;
+    let bytes = client.get_document(&url).await?;
     parse_ownership_document(&bytes, Some(accession.to_string()), Some(url))
 }
 

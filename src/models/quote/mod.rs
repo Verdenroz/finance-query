@@ -11,7 +11,8 @@ pub(crate) mod response;
 pub mod data;
 /// Formatted value wrapper for Yahoo Finance numeric fields.
 pub mod formatted_value;
-/// Cross-market snapshot models (provider-routed).
+/// Cross-market snapshot models (provider-routed; Polygon-only).
+#[cfg(feature = "polygon")]
 pub mod snapshot;
 
 // Re-export only the final flattened Quote struct and FormattedValue (used in Quote's public fields)
