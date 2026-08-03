@@ -517,7 +517,7 @@ pub use discovery::Discovery;
     feature = "polygon",
     feature = "worldbank"
 ))]
-pub use economic::EconomicIndicator;
+pub use economic::{EconomicCatalog, EconomicIndicator};
 pub use filings::Filings;
 #[cfg(any(
     feature = "alphavantage",

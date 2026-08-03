@@ -176,6 +176,7 @@ let disco = providers.discovery();   // → Discovery: symbol search, reference 
 let cal   = providers.calendar();    // → MarketCalendar: earnings/IPO/dividend/split/economic calendars
 let mkt   = providers.market();      // → Market: sector performance, movers
 let snap  = providers.snapshot();    // → Snapshot: cross-market watchlist snapshots
+let cat   = providers.economic_catalog(); // → EconomicCatalog: find macro series (needs fred/alphavantage/polygon)
 ```
 
 ### Domain Handle Methods
@@ -184,7 +185,8 @@ let snap  = providers.snapshot();    // → Snapshot: cross-market watchlist sna
 |--------|--------|---------|
 | `ForexPair` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `ForexQuote` · `Chart` |
 | `CryptoCoin` | `.quote(vs_currency)` · `.chart(vs_currency, interval, range)` · `.history(vs_currency, range)` | `CryptoQuote` · `Chart` |
-| `EconomicIndicator` | `.series()` | `EconomicSeries` |
+| `EconomicIndicator` | `.series()` · `.as_of(date)` | `EconomicSeries` |
+| `EconomicCatalog` | `.search(query, limit)` · `.categories(parent_id)` · `.releases()` | `Vec<EconomicSeriesMatch>` · `Vec<EconomicCategory>` · `Vec<EconomicRelease>` |
 | `Index` | `.quote()` · `.chart(interval, range)` · `.history(range)` · `.constituents()` · `.constituent_changes()` | `IndexQuote` · `Chart` · `Vec<IndexConstituent>` · `Vec<IndexConstituentChange>` |
 | `FuturesContract` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `FuturesQuote` · `Chart` |
 | `Commodity` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `CommodityQuote` · `Chart` |

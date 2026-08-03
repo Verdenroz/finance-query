@@ -117,6 +117,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- FRED series discovery and point-in-time data:
+  `providers.economic_catalog()` is a new market-wide handle with `.search(query,
+  limit)`, `.categories(parent_id)`, and `.releases()`, so a series id no longer
+  has to be known up front. `providers.economic("GDPC1").as_of("2020-06-30")`
+  returns the series as it was actually published on that date (ALFRED vintage)
+  rather than as currently revised — backtesting against revised macro data is
+  look-ahead bias. New public models `EconomicSeriesMatch`, `EconomicCategory`,
+  and `EconomicRelease`.
 - Keyless crypto price history: `Provider::CoinGecko` now serves
   `Capability::CHART`, so `.route(Capability::CHART, [Provider::CoinGecko])`
   makes `providers.crypto("bitcoin").history("usd", range)` work without an API

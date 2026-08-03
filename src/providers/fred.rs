@@ -19,6 +19,35 @@ impl EconomicProvider for FredProvider {
     ) -> Result<crate::models::economic::EconomicSeries> {
         crate::adapters::fred::fetch_economic_series_response(series_id).await
     }
+
+    async fn fetch_economic_series_as_of(
+        &self,
+        series_id: &str,
+        date: &str,
+    ) -> Result<crate::models::economic::EconomicSeries> {
+        crate::adapters::fred::economic::catalog::series_as_of(series_id, date).await
+    }
+
+    async fn fetch_economic_search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::economic::EconomicSeriesMatch>> {
+        crate::adapters::fred::economic::catalog::search(query, limit).await
+    }
+
+    async fn fetch_economic_categories(
+        &self,
+        parent_id: i64,
+    ) -> Result<Vec<crate::models::economic::EconomicCategory>> {
+        crate::adapters::fred::economic::catalog::categories(parent_id).await
+    }
+
+    async fn fetch_economic_releases(
+        &self,
+    ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
+        crate::adapters::fred::economic::catalog::releases().await
+    }
 }
 
 #[async_trait::async_trait]

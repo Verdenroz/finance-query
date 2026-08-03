@@ -514,6 +514,14 @@ pub enum Operation {
     InsiderTrades,
     /// Institutional holdings reported on Form 13F-HR.
     InstitutionalHoldings,
+    /// A macro series as it stood on a past date (vintage/ALFRED view).
+    EconomicSeriesAsOf,
+    /// Free-text search over the macro series catalog.
+    EconomicSearch,
+    /// Macro series category browsing.
+    EconomicCategories,
+    /// Scheduled macro data releases.
+    EconomicReleases,
 }
 
 impl Operation {
@@ -573,6 +581,10 @@ impl Operation {
             Self::FilingSearch => "filing_search",
             Self::InsiderTrades => "insider_trades",
             Self::InstitutionalHoldings => "institutional_holdings",
+            Self::EconomicSeriesAsOf => "economic_series_as_of",
+            Self::EconomicSearch => "economic_search",
+            Self::EconomicCategories => "economic_categories",
+            Self::EconomicReleases => "economic_releases",
         }
     }
 
@@ -600,7 +612,11 @@ impl Operation {
             Self::CryptoQuote => Capability::CRYPTO,
             #[cfg(feature = "defi")]
             Self::ProtocolTvl | Self::ProtocolTvlHistory => Capability::CRYPTO,
-            Self::EconomicSeries => Capability::ECONOMIC,
+            Self::EconomicSeries
+            | Self::EconomicSeriesAsOf
+            | Self::EconomicSearch
+            | Self::EconomicCategories
+            | Self::EconomicReleases => Capability::ECONOMIC,
             Self::ForexQuote => Capability::FOREX,
             Self::IndicesQuote | Self::IndexConstituents | Self::IndexConstituentChanges => {
                 Capability::INDICES

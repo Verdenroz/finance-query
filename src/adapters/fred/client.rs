@@ -73,6 +73,57 @@ pub(crate) struct FredClient {
 }
 
 impl FredClient {
+    /// Map a FRED HTTP status onto a `FinanceError`.
+    fn check_status(status: StatusCode) -> Result<()> {
+        match status {
+            StatusCode::OK => Ok(()),
+            StatusCode::BAD_REQUEST => Err(FinanceError::InvalidParameter {
+                param: "request".to_string(),
+                reason: "FRED rejected the request parameters".to_string(),
+            }),
+            StatusCode::UNAUTHORIZED | StatusCode::FORBIDDEN => {
+                Err(FinanceError::AuthenticationFailed {
+                    context: "FRED API key invalid or missing. Call fred::init(key) first."
+                        .to_string(),
+                })
+            }
+            StatusCode::TOO_MANY_REQUESTS => Err(FinanceError::RateLimited {
+                retry_after: Some(60),
+            }),
+            s => Err(FinanceError::ExternalApiError {
+                api: "FRED".to_string(),
+                status: s.as_u16(),
+            }),
+        }
+    }
+
+    /// Rate-limited GET against a FRED path, deserialized into `T`.
+    ///
+    /// The api key and `file_type=json` are always appended, so callers pass
+    /// only the endpoint-specific parameters.
+    pub async fn get_json<T: serde::de::DeserializeOwned>(
+        &self,
+        path: &str,
+        params: &[(&str, &str)],
+    ) -> Result<T> {
+        self.limiter.acquire().await;
+
+        let url = format!("{}/{path}", self.base_url);
+        let mut query: Vec<(&str, &str)> = vec![("api_key", &self.api_key), ("file_type", "json")];
+        query.extend_from_slice(params);
+
+        debug!("FRED request: {path}");
+        let resp = self.http.get(&url).query(&query).send().await?;
+        Self::check_status(resp.status())?;
+
+        resp.json()
+            .await
+            .map_err(|e| FinanceError::ResponseStructureError {
+                field: path.to_string(),
+                context: format!("Failed to deserialize FRED response: {e}"),
+            })
+    }
+
     /// Fetch all observations for a FRED series by ID (e.g., `"FEDFUNDS"`, `"CPIAUCSL"`).
     pub async fn series(&self, series_id: &str) -> Result<MacroSeries> {
         self.limiter.acquire().await;

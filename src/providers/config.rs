@@ -179,6 +179,18 @@ impl Providers {
         crate::domains::Market::with_providers(Arc::clone(&self.set))
     }
 
+    /// Create an [`EconomicCatalog`](crate::EconomicCatalog) handle backed by
+    /// this provider set.
+    ///
+    /// Routes series search and category/release browsing through
+    /// [`Capability::ECONOMIC`](crate::Capability::ECONOMIC). Unlike
+    /// [`economic`](Self::economic) it takes no series id — it is how you find
+    /// one.
+    #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+    pub fn economic_catalog(&self) -> crate::domains::EconomicCatalog {
+        crate::domains::EconomicCatalog::with_providers(Arc::clone(&self.set))
+    }
+
     /// Create a [`Snapshot`](crate::Snapshot) handle backed by this provider set.
     ///
     /// Routes cross-market snapshots through

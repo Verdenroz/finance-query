@@ -409,6 +409,40 @@ pub(crate) trait EconomicProvider: ProviderCore {
         &self,
         series_id: &str,
     ) -> Result<crate::models::economic::EconomicSeries>;
+
+    /// Fetch a series as it stood on `date` (`YYYY-MM-DD`) rather than as
+    /// currently revised — the point-in-time view backtests need.
+    async fn fetch_economic_series_as_of(
+        &self,
+        _series_id: &str,
+        _date: &str,
+    ) -> Result<crate::models::economic::EconomicSeries> {
+        Err(self.not_supported(Operation::EconomicSeriesAsOf))
+    }
+
+    /// Search the provider's series catalog by free text.
+    async fn fetch_economic_search(
+        &self,
+        _query: &str,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::economic::EconomicSeriesMatch>> {
+        Err(self.not_supported(Operation::EconomicSearch))
+    }
+
+    /// List the child categories of `parent_id` in the series category tree.
+    async fn fetch_economic_categories(
+        &self,
+        _parent_id: i64,
+    ) -> Result<Vec<crate::models::economic::EconomicCategory>> {
+        Err(self.not_supported(Operation::EconomicCategories))
+    }
+
+    /// List the provider's scheduled data releases.
+    async fn fetch_economic_releases(
+        &self,
+    ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
+        Err(self.not_supported(Operation::EconomicReleases))
+    }
 }
 
 /// [`Capability::FOREX`] — currency-pair quotes.

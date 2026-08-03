@@ -238,20 +238,20 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 pub use domains::CryptoCoin;
 #[cfg(any(
     feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
+pub use domains::ForexPair;
+#[cfg(any(
+    feature = "alphavantage",
     feature = "bls",
     feature = "fiscaldata",
     feature = "fred",
     feature = "polygon",
     feature = "worldbank"
 ))]
-pub use domains::EconomicIndicator;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "polygon"
-))]
-pub use domains::ForexPair;
+pub use domains::{EconomicCatalog, EconomicIndicator};
 
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
@@ -379,7 +379,9 @@ pub use models::crypto::CryptoQuote;
     feature = "polygon",
     feature = "worldbank"
 ))]
-pub use models::economic::EconomicSeries;
+pub use models::economic::{
+    EconomicCategory, EconomicRelease, EconomicSeries, EconomicSeriesMatch,
+};
 #[cfg(any(
     feature = "alphavantage",
     feature = "fmp",
