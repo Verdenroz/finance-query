@@ -522,6 +522,10 @@ pub enum Operation {
     EconomicCategories,
     /// Scheduled macro data releases.
     EconomicReleases,
+    /// ETF profile and portfolio holdings.
+    EtfProfile,
+    /// The provider's whole listed-security universe.
+    ListingStatus,
 }
 
 impl Operation {
@@ -585,6 +589,8 @@ impl Operation {
             Self::EconomicSearch => "economic_search",
             Self::EconomicCategories => "economic_categories",
             Self::EconomicReleases => "economic_releases",
+            Self::EtfProfile => "etf_profile",
+            Self::ListingStatus => "listing_status",
         }
     }
 
@@ -601,7 +607,8 @@ impl Operation {
             | Self::PriceTargetSummary
             | Self::RatingConsensus
             | Self::KeyMetricsTtm
-            | Self::RatiosTtm => Capability::FUNDAMENTALS,
+            | Self::RatiosTtm
+            | Self::EtfProfile => Capability::FUNDAMENTALS,
             Self::News
             | Self::Recommendations
             | Self::Events
@@ -629,9 +636,11 @@ impl Operation {
             | Self::FilingSearch
             | Self::InsiderTrades
             | Self::InstitutionalHoldings => Capability::FILINGS,
-            Self::SymbolSearch | Self::SymbolDetails | Self::Exchanges | Self::Screener => {
-                Capability::DISCOVERY
-            }
+            Self::SymbolSearch
+            | Self::SymbolDetails
+            | Self::Exchanges
+            | Self::Screener
+            | Self::ListingStatus => Capability::DISCOVERY,
             Self::EarningsCalendar
             | Self::IpoCalendar
             | Self::DividendCalendar

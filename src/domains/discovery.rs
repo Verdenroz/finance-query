@@ -117,6 +117,36 @@ impl Discovery {
             .await
     }
 
+    /// Fetch the providers' whole listed-security universe.
+    ///
+    /// `active = false` asks for delisted securities instead. This is an
+    /// unfiltered dump — expect thousands of rows in one response — so prefer
+    /// [`search`](Self::search) when you have a query. Cached per `active`.
+    /// Currently Alpha Vantage only.
+    pub async fn listing_status(&self, active: bool) -> Result<Vec<SymbolMatch>> {
+        let providers = Arc::clone(&self.providers);
+        self.cache
+            .get_or_try(
+                format!("listing_status\u{1f}{active}"),
+                move || async move {
+                    providers
+                        .fetch(Capability::DISCOVERY, move |p| {
+                            let p = p.clone();
+                            async move {
+                                p.as_discovery()
+                                    .ok_or_else(|| {
+                                        p.not_supported(crate::providers::Operation::ListingStatus)
+                                    })?
+                                    .fetch_listing_status(active)
+                                    .await
+                            }
+                        })
+                        .await
+                },
+            )
+            .await
+    }
+
     /// Run a screener query over the providers' universe.
     ///
     /// Not cached — screener filters are open-ended and results are

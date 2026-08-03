@@ -4,9 +4,9 @@
 //! in the adapter functions under `crate::adapters::alphavantage::*`.
 
 use super::{
-    ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider, EconomicProvider,
-    ForexProvider, FundamentalsProvider, MarketProvider, OptionsProvider, ProviderAdapter,
-    ProviderCore, QuoteProvider,
+    ChartProvider, CommoditiesProvider, CorporateProvider, CryptoProvider, DiscoveryProvider,
+    EconomicProvider, ForexProvider, FundamentalsProvider, MarketProvider, OptionsProvider,
+    ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::alphavantage as av;
 use crate::error::Result;
@@ -65,6 +65,39 @@ impl FundamentalsProvider for AlphaVantageProvider {
         frequency: crate::Frequency,
     ) -> Result<crate::models::fundamentals::FinancialStatement> {
         av::fetch_financials_response(symbol, stmt_type, frequency).await
+    }
+
+    async fn fetch_etf_profile(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::EtfProfile> {
+        av::fundamentals::etf::fetch_etf_profile_response(symbol).await
+    }
+}
+
+#[async_trait::async_trait]
+impl DiscoveryProvider for AlphaVantageProvider {
+    async fn fetch_symbol_search(
+        &self,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        av::discovery::fetch_symbol_search_response(query, limit).await
+    }
+
+    /// Alpha Vantage has no exchange endpoint; the venue list is derived from
+    /// the active listing universe, so only `name` is populated.
+    async fn fetch_exchanges(
+        &self,
+    ) -> Result<Vec<crate::models::discovery::reference::ExchangeInfo>> {
+        av::discovery::fetch_exchanges_response().await
+    }
+
+    async fn fetch_listing_status(
+        &self,
+        active: bool,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        av::discovery::fetch_listing_status_response(active).await
     }
 }
 
@@ -187,6 +220,9 @@ impl ProviderAdapter for AlphaVantageProvider {
         Some(self)
     }
     fn as_market(&self) -> Option<&dyn MarketProvider> {
+        Some(self)
+    }
+    fn as_discovery(&self) -> Option<&dyn DiscoveryProvider> {
         Some(self)
     }
 }

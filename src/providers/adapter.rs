@@ -157,6 +157,14 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
     ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
         Err(self.not_supported(Operation::RatiosTtm))
     }
+
+    /// Fetch an ETF's profile and portfolio holdings.
+    async fn fetch_etf_profile(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::EtfProfile> {
+        Err(self.not_supported(Operation::EtfProfile))
+    }
 }
 
 /// [`Capability::CORPORATE`] — news, corporate events, similar-symbol
@@ -296,6 +304,18 @@ pub(crate) trait DiscoveryProvider: ProviderCore {
         _filters: &crate::models::discovery::reference::ScreenerFilters,
     ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
         Err(self.not_supported(Operation::Screener))
+    }
+
+    /// Fetch the provider's whole listed-security universe.
+    ///
+    /// `active = false` asks for delisted securities instead. Unlike
+    /// [`fetch_symbol_search`](Self::fetch_symbol_search) this is an unfiltered
+    /// dump, so expect thousands of rows in one response.
+    async fn fetch_listing_status(
+        &self,
+        _active: bool,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        Err(self.not_supported(Operation::ListingStatus))
     }
 }
 

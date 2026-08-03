@@ -969,6 +969,28 @@ impl Ticker {
             .await
     }
 
+    /// Fetch this fund's profile and portfolio holdings via the configured
+    /// [`Capability::FUNDAMENTALS`] provider (currently Alpha Vantage only,
+    /// and the only wired source of ETF holdings at all).
+    ///
+    /// Holdings come back heaviest-first. Errors for a symbol that is not a
+    /// fund.
+    pub async fn etf_profile(&self) -> Result<crate::models::fundamentals::EtfProfile> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::EtfProfile))?
+                        .fetch_etf_profile(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
     #[cfg(feature = "indicators")]
     /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(

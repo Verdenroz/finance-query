@@ -19,6 +19,10 @@ pub use consensus::{PriceTargetConsensus, PriceTargetSummary, RatingConsensus};
 mod ttm;
 pub use ttm::{FinancialRatiosTtm, KeyMetricsTtm};
 
+// ETF profile and holdings (provider-routed)
+mod etf;
+pub use etf::{EtfHolding, EtfProfile};
+
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod balance_sheet_history;
 pub(crate) mod cashflow_statement_history;

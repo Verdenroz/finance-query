@@ -6,6 +6,8 @@ use std::collections::HashMap;
 use super::build_client;
 use super::models::*;
 
+pub mod etf;
+
 /// Fetch company overview and fundamentals.
 #[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn company_overview(symbol: &str) -> Result<CompanyOverviewDTO> {
@@ -80,7 +82,6 @@ pub async fn company_overview(symbol: &str) -> Result<CompanyOverviewDTO> {
 }
 
 /// Fetch ETF profile and top holdings.
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn etf_profile(symbol: &str) -> Result<EtfProfileDTO> {
     let client = build_client()?;
     let json = client.get("ETF_PROFILE", &[("symbol", symbol)]).await?;
@@ -285,7 +286,6 @@ fn parse_split_csv(csv: &str) -> Result<Vec<SplitEventDTO>> {
 /// Fetch listing status (active or delisted).
 ///
 /// * `status` - `"active"` (default) or `"delisted"`
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn listing_status(status: Option<&str>) -> Result<Vec<ListingEntryDTO>> {
     let client = build_client()?;
     let params: Vec<(&str, &str)> = match status {

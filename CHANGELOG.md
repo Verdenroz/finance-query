@@ -117,6 +117,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
+  `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
+  (heaviest first) — no other wired provider serves ETF composition —
+  and `providers.discovery()` now routes to Alpha Vantage for `.search(..)`,
+  `.exchanges()`, and the new `.listing_status(active)`, which returns the whole
+  listed (or delisted) universe. New public models `EtfProfile` and
+  `EtfHolding`.
 - FRED series discovery and point-in-time data:
   `providers.economic_catalog()` is a new market-wide handle with `.search(query,
   limit)`, `.categories(parent_id)`, and `.releases()`, so a series id no longer

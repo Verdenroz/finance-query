@@ -351,7 +351,6 @@ pub async fn realtime_bulk_quotes(symbols: &str) -> Result<Vec<BulkQuoteDTO>> {
 }
 
 /// Search for symbols matching the given keywords.
-#[allow(dead_code)] // unrouted: remaining Alpha Vantage endpoints land with #264
 pub async fn symbol_search(keywords: &str) -> Result<Vec<SymbolMatchDTO>> {
     let client = build_client()?;
     let json = client

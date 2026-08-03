@@ -191,7 +191,7 @@ let cat   = providers.economic_catalog(); // → EconomicCatalog: find macro ser
 | `FuturesContract` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `FuturesQuote` · `Chart` |
 | `Commodity` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `CommodityQuote` · `Chart` |
 | `Filings` | `.get()` · `.search(query, filters)` · `.search_all(query, filters)` · `.insider_trades(limit)` · `.institutional_holdings()` · `.sections(accession, form)` · `.risk_factors()` | `ProviderFilings` · `Vec<FilingSearchHit>` · `Vec<InsiderTrade>` · `Vec<InstitutionalHolding>` · `Vec<FilingSection>` · `Vec<RiskFactor>` |
-| `Discovery` | `.search(query, limit)` · `.details(symbol)` · `.exchanges()` · `.screener(filters)` | `Vec<SymbolMatch>` · `SymbolDetails` · `Vec<ExchangeInfo>` · `Vec<ScreenerMatch>` |
+| `Discovery` | `.search(query, limit)` · `.details(symbol)` · `.exchanges()` · `.listing_status(active)` · `.screener(filters)` | `Vec<SymbolMatch>` · `SymbolDetails` · `Vec<ExchangeInfo>` · `Vec<SymbolMatch>` · `Vec<ScreenerMatch>` |
 | `MarketCalendar` | `.earnings(from, to)` · `.ipos(..)` · `.dividends(..)` · `.splits(..)` · `.economic(..)` · `.holidays()` | `Vec<MarketCalendarEntry>` |
 | `Market` | `.sector_performance()` · `.sector_performance_history(limit)` · `.sector_pe()` · `.industry_pe()` · `.gainers()` · `.losers()` · `.most_active()` | `Vec<SectorPerformance>` · `Vec<SectorPerformanceHistory>` · `Vec<SectorPe>` · `Vec<IndustryPe>` · `Vec<MoverQuote>` |
 | `Snapshot` | `.get(symbols)` | `Vec<MarketSnapshot>` |

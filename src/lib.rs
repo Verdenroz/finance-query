@@ -341,8 +341,9 @@ pub use models::{
         ProviderFilings, RiskFactor,
     },
     fundamentals::{
-        FinancialRatiosTtm, FinancialStatement, KeyMetricsTtm, PriceTargetConsensus,
-        PriceTargetSummary, RatingConsensus, ShareFloat, ShortInterest, ShortVolume,
+        EtfHolding, EtfProfile, FinancialRatiosTtm, FinancialStatement, KeyMetricsTtm,
+        PriceTargetConsensus, PriceTargetSummary, RatingConsensus, ShareFloat, ShortInterest,
+        ShortVolume,
     },
     market::currencies::Currency,
     market::exchanges::Exchange,
