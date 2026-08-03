@@ -15,6 +15,8 @@ pub(crate) mod bls;
 #[cfg(feature = "crypto")]
 pub(crate) mod coingecko;
 pub(crate) mod edgar;
+#[cfg(feature = "finra")]
+pub(crate) mod finra;
 #[cfg(feature = "fiscaldata")]
 pub(crate) mod fiscaldata;
 #[cfg(feature = "fmp")]
@@ -83,6 +85,9 @@ pub enum Provider {
     /// Kraken public market data (requires `kraken` feature, keyless).
     #[cfg(feature = "kraken")]
     Kraken,
+    /// FINRA daily short-sale volume (requires `finra` feature, keyless).
+    #[cfg(feature = "finra")]
+    Finra,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -116,6 +121,8 @@ impl Provider {
             "binance" => Some(Self::Binance),
             #[cfg(feature = "kraken")]
             "kraken" => Some(Self::Kraken),
+            #[cfg(feature = "finra")]
+            "finra" => Some(Self::Finra),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -147,6 +154,8 @@ impl Provider {
             Self::Binance => "binance",
             #[cfg(feature = "kraken")]
             Self::Kraken => "kraken",
+            #[cfg(feature = "finra")]
+            Self::Finra => "finra",
             Self::Edgar => "edgar",
         }
     }
@@ -179,6 +188,8 @@ impl Provider {
         v.push(Self::Binance);
         #[cfg(feature = "kraken")]
         v.push(Self::Kraken);
+        #[cfg(feature = "finra")]
+        v.push(Self::Finra);
         v.push(Self::Edgar);
         v
     }
@@ -215,6 +226,8 @@ impl Provider {
             Self::Binance => ProviderAdapter::capabilities(&binance::BinanceProvider),
             #[cfg(feature = "kraken")]
             Self::Kraken => ProviderAdapter::capabilities(&kraken::KrakenProvider),
+            #[cfg(feature = "finra")]
+            Self::Finra => ProviderAdapter::capabilities(&finra::FinraProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -915,6 +928,8 @@ pub(crate) async fn build_providers(
             Provider::Binance => Arc::new(binance::BinanceProvider),
             #[cfg(feature = "kraken")]
             Provider::Kraken => Arc::new(kraken::KrakenProvider),
+            #[cfg(feature = "finra")]
+            Provider::Finra => Arc::new(finra::FinraProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

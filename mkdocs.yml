@@ -82,6 +82,7 @@ nav:
           - Frankfurter: library/providers/frankfurter.md
           - Binance: library/providers/binance.md
           - Kraken: library/providers/kraken.md
+          - FINRA: library/providers/finra.md
       - Domains:
           - Crypto: library/crypto.md
           - Forex: library/forex.md

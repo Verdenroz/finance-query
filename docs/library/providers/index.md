@@ -29,6 +29,7 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **Frankfurter** | `frankfurter` | Keyless | *(keyless)* |
 | **Binance** | `binance` | Keyless | *(keyless)* |
 | **Kraken** | `kraken` | Keyless | *(keyless)* |
+| **FINRA** | `finra` | Keyless (non-commercial) | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 
 ```toml

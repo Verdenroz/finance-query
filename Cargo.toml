@@ -115,6 +115,7 @@ full = [
     "frankfurter",
     "binance",
     "kraken",
+    "finra",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -138,6 +139,8 @@ frankfurter = []
 binance = []
 # Enable Kraken public market data (keyless crypto, US-accessible)
 kraken = []
+# Enable FINRA daily short-sale volume (free, non-commercial use)
+finra = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -184,6 +187,7 @@ features = [
     "frankfurter",
     "binance",
     "kraken",
+    "finra",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

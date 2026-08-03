@@ -90,6 +90,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   pass normal tickers. Kraken caps `/OHLC` at ~720 candles ending at the
   present with no way to page further back — deep history needs Binance or a
   keyed provider.
+- **FINRA short-sale volume** (`finra` feature, keyless) — `Provider::Finra`
+  serves the short-volume slice of `Capability::FUNDAMENTALS`, giving
+  `Ticker::short_volume()` a keyless provider reading from the primary source
+  rather than requiring Polygon. FINRA reports each symbol once per reporting
+  facility per day (Nasdaq / NYSE / OTC); the adapter sums them into one figure
+  per date, matching FINRA's own consolidated daily file. A symbol with no
+  reportable short volume returns an empty series rather than an error. Free
+  for non-commercial use — see the provider docs.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).
