@@ -65,6 +65,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   queries/day, 20 years, plus catalog series titles). BLS's `"-"`
   unpublished-value marker becomes `None`, and annual-aggregate rows (`M13` /
   `Q05` / `S03`) are dropped so a monthly series stays strictly monthly.
+- **Frankfurter / ECB reference rates** (`frankfurter` feature, keyless) —
+  `Provider::Frankfurter` serves `Capability::FOREX`, the first keyless route
+  for that capability: `providers.forex("USD", "EUR").quote()` now works with
+  nothing configured, where previously every forex route needed an API key.
+  ECB rates are a daily reference fix, so quotes carry a price and a change
+  against the previous *published* day but no bid/ask. A pair of identical
+  currencies is answered locally with `1.0` rather than Frankfurter's HTTP 422.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

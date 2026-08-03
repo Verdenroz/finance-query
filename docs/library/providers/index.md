@@ -26,6 +26,7 @@ Yahoo Finance is always available with no configuration. All others are opt-in v
 | **World Bank** | `worldbank` | Keyless | *(keyless)* |
 | **US Treasury FiscalData** | `fiscaldata` | Keyless | *(keyless)* |
 | **BLS** | `bls` | Keyless 25/day, keyed 500/day | `BLS_API_KEY` *(optional)* |
+| **Frankfurter** | `frankfurter` | Keyless | *(keyless)* |
 | **SEC EDGAR** | *(always available)* | Keyless | *(email via `edgar::init`)* |
 
 ```toml

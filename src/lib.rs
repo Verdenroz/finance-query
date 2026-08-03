@@ -132,7 +132,12 @@ pub use domains::CryptoCoin;
     feature = "worldbank"
 ))]
 pub use domains::EconomicIndicator;
-#[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 pub use domains::ForexPair;
 
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
@@ -252,7 +257,12 @@ pub use models::crypto::CryptoQuote;
     feature = "worldbank"
 ))]
 pub use models::economic::EconomicSeries;
-#[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 pub use models::forex::ForexQuote;
 #[cfg(feature = "polygon")]
 pub use models::futures::FuturesQuote;

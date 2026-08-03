@@ -55,7 +55,12 @@ pub mod crypto;
 ))]
 pub mod economic;
 /// Forex (foreign exchange) data models — Polygon / FMP / Alpha Vantage.
-#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 pub mod forex;
 /// Futures market data models — Polygon.
 #[cfg(feature = "polygon")]

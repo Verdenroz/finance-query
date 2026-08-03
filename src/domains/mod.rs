@@ -453,7 +453,12 @@ pub(crate) mod discovery;
 ))]
 pub(crate) mod economic;
 pub(crate) mod filings;
-#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 pub(crate) mod forex;
 #[cfg(feature = "polygon")]
 pub(crate) mod futures;
@@ -484,7 +489,12 @@ pub use discovery::Discovery;
 ))]
 pub use economic::EconomicIndicator;
 pub use filings::Filings;
-#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 pub use forex::ForexPair;
 #[cfg(feature = "polygon")]
 pub use futures::FuturesContract;

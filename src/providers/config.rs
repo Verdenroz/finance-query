@@ -95,7 +95,12 @@ impl Providers {
     }
 
     /// Create a [`ForexPair`](crate::ForexPair) handle backed by this provider set.
-    #[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
+    #[cfg(any(
+        feature = "alphavantage",
+        feature = "fmp",
+        feature = "frankfurter",
+        feature = "polygon"
+    ))]
     pub fn forex(
         &self,
         from: impl Into<String>,

@@ -17,6 +17,8 @@ pub(crate) mod edgar;
 pub(crate) mod fiscaldata;
 #[cfg(feature = "fmp")]
 pub(crate) mod fmp;
+#[cfg(feature = "frankfurter")]
+pub(crate) mod frankfurter;
 #[cfg(feature = "fred")]
 pub(crate) mod fred;
 #[cfg(feature = "polygon")]
@@ -68,6 +70,9 @@ pub enum Provider {
     /// keyed v2 when `BLS_API_KEY` is set).
     #[cfg(feature = "bls")]
     Bls,
+    /// Frankfurter ECB reference exchange rates (requires `frankfurter` feature, keyless).
+    #[cfg(feature = "frankfurter")]
+    Frankfurter,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -95,6 +100,8 @@ impl Provider {
             "fiscaldata" => Some(Self::FiscalData),
             #[cfg(feature = "bls")]
             "bls" => Some(Self::Bls),
+            #[cfg(feature = "frankfurter")]
+            "frankfurter" => Some(Self::Frankfurter),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -120,6 +127,8 @@ impl Provider {
             Self::FiscalData => "fiscaldata",
             #[cfg(feature = "bls")]
             Self::Bls => "bls",
+            #[cfg(feature = "frankfurter")]
+            Self::Frankfurter => "frankfurter",
             Self::Edgar => "edgar",
         }
     }
@@ -146,6 +155,8 @@ impl Provider {
         v.push(Self::FiscalData);
         #[cfg(feature = "bls")]
         v.push(Self::Bls);
+        #[cfg(feature = "frankfurter")]
+        v.push(Self::Frankfurter);
         v.push(Self::Edgar);
         v
     }
@@ -176,6 +187,8 @@ impl Provider {
             Self::FiscalData => ProviderAdapter::capabilities(&fiscaldata::FiscalDataProvider),
             #[cfg(feature = "bls")]
             Self::Bls => ProviderAdapter::capabilities(&bls::BlsProvider),
+            #[cfg(feature = "frankfurter")]
+            Self::Frankfurter => ProviderAdapter::capabilities(&frankfurter::FrankfurterProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -870,6 +883,8 @@ pub(crate) async fn build_providers(
             Provider::FiscalData => Arc::new(fiscaldata::FiscalDataProvider),
             #[cfg(feature = "bls")]
             Provider::Bls => Arc::new(bls::BlsProvider),
+            #[cfg(feature = "frankfurter")]
+            Provider::Frankfurter => Arc::new(frankfurter::FrankfurterProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

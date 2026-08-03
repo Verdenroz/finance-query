@@ -79,6 +79,7 @@ nav:
           - World Bank: library/providers/worldbank.md
           - US Treasury FiscalData: library/providers/fiscaldata.md
           - BLS: library/providers/bls.md
+          - Frankfurter: library/providers/frankfurter.md
       - Domains:
           - Crypto: library/crypto.md
           - Forex: library/forex.md

@@ -303,7 +303,12 @@ pub(crate) trait EconomicProvider: ProviderCore {
 }
 
 /// [`Capability::FOREX`] — currency-pair quotes.
-#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 #[async_trait::async_trait]
 pub(crate) trait ForexProvider: ProviderCore {
     async fn fetch_forex_quote(
@@ -418,7 +423,12 @@ pub(crate) trait ProviderAdapter: ProviderCore {
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {
         None
     }
-    #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+    #[cfg(any(
+        feature = "alphavantage",
+        feature = "fmp",
+        feature = "frankfurter",
+        feature = "polygon"
+    ))]
     fn as_forex(&self) -> Option<&dyn ForexProvider> {
         None
     }
@@ -489,7 +499,12 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         if self.as_economic().is_some() {
             caps = caps | Capability::ECONOMIC;
         }
-        #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+        #[cfg(any(
+            feature = "alphavantage",
+            feature = "fmp",
+            feature = "frankfurter",
+            feature = "polygon"
+        ))]
         if self.as_forex().is_some() {
             caps = caps | Capability::FOREX;
         }
