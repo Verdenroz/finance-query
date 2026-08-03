@@ -188,7 +188,7 @@ let snap  = providers.snapshot();    // → Snapshot: cross-market watchlist sna
 | `Index` | `.quote()` · `.chart(interval, range)` · `.history(range)` · `.constituents()` · `.constituent_changes()` | `IndexQuote` · `Chart` · `Vec<IndexConstituent>` · `Vec<IndexConstituentChange>` |
 | `FuturesContract` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `FuturesQuote` · `Chart` |
 | `Commodity` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `CommodityQuote` · `Chart` |
-| `Filings` | `.get()` · `.sections(accession, form)` · `.risk_factors()` | `ProviderFilings` · `Vec<FilingSection>` · `Vec<RiskFactor>` |
+| `Filings` | `.get()` · `.search(query, filters)` · `.search_all(query, filters)` · `.sections(accession, form)` · `.risk_factors()` | `ProviderFilings` · `Vec<FilingSearchHit>` · `Vec<FilingSection>` · `Vec<RiskFactor>` |
 | `Discovery` | `.search(query, limit)` · `.details(symbol)` · `.exchanges()` · `.screener(filters)` | `Vec<SymbolMatch>` · `SymbolDetails` · `Vec<ExchangeInfo>` · `Vec<ScreenerMatch>` |
 | `MarketCalendar` | `.earnings(from, to)` · `.ipos(..)` · `.dividends(..)` · `.splits(..)` · `.economic(..)` · `.holidays()` | `Vec<MarketCalendarEntry>` |
 | `Market` | `.sector_performance()` · `.sector_performance_history(limit)` · `.sector_pe()` · `.industry_pe()` · `.gainers()` · `.losers()` · `.most_active()` | `Vec<SectorPerformance>` · `Vec<SectorPerformanceHistory>` · `Vec<SectorPe>` · `Vec<IndustryPe>` · `Vec<MoverQuote>` |

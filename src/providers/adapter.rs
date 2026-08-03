@@ -233,6 +233,15 @@ pub(crate) trait FilingsProvider: ProviderCore {
     ) -> Result<Vec<crate::models::filings::RiskFactor>> {
         Err(self.not_supported(Operation::RiskFactors))
     }
+
+    /// Search filing *text* rather than looking filings up by filer.
+    async fn fetch_filing_search(
+        &self,
+        _query: &str,
+        _filters: &crate::models::filings::FilingSearchFilters,
+    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        Err(self.not_supported(Operation::FilingSearch))
+    }
 }
 
 // ── Capability traits (feature-gated) ───────────────────────────────

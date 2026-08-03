@@ -318,6 +318,23 @@ impl EdgarClient {
         from: Option<usize>,
         size: Option<usize>,
     ) -> Result<EdgarSearchResults> {
+        self.search_filtered(query, forms, start_date, end_date, from, size, None)
+            .await
+    }
+
+    /// [`search`](Self::search) with an optional `ciks` filter restricting the
+    /// query to one filer.
+    #[allow(clippy::too_many_arguments)] // mirrors EFTS's flat query-parameter set
+    pub async fn search_filtered(
+        &self,
+        query: &str,
+        forms: Option<&[&str]>,
+        start_date: Option<&str>,
+        end_date: Option<&str>,
+        from: Option<usize>,
+        size: Option<usize>,
+        ciks: Option<&str>,
+    ) -> Result<EdgarSearchResults> {
         let mut params: Vec<(&str, String)> = vec![("q", query.to_string())];
 
         // Add optional parameters
@@ -330,6 +347,7 @@ impl EdgarClient {
                 end_date.map(|e| ("enddt", e.to_string())),
                 from.map(|f| ("from", f.to_string())),
                 size.map(|s| ("size", s.to_string())),
+                ciks.map(|c| ("ciks", c.to_string())),
             ]
             .into_iter()
             .flatten(),

@@ -37,6 +37,7 @@
 
 mod client;
 mod endpoints;
+pub(crate) mod filings; // FILINGS
 
 use crate::error::{FinanceError, Result};
 use crate::models::filings::{

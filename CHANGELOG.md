@@ -117,6 +117,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- Routed EDGAR full-text search: `providers.filings("AAPL").search(query,
+  filters)` searches filing *text* within that filer, and `.search_all(..)`
+  across every filer, through the `FILINGS` capability. Returns the flattened
+  `FilingSearchHit` (with a derived archive URL per hit) rather than EDGAR's raw
+  Elasticsearch envelope, which `edgar::search` still exposes unchanged. New
+  public models `FilingSearchHit` and `FilingSearchFilters`.
 - Cross-market snapshots: `providers.snapshot().get(&["AAPL", "X:BTCUSD",
   "I:SPX"])` answers a mixed watchlist in one request through the `QUOTE` route
   (Polygon's `/v3/snapshot`, max 250 symbols) instead of one request per asset

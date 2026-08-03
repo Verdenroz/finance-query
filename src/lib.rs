@@ -336,8 +336,8 @@ pub use models::{
     discovery::search::SearchResults,
     discovery::trending::TrendingQuote,
     filings::{
-        CompanyFacts, EdgarSearchResults, EdgarSubmissions, FilingSection, FilingSectionForm,
-        ProviderFiling, ProviderFilings, RiskFactor,
+        CompanyFacts, EdgarSearchResults, EdgarSubmissions, FilingSearchFilters, FilingSearchHit,
+        FilingSection, FilingSectionForm, ProviderFiling, ProviderFilings, RiskFactor,
     },
     fundamentals::{
         FinancialRatiosTtm, FinancialStatement, KeyMetricsTtm, PriceTargetConsensus,

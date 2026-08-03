@@ -276,6 +276,37 @@ edgar::search("query", Some(&["8-K"]), None, None).await?;
 edgar::search("query", Some(&["10-K", "10-Q", "8-K"]), None, None).await?;
 ```
 
+### Routed Search (`Filings` handle)
+
+The same EFTS index is reachable through the `FILINGS` capability, which returns
+the flattened `FilingSearchHit` model instead of EDGAR's raw Elasticsearch
+envelope — and derives a direct archive URL per hit where possible.
+
+```rust,ignore
+use finance_query::{FilingSearchFilters, Providers};
+
+let providers = Providers::builder().build().await?;
+let sec = providers.filings("AAPL");
+
+// Scoped to AAPL — the handle's symbol is resolved to a CIK filter.
+let hits = sec.search(
+    "artificial intelligence",
+    FilingSearchFilters::default().forms(["10-K"]).from("2024-01-01"),
+).await?;
+
+// Across every filer.
+let all = sec.search_all(
+    "artificial intelligence",
+    FilingSearchFilters::default().forms(["10-K"]).limit(50),
+).await?;
+
+for hit in hits {
+    println!("{:?} {:?} {:?}", hit.form, hit.filed_date, hit.url);
+}
+```
+
+EFTS caps a page at 100 hits, so `limit` above that is clamped.
+
 ## Complete Example
 
 Here's a complete example combining all EDGAR features:

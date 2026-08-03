@@ -21,6 +21,15 @@ impl FilingsProvider for EdgarProvider {
     async fn fetch_filings(&self, symbol: &str) -> Result<ProviderFilings> {
         crate::adapters::edgar::fetch_filings_response(symbol).await
     }
+
+    async fn fetch_filing_search(
+        &self,
+        query: &str,
+        filters: &crate::models::filings::FilingSearchFilters,
+    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        crate::adapters::edgar::filings::full_text::fetch_filing_search_response(query, filters)
+            .await
+    }
 }
 
 #[async_trait::async_trait]

@@ -508,6 +508,8 @@ pub enum Operation {
     EmployeeCount,
     /// Cross-market snapshot for symbols spanning several asset classes.
     UnifiedSnapshot,
+    /// Full-text search over filing content.
+    FilingSearch,
 }
 
 impl Operation {
@@ -564,6 +566,7 @@ impl Operation {
             Self::ExecutiveCompensation => "executive_compensation",
             Self::EmployeeCount => "employee_count",
             Self::UnifiedSnapshot => "unified_snapshot",
+            Self::FilingSearch => "filing_search",
         }
     }
 
@@ -598,7 +601,9 @@ impl Operation {
             }
             Self::FuturesQuote => Capability::FUTURES,
             Self::CommoditiesQuote => Capability::COMMODITIES,
-            Self::Filings | Self::FilingSections | Self::RiskFactors => Capability::FILINGS,
+            Self::Filings | Self::FilingSections | Self::RiskFactors | Self::FilingSearch => {
+                Capability::FILINGS
+            }
             Self::SymbolSearch | Self::SymbolDetails | Self::Exchanges | Self::Screener => {
                 Capability::DISCOVERY
             }
