@@ -8,8 +8,10 @@ use async_graphql::{Context, Error, Result, Subscription};
 use finance_query::feeds::FeedSource;
 use futures_util::{Stream, StreamExt};
 
+use finance_query::streaming::{AlertEvaluator, AlertRule};
+
 use super::types::feeds::GqlFeedEntry;
-use super::types::streaming::GqlPriceUpdate;
+use super::types::streaming::{GqlAlertEvent, GqlAlertRuleInput, GqlPriceUpdate};
 use crate::{AppState, FeedHub, StreamHub};
 
 pub struct SubscriptionRoot;
@@ -51,6 +53,60 @@ impl SubscriptionRoot {
         Ok(GuardedStream {
             _guard: guard,
             inner: Box::pin(filtered),
+        })
+    }
+
+    /// Subscribe to threshold-triggered price alerts.
+    ///
+    /// Same upstream as `priceStream`, but only ticks that satisfy one of the
+    /// supplied rules are sent — the predicate is evaluated here rather than
+    /// pushing every tick to the client. Symbols are derived from the rules
+    /// and ref-counted through the same hub.
+    async fn price_alerts(
+        &self,
+        ctx: &Context<'_>,
+        rules: Vec<GqlAlertRuleInput>,
+    ) -> Result<impl Stream<Item = GqlAlertEvent>> {
+        if rules.is_empty() {
+            return Err(Error::new("at least one alert rule is required"));
+        }
+
+        let state = ctx.data::<AppState>()?;
+        let hub = state.stream_hub.clone();
+
+        let rules: Vec<AlertRule> = rules.into_iter().map(AlertRule::from).collect();
+        let mut evaluator = AlertEvaluator::new(rules);
+        let symbols = evaluator.symbols();
+
+        hub.subscribe_symbols(&symbols)
+            .await
+            .map_err(|e| Error::new(e.to_string()))?;
+
+        let hub_stream = hub
+            .resubscribe()
+            .await
+            .ok_or_else(|| Error::new("Price stream unavailable"))?;
+
+        let guard = SubscriptionGuard {
+            hub: hub.clone(),
+            symbols,
+        };
+
+        let alerts = hub_stream
+            .flat_map(move |update| {
+                futures_util::stream::iter(
+                    evaluator
+                        .evaluate(&update)
+                        .into_iter()
+                        .map(GqlAlertEvent::from)
+                        .collect::<Vec<_>>(),
+                )
+            })
+            .boxed();
+
+        Ok(GuardedAlertStream {
+            _guard: guard,
+            inner: alerts,
         })
     }
 
@@ -128,6 +184,28 @@ impl Unpin for GuardedStream {}
 
 impl Stream for GuardedStream {
     type Item = GqlPriceUpdate;
+
+    fn poll_next(
+        mut self: Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+    ) -> task::Poll<Option<Self::Item>> {
+        self.inner.as_mut().poll_next(cx)
+    }
+}
+
+/// Wraps an alert-filtered price stream and holds a `SubscriptionGuard` so
+/// symbols are unsubscribed when the stream is dropped.
+struct GuardedAlertStream {
+    _guard: SubscriptionGuard,
+    inner: Pin<Box<dyn Stream<Item = GqlAlertEvent> + Send>>,
+}
+
+// SAFETY: `Pin<Box<T>>` is always `Unpin` (the box pointer can be moved),
+// and `SubscriptionGuard` contains no pinned fields.
+impl Unpin for GuardedAlertStream {}
+
+impl Stream for GuardedAlertStream {
+    type Item = GqlAlertEvent;
 
     fn poll_next(
         mut self: Pin<&mut Self>,

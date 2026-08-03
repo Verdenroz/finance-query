@@ -49,11 +49,16 @@ channels:
         oneOf:
           - $ref: '#/components/messages/Subscribe'
           - $ref: '#/components/messages/Unsubscribe'
+          - $ref: '#/components/messages/SetAlerts'
     subscribe:
       operationId: receiveMessage
-      summary: Receive price updates from the server
+      summary: >-
+        Receive price updates from the server, or alert events while an alert
+        rule set is active
       message:
-        $ref: '#/components/messages/PriceUpdate'
+        oneOf:
+          - $ref: '#/components/messages/PriceUpdate'
+          - $ref: '#/components/messages/AlertEvent'
 
   /feeds:
     servers: [feedsProduction, feedsDevelopment]
@@ -110,6 +115,25 @@ components:
             example:
               - AAPL
 
+    SetAlerts:
+      name: alerts
+      title: Set Alerts Message
+      summary: >-
+        Replace the connection's alert rule set. While a non-empty rule set is
+        active the server sends AlertEvent messages instead of raw price
+        updates; send an empty array to revert to raw ticks. Symbols named by
+        rules are subscribed automatically.
+      contentType: application/json
+      payload:
+        type: object
+        required:
+          - alerts
+        properties:
+          alerts:
+            type: array
+            items:
+              $ref: '#/components/schemas/AlertRule'
+
     PriceUpdate:
       name: priceUpdate
       title: Price Update
@@ -117,6 +141,14 @@ components:
       contentType: application/json
       payload:
         $ref: '#/components/schemas/PriceUpdate'
+
+    AlertEvent:
+      name: alertEvent
+      title: Alert Event
+      summary: A price tick that satisfied one of the connection's alert rules
+      contentType: application/json
+      payload:
+        $ref: '#/components/schemas/AlertEvent'
 
     FeedSubscribe:
       name: subscribe
@@ -170,6 +202,66 @@ components:
         $ref: '#/components/schemas/FeedEntry'
 
   schemas:
+    AlertRule:
+      type: object
+      required:
+        - symbol
+        - condition
+        - value
+      properties:
+        symbol:
+          type: string
+          description: Ticker symbol to watch
+          example: AAPL
+        condition:
+          type: string
+          enum:
+            - crossesAbove
+            - crossesBelow
+            - priceAbove
+            - priceBelow
+            - percentChangeAbove
+            - percentChangeBelow
+            - volumeAbove
+          description: >-
+            Predicate to evaluate. Crossing conditions compare against the
+            previous tick and never fire on a symbol's first tick.
+        value:
+          type: number
+          description: Threshold the predicate compares against
+          example: 200.0
+        repeat:
+          type: boolean
+          default: false
+          description: >-
+            Fire every time the condition becomes true again, instead of once
+
+    AlertEvent:
+      type: object
+      properties:
+        symbol:
+          type: string
+        condition:
+          type: object
+          description: >-
+            The condition that fired, as a single-key object — for example
+            `{"crossesAbove": 200.0}`
+        price:
+          type: number
+          format: float
+        previousPrice:
+          type: number
+          format: float
+          nullable: true
+        changePercent:
+          type: number
+          format: float
+        time:
+          type: integer
+          format: int64
+        update:
+          $ref: '#/components/schemas/PriceUpdate'
+
     PriceUpdate:
       type: object
       description: Real-time price update from Yahoo Finance

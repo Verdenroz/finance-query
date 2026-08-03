@@ -1,7 +1,7 @@
 //! GraphQL type for real-time price streaming updates.
 
-use async_graphql::SimpleObject;
-use finance_query::streaming::PriceUpdate;
+use async_graphql::{Enum, InputObject, SimpleObject};
+use finance_query::streaming::{AlertCondition, AlertEvent, AlertRule, PriceUpdate};
 use serde::Deserialize;
 
 /// A real-time price update from the streaming WebSocket, mirroring `PriceUpdate`.
@@ -81,5 +81,151 @@ impl From<PriceUpdate> for GqlPriceUpdate {
             circulating_supply: u.circulating_supply,
             market_cap: u.market_cap,
         }
+    }
+}
+
+/// Threshold predicate for a price alert subscription.
+#[derive(Enum, Copy, Clone, Eq, PartialEq, Debug)]
+#[graphql(rename_items = "SCREAMING_SNAKE_CASE")]
+pub enum GqlAlertConditionKind {
+    /// Price moved from at-or-below `value` to above it.
+    CrossesAbove,
+    /// Price moved from at-or-above `value` to below it.
+    CrossesBelow,
+    /// Price is above `value`.
+    PriceAbove,
+    /// Price is below `value`.
+    PriceBelow,
+    /// Percent change is at or above `value`.
+    PercentChangeAbove,
+    /// Percent change is at or below `value`.
+    PercentChangeBelow,
+    /// Day volume is at or above `value`.
+    VolumeAbove,
+}
+
+/// One alert rule supplied by a subscriber.
+#[derive(InputObject, Clone, Debug)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlAlertRuleInput {
+    /// Symbol to watch.
+    pub symbol: String,
+    /// Predicate to evaluate.
+    pub condition: GqlAlertConditionKind,
+    /// Threshold the predicate compares against.
+    pub value: f64,
+    /// Fire every time the condition becomes true again (default: once).
+    #[graphql(default = false)]
+    pub repeat: bool,
+}
+
+impl From<GqlAlertRuleInput> for AlertRule {
+    fn from(input: GqlAlertRuleInput) -> Self {
+        let condition = match input.condition {
+            GqlAlertConditionKind::CrossesAbove => AlertCondition::CrossesAbove(input.value),
+            GqlAlertConditionKind::CrossesBelow => AlertCondition::CrossesBelow(input.value),
+            GqlAlertConditionKind::PriceAbove => AlertCondition::PriceAbove(input.value),
+            GqlAlertConditionKind::PriceBelow => AlertCondition::PriceBelow(input.value),
+            GqlAlertConditionKind::PercentChangeAbove => {
+                AlertCondition::PercentChangeAbove(input.value)
+            }
+            GqlAlertConditionKind::PercentChangeBelow => {
+                AlertCondition::PercentChangeBelow(input.value)
+            }
+            GqlAlertConditionKind::VolumeAbove => AlertCondition::VolumeAbove(input.value as i64),
+        };
+        let rule = AlertRule::new(input.symbol, condition);
+        if input.repeat { rule.repeating() } else { rule }
+    }
+}
+
+/// A fired price alert.
+#[derive(SimpleObject, Debug, Clone)]
+#[graphql(rename_fields = "camelCase")]
+pub struct GqlAlertEvent {
+    /// Symbol that triggered.
+    pub symbol: String,
+    /// Which predicate fired.
+    pub condition: GqlAlertConditionKind,
+    /// Threshold the predicate compared against.
+    pub threshold: f64,
+    /// Price on the triggering tick.
+    pub price: f32,
+    /// Last price seen before this tick.
+    pub previous_price: Option<f32>,
+    /// Percent change carried by the triggering tick.
+    pub change_percent: f32,
+    /// Tick timestamp (milliseconds).
+    pub time: i64,
+    /// The full triggering tick.
+    pub update: GqlPriceUpdate,
+}
+
+impl From<AlertEvent> for GqlAlertEvent {
+    fn from(event: AlertEvent) -> Self {
+        let (condition, threshold) = split_condition(event.condition);
+        Self {
+            symbol: event.symbol,
+            condition,
+            threshold,
+            price: event.price,
+            previous_price: event.previous_price,
+            change_percent: event.change_percent,
+            time: event.time,
+            update: GqlPriceUpdate::from(event.update),
+        }
+    }
+}
+
+/// Flatten the library's data-carrying condition into GraphQL's
+/// enum-plus-scalar shape.
+fn split_condition(condition: AlertCondition) -> (GqlAlertConditionKind, f64) {
+    match condition {
+        AlertCondition::CrossesAbove(v) => (GqlAlertConditionKind::CrossesAbove, v),
+        AlertCondition::CrossesBelow(v) => (GqlAlertConditionKind::CrossesBelow, v),
+        AlertCondition::PriceAbove(v) => (GqlAlertConditionKind::PriceAbove, v),
+        AlertCondition::PriceBelow(v) => (GqlAlertConditionKind::PriceBelow, v),
+        AlertCondition::PercentChangeAbove(v) => (GqlAlertConditionKind::PercentChangeAbove, v),
+        AlertCondition::PercentChangeBelow(v) => (GqlAlertConditionKind::PercentChangeBelow, v),
+        AlertCondition::VolumeAbove(v) => (GqlAlertConditionKind::VolumeAbove, v as f64),
+        // `AlertCondition` is #[non_exhaustive]; new variants degrade to a
+        // price-above alert rather than failing the subscription.
+        _ => (GqlAlertConditionKind::PriceAbove, 0.0),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn input(condition: GqlAlertConditionKind, value: f64, repeat: bool) -> GqlAlertRuleInput {
+        GqlAlertRuleInput {
+            symbol: "AAPL".into(),
+            condition,
+            value,
+            repeat,
+        }
+    }
+
+    #[test]
+    fn rule_input_maps_onto_library_conditions() {
+        let rule: AlertRule = input(GqlAlertConditionKind::CrossesAbove, 150.0, false).into();
+        assert_eq!(rule.symbol, "AAPL");
+        assert_eq!(rule.condition, AlertCondition::CrossesAbove(150.0));
+        assert!(!rule.repeat);
+
+        let repeating: AlertRule = input(GqlAlertConditionKind::PriceBelow, 10.0, true).into();
+        assert!(repeating.repeat);
+        assert_eq!(repeating.condition, AlertCondition::PriceBelow(10.0));
+    }
+
+    #[test]
+    fn volume_thresholds_round_trip_through_the_float_input() {
+        let rule: AlertRule = input(GqlAlertConditionKind::VolumeAbove, 1_000.0, false).into();
+        assert_eq!(rule.condition, AlertCondition::VolumeAbove(1_000));
+        assert_eq!(
+            split_condition(rule.condition),
+            (GqlAlertConditionKind::VolumeAbove, 1_000.0)
+        );
     }
 }

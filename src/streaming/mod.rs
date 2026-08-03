@@ -39,6 +39,7 @@
 //! # }
 //! ```
 
+mod alerts;
 mod batch;
 #[cfg(feature = "polygon")]
 mod book;
@@ -57,6 +58,7 @@ mod subscription;
 mod trades;
 mod yahoo;
 
+pub use alerts::{AlertCondition, AlertEvaluator, AlertEvent, AlertExt, AlertRule, AlertStream};
 pub use batch::{Batched, StreamBatchExt};
 #[cfg(feature = "polygon")]
 pub use book::{BookLevel, DepthStream, DepthStreamBuilder, OrderBookUpdate};
