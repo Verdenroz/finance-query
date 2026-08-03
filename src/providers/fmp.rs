@@ -102,6 +102,29 @@ impl FundamentalsProvider for FmpProvider {
             data,
         ))
     }
+
+    async fn fetch_price_target_consensus(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+        crate::adapters::fmp::fundamentals::consensus::fetch_price_target_consensus_response(symbol)
+            .await
+    }
+
+    async fn fetch_price_target_summary(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::PriceTargetSummary> {
+        crate::adapters::fmp::fundamentals::consensus::fetch_price_target_summary_response(symbol)
+            .await
+    }
+
+    async fn fetch_rating_consensus(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::RatingConsensus> {
+        crate::adapters::fmp::fundamentals::consensus::fetch_rating_consensus_response(symbol).await
+    }
 }
 
 #[async_trait::async_trait]

@@ -1,5 +1,6 @@
 #[allow(dead_code)] // unrouted: TTM key-metrics/ratios snapshot lands with #242
 pub mod analysis;
+pub mod consensus;
 pub mod core;
 pub mod estimates;
 #[allow(dead_code)] // unrouted: ETF/fund data has no capability route yet

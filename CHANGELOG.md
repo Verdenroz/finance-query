@@ -117,6 +117,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- Analyst consensus on `Ticker`: `price_target_consensus()` (high/low/mean/median
+  target), `price_target_summary()` (how many targets were published last
+  month/quarter/year/all time and their averages), and `rating_consensus()`
+  (grade distribution plus a headline label) via the `FUNDAMENTALS` route (FMP).
+  These are the provider's own panel-wide rollups, not the raw per-analyst grade
+  actions already available through `UpgradeDowngradeHistory`.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

@@ -492,6 +492,12 @@ pub enum Operation {
     /// Historical total value locked in a DeFi protocol.
     #[cfg(feature = "defi")]
     ProtocolTvlHistory,
+    /// Aggregated analyst price-target consensus.
+    PriceTargetConsensus,
+    /// Price-target publication activity over trailing windows.
+    PriceTargetSummary,
+    /// Aggregated analyst rating consensus.
+    RatingConsensus,
 }
 
 impl Operation {
@@ -540,6 +546,9 @@ impl Operation {
             Self::ProtocolTvl => "protocol_tvl",
             #[cfg(feature = "defi")]
             Self::ProtocolTvlHistory => "protocol_tvl_history",
+            Self::PriceTargetConsensus => "price_target_consensus",
+            Self::PriceTargetSummary => "price_target_summary",
+            Self::RatingConsensus => "rating_consensus",
         }
     }
 
@@ -548,9 +557,13 @@ impl Operation {
         match self {
             Self::Quote | Self::QuotesBatch => Capability::QUOTE,
             Self::Chart | Self::ChartRange | Self::Spark => Capability::CHART,
-            Self::Financials | Self::ShortInterest | Self::ShortVolume | Self::ShareFloat => {
-                Capability::FUNDAMENTALS
-            }
+            Self::Financials
+            | Self::ShortInterest
+            | Self::ShortVolume
+            | Self::ShareFloat
+            | Self::PriceTargetConsensus
+            | Self::PriceTargetSummary
+            | Self::RatingConsensus => Capability::FUNDAMENTALS,
             Self::News | Self::Recommendations | Self::Events | Self::PressReleases => {
                 Capability::CORPORATE
             }

@@ -107,6 +107,30 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
     ) -> Result<crate::models::fundamentals::ShareFloat> {
         Err(self.not_supported(Operation::ShareFloat))
     }
+
+    /// Fetch the aggregated analyst price-target consensus.
+    async fn fetch_price_target_consensus(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+        Err(self.not_supported(Operation::PriceTargetConsensus))
+    }
+
+    /// Fetch price-target publication activity over trailing windows.
+    async fn fetch_price_target_summary(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::PriceTargetSummary> {
+        Err(self.not_supported(Operation::PriceTargetSummary))
+    }
+
+    /// Fetch the aggregated analyst rating consensus.
+    async fn fetch_rating_consensus(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::RatingConsensus> {
+        Err(self.not_supported(Operation::RatingConsensus))
+    }
 }
 
 /// [`Capability::CORPORATE`] — news, corporate events, similar-symbol

@@ -816,6 +816,75 @@ impl Ticker {
             .await
     }
 
+    /// Fetch the aggregated analyst price-target consensus (high/low/mean/median)
+    /// via the configured [`Capability::FUNDAMENTALS`] provider (currently FMP
+    /// only). Route with
+    /// `.route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])`.
+    pub async fn price_target_consensus(
+        &self,
+    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::PriceTargetConsensus)
+                        })?
+                        .fetch_price_target_consensus(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch price-target publication activity over trailing windows (last
+    /// month/quarter/year/all time) via the configured
+    /// [`Capability::FUNDAMENTALS`] provider (currently FMP only).
+    pub async fn price_target_summary(
+        &self,
+    ) -> Result<crate::models::fundamentals::PriceTargetSummary> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::PriceTargetSummary)
+                        })?
+                        .fetch_price_target_summary(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch the aggregated analyst rating consensus (grade distribution plus a
+    /// headline label) via the configured [`Capability::FUNDAMENTALS`] provider
+    /// (currently FMP only). Distinct from
+    /// [`recommendations`](Self::recommendations), which returns similar symbols.
+    pub async fn rating_consensus(&self) -> Result<crate::models::fundamentals::RatingConsensus> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::RatingConsensus)
+                        })?
+                        .fetch_rating_consensus(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
     #[cfg(feature = "indicators")]
     /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(

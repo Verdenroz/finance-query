@@ -337,7 +337,10 @@ pub use models::{
         CompanyFacts, EdgarSearchResults, EdgarSubmissions, FilingSection, FilingSectionForm,
         ProviderFiling, ProviderFilings, RiskFactor,
     },
-    fundamentals::{FinancialStatement, ShareFloat, ShortInterest, ShortVolume},
+    fundamentals::{
+        FinancialStatement, PriceTargetConsensus, PriceTargetSummary, RatingConsensus, ShareFloat,
+        ShortInterest, ShortVolume,
+    },
     market::currencies::Currency,
     market::exchanges::Exchange,
     market::hours::MarketHours,

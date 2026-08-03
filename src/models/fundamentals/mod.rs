@@ -11,6 +11,10 @@ pub use response::FinancialStatement;
 mod short_activity;
 pub use short_activity::{ShareFloat, ShortInterest, ShortVolume};
 
+// Aggregated analyst consensus (provider-routed)
+mod consensus;
+pub use consensus::{PriceTargetConsensus, PriceTargetSummary, RatingConsensus};
+
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod balance_sheet_history;
 pub(crate) mod cashflow_statement_history;
