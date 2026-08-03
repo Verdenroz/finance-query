@@ -8,6 +8,8 @@ pub(crate) mod mock;
 
 #[cfg(feature = "alphavantage")]
 pub(crate) mod alphavantage;
+#[cfg(feature = "bls")]
+pub(crate) mod bls;
 #[cfg(feature = "crypto")]
 pub(crate) mod coingecko;
 pub(crate) mod edgar;
@@ -62,6 +64,10 @@ pub enum Provider {
     /// US Treasury FiscalData (requires `fiscaldata` feature, keyless).
     #[cfg(feature = "fiscaldata")]
     FiscalData,
+    /// US Bureau of Labor Statistics (requires `bls` feature; keyless v1,
+    /// keyed v2 when `BLS_API_KEY` is set).
+    #[cfg(feature = "bls")]
+    Bls,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -87,6 +93,8 @@ impl Provider {
             "worldbank" => Some(Self::WorldBank),
             #[cfg(feature = "fiscaldata")]
             "fiscaldata" => Some(Self::FiscalData),
+            #[cfg(feature = "bls")]
+            "bls" => Some(Self::Bls),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -110,6 +118,8 @@ impl Provider {
             Self::WorldBank => "worldbank",
             #[cfg(feature = "fiscaldata")]
             Self::FiscalData => "fiscaldata",
+            #[cfg(feature = "bls")]
+            Self::Bls => "bls",
             Self::Edgar => "edgar",
         }
     }
@@ -134,6 +144,8 @@ impl Provider {
         v.push(Self::WorldBank);
         #[cfg(feature = "fiscaldata")]
         v.push(Self::FiscalData);
+        #[cfg(feature = "bls")]
+        v.push(Self::Bls);
         v.push(Self::Edgar);
         v
     }
@@ -162,6 +174,8 @@ impl Provider {
             Self::WorldBank => ProviderAdapter::capabilities(&worldbank::WorldBankProvider),
             #[cfg(feature = "fiscaldata")]
             Self::FiscalData => ProviderAdapter::capabilities(&fiscaldata::FiscalDataProvider),
+            #[cfg(feature = "bls")]
+            Self::Bls => ProviderAdapter::capabilities(&bls::BlsProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -854,6 +868,8 @@ pub(crate) async fn build_providers(
             Provider::WorldBank => Arc::new(worldbank::WorldBankProvider),
             #[cfg(feature = "fiscaldata")]
             Provider::FiscalData => Arc::new(fiscaldata::FiscalDataProvider),
+            #[cfg(feature = "bls")]
+            Provider::Bls => Arc::new(bls::BlsProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

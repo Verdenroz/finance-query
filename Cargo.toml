@@ -111,6 +111,7 @@ full = [
     "sentiment",
     "worldbank",
     "fiscaldata",
+    "bls",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -126,6 +127,8 @@ crypto = []
 worldbank = []
 # Enable US Treasury FiscalData federal debt/interest statistics (keyless)
 fiscaldata = []
+# Enable BLS labor/inflation statistics (keyless v1; BLS_API_KEY upgrades to v2)
+bls = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -168,6 +171,7 @@ features = [
     "sentiment",
     "worldbank",
     "fiscaldata",
+    "bls",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

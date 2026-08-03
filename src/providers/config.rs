@@ -111,6 +111,7 @@ impl Providers {
     /// Create an [`EconomicIndicator`](crate::EconomicIndicator) handle backed by this provider set.
     #[cfg(any(
         feature = "alphavantage",
+        feature = "bls",
         feature = "fiscaldata",
         feature = "fred",
         feature = "polygon",

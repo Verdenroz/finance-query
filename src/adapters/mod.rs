@@ -19,6 +19,7 @@
 //! | `fred` | [FRED](https://fred.stlouisfed.org/) | 120 req/min | 2+ | 800k+ macro time series, US Treasury yield curve |
 //! | `worldbank` | [World Bank Open Data](https://data.worldbank.org/) | Keyless | 1 | ~1,600 global development/macro indicators across 200+ economies |
 //! | `fiscaldata` | [US Treasury FiscalData](https://fiscaldata.treasury.gov/) | Keyless | 50+ datasets | Federal debt, average interest rates, daily Treasury statements |
+//! | `bls` | [BLS Public Data](https://www.bls.gov/developers/) | Keyless (25/day) or keyed (500/day) | 1 | CPI, unemployment, payrolls, wages, PPI from the primary source |
 //! | *(always)* | [SEC EDGAR](https://www.sec.gov/edgar) | 10 req/sec | 5+ | Filing history, XBRL financials, full-text search (keyless, requires contact email) |
 //!
 //! # Quick comparison
@@ -65,6 +66,10 @@ pub(crate) mod worldbank;
 /// US Treasury FiscalData federal fiscal statistics (keyless, requires `fiscaldata` feature).
 #[cfg(feature = "fiscaldata")]
 pub(crate) mod fiscaldata;
+
+/// BLS labor and inflation statistics (keyless v1 / keyed v2, requires `bls` feature).
+#[cfg(feature = "bls")]
+pub(crate) mod bls;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;

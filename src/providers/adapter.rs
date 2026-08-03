@@ -288,6 +288,7 @@ pub(crate) trait CryptoProvider: ProviderCore {
 /// [`Capability::ECONOMIC`] — macro-economic data series.
 #[cfg(any(
     feature = "alphavantage",
+    feature = "bls",
     feature = "fiscaldata",
     feature = "fred",
     feature = "polygon",
@@ -408,6 +409,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
     }
     #[cfg(any(
         feature = "alphavantage",
+        feature = "bls",
         feature = "fiscaldata",
         feature = "fred",
         feature = "polygon",
@@ -478,6 +480,7 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         }
         #[cfg(any(
             feature = "alphavantage",
+            feature = "bls",
             feature = "fiscaldata",
             feature = "fred",
             feature = "polygon",

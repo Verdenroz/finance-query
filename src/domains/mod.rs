@@ -445,6 +445,7 @@ pub(crate) mod crypto;
 pub(crate) mod discovery;
 #[cfg(any(
     feature = "alphavantage",
+    feature = "bls",
     feature = "fiscaldata",
     feature = "fred",
     feature = "polygon",
@@ -475,6 +476,7 @@ pub use crypto::CryptoCoin;
 pub use discovery::Discovery;
 #[cfg(any(
     feature = "alphavantage",
+    feature = "bls",
     feature = "fiscaldata",
     feature = "fred",
     feature = "polygon",
