@@ -82,6 +82,13 @@ let ratios = ticker.ratios_ttm().await?;              // current TTM margins/ret
 | `rating_consensus()` | `RatingConsensus` | `/api/v4/upgrades-downgrades-consensus` |
 | `key_metrics_ttm()` | `KeyMetricsTtm` | `/api/v3/key-metrics-ttm/{symbol}` |
 | `ratios_ttm()` | `FinancialRatiosTtm` | `/api/v3/ratios-ttm/{symbol}` |
+| `executive_compensation()` | `Vec<ExecutiveCompensation>` | `/api/v4/governance/executive_compensation` |
+| `employee_count()` | `Vec<EmployeeCount>` | `/api/v4/historical/employee_count` |
+
+`executive_compensation()` and `employee_count()` route through
+`Capability::CORPORATE` instead. FMP also serves `share_float()`, which the
+default Yahoo route already covers — routing `FUNDAMENTALS` to FMP just changes
+which source answers it.
 
 The TTM snapshots are single always-current rollups; `financials(..)` remains the
 period-indexed series. FMP computes the trailing window server-side, so partial

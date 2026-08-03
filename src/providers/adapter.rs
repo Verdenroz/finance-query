@@ -174,6 +174,22 @@ pub(crate) trait CorporateProvider: ProviderCore {
     ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
         Err(self.not_supported(Operation::PressReleases))
     }
+
+    /// Fetch reported executive compensation, most recent fiscal year first.
+    async fn fetch_executive_compensation(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+        Err(self.not_supported(Operation::ExecutiveCompensation))
+    }
+
+    /// Fetch reported employee headcount history, most recent period first.
+    async fn fetch_employee_count(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+        Err(self.not_supported(Operation::EmployeeCount))
+    }
 }
 
 /// [`Capability::OPTIONS`] — options chains.

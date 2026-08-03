@@ -925,6 +925,50 @@ impl Ticker {
             .await
     }
 
+    /// Fetch reported executive compensation (most recent fiscal year first)
+    /// via the configured [`Capability::CORPORATE`] provider (currently FMP
+    /// only). Extracted from DEF 14A proxy statements, so it lags the filing.
+    pub async fn executive_compensation(
+        &self,
+    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::CORPORATE, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_corporate()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::ExecutiveCompensation)
+                        })?
+                        .fetch_executive_compensation(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch reported employee headcount history (most recent period first) via
+    /// the configured [`Capability::CORPORATE`] provider (currently FMP only).
+    /// Taken from 10-K cover pages, so it is annual.
+    pub async fn employee_count(
+        &self,
+    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::CORPORATE, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_corporate()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::EmployeeCount))?
+                        .fetch_employee_count(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
     #[cfg(feature = "indicators")]
     /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(

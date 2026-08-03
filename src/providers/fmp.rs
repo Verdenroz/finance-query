@@ -139,6 +139,13 @@ impl FundamentalsProvider for FmpProvider {
     ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
         crate::adapters::fmp::fundamentals::ttm::fetch_ratios_ttm_response(symbol).await
     }
+
+    async fn fetch_share_float(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::ShareFloat> {
+        crate::adapters::fmp::fundamentals::float::fetch_share_float_response(symbol).await
+    }
 }
 
 #[async_trait::async_trait]
@@ -168,6 +175,21 @@ impl CorporateProvider for FmpProvider {
         limit: u32,
     ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
         crate::adapters::fmp::corporate::fetch_press_releases_response(symbol, limit).await
+    }
+
+    async fn fetch_executive_compensation(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+        crate::adapters::fmp::corporate::ownership::fetch_executive_compensation_response(symbol)
+            .await
+    }
+
+    async fn fetch_employee_count(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+        crate::adapters::fmp::corporate::ownership::fetch_employee_count_response(symbol).await
     }
 }
 

@@ -325,6 +325,7 @@ pub use models::{
     calendar::{CalendarEvent, EventKind},
     chart::Chart,
     chart::spark::Spark,
+    corporate::governance::{EmployeeCount, ExecutiveCompensation},
     corporate::news::News,
     corporate::press_release::PressRelease,
     corporate::recommendation::Recommendation,

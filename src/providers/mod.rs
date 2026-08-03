@@ -502,6 +502,10 @@ pub enum Operation {
     KeyMetricsTtm,
     /// Trailing-twelve-month ratios snapshot.
     RatiosTtm,
+    /// Reported executive compensation.
+    ExecutiveCompensation,
+    /// Reported employee headcount.
+    EmployeeCount,
 }
 
 impl Operation {
@@ -555,6 +559,8 @@ impl Operation {
             Self::RatingConsensus => "rating_consensus",
             Self::KeyMetricsTtm => "key_metrics_ttm",
             Self::RatiosTtm => "ratios_ttm",
+            Self::ExecutiveCompensation => "executive_compensation",
+            Self::EmployeeCount => "employee_count",
         }
     }
 
@@ -572,9 +578,12 @@ impl Operation {
             | Self::RatingConsensus
             | Self::KeyMetricsTtm
             | Self::RatiosTtm => Capability::FUNDAMENTALS,
-            Self::News | Self::Recommendations | Self::Events | Self::PressReleases => {
-                Capability::CORPORATE
-            }
+            Self::News
+            | Self::Recommendations
+            | Self::Events
+            | Self::PressReleases
+            | Self::ExecutiveCompensation
+            | Self::EmployeeCount => Capability::CORPORATE,
             Self::Options => Capability::OPTIONS,
             Self::CryptoQuote => Capability::CRYPTO,
             #[cfg(feature = "defi")]

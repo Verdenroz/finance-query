@@ -128,6 +128,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `FUNDAMENTALS` route (FMP), instead of requiring callers to fetch the latest
   fiscal period and reason about whether it is still current. New public models
   `KeyMetricsTtm` and `FinancialRatiosTtm`.
+- Ownership/governance on `Ticker`: `executive_compensation()` and
+  `employee_count()` via the `CORPORATE` route (FMP), both extracted from the
+  company's own SEC filings and returned newest-first. FMP also now serves
+  `share_float()` on the `FUNDAMENTALS` route, so it works when FMP is routed
+  ahead of Yahoo. New public models `ExecutiveCompensation` and `EmployeeCount`.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).
