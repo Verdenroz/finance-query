@@ -242,6 +242,23 @@ pub(crate) trait FilingsProvider: ProviderCore {
     ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
         Err(self.not_supported(Operation::FilingSearch))
     }
+
+    /// Fetch insider transactions reported on Forms 3/4/5, newest filing first.
+    async fn fetch_insider_trades(
+        &self,
+        _symbol: &str,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+        Err(self.not_supported(Operation::InsiderTrades))
+    }
+
+    /// Fetch the latest reported 13F institutional holdings for a filer.
+    async fn fetch_institutional_holdings(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::filings::InstitutionalHolding>> {
+        Err(self.not_supported(Operation::InstitutionalHoldings))
+    }
 }
 
 // ── Capability traits (feature-gated) ───────────────────────────────

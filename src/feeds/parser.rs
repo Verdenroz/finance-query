@@ -133,7 +133,7 @@ fn find(haystack: &[u8], from: usize, needle: &[u8]) -> Option<usize> {
         .map(|p| p + from)
 }
 
-fn find_byte(haystack: &[u8], from: usize, byte: u8) -> Option<usize> {
+pub(crate) fn find_byte(haystack: &[u8], from: usize, byte: u8) -> Option<usize> {
     if from > haystack.len() {
         return None;
     }
@@ -143,7 +143,7 @@ fn find_byte(haystack: &[u8], from: usize, byte: u8) -> Option<usize> {
         .map(|p| p + from)
 }
 
-fn trim_ascii(bytes: &[u8]) -> &[u8] {
+pub(crate) fn trim_ascii(bytes: &[u8]) -> &[u8] {
     let start = bytes
         .iter()
         .position(|b| !b.is_ascii_whitespace())
@@ -159,7 +159,7 @@ fn trim_ascii(bytes: &[u8]) -> &[u8] {
 /// Decode the 5 predefined XML entities and numeric character references
 /// (`&#NN;` / `&#xHH;`). Unrecognized or malformed entities are left as a
 /// literal `&` rather than erroring — real-world feeds are inconsistent here.
-fn unescape(raw: &[u8]) -> String {
+pub(crate) fn unescape(raw: &[u8]) -> String {
     let mut out = String::with_capacity(raw.len());
     let mut i = 0;
     loop {

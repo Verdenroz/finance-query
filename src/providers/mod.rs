@@ -510,6 +510,10 @@ pub enum Operation {
     UnifiedSnapshot,
     /// Full-text search over filing content.
     FilingSearch,
+    /// Insider transactions reported on Forms 3/4/5.
+    InsiderTrades,
+    /// Institutional holdings reported on Form 13F-HR.
+    InstitutionalHoldings,
 }
 
 impl Operation {
@@ -567,6 +571,8 @@ impl Operation {
             Self::EmployeeCount => "employee_count",
             Self::UnifiedSnapshot => "unified_snapshot",
             Self::FilingSearch => "filing_search",
+            Self::InsiderTrades => "insider_trades",
+            Self::InstitutionalHoldings => "institutional_holdings",
         }
     }
 
@@ -601,9 +607,12 @@ impl Operation {
             }
             Self::FuturesQuote => Capability::FUTURES,
             Self::CommoditiesQuote => Capability::COMMODITIES,
-            Self::Filings | Self::FilingSections | Self::RiskFactors | Self::FilingSearch => {
-                Capability::FILINGS
-            }
+            Self::Filings
+            | Self::FilingSections
+            | Self::RiskFactors
+            | Self::FilingSearch
+            | Self::InsiderTrades
+            | Self::InstitutionalHoldings => Capability::FILINGS,
             Self::SymbolSearch | Self::SymbolDetails | Self::Exchanges | Self::Screener => {
                 Capability::DISCOVERY
             }

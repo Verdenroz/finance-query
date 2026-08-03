@@ -98,6 +98,57 @@ impl Filings {
             .await
     }
 
+    /// Insider transactions reported on this issuer's Forms 3/4/5, parsed from
+    /// the filed XML, via the FILINGS route (currently EDGAR only).
+    ///
+    /// `limit` caps how many *filings* are read, not how many transactions come
+    /// back — one Form 4 can report several lines. Each filing costs two extra
+    /// requests, so keep it modest. Not cached.
+    pub async fn insider_trades(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+        let symbol: String = self.symbol().to_string();
+        self.providers
+            .fetch(crate::providers::Capability::FILINGS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_filings()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::InsiderTrades))?
+                        .fetch_insider_trades(&symbol, limit)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// The latest 13F-HR information table filed by this symbol's CIK, via the
+    /// FILINGS route (currently EDGAR only).
+    ///
+    /// The handle's symbol identifies the *filer*, so this is only meaningful
+    /// for listed institutional managers (e.g. `BRK-B`) — an issuer that files
+    /// no 13F errors rather than returning an empty list. Not cached.
+    pub async fn institutional_holdings(
+        &self,
+    ) -> Result<Vec<crate::models::filings::InstitutionalHolding>> {
+        let symbol: String = self.symbol().to_string();
+        self.providers
+            .fetch(crate::providers::Capability::FILINGS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_filings()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::InstitutionalHoldings)
+                        })?
+                        .fetch_institutional_holdings(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
     /// Fetch risk factors extracted from this symbol's SEC filings via the
     /// FILINGS route (currently Polygon only). Not cached.
     pub async fn risk_factors(&self) -> Result<Vec<crate::models::filings::RiskFactor>> {

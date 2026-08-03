@@ -117,6 +117,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- Primary-source ownership data from EDGAR, keyless:
+  `providers.filings("AAPL").insider_trades(limit)` parses Form 3/4/5 ownership
+  XML into typed `InsiderTrade` rows (insider, role, transaction code, shares,
+  price, post-transaction holdings, derivative flag), and
+  `providers.filings("BRK-B").institutional_holdings()` parses the latest 13F-HR
+  information table into `InstitutionalHolding` rows (issuer, CUSIP, value,
+  shares, voting authority). XML is read by a small in-crate element reader —
+  no new dependency, same reasoning as the RSS/Atom parser.
 - Routed EDGAR full-text search: `providers.filings("AAPL").search(query,
   filters)` searches filing *text* within that filer, and `.search_all(..)`
   across every filer, through the `FILINGS` capability. Returns the flattened

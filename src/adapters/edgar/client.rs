@@ -112,6 +112,14 @@ impl EdgarClient {
         Ok(response)
     }
 
+    /// Fetch an arbitrary EDGAR archive document as bytes.
+    ///
+    /// Used for the filed XML (Forms 3/4/5, 13F information tables), which the
+    /// JSON APIs only point at rather than serve.
+    pub async fn get_document(&self, url: &str) -> Result<Vec<u8>> {
+        Ok(self.get(url).await?.bytes().await?.to_vec())
+    }
+
     /// Make a rate-limited GET request with query parameters.
     async fn get_with_params<T: serde::Serialize + ?Sized>(
         &self,
