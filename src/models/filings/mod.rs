@@ -8,6 +8,7 @@ mod company_facts;
 pub mod filing_index;
 mod provider;
 mod search;
+mod sections;
 mod submissions;
 
 pub use cik::CikEntry;
@@ -18,6 +19,7 @@ pub use search::{
     EdgarSearchHit, EdgarSearchHitsContainer, EdgarSearchResults, EdgarSearchSource,
     EdgarSearchTotal,
 };
+pub use sections::{FilingSection, FilingSectionForm, RiskFactor};
 pub use submissions::{
     EdgarFiling, EdgarFilingFile, EdgarFilingRecent, EdgarFilings, EdgarSubmissions,
 };

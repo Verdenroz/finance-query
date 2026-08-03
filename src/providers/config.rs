@@ -157,8 +157,9 @@ impl Providers {
     /// Create a [`Market`](crate::Market) handle backed by this provider set.
     ///
     /// Routes sector/industry performance and movers through
-    /// [`Capability::MARKET`](crate::Capability::MARKET).
-    #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
+    /// [`Capability::MARKET`](crate::Capability::MARKET). Movers work on the
+    /// default keyless route (Yahoo screeners); the sector/industry
+    /// statistics need a keyed provider (FMP).
     pub fn market(&self) -> crate::domains::Market {
         crate::domains::Market::with_providers(Arc::clone(&self.set))
     }

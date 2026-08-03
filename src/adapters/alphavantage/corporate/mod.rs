@@ -134,7 +134,6 @@ pub async fn earnings_call_transcript(
 }
 
 /// Fetch top gainers, losers, and most actively traded tickers.
-#[allow(dead_code)] // unrouted: AV movers land with #300 (MarketProvider::fetch_market_movers)
 pub async fn top_gainers_losers() -> Result<TopMoversDTO> {
     let client = build_client()?;
     let json = client.get("TOP_GAINERS_LOSERS", &[]).await?;
@@ -270,5 +269,85 @@ fn parse_split_ratio(ratio: &str) -> (u32, u32) {
         (num, den)
     } else {
         (1, 1)
+    }
+}
+
+/// Fetch the canonical movers list for `direction`.
+///
+/// Alpha Vantage returns gainers, losers, and most-active in one response;
+/// the numbers arrive as strings (`"12.34"`, `"5.67%"`) and are parsed here.
+pub async fn fetch_market_movers_response(
+    direction: crate::models::market::performance::MoverDirection,
+) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+    Ok(movers_to_canonical(top_gainers_losers().await?, direction))
+}
+
+/// Select `direction`'s list and parse AV's stringly-typed numbers.
+fn movers_to_canonical(
+    movers: crate::adapters::alphavantage::models::TopMoversDTO,
+    direction: crate::models::market::performance::MoverDirection,
+) -> Vec<crate::models::market::performance::MoverQuote> {
+    use crate::models::market::performance::{MoverDirection, MoverQuote};
+
+    fn num(s: &str) -> Option<f64> {
+        s.trim().trim_end_matches('%').trim().parse().ok()
+    }
+
+    let list = match direction {
+        MoverDirection::Gainers => movers.top_gainers,
+        MoverDirection::Losers => movers.top_losers,
+        MoverDirection::MostActive => movers.most_actively_traded,
+    };
+    list.into_iter()
+        .map(|t| MoverQuote {
+            symbol: t.ticker,
+            name: None,
+            price: num(&t.price),
+            change: num(&t.change_amount),
+            change_percent: num(&t.change_percentage),
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::adapters::alphavantage::models::{TopMoverTickerDTO, TopMoversDTO};
+    use crate::models::market::performance::MoverDirection;
+
+    fn movers() -> TopMoversDTO {
+        TopMoversDTO {
+            last_updated: "2026-08-01 16:00:00 US/Eastern".into(),
+            top_gainers: vec![TopMoverTickerDTO {
+                ticker: "AAA".into(),
+                price: "12.34".into(),
+                change_amount: "1.50".into(),
+                change_percentage: "13.85%".into(),
+                volume: "1000000".into(),
+            }],
+            top_losers: vec![TopMoverTickerDTO {
+                ticker: "BBB".into(),
+                price: "5.00".into(),
+                change_amount: "-0.55".into(),
+                change_percentage: "-9.91%".into(),
+                volume: "5".into(),
+            }],
+            most_actively_traded: vec![],
+        }
+    }
+
+    #[test]
+    fn movers_parse_string_numbers_per_direction() {
+        let g = movers_to_canonical(movers(), MoverDirection::Gainers);
+        assert_eq!(g.len(), 1);
+        assert_eq!(g[0].symbol, "AAA");
+        assert_eq!(g[0].price, Some(12.34));
+        assert_eq!(g[0].change, Some(1.50));
+        assert_eq!(g[0].change_percent, Some(13.85));
+
+        let l = movers_to_canonical(movers(), MoverDirection::Losers);
+        assert_eq!(l[0].change_percent, Some(-9.91));
+
+        assert!(movers_to_canonical(movers(), MoverDirection::MostActive).is_empty());
     }
 }

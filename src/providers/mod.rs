@@ -361,6 +361,26 @@ pub enum Operation {
     SectorPerformance,
     /// Market movers — gainers, losers, most active.
     MarketMovers,
+    /// Historical sector performance.
+    SectorPerformanceHistory,
+    /// Market-wide holiday calendar.
+    HolidayCalendar,
+    /// Current constituents of a major index.
+    IndexConstituents,
+    /// Historical constituent changes of a major index.
+    IndexConstituentChanges,
+    /// Short interest (settlement-date positions).
+    ShortInterest,
+    /// Daily short volume.
+    ShortVolume,
+    /// Share float and shares outstanding.
+    ShareFloat,
+    /// Sectioned text of an SEC filing.
+    FilingSections,
+    /// Risk factors extracted from SEC filings.
+    RiskFactors,
+    /// Company press releases.
+    PressReleases,
 }
 
 impl Operation {
@@ -395,6 +415,16 @@ impl Operation {
             Self::EconomicCalendar => "economic_calendar",
             Self::SectorPerformance => "sector_performance",
             Self::MarketMovers => "market_movers",
+            Self::SectorPerformanceHistory => "sector_performance_history",
+            Self::HolidayCalendar => "holiday_calendar",
+            Self::IndexConstituents => "index_constituents",
+            Self::IndexConstituentChanges => "index_constituent_changes",
+            Self::ShortInterest => "short_interest",
+            Self::ShortVolume => "short_volume",
+            Self::ShareFloat => "share_float",
+            Self::FilingSections => "filing_sections",
+            Self::RiskFactors => "risk_factors",
+            Self::PressReleases => "press_releases",
         }
     }
 
@@ -403,16 +433,22 @@ impl Operation {
         match self {
             Self::Quote | Self::QuotesBatch => Capability::QUOTE,
             Self::Chart | Self::ChartRange | Self::Spark => Capability::CHART,
-            Self::Financials => Capability::FUNDAMENTALS,
-            Self::News | Self::Recommendations | Self::Events => Capability::CORPORATE,
+            Self::Financials | Self::ShortInterest | Self::ShortVolume | Self::ShareFloat => {
+                Capability::FUNDAMENTALS
+            }
+            Self::News | Self::Recommendations | Self::Events | Self::PressReleases => {
+                Capability::CORPORATE
+            }
             Self::Options => Capability::OPTIONS,
             Self::CryptoQuote => Capability::CRYPTO,
             Self::EconomicSeries => Capability::ECONOMIC,
             Self::ForexQuote => Capability::FOREX,
-            Self::IndicesQuote => Capability::INDICES,
+            Self::IndicesQuote | Self::IndexConstituents | Self::IndexConstituentChanges => {
+                Capability::INDICES
+            }
             Self::FuturesQuote => Capability::FUTURES,
             Self::CommoditiesQuote => Capability::COMMODITIES,
-            Self::Filings => Capability::FILINGS,
+            Self::Filings | Self::FilingSections | Self::RiskFactors => Capability::FILINGS,
             Self::SymbolSearch | Self::SymbolDetails | Self::Exchanges | Self::Screener => {
                 Capability::DISCOVERY
             }
@@ -420,8 +456,11 @@ impl Operation {
             | Self::IpoCalendar
             | Self::DividendCalendar
             | Self::SplitCalendar
-            | Self::EconomicCalendar => Capability::CALENDAR,
-            Self::SectorPerformance | Self::MarketMovers => Capability::MARKET,
+            | Self::EconomicCalendar
+            | Self::HolidayCalendar => Capability::CALENDAR,
+            Self::SectorPerformance | Self::MarketMovers | Self::SectorPerformanceHistory => {
+                Capability::MARKET
+            }
         }
     }
 }
@@ -900,8 +939,31 @@ mod tests {
             .union(Capability::CHART)
             .union(Capability::FUNDAMENTALS)
             .union(Capability::CORPORATE)
-            .union(Capability::OPTIONS);
+            .union(Capability::OPTIONS)
+            .union(Capability::MARKET);
         assert_eq!(yahoo::CAPS, expected);
+    }
+
+    /// Polygon gained CALENDAR (holidays) and AV gained MARKET (movers) via
+    /// accessor overrides; `Provider::capabilities()` must reflect that.
+    #[cfg(feature = "polygon")]
+    #[test]
+    fn polygon_derives_calendar_capability() {
+        assert!(
+            Provider::Polygon
+                .capabilities()
+                .contains(Capability::CALENDAR)
+        );
+    }
+
+    #[cfg(feature = "alphavantage")]
+    #[test]
+    fn alphavantage_derives_market_capability() {
+        assert!(
+            Provider::AlphaVantage
+                .capabilities()
+                .contains(Capability::MARKET)
+        );
     }
 
     #[test]

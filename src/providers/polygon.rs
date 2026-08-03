@@ -1,9 +1,9 @@
 //! Polygon.io provider implementation.
 
 use super::{
-    ChartProvider, CorporateProvider, CryptoProvider, DiscoveryProvider, EconomicProvider,
-    FilingsProvider, ForexProvider, FundamentalsProvider, FuturesProvider, IndicesProvider,
-    OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
+    CalendarProvider, ChartProvider, CorporateProvider, CryptoProvider, DiscoveryProvider,
+    EconomicProvider, FilingsProvider, ForexProvider, FundamentalsProvider, FuturesProvider,
+    IndicesProvider, OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::polygon;
 use crate::error::FinanceError;
@@ -63,6 +63,27 @@ impl FundamentalsProvider for PolygonProvider {
         frequency: crate::Frequency,
     ) -> Result<crate::models::fundamentals::FinancialStatement> {
         polygon::fetch_financials_response(symbol, stmt_type, frequency).await
+    }
+
+    async fn fetch_short_interest(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+        polygon::fetch_short_interest_response(symbol).await
+    }
+
+    async fn fetch_short_volume(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+        polygon::fetch_short_volume_response(symbol).await
+    }
+
+    async fn fetch_share_float(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::ShareFloat> {
+        polygon::fetch_share_float_response(symbol).await
     }
 }
 
@@ -159,6 +180,39 @@ impl FilingsProvider for PolygonProvider {
     async fn fetch_filings(&self, symbol: &str) -> Result<crate::models::filings::ProviderFilings> {
         polygon::fetch_filings_response(symbol).await
     }
+
+    async fn fetch_filing_sections(
+        &self,
+        accession_number: &str,
+        form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        polygon::fetch_filing_sections_response(accession_number, form).await
+    }
+
+    async fn fetch_risk_factors(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::filings::RiskFactor>> {
+        polygon::fetch_risk_factors_response(symbol).await
+    }
+}
+
+#[async_trait::async_trait]
+impl CalendarProvider for PolygonProvider {
+    /// Polygon serves the holiday calendar only; other kinds fall through to
+    /// the next routed provider. Holidays are date-bounded upstream (Polygon
+    /// returns the upcoming set), so `from`/`to` are ignored.
+    async fn fetch_market_calendar(
+        &self,
+        kind: crate::models::calendar::market::CalendarKind,
+        _from: &str,
+        _to: &str,
+    ) -> Result<Vec<crate::models::calendar::market::MarketCalendarEntry>> {
+        if kind != crate::models::calendar::market::CalendarKind::MarketHoliday {
+            return Err(self.not_supported(kind.operation()));
+        }
+        polygon::fetch_market_holidays_response().await
+    }
 }
 
 #[async_trait::async_trait]
@@ -229,6 +283,9 @@ impl ProviderAdapter for PolygonProvider {
         Some(self)
     }
     fn as_filings(&self) -> Option<&dyn FilingsProvider> {
+        Some(self)
+    }
+    fn as_calendar(&self) -> Option<&dyn CalendarProvider> {
         Some(self)
     }
 }

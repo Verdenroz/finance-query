@@ -5,6 +5,8 @@
 // Sub-capability directories
 /// News article models.
 pub mod news;
+
+pub mod press_release;
 /// Recommendation/similar symbol models.
 pub mod recommendation;
 /// Earnings call transcripts.

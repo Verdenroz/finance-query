@@ -27,6 +27,16 @@ pub struct SectorPerformance {
     pub change_percent: Option<f64>,
 }
 
+/// One day of aggregate performance across every sector.
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct SectorPerformanceHistory {
+    /// Date (`YYYY-MM-DD`).
+    pub date: Option<String>,
+    /// Per-sector percentage change on that date.
+    pub sectors: Vec<SectorPerformance>,
+}
+
 /// A sector's aggregate price/earnings ratio.
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 #[non_exhaustive]
@@ -75,11 +85,12 @@ pub struct MoverQuote {
 ///
 /// FMP returns sector performance as a preformatted string, unlike its movers
 /// endpoints which return a bare number.
+#[cfg(feature = "fmp")]
 pub(crate) fn parse_percent(raw: Option<&str>) -> Option<f64> {
     raw?.trim().trim_end_matches('%').trim().parse().ok()
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "fmp"))]
 mod tests {
     use super::*;
 

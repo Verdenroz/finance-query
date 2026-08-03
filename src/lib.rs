@@ -175,7 +175,7 @@ pub use models::discovery::reference::{
 };
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use models::market::performance::{
-    IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
+    IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance, SectorPerformanceHistory,
 };
 
 pub use error::{ErrorCategory, FinanceError, Result};
@@ -201,6 +201,7 @@ pub use models::{
     chart::Chart,
     chart::spark::Spark,
     corporate::news::News,
+    corporate::press_release::PressRelease,
     corporate::recommendation::Recommendation,
     corporate::transcript::{Transcript, TranscriptWithMeta},
     discovery::lookup::LookupResults,
@@ -208,9 +209,10 @@ pub use models::{
     discovery::search::SearchResults,
     discovery::trending::TrendingQuote,
     filings::{
-        CompanyFacts, EdgarSearchResults, EdgarSubmissions, ProviderFiling, ProviderFilings,
+        CompanyFacts, EdgarSearchResults, EdgarSubmissions, FilingSection, FilingSectionForm,
+        ProviderFiling, ProviderFilings, RiskFactor,
     },
-    fundamentals::FinancialStatement,
+    fundamentals::{FinancialStatement, ShareFloat, ShortInterest, ShortVolume},
     market::currencies::Currency,
     market::exchanges::Exchange,
     market::hours::MarketHours,
@@ -241,7 +243,7 @@ pub use models::forex::ForexQuote;
 #[cfg(feature = "polygon")]
 pub use models::futures::FuturesQuote;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
-pub use models::indices::IndexQuote;
+pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
 
 // ============================================================================
 // Nested types - Commonly accessed fields within response types

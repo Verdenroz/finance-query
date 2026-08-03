@@ -42,6 +42,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Index constituents: `providers.index("^GSPC").constituents()` and
+  `.constituent_changes()` list the current members and membership history of
+  the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).
+  `MajorIndex::from_symbol` maps common symbol spellings.
+- Short data on `Ticker`: `short_interest()`, `short_volume()`, and
+  `share_float()` via the `FUNDAMENTALS` route. The default Yahoo route
+  derives short interest (current + prior-month snapshots) and float from
+  key statistics keylessly; Polygon adds the full history and daily short
+  volume.
+- Filing text: `providers.filings("AAPL").sections(accession, form)` returns
+  the sectioned 10-K/8-K text of a filing and `.risk_factors()` the extracted
+  risk factors (Polygon; EDGAR still serves metadata).
+- `Ticker::press_releases(limit)` — the company's own releases, distinct from
+  press coverage via `news()` (FMP).
+- `providers.calendar().holidays()` — upcoming market holidays and early
+  closes as a new `CalendarKind::MarketHoliday` (Polygon).
+- `providers.market().sector_performance_history(limit)` (FMP), and market
+  movers now work on the default keyless route: Yahoo serves
+  `gainers()`/`losers()`/`most_active()` derived from its predefined
+  screeners, with Alpha Vantage as a second keyed route. `providers.market()`
+  and the mover/sector models are available without any provider feature.
 - Three market-wide capabilities and handles on the Providers API (each needs
   at least one of the `fmp`/`polygon`/`alphavantage` features):
   `Capability::DISCOVERY` with `providers.discovery()` (symbol search,

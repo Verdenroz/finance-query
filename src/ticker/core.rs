@@ -736,6 +736,86 @@ impl Ticker {
             .await
     }
 
+    /// Fetch short-interest settlement reports via the configured
+    /// [`Capability::FUNDAMENTALS`] provider. The default Yahoo route derives
+    /// the current and prior-month snapshots from key statistics (keyless);
+    /// route to Polygon for the full bi-monthly history:
+    /// `.route(Capability::FUNDAMENTALS, [Provider::Polygon, Provider::Yahoo])`.
+    pub async fn short_interest(&self) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ShortInterest))?
+                        .fetch_short_interest(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch daily short-volume data via the configured
+    /// [`Capability::FUNDAMENTALS`] provider (currently Polygon only).
+    pub async fn short_volume(&self) -> Result<Vec<crate::models::fundamentals::ShortVolume>> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ShortVolume))?
+                        .fetch_short_volume(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch share float and shares outstanding via the configured
+    /// [`Capability::FUNDAMENTALS`] provider (Yahoo-derived on the default
+    /// route; Polygon serves it too).
+    pub async fn share_float(&self) -> Result<crate::models::fundamentals::ShareFloat> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::FUNDAMENTALS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_fundamentals()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ShareFloat))?
+                        .fetch_share_float(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch the company's own press releases via the configured
+    /// [`Capability::CORPORATE`] provider (currently FMP only). Distinct from
+    /// [`news`](Self::news), which returns press coverage.
+    pub async fn press_releases(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
+        let symbol = self.symbol.clone();
+        self.providers
+            .fetch(Capability::CORPORATE, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_corporate()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::PressReleases))?
+                        .fetch_press_releases(&symbol, limit)
+                        .await
+                }
+            })
+            .await
+    }
+
     #[cfg(feature = "indicators")]
     /// Calculate a specific technical indicator over a time range.
     pub async fn indicator(

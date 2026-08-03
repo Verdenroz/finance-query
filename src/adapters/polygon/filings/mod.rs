@@ -32,7 +32,6 @@ pub struct FilingEntryDTO {
 /// SEC filing section content.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub struct FilingSectionDTO {
     /// Section key/name.
     pub section: Option<String>,
@@ -43,7 +42,6 @@ pub struct FilingSectionDTO {
 /// Risk factor entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub struct RiskFactorDTO {
     /// Risk factor title.
     pub title: Option<String>,
@@ -58,7 +56,7 @@ pub struct RiskFactorDTO {
 /// Risk category.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
+#[allow(dead_code)] // unrouted: risk-category taxonomy; fold into risk factors if a consumer appears
 pub struct RiskCategoryDTO {
     /// Category name.
     pub name: Option<String>,
@@ -69,7 +67,6 @@ pub struct RiskCategoryDTO {
 /// Filing sections response.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub struct FilingSectionsResponseDTO {
     /// Request ID.
     pub request_id: Option<String>,
@@ -110,7 +107,6 @@ pub async fn fetch_filings_response(symbol: &str) -> Result<ProviderFilings> {
 }
 
 /// Fetch 10-K filing section content.
-#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub async fn filing_10k_sections(
     accession_number: &str,
     params: &[(&str, &str)],
@@ -126,7 +122,6 @@ pub async fn filing_10k_sections(
 }
 
 /// Fetch 8-K filing text.
-#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub async fn filing_8k_text(
     accession_number: &str,
     params: &[(&str, &str)],
@@ -140,15 +135,53 @@ pub async fn filing_8k_text(
 }
 
 /// Fetch risk factors from SEC filings.
-#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
 pub async fn risk_factors(params: &[(&str, &str)]) -> Result<PaginatedResponseDTO<RiskFactorDTO>> {
     let client = build_client()?;
     client.get("/v1/reference/sec/risk-factors", params).await
 }
 
 /// Fetch risk factor categories.
-#[allow(dead_code)] // unrouted: filing sections + risk factors land with #299
+#[allow(dead_code)] // unrouted: risk-category taxonomy; fold into risk factors if a consumer appears
 pub async fn risk_categories() -> Result<PaginatedResponseDTO<RiskCategoryDTO>> {
     let client = build_client()?;
     client.get("/v1/reference/sec/risk-categories", &[]).await
+}
+
+/// Fetch canonical sectioned text for one filing.
+pub async fn fetch_filing_sections_response(
+    accession_number: &str,
+    form: crate::models::filings::FilingSectionForm,
+) -> Result<Vec<crate::models::filings::FilingSection>> {
+    use crate::models::filings::FilingSectionForm;
+    let resp = match form {
+        FilingSectionForm::TenK => filing_10k_sections(accession_number, &[]).await?,
+        FilingSectionForm::EightK => filing_8k_text(accession_number, &[]).await?,
+    };
+    Ok(resp
+        .results
+        .unwrap_or_default()
+        .into_iter()
+        .map(|d| crate::models::filings::FilingSection {
+            section: d.section,
+            content: d.content,
+        })
+        .collect())
+}
+
+/// Fetch canonical risk factors for a stock ticker.
+pub async fn fetch_risk_factors_response(
+    symbol: &str,
+) -> Result<Vec<crate::models::filings::RiskFactor>> {
+    let paginated = risk_factors(&[("ticker", symbol), ("limit", "100")]).await?;
+    Ok(paginated
+        .results
+        .unwrap_or_default()
+        .into_iter()
+        .map(|d| crate::models::filings::RiskFactor {
+            title: d.title,
+            text: d.text,
+            category: d.category,
+            filing_date: d.filing_date,
+        })
+        .collect())
 }

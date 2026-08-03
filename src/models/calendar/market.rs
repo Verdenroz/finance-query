@@ -21,6 +21,8 @@ pub enum CalendarKind {
     Split,
     /// Macro-economic releases.
     Economic,
+    /// Market holidays and early closes.
+    MarketHoliday,
 }
 
 impl CalendarKind {
@@ -33,6 +35,7 @@ impl CalendarKind {
             Self::Dividend => Operation::DividendCalendar,
             Self::Split => Operation::SplitCalendar,
             Self::Economic => Operation::EconomicCalendar,
+            Self::MarketHoliday => Operation::HolidayCalendar,
         }
     }
 }
@@ -106,6 +109,19 @@ pub enum CalendarDetail {
         numerator: Option<f64>,
         /// Split ratio denominator (old shares).
         denominator: Option<f64>,
+    },
+    /// A market holiday or early close.
+    MarketHoliday {
+        /// Holiday name (e.g. `"Thanksgiving"`).
+        name: Option<String>,
+        /// Exchange the holiday applies to (e.g. `"NYSE"`).
+        exchange: Option<String>,
+        /// Status (e.g. `"closed"`, `"early-close"`).
+        status: Option<String>,
+        /// Open time, when the exchange opens late or closes early.
+        open: Option<String>,
+        /// Close time, when the exchange closes early.
+        close: Option<String>,
     },
     /// A macro-economic release.
     Economic {

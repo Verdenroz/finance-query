@@ -378,7 +378,6 @@ pub struct EarningsCallTranscriptDTO {
 /// A top gainer, loser, or most actively traded ticker.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: AV movers land with #300
 pub struct TopMoverTickerDTO {
     /// Ticker symbol
     pub ticker: String,
@@ -395,7 +394,6 @@ pub struct TopMoverTickerDTO {
 /// Top gainers, losers, and most actively traded tickers.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: AV movers land with #300
 pub struct TopMoversDTO {
     /// Last updated timestamp
     pub last_updated: String,

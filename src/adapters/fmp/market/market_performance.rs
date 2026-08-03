@@ -52,7 +52,6 @@ pub struct SectorPerformanceDTO {
 /// Historical sector performance entry.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
-#[allow(dead_code)] // unrouted: sector-performance history lands with #300
 pub struct HistoricalSectorPerformanceDTO {
     /// Date.
     pub date: Option<String>,
@@ -133,7 +132,6 @@ pub async fn sector_performance() -> Result<Vec<SectorPerformanceDTO>> {
 }
 
 /// Fetch historical sector performance.
-#[allow(dead_code)] // unrouted: sector-performance history lands with #300
 pub async fn historical_sector_performance(
     limit: u32,
 ) -> Result<Vec<HistoricalSectorPerformanceDTO>> {
@@ -241,9 +239,81 @@ pub async fn fetch_industry_pe_response()
         .collect())
 }
 
+/// Convert one historical row into the canonical per-day sector list.
+fn history_to_canonical(
+    d: HistoricalSectorPerformanceDTO,
+) -> crate::models::market::performance::SectorPerformanceHistory {
+    use crate::models::market::performance::SectorPerformance;
+    let sector = |name: &str, v: Option<f64>| SectorPerformance {
+        sector: name.to_string(),
+        change_percent: v,
+    };
+    crate::models::market::performance::SectorPerformanceHistory {
+        date: d.date,
+        sectors: vec![
+            sector("Utilities", d.utilities_changes_percentage),
+            sector("Basic Materials", d.basic_materials_changes_percentage),
+            sector(
+                "Communication Services",
+                d.communication_services_changes_percentage,
+            ),
+            sector("Consumer Cyclical", d.consumer_cyclical_changes_percentage),
+            sector(
+                "Consumer Defensive",
+                d.consumer_defensive_changes_percentage,
+            ),
+            sector("Energy", d.energy_changes_percentage),
+            sector(
+                "Financial Services",
+                d.financial_services_changes_percentage,
+            ),
+            sector("Healthcare", d.healthcare_changes_percentage),
+            sector("Industrials", d.industrials_changes_percentage),
+            sector("Real Estate", d.real_estate_changes_percentage),
+            sector("Technology", d.technology_changes_percentage),
+        ],
+    }
+}
+
+/// Fetch canonical historical sector performance, most recent first.
+pub async fn fetch_sector_performance_history_response(
+    limit: u32,
+) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+    let dtos = historical_sector_performance(limit).await?;
+    Ok(dtos.into_iter().map(history_to_canonical).collect())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn history_maps_all_eleven_sectors() {
+        let row: HistoricalSectorPerformanceDTO = serde_json::from_value(serde_json::json!({
+            "date": "2026-07-31",
+            "utilitiesChangesPercentage": 0.5,
+            "technologyChangesPercentage": -1.25
+        }))
+        .unwrap();
+        let day = history_to_canonical(row);
+        assert_eq!(day.date.as_deref(), Some("2026-07-31"));
+        assert_eq!(day.sectors.len(), 11);
+        let tech = day
+            .sectors
+            .iter()
+            .find(|s| s.sector == "Technology")
+            .unwrap();
+        assert_eq!(tech.change_percent, Some(-1.25));
+        let util = day
+            .sectors
+            .iter()
+            .find(|s| s.sector == "Utilities")
+            .unwrap();
+        assert_eq!(util.change_percent, Some(0.5));
+        // Absent sectors surface as None, not omitted.
+        let energy = day.sectors.iter().find(|s| s.sector == "Energy").unwrap();
+        assert!(energy.change_percent.is_none());
+    }
 
     #[tokio::test]
     async fn test_sector_performance_mock() {

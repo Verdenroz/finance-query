@@ -158,8 +158,9 @@ let sec   = providers.filings("AAPL");                        // → Filings
 ```
 
 Three handles are market-wide rather than symbol-scoped, so their factories take
-no argument (each requires at least one of the `fmp`, `polygon`, or
-`alphavantage` features):
+no argument. `market()` is always available (movers are served keylessly from
+Yahoo's screeners); `discovery()` and `calendar()` require at least one of the
+`fmp`, `polygon`, or `alphavantage` features:
 
 ```rust,ignore
 let disco = providers.discovery();   // → Discovery: symbol search, reference data, screeners
@@ -174,13 +175,13 @@ let mkt   = providers.market();      // → Market: sector performance, movers
 | `ForexPair` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `ForexQuote` · `Chart` |
 | `CryptoCoin` | `.quote(vs_currency)` · `.chart(vs_currency, interval, range)` · `.history(vs_currency, range)` | `CryptoQuote` · `Chart` |
 | `EconomicIndicator` | `.series()` | `EconomicSeries` |
-| `Index` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `IndexQuote` · `Chart` |
+| `Index` | `.quote()` · `.chart(interval, range)` · `.history(range)` · `.constituents()` · `.constituent_changes()` | `IndexQuote` · `Chart` · `Vec<IndexConstituent>` · `Vec<IndexConstituentChange>` |
 | `FuturesContract` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `FuturesQuote` · `Chart` |
 | `Commodity` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `CommodityQuote` · `Chart` |
-| `Filings` | `.get()` | `ProviderFilings` |
+| `Filings` | `.get()` · `.sections(accession, form)` · `.risk_factors()` | `ProviderFilings` · `Vec<FilingSection>` · `Vec<RiskFactor>` |
 | `Discovery` | `.search(query, limit)` · `.details(symbol)` · `.exchanges()` · `.screener(filters)` | `Vec<SymbolMatch>` · `SymbolDetails` · `Vec<ExchangeInfo>` · `Vec<ScreenerMatch>` |
-| `MarketCalendar` | `.earnings(from, to)` · `.ipos(..)` · `.dividends(..)` · `.splits(..)` · `.economic(..)` | `Vec<MarketCalendarEntry>` |
-| `Market` | `.sector_performance()` · `.sector_pe()` · `.industry_pe()` · `.gainers()` · `.losers()` · `.most_active()` | `Vec<SectorPerformance>` · `Vec<SectorPe>` · `Vec<IndustryPe>` · `Vec<MoverQuote>` |
+| `MarketCalendar` | `.earnings(from, to)` · `.ipos(..)` · `.dividends(..)` · `.splits(..)` · `.economic(..)` · `.holidays()` | `Vec<MarketCalendarEntry>` |
+| `Market` | `.sector_performance()` · `.sector_performance_history(limit)` · `.sector_pe()` · `.industry_pe()` · `.gainers()` · `.losers()` · `.most_active()` | `Vec<SectorPerformance>` · `Vec<SectorPerformanceHistory>` · `Vec<SectorPe>` · `Vec<IndustryPe>` · `Vec<MoverQuote>` |
 
 All chart-capable handles route through `Capability::CHART` (Yahoo by default) and cache per `(symbol, interval, range)` when `.cache(ttl)` is set. `history(range)` is sugar for `chart(range.default_interval(), range)`. The handle's identifier is passed to the chart route as-is, so it must be a chart-route symbol (e.g. `^GSPC`, `NQ=F`, `GC=F`); `CryptoCoin` builds `"{ID}-{VS}"` (e.g. `"BTC-USD"`), which resolves on Yahoo only for ticker-style ids.
 

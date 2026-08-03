@@ -6,6 +6,7 @@
 use std::sync::Arc;
 
 use crate::error::Result;
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 use crate::models::calendar::market::{CalendarKind, MarketCalendarEntry};
 use crate::models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
@@ -19,11 +20,13 @@ use crate::providers::{Capability, ProviderSet};
 /// timeline, these span the whole market over a date range.
 ///
 /// Created via [`Providers::calendar`](crate::Providers::calendar).
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub struct MarketCalendar {
     providers: Arc<ProviderSet>,
     cache: crate::domains::DomainCache<Vec<MarketCalendarEntry>>,
 }
 
+#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 impl MarketCalendar {
     pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
         Self {
@@ -99,6 +102,12 @@ impl MarketCalendar {
     pub async fn economic(&self, from: &str, to: &str) -> Result<Vec<MarketCalendarEntry>> {
         self.fetch(CalendarKind::Economic, from, to).await
     }
+
+    /// Upcoming market holidays and early closes. Providers return their
+    /// upcoming set, so no date range is taken.
+    pub async fn holidays(&self) -> Result<Vec<MarketCalendarEntry>> {
+        self.fetch(CalendarKind::MarketHoliday, "", "").await
+    }
 }
 
 /// Market-wide performance statistics backed by configured data providers.
@@ -128,6 +137,26 @@ impl Market {
                             p.not_supported(crate::providers::Operation::SectorPerformance)
                         })?
                         .fetch_sector_performance()
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Historical aggregate sector performance, most recent first.
+    pub async fn sector_performance_history(
+        &self,
+        limit: u32,
+    ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
+        self.providers
+            .fetch(Capability::MARKET, move |p| {
+                let p = p.clone();
+                async move {
+                    p.as_market()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::SectorPerformanceHistory)
+                        })?
+                        .fetch_sector_performance_history(limit)
                         .await
                 }
             })

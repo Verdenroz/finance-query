@@ -4,8 +4,8 @@
 //! to keep this file focused on routing and lifecycle.
 
 use super::{
-    Capability, ChartProvider, CorporateProvider, FundamentalsProvider, OptionsProvider,
-    ProviderAdapter, ProviderCore, QuoteProvider,
+    Capability, ChartProvider, CorporateProvider, FundamentalsProvider, MarketProvider,
+    OptionsProvider, ProviderAdapter, ProviderCore, QuoteProvider,
 };
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
 use crate::constants::{Interval, TimeRange};
@@ -20,7 +20,8 @@ pub(crate) const CAPS: Capability = Capability::QUOTE
     .union(Capability::CHART)
     .union(Capability::FUNDAMENTALS)
     .union(Capability::CORPORATE)
-    .union(Capability::OPTIONS);
+    .union(Capability::OPTIONS)
+    .union(Capability::MARKET);
 
 pub(crate) struct YahooProvider {
     client: Arc<YahooClient>,
@@ -124,8 +125,88 @@ impl ChartProvider for YahooProvider {
     }
 }
 
+/// Convert a Yahoo epoch timestamp to a `YYYY-MM-DD` date string.
+fn epoch_to_date(ts: i64) -> Option<String> {
+    chrono::DateTime::from_timestamp(ts, 0).map(|dt| dt.format("%Y-%m-%d").to_string())
+}
+
 #[async_trait::async_trait]
 impl FundamentalsProvider for YahooProvider {
+    /// Derived from `defaultKeyStatistics` rather than a dedicated endpoint:
+    /// Yahoo reports the current and prior-month settlement snapshots (with
+    /// `shortRatio` as days-to-cover), so the default keyless route serves
+    /// short interest without an API key. Route to Polygon for deeper history.
+    async fn fetch_short_interest(
+        &self,
+        symbol: &str,
+    ) -> Result<Vec<crate::models::fundamentals::ShortInterest>> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        let stats = resp.default_key_statistics.ok_or_else(|| {
+            crate::error::FinanceError::ResponseStructureError {
+                field: "defaultKeyStatistics".into(),
+                context: format!("no key statistics returned for {symbol}"),
+            }
+        })?;
+
+        let mut out = Vec::new();
+        if let Some(shares) = stats.shares_short.as_ref().and_then(|v| v.raw) {
+            out.push(crate::models::fundamentals::ShortInterest {
+                settlement_date: stats
+                    .date_short_interest
+                    .as_ref()
+                    .and_then(|v| v.raw)
+                    .and_then(epoch_to_date),
+                short_interest: Some(shares as f64),
+                avg_daily_volume: None,
+                days_to_cover: stats.short_ratio.as_ref().and_then(|v| v.raw),
+            });
+        }
+        if let Some(shares) = stats.shares_short_prior_month.as_ref().and_then(|v| v.raw) {
+            out.push(crate::models::fundamentals::ShortInterest {
+                settlement_date: stats
+                    .shares_short_previous_month_date
+                    .as_ref()
+                    .and_then(|v| v.raw)
+                    .and_then(epoch_to_date),
+                short_interest: Some(shares as f64),
+                avg_daily_volume: None,
+                days_to_cover: None,
+            });
+        }
+        Ok(out)
+    }
+
+    /// Derived from `defaultKeyStatistics` (`floatShares` /
+    /// `sharesOutstanding`) rather than a dedicated endpoint.
+    async fn fetch_share_float(
+        &self,
+        symbol: &str,
+    ) -> Result<crate::models::fundamentals::ShareFloat> {
+        let resp =
+            crate::adapters::yahoo::quote::summary::fetch_summary(&self.client, symbol).await?;
+        let stats = resp.default_key_statistics.ok_or_else(|| {
+            crate::error::FinanceError::ResponseStructureError {
+                field: "defaultKeyStatistics".into(),
+                context: format!("no key statistics returned for {symbol}"),
+            }
+        })?;
+        Ok(crate::models::fundamentals::ShareFloat {
+            symbol: Some(symbol.to_string()),
+            float_shares: stats
+                .float_shares
+                .as_ref()
+                .and_then(|v| v.raw)
+                .map(|r| r as f64),
+            outstanding_shares: stats
+                .shares_outstanding
+                .as_ref()
+                .and_then(|v| v.raw)
+                .map(|r| r as f64),
+            date: None,
+        })
+    }
+
     async fn fetch_financials(
         &self,
         symbol: &str,
@@ -163,6 +244,48 @@ impl CorporateProvider for YahooProvider {
 }
 
 #[async_trait::async_trait]
+impl MarketProvider for YahooProvider {
+    /// Derived from Yahoo's predefined screeners (`day_gainers`,
+    /// `day_losers`, `most_actives`) rather than a dedicated movers endpoint,
+    /// so movers work on the default keyless route.
+    async fn fetch_market_movers(
+        &self,
+        direction: crate::models::market::performance::MoverDirection,
+    ) -> Result<Vec<crate::models::market::performance::MoverQuote>> {
+        use crate::constants::screeners::Screener;
+        use crate::models::market::performance::MoverDirection;
+
+        let screener = match direction {
+            MoverDirection::Gainers => Screener::DayGainers,
+            MoverDirection::Losers => Screener::DayLosers,
+            MoverDirection::MostActive => Screener::MostActives,
+        };
+        let results =
+            crate::adapters::yahoo::discovery::screeners::fetch(&self.client, screener, 25).await?;
+        Ok(screener_quotes_to_movers(results))
+    }
+}
+
+/// Map screener rows to canonical mover quotes.
+fn screener_quotes_to_movers(
+    results: crate::models::discovery::screeners::ScreenerResults,
+) -> Vec<crate::models::market::performance::MoverQuote> {
+    results
+        .quotes
+        .into_iter()
+        .map(|q| crate::models::market::performance::MoverQuote {
+            name: Some(q.short_name.clone())
+                .filter(|s| !s.is_empty())
+                .or(q.long_name),
+            symbol: q.symbol,
+            price: q.regular_market_price.raw,
+            change: q.regular_market_change.raw,
+            change_percent: q.regular_market_change_percent.raw,
+        })
+        .collect()
+}
+
+#[async_trait::async_trait]
 impl OptionsProvider for YahooProvider {
     async fn fetch_options(
         &self,
@@ -189,5 +312,39 @@ impl ProviderAdapter for YahooProvider {
     }
     fn as_options(&self) -> Option<&dyn OptionsProvider> {
         Some(self)
+    }
+    fn as_market(&self) -> Option<&dyn MarketProvider> {
+        Some(self)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn screener_rows_map_to_mover_quotes() {
+        let results: crate::models::discovery::screeners::ScreenerResults =
+            serde_json::from_value(serde_json::json!({
+                "quotes": [{
+                    "symbol": "NVDA",
+                    "shortName": "NVIDIA Corporation",
+                    "quoteType": "EQUITY",
+                    "exchange": "NMS",
+                    "regularMarketPrice": {"raw": 1234.5, "fmt": "1,234.50"},
+                    "regularMarketChange": {"raw": 56.7, "fmt": "56.70"},
+                    "regularMarketChangePercent": {"raw": 4.81, "fmt": "4.81%"}
+                }],
+                "type": "day_gainers",
+                "description": "Day gainers"
+            }))
+            .unwrap();
+        let movers = screener_quotes_to_movers(results);
+        assert_eq!(movers.len(), 1);
+        assert_eq!(movers[0].symbol, "NVDA");
+        assert_eq!(movers[0].name.as_deref(), Some("NVIDIA Corporation"));
+        assert_eq!(movers[0].price, Some(1234.5));
+        assert_eq!(movers[0].change, Some(56.7));
+        assert_eq!(movers[0].change_percent, Some(4.81));
     }
 }

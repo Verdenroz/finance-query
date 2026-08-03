@@ -452,7 +452,6 @@ pub(crate) mod forex;
 pub(crate) mod futures;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub(crate) mod indices;
-#[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub(crate) mod market;
 
 // ── Re-exports ──────────────────────────────────────────────────────
@@ -477,8 +476,9 @@ pub use forex::ForexPair;
 pub use futures::FuturesContract;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use indices::Index;
+pub use market::Market;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
-pub use market::{Market, MarketCalendar};
+pub use market::MarketCalendar;
 
 // ── Tests ───────────────────────────────────────────────────────────
 

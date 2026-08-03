@@ -41,6 +41,61 @@ impl Index {
     pub async fn history(&self, range: TimeRange) -> Result<Chart> {
         self.chart(range.default_interval(), range).await
     }
+
+    /// The [`MajorIndex`](crate::models::indices::MajorIndex) this handle's
+    /// symbol denotes, or an error for indices without constituent support.
+    fn major_index(&self) -> Result<crate::models::indices::MajorIndex> {
+        crate::models::indices::MajorIndex::from_symbol(self.symbol()).ok_or_else(|| {
+            crate::error::FinanceError::InvalidParameter {
+                param: "symbol".into(),
+                reason: format!(
+                    "constituents are available for major indices only \
+                     (S&P 500, Nasdaq 100, Dow Jones), not {}",
+                    self.symbol()
+                ),
+            }
+        })
+    }
+
+    /// Fetch the index's current constituents (major indices only). Not
+    /// cached — constituent lists change rarely but the call is uncommon.
+    pub async fn constituents(&self) -> Result<Vec<crate::models::indices::IndexConstituent>> {
+        let index = self.major_index()?;
+        self.providers
+            .fetch(crate::providers::Capability::INDICES, move |p| {
+                let p = p.clone();
+                async move {
+                    p.as_indices()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::IndexConstituents)
+                        })?
+                        .fetch_index_constituents(index)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch historical changes to the index's constituency (currently
+    /// S&P 500 only on FMP).
+    pub async fn constituent_changes(
+        &self,
+    ) -> Result<Vec<crate::models::indices::IndexConstituentChange>> {
+        let index = self.major_index()?;
+        self.providers
+            .fetch(crate::providers::Capability::INDICES, move |p| {
+                let p = p.clone();
+                async move {
+                    p.as_indices()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::IndexConstituentChanges)
+                        })?
+                        .fetch_index_constituent_changes(index)
+                        .await
+                }
+            })
+            .await
+    }
 }
 
 impl_chartable_analytics!(Index, crate::risk::TradingCalendar::Exchange);

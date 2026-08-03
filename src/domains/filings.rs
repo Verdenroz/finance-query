@@ -26,4 +26,46 @@ impl Filings {
             crate::models::filings::ProviderFilings
         )
     }
+
+    /// Fetch the sectioned text of one filing by accession number via the
+    /// FILINGS route (currently Polygon only). Not cached.
+    pub async fn sections(
+        &self,
+        accession_number: &str,
+        form: crate::models::filings::FilingSectionForm,
+    ) -> Result<Vec<crate::models::filings::FilingSection>> {
+        let accession = accession_number.to_string();
+        self.providers
+            .fetch(crate::providers::Capability::FILINGS, move |p| {
+                let accession = accession.clone();
+                let p = p.clone();
+                async move {
+                    p.as_filings()
+                        .ok_or_else(|| {
+                            p.not_supported(crate::providers::Operation::FilingSections)
+                        })?
+                        .fetch_filing_sections(&accession, form)
+                        .await
+                }
+            })
+            .await
+    }
+
+    /// Fetch risk factors extracted from this symbol's SEC filings via the
+    /// FILINGS route (currently Polygon only). Not cached.
+    pub async fn risk_factors(&self) -> Result<Vec<crate::models::filings::RiskFactor>> {
+        let symbol: String = self.symbol().to_string();
+        self.providers
+            .fetch(crate::providers::Capability::FILINGS, move |p| {
+                let symbol = symbol.clone();
+                let p = p.clone();
+                async move {
+                    p.as_filings()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::RiskFactors))?
+                        .fetch_risk_factors(&symbol)
+                        .await
+                }
+            })
+            .await
+    }
 }
