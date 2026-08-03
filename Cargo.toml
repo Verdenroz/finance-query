@@ -116,6 +116,7 @@ full = [
     "binance",
     "kraken",
     "finra",
+    "openfigi",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -141,6 +142,8 @@ binance = []
 kraken = []
 # Enable FINRA daily short-sale volume (free, non-commercial use)
 finra = []
+# Enable OpenFIGI CUSIP/ISIN/SEDOL to ticker mapping (keyless)
+openfigi = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -188,6 +191,7 @@ features = [
     "binance",
     "kraken",
     "finra",
+    "openfigi",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

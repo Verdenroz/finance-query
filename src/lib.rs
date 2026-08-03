@@ -99,6 +99,74 @@ pub mod crypto {
     pub use crate::adapters::coingecko::{CoinQuote, coin, coins};
 }
 
+#[cfg(feature = "openfigi")]
+pub mod openfigi {
+    //! Security-identifier resolution via OpenFIGI (requires `openfigi`
+    //! feature, keyless).
+    //!
+    //! Resolves a CUSIP, ISIN, SEDOL, or FIGI to the instruments carrying it —
+    //! the missing step for any dataset that identifies holdings by CUSIP
+    //! rather than ticker, such as 13F filings.
+    //!
+    //! Lives here rather than behind the Providers API because resolution is
+    //! not tied to a symbol handle and maps onto no
+    //! [`Capability`](crate::Capability), the same reasoning that puts
+    //! [`edgar`](crate::edgar) and [`fred`](crate::fred) at the crate root.
+    //!
+    //! No API key is required; `OPENFIGI_API_KEY` is optional and only raises
+    //! the quota.
+    //!
+    //! ```no_run
+    //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    //! use finance_query::openfigi;
+    //!
+    //! // One CUSIP maps to every venue listing of the security.
+    //! for listing in openfigi::resolve_cusip("037833100").await? {
+    //!     println!("{:?} on {:?}", listing.ticker, listing.exchange_code);
+    //! }
+    //! # Ok(())
+    //! # }
+    //! ```
+
+    use crate::error::Result;
+    pub use crate::models::discovery::figi::{SecurityIdKind, SecurityMapping};
+
+    /// Resolve a CUSIP to every instrument carrying it.
+    ///
+    /// Returns an empty list when the identifier is well-formed but matches
+    /// nothing; a malformed identifier is an error.
+    pub async fn resolve_cusip(cusip: &str) -> Result<Vec<SecurityMapping>> {
+        crate::adapters::openfigi::resolve(SecurityIdKind::Cusip, cusip).await
+    }
+
+    /// Resolve an ISIN to every instrument carrying it.
+    pub async fn resolve_isin(isin: &str) -> Result<Vec<SecurityMapping>> {
+        crate::adapters::openfigi::resolve(SecurityIdKind::Isin, isin).await
+    }
+
+    /// Resolve a SEDOL to every instrument carrying it.
+    pub async fn resolve_sedol(sedol: &str) -> Result<Vec<SecurityMapping>> {
+        crate::adapters::openfigi::resolve(SecurityIdKind::Sedol, sedol).await
+    }
+
+    /// Resolve an identifier of any supported [`SecurityIdKind`].
+    pub async fn resolve(kind: SecurityIdKind, id: &str) -> Result<Vec<SecurityMapping>> {
+        crate::adapters::openfigi::resolve(kind, id).await
+    }
+
+    /// Resolve many identifiers of the same kind in as few requests as
+    /// possible (OpenFIGI accepts 10 per request without a key).
+    ///
+    /// The result is positional: element `i` answers `ids[i]`, with an empty
+    /// list where nothing matched.
+    pub async fn resolve_many(
+        kind: SecurityIdKind,
+        ids: &[&str],
+    ) -> Result<Vec<Vec<SecurityMapping>>> {
+        crate::adapters::openfigi::resolve_many(kind, ids).await
+    }
+}
+
 pub mod feeds;
 
 #[cfg(feature = "risk")]

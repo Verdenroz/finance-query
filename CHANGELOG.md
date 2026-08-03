@@ -98,6 +98,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   per date, matching FINRA's own consolidated daily file. A symbol with no
   reportable short volume returns an empty series rather than an error. Free
   for non-commercial use — see the provider docs.
+- **OpenFIGI identifier mapping** (`openfigi` feature, keyless) — new
+  crate-level `openfigi` module resolving a CUSIP, ISIN, SEDOL, or FIGI to the
+  instruments carrying it: `openfigi::resolve_cusip("037833100")`,
+  `resolve_isin`, `resolve_sedol`, and a positional batch `resolve_many` that
+  chunks to OpenFIGI's 10-per-request limit. New public types
+  `SecurityMapping` and `SecurityIdKind`. It sits beside `edgar` and `fred`
+  rather than behind the Providers API because resolution is not tied to a
+  symbol handle and maps onto no `Capability`. `OPENFIGI_API_KEY` is optional
+  and only raises the quota.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

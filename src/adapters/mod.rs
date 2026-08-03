@@ -24,6 +24,7 @@
 //! | `binance` | [Binance public data](https://data-api.binance.vision/) | Keyless | 2 | Exchange-grade crypto quotes and arbitrary-interval OHLCV (geo-blocked in some regions) |
 //! | `kraken` | [Kraken public data](https://api.kraken.com/) | Keyless | 2 | Crypto quotes and OHLC candles; US-accessible complement to Binance |
 //! | `finra` | [FINRA Query API](https://developer.finra.org/) | Keyless (non-commercial) | 1 | Daily short-sale volume by security, from the primary source |
+//! | `openfigi` | [OpenFIGI](https://www.openfigi.com/api) | Keyless (25 req/min) | 1 | CUSIP/ISIN/SEDOL/FIGI to ticker resolution |
 //! | *(always)* | [SEC EDGAR](https://www.sec.gov/edgar) | 10 req/sec | 5+ | Filing history, XBRL financials, full-text search (keyless, requires contact email) |
 //!
 //! # Quick comparison
@@ -90,6 +91,10 @@ pub(crate) mod kraken;
 /// FINRA daily short-sale volume (keyless, requires `finra` feature).
 #[cfg(feature = "finra")]
 pub(crate) mod finra;
+
+/// OpenFIGI security-identifier mapping (keyless, requires `openfigi` feature).
+#[cfg(feature = "openfigi")]
+pub(crate) mod openfigi;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;

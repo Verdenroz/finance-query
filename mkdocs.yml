@@ -83,6 +83,7 @@ nav:
           - Binance: library/providers/binance.md
           - Kraken: library/providers/kraken.md
           - FINRA: library/providers/finra.md
+          - OpenFIGI: library/providers/openfigi.md
       - Domains:
           - Crypto: library/crypto.md
           - Forex: library/forex.md
