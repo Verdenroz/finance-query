@@ -141,11 +141,7 @@ pub(super) fn resolve(series_id: &str) -> Result<Resolved<'_>> {
 /// A missing figure arrives as the literal string `"null"`, or as an empty
 /// string, rather than as JSON `null`.
 pub(super) fn parse_value(raw: &str) -> Option<f64> {
-    let raw = raw.trim();
-    if raw.is_empty() || raw.eq_ignore_ascii_case("null") {
-        return None;
-    }
-    raw.parse::<f64>().ok()
+    crate::adapters::common::numbers::parse_number(raw, &["null"])
 }
 
 /// Map raw rows onto the canonical [`EconomicSeries`].

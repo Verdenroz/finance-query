@@ -12,7 +12,7 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::{CompareFilter, DataRequest, DateRangeFilter, FinraError, RegShoDailyRow};
-use crate::adapters::common::keyless_http_client;
+use crate::adapters::common::{keyless_http_client, status_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -96,17 +96,16 @@ impl FinraClient {
 
     /// Map a non-2xx response, preferring FINRA's own explanation.
     fn map_error(status: StatusCode, body: &[u8], symbol: &str) -> FinanceError {
+        // Checked before the body: a throttled response carries no useful
+        // explanation of the query.
         if status == StatusCode::TOO_MANY_REQUESTS {
-            return FinanceError::RateLimited { retry_after: None };
+            return status_error("FINRA", status);
         }
         if let Ok(err) = serde_json::from_slice::<FinraError>(body)
             && let Some(message) = err.message
         {
             return FinanceError::ApiError(format!("FINRA ({symbol}): {message}"));
         }
-        FinanceError::ExternalApiError {
-            api: "FINRA".to_string(),
-            status: status.as_u16(),
-        }
+        status_error("FINRA", status)
     }
 }

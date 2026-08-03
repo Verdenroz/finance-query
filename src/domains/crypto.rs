@@ -11,7 +11,13 @@ domain_handle! {
     ///
     /// Created via [`Providers::crypto`](crate::Providers::crypto).
     pub struct CryptoCoin { id, id }
-    cache: crate::models::crypto::CryptoQuote, chart
+    cache: crate::models::crypto::CryptoQuote, chart,
+    extra: {
+        #[cfg(feature = "defi")]
+        tvl_cache: crate::models::crypto::defi::ProtocolTvl,
+        #[cfg(feature = "defi")]
+        tvl_history_cache: Vec<crate::models::crypto::defi::TvlPoint>,
+    }
 }
 
 impl CryptoCoin {
@@ -35,23 +41,20 @@ impl CryptoCoin {
     /// Routed through `Capability::CRYPTO`; only DefiLlama serves it, so route
     /// `CRYPTO` to include [`Provider::DefiLlama`](crate::Provider::DefiLlama).
     /// The id is a protocol slug here, not a coin id — most DefiLlama slugs
-    /// happen to match their CoinGecko id, but not all do.
+    /// happen to match their CoinGecko id, but not all do. The response is
+    /// cached on the handle, so a repeat call costs nothing.
     #[cfg(feature = "defi")]
     pub async fn tvl(&self) -> Result<crate::models::crypto::defi::ProtocolTvl> {
-        let __sym = self.id.clone();
-        let __providers = std::sync::Arc::clone(&self.providers);
-        __providers
-            .fetch(crate::providers::Capability::CRYPTO, move |p| {
-                let __s = __sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_crypto()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::ProtocolTvl))?
-                        .fetch_protocol_tvl(&__s)
-                        .await
-                }
-            })
-            .await
+        fetch_via!(
+            cache: tvl_cache,
+            self,
+            id,
+            CRYPTO,
+            as_crypto,
+            ProtocolTvl,
+            fetch_protocol_tvl,
+            crate::models::crypto::defi::ProtocolTvl
+        )
     }
 
     /// Fetch this protocol's full TVL history, oldest first.
@@ -59,22 +62,16 @@ impl CryptoCoin {
     /// Same routing and slug semantics as [`tvl`](Self::tvl).
     #[cfg(feature = "defi")]
     pub async fn tvl_history(&self) -> Result<Vec<crate::models::crypto::defi::TvlPoint>> {
-        let __sym = self.id.clone();
-        let __providers = std::sync::Arc::clone(&self.providers);
-        __providers
-            .fetch(crate::providers::Capability::CRYPTO, move |p| {
-                let __s = __sym.clone();
-                let p = p.clone();
-                async move {
-                    p.as_crypto()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::ProtocolTvlHistory)
-                        })?
-                        .fetch_protocol_tvl_history(&__s)
-                        .await
-                }
-            })
-            .await
+        fetch_via!(
+            cache: tvl_history_cache,
+            self,
+            id,
+            CRYPTO,
+            as_crypto,
+            ProtocolTvlHistory,
+            fetch_protocol_tvl_history,
+            Vec<crate::models::crypto::defi::TvlPoint>
+        )
     }
 
     /// Fetch historical OHLCV candles for this coin priced in `vs_currency`.

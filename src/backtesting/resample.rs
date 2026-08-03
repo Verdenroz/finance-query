@@ -127,21 +127,7 @@ fn bucket_id(candle: &Candle, interval: Interval, utc_offset_secs: i64) -> i64 {
             let (y, m, _) = ymd(ts);
             y * 10 + (m - 1) / 3 + 1
         }
-        _ => ts.div_euclid(interval_seconds(interval)),
-    }
-}
-
-const fn interval_seconds(interval: Interval) -> i64 {
-    match interval {
-        Interval::OneMinute => 60,
-        Interval::FiveMinutes => 300,
-        Interval::FifteenMinutes => 900,
-        Interval::ThirtyMinutes => 1_800,
-        Interval::OneHour => 3_600,
-        Interval::OneDay => 86_400,
-        Interval::OneWeek => 604_800,
-        Interval::OneMonth => 2_592_000,
-        Interval::ThreeMonths => 7_776_000,
+        _ => ts.div_euclid(interval.duration_secs()),
     }
 }
 

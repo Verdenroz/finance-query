@@ -7,7 +7,7 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::{FrankfurterError, FrankfurterTimeSeries};
-use crate::adapters::common::keyless_http_client;
+use crate::adapters::common::{keyless_http_client, status_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -108,11 +108,7 @@ impl FrankfurterClient {
                 param: "currency pair".to_string(),
                 reason: detail.unwrap_or_else(|| format!("{base}/{quote} is not a valid pair")),
             },
-            StatusCode::TOO_MANY_REQUESTS => FinanceError::RateLimited { retry_after: None },
-            s => FinanceError::ExternalApiError {
-                api: "Frankfurter".to_string(),
-                status: s.as_u16(),
-            },
+            s => status_error("Frankfurter", s),
         }
     }
 }

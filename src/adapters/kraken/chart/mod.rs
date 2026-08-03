@@ -1,12 +1,20 @@
 //! `CHART` capability for Kraken public market data.
 
+use crate::adapters::common::crypto_chart::{CryptoExchange, crypto_chart};
 use crate::constants::{Interval, TimeRange};
-use crate::error::{FinanceError, Result};
-use crate::models::chart::{Candle, Chart, ChartMeta};
+use crate::error::Result;
+use crate::models::chart::{Candle, Chart};
 use crate::providers::{Operation, Provider};
 
 use super::models::KrakenCandle;
 use super::symbols;
+
+/// How Kraken identifies itself in canonical chart metadata.
+const EXCHANGE: CryptoExchange = CryptoExchange {
+    provider: Provider::Kraken,
+    code: "KRAKEN",
+    name: "Kraken",
+};
 
 /// Map a library interval to Kraken's OHLC interval, in minutes.
 ///
@@ -14,18 +22,13 @@ use super::symbols;
 /// `OneMonth` land exactly; `ThreeMonths` has no equivalent and returns
 /// `None`, so the caller reports `NotSupported` and dispatch falls through.
 pub(super) fn interval_minutes(interval: Interval) -> Option<u32> {
-    Some(match interval {
-        Interval::OneMinute => 1,
-        Interval::FiveMinutes => 5,
-        Interval::FifteenMinutes => 15,
-        Interval::ThirtyMinutes => 30,
-        Interval::OneHour => 60,
-        Interval::OneDay => 1_440,
-        Interval::OneWeek => 10_080,
-        // Kraken's longest bucket is 15 days, the closest thing to a month.
-        Interval::OneMonth => 21_600,
-        Interval::ThreeMonths => return None,
-    })
+    match interval {
+        // Kraken's longest bucket is 15 days, the closest thing to a month,
+        // so this one does not follow from the interval's nominal span.
+        Interval::OneMonth => Some(21_600),
+        Interval::ThreeMonths => None,
+        other => Some((other.duration_secs() / 60) as u32),
+    }
 }
 
 /// Turn Kraken candles into canonical candles.
@@ -58,42 +61,14 @@ pub(super) fn build_chart(
 ) -> Chart {
     let quote_currency =
         symbols::split_pair(pair).map(|(_, quote)| symbols::from_kraken_asset(quote));
-    Chart {
-        symbol: symbol.to_string(),
-        meta: ChartMeta {
-            symbol: symbol.to_string(),
-            currency: quote_currency,
-            exchange_name: Some("KRAKEN".to_string()),
-            full_exchange_name: Some("Kraken".to_string()),
-            instrument_type: Some("CRYPTOCURRENCY".to_string()),
-            first_trade_date: candles.first().map(|c| c.timestamp),
-            regular_market_time: candles.last().map(|c| c.timestamp),
-            regular_market_price: candles.last().map(|c| c.close),
-            data_granularity: interval.map(|i| i.as_str().to_string()),
-            range: range.map(|r| r.as_str().to_string()),
-            provider_id: Some(Provider::Kraken),
-            ..Default::default()
-        },
-        candles,
-        interval,
-        range,
-        provider_id: Some(Provider::Kraken),
-    }
-}
-
-fn not_supported(operation: Operation) -> FinanceError {
-    FinanceError::NotSupported {
-        provider: Provider::Kraken,
-        operation,
-        candidates: operation.capability().candidate_providers(),
-    }
+    crypto_chart(&EXCHANGE, symbol, quote_currency, candles, interval, range)
 }
 
 /// Resolve the requested symbol to a Kraken pair, or report `NotSupported` —
 /// an unmappable symbol is an equity/index ticker another provider should
 /// serve, not a hard failure.
 fn pair_for(symbol: &str, operation: Operation) -> Result<String> {
-    symbols::parse_market(symbol).ok_or_else(|| not_supported(operation))
+    symbols::parse_market(symbol).ok_or_else(|| operation.not_supported(Provider::Kraken))
 }
 
 /// Fetch candles for `symbol` over `range` at `interval`.
@@ -107,7 +82,8 @@ pub(crate) async fn fetch_chart_response(
     range: TimeRange,
 ) -> Result<Chart> {
     let pair = pair_for(symbol, Operation::Chart)?;
-    let minutes = interval_minutes(interval).ok_or_else(|| not_supported(Operation::Chart))?;
+    let minutes = interval_minutes(interval)
+        .ok_or_else(|| Operation::Chart.not_supported(Provider::Kraken))?;
 
     let since = chrono::Utc::now().timestamp() - range.approx_duration_secs();
     let raw = super::client()?.ohlc(&pair, minutes, since).await?;
@@ -132,7 +108,8 @@ pub(crate) async fn fetch_chart_range_response(
     end: i64,
 ) -> Result<Chart> {
     let pair = pair_for(symbol, Operation::ChartRange)?;
-    let minutes = interval_minutes(interval).ok_or_else(|| not_supported(Operation::ChartRange))?;
+    let minutes = interval_minutes(interval)
+        .ok_or_else(|| Operation::ChartRange.not_supported(Provider::Kraken))?;
 
     let raw = super::client()?.ohlc(&pair, minutes, start).await?;
     let candles = to_candles(raw)

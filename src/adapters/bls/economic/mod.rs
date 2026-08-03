@@ -1,5 +1,7 @@
 //! `ECONOMIC` capability for the BLS Public Data API.
 
+use crate::adapters::common::numbers::parse_number;
+use crate::adapters::common::periods;
 use crate::error::Result;
 use crate::models::economic::{EconomicSeries, MacroObservation};
 
@@ -23,19 +25,19 @@ pub(super) fn resolve_period(year: &str, period: &str) -> Option<Period> {
     let n: u32 = n.parse().ok()?;
     match kind {
         "M" if (1..=12).contains(&n) => Some(Period {
-            date: format!("{year}-{n:02}-01"),
+            date: periods::month_start(year, n),
             frequency: "Monthly",
         }),
         "Q" if (1..=4).contains(&n) => Some(Period {
-            date: format!("{year}-{:02}-01", (n - 1) * 3 + 1),
+            date: periods::quarter_start(year, n),
             frequency: "Quarterly",
         }),
         "S" if (1..=2).contains(&n) => Some(Period {
-            date: format!("{year}-{:02}-01", (n - 1) * 6 + 1),
+            date: periods::half_start(year, n),
             frequency: "Semiannual",
         }),
         "A" => Some(Period {
-            date: format!("{year}-01-01"),
+            date: periods::year_start(year),
             frequency: "Annual",
         }),
         // M13 / Q05 / S03 are annual aggregates, and anything else is a period
@@ -46,11 +48,7 @@ pub(super) fn resolve_period(year: &str, period: &str) -> Option<Period> {
 
 /// Parse a BLS value string. `"-"` marks a figure BLS could not publish.
 pub(super) fn parse_value(raw: &str) -> Option<f64> {
-    let raw = raw.trim();
-    if raw.is_empty() || raw == "-" {
-        return None;
-    }
-    raw.parse::<f64>().ok()
+    parse_number(raw, &["-"])
 }
 
 /// Map a BLS series onto the canonical [`EconomicSeries`].

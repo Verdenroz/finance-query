@@ -47,7 +47,7 @@ pub(crate) use crypto::fetch_crypto_quote_response;
 
 #[cfg(test)]
 mod tests {
-    use super::chart::{interval_code, interval_secs, to_candles};
+    use super::chart::{interval_code, to_candles};
     use super::crypto::to_quote;
     use super::models::Kline;
     use super::*;
@@ -119,13 +119,6 @@ mod tests {
         // Crypto has no corporate actions, so adj_close mirrors close.
         assert_eq!(candles[0].adj_close, Some(63570.0));
         assert_eq!(candles[0].provider_id, Some(crate::Provider::Binance));
-    }
-
-    #[test]
-    fn interval_seconds_match_the_interval_codes() {
-        assert_eq!(interval_secs(Interval::OneMinute), 60);
-        assert_eq!(interval_secs(Interval::OneDay), 86_400);
-        assert_eq!(interval_secs(Interval::OneWeek), 604_800);
     }
 
     #[tokio::test]

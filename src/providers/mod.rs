@@ -580,6 +580,19 @@ impl Operation {
             }
         }
     }
+
+    /// The error reported when `provider` does not serve this operation.
+    ///
+    /// Adapters reach for this when they detect the gap before dispatch has a
+    /// `&dyn ProviderAdapter` to hand (e.g. a symbol an exchange cannot name);
+    /// `ProviderCore::not_supported` is the same error built from an instance.
+    pub(crate) fn not_supported(self, provider: Provider) -> FinanceError {
+        FinanceError::NotSupported {
+            provider,
+            operation: self,
+            candidates: self.capability().candidate_providers(),
+        }
+    }
 }
 
 impl std::fmt::Display for Operation {

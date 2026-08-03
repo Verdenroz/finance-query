@@ -11,7 +11,7 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::{BinanceError, Kline, Ticker24hr};
-use crate::adapters::common::keyless_http_client;
+use crate::adapters::common::{keyless_http_client, status_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -113,19 +113,15 @@ impl BinanceClient {
                     .and_then(|e| e.msg)
                     .unwrap_or_else(|| "Binance rejected this market symbol".to_string()),
             },
-            // 418 is Binance's "you ignored a 429 and are now banned".
-            StatusCode::TOO_MANY_REQUESTS | StatusCode::IM_A_TEAPOT => {
-                FinanceError::RateLimited { retry_after: None }
-            }
+            // 418 is Binance's "you ignored a 429 and are now banned"; 429
+            // itself falls through to the shared mapping below.
+            StatusCode::IM_A_TEAPOT => FinanceError::RateLimited { retry_after: None },
             // 451 is the geo-block: Binance restricts some regions (US retail).
             StatusCode::UNAVAILABLE_FOR_LEGAL_REASONS => FinanceError::ApiError(
                 "Binance is not available from this region; route CRYPTO to Kraken or CoinGecko"
                     .to_string(),
             ),
-            s => FinanceError::ExternalApiError {
-                api: "Binance".to_string(),
-                status: s.as_u16(),
-            },
+            s => status_error("Binance", s),
         })
     }
 }

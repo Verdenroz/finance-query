@@ -10,7 +10,7 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::{MappingJob, MappingResult};
-use crate::adapters::common::keyless_http_client;
+use crate::adapters::common::{keyless_http_client, status_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -64,7 +64,6 @@ impl OpenFigiClient {
 
         if !status.is_success() {
             return Err(match status {
-                StatusCode::TOO_MANY_REQUESTS => FinanceError::RateLimited { retry_after: None },
                 // OpenFIGI rejects an oversized batch with 413.
                 StatusCode::PAYLOAD_TOO_LARGE => FinanceError::InvalidParameter {
                     param: "identifiers".to_string(),
@@ -72,10 +71,7 @@ impl OpenFigiClient {
                         "OpenFIGI accepts at most {MAX_JOBS_PER_REQUEST} identifiers per request"
                     ),
                 },
-                s => FinanceError::ExternalApiError {
-                    api: "OpenFIGI".to_string(),
-                    status: s.as_u16(),
-                },
+                s => status_error("OpenFIGI", s),
             });
         }
 

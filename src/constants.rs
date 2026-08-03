@@ -837,6 +837,25 @@ impl Interval {
             Interval::ThreeMonths => "3mo",
         }
     }
+
+    /// Approximate span one candle of this interval covers, in seconds.
+    ///
+    /// Calendar approximations match [`TimeRange::approx_duration_secs`]: a
+    /// month is 30 days, so a quarter is 90.
+    #[cfg(any(feature = "backtesting", feature = "binance", feature = "kraken"))]
+    pub(crate) const fn duration_secs(self) -> i64 {
+        match self {
+            Interval::OneMinute => 60,
+            Interval::FiveMinutes => 300,
+            Interval::FifteenMinutes => 900,
+            Interval::ThirtyMinutes => 1_800,
+            Interval::OneHour => 3_600,
+            Interval::OneDay => 86_400,
+            Interval::OneWeek => 604_800,
+            Interval::OneMonth => 2_592_000,
+            Interval::ThreeMonths => 7_776_000,
+        }
+    }
 }
 
 impl std::fmt::Display for Interval {
@@ -2308,5 +2327,23 @@ mod tests {
         assert_eq!(TimeRange::OneYear.default_interval(), Interval::OneDay);
         assert_eq!(TimeRange::TwoYears.default_interval(), Interval::OneWeek);
         assert_eq!(TimeRange::Max.default_interval(), Interval::OneMonth);
+    }
+
+    #[cfg(any(feature = "backtesting", feature = "binance", feature = "kraken"))]
+    #[test]
+    fn test_interval_duration_secs() {
+        assert_eq!(Interval::OneMinute.duration_secs(), 60);
+        assert_eq!(Interval::OneHour.duration_secs(), 3_600);
+        assert_eq!(Interval::OneDay.duration_secs(), 86_400);
+        assert_eq!(Interval::OneWeek.duration_secs(), 604_800);
+        // Calendar approximations agree with TimeRange's: 30-day months.
+        assert_eq!(
+            Interval::OneMonth.duration_secs(),
+            TimeRange::OneMonth.approx_duration_secs()
+        );
+        assert_eq!(
+            Interval::ThreeMonths.duration_secs(),
+            TimeRange::ThreeMonths.approx_duration_secs()
+        );
     }
 }

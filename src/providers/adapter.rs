@@ -22,11 +22,7 @@ pub(crate) trait ProviderCore: Send + Sync {
     fn id(&self) -> Provider;
 
     fn not_supported(&self, operation: Operation) -> FinanceError {
-        FinanceError::NotSupported {
-            provider: self.id(),
-            operation,
-            candidates: operation.capability().candidate_providers(),
-        }
+        operation.not_supported(self.id())
     }
 }
 

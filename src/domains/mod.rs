@@ -108,13 +108,21 @@ impl<V: Clone> DomainCache<V> {
 /// Callers add fetch methods manually.
 macro_rules! domain_handle {
     // Chartable variant — adds a `Chart` response cache read by `chart()`.
-    ($(#[$meta:meta])* pub struct $name:ident { $field:ident, $accessor:ident } cache: $val:ty, chart) => {
+    // `extra:` declares further per-response caches for methods whose return
+    // type differs from the handle's main one; `.cache(ttl)` covers them all.
+    (
+        $(#[$meta:meta])*
+        pub struct $name:ident { $field:ident, $accessor:ident }
+        cache: $val:ty, chart
+        $(, extra: { $( $(#[$ecfg:meta])* $ecache:ident: $eval:ty ),+ $(,)? } )?
+    ) => {
         $(#[$meta])*
         pub struct $name {
             $field: std::sync::Arc<str>,
             providers: std::sync::Arc<crate::providers::ProviderSet>,
             cache: crate::domains::DomainCache<$val>,
             chart_cache: crate::domains::DomainCache<crate::models::chart::Chart>,
+            $($( $(#[$ecfg])* $ecache: crate::domains::DomainCache<$eval>, )+)?
         }
 
         impl $name {
@@ -127,6 +135,10 @@ macro_rules! domain_handle {
                     providers,
                     cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
                     chart_cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
+                    $($(
+                        $(#[$ecfg])*
+                        $ecache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
+                    )+)?
                 }
             }
 
@@ -136,6 +148,10 @@ macro_rules! domain_handle {
                 let mode = crate::utils::CacheMode::Ttl(ttl);
                 self.cache = crate::domains::DomainCache::new(mode);
                 self.chart_cache = crate::domains::DomainCache::new(mode);
+                $($(
+                    $(#[$ecfg])*
+                    { self.$ecache = crate::domains::DomainCache::new(mode); }
+                )+)?
                 self
             }
 
@@ -144,6 +160,10 @@ macro_rules! domain_handle {
                 let mode = crate::utils::CacheMode::Off;
                 self.cache = crate::domains::DomainCache::new(mode);
                 self.chart_cache = crate::domains::DomainCache::new(mode);
+                $($(
+                    $(#[$ecfg])*
+                    { self.$ecache = crate::domains::DomainCache::new(mode); }
+                )+)?
                 self
             }
 
@@ -264,11 +284,14 @@ macro_rules! domain_handle {
 /// and `$op` the [`Operation`](crate::providers::Operation) reported when a
 /// routed provider lacks it.
 macro_rules! fetch_via {
-    ($self:expr, $field:ident, $cap:ident, $acc:ident, $op:ident, $fetch:ident, $ret:ty) => {{
+    ($self:expr, $field:ident, $cap:ident, $acc:ident, $op:ident, $fetch:ident, $ret:ty) => {
+        fetch_via!(cache: cache, $self, $field, $cap, $acc, $op, $fetch, $ret)
+    };
+    (cache: $store:ident, $self:expr, $field:ident, $cap:ident, $acc:ident, $op:ident, $fetch:ident, $ret:ty) => {{
         let __sym = $self.$field.clone();
         let __providers = std::sync::Arc::clone(&$self.providers);
         $self
-            .cache
+            .$store
             .get_or_try(String::new(), move || async move {
                 __providers
                     .fetch(crate::providers::Capability::$cap, move |p| {

@@ -7,11 +7,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use tracing::debug;
 
 use super::models::{BlsResponse, BlsSeries};
-use crate::adapters::common::keyless_http_client;
+use crate::adapters::common::{check_status, keyless_http_client};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -108,15 +108,7 @@ impl BlsClient {
         let status = resp.status();
         let bytes = resp.bytes().await?;
 
-        if !status.is_success() {
-            return Err(match status {
-                StatusCode::TOO_MANY_REQUESTS => FinanceError::RateLimited { retry_after: None },
-                s => FinanceError::ExternalApiError {
-                    api: "BLS".to_string(),
-                    status: s.as_u16(),
-                },
-            });
-        }
+        check_status("BLS", status)?;
 
         let parsed: BlsResponse =
             serde_json::from_slice(&bytes).map_err(|e| FinanceError::ResponseStructureError {

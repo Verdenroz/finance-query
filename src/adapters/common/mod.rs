@@ -1,6 +1,25 @@
 //! Shared internal helpers for adapter modules.
 
 use percent_encoding::{AsciiSet, CONTROLS, utf8_percent_encode};
+use reqwest::StatusCode;
+
+use crate::error::{FinanceError, Result};
+
+/// Coin id / ticker vocabulary shared by the keyless crypto exchanges.
+#[cfg(any(feature = "binance", feature = "kraken"))]
+pub(crate) mod coins;
+
+/// Canonical chart assembly shared by the keyless crypto exchanges.
+#[cfg(any(feature = "binance", feature = "kraken"))]
+pub(crate) mod crypto_chart;
+
+/// Numeric parsing shared by the macro-data adapters.
+#[cfg(any(feature = "bls", feature = "fiscaldata"))]
+pub(crate) mod numbers;
+
+/// Period-label resolution shared by the macro-data adapters.
+#[cfg(any(feature = "bls", feature = "worldbank"))]
+pub(crate) mod periods;
 
 /// Characters that must be percent-encoded inside a URL path segment.
 ///
@@ -49,7 +68,7 @@ const PATH_SEGMENT_ENCODE_SET: &AsciiSet = &CONTROLS
 ///
 /// Use whenever a user-supplied symbol/ticker/CIK is interpolated into a
 /// URL path via `format!`.
-#[allow(dead_code)] // used by fmp and polygon adapter modules (tasks 5 & 6)
+#[allow(dead_code)] // unused when no URL-building adapter feature is enabled
 pub(crate) fn encode_path_segment(segment: &str) -> String {
     utf8_percent_encode(segment, PATH_SEGMENT_ENCODE_SET).to_string()
 }
@@ -69,13 +88,37 @@ pub(crate) fn user_agent() -> String {
 /// a `reqwest::Client` is bound to the runtime that first drives it, so a
 /// cached one fails with hyper `DispatchGone` once that runtime is dropped.
 #[allow(dead_code)] // used by the keyless adapter modules
-pub(crate) fn keyless_http_client(
-    timeout: std::time::Duration,
-) -> crate::error::Result<reqwest::Client> {
+pub(crate) fn keyless_http_client(timeout: std::time::Duration) -> Result<reqwest::Client> {
     Ok(reqwest::Client::builder()
         .timeout(timeout)
         .user_agent(user_agent())
         .build()?)
+}
+
+/// The error a non-2xx status maps to when the adapter has no more specific
+/// reading of it. `api` names the upstream service in the error message.
+///
+/// Adapters that distinguish extra statuses match those arms first and let
+/// this handle the tail, so every adapter reports the same shape for the
+/// statuses none of them special-case.
+#[allow(dead_code)] // used by the keyless adapter modules
+pub(crate) fn status_error(api: &'static str, status: StatusCode) -> FinanceError {
+    match status {
+        StatusCode::TOO_MANY_REQUESTS => FinanceError::RateLimited { retry_after: None },
+        s => FinanceError::ExternalApiError {
+            api: api.to_string(),
+            status: s.as_u16(),
+        },
+    }
+}
+
+/// Fail a non-2xx response via [`status_error`]; succeed on any 2xx.
+#[allow(dead_code)] // used by the keyless adapter modules
+pub(crate) fn check_status(api: &'static str, status: StatusCode) -> Result<()> {
+    if status.is_success() {
+        return Ok(());
+    }
+    Err(status_error(api, status))
 }
 
 #[cfg(test)]
@@ -117,6 +160,32 @@ mod tests {
         // Critical: must NOT collapse to empty (no dot-segment removal).
         // The literal ".." characters are unreserved, so they pass through.
         assert_eq!(encode_path_segment(".."), "..");
+    }
+
+    #[test]
+    fn rate_limit_status_maps_to_rate_limited() {
+        assert!(matches!(
+            status_error("Test", StatusCode::TOO_MANY_REQUESTS),
+            FinanceError::RateLimited { retry_after: None }
+        ));
+    }
+
+    #[test]
+    fn other_failures_carry_the_api_name_and_status() {
+        match status_error("Test", StatusCode::BAD_GATEWAY) {
+            FinanceError::ExternalApiError { api, status } => {
+                assert_eq!(api, "Test");
+                assert_eq!(status, 502);
+            }
+            other => panic!("unexpected error: {other:?}"),
+        }
+    }
+
+    #[test]
+    fn success_statuses_pass_check() {
+        assert!(check_status("Test", StatusCode::OK).is_ok());
+        assert!(check_status("Test", StatusCode::NO_CONTENT).is_ok());
+        assert!(check_status("Test", StatusCode::NOT_FOUND).is_err());
     }
 
     #[test]

@@ -1,5 +1,6 @@
 //! `ECONOMIC` capability for World Bank Open Data.
 
+use crate::adapters::common::periods;
 use crate::error::Result;
 use crate::models::economic::{EconomicSeries, MacroObservation};
 
@@ -32,23 +33,26 @@ pub(crate) fn normalize_date(period: &str) -> String {
         && let Ok(q) = quarter.parse::<u32>()
         && (1..=4).contains(&q)
     {
-        return format!("{year}-{:02}-01", (q - 1) * 3 + 1);
+        return periods::quarter_start(year, q);
     }
     if let Some((year, month)) = period.split_once('M')
         && let Ok(m) = month.parse::<u32>()
         && (1..=12).contains(&m)
     {
-        return format!("{year}-{m:02}-01");
+        return periods::month_start(year, m);
     }
     if period.len() == 4 && period.chars().all(|c| c.is_ascii_digit()) {
-        return format!("{period}-01-01");
+        return periods::year_start(period);
     }
     period.to_string()
 }
 
 /// Infer the reporting frequency from the shape of a period label.
-pub(crate) fn infer_frequency(periods: &[String]) -> Option<String> {
-    let first = periods.first()?;
+///
+/// One label settles it — the World Bank never mixes base frequencies within
+/// a single country/indicator series.
+pub(crate) fn infer_frequency(period: Option<&str>) -> Option<String> {
+    let first = period?;
     if first.contains('Q') {
         Some("Quarterly".to_string())
     } else if first.contains('M') {
@@ -65,8 +69,7 @@ pub(crate) fn infer_frequency(periods: &[String]) -> Option<String> {
 /// The API returns newest-first; the canonical model documents chronological
 /// order, so observations are reversed here.
 pub(crate) fn to_canonical(series_id: &str, raw: Vec<WorldBankObservation>) -> EconomicSeries {
-    let periods: Vec<String> = raw.iter().map(|o| o.date.clone()).collect();
-    let frequency = infer_frequency(&periods);
+    let frequency = infer_frequency(raw.first().map(|o| o.date.as_str()));
 
     let title = raw
         .first()

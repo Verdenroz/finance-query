@@ -51,5 +51,5 @@ pub(crate) async fn fetch_crypto_quote_response(
 ) -> Result<CryptoQuote> {
     let pair = symbols::pair(id, vs_currency);
     let ticker = super::client()?.ticker(&pair).await?;
-    Ok(to_quote(id, &symbols::ticker_for(id), &ticker))
+    Ok(to_quote(id, &symbols::resolve_ticker(id), &ticker))
 }

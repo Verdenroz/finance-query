@@ -10,7 +10,7 @@ use reqwest::{Client, StatusCode};
 use tracing::debug;
 
 use super::models::{ChainResponse, ProtocolResponse, StablecoinsResponse};
-use crate::adapters::common::keyless_http_client;
+use crate::adapters::common::{keyless_http_client, status_error};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -82,16 +82,9 @@ impl DefiLlamaClient {
                         symbol: Some(slug.to_string()),
                         context: "DefiLlama knows no protocol by this slug".to_string(),
                     },
-                    None => FinanceError::ExternalApiError {
-                        api: "DefiLlama".to_string(),
-                        status: status.as_u16(),
-                    },
+                    None => status_error("DefiLlama", status),
                 },
-                StatusCode::TOO_MANY_REQUESTS => FinanceError::RateLimited { retry_after: None },
-                s => FinanceError::ExternalApiError {
-                    api: "DefiLlama".to_string(),
-                    status: s.as_u16(),
-                },
+                s => status_error("DefiLlama", s),
             });
         }
 

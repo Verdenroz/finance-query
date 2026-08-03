@@ -7,11 +7,11 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use tracing::debug;
 
 use super::models::{WorldBankObservation, WorldBankResponse};
-use crate::adapters::common::keyless_http_client;
+use crate::adapters::common::{check_status, keyless_http_client};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -70,7 +70,7 @@ impl WorldBankClient {
             ])
             .send()
             .await?;
-        Self::check_status(resp.status())?;
+        check_status("World Bank", resp.status())?;
 
         let bytes = resp.bytes().await?;
         let parsed: WorldBankResponse =
@@ -100,16 +100,5 @@ impl WorldBankClient {
             });
         }
         Ok(observations)
-    }
-
-    fn check_status(status: StatusCode) -> Result<()> {
-        match status {
-            s if s.is_success() => Ok(()),
-            StatusCode::TOO_MANY_REQUESTS => Err(FinanceError::RateLimited { retry_after: None }),
-            s => Err(FinanceError::ExternalApiError {
-                api: "World Bank".to_string(),
-                status: s.as_u16(),
-            }),
-        }
     }
 }

@@ -1,13 +1,21 @@
 //! `CHART` capability for Binance public market data.
 
+use crate::adapters::common::crypto_chart::{CryptoExchange, crypto_chart};
 use crate::constants::{Interval, TimeRange};
-use crate::error::{FinanceError, Result};
-use crate::models::chart::{Candle, Chart, ChartMeta};
+use crate::error::Result;
+use crate::models::chart::{Candle, Chart};
 use crate::providers::{Operation, Provider};
 
 use super::client::MAX_KLINES;
 use super::models::Kline;
 use super::symbols;
+
+/// How Binance identifies itself in canonical chart metadata.
+const EXCHANGE: CryptoExchange = CryptoExchange {
+    provider: Provider::Binance,
+    code: "BINANCE",
+    name: "Binance",
+};
 
 /// Requests one chart may spend walking forward through Binance's 1000-candle
 /// page cap. Enough for five years of daily or a year of hourly candles.
@@ -30,21 +38,6 @@ pub(super) fn interval_code(interval: Interval) -> Option<&'static str> {
         Interval::OneMonth => "1M",
         Interval::ThreeMonths => return None,
     })
-}
-
-/// The span one candle covers, in seconds. Month candles use a 30-day
-/// approximation, matching [`TimeRange::approx_duration_secs`].
-pub(super) fn interval_secs(interval: Interval) -> i64 {
-    match interval {
-        Interval::OneMinute => 60,
-        Interval::FiveMinutes => 300,
-        Interval::FifteenMinutes => 900,
-        Interval::ThirtyMinutes => 1_800,
-        Interval::OneHour => 3_600,
-        Interval::OneDay => 86_400,
-        Interval::OneWeek => 604_800,
-        Interval::OneMonth | Interval::ThreeMonths => 2_592_000,
-    }
 }
 
 /// Turn Binance klines into canonical candles.
@@ -78,38 +71,14 @@ pub(super) fn build_chart(
     range: Option<TimeRange>,
 ) -> Chart {
     let quote_currency = symbols::split_pair(market).map(|(_, quote)| quote.to_string());
-    Chart {
-        symbol: symbol.to_string(),
-        meta: ChartMeta {
-            symbol: symbol.to_string(),
-            currency: quote_currency,
-            exchange_name: Some("BINANCE".to_string()),
-            full_exchange_name: Some("Binance".to_string()),
-            instrument_type: Some("CRYPTOCURRENCY".to_string()),
-            first_trade_date: candles.first().map(|c| c.timestamp),
-            regular_market_time: candles.last().map(|c| c.timestamp),
-            regular_market_price: candles.last().map(|c| c.close),
-            data_granularity: interval.map(|i| i.as_str().to_string()),
-            range: range.map(|r| r.as_str().to_string()),
-            provider_id: Some(Provider::Binance),
-            ..Default::default()
-        },
-        candles,
-        interval,
-        range,
-        provider_id: Some(Provider::Binance),
-    }
+    crypto_chart(&EXCHANGE, symbol, quote_currency, candles, interval, range)
 }
 
 /// Resolve the requested symbol to a Binance market, or explain why it can't
 /// be — an unmappable symbol is an equity/index ticker that another provider
 /// should serve, so it reports `NotSupported` rather than a hard failure.
-fn market_for(symbol: &str) -> Result<String> {
-    symbols::parse_market(symbol).ok_or(FinanceError::NotSupported {
-        provider: Provider::Binance,
-        operation: Operation::Chart,
-        candidates: Operation::Chart.capability().candidate_providers(),
-    })
+fn market_for(symbol: &str, operation: Operation) -> Result<String> {
+    symbols::parse_market(symbol).ok_or_else(|| operation.not_supported(Provider::Binance))
 }
 
 /// Walk Binance's paginated kline endpoint from `start_ms` to `end_ms`.
@@ -121,7 +90,7 @@ async fn collect_klines(
     end_ms: i64,
 ) -> Result<Vec<Kline>> {
     let client = super::client()?;
-    let step_ms = interval_secs(interval) * 1_000;
+    let step_ms = interval.duration_secs() * 1_000;
     let mut cursor = start_ms;
     let mut out: Vec<Kline> = Vec::new();
 
@@ -148,12 +117,9 @@ pub(crate) async fn fetch_chart_response(
     interval: Interval,
     range: TimeRange,
 ) -> Result<Chart> {
-    let market = market_for(symbol)?;
-    let code = interval_code(interval).ok_or(FinanceError::NotSupported {
-        provider: Provider::Binance,
-        operation: Operation::Chart,
-        candidates: Operation::Chart.capability().candidate_providers(),
-    })?;
+    let market = market_for(symbol, Operation::Chart)?;
+    let code =
+        interval_code(interval).ok_or_else(|| Operation::Chart.not_supported(Provider::Binance))?;
 
     let end_ms = chrono::Utc::now().timestamp_millis();
     let start_ms = end_ms - range.approx_duration_secs() * 1_000;
@@ -175,12 +141,9 @@ pub(crate) async fn fetch_chart_range_response(
     start: i64,
     end: i64,
 ) -> Result<Chart> {
-    let market = market_for(symbol)?;
-    let code = interval_code(interval).ok_or(FinanceError::NotSupported {
-        provider: Provider::Binance,
-        operation: Operation::ChartRange,
-        candidates: Operation::ChartRange.capability().candidate_providers(),
-    })?;
+    let market = market_for(symbol, Operation::ChartRange)?;
+    let code = interval_code(interval)
+        .ok_or_else(|| Operation::ChartRange.not_supported(Provider::Binance))?;
 
     let klines = collect_klines(&market, code, interval, start * 1_000, end * 1_000).await?;
     Ok(build_chart(

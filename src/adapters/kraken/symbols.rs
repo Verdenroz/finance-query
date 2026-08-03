@@ -3,7 +3,12 @@
 //! Kraken predates most ticker conventions and kept its own: Bitcoin is
 //! `XBT`, Dogecoin is `XDG`, and older pairs carry `X`/`Z` class prefixes
 //! (`XXBTZUSD`). Callers should never have to know that, so every spelling is
-//! translated here.
+//! translated here. Only the Kraken-specific aliasing lives in this file — the
+//! coin id table is shared with Binance in [`crate::adapters::common::coins`].
+
+use crate::adapters::common::coins;
+
+pub(crate) use coins::{asset_name, resolve_ticker};
 
 /// Assets whose Kraken code differs from the ticker everyone else uses.
 const ASSET_ALIASES: &[(&str, &str)] = &[
@@ -18,52 +23,6 @@ const ASSET_ALIASES: &[(&str, &str)] = &[
 const QUOTE_ASSETS: &[&str] = &[
     "USDT", "USDC", "CHF", "AUD", "USD", "EUR", "GBP", "JPY", "CAD", "XBT", "ETH", "DAI",
 ];
-
-/// CoinGecko-style ids for the majors, so a route swap between CoinGecko,
-/// Binance, and Kraken does not change call sites.
-///
-/// Deliberately partial — Kraken has no id concept. Anything absent falls
-/// through as a ticker.
-const COIN_IDS: &[(&str, &str, &str)] = &[
-    ("bitcoin", "BTC", "Bitcoin"),
-    ("ethereum", "ETH", "Ethereum"),
-    ("ripple", "XRP", "XRP"),
-    ("cardano", "ADA", "Cardano"),
-    ("solana", "SOL", "Solana"),
-    ("dogecoin", "DOGE", "Dogecoin"),
-    ("polkadot", "DOT", "Polkadot"),
-    ("chainlink", "LINK", "Chainlink"),
-    ("litecoin", "LTC", "Litecoin"),
-    ("stellar", "XLM", "Stellar"),
-    ("cosmos", "ATOM", "Cosmos"),
-    ("monero", "XMR", "Monero"),
-    ("ethereum-classic", "ETC", "Ethereum Classic"),
-    ("filecoin", "FIL", "Filecoin"),
-    ("algorand", "ALGO", "Algorand"),
-    ("tezos", "XTZ", "Tezos"),
-    ("uniswap", "UNI", "Uniswap"),
-    ("aave", "AAVE", "Aave"),
-    ("avalanche-2", "AVAX", "Avalanche"),
-    ("near", "NEAR", "NEAR Protocol"),
-];
-
-/// Resolve a coin id or ticker to the common ticker (not yet Kraken-coded).
-pub(crate) fn ticker_for(id: &str) -> String {
-    let id = id.trim();
-    COIN_IDS
-        .iter()
-        .find(|(coin_id, _, _)| coin_id.eq_ignore_ascii_case(id))
-        .map(|(_, ticker, _)| (*ticker).to_string())
-        .unwrap_or_else(|| id.to_uppercase())
-}
-
-/// The display name for a ticker, when it is one of the majors.
-pub(crate) fn asset_name(ticker: &str) -> Option<&'static str> {
-    COIN_IDS
-        .iter()
-        .find(|(_, t, _)| t.eq_ignore_ascii_case(ticker))
-        .map(|(_, _, name)| *name)
-}
 
 /// Translate a common ticker to Kraken's own asset code.
 pub(crate) fn kraken_asset(ticker: &str) -> String {
@@ -96,17 +55,14 @@ pub(crate) fn from_kraken_asset(code: &str) -> String {
 pub(crate) fn pair(base_id: &str, vs_currency: &str) -> String {
     format!(
         "{}{}",
-        kraken_asset(&ticker_for(base_id)),
+        kraken_asset(&resolve_ticker(base_id)),
         kraken_asset(vs_currency)
     )
 }
 
 /// Split a concatenated market into `(base, quote)` on a known quote asset.
 pub(crate) fn split_pair(symbol: &str) -> Option<(&str, &str)> {
-    QUOTE_ASSETS
-        .iter()
-        .find(|q| symbol.len() > q.len() && symbol.ends_with(*q))
-        .map(|q| symbol.split_at(symbol.len() - q.len()))
+    coins::split_on_quote(symbol, QUOTE_ASSETS)
 }
 
 /// Normalise any of the library's symbol spellings into a Kraken pair.
@@ -148,13 +104,6 @@ mod tests {
         assert_eq!(from_kraken_asset("ADA"), "ADA");
         // A four-character code that isn't prefixed must survive intact.
         assert_eq!(from_kraken_asset("AAVE"), "AAVE");
-    }
-
-    #[test]
-    fn coin_ids_resolve_to_tickers() {
-        assert_eq!(ticker_for("bitcoin"), "BTC");
-        assert_eq!(ticker_for("Solana"), "SOL");
-        assert_eq!(ticker_for("wif"), "WIF");
     }
 
     #[test]

@@ -6,13 +6,13 @@
 use std::sync::Arc;
 use std::time::Duration;
 
-use reqwest::{Client, StatusCode};
+use reqwest::Client;
 use tracing::debug;
 
 use super::models::{
     KrakenCandle, KrakenEnvelope, KrakenTicker, OhlcEntry, OhlcResult, TickerResult,
 };
-use crate::adapters::common::keyless_http_client;
+use crate::adapters::common::{check_status, keyless_http_client};
 use crate::error::{FinanceError, Result};
 use crate::rate_limiter::RateLimiter;
 
@@ -99,15 +99,7 @@ impl KrakenClient {
         let status = resp.status();
         let bytes = resp.bytes().await?;
 
-        if !status.is_success() {
-            return Err(match status {
-                StatusCode::TOO_MANY_REQUESTS => FinanceError::RateLimited { retry_after: None },
-                s => FinanceError::ExternalApiError {
-                    api: "Kraken".to_string(),
-                    status: s.as_u16(),
-                },
-            });
-        }
+        check_status("Kraken", status)?;
 
         let envelope: KrakenEnvelope<T> =
             serde_json::from_slice(&bytes).map_err(|e| FinanceError::ResponseStructureError {
