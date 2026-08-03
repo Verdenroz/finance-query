@@ -18,6 +18,8 @@ pub(crate) mod fred;
 #[cfg(feature = "polygon")]
 pub(crate) mod polygon;
 pub(crate) mod types;
+#[cfg(feature = "worldbank")]
+pub(crate) mod worldbank;
 pub(crate) mod yahoo;
 
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
@@ -52,6 +54,9 @@ pub enum Provider {
     /// FRED economic data (requires `fred` feature).
     #[cfg(feature = "fred")]
     Fred,
+    /// World Bank Open Data global macro indicators (requires `worldbank` feature, keyless).
+    #[cfg(feature = "worldbank")]
+    WorldBank,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -73,6 +78,8 @@ impl Provider {
             "coingecko" => Some(Self::CoinGecko),
             #[cfg(feature = "fred")]
             "fred" => Some(Self::Fred),
+            #[cfg(feature = "worldbank")]
+            "worldbank" => Some(Self::WorldBank),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -92,6 +99,8 @@ impl Provider {
             Self::CoinGecko => "coingecko",
             #[cfg(feature = "fred")]
             Self::Fred => "fred",
+            #[cfg(feature = "worldbank")]
+            Self::WorldBank => "worldbank",
             Self::Edgar => "edgar",
         }
     }
@@ -112,6 +121,8 @@ impl Provider {
         v.push(Self::CoinGecko);
         #[cfg(feature = "fred")]
         v.push(Self::Fred);
+        #[cfg(feature = "worldbank")]
+        v.push(Self::WorldBank);
         v.push(Self::Edgar);
         v
     }
@@ -136,6 +147,8 @@ impl Provider {
             Self::CoinGecko => ProviderAdapter::capabilities(&coingecko::CoinGeckoProvider),
             #[cfg(feature = "fred")]
             Self::Fred => ProviderAdapter::capabilities(&fred::FredProvider),
+            #[cfg(feature = "worldbank")]
+            Self::WorldBank => ProviderAdapter::capabilities(&worldbank::WorldBankProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -824,6 +837,8 @@ pub(crate) async fn build_providers(
             Provider::CoinGecko => Arc::new(coingecko::CoinGeckoProvider),
             #[cfg(feature = "fred")]
             Provider::Fred => Arc::new(fred::FredProvider),
+            #[cfg(feature = "worldbank")]
+            Provider::WorldBank => Arc::new(worldbank::WorldBankProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

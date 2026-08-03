@@ -123,7 +123,12 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
     feature = "polygon"
 ))]
 pub use domains::CryptoCoin;
-#[cfg(any(feature = "alphavantage", feature = "polygon", feature = "fred"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 pub use domains::EconomicIndicator;
 #[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
 pub use domains::ForexPair;
@@ -236,7 +241,12 @@ pub use models::commodities::CommodityQuote;
     feature = "polygon"
 ))]
 pub use models::crypto::CryptoQuote;
-#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 pub use models::economic::EconomicSeries;
 #[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
 pub use models::forex::ForexQuote;

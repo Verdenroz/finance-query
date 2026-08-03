@@ -109,6 +109,7 @@ full = [
     "risk",
     "translation",
     "sentiment",
+    "worldbank",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -120,6 +121,8 @@ backtesting = ["indicators", "dep:rayon"]
 fred = ["dep:csv"]
 # Enable CoinGecko cryptocurrency data
 crypto = []
+# Enable World Bank Open Data global macro indicators (keyless)
+worldbank = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -160,6 +163,7 @@ features = [
     "risk",
     "translation",
     "sentiment",
+    "worldbank",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

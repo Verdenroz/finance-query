@@ -109,7 +109,12 @@ impl Providers {
     }
 
     /// Create an [`EconomicIndicator`](crate::EconomicIndicator) handle backed by this provider set.
-    #[cfg(any(feature = "alphavantage", feature = "polygon", feature = "fred"))]
+    #[cfg(any(
+        feature = "alphavantage",
+        feature = "fred",
+        feature = "polygon",
+        feature = "worldbank"
+    ))]
     pub fn economic(&self, series_id: impl Into<String>) -> crate::domains::EconomicIndicator {
         crate::domains::EconomicIndicator::with_providers(
             series_id.into().into(),

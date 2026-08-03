@@ -42,6 +42,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **World Bank Open Data** (`worldbank` feature, keyless) — `Provider::WorldBank`
+  serves `Capability::ECONOMIC` with roughly 1,600 global development and macro
+  indicators across 200+ economies, closing the gap left by FRED's US focus.
+  Series are addressed as `"<COUNTRY>/<INDICATOR>"`
+  (`providers.economic("USA/NY.GDP.MKTP.CD")`); a bare indicator resolves
+  against the world aggregate `WLD`. Annual/quarterly/monthly period labels are
+  normalised to the `YYYY-MM-DD` start of the period and observations are
+  returned oldest-first, matching every other `ECONOMIC` provider.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

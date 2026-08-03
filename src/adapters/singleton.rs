@@ -117,6 +117,31 @@ macro_rules! provider_build_client {
     };
 }
 
+/// Generates the process-global shared rate limiter for a **keyless** adapter.
+///
+/// Keyless sources have no API key to store, so the only state that must
+/// outlive a single call is the token bucket. As with the keyed singletons the
+/// `reqwest::Client` is deliberately *not* cached: it is runtime-bound and a
+/// client built on a dropped runtime yields hyper `DispatchGone` errors.
+#[allow(unused_macros)]
+macro_rules! keyless_limiter {
+    (rate = $rate_const:expr $(,)?) => {
+        static SHARED_LIMITER: ::std::sync::OnceLock<
+            ::std::sync::Arc<crate::rate_limiter::RateLimiter>,
+        > = ::std::sync::OnceLock::new();
+
+        /// The process-global token bucket shared by every client this adapter
+        /// builds, so pacing is respected across calls.
+        pub(crate) fn shared_limiter() -> ::std::sync::Arc<crate::rate_limiter::RateLimiter> {
+            ::std::sync::Arc::clone(SHARED_LIMITER.get_or_init(|| {
+                ::std::sync::Arc::new(crate::rate_limiter::RateLimiter::new($rate_const))
+            }))
+        }
+    };
+}
+
+#[allow(unused_imports)]
+pub(crate) use keyless_limiter;
 #[allow(unused_imports)]
 pub(crate) use provider_build_client;
 #[allow(unused_imports)]

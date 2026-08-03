@@ -443,7 +443,12 @@ pub(crate) mod commodities;
 pub(crate) mod crypto;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub(crate) mod discovery;
-#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 pub(crate) mod economic;
 pub(crate) mod filings;
 #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
@@ -467,7 +472,12 @@ pub use commodities::Commodity;
 pub use crypto::CryptoCoin;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use discovery::Discovery;
-#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 pub use economic::EconomicIndicator;
 pub use filings::Filings;
 #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]

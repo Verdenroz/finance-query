@@ -286,7 +286,12 @@ pub(crate) trait CryptoProvider: ProviderCore {
 }
 
 /// [`Capability::ECONOMIC`] — macro-economic data series.
-#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 #[async_trait::async_trait]
 pub(crate) trait EconomicProvider: ProviderCore {
     async fn fetch_economic_series(
@@ -400,7 +405,12 @@ pub(crate) trait ProviderAdapter: ProviderCore {
     fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
         None
     }
-    #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+    #[cfg(any(
+        feature = "alphavantage",
+        feature = "fred",
+        feature = "polygon",
+        feature = "worldbank"
+    ))]
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {
         None
     }
@@ -464,7 +474,12 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         if self.as_crypto().is_some() {
             caps = caps | Capability::CRYPTO;
         }
-        #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+        #[cfg(any(
+            feature = "alphavantage",
+            feature = "fred",
+            feature = "polygon",
+            feature = "worldbank"
+        ))]
         if self.as_economic().is_some() {
             caps = caps | Capability::ECONOMIC;
         }

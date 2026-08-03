@@ -76,6 +76,7 @@ nav:
           - CoinGecko: library/providers/coingecko.md
           - EDGAR: library/providers/edgar.md
           - FRED: library/providers/fred.md
+          - World Bank: library/providers/worldbank.md
       - Domains:
           - Crypto: library/crypto.md
           - Forex: library/forex.md

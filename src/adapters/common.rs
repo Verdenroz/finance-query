@@ -54,6 +54,30 @@ pub(crate) fn encode_path_segment(segment: &str) -> String {
     utf8_percent_encode(segment, PATH_SEGMENT_ENCODE_SET).to_string()
 }
 
+/// The `User-Agent` every adapter identifies itself with. Several keyless
+/// public APIs (World Bank, FiscalData, Stooq, …) throttle or reject clients
+/// that send no identifiable agent.
+#[allow(dead_code)] // used by the keyless adapter modules
+pub(crate) fn user_agent() -> String {
+    format!(
+        "finance-query/{} (https://github.com/Verdenroz/finance-query)",
+        env!("CARGO_PKG_VERSION")
+    )
+}
+
+/// Build a keyless adapter's HTTP client. Deliberately constructed per call —
+/// a `reqwest::Client` is bound to the runtime that first drives it, so a
+/// cached one fails with hyper `DispatchGone` once that runtime is dropped.
+#[allow(dead_code)] // used by the keyless adapter modules
+pub(crate) fn keyless_http_client(
+    timeout: std::time::Duration,
+) -> crate::error::Result<reqwest::Client> {
+    Ok(reqwest::Client::builder()
+        .timeout(timeout)
+        .user_agent(user_agent())
+        .build()?)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -45,7 +45,12 @@ pub mod commodities;
 ))]
 pub mod crypto;
 /// Macro-economic data — FRED, Alpha Vantage, Polygon.
-#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 pub mod economic;
 /// Forex (foreign exchange) data models — Polygon / FMP / Alpha Vantage.
 #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
