@@ -879,3 +879,420 @@ impl FinanceTools {
         .await
     }
 }
+
+// ── Param-struct deserialization ─────────────────────────────────────────────
+//
+// Every `#[tool]` param struct must (a) deserialize when only its required
+// fields are present, defaulting every `Option<T>` to `None`, and (b)
+// preserve every field's value when the caller supplies all of them. These
+// are the two contracts an LLM caller actually relies on — no network, no
+// schema execution, just serde against canned JSON.
+
+#[cfg(test)]
+mod param_tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn edgar_submissions_params_defaults_optionals_to_none() {
+        let p: EdgarSubmissionsParams = serde_json::from_value(json!({"symbol": "AAPL"})).unwrap();
+        assert_eq!(p.symbol, "AAPL");
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn edgar_submissions_params_preserves_all_fields() {
+        let p: EdgarSubmissionsParams = serde_json::from_value(json!({
+            "symbol": "AAPL", "fields": "formType,filingDate", "limit": 10, "cursor": "abc"
+        }))
+        .unwrap();
+        assert_eq!(p.fields, Some("formType,filingDate".to_string()));
+        assert_eq!(p.limit, Some(10));
+        assert_eq!(p.cursor, Some("abc".to_string()));
+    }
+
+    #[test]
+    fn edgar_facts_params_defaults_optionals_to_none() {
+        let p: EdgarFactsParams = serde_json::from_value(json!({"symbol": "AAPL"})).unwrap();
+        assert_eq!(p.symbol, "AAPL");
+        assert_eq!(p.taxonomy, None);
+        assert_eq!(p.concepts, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn edgar_facts_params_preserves_all_fields() {
+        let p: EdgarFactsParams = serde_json::from_value(json!({
+            "symbol": "AAPL", "taxonomy": "ifrs-full", "concepts": "Revenues,Assets",
+            "fields": "concept,unit", "limit": 5, "cursor": "xyz"
+        }))
+        .unwrap();
+        assert_eq!(p.taxonomy, Some("ifrs-full".to_string()));
+        assert_eq!(p.concepts, Some("Revenues,Assets".to_string()));
+        assert_eq!(p.limit, Some(5));
+    }
+
+    #[test]
+    fn symbols_params_defaults_optionals_to_none() {
+        let p: SymbolsParams = serde_json::from_value(json!({"symbols": "AAPL,MSFT"})).unwrap();
+        assert_eq!(p.symbols, "AAPL,MSFT");
+        assert_eq!(p.lang, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn symbols_params_preserves_all_fields() {
+        let p: SymbolsParams = serde_json::from_value(json!({
+            "symbols": "AAPL", "lang": "ja", "fields": "symbol,shortName", "limit": 25, "cursor": "c1"
+        }))
+        .unwrap();
+        assert_eq!(p.lang, Some("ja".to_string()));
+        assert_eq!(p.fields, Some("symbol,shortName".to_string()));
+    }
+
+    #[test]
+    fn calendar_params_defaults_optionals_to_none() {
+        let p: CalendarParams = serde_json::from_value(json!({"symbols": "AAPL,MSFT"})).unwrap();
+        assert_eq!(p.symbols, "AAPL,MSFT");
+        assert_eq!(p.range, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn chart_params_defaults_optionals_to_none() {
+        let p: ChartParams = serde_json::from_value(json!({"symbols": "AAPL"})).unwrap();
+        assert_eq!(p.interval, None);
+        assert_eq!(p.range, None);
+        assert_eq!(p.start, None);
+        assert_eq!(p.end, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn chart_params_preserves_all_fields() {
+        let p: ChartParams = serde_json::from_value(json!({
+            "symbols": "AAPL", "interval": "1d", "range": "1mo", "start": 1_700_000_000,
+            "end": 1_700_100_000, "fields": "meta,candles", "limit": 25, "cursor": "c1"
+        }))
+        .unwrap();
+        assert_eq!(p.start, Some(1_700_000_000));
+        assert_eq!(p.end, Some(1_700_100_000));
+    }
+
+    #[test]
+    fn financials_params_requires_statement() {
+        let err = serde_json::from_value::<FinancialsParams>(json!({"symbols": "AAPL"}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn financials_params_defaults_optionals_to_none() {
+        let p: FinancialsParams =
+            serde_json::from_value(json!({"symbols": "AAPL", "statement": "income"})).unwrap();
+        assert_eq!(p.statement, "income");
+        assert_eq!(p.frequency, None);
+        assert_eq!(p.metrics, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn financials_params_preserves_metrics_and_fields() {
+        let p: FinancialsParams = serde_json::from_value(json!({
+            "symbols": "AAPL", "statement": "balance", "frequency": "quarterly",
+            "metrics": "totalRevenue,netIncome", "fields": "reportDate"
+        }))
+        .unwrap();
+        assert_eq!(p.metrics, Some("totalRevenue,netIncome".to_string()));
+        assert_eq!(p.frequency, Some("quarterly".to_string()));
+    }
+
+    #[test]
+    fn indicators_params_defaults_optionals_to_none() {
+        let p: IndicatorsParams = serde_json::from_value(json!({"symbols": "AAPL"})).unwrap();
+        assert_eq!(p.interval, None);
+        assert_eq!(p.range, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn search_params_requires_query() {
+        let err = serde_json::from_value::<SearchParams>(json!({}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn search_params_defaults_optionals_to_none() {
+        let p: SearchParams = serde_json::from_value(json!({"query": "Apple"})).unwrap();
+        assert_eq!(p.query, "Apple");
+        assert_eq!(p.lang, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn screener_params_requires_screener_type() {
+        let err = serde_json::from_value::<ScreenerParams>(json!({}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn screener_params_defaults_optionals_to_none() {
+        let p: ScreenerParams =
+            serde_json::from_value(json!({"screener_type": "day-gainers"})).unwrap();
+        assert_eq!(p.screener_type, "day-gainers");
+        assert_eq!(p.count, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn news_params_allows_omitting_symbol_for_general_news() {
+        let p: NewsParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.symbol, None);
+        assert_eq!(p.lang, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn news_params_preserves_symbol_when_present() {
+        let p: NewsParams = serde_json::from_value(json!({"symbol": "AAPL"})).unwrap();
+        assert_eq!(p.symbol, Some("AAPL".to_string()));
+    }
+
+    #[test]
+    fn market_summary_params_all_optional() {
+        let p: MarketSummaryParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.region, None);
+        assert_eq!(p.lang, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn fear_and_greed_params_all_optional() {
+        let p: FearAndGreedParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn dividends_params_defaults_optionals_to_none() {
+        let p: DividendsParams = serde_json::from_value(json!({"symbols": "AAPL,KO"})).unwrap();
+        assert_eq!(p.range, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn risk_params_defaults_optionals_to_none() {
+        let p: RiskParams = serde_json::from_value(json!({"symbol": "AAPL"})).unwrap();
+        assert_eq!(p.interval, None);
+        assert_eq!(p.range, None);
+        assert_eq!(p.benchmark, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn risk_params_preserves_benchmark() {
+        let p: RiskParams =
+            serde_json::from_value(json!({"symbol": "AAPL", "benchmark": "SPY"})).unwrap();
+        assert_eq!(p.benchmark, Some("SPY".to_string()));
+    }
+
+    #[test]
+    fn crypto_params_all_optional() {
+        let p: CryptoParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.count, None);
+        assert_eq!(p.vs_currency, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn options_params_defaults_optionals_to_none() {
+        let p: OptionsParams = serde_json::from_value(json!({"symbol": "AAPL"})).unwrap();
+        assert_eq!(p.expiration, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn recommendations_params_defaults_optionals_to_none() {
+        let p: RecommendationsParams = serde_json::from_value(json!({"symbol": "AAPL"})).unwrap();
+        assert_eq!(p.limit, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn splits_params_defaults_optionals_to_none() {
+        let p: SplitsParams = serde_json::from_value(json!({"symbol": "AAPL"})).unwrap();
+        assert_eq!(p.range, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn trending_params_all_optional() {
+        let p: TrendingParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.region, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn indices_params_all_optional() {
+        let p: IndicesParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.region, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn market_hours_params_all_optional() {
+        let p: MarketHoursParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.region, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn sector_params_requires_sector() {
+        let err = serde_json::from_value::<SectorParams>(json!({}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn sector_params_defaults_optionals_to_none() {
+        let p: SectorParams = serde_json::from_value(json!({"sector": "technology"})).unwrap();
+        assert_eq!(p.lang, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn industry_params_requires_industry() {
+        let err = serde_json::from_value::<IndustryParams>(json!({}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn holders_params_requires_holder_type() {
+        let err = serde_json::from_value::<HoldersParams>(json!({"symbol": "AAPL"}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn holders_params_defaults_optionals_to_none() {
+        let p: HoldersParams =
+            serde_json::from_value(json!({"symbol": "AAPL", "holder_type": "institutional"}))
+                .unwrap();
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn analysis_params_requires_analysis_type() {
+        let err = serde_json::from_value::<AnalysisParams>(json!({"symbol": "AAPL"}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn fred_series_params_defaults_optionals_to_none() {
+        let p: FredSeriesParams = serde_json::from_value(json!({"id": "FEDFUNDS"})).unwrap();
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn treasury_yields_params_all_optional() {
+        let p: TreasuryYieldsParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.year, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn transcripts_params_defaults_optionals_to_none() {
+        let p: TranscriptsParams = serde_json::from_value(json!({"symbol": "AAPL"})).unwrap();
+        assert_eq!(p.limit, None);
+        assert_eq!(p.lang, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.paragraph_limit, None);
+        assert_eq!(p.paragraph_cursor, None);
+    }
+
+    #[test]
+    fn feeds_params_all_optional() {
+        let p: FeedsParams = serde_json::from_value(json!({})).unwrap();
+        assert_eq!(p.sources, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.limit, None);
+        assert_eq!(p.cursor, None);
+    }
+
+    #[test]
+    fn lookup_params_requires_query() {
+        let err = serde_json::from_value::<LookupParams>(json!({}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn lookup_params_defaults_optionals_to_none() {
+        let p: LookupParams = serde_json::from_value(json!({"query": "Apple"})).unwrap();
+        assert_eq!(p.query_type, None);
+        assert_eq!(p.lang, None);
+        assert_eq!(p.fields, None);
+        assert_eq!(p.logo, None);
+    }
+
+    #[test]
+    fn lookup_params_preserves_logo_flag() {
+        let p: LookupParams =
+            serde_json::from_value(json!({"query": "Apple", "logo": true})).unwrap();
+        assert_eq!(p.logo, Some(true));
+    }
+
+    #[test]
+    fn batch_symbols_params_defaults_optionals_to_none() {
+        let p: BatchSymbolsParams =
+            serde_json::from_value(json!({"symbols": "AAPL,MSFT"})).unwrap();
+        assert_eq!(p.interval, None);
+        assert_eq!(p.range, None);
+        assert_eq!(p.fields, None);
+    }
+
+    #[test]
+    fn edgar_search_params_requires_query() {
+        let err = serde_json::from_value::<EdgarSearchParams>(json!({}));
+        assert!(err.is_err());
+    }
+
+    #[test]
+    fn edgar_search_params_defaults_optionals_to_none() {
+        let p: EdgarSearchParams = serde_json::from_value(json!({"query": "revenue"})).unwrap();
+        assert_eq!(p.forms, None);
+        assert_eq!(p.start_date, None);
+        assert_eq!(p.end_date, None);
+        assert_eq!(p.from, None);
+        assert_eq!(p.size, None);
+    }
+
+    #[test]
+    fn edgar_search_params_preserves_date_filters() {
+        let p: EdgarSearchParams = serde_json::from_value(json!({
+            "query": "revenue", "forms": "10-K,10-Q", "start_date": "2024-01-01",
+            "end_date": "2024-12-31", "from": 0, "size": 50
+        }))
+        .unwrap();
+        assert_eq!(p.forms, Some("10-K,10-Q".to_string()));
+        assert_eq!(p.from, Some(0));
+        assert_eq!(p.size, Some(50));
+    }
+}

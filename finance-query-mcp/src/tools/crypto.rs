@@ -8,6 +8,15 @@ use crate::tools::gql::{
     wrap_connection,
 };
 
+/// Build the `first`/`after` connection args for the `cryptoCoins` query.
+fn build_conn_args(limit: Option<u32>, cursor: Option<&str>) -> String {
+    let mut args = vec![format!("first: {}", limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE))];
+    if let Some(c) = cursor {
+        args.push(format!("after: \"{}\"", escape_gql_string(c)));
+    }
+    args.join(", ")
+}
+
 pub async fn get_crypto_coins(
     schema: &FinanceSchema,
     count: Option<u32>,
@@ -25,11 +34,7 @@ pub async fn get_crypto_coins(
         GQL_COIN_VALID_FIELDS,
     );
     let selection = build_connection_selection(&inner_selection);
-    let mut conn_args = vec![format!("first: {}", limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE))];
-    if let Some(c) = cursor.as_deref() {
-        conn_args.push(format!("after: \"{}\"", escape_gql_string(c)));
-    }
-    let conn_args = conn_args.join(", ");
+    let conn_args = build_conn_args(limit, cursor.as_deref());
     let query = format!(
         "query {{ cryptoCoins(vsCurrency: \"{currency}\", count: {n}, {conn_args}) {selection} }}"
     );
@@ -38,4 +43,36 @@ pub async fn get_crypto_coins(
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn build_conn_args_uses_default_limit_without_cursor() {
+        let args = build_conn_args(None, None);
+        assert_eq!(args, format!("first: {DEFAULT_MCP_PAGE_SIZE}"));
+    }
+
+    #[test]
+    fn build_conn_args_uses_given_limit() {
+        let args = build_conn_args(Some(5), None);
+        assert_eq!(args, "first: 5");
+    }
+
+    #[test]
+    fn build_conn_args_includes_cursor_when_present() {
+        let args = build_conn_args(Some(10), Some("abc123"));
+        assert_eq!(args, "first: 10, after: \"abc123\"");
+    }
+
+    #[test]
+    fn build_conn_args_escapes_special_characters_in_cursor() {
+        let args = build_conn_args(None, Some("has\"quote\\slash"));
+        assert_eq!(
+            args,
+            format!("first: {DEFAULT_MCP_PAGE_SIZE}, after: \"has\\\"quote\\\\slash\"")
+        );
+    }
 }

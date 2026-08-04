@@ -594,6 +594,68 @@ mod tests {
     }
 
     #[test]
+    fn wrap_connection_reshapes_edges_node_into_items_and_page_info() {
+        let canned = serde_json::json!({
+            "edges": [
+                {"node": {"symbol": "AAPL"}},
+                {"node": {"symbol": "MSFT"}},
+            ],
+            "pageInfo": {"hasNextPage": true, "endCursor": "abc123"},
+        });
+
+        let wrapped = wrap_connection(canned);
+
+        assert_eq!(
+            wrapped["items"],
+            serde_json::json!([{"symbol": "AAPL"}, {"symbol": "MSFT"}])
+        );
+        assert_eq!(wrapped["pageInfo"]["hasNextPage"], true);
+        assert_eq!(wrapped["pageInfo"]["endCursor"], "abc123");
+    }
+
+    #[test]
+    fn wrap_connection_handles_an_empty_page() {
+        let canned = serde_json::json!({
+            "edges": [],
+            "pageInfo": {"hasNextPage": false, "endCursor": null},
+        });
+
+        let wrapped = wrap_connection(canned);
+
+        assert_eq!(wrapped["items"], serde_json::json!([]));
+        assert_eq!(wrapped["pageInfo"]["hasNextPage"], false);
+    }
+
+    #[test]
+    fn wrap_nested_connection_only_reshapes_the_named_field() {
+        let canned = serde_json::json!({
+            "symbol": "AAPL",
+            "dividends": {
+                "edges": [{"node": {"amount": 0.24}}],
+                "pageInfo": {"hasNextPage": false, "endCursor": "xyz"},
+            },
+        });
+
+        let wrapped = wrap_nested_connection(canned, "dividends");
+
+        assert_eq!(wrapped["symbol"], "AAPL");
+        assert_eq!(
+            wrapped["dividends"]["items"],
+            serde_json::json!([{"amount": 0.24}])
+        );
+        assert_eq!(wrapped["dividends"]["pageInfo"]["endCursor"], "xyz");
+    }
+
+    #[test]
+    fn wrap_nested_connection_is_a_no_op_when_the_field_is_absent() {
+        let canned = serde_json::json!({"symbol": "AAPL"});
+
+        let wrapped = wrap_nested_connection(canned.clone(), "dividends");
+
+        assert_eq!(wrapped, canned);
+    }
+
+    #[test]
     fn build_type_spec_selection_falls_back_when_every_requested_field_is_unknown() {
         let requested = fields(&["bogus1", "bogus2"]);
         let selection = build_type_spec_selection(

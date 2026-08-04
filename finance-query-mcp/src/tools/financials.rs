@@ -21,6 +21,27 @@ const FINANCIAL_LINE_ITEM_FIELDS: &[&str] = GQL_FINANCIAL_LINE_ITEM_VALID_FIELDS
 const FINANCIAL_LINE_ITEM_COMPOSITE_FIELDS: &[(&str, &str)] =
     SHARED_FINANCIAL_LINE_ITEM_COMPOSITE_FIELDS;
 
+/// Split a comma-separated `symbols` param into trimmed, non-empty symbols.
+fn split_symbols(symbols: &str) -> Vec<String> {
+    symbols
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+/// Build the `, metrics: [...]` argument suffix, or empty when no metrics
+/// were requested — mirrors the leading comma needed because it's always
+/// spliced after an already-present `statement`/`frequency` argument.
+fn build_metrics_arg(metric_list: Option<&[String]>) -> String {
+    match metric_list {
+        Some(list) if !list.is_empty() => {
+            format!(", metrics: [{}]", gql_string_list_literal(list))
+        }
+        _ => String::new(),
+    }
+}
+
 /// Accepts one or more comma-separated symbols: a single symbol returns the
 /// flat statement shape, multiple symbols return the batch `{financials, errors}` shape.
 pub async fn get_financials(
@@ -31,11 +52,7 @@ pub async fn get_financials(
     metrics: Option<String>,
     fields: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let syms: Vec<String> = symbols
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
+    let syms = split_symbols(&symbols);
     if syms.len() == 1 {
         get_one_financials(
             schema,
@@ -73,12 +90,7 @@ async fn get_one_financials(
     let gql_st = statement_to_gql(st);
     let gql_freq = frequency_to_gql(freq);
     let metric_list = parse_fields(metrics);
-    let metrics_arg = match &metric_list {
-        Some(list) if !list.is_empty() => {
-            format!(", metrics: [{}]", gql_string_list_literal(list))
-        }
-        _ => String::new(),
-    };
+    let metrics_arg = build_metrics_arg(metric_list.as_deref());
     let field_list = parse_fields(fields);
     let selection = build_type_spec_selection(
         field_list.as_deref(),
@@ -121,12 +133,7 @@ async fn get_many_financials(
     let gql_st = statement_to_gql(st);
     let gql_freq = frequency_to_gql(freq);
     let metric_list = parse_fields(metrics);
-    let metrics_arg = match &metric_list {
-        Some(list) if !list.is_empty() => {
-            format!(", metrics: [{}]", gql_string_list_literal(list))
-        }
-        _ => String::new(),
-    };
+    let metrics_arg = build_metrics_arg(metric_list.as_deref());
     let syms_literal = gql_string_list_literal(&syms);
     let field_list = parse_fields(fields);
     // "statement" (`GqlSymbolFinancials`) is a list of composite
@@ -146,4 +153,60 @@ async fn get_many_financials(
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn split_symbols_returns_single_symbol_for_one_input() {
+        assert_eq!(split_symbols("AAPL"), vec!["AAPL".to_string()]);
+    }
+
+    #[test]
+    fn split_symbols_trims_whitespace_around_each_symbol() {
+        assert_eq!(
+            split_symbols("AAPL, MSFT , GOOG"),
+            vec!["AAPL".to_string(), "MSFT".to_string(), "GOOG".to_string()]
+        );
+    }
+
+    #[test]
+    fn split_symbols_drops_empty_entries_from_repeated_commas() {
+        assert_eq!(
+            split_symbols("AAPL,,MSFT,"),
+            vec!["AAPL".to_string(), "MSFT".to_string()]
+        );
+    }
+
+    #[test]
+    fn split_symbols_returns_empty_vec_for_empty_string() {
+        assert_eq!(split_symbols(""), Vec::<String>::new());
+    }
+
+    #[test]
+    fn split_symbols_returns_empty_vec_for_blank_input() {
+        assert_eq!(split_symbols("   "), Vec::<String>::new());
+    }
+
+    #[test]
+    fn build_metrics_arg_formats_a_gql_list_when_metrics_present() {
+        let metrics = vec!["revenue".to_string(), "netIncome".to_string()];
+        assert_eq!(
+            build_metrics_arg(Some(&metrics)),
+            ", metrics: [\"revenue\", \"netIncome\"]"
+        );
+    }
+
+    #[test]
+    fn build_metrics_arg_is_empty_when_metrics_is_none() {
+        assert_eq!(build_metrics_arg(None), "");
+    }
+
+    #[test]
+    fn build_metrics_arg_is_empty_when_metrics_list_is_empty() {
+        let empty: Vec<String> = Vec::new();
+        assert_eq!(build_metrics_arg(Some(&empty)), "");
+    }
 }

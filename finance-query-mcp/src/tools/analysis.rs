@@ -30,6 +30,44 @@ fn holder_paginated_field(gql_field: &str) -> Option<&'static str> {
     }
 }
 
+/// Build the `<gqlField> { ... }` selection for `get_holders`: delegates to
+/// the paginated-composite builder when the holder type has a paginated
+/// nested list, otherwise falls back to the plain type-spec builder.
+#[allow(clippy::too_many_arguments)]
+fn build_holders_selection(
+    field_list: Option<&[String]>,
+    valid_fields: &[&str],
+    default_fields: &[&str],
+    composite_fields: &[(&str, &str)],
+    paginated_field: Option<&str>,
+    limit: u32,
+    cursor: Option<&str>,
+) -> String {
+    match paginated_field {
+        Some(pf) => {
+            let item_selection = composite_fields
+                .iter()
+                .find(|(name, _)| *name == pf)
+                .map(|(_, sel)| *sel)
+                .unwrap_or("{ }");
+            let fields_csv = field_list.map(|fs| fs.join(","));
+            build_paginated_composite_selection(
+                fields_csv.as_deref(),
+                valid_fields,
+                default_fields,
+                composite_fields,
+                pf,
+                item_selection,
+                Some(limit),
+                cursor,
+            )
+        }
+        None => {
+            build_type_spec_selection(field_list, valid_fields, default_fields, composite_fields)
+        }
+    }
+}
+
 pub async fn get_holders(
     schema: &FinanceSchema,
     symbol: String,
@@ -47,32 +85,15 @@ pub async fn get_holders(
 
     let field_list = parse_fields(fields);
     let paginated_field = holder_paginated_field(gql_field);
-    let selection = match paginated_field {
-        Some(pf) => {
-            let item_selection = composite_fields
-                .iter()
-                .find(|(name, _)| *name == pf)
-                .map(|(_, sel)| *sel)
-                .unwrap_or("{ }");
-            let fields_csv = field_list.as_ref().map(|fs| fs.join(","));
-            build_paginated_composite_selection(
-                fields_csv.as_deref(),
-                valid_fields,
-                default_fields,
-                composite_fields,
-                pf,
-                item_selection,
-                Some(limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE)),
-                cursor.as_deref(),
-            )
-        }
-        None => build_type_spec_selection(
-            field_list.as_deref(),
-            valid_fields,
-            default_fields,
-            composite_fields,
-        ),
-    };
+    let selection = build_holders_selection(
+        field_list.as_deref(),
+        valid_fields,
+        default_fields,
+        composite_fields,
+        paginated_field,
+        limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE),
+        cursor.as_deref(),
+    );
 
     let query = format!(
         "query GetHolders($symbol: String!) {{ ticker(symbol: $symbol) {{ {gql_field} {selection} }} }}"
@@ -130,4 +151,205 @@ pub async fn get_analysis(
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn holder_type_to_field_maps_every_known_value() {
+        assert_eq!(holder_type_to_field("major"), Some("majorHolders"));
+        assert_eq!(
+            holder_type_to_field("institutional"),
+            Some("institutionalHolders")
+        );
+        assert_eq!(
+            holder_type_to_field("mutualfund"),
+            Some("mutualFundHolders")
+        );
+        assert_eq!(
+            holder_type_to_field("insidertransactions"),
+            Some("insiderTransactions")
+        );
+        assert_eq!(
+            holder_type_to_field("insiderpurchases"),
+            Some("insiderPurchases")
+        );
+        assert_eq!(holder_type_to_field("insiderroster"), Some("insiderRoster"));
+    }
+
+    #[test]
+    fn holder_type_to_field_normalizes_hyphens_and_case() {
+        assert_eq!(
+            holder_type_to_field("insider-transactions"),
+            Some("insiderTransactions")
+        );
+        assert_eq!(
+            holder_type_to_field("Insider-Purchases"),
+            Some("insiderPurchases")
+        );
+        assert_eq!(
+            holder_type_to_field("MUTUAL-FUND"),
+            Some("mutualFundHolders")
+        );
+        assert_eq!(holder_type_to_field("Major"), Some("majorHolders"));
+    }
+
+    #[test]
+    fn holder_type_to_field_rejects_unknown_and_empty_input() {
+        assert_eq!(holder_type_to_field("bogus"), None);
+        assert_eq!(holder_type_to_field(""), None);
+        assert_eq!(holder_type_to_field("-"), None);
+    }
+
+    #[test]
+    fn holder_paginated_field_maps_paginated_holder_types() {
+        assert_eq!(
+            holder_paginated_field("institutionalHolders"),
+            Some("ownershipList")
+        );
+        assert_eq!(
+            holder_paginated_field("mutualFundHolders"),
+            Some("ownershipList")
+        );
+        assert_eq!(
+            holder_paginated_field("insiderTransactions"),
+            Some("transactions")
+        );
+        assert_eq!(holder_paginated_field("insiderRoster"), Some("holders"));
+    }
+
+    #[test]
+    fn holder_paginated_field_returns_none_for_unpaginated_or_unknown_types() {
+        assert_eq!(holder_paginated_field("majorHolders"), None);
+        assert_eq!(holder_paginated_field("insiderPurchases"), None);
+        assert_eq!(holder_paginated_field("bogusField"), None);
+        assert_eq!(holder_paginated_field(""), None);
+    }
+
+    #[test]
+    fn analysis_type_to_field_maps_every_known_value() {
+        assert_eq!(
+            analysis_type_to_field("recommendations"),
+            Some("recommendationTrend")
+        );
+        assert_eq!(
+            analysis_type_to_field("upgradesdowngrades"),
+            Some("gradingHistory")
+        );
+        assert_eq!(
+            analysis_type_to_field("earningsestimate"),
+            Some("earningsEstimate")
+        );
+        assert_eq!(
+            analysis_type_to_field("earningshistory"),
+            Some("earningsHistory")
+        );
+    }
+
+    #[test]
+    fn analysis_type_to_field_normalizes_hyphens_and_case() {
+        assert_eq!(
+            analysis_type_to_field("upgrades-downgrades"),
+            Some("gradingHistory")
+        );
+        assert_eq!(
+            analysis_type_to_field("Earnings-Estimate"),
+            Some("earningsEstimate")
+        );
+        assert_eq!(
+            analysis_type_to_field("EARNINGS-HISTORY"),
+            Some("earningsHistory")
+        );
+    }
+
+    #[test]
+    fn analysis_type_to_field_rejects_unknown_and_empty_input() {
+        assert_eq!(analysis_type_to_field("bogus"), None);
+        assert_eq!(analysis_type_to_field(""), None);
+    }
+
+    #[test]
+    fn build_holders_selection_uses_type_spec_builder_when_not_paginated() {
+        let (_, valid_fields, default_fields, composite_fields) = HOLDER_TYPE_SPECS
+            .iter()
+            .find(|(n, ..)| *n == "majorHolders")
+            .unwrap();
+        let selection = build_holders_selection(
+            None,
+            valid_fields,
+            default_fields,
+            composite_fields,
+            None,
+            25,
+            None,
+        );
+
+        for f in *default_fields {
+            assert!(selection.contains(f));
+        }
+        assert!(!selection.contains("first:"));
+    }
+
+    #[test]
+    fn build_holders_selection_builds_paginated_connection_when_holder_type_is_paginated() {
+        let (_, valid_fields, default_fields, composite_fields) = HOLDER_TYPE_SPECS
+            .iter()
+            .find(|(n, ..)| *n == "institutionalHolders")
+            .unwrap();
+        let selection = build_holders_selection(
+            None,
+            valid_fields,
+            default_fields,
+            composite_fields,
+            Some("ownershipList"),
+            10,
+            None,
+        );
+
+        assert!(selection.contains("ownershipList"));
+        assert!(selection.contains("first: 10"));
+        assert!(selection.contains("edges"));
+        assert!(selection.contains("pageInfo"));
+    }
+
+    #[test]
+    fn build_holders_selection_includes_cursor_when_present() {
+        let (_, valid_fields, default_fields, composite_fields) = HOLDER_TYPE_SPECS
+            .iter()
+            .find(|(n, ..)| *n == "insiderTransactions")
+            .unwrap();
+        let selection = build_holders_selection(
+            None,
+            valid_fields,
+            default_fields,
+            composite_fields,
+            Some("transactions"),
+            25,
+            Some("abc123"),
+        );
+
+        assert!(selection.contains("after: \"abc123\""));
+    }
+
+    #[test]
+    fn build_holders_selection_respects_explicit_field_list() {
+        let (_, valid_fields, default_fields, composite_fields) = HOLDER_TYPE_SPECS
+            .iter()
+            .find(|(n, ..)| *n == "majorHolders")
+            .unwrap();
+        let requested = vec!["institutionsCount".to_string()];
+        let selection = build_holders_selection(
+            Some(&requested),
+            valid_fields,
+            default_fields,
+            composite_fields,
+            None,
+            25,
+            None,
+        );
+
+        assert_eq!(selection, "{ institutionsCount }");
+    }
 }

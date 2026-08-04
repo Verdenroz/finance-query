@@ -18,6 +18,30 @@ fn edgar_guard() -> Result<(), McpError> {
     Ok(())
 }
 
+/// Build the `(taxonomy: "...", concepts: [...])` argument clause for the
+/// `edgarFacts` field, omitting each part when absent/empty and omitting the
+/// parens entirely when neither part is present (bare `edgarFacts()` is
+/// invalid GraphQL syntax).
+fn build_edgar_facts_args(taxonomy: Option<&str>, concepts: Option<&[String]>) -> String {
+    let taxonomy_arg = match taxonomy {
+        Some(t) if !t.trim().is_empty() => format!("taxonomy: \"{}\"", escape_gql_string(t)),
+        _ => String::new(),
+    };
+    let concepts_arg = match concepts {
+        Some(cs) if !cs.is_empty() => format!("concepts: [{}]", gql_string_list_literal(cs)),
+        _ => String::new(),
+    };
+    let args: Vec<&str> = [taxonomy_arg.as_str(), concepts_arg.as_str()]
+        .into_iter()
+        .filter(|s| !s.is_empty())
+        .collect();
+    if args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", args.join(", "))
+    }
+}
+
 pub async fn get_edgar_facts(
     schema: &FinanceSchema,
     symbol: String,
@@ -46,24 +70,8 @@ pub async fn get_edgar_facts(
         cursor.as_deref(),
     );
 
-    let taxonomy_arg = match &taxonomy {
-        Some(t) if !t.trim().is_empty() => format!("taxonomy: \"{}\"", escape_gql_string(t)),
-        _ => String::new(),
-    };
     let concept_list = parse_fields(concepts);
-    let concepts_arg = match &concept_list {
-        Some(cs) if !cs.is_empty() => format!("concepts: [{}]", gql_string_list_literal(cs)),
-        _ => String::new(),
-    };
-    let args: Vec<&str> = [taxonomy_arg.as_str(), concepts_arg.as_str()]
-        .into_iter()
-        .filter(|s| !s.is_empty())
-        .collect();
-    let args_str = if args.is_empty() {
-        String::new()
-    } else {
-        format!("({})", args.join(", "))
-    };
+    let args_str = build_edgar_facts_args(taxonomy.as_deref(), concept_list.as_deref());
 
     let query = format!(
         "query GetEdgarFacts($symbol: String!) {{ ticker(symbol: $symbol) {{ edgarFacts{args_str} {selection} }} }}"
@@ -152,4 +160,62 @@ pub async fn get_edgar_search(
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn edgar_guard_errs_without_env_var_and_ok_with_it() {
+        // Single test to avoid two tests racing on the same process-wide env var.
+        let saved = std::env::var("EDGAR_EMAIL").ok();
+
+        unsafe { std::env::remove_var("EDGAR_EMAIL") };
+        assert!(edgar_guard().is_err());
+
+        unsafe { std::env::set_var("EDGAR_EMAIL", "test@example.com") };
+        assert!(edgar_guard().is_ok());
+
+        match saved {
+            Some(v) => unsafe { std::env::set_var("EDGAR_EMAIL", v) },
+            None => unsafe { std::env::remove_var("EDGAR_EMAIL") },
+        }
+    }
+
+    #[test]
+    fn build_edgar_facts_args_includes_both_when_present() {
+        let concepts = vec!["Assets".to_string(), "Liabilities".to_string()];
+        let args = build_edgar_facts_args(Some("us-gaap"), Some(&concepts));
+        assert_eq!(
+            args,
+            "(taxonomy: \"us-gaap\", concepts: [\"Assets\", \"Liabilities\"])"
+        );
+    }
+
+    #[test]
+    fn build_edgar_facts_args_omits_taxonomy_when_blank() {
+        let concepts = vec!["Assets".to_string()];
+        let args = build_edgar_facts_args(Some("  "), Some(&concepts));
+        assert_eq!(args, "(concepts: [\"Assets\"])");
+    }
+
+    #[test]
+    fn build_edgar_facts_args_omits_concepts_when_empty() {
+        let empty: Vec<String> = Vec::new();
+        let args = build_edgar_facts_args(Some("us-gaap"), Some(&empty));
+        assert_eq!(args, "(taxonomy: \"us-gaap\")");
+    }
+
+    #[test]
+    fn build_edgar_facts_args_is_empty_when_neither_present() {
+        assert_eq!(build_edgar_facts_args(None, None), "");
+        assert_eq!(build_edgar_facts_args(Some(""), None), "");
+    }
+
+    #[test]
+    fn build_edgar_facts_args_escapes_taxonomy_string() {
+        let args = build_edgar_facts_args(Some("us\"gaap"), None);
+        assert_eq!(args, "(taxonomy: \"us\\\"gaap\")");
+    }
 }

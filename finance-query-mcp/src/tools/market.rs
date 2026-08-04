@@ -13,6 +13,27 @@ use crate::tools::gql::{
     build_type_spec_selection, execute_query, parse_fields, unwrap_field,
 };
 
+/// Builds the parenthesized `marketSummary(...)` argument list from the
+/// optional region/normalized-lang inputs; empty when neither is present
+/// (a GraphQL field with no filled args takes no parens at all).
+fn market_summary_args(region: Option<&str>, normalized_lang: Option<&str>) -> String {
+    let mut args = Vec::new();
+    if let Some(r) = region.filter(|r| !r.is_empty()) {
+        args.push(format!(
+            "region: \"{}\"",
+            crate::tools::gql::escape_gql_string(r)
+        ));
+    }
+    if let Some(l) = normalized_lang {
+        args.push(format!("lang: \"{l}\""));
+    }
+    if args.is_empty() {
+        String::new()
+    } else {
+        format!("({})", args.join(", "))
+    }
+}
+
 pub async fn get_market_summary(
     schema: &FinanceSchema,
     region: Option<String>,
@@ -25,21 +46,8 @@ pub async fn get_market_summary(
         GQL_MARKET_SUMMARY_VALID_FIELDS,
         GQL_MARKET_SUMMARY_DEFAULT_FIELDS,
     );
-    let mut args = Vec::new();
-    if let Some(r) = region.as_deref().filter(|r| !r.is_empty()) {
-        args.push(format!(
-            "region: \"{}\"",
-            crate::tools::gql::escape_gql_string(r)
-        ));
-    }
-    if let Some(l) = crate::lang::normalize(lang.as_deref()) {
-        args.push(format!("lang: \"{l}\""));
-    }
-    let args_str = if args.is_empty() {
-        String::new()
-    } else {
-        format!("({})", args.join(", "))
-    };
+    let normalized_lang = crate::lang::normalize(lang.as_deref());
+    let args_str = market_summary_args(region.as_deref(), normalized_lang.as_deref());
     let query = format!("query {{ marketSummary{args_str} {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = unwrap_field(json, "marketSummary");
@@ -90,15 +98,11 @@ pub async fn get_trending(
     )]))
 }
 
-pub async fn get_indices(
-    schema: &FinanceSchema,
-    region: Option<String>,
-    fields: Option<String>,
-) -> Result<CallToolResult, McpError> {
-    // `region` is a `GqlIndicesRegion` enum, spliced as a literal (async-graphql
-    // renames enums SCREAMING_SNAKE_CASE — same as `financials.rs`'s statement type).
-    let gql_region = region
-        .as_deref()
+/// Parses a raw `region` param into its `GqlIndicesRegion` enum literal
+/// (async-graphql renames enums SCREAMING_SNAKE_CASE — same as
+/// `financials.rs`'s statement type); `None` for unparseable/absent input.
+fn indices_region_to_gql(region: Option<&str>) -> Option<&'static str> {
+    region
         .and_then(|s| s.parse::<IndicesRegion>().ok())
         .map(|r| match r {
             IndicesRegion::Americas => "AMERICAS",
@@ -106,7 +110,15 @@ pub async fn get_indices(
             IndicesRegion::AsiaPacific => "ASIA_PACIFIC",
             IndicesRegion::MiddleEastAfrica => "MIDDLE_EAST_AFRICA",
             IndicesRegion::Currencies => "CURRENCIES",
-        });
+        })
+}
+
+pub async fn get_indices(
+    schema: &FinanceSchema,
+    region: Option<String>,
+    fields: Option<String>,
+) -> Result<CallToolResult, McpError> {
+    let gql_region = indices_region_to_gql(region.as_deref());
     let args = gql_region
         .map(|r| format!("(region: {r})"))
         .unwrap_or_default();
@@ -218,4 +230,81 @@ pub async fn get_industry(
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn market_summary_args_empty_when_neither_present() {
+        assert_eq!(market_summary_args(None, None), "");
+    }
+
+    #[test]
+    fn market_summary_args_empty_when_region_is_empty_string() {
+        assert_eq!(market_summary_args(Some(""), None), "");
+    }
+
+    #[test]
+    fn market_summary_args_region_only() {
+        assert_eq!(market_summary_args(Some("US"), None), "(region: \"US\")");
+    }
+
+    #[test]
+    fn market_summary_args_lang_only() {
+        assert_eq!(market_summary_args(None, Some("ja")), "(lang: \"ja\")");
+    }
+
+    #[test]
+    fn market_summary_args_both_present() {
+        assert_eq!(
+            market_summary_args(Some("US"), Some("ja")),
+            "(region: \"US\", lang: \"ja\")"
+        );
+    }
+
+    #[test]
+    fn market_summary_args_escapes_region_string() {
+        // escape_gql_string backslash-escapes embedded quotes rather than
+        // stripping them, so the injected `"` is neutralized (can't close
+        // the string literal early) but still literally present — assert
+        // the exact escaped form, not just the absence of the raw input.
+        let result = market_summary_args(Some("US\"; { __schema"), None);
+        assert_eq!(result, "(region: \"US\\\"; { __schema\")");
+    }
+
+    #[test]
+    fn indices_region_to_gql_maps_every_known_variant_case_insensitively() {
+        assert_eq!(indices_region_to_gql(Some("americas")), Some("AMERICAS"));
+        assert_eq!(indices_region_to_gql(Some("AMERICAS")), Some("AMERICAS"));
+        assert_eq!(indices_region_to_gql(Some("am")), Some("AMERICAS"));
+        assert_eq!(indices_region_to_gql(Some("europe")), Some("EUROPE"));
+        assert_eq!(indices_region_to_gql(Some("eu")), Some("EUROPE"));
+        assert_eq!(
+            indices_region_to_gql(Some("asia-pacific")),
+            Some("ASIA_PACIFIC")
+        );
+        assert_eq!(indices_region_to_gql(Some("apac")), Some("ASIA_PACIFIC"));
+        assert_eq!(
+            indices_region_to_gql(Some("middle-east-africa")),
+            Some("MIDDLE_EAST_AFRICA")
+        );
+        assert_eq!(
+            indices_region_to_gql(Some("emea")),
+            Some("MIDDLE_EAST_AFRICA")
+        );
+        assert_eq!(
+            indices_region_to_gql(Some("currencies")),
+            Some("CURRENCIES")
+        );
+        assert_eq!(indices_region_to_gql(Some("fx")), Some("CURRENCIES"));
+    }
+
+    #[test]
+    fn indices_region_to_gql_none_for_absent_or_unknown_input() {
+        assert_eq!(indices_region_to_gql(None), None);
+        assert_eq!(indices_region_to_gql(Some("bogus")), None);
+        assert_eq!(indices_region_to_gql(Some("")), None);
+    }
 }
