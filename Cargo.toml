@@ -71,7 +71,7 @@ tracing = "0.1"
 
 # WebSocket streaming support
 tokio-tungstenite = { version = "0.28.0", default-features = false, features = ["connect", "rustls-tls-webpki-roots"] }
-tokio-stream = { version = "0.1", features = ["sync"] }
+tokio-stream = { version = "0.1", features = ["sync", "time"] }
 prost = "0.14.3"
 base64 = "0.22"
 

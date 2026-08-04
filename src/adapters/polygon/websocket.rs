@@ -64,8 +64,10 @@ impl ClusterDTO {
 pub struct StreamTrade {
     /// Event type (e.g., `"T"`).
     pub ev: Option<String>,
-    /// Symbol.
+    /// Symbol. Absent on the crypto cluster, which sends `pair` instead.
     pub sym: Option<String>,
+    /// Currency pair (crypto cluster, e.g. `"BTC-USD"`).
+    pub pair: Option<String>,
     /// Price.
     pub p: Option<f64>,
     /// Size.
@@ -76,6 +78,15 @@ pub struct StreamTrade {
     pub c: Option<Vec<i32>>,
     /// Timestamp (milliseconds).
     pub t: Option<i64>,
+    /// Trade ID (crypto cluster).
+    pub i: Option<String>,
+}
+
+impl StreamTrade {
+    /// Symbol under whichever key this cluster uses.
+    pub fn symbol(&self) -> Option<&str> {
+        self.sym.as_deref().or(self.pair.as_deref())
+    }
 }
 
 /// A real-time quote message.
@@ -84,8 +95,10 @@ pub struct StreamTrade {
 pub struct StreamQuote {
     /// Event type (e.g., `"Q"`).
     pub ev: Option<String>,
-    /// Symbol.
+    /// Symbol. Absent on the crypto cluster, which sends `pair` instead.
     pub sym: Option<String>,
+    /// Currency pair (crypto cluster, e.g. `"BTC-USD"`).
+    pub pair: Option<String>,
     /// Bid price.
     pub bp: Option<f64>,
     /// Bid size.
@@ -105,14 +118,23 @@ pub struct StreamQuote {
     pub t: Option<i64>,
 }
 
+impl StreamQuote {
+    /// Symbol under whichever key this cluster uses.
+    pub fn symbol(&self) -> Option<&str> {
+        self.sym.as_deref().or(self.pair.as_deref())
+    }
+}
+
 /// A real-time aggregate bar message.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct StreamAggregate {
     /// Event type (e.g., `"A"` per-second, `"AM"` per-minute).
     pub ev: Option<String>,
-    /// Symbol.
+    /// Symbol. Absent on the crypto/forex clusters, which send `pair` instead.
     pub sym: Option<String>,
+    /// Currency pair (crypto/forex clusters, e.g. `"BTC-USD"`, `"USD/EUR"`).
+    pub pair: Option<String>,
     /// Open.
     pub o: Option<f64>,
     /// High.
@@ -131,6 +153,55 @@ pub struct StreamAggregate {
     pub e: Option<i64>,
     /// Number of trades.
     pub z: Option<u64>,
+}
+
+impl StreamAggregate {
+    /// Symbol under whichever key this cluster uses.
+    pub fn symbol(&self) -> Option<&str> {
+        self.sym.as_deref().or(self.pair.as_deref())
+    }
+}
+
+/// A real-time forex quote message (`forex` cluster, event `"C"`).
+///
+/// The forex cluster uses single-letter keys that collide with the stock
+/// quote shape (`a`/`b` rather than `ap`/`bp`), so it needs its own type.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct StreamForexQuote {
+    /// Event type (`"C"`).
+    pub ev: Option<String>,
+    /// Currency pair (e.g., `"USD/EUR"`).
+    pub p: Option<String>,
+    /// Ask price.
+    pub a: Option<f64>,
+    /// Bid price.
+    pub b: Option<f64>,
+    /// Exchange ID.
+    pub x: Option<i32>,
+    /// Timestamp (milliseconds).
+    pub t: Option<i64>,
+}
+
+/// One side of an order book: `[price, size]` pairs.
+pub type BookSide = Vec<[f64; 2]>;
+
+/// A real-time level-2 order book snapshot (`crypto` cluster, event `"XL2"`).
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[non_exhaustive]
+pub struct StreamLevel2 {
+    /// Event type (`"XL2"`).
+    pub ev: Option<String>,
+    /// Currency pair (e.g., `"BTC-USD"`).
+    pub pair: Option<String>,
+    /// Bid levels, `[price, size]`, best first.
+    pub b: Option<BookSide>,
+    /// Ask levels, `[price, size]`, best first.
+    pub a: Option<BookSide>,
+    /// Exchange ID.
+    pub x: Option<i32>,
+    /// Timestamp (milliseconds).
+    pub t: Option<i64>,
 }
 
 /// A real-time index value message (`indices` cluster).
@@ -157,6 +228,10 @@ pub enum PolygonMessage {
     Quote(StreamQuote),
     /// Aggregate bar (per-second or per-minute).
     Aggregate(StreamAggregate),
+    /// Forex quote (`forex` cluster).
+    ForexQuote(StreamForexQuote),
+    /// Level-2 order book (`crypto` cluster).
+    Level2(StreamLevel2),
     /// Index value (`indices` cluster).
     IndexValue(StreamIndexValue),
     /// Status/control message (auth, subscription confirmations).
@@ -240,7 +315,8 @@ impl PolygonStreamBuilder {
 
         Ok(PolygonStream {
             read: Box::pin(read),
-            _write: write,
+            write,
+            pending: std::collections::VecDeque::new(),
         })
     }
 }
@@ -255,16 +331,54 @@ pub struct PolygonStream {
                 + Send,
         >,
     >,
-    _write: std::sync::Arc<
-        tokio::sync::Mutex<
-            futures::stream::SplitSink<
-                tokio_tungstenite::WebSocketStream<
-                    tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
-                >,
-                Message,
+    write: SharedSink,
+    // One frame carries many events; hold the tail so none are dropped.
+    pending: std::collections::VecDeque<PolygonMessage>,
+}
+
+type SharedSink = std::sync::Arc<
+    tokio::sync::Mutex<
+        futures::stream::SplitSink<
+            tokio_tungstenite::WebSocketStream<
+                tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>,
             >,
+            Message,
         >,
     >,
+>;
+
+/// Send half of a [`PolygonStream`], detachable so a session can change its
+/// subscriptions while the read half is borrowed by a `select!` arm.
+#[derive(Clone)]
+pub struct PolygonSender {
+    write: SharedSink,
+}
+
+impl PolygonSender {
+    /// Subscribe to additional channels on the live connection.
+    pub async fn subscribe_channels(&self, channels: &[String]) -> Result<()> {
+        self.send_action("subscribe", channels).await
+    }
+
+    /// Unsubscribe from channels on the live connection.
+    pub async fn unsubscribe_channels(&self, channels: &[String]) -> Result<()> {
+        self.send_action("unsubscribe", channels).await
+    }
+
+    async fn send_action(&self, action: &str, channels: &[String]) -> Result<()> {
+        use futures::SinkExt;
+
+        if channels.is_empty() {
+            return Ok(());
+        }
+        let msg = serde_json::json!({ "action": action, "params": channels.join(",") });
+        self.write
+            .lock()
+            .await
+            .send(Message::Text(msg.to_string().into()))
+            .await
+            .map_err(|e| FinanceError::ApiError(format!("Polygon WebSocket {action} error: {e}")))
+    }
 }
 
 impl PolygonStream {
@@ -278,6 +392,13 @@ impl PolygonStream {
             subscriptions: Vec::new(),
         })
     }
+
+    /// Detach the send half so subscriptions can change mid-session.
+    pub fn sender(&self) -> PolygonSender {
+        PolygonSender {
+            write: std::sync::Arc::clone(&self.write),
+        }
+    }
 }
 
 impl Stream for PolygonStream {
@@ -285,9 +406,12 @@ impl Stream for PolygonStream {
 
     fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         loop {
+            if let Some(msg) = self.pending.pop_front() {
+                return Poll::Ready(Some(msg));
+            }
             match self.read.as_mut().poll_next(cx) {
                 Poll::Ready(Some(Ok(Message::Text(text)))) => {
-                    return Poll::Ready(Some(parse_message(&text)));
+                    self.pending.extend(parse_messages(&text));
                 }
                 Poll::Ready(Some(Ok(Message::Close(_)))) | Poll::Ready(None) => {
                     return Poll::Ready(None);
@@ -300,56 +424,66 @@ impl Stream for PolygonStream {
     }
 }
 
-fn parse_message(text: &str) -> PolygonMessage {
-    // Polygon sends arrays of events
+/// Parse every event in one Polygon frame.
+///
+/// Frames carry an array of events; tick-by-tick consumers need all of them,
+/// so nothing is collapsed to a single message here.
+pub(crate) fn parse_messages(text: &str) -> Vec<PolygonMessage> {
     let events: Vec<serde_json::Value> = match serde_json::from_str(text) {
         Ok(v) => v,
-        Err(_) => return PolygonMessage::Unknown(text.to_string()),
+        Err(_) => return vec![PolygonMessage::Unknown(text.to_string())],
     };
 
-    // Return the first meaningful event
+    let mut out = Vec::with_capacity(events.len());
     for event in events {
         let ev = event.get("ev").and_then(|v| v.as_str()).unwrap_or("");
-        match ev {
-            "T" | "XT" => {
-                if let Ok(trade) = serde_json::from_value(event) {
-                    return PolygonMessage::Trade(trade);
-                }
-            }
-            "Q" | "XQ" => {
-                if let Ok(quote) = serde_json::from_value(event) {
-                    return PolygonMessage::Quote(quote);
-                }
-            }
-            "A" | "AM" | "XA" | "XAM" => {
-                if let Ok(agg) = serde_json::from_value(event) {
-                    return PolygonMessage::Aggregate(agg);
-                }
-            }
-            "V" => {
-                if let Ok(value) = serde_json::from_value(event) {
-                    return PolygonMessage::IndexValue(value);
-                }
-            }
-            "status" => {
-                return PolygonMessage::Status(event);
-            }
-            _ => {}
+        let parsed = match ev {
+            "T" | "XT" => serde_json::from_value(event)
+                .ok()
+                .map(PolygonMessage::Trade),
+            "Q" | "XQ" => serde_json::from_value(event)
+                .ok()
+                .map(PolygonMessage::Quote),
+            "A" | "AM" | "XA" | "XAM" | "CA" | "CAS" => serde_json::from_value(event)
+                .ok()
+                .map(PolygonMessage::Aggregate),
+            "C" => serde_json::from_value(event)
+                .ok()
+                .map(PolygonMessage::ForexQuote),
+            "XL2" => serde_json::from_value(event)
+                .ok()
+                .map(PolygonMessage::Level2),
+            "V" => serde_json::from_value(event)
+                .ok()
+                .map(PolygonMessage::IndexValue),
+            "status" => Some(PolygonMessage::Status(event)),
+            _ => None,
+        };
+        if let Some(msg) = parsed {
+            out.push(msg);
         }
     }
 
-    PolygonMessage::Unknown(text.to_string())
+    if out.is_empty() {
+        out.push(PolygonMessage::Unknown(text.to_string()));
+    }
+    out
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    /// First parsed event of a frame — most cases here send a single event.
+    fn first(text: &str) -> PolygonMessage {
+        parse_messages(text).into_iter().next().expect("no events")
+    }
+
     #[test]
     fn test_parse_trade_message() {
         let msg =
             r#"[{"ev":"T","sym":"AAPL","p":186.19,"s":100,"x":4,"c":[12,37],"t":1705363200000}]"#;
-        match parse_message(msg) {
+        match first(msg) {
             PolygonMessage::Trade(t) => {
                 assert_eq!(t.sym.as_deref(), Some("AAPL"));
                 assert!((t.p.unwrap() - 186.19).abs() < 0.01);
@@ -362,7 +496,7 @@ mod tests {
     #[test]
     fn test_parse_quote_message() {
         let msg = r#"[{"ev":"Q","sym":"AAPL","bp":186.18,"bs":2,"ap":186.25,"as":3,"bx":19,"ax":11,"t":1705363200000}]"#;
-        match parse_message(msg) {
+        match first(msg) {
             PolygonMessage::Quote(q) => {
                 assert_eq!(q.sym.as_deref(), Some("AAPL"));
                 assert!((q.bp.unwrap() - 186.18).abs() < 0.01);
@@ -375,7 +509,7 @@ mod tests {
     #[test]
     fn test_parse_aggregate_message() {
         let msg = r#"[{"ev":"AM","sym":"AAPL","o":186.0,"h":186.25,"l":185.90,"c":186.19,"v":1500000,"vw":186.05,"s":1705363200000,"e":1705363260000,"z":823}]"#;
-        match parse_message(msg) {
+        match first(msg) {
             PolygonMessage::Aggregate(a) => {
                 assert_eq!(a.sym.as_deref(), Some("AAPL"));
                 assert!((a.c.unwrap() - 186.19).abs() < 0.01);
@@ -388,7 +522,7 @@ mod tests {
     #[test]
     fn test_parse_index_value_message() {
         let msg = r#"[{"ev":"V","val":3988.5,"T":"I:SPX","t":1678220098130}]"#;
-        match parse_message(msg) {
+        match first(msg) {
             PolygonMessage::IndexValue(v) => {
                 assert_eq!(v.ev.as_deref(), Some("V"));
                 assert_eq!(v.ticker.as_deref(), Some("I:SPX"));
@@ -402,13 +536,13 @@ mod tests {
     #[test]
     fn test_index_value_not_dropped_as_unknown() {
         let msg = r#"[{"ev":"V","val":3988.5,"T":"I:SPX","t":1678220098130}]"#;
-        assert!(!matches!(parse_message(msg), PolygonMessage::Unknown(_)));
+        assert!(!matches!(first(msg), PolygonMessage::Unknown(_)));
     }
 
     #[test]
     fn test_parse_status_message() {
         let msg = r#"[{"ev":"status","status":"auth_success","message":"authenticated"}]"#;
-        match parse_message(msg) {
+        match first(msg) {
             PolygonMessage::Status(v) => {
                 assert_eq!(v.get("status").unwrap().as_str().unwrap(), "auth_success");
             }
@@ -419,7 +553,7 @@ mod tests {
     #[test]
     fn test_parse_unknown_message() {
         let msg = "not json at all";
-        assert!(matches!(parse_message(msg), PolygonMessage::Unknown(_)));
+        assert!(matches!(first(msg), PolygonMessage::Unknown(_)));
     }
 
     #[test]

@@ -119,6 +119,25 @@ pub(crate) fn build_client() -> Result<client::FredClient> {
         .build_with_limiter(Arc::clone(&s.limiter))
 }
 
+/// Fetch only the most recent observation of a FRED series.
+///
+/// Used by the economic stream's poll loop, where downloading a series'
+/// full observation history to read one value is pure waste.
+pub(crate) async fn latest_observation(
+    series_id: &str,
+) -> Result<Option<crate::models::economic::MacroObservation>> {
+    let s = FRED_SINGLETON
+        .get()
+        .ok_or_else(|| FinanceError::InvalidParameter {
+            param: "fred".to_string(),
+            reason: "FRED not initialized. Call fred::init(api_key) first.".to_string(),
+        })?;
+    let c = FredClientBuilder::new(&s.api_key)
+        .timeout(s.timeout)
+        .build_with_limiter(Arc::clone(&s.limiter))?;
+    c.latest_observation(series_id).await
+}
+
 /// Fetch upcoming scheduled economic-data release dates (CPI, NFP, GDP, FOMC, …).
 ///
 /// Returns releases scheduled from today onward, sorted ascending.

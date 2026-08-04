@@ -2,9 +2,9 @@
 //!
 //! Separates the provider-specific transport + wire protocol (connect,
 //! subscribe, decode) from the generic machinery — reconnection, the
-//! subscription set, and the public [`PriceStream`](super::PriceStream) API.
-//! Yahoo is the reference implementation in [`super::yahoo`]; additional
-//! backends (e.g. Polygon) implement the same trait.
+//! subscription set, and the public stream handles. The trait is generic over
+//! the item type so price ticks, trade prints, order books and options
+//! contracts all reuse one reconnect loop.
 
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -14,7 +14,6 @@ use tokio::sync::{RwLock, broadcast, mpsc};
 use tracing::{error, info};
 
 use super::client::StreamResult;
-use super::pricing::PriceUpdate;
 
 /// Commands sent to a running streaming session.
 pub(crate) enum StreamCommand {
@@ -26,13 +25,16 @@ pub(crate) enum StreamCommand {
     Close,
 }
 
-/// A real-time price source backing a [`PriceStream`](super::PriceStream).
+/// A real-time source backing one of the public stream handles.
 ///
-/// Implementations own the transport and wire protocol and push decoded
-/// [`PriceUpdate`]s onto `broadcast_tx`. Reconnection and the public stream
-/// API are provided generically by [`run_stream_loop`].
+/// Implementations own the transport and wire protocol and push decoded items
+/// of type `T` onto `broadcast_tx`. Reconnection and the public stream API are
+/// provided generically by [`run_stream_loop`].
 #[async_trait::async_trait]
-pub(crate) trait StreamSource: Send + Sync + 'static {
+pub(crate) trait StreamSource<T>: Send + Sync + 'static
+where
+    T: Clone + Send + 'static,
+{
     /// Short identifier for logging (e.g. `"yahoo"`).
     fn id(&self) -> &'static str;
 
@@ -46,19 +48,25 @@ pub(crate) trait StreamSource: Send + Sync + 'static {
     async fn run_session(
         &self,
         subscriptions: &Arc<RwLock<HashSet<String>>>,
-        broadcast_tx: &broadcast::Sender<PriceUpdate>,
+        broadcast_tx: &broadcast::Sender<T>,
         command_rx: &mut mpsc::Receiver<StreamCommand>,
     ) -> StreamResult<()>;
 }
 
 /// Drive a [`StreamSource`] with automatic reconnection until it shuts down.
-pub(crate) async fn run_stream_loop(
-    source: Arc<dyn StreamSource>,
+///
+/// `retry_delay` is supplied by the caller rather than hard-coded so a smarter
+/// policy (see issue #276) can be swapped in without touching sources.
+pub(crate) async fn run_stream_loop<T>(
+    source: Arc<dyn StreamSource<T>>,
     initial_symbols: Vec<String>,
-    broadcast_tx: broadcast::Sender<PriceUpdate>,
+    broadcast_tx: broadcast::Sender<T>,
     mut command_rx: mpsc::Receiver<StreamCommand>,
     retry_delay: Duration,
-) -> StreamResult<()> {
+) -> StreamResult<()>
+where
+    T: Clone + Send + 'static,
+{
     let subscriptions = Arc::new(RwLock::new(HashSet::<String>::from_iter(initial_symbols)));
 
     loop {
@@ -85,11 +93,44 @@ pub(crate) async fn run_stream_loop(
     Ok(())
 }
 
+/// Apply a [`StreamCommand`] to the shared subscription set.
+///
+/// Returns the symbols that actually changed state, so sources only send
+/// wire-level (un)subscribes for real deltas. `Close` returns `None`.
+pub(crate) async fn apply_command(
+    command: &StreamCommand,
+    subscriptions: &Arc<RwLock<HashSet<String>>>,
+) -> Option<Vec<String>> {
+    match command {
+        StreamCommand::Subscribe(symbols) => {
+            let mut subs = subscriptions.write().await;
+            Some(
+                symbols
+                    .iter()
+                    .filter(|s| subs.insert((*s).clone()))
+                    .cloned()
+                    .collect(),
+            )
+        }
+        StreamCommand::Unsubscribe(symbols) => {
+            let mut subs = subscriptions.write().await;
+            Some(
+                symbols
+                    .iter()
+                    .filter(|s| subs.remove(*s))
+                    .cloned()
+                    .collect(),
+            )
+        }
+        StreamCommand::Close => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::streaming::client::PriceStream;
-    use crate::streaming::pricing::PricingData;
+    use crate::streaming::pricing::{PriceUpdate, PricingData};
     use futures::StreamExt;
 
     /// A network-free source that emits one synthetic update per subscribed
@@ -97,7 +138,7 @@ mod tests {
     struct MockSource;
 
     #[async_trait::async_trait]
-    impl StreamSource for MockSource {
+    impl StreamSource<PriceUpdate> for MockSource {
         fn id(&self) -> &'static str {
             "mock"
         }
@@ -144,5 +185,26 @@ mod tests {
         assert_eq!(update.id, "AAPL");
         assert_eq!(update.price, 42.0);
         stream.close().await;
+    }
+
+    #[tokio::test]
+    async fn apply_command_reports_only_real_deltas() {
+        let subs = Arc::new(RwLock::new(HashSet::from(["AAPL".to_string()])));
+
+        let added = apply_command(
+            &StreamCommand::Subscribe(vec!["AAPL".into(), "NVDA".into()]),
+            &subs,
+        )
+        .await;
+        assert_eq!(added, Some(vec!["NVDA".to_string()]));
+
+        let removed = apply_command(
+            &StreamCommand::Unsubscribe(vec!["NVDA".into(), "TSLA".into()]),
+            &subs,
+        )
+        .await;
+        assert_eq!(removed, Some(vec!["NVDA".to_string()]));
+
+        assert!(apply_command(&StreamCommand::Close, &subs).await.is_none());
     }
 }

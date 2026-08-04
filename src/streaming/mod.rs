@@ -39,13 +39,41 @@
 //! # }
 //! ```
 
+mod alerts;
+mod batch;
+#[cfg(feature = "polygon")]
+mod book;
 mod client;
+#[cfg(feature = "fred")]
+mod economic;
+mod handle;
 mod news;
+#[cfg(feature = "polygon")]
+mod options;
+#[cfg(feature = "polygon")]
+mod polygon;
 mod pricing;
 mod source;
 mod subscription;
+#[cfg(feature = "polygon")]
+mod trades;
 mod yahoo;
 
-pub use client::{PriceStream, PriceStreamBuilder, StreamError, StreamResult};
+pub use alerts::{
+    AlertCondition, AlertConditionKind, AlertEvaluator, AlertEvent, AlertExt, AlertRule,
+    AlertStream,
+};
+pub use batch::{Batched, StreamBatchExt};
+#[cfg(feature = "polygon")]
+pub use book::{BookLevel, DepthStream, DepthStreamBuilder, OrderBookUpdate};
+pub use client::{PriceSource, PriceStream, PriceStreamBuilder, StreamError, StreamResult};
+#[cfg(feature = "fred")]
+pub use economic::{EconomicStream, EconomicStreamBuilder, SeriesUpdate};
 pub use news::{NewsStream, NewsStreamBuilder};
+#[cfg(feature = "polygon")]
+pub use options::{Greeks, OptionContractUpdate, OptionsChainStream, OptionsChainStreamBuilder};
+#[cfg(feature = "polygon")]
+pub use polygon::AssetClass;
 pub use pricing::{MarketHoursType, OptionType, PriceUpdate, QuoteType};
+#[cfg(feature = "polygon")]
+pub use trades::{TradeStream, TradeStreamBuilder, TradeTick};
