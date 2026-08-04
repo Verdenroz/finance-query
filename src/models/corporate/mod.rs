@@ -3,6 +3,8 @@
 //! Company profiles, officers, ownership, insider activity, and related data.
 
 // Sub-capability directories
+/// Executive compensation and employee headcount.
+pub mod governance;
 /// News article models.
 pub mod news;
 

@@ -40,10 +40,23 @@ pub(crate) mod market; // CALENDAR + MARKET
 pub(crate) mod quote; // QUOTE
 
 use crate::adapters::singleton::{provider_build_client, provider_singleton_state};
-use crate::error::Result;
+use crate::error::{FinanceError, Result};
 use std::time::Duration;
 
 pub use models::*;
+
+/// Take the first row of a single-row FMP response.
+///
+/// FMP wraps per-symbol rollups in a single-element array; an empty one means
+/// the symbol is absent from FMP's universe rather than that the call failed.
+pub(crate) fn first_or_missing<T>(rows: Vec<T>, symbol: &str, field: &str) -> Result<T> {
+    rows.into_iter()
+        .next()
+        .ok_or_else(|| FinanceError::SymbolNotFound {
+            symbol: Some(symbol.to_string()),
+            context: format!("FMP returned no {field} for {symbol}"),
+        })
+}
 
 /// FMP default rate limit: 5 req/sec.
 const FMP_RATE_PER_SEC: f64 = 5.0;

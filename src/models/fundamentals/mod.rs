@@ -11,6 +11,18 @@ pub use response::FinancialStatement;
 mod short_activity;
 pub use short_activity::{ShareFloat, ShortInterest, ShortVolume};
 
+// Aggregated analyst consensus (provider-routed)
+mod consensus;
+pub use consensus::{PriceTargetConsensus, PriceTargetSummary, RatingConsensus};
+
+// Trailing-twelve-month snapshots (provider-routed)
+mod ttm;
+pub use ttm::{FinancialRatiosTtm, KeyMetricsTtm};
+
+// ETF profile and holdings (provider-routed)
+mod etf;
+pub use etf::{EtfHolding, EtfProfile};
+
 // quoteSummary modules (canonical home, re-exported from quote/ for backward compat)
 pub(crate) mod balance_sheet_history;
 pub(crate) mod cashflow_statement_history;

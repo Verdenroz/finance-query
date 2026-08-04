@@ -276,6 +276,75 @@ edgar::search("query", Some(&["8-K"]), None, None).await?;
 edgar::search("query", Some(&["10-K", "10-Q", "8-K"]), None, None).await?;
 ```
 
+### Routed Search (`Filings` handle)
+
+The same EFTS index is reachable through the `FILINGS` capability, which returns
+the flattened `FilingSearchHit` model instead of EDGAR's raw Elasticsearch
+envelope — and derives a direct archive URL per hit where possible.
+
+```rust,ignore
+use finance_query::{FilingSearchFilters, Providers};
+
+let providers = Providers::builder().build().await?;
+let sec = providers.filings("AAPL");
+
+// Scoped to AAPL — the handle's symbol is resolved to a CIK filter.
+let hits = sec.search(
+    "artificial intelligence",
+    FilingSearchFilters::default().forms(["10-K"]).from("2024-01-01"),
+).await?;
+
+// Across every filer.
+let all = sec.search_all(
+    "artificial intelligence",
+    FilingSearchFilters::default().forms(["10-K"]).limit(50),
+).await?;
+
+for hit in hits {
+    println!("{:?} {:?} {:?}", hit.form, hit.filed_date, hit.url);
+}
+```
+
+EFTS caps a page at 100 hits, so `limit` above that is clamped.
+
+## Ownership (Forms 3/4/5 and 13F-HR)
+
+Both are parsed straight from the filed XML — primary-source data, keyless, and
+structurally typed rather than scraped.
+
+```rust,ignore
+use finance_query::Providers;
+
+let providers = Providers::builder().build().await?;
+
+// Insider transactions from the most recent 10 Form 3/4/5 filings.
+for trade in providers.filings("AAPL").insider_trades(10).await? {
+    println!(
+        "{:?} {:?} {:?} shares @ {:?}",
+        trade.insider_name, trade.transaction_code, trade.shares, trade.price_per_share
+    );
+}
+
+// The latest 13F-HR information table filed by a listed manager.
+for position in providers.filings("BRK-B").institutional_holdings().await? {
+    println!("{:?} {:?}", position.issuer_name, position.shares);
+}
+```
+
+Notes:
+
+- `limit` on `insider_trades` caps how many *filings* are read, not how many
+  transactions come back — one Form 4 can report several lines. Each filing
+  costs an index lookup plus a document fetch, so keep it modest.
+- A Form 3 states initial holdings rather than transactions, so it contributes
+  no rows. A filing whose XML cannot be parsed is skipped rather than failing
+  the whole call — ownership schemas vary across two decades of filings.
+- `institutional_holdings` treats the handle's symbol as the *filer*, so it is
+  only meaningful for listed institutional managers. An issuer that files no
+  13F returns an error rather than an empty list.
+- `value` on a holding is passed through unscaled: filings before 2023 report
+  thousands of dollars, later ones report whole dollars.
+
 ## Complete Example
 
 Here's a complete example combining all EDGAR features:

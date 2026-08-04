@@ -39,6 +39,17 @@ pub(crate) trait QuoteProvider: ProviderCore {
     async fn fetch_quotes_batch(&self, _: &[&str]) -> Result<Vec<(String, QuoteSummaryResponse)>> {
         Err(self.not_supported(Operation::QuotesBatch))
     }
+
+    /// Fetch a snapshot for symbols spanning several asset classes in one
+    /// request. Rows the provider could not resolve are returned with
+    /// `error` set rather than dropped.
+    #[cfg(feature = "polygon")]
+    async fn fetch_unified_snapshot(
+        &self,
+        _symbols: &[&str],
+    ) -> Result<Vec<crate::models::quote::snapshot::MarketSnapshot>> {
+        Err(self.not_supported(Operation::UnifiedSnapshot))
+    }
 }
 
 /// [`Capability::CHART`] — historical OHLCV candles and sparklines.
@@ -107,6 +118,54 @@ pub(crate) trait FundamentalsProvider: ProviderCore {
     ) -> Result<crate::models::fundamentals::ShareFloat> {
         Err(self.not_supported(Operation::ShareFloat))
     }
+
+    /// Fetch the aggregated analyst price-target consensus.
+    async fn fetch_price_target_consensus(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::PriceTargetConsensus> {
+        Err(self.not_supported(Operation::PriceTargetConsensus))
+    }
+
+    /// Fetch price-target publication activity over trailing windows.
+    async fn fetch_price_target_summary(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::PriceTargetSummary> {
+        Err(self.not_supported(Operation::PriceTargetSummary))
+    }
+
+    /// Fetch the aggregated analyst rating consensus.
+    async fn fetch_rating_consensus(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::RatingConsensus> {
+        Err(self.not_supported(Operation::RatingConsensus))
+    }
+
+    /// Fetch the trailing-twelve-month key-metrics snapshot.
+    async fn fetch_key_metrics_ttm(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::KeyMetricsTtm> {
+        Err(self.not_supported(Operation::KeyMetricsTtm))
+    }
+
+    /// Fetch the trailing-twelve-month ratios snapshot.
+    async fn fetch_ratios_ttm(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::FinancialRatiosTtm> {
+        Err(self.not_supported(Operation::RatiosTtm))
+    }
+
+    /// Fetch an ETF's profile and portfolio holdings.
+    async fn fetch_etf_profile(
+        &self,
+        _symbol: &str,
+    ) -> Result<crate::models::fundamentals::EtfProfile> {
+        Err(self.not_supported(Operation::EtfProfile))
+    }
 }
 
 /// [`Capability::CORPORATE`] — news, corporate events, similar-symbol
@@ -133,6 +192,22 @@ pub(crate) trait CorporateProvider: ProviderCore {
         _limit: u32,
     ) -> Result<Vec<crate::models::corporate::press_release::PressRelease>> {
         Err(self.not_supported(Operation::PressReleases))
+    }
+
+    /// Fetch reported executive compensation, most recent fiscal year first.
+    async fn fetch_executive_compensation(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::corporate::governance::ExecutiveCompensation>> {
+        Err(self.not_supported(Operation::ExecutiveCompensation))
+    }
+
+    /// Fetch reported employee headcount history, most recent period first.
+    async fn fetch_employee_count(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::corporate::governance::EmployeeCount>> {
+        Err(self.not_supported(Operation::EmployeeCount))
     }
 }
 
@@ -166,6 +241,37 @@ pub(crate) trait FilingsProvider: ProviderCore {
         _symbol: &str,
     ) -> Result<Vec<crate::models::filings::RiskFactor>> {
         Err(self.not_supported(Operation::RiskFactors))
+    }
+
+    /// Search filing *text* rather than looking filings up by filer.
+    ///
+    /// `symbol` scopes the search to one filer; the provider resolves it to
+    /// whatever identifier its own index is keyed by (a CIK, for EDGAR).
+    /// `None` searches every filer.
+    async fn fetch_filing_search(
+        &self,
+        _symbol: Option<&str>,
+        _query: &str,
+        _filters: &crate::models::filings::FilingSearchFilters,
+    ) -> Result<Vec<crate::models::filings::FilingSearchHit>> {
+        Err(self.not_supported(Operation::FilingSearch))
+    }
+
+    /// Fetch insider transactions reported on Forms 3/4/5, newest filing first.
+    async fn fetch_insider_trades(
+        &self,
+        _symbol: &str,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::filings::InsiderTrade>> {
+        Err(self.not_supported(Operation::InsiderTrades))
+    }
+
+    /// Fetch the latest reported 13F institutional holdings for a filer.
+    async fn fetch_institutional_holdings(
+        &self,
+        _symbol: &str,
+    ) -> Result<Vec<crate::models::filings::InstitutionalHolding>> {
+        Err(self.not_supported(Operation::InstitutionalHoldings))
     }
 }
 
@@ -204,6 +310,18 @@ pub(crate) trait DiscoveryProvider: ProviderCore {
         _filters: &crate::models::discovery::reference::ScreenerFilters,
     ) -> Result<Vec<crate::models::discovery::reference::ScreenerMatch>> {
         Err(self.not_supported(Operation::Screener))
+    }
+
+    /// Fetch the provider's whole listed-security universe.
+    ///
+    /// `active = false` asks for delisted securities instead. Unlike
+    /// [`fetch_symbol_search`](Self::fetch_symbol_search) this is an unfiltered
+    /// dump, so expect thousands of rows in one response.
+    async fn fetch_listing_status(
+        &self,
+        _active: bool,
+    ) -> Result<Vec<crate::models::discovery::reference::SymbolMatch>> {
+        Err(self.not_supported(Operation::ListingStatus))
     }
 }
 
@@ -317,6 +435,40 @@ pub(crate) trait EconomicProvider: ProviderCore {
         &self,
         series_id: &str,
     ) -> Result<crate::models::economic::EconomicSeries>;
+
+    /// Fetch a series as it stood on `date` (`YYYY-MM-DD`) rather than as
+    /// currently revised — the point-in-time view backtests need.
+    async fn fetch_economic_series_as_of(
+        &self,
+        _series_id: &str,
+        _date: &str,
+    ) -> Result<crate::models::economic::EconomicSeries> {
+        Err(self.not_supported(Operation::EconomicSeriesAsOf))
+    }
+
+    /// Search the provider's series catalog by free text.
+    async fn fetch_economic_search(
+        &self,
+        _query: &str,
+        _limit: u32,
+    ) -> Result<Vec<crate::models::economic::EconomicSeriesMatch>> {
+        Err(self.not_supported(Operation::EconomicSearch))
+    }
+
+    /// List the child categories of `parent_id` in the series category tree.
+    async fn fetch_economic_categories(
+        &self,
+        _parent_id: i64,
+    ) -> Result<Vec<crate::models::economic::EconomicCategory>> {
+        Err(self.not_supported(Operation::EconomicCategories))
+    }
+
+    /// List the provider's scheduled data releases.
+    async fn fetch_economic_releases(
+        &self,
+    ) -> Result<Vec<crate::models::economic::EconomicRelease>> {
+        Err(self.not_supported(Operation::EconomicReleases))
+    }
 }
 
 /// [`Capability::FOREX`] — currency-pair quotes.

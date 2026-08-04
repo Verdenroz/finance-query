@@ -34,6 +34,7 @@ pub(crate) mod models;
 pub(crate) mod commodities;
 pub(crate) mod corporate;
 pub(crate) mod crypto;
+pub(crate) mod discovery;
 pub(crate) mod economic;
 pub(crate) mod forex;
 pub(crate) mod fundamentals;

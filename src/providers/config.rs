@@ -179,6 +179,29 @@ impl Providers {
         crate::domains::Market::with_providers(Arc::clone(&self.set))
     }
 
+    /// Create an [`EconomicCatalog`](crate::EconomicCatalog) handle backed by
+    /// this provider set.
+    ///
+    /// Routes series search and category/release browsing through
+    /// [`Capability::ECONOMIC`](crate::Capability::ECONOMIC). Unlike
+    /// [`economic`](Self::economic) it takes no series id — it is how you find
+    /// one.
+    #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+    pub fn economic_catalog(&self) -> crate::domains::EconomicCatalog {
+        crate::domains::EconomicCatalog::with_providers(Arc::clone(&self.set))
+    }
+
+    /// Create a [`Snapshot`](crate::Snapshot) handle backed by this provider set.
+    ///
+    /// Routes cross-market snapshots through
+    /// [`Capability::QUOTE`](crate::Capability::QUOTE). Needs a provider whose
+    /// snapshot endpoint spans asset classes — currently Polygon only, which is
+    /// why the handle is gated on that feature.
+    #[cfg(feature = "polygon")]
+    pub fn snapshot(&self) -> crate::domains::Snapshot {
+        crate::domains::Snapshot::with_providers(Arc::clone(&self.set))
+    }
+
     /// Create a [`Filings`](crate::Filings) handle backed by this provider set.
     ///
     /// Always available — EDGAR is auto-injected when no other FILINGS provider

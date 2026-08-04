@@ -34,7 +34,7 @@ use std::time::Duration;
 
 use crate::error::Result;
 
-mod parser;
+pub(crate) mod parser;
 
 /// Cached User-Agent string, computed once from the environment.
 ///

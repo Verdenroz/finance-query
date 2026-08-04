@@ -4,6 +4,9 @@
 
 use serde::{Deserialize, Serialize};
 
+mod catalog;
+pub use catalog::{EconomicCategory, EconomicRelease, EconomicSeriesMatch};
+
 /// A provider-agnostic economic data series with metadata.
 ///
 /// Obtain via [`Ticker::economic_series`](crate::Ticker::economic_series). Supported providers:

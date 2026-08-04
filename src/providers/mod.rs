@@ -492,6 +492,40 @@ pub enum Operation {
     /// Historical total value locked in a DeFi protocol.
     #[cfg(feature = "defi")]
     ProtocolTvlHistory,
+    /// Aggregated analyst price-target consensus.
+    PriceTargetConsensus,
+    /// Price-target publication activity over trailing windows.
+    PriceTargetSummary,
+    /// Aggregated analyst rating consensus.
+    RatingConsensus,
+    /// Trailing-twelve-month key-metrics snapshot.
+    KeyMetricsTtm,
+    /// Trailing-twelve-month ratios snapshot.
+    RatiosTtm,
+    /// Reported executive compensation.
+    ExecutiveCompensation,
+    /// Reported employee headcount.
+    EmployeeCount,
+    /// Cross-market snapshot for symbols spanning several asset classes.
+    UnifiedSnapshot,
+    /// Full-text search over filing content.
+    FilingSearch,
+    /// Insider transactions reported on Forms 3/4/5.
+    InsiderTrades,
+    /// Institutional holdings reported on Form 13F-HR.
+    InstitutionalHoldings,
+    /// A macro series as it stood on a past date (vintage/ALFRED view).
+    EconomicSeriesAsOf,
+    /// Free-text search over the macro series catalog.
+    EconomicSearch,
+    /// Macro series category browsing.
+    EconomicCategories,
+    /// Scheduled macro data releases.
+    EconomicReleases,
+    /// ETF profile and portfolio holdings.
+    EtfProfile,
+    /// The provider's whole listed-security universe.
+    ListingStatus,
 }
 
 impl Operation {
@@ -540,35 +574,73 @@ impl Operation {
             Self::ProtocolTvl => "protocol_tvl",
             #[cfg(feature = "defi")]
             Self::ProtocolTvlHistory => "protocol_tvl_history",
+            Self::PriceTargetConsensus => "price_target_consensus",
+            Self::PriceTargetSummary => "price_target_summary",
+            Self::RatingConsensus => "rating_consensus",
+            Self::KeyMetricsTtm => "key_metrics_ttm",
+            Self::RatiosTtm => "ratios_ttm",
+            Self::ExecutiveCompensation => "executive_compensation",
+            Self::EmployeeCount => "employee_count",
+            Self::UnifiedSnapshot => "unified_snapshot",
+            Self::FilingSearch => "filing_search",
+            Self::InsiderTrades => "insider_trades",
+            Self::InstitutionalHoldings => "institutional_holdings",
+            Self::EconomicSeriesAsOf => "economic_series_as_of",
+            Self::EconomicSearch => "economic_search",
+            Self::EconomicCategories => "economic_categories",
+            Self::EconomicReleases => "economic_releases",
+            Self::EtfProfile => "etf_profile",
+            Self::ListingStatus => "listing_status",
         }
     }
 
     /// The coarser [`Capability`] bit this operation falls under.
     pub fn capability(self) -> Capability {
         match self {
-            Self::Quote | Self::QuotesBatch => Capability::QUOTE,
+            Self::Quote | Self::QuotesBatch | Self::UnifiedSnapshot => Capability::QUOTE,
             Self::Chart | Self::ChartRange | Self::Spark => Capability::CHART,
-            Self::Financials | Self::ShortInterest | Self::ShortVolume | Self::ShareFloat => {
-                Capability::FUNDAMENTALS
-            }
-            Self::News | Self::Recommendations | Self::Events | Self::PressReleases => {
-                Capability::CORPORATE
-            }
+            Self::Financials
+            | Self::ShortInterest
+            | Self::ShortVolume
+            | Self::ShareFloat
+            | Self::PriceTargetConsensus
+            | Self::PriceTargetSummary
+            | Self::RatingConsensus
+            | Self::KeyMetricsTtm
+            | Self::RatiosTtm
+            | Self::EtfProfile => Capability::FUNDAMENTALS,
+            Self::News
+            | Self::Recommendations
+            | Self::Events
+            | Self::PressReleases
+            | Self::ExecutiveCompensation
+            | Self::EmployeeCount => Capability::CORPORATE,
             Self::Options => Capability::OPTIONS,
             Self::CryptoQuote => Capability::CRYPTO,
             #[cfg(feature = "defi")]
             Self::ProtocolTvl | Self::ProtocolTvlHistory => Capability::CRYPTO,
-            Self::EconomicSeries => Capability::ECONOMIC,
+            Self::EconomicSeries
+            | Self::EconomicSeriesAsOf
+            | Self::EconomicSearch
+            | Self::EconomicCategories
+            | Self::EconomicReleases => Capability::ECONOMIC,
             Self::ForexQuote => Capability::FOREX,
             Self::IndicesQuote | Self::IndexConstituents | Self::IndexConstituentChanges => {
                 Capability::INDICES
             }
             Self::FuturesQuote => Capability::FUTURES,
             Self::CommoditiesQuote => Capability::COMMODITIES,
-            Self::Filings | Self::FilingSections | Self::RiskFactors => Capability::FILINGS,
-            Self::SymbolSearch | Self::SymbolDetails | Self::Exchanges | Self::Screener => {
-                Capability::DISCOVERY
-            }
+            Self::Filings
+            | Self::FilingSections
+            | Self::RiskFactors
+            | Self::FilingSearch
+            | Self::InsiderTrades
+            | Self::InstitutionalHoldings => Capability::FILINGS,
+            Self::SymbolSearch
+            | Self::SymbolDetails
+            | Self::Exchanges
+            | Self::Screener
+            | Self::ListingStatus => Capability::DISCOVERY,
             Self::EarningsCalendar
             | Self::IpoCalendar
             | Self::DividendCalendar

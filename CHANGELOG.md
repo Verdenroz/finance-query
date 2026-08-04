@@ -117,6 +117,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
   double-count. DefiLlama serves no prices, so `quote()` falls through to
   another routed provider.
+- Alpha Vantage gains the `DISCOVERY` capability and ETF coverage:
+  `Ticker::etf_profile()` returns a fund's profile and portfolio holdings
+  (heaviest first) — no other wired provider serves ETF composition —
+  and `providers.discovery()` now routes to Alpha Vantage for `.search(..)`,
+  `.exchanges()`, and the new `.listing_status(active)`, which returns the whole
+  listed (or delisted) universe. New public models `EtfProfile` and
+  `EtfHolding`.
+- FRED series discovery and point-in-time data:
+  `providers.economic_catalog()` is a new market-wide handle with `.search(query,
+  limit)`, `.categories(parent_id)`, and `.releases()`, so a series id no longer
+  has to be known up front. `providers.economic("GDPC1").as_of("2020-06-30")`
+  returns the series as it was actually published on that date (ALFRED vintage)
+  rather than as currently revised — backtesting against revised macro data is
+  look-ahead bias. New public models `EconomicSeriesMatch`, `EconomicCategory`,
+  and `EconomicRelease`.
+- Keyless crypto price history: `Provider::CoinGecko` now serves
+  `Capability::CHART`, so `.route(Capability::CHART, [Provider::CoinGecko])`
+  makes `providers.crypto("bitcoin").history("usd", range)` work without an API
+  key. CoinGecko picks bar granularity from the range (so `interval` is
+  advisory) and its OHLC endpoint reports no volume, so those candles carry
+  `volume: 0` rather than an interpolated figure.
+- Primary-source ownership data from EDGAR, keyless:
+  `providers.filings("AAPL").insider_trades(limit)` parses Form 3/4/5 ownership
+  XML into typed `InsiderTrade` rows (insider, role, transaction code, shares,
+  price, post-transaction holdings, derivative flag), and
+  `providers.filings("BRK-B").institutional_holdings()` parses the latest 13F-HR
+  information table into `InstitutionalHolding` rows (issuer, CUSIP, value,
+  shares, voting authority). XML is read by a small in-crate element reader —
+  no new dependency, same reasoning as the RSS/Atom parser.
+- Routed EDGAR full-text search: `providers.filings("AAPL").search(query,
+  filters)` searches filing *text* within that filer, and `.search_all(..)`
+  across every filer, through the `FILINGS` capability. Returns the flattened
+  `FilingSearchHit` (with a derived archive URL per hit) rather than EDGAR's raw
+  Elasticsearch envelope, which `edgar::search` still exposes unchanged. New
+  public models `FilingSearchHit` and `FilingSearchFilters`.
+- Cross-market snapshots: `providers.snapshot().get(&["AAPL", "X:BTCUSD",
+  "I:SPX"])` answers a mixed watchlist in one request through the `QUOTE` route
+  (Polygon's `/v3/snapshot`, max 250 symbols) instead of one request per asset
+  class. Unresolvable symbols come back as rows with `error` set rather than
+  being dropped. New public models `MarketSnapshot` and `AssetClass`, and a new
+  `Snapshot` handle.
+- Analyst consensus on `Ticker`: `price_target_consensus()` (high/low/mean/median
+  target), `price_target_summary()` (how many targets were published last
+  month/quarter/year/all time and their averages), and `rating_consensus()`
+  (grade distribution plus a headline label) via the `FUNDAMENTALS` route (FMP).
+  These are the provider's own panel-wide rollups, not the raw per-analyst grade
+  actions already available through `UpgradeDowngradeHistory`.
+- TTM fundamentals snapshots on `Ticker`: `key_metrics_ttm()` and `ratios_ttm()`
+  return a single always-current trailing-twelve-month rollup via the
+  `FUNDAMENTALS` route (FMP), instead of requiring callers to fetch the latest
+  fiscal period and reason about whether it is still current. New public models
+  `KeyMetricsTtm` and `FinancialRatiosTtm`.
+- Ownership/governance on `Ticker`: `executive_compensation()` and
+  `employee_count()` via the `CORPORATE` route (FMP), both extracted from the
+  company's own SEC filings and returned newest-first. FMP also now serves
+  `share_float()` on the `FUNDAMENTALS` route, so it works when FMP is routed
+  ahead of Yahoo. New public models `ExecutiveCompensation` and `EmployeeCount`.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

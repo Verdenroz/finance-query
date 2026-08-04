@@ -84,6 +84,48 @@ for obs in cpi.observations.iter().rev().take(5) {
 
 **Rate limit:** 2 requests/second (enforced automatically).
 
+## Finding Series (`EconomicCatalog`)
+
+`fred::series(id)` and `providers.economic(id)` both require an id you already
+know. `providers.economic_catalog()` is how you find one:
+
+```rust,ignore
+use finance_query::Providers;
+
+let providers = Providers::builder().build().await?;
+let catalog = providers.economic_catalog();
+
+// Free-text search, most popular first.
+for hit in catalog.search("real gross domestic product", 10).await? {
+    println!("{} — {:?} ({:?})", hit.id, hit.title, hit.frequency);
+}
+
+// Browse the category tree; 0 is the root.
+for cat in catalog.categories(0).await? {
+    println!("{} {:?}", cat.id, cat.name);
+}
+
+// Every scheduled release FRED publishes.
+let releases = catalog.releases().await?;
+```
+
+## Point-in-Time Data (ALFRED vintages)
+
+FRED revises macro data after publication, so backtesting a rule against
+today's `GDPC1` is look-ahead bias — the values it trades on were not knowable
+at the time. `.as_of(date)` asks for the vintage that was actually published:
+
+```rust,ignore
+let gdp = providers.economic("GDPC1");
+
+let revised = gdp.series().await?;              // as currently revised
+let vintage = gdp.as_of("2020-06-30").await?;   // as published on that date
+```
+
+Both realtime bounds are pinned to `date`, so the response contains exactly the
+values in force that day rather than a range of revisions. Results are cached
+per date.
+
 ## US Treasury Yields
 
 No initialization required. Fetches directly from the US Treasury Department:

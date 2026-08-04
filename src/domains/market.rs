@@ -11,43 +11,25 @@ use crate::models::calendar::market::{CalendarKind, MarketCalendarEntry};
 use crate::models::market::performance::{
     IndustryPe, MoverDirection, MoverQuote, SectorPe, SectorPerformance,
 };
-use crate::providers::{Capability, ProviderSet};
-
-/// Market-wide event calendars backed by configured data providers.
-///
-/// Routes through [`Capability::CALENDAR`]. Unlike
-/// [`Ticker::calendar`](crate::Ticker::calendar), which builds a per-symbol
-/// timeline, these span the whole market over a date range.
-///
-/// Created via [`Providers::calendar`](crate::Providers::calendar).
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
-pub struct MarketCalendar {
-    providers: Arc<ProviderSet>,
-    cache: crate::domains::DomainCache<Vec<MarketCalendarEntry>>,
+use crate::providers::Capability;
+use crate::providers::ProviderSet;
+
+domain_handle! {
+    /// Market-wide event calendars backed by configured data providers.
+    ///
+    /// Routes through [`Capability::CALENDAR`]. Unlike
+    /// [`Ticker::calendar`](crate::Ticker::calendar), which builds a per-symbol
+    /// timeline, these span the whole market over a date range.
+    ///
+    /// Created via [`Providers::calendar`](crate::Providers::calendar).
+    pub struct MarketCalendar
+    cfg: any(feature = "fmp", feature = "polygon", feature = "alphavantage"),
+    caches: { cache: Vec<MarketCalendarEntry> }
 }
 
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 impl MarketCalendar {
-    pub(crate) fn with_providers(providers: Arc<ProviderSet>) -> Self {
-        Self {
-            providers,
-            cache: crate::domains::DomainCache::new(crate::utils::CacheMode::default()),
-        }
-    }
-
-    /// Cache responses for `ttl` instead of for the handle's lifetime,
-    /// deduplicating concurrent identical requests.
-    pub fn cache(mut self, ttl: std::time::Duration) -> Self {
-        self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Ttl(ttl));
-        self
-    }
-
-    /// Disable caching — every call fetches fresh data.
-    pub fn no_cache(mut self) -> Self {
-        self.cache = crate::domains::DomainCache::new(crate::utils::CacheMode::Off);
-        self
-    }
-
     /// Fetch a calendar of `kind` over `[from, to]` (`YYYY-MM-DD` dates).
     ///
     /// Cached per `(kind, from, to)`.
@@ -128,19 +110,14 @@ impl Market {
 
     /// Aggregate performance for every sector.
     pub async fn sector_performance(&self) -> Result<Vec<SectorPerformance>> {
-        self.providers
-            .fetch(Capability::MARKET, |p| {
-                let p = p.clone();
-                async move {
-                    p.as_market()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::SectorPerformance)
-                        })?
-                        .fetch_sector_performance()
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            MARKET,
+            as_market,
+            SectorPerformance,
+            fetch_sector_performance,
+            []
+        )
     }
 
     /// Historical aggregate sector performance, most recent first.
@@ -148,68 +125,52 @@ impl Market {
         &self,
         limit: u32,
     ) -> Result<Vec<crate::models::market::performance::SectorPerformanceHistory>> {
-        self.providers
-            .fetch(Capability::MARKET, move |p| {
-                let p = p.clone();
-                async move {
-                    p.as_market()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::SectorPerformanceHistory)
-                        })?
-                        .fetch_sector_performance_history(limit)
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            MARKET,
+            as_market,
+            SectorPerformanceHistory,
+            fetch_sector_performance_history,
+            [],
+            limit
+        )
     }
 
     /// Price/earnings ratios by sector.
     pub async fn sector_pe(&self) -> Result<Vec<SectorPe>> {
-        self.providers
-            .fetch(Capability::MARKET, |p| {
-                let p = p.clone();
-                async move {
-                    p.as_market()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::SectorPerformance)
-                        })?
-                        .fetch_sector_pe()
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            MARKET,
+            as_market,
+            SectorPerformance,
+            fetch_sector_pe,
+            []
+        )
     }
 
     /// Price/earnings ratios by industry.
     pub async fn industry_pe(&self) -> Result<Vec<IndustryPe>> {
-        self.providers
-            .fetch(Capability::MARKET, |p| {
-                let p = p.clone();
-                async move {
-                    p.as_market()
-                        .ok_or_else(|| {
-                            p.not_supported(crate::providers::Operation::SectorPerformance)
-                        })?
-                        .fetch_industry_pe()
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            MARKET,
+            as_market,
+            SectorPerformance,
+            fetch_industry_pe,
+            []
+        )
     }
 
     /// Market movers for `direction`.
     pub async fn movers(&self, direction: MoverDirection) -> Result<Vec<MoverQuote>> {
-        self.providers
-            .fetch(Capability::MARKET, |p| {
-                let p = p.clone();
-                async move {
-                    p.as_market()
-                        .ok_or_else(|| p.not_supported(crate::providers::Operation::MarketMovers))?
-                        .fetch_market_movers(direction)
-                        .await
-                }
-            })
-            .await
+        dispatch_via!(
+            self,
+            MARKET,
+            as_market,
+            MarketMovers,
+            fetch_market_movers,
+            [],
+            direction
+        )
     }
 
     /// Largest percentage gainers.

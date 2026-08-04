@@ -32,8 +32,8 @@
 //! # }
 //! ```
 
-mod client;
-mod economic;
+pub(crate) mod client;
+pub(crate) mod economic;
 pub mod models;
 
 use crate::adapters::singleton::provider_singleton_state;
@@ -100,16 +100,23 @@ pub fn init_with_timeout(api_key: impl Into<String>, timeout: Duration) -> Resul
 ///
 /// Returns [`FinanceError::InvalidParameter`] if FRED has not been initialized.
 pub async fn series(series_id: &str) -> Result<MacroSeries> {
+    build_client()?.series(series_id).await
+}
+
+/// Build a FRED client from the initialized singleton.
+///
+/// A fresh `reqwest::Client` per call is deliberate (see the singleton note
+/// above); the rate limiter is shared so the 2 req/sec ceiling still holds.
+pub(crate) fn build_client() -> Result<client::FredClient> {
     let s = FRED_SINGLETON
         .get()
         .ok_or_else(|| FinanceError::InvalidParameter {
             param: "fred".to_string(),
             reason: "FRED not initialized. Call fred::init(api_key) first.".to_string(),
         })?;
-    let c = FredClientBuilder::new(&s.api_key)
+    FredClientBuilder::new(&s.api_key)
         .timeout(s.timeout)
-        .build_with_limiter(Arc::clone(&s.limiter))?;
-    c.series(series_id).await
+        .build_with_limiter(Arc::clone(&s.limiter))
 }
 
 /// Fetch upcoming scheduled economic-data release dates (CPI, NFP, GDP, FOMC, …).
@@ -120,17 +127,8 @@ pub async fn series(series_id: &str) -> Result<MacroSeries> {
 ///
 /// Returns [`FinanceError::InvalidParameter`] if FRED has not been initialized.
 pub async fn release_dates() -> Result<Vec<ReleaseDate>> {
-    let s = FRED_SINGLETON
-        .get()
-        .ok_or_else(|| FinanceError::InvalidParameter {
-            param: "fred".to_string(),
-            reason: "FRED not initialized. Call fred::init(api_key) first.".to_string(),
-        })?;
     let today = chrono::Utc::now().format("%Y-%m-%d").to_string();
-    let c = FredClientBuilder::new(&s.api_key)
-        .timeout(s.timeout)
-        .build_with_limiter(Arc::clone(&s.limiter))?;
-    c.release_dates(&today).await
+    build_client()?.release_dates(&today).await
 }
 
 /// Fetch US Treasury yield curve data for the given year.

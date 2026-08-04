@@ -30,6 +30,13 @@ impl QuoteProvider for PolygonProvider {
     ) -> Result<Vec<(String, QuoteSummaryResponse)>> {
         polygon::fetch_quotes_batch_response(symbols).await
     }
+
+    async fn fetch_unified_snapshot(
+        &self,
+        symbols: &[&str],
+    ) -> Result<Vec<crate::models::quote::snapshot::MarketSnapshot>> {
+        polygon::unified::fetch_unified_snapshot_response(symbols).await
+    }
 }
 
 #[async_trait::async_trait]

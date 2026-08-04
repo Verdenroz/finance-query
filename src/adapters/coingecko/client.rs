@@ -76,6 +76,26 @@ impl CoinGeckoClient {
         })
     }
 
+    /// Fetch OHLC candles for a coin.
+    ///
+    /// `days` must be one of the public tier's accepted spans
+    /// (`1`/`7`/`14`/`30`/`90`/`180`/`365`/`max`); granularity is chosen by
+    /// CoinGecko from that span.
+    pub async fn ohlc(
+        &self,
+        id: &str,
+        vs_currency: &str,
+        days: &str,
+    ) -> Result<Vec<super::chart::OhlcRowDTO>> {
+        self.limiter.acquire().await;
+
+        let url = format!("{COINGECKO_BASE}/coins/{id}/ohlc?vs_currency={vs_currency}&days={days}");
+        debug!("CoinGecko request: ohlc(id={id}, vs={vs_currency}, days={days})");
+        let resp = self.http.get(&url).send().await?;
+        CoinGeckoClient::check_status(&resp)?;
+        Ok(resp.json().await?)
+    }
+
     fn check_status(resp: &reqwest::Response) -> Result<()> {
         match resp.status() {
             StatusCode::OK => Ok(()),

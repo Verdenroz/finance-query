@@ -238,20 +238,20 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 pub use domains::CryptoCoin;
 #[cfg(any(
     feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
+pub use domains::ForexPair;
+#[cfg(any(
+    feature = "alphavantage",
     feature = "bls",
     feature = "fiscaldata",
     feature = "fred",
     feature = "polygon",
     feature = "worldbank"
 ))]
-pub use domains::EconomicIndicator;
-#[cfg(any(
-    feature = "alphavantage",
-    feature = "fmp",
-    feature = "frankfurter",
-    feature = "polygon"
-))]
-pub use domains::ForexPair;
+pub use domains::{EconomicCatalog, EconomicIndicator};
 
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
@@ -263,6 +263,8 @@ pub use domains::Filings;
 pub use domains::FuturesContract;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use domains::Index;
+#[cfg(feature = "polygon")]
+pub use domains::Snapshot;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use domains::{Market, MarketCalendar};
 
@@ -325,6 +327,7 @@ pub use models::{
     calendar::{CalendarEvent, EventKind},
     chart::Chart,
     chart::spark::Spark,
+    corporate::governance::{EmployeeCount, ExecutiveCompensation},
     corporate::news::News,
     corporate::press_release::PressRelease,
     corporate::recommendation::Recommendation,
@@ -334,10 +337,15 @@ pub use models::{
     discovery::search::SearchResults,
     discovery::trending::TrendingQuote,
     filings::{
-        CompanyFacts, EdgarSearchResults, EdgarSubmissions, FilingSection, FilingSectionForm,
-        ProviderFiling, ProviderFilings, RiskFactor,
+        CompanyFacts, EdgarSearchResults, EdgarSubmissions, FilingSearchFilters, FilingSearchHit,
+        FilingSection, FilingSectionForm, InsiderTrade, InstitutionalHolding, ProviderFiling,
+        ProviderFilings, RiskFactor,
     },
-    fundamentals::{FinancialStatement, ShareFloat, ShortInterest, ShortVolume},
+    fundamentals::{
+        EtfHolding, EtfProfile, FinancialRatiosTtm, FinancialStatement, KeyMetricsTtm,
+        PriceTargetConsensus, PriceTargetSummary, RatingConsensus, ShareFloat, ShortInterest,
+        ShortVolume,
+    },
     market::currencies::Currency,
     market::exchanges::Exchange,
     market::hours::MarketHours,
@@ -372,7 +380,9 @@ pub use models::crypto::CryptoQuote;
     feature = "polygon",
     feature = "worldbank"
 ))]
-pub use models::economic::EconomicSeries;
+pub use models::economic::{
+    EconomicCategory, EconomicRelease, EconomicSeries, EconomicSeriesMatch,
+};
 #[cfg(any(
     feature = "alphavantage",
     feature = "fmp",
@@ -384,6 +394,8 @@ pub use models::forex::ForexQuote;
 pub use models::futures::FuturesQuote;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub use models::indices::{IndexConstituent, IndexConstituentChange, IndexQuote, MajorIndex};
+#[cfg(feature = "polygon")]
+pub use models::quote::snapshot::{AssetClass, MarketSnapshot};
 
 // ============================================================================
 // Nested types - Commonly accessed fields within response types

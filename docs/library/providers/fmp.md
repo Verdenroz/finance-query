@@ -55,6 +55,46 @@ let quote = ticker.quote::<Raw>().await?;
 | Filings | — |
 | Sentiment | — |
 
+## FMP-only `Ticker` methods
+
+These route through `Capability::FUNDAMENTALS`, so FMP must be first in that
+route for them to resolve — no other wired provider serves them.
+
+```rust,ignore
+let providers = Providers::builder()
+    .route(Capability::FUNDAMENTALS, [Provider::Fmp, Provider::Yahoo])
+    .build()
+    .await?;
+let ticker = providers.ticker("AAPL").build().await?;
+
+let target = ticker.price_target_consensus().await?;  // high / low / mean / median
+let activity = ticker.price_target_summary().await?;  // targets published per window
+let rating = ticker.rating_consensus().await?;        // grade distribution + label
+
+let metrics = ticker.key_metrics_ttm().await?;        // current TTM per-share/valuation
+let ratios = ticker.ratios_ttm().await?;              // current TTM margins/returns
+```
+
+| Method | Returns | FMP endpoint |
+|--------|---------|--------------|
+| `price_target_consensus()` | `PriceTargetConsensus` | `/api/v4/price-target-consensus` |
+| `price_target_summary()` | `PriceTargetSummary` | `/api/v4/price-target-summary` |
+| `rating_consensus()` | `RatingConsensus` | `/api/v4/upgrades-downgrades-consensus` |
+| `key_metrics_ttm()` | `KeyMetricsTtm` | `/api/v3/key-metrics-ttm/{symbol}` |
+| `ratios_ttm()` | `FinancialRatiosTtm` | `/api/v3/ratios-ttm/{symbol}` |
+| `executive_compensation()` | `Vec<ExecutiveCompensation>` | `/api/v4/governance/executive_compensation` |
+| `employee_count()` | `Vec<EmployeeCount>` | `/api/v4/historical/employee_count` |
+
+`executive_compensation()` and `employee_count()` route through
+`Capability::CORPORATE` instead. FMP also serves `share_float()`, which the
+default Yahoo route already covers — routing `FUNDAMENTALS` to FMP just changes
+which source answers it.
+
+The TTM snapshots are single always-current rollups; `financials(..)` remains the
+period-indexed series. FMP computes the trailing window server-side, so partial
+periods and restatements are handled there rather than by summing four quarters
+client-side.
+
 ## See Also
 
 - [Multi-Provider Architecture](index.md) — Provider configuration and strategies

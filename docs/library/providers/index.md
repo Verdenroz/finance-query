@@ -166,15 +166,17 @@ let wheat = providers.commodity("WHEAT");                     // → Commodity
 let sec   = providers.filings("AAPL");                        // → Filings
 ```
 
-Three handles are market-wide rather than symbol-scoped, so their factories take
-no argument. `market()` is always available (movers are served keylessly from
-Yahoo's screeners); `discovery()` and `calendar()` require at least one of the
-`fmp`, `polygon`, or `alphavantage` features:
+Four handles are market-wide rather than symbol-scoped, so their factories take
+no argument. `market()` and `snapshot()` are always available (movers are served
+keylessly from Yahoo's screeners); `discovery()` and `calendar()` require at
+least one of the `fmp`, `polygon`, or `alphavantage` features:
 
 ```rust,ignore
 let disco = providers.discovery();   // → Discovery: symbol search, reference data, screeners
 let cal   = providers.calendar();    // → MarketCalendar: earnings/IPO/dividend/split/economic calendars
 let mkt   = providers.market();      // → Market: sector performance, movers
+let snap  = providers.snapshot();    // → Snapshot: cross-market watchlist snapshots
+let cat   = providers.economic_catalog(); // → EconomicCatalog: find macro series (needs fred/alphavantage/polygon)
 ```
 
 ### Domain Handle Methods
@@ -183,14 +185,23 @@ let mkt   = providers.market();      // → Market: sector performance, movers
 |--------|--------|---------|
 | `ForexPair` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `ForexQuote` · `Chart` |
 | `CryptoCoin` | `.quote(vs_currency)` · `.chart(vs_currency, interval, range)` · `.history(vs_currency, range)` | `CryptoQuote` · `Chart` |
-| `EconomicIndicator` | `.series()` | `EconomicSeries` |
+| `EconomicIndicator` | `.series()` · `.as_of(date)` | `EconomicSeries` |
+| `EconomicCatalog` | `.search(query, limit)` · `.categories(parent_id)` · `.releases()` | `Vec<EconomicSeriesMatch>` · `Vec<EconomicCategory>` · `Vec<EconomicRelease>` |
 | `Index` | `.quote()` · `.chart(interval, range)` · `.history(range)` · `.constituents()` · `.constituent_changes()` | `IndexQuote` · `Chart` · `Vec<IndexConstituent>` · `Vec<IndexConstituentChange>` |
 | `FuturesContract` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `FuturesQuote` · `Chart` |
 | `Commodity` | `.quote()` · `.chart(interval, range)` · `.history(range)` | `CommodityQuote` · `Chart` |
-| `Filings` | `.get()` · `.sections(accession, form)` · `.risk_factors()` | `ProviderFilings` · `Vec<FilingSection>` · `Vec<RiskFactor>` |
-| `Discovery` | `.search(query, limit)` · `.details(symbol)` · `.exchanges()` · `.screener(filters)` | `Vec<SymbolMatch>` · `SymbolDetails` · `Vec<ExchangeInfo>` · `Vec<ScreenerMatch>` |
+| `Filings` | `.get()` · `.search(query, filters)` · `.search_all(query, filters)` · `.insider_trades(limit)` · `.institutional_holdings()` · `.sections(accession, form)` · `.risk_factors()` | `ProviderFilings` · `Vec<FilingSearchHit>` · `Vec<InsiderTrade>` · `Vec<InstitutionalHolding>` · `Vec<FilingSection>` · `Vec<RiskFactor>` |
+| `Discovery` | `.search(query, limit)` · `.details(symbol)` · `.exchanges()` · `.listing_status(active)` · `.screener(filters)` | `Vec<SymbolMatch>` · `SymbolDetails` · `Vec<ExchangeInfo>` · `Vec<SymbolMatch>` · `Vec<ScreenerMatch>` |
 | `MarketCalendar` | `.earnings(from, to)` · `.ipos(..)` · `.dividends(..)` · `.splits(..)` · `.economic(..)` · `.holidays()` | `Vec<MarketCalendarEntry>` |
 | `Market` | `.sector_performance()` · `.sector_performance_history(limit)` · `.sector_pe()` · `.industry_pe()` · `.gainers()` · `.losers()` · `.most_active()` | `Vec<SectorPerformance>` · `Vec<SectorPerformanceHistory>` · `Vec<SectorPe>` · `Vec<IndustryPe>` · `Vec<MoverQuote>` |
+| `Snapshot` | `.get(symbols)` | `Vec<MarketSnapshot>` |
+
+`Snapshot::get` takes provider-spelled symbols from any market in one list
+(`"AAPL"`, `"X:BTCUSD"`, `"I:SPX"`, `"C:EURUSD"`, `"O:NCLH221014C00005000"`) and
+answers them in a single request — one rate-limit unit instead of one per asset
+class. Symbols the provider cannot resolve come back as rows with `error` set,
+so the result stays aligned with the request. Polygon (max 250 symbols) is
+currently the only provider whose snapshot endpoint spans markets.
 
 All chart-capable handles route through `Capability::CHART` (Yahoo by default) and cache per `(symbol, interval, range)` when `.cache(ttl)` is set. `history(range)` is sugar for `chart(range.default_interval(), range)`. The handle's identifier is passed to the chart route as-is, so it must be a chart-route symbol (e.g. `^GSPC`, `NQ=F`, `GC=F`); `CryptoCoin` builds `"{ID}-{VS}"` (e.g. `"BTC-USD"`), which resolves on Yahoo only for ticker-style ids.
 

@@ -276,6 +276,79 @@ macro_rules! domain_handle {
             }
         }
     };
+
+    // Market-wide variant — no identifier field, since these handles describe
+    // the market rather than one instrument. Takes one or more named response
+    // caches; `.cache(ttl)` / `.no_cache()` reset all of them together. `cfg:`
+    // is a slot rather than a plain attribute because the gate has to reach the
+    // generated `impl` block too, not just the struct.
+    (
+        $(#[$meta:meta])*
+        pub struct $name:ident
+        $(cfg: $cfg:meta,)?
+        caches: { $($cache:ident : $val:ty),+ $(,)? }
+    ) => {
+        $(#[$meta])*
+        $(#[cfg($cfg)])?
+        pub struct $name {
+            providers: std::sync::Arc<crate::providers::ProviderSet>,
+            $($cache: crate::domains::DomainCache<$val>,)+
+        }
+
+        $(#[cfg($cfg)])?
+        impl $name {
+            pub(crate) fn with_providers(
+                providers: std::sync::Arc<crate::providers::ProviderSet>,
+            ) -> Self {
+                Self {
+                    providers,
+                    $($cache: crate::domains::DomainCache::new(
+                        crate::utils::CacheMode::default(),
+                    ),)+
+                }
+            }
+
+            /// Cache responses for `ttl` instead of for the handle's lifetime,
+            /// deduplicating concurrent identical requests.
+            pub fn cache(mut self, ttl: std::time::Duration) -> Self {
+                let mode = crate::utils::CacheMode::Ttl(ttl);
+                $(self.$cache = crate::domains::DomainCache::new(mode);)+
+                self
+            }
+
+            /// Disable caching — every call fetches fresh data.
+            pub fn no_cache(mut self) -> Self {
+                let mode = crate::utils::CacheMode::Off;
+                $(self.$cache = crate::domains::DomainCache::new(mode);)+
+                self
+            }
+        }
+    };
+}
+
+/// Dispatch an uncached provider call. `$owned` names values cloned per
+/// attempt (dispatch may try several providers); `$arg`s are the call's own
+/// arguments and may borrow those clones.
+#[allow(unused_macros)]
+macro_rules! dispatch_via {
+    (
+        $self:expr, $cap:ident, $acc:ident, $op:ident, $fetch:ident,
+        [$($owned:ident),* $(,)?] $(, $arg:expr)* $(,)?
+    ) => {{
+        $self
+            .providers
+            .fetch(crate::providers::Capability::$cap, move |p| {
+                $(let $owned = $owned.clone();)*
+                let p = p.clone();
+                async move {
+                    p.$acc()
+                        .ok_or_else(|| p.not_supported(crate::providers::Operation::$op))?
+                        .$fetch($($arg),*)
+                        .await
+                }
+            })
+            .await
+    }};
 }
 
 /// Fetch via the provider dispatch — single symbol field, no extra args.
@@ -491,6 +564,8 @@ pub(crate) mod futures;
 #[cfg(any(feature = "polygon", feature = "fmp"))]
 pub(crate) mod indices;
 pub(crate) mod market;
+#[cfg(feature = "polygon")]
+pub(crate) mod snapshot;
 
 // ── Re-exports ──────────────────────────────────────────────────────
 
@@ -516,7 +591,7 @@ pub use discovery::Discovery;
     feature = "polygon",
     feature = "worldbank"
 ))]
-pub use economic::EconomicIndicator;
+pub use economic::{EconomicCatalog, EconomicIndicator};
 pub use filings::Filings;
 #[cfg(any(
     feature = "alphavantage",
@@ -532,6 +607,8 @@ pub use indices::Index;
 pub use market::Market;
 #[cfg(any(feature = "fmp", feature = "polygon", feature = "alphavantage"))]
 pub use market::MarketCalendar;
+#[cfg(feature = "polygon")]
+pub use snapshot::Snapshot;
 
 // ── Tests ───────────────────────────────────────────────────────────
 

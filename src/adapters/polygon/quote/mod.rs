@@ -9,6 +9,7 @@ use super::models::*;
 
 #[allow(dead_code)] // unrouted: tick-level trades land with #250
 pub mod trades;
+pub mod unified;
 
 /// Fetch snapshot for a single stock ticker.
 pub async fn stock_snapshot(ticker: &str) -> Result<SingleSnapshotResponseDTO> {
