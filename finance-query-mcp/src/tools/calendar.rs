@@ -64,3 +64,72 @@ pub async fn get_calendar(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn fields(names: &[&str]) -> Vec<String> {
+        names.iter().map(|s| s.to_string()).collect()
+    }
+
+    #[test]
+    fn build_calendar_selection_defaults_to_all_fields_including_event_union() {
+        let selection = build_calendar_selection(None);
+
+        assert!(selection.contains("timestamp"));
+        assert!(selection.contains("date"));
+        assert!(selection.contains("symbol"));
+        assert!(selection.contains("event"));
+        assert!(selection.contains("__typename"));
+        assert!(selection.contains("GqlEarningsEvent"));
+    }
+
+    #[test]
+    fn build_calendar_selection_falls_back_to_all_fields_when_list_is_empty() {
+        let empty = fields(&[]);
+        let selection = build_calendar_selection(Some(&empty));
+
+        assert!(selection.contains("event"));
+        assert!(selection.contains("__typename"));
+    }
+
+    #[test]
+    fn build_calendar_selection_without_event_returns_flat_selection() {
+        let requested = fields(&["timestamp", "symbol"]);
+        let selection = build_calendar_selection(Some(&requested));
+
+        assert_eq!(selection, "{ timestamp symbol }");
+        assert!(!selection.contains("event"));
+        assert!(!selection.contains("__typename"));
+    }
+
+    #[test]
+    fn build_calendar_selection_with_event_expands_union_and_omits_unrequested_scalars() {
+        let requested = fields(&["symbol", "event"]);
+        let selection = build_calendar_selection(Some(&requested));
+
+        assert!(selection.contains("symbol"));
+        assert!(selection.contains("event"));
+        assert!(selection.contains("__typename"));
+        assert!(!selection.contains("timestamp"));
+        assert!(!selection.contains("date "));
+    }
+
+    #[test]
+    fn build_calendar_selection_drops_unknown_field_names() {
+        let requested = fields(&["bogusField"]);
+        let selection = build_calendar_selection(Some(&requested));
+
+        assert_eq!(selection, "{ }");
+    }
+
+    #[test]
+    fn build_calendar_selection_is_injection_safe_against_unmatched_strings() {
+        let requested = fields(&["\") { __schema", "event } evil"]);
+        let selection = build_calendar_selection(Some(&requested));
+
+        assert_eq!(selection, "{ }");
+        assert!(!selection.contains("__schema"));
+    }
+}

@@ -8,6 +8,25 @@ use crate::tools::gql::{
 };
 use crate::tools::helpers::{interval_to_gql, range_to_gql};
 
+/// Whether a benchmark was actually supplied, plus the GraphQL argument and
+/// operation-variable-declaration snippets to splice in when it was.
+/// GraphQL rejects a declared operation variable that's never referenced in
+/// the query body, so `$benchmark` can only be declared when it's used.
+fn benchmark_query_parts(benchmark: Option<&str>) -> (bool, &'static str, &'static str) {
+    let has_benchmark = benchmark.is_some_and(|b| !b.is_empty());
+    let bench_arg = if has_benchmark {
+        ", benchmark: $benchmark"
+    } else {
+        ""
+    };
+    let benchmark_decl = if has_benchmark {
+        ", $benchmark: String"
+    } else {
+        ""
+    };
+    (has_benchmark, bench_arg, benchmark_decl)
+}
+
 pub async fn get_risk(
     schema: &FinanceSchema,
     symbol: String,
@@ -18,19 +37,7 @@ pub async fn get_risk(
 ) -> Result<CallToolResult, McpError> {
     let gql_interval = interval_to_gql(interval.as_deref().unwrap_or("1d"));
     let gql_range = range_to_gql(range.as_deref().unwrap_or("1y"));
-    let has_benchmark = benchmark.as_deref().is_some_and(|b| !b.is_empty());
-    let bench_arg = if has_benchmark {
-        ", benchmark: $benchmark"
-    } else {
-        ""
-    };
-    // GraphQL rejects a declared operation variable that's never referenced
-    // in the query body, so $benchmark can only be declared when it's used.
-    let benchmark_decl = if has_benchmark {
-        ", $benchmark: String"
-    } else {
-        ""
-    };
+    let (_, bench_arg, benchmark_decl) = benchmark_query_parts(benchmark.as_deref());
 
     let field_list = parse_fields(fields);
     let selection = build_selection_or_default(
@@ -54,4 +61,27 @@ pub async fn get_risk(
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         text,
     )]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn benchmark_query_parts_none_omits_arg_and_decl() {
+        assert_eq!(benchmark_query_parts(None), (false, "", ""));
+    }
+
+    #[test]
+    fn benchmark_query_parts_empty_string_omits_arg_and_decl() {
+        assert_eq!(benchmark_query_parts(Some("")), (false, "", ""));
+    }
+
+    #[test]
+    fn benchmark_query_parts_present_includes_arg_and_decl() {
+        assert_eq!(
+            benchmark_query_parts(Some("SPY")),
+            (true, ", benchmark: $benchmark", ", $benchmark: String")
+        );
+    }
 }

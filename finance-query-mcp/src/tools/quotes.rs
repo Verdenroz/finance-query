@@ -11,6 +11,16 @@ use crate::tools::gql::{
 };
 use crate::tools::helpers::range_to_gql;
 
+/// Splits a comma-separated symbols param into trimmed, non-empty entries —
+/// tolerates surrounding whitespace and doubled/trailing commas.
+fn parse_symbols(symbols: &str) -> Vec<String> {
+    symbols
+        .split(',')
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
 /// Accepts one or more comma-separated symbols: a single symbol returns the
 /// flat quote shape, multiple symbols return the batch `{quotes, errors}` shape.
 pub async fn get_quote(
@@ -21,11 +31,7 @@ pub async fn get_quote(
     limit: Option<u32>,
     cursor: Option<String>,
 ) -> Result<CallToolResult, McpError> {
-    let syms: Vec<String> = symbols
-        .split(',')
-        .map(|s| s.trim().to_string())
-        .filter(|s| !s.is_empty())
-        .collect();
+    let syms: Vec<String> = parse_symbols(&symbols);
     if syms.len() == 1 {
         get_one_quote(schema, syms.into_iter().next().unwrap(), lang, fields).await
     } else {
@@ -177,4 +183,53 @@ pub async fn get_splits(
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         text,
     )]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_symbols_empty_string_yields_no_symbols() {
+        assert_eq!(parse_symbols(""), Vec::<String>::new());
+    }
+
+    #[test]
+    fn parse_symbols_single_symbol() {
+        assert_eq!(parse_symbols("AAPL"), vec!["AAPL".to_string()]);
+    }
+
+    #[test]
+    fn parse_symbols_multiple_symbols() {
+        assert_eq!(
+            parse_symbols("AAPL,MSFT,GOOG"),
+            vec!["AAPL".to_string(), "MSFT".to_string(), "GOOG".to_string()]
+        );
+    }
+
+    #[test]
+    fn parse_symbols_trims_surrounding_whitespace() {
+        assert_eq!(
+            parse_symbols(" AAPL , MSFT  "),
+            vec!["AAPL".to_string(), "MSFT".to_string()]
+        );
+    }
+
+    #[test]
+    fn parse_symbols_drops_empty_entries_from_doubled_commas() {
+        assert_eq!(
+            parse_symbols("AAPL,,MSFT"),
+            vec!["AAPL".to_string(), "MSFT".to_string()]
+        );
+    }
+
+    #[test]
+    fn parse_symbols_drops_empty_entries_from_trailing_comma() {
+        assert_eq!(parse_symbols("AAPL,"), vec!["AAPL".to_string()]);
+    }
+
+    #[test]
+    fn parse_symbols_all_whitespace_or_commas_yields_no_symbols() {
+        assert_eq!(parse_symbols(" , , "), Vec::<String>::new());
+    }
 }

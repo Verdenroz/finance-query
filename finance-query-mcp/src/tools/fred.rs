@@ -9,6 +9,16 @@ use crate::tools::gql::{
     wrap_connection, wrap_nested_connection,
 };
 
+/// Look up the `observations` nested selection from `MACRO_SERIES_COMPOSITE_FIELDS`,
+/// falling back to a minimal `date`/`value` selection if the entry is ever missing.
+fn observations_selection() -> &'static str {
+    MACRO_SERIES_COMPOSITE_FIELDS
+        .iter()
+        .find(|(name, _)| *name == "observations")
+        .map(|(_, sel)| *sel)
+        .unwrap_or("{ date value }")
+}
+
 pub async fn get_fred_series(
     schema: &FinanceSchema,
     id: String,
@@ -22,11 +32,7 @@ pub async fn get_fred_series(
         ));
     }
     let field_list = parse_fields(fields);
-    let observations_item_selection = MACRO_SERIES_COMPOSITE_FIELDS
-        .iter()
-        .find(|(name, _)| *name == "observations")
-        .map(|(_, sel)| *sel)
-        .unwrap_or("{ date value }");
+    let observations_item_selection = observations_selection();
     let fields_csv = field_list.as_ref().map(|fs| fs.join(","));
     let selection = build_paginated_composite_selection(
         fields_csv.as_deref(),
@@ -48,6 +54,20 @@ pub async fn get_fred_series(
     )]))
 }
 
+/// Build the `treasuryYields(...)` field argument list: an optional `year`
+/// filter, always followed by `first` and an optional `after` cursor.
+fn build_treasury_args(year: Option<u32>, limit: Option<u32>, cursor: Option<&str>) -> String {
+    let mut args = Vec::new();
+    if let Some(y) = year {
+        args.push(format!("year: {y}"));
+    }
+    args.push(format!("first: {}", limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE)));
+    if let Some(c) = cursor {
+        args.push(format!("after: \"{}\"", escape_gql_string(c)));
+    }
+    args.join(", ")
+}
+
 pub async fn get_treasury_yields(
     schema: &FinanceSchema,
     year: Option<u32>,
@@ -62,21 +82,55 @@ pub async fn get_treasury_yields(
         GQL_TREASURY_YIELD_VALID_FIELDS,
     );
     let selection = build_connection_selection(&inner_selection);
-    let mut args = Vec::new();
-    if let Some(y) = year {
-        args.push(format!("year: {y}"));
-    }
-    args.push(format!("first: {}", limit.unwrap_or(DEFAULT_MCP_PAGE_SIZE)));
-    if let Some(c) = cursor.as_deref() {
-        args.push(format!("after: \"{}\"", escape_gql_string(c)));
-    }
-    let query = format!(
-        "query {{ treasuryYields({}) {selection} }}",
-        args.join(", ")
-    );
+    let args = build_treasury_args(year, limit, cursor.as_deref());
+    let query = format!("query {{ treasuryYields({args}) {selection} }}");
     let json = execute_query(schema, &query, async_graphql::Variables::default()).await?;
     let data = wrap_connection(unwrap_field(json, "treasuryYields"));
     Ok(CallToolResult::success(vec![rmcp::model::Content::text(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn observations_selection_returns_a_nonempty_brace_wrapped_selection() {
+        let sel = observations_selection();
+        assert!(sel.starts_with('{'));
+        assert!(sel.ends_with('}'));
+        assert!(sel.contains("date"));
+        assert!(sel.contains("value"));
+    }
+
+    #[test]
+    fn build_treasury_args_uses_default_limit_without_year_or_cursor() {
+        let args = build_treasury_args(None, None, None);
+        assert_eq!(args, format!("first: {DEFAULT_MCP_PAGE_SIZE}"));
+    }
+
+    #[test]
+    fn build_treasury_args_includes_year_before_first() {
+        let args = build_treasury_args(Some(2024), Some(10), None);
+        assert_eq!(args, "year: 2024, first: 10");
+    }
+
+    #[test]
+    fn build_treasury_args_includes_cursor_after_first() {
+        let args = build_treasury_args(None, Some(10), Some("cur1"));
+        assert_eq!(args, "first: 10, after: \"cur1\"");
+    }
+
+    #[test]
+    fn build_treasury_args_includes_year_first_and_cursor_together() {
+        let args = build_treasury_args(Some(2023), Some(5), Some("cur2"));
+        assert_eq!(args, "year: 2023, first: 5, after: \"cur2\"");
+    }
+
+    #[test]
+    fn build_treasury_args_escapes_special_characters_in_cursor() {
+        let args = build_treasury_args(None, None, Some("has\"quote"));
+        assert!(args.contains("after: \"has\\\"quote\""));
+    }
 }

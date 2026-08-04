@@ -129,3 +129,48 @@ pub async fn get_lookup(
         serde_json::to_string(&data).map_err(ser_err)?,
     )]))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn lookup_type_to_gql_maps_known_aliases_case_insensitively() {
+        assert_eq!(lookup_type_to_gql("equity"), "EQUITY");
+        assert_eq!(lookup_type_to_gql("EQUITY"), "EQUITY");
+        assert_eq!(lookup_type_to_gql("Stock"), "EQUITY");
+        assert_eq!(lookup_type_to_gql("etf"), "ETF");
+        assert_eq!(lookup_type_to_gql("ETF"), "ETF");
+        assert_eq!(lookup_type_to_gql("index"), "INDEX");
+        assert_eq!(lookup_type_to_gql("future"), "FUTURE");
+    }
+
+    #[test]
+    fn lookup_type_to_gql_maps_mutual_fund_variants() {
+        assert_eq!(lookup_type_to_gql("mutualfund"), "MUTUAL_FUND");
+        assert_eq!(lookup_type_to_gql("mutual_fund"), "MUTUAL_FUND");
+        assert_eq!(lookup_type_to_gql("mutual-fund"), "MUTUAL_FUND");
+        assert_eq!(lookup_type_to_gql("Mutual-Fund"), "MUTUAL_FUND");
+    }
+
+    #[test]
+    fn lookup_type_to_gql_maps_currency_variants() {
+        assert_eq!(lookup_type_to_gql("currency"), "CURRENCY");
+        assert_eq!(lookup_type_to_gql("forex"), "CURRENCY");
+        assert_eq!(lookup_type_to_gql("fx"), "CURRENCY");
+    }
+
+    #[test]
+    fn lookup_type_to_gql_maps_crypto_variants() {
+        assert_eq!(lookup_type_to_gql("crypto"), "CRYPTOCURRENCY");
+        assert_eq!(lookup_type_to_gql("cryptocurrency"), "CRYPTOCURRENCY");
+        assert_eq!(lookup_type_to_gql("CRYPTO"), "CRYPTOCURRENCY");
+    }
+
+    #[test]
+    fn lookup_type_to_gql_falls_back_to_all_for_unknown_or_empty() {
+        assert_eq!(lookup_type_to_gql("all"), "ALL");
+        assert_eq!(lookup_type_to_gql("bogus"), "ALL");
+        assert_eq!(lookup_type_to_gql(""), "ALL");
+    }
+}
