@@ -150,7 +150,7 @@ pub async fn fetch_executive_compensation_response(
         .into_iter()
         .map(|d| to_executive_compensation(d, symbol))
         .collect();
-    out.sort_by(|a, b| b.year.cmp(&a.year));
+    out.sort_by_key(|r| std::cmp::Reverse(r.year));
     Ok(out)
 }
 
@@ -232,7 +232,7 @@ mod tests {
             .into_iter()
             .map(|y| to_executive_compensation(comp_dto(y), "AAPL"))
             .collect();
-        rows.sort_by(|a, b| b.year.cmp(&a.year));
+        rows.sort_by_key(|r| std::cmp::Reverse(r.year));
         assert_eq!(
             rows.iter().map(|r| r.year).collect::<Vec<_>>(),
             vec![Some(2023), Some(2021), Some(2019)]
