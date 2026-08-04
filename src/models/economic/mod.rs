@@ -36,6 +36,7 @@ pub struct MacroObservation {
 /// A FRED macro-economic time series with all its observations.
 ///
 /// Obtain via [`fred::series`](crate::fred::series).
+#[cfg(feature = "fred")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct MacroSeries {
@@ -49,6 +50,7 @@ pub struct MacroSeries {
 ///
 /// Maturities with no published rate on a given date are `None`.
 /// Obtain via [`fred::treasury_yields`](crate::fred::treasury_yields).
+#[cfg(feature = "fred")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct TreasuryYield {

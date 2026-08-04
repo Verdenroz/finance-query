@@ -22,11 +22,7 @@ pub(crate) trait ProviderCore: Send + Sync {
     fn id(&self) -> Provider;
 
     fn not_supported(&self, operation: Operation) -> FinanceError {
-        FinanceError::NotSupported {
-            provider: self.id(),
-            operation,
-            candidates: operation.capability().candidate_providers(),
-        }
+        operation.not_supported(self.id())
     }
 }
 
@@ -271,9 +267,12 @@ pub(crate) trait MarketProvider: ProviderCore {
 
 /// [`Capability::CRYPTO`] — cryptocurrency quotes.
 #[cfg(any(
-    feature = "crypto",
     feature = "alphavantage",
+    feature = "binance",
+    feature = "crypto",
+    feature = "defi",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 #[async_trait::async_trait]
@@ -283,10 +282,35 @@ pub(crate) trait CryptoProvider: ProviderCore {
         id: &str,
         vs_currency: &str,
     ) -> Result<crate::models::crypto::CryptoQuote>;
+
+    /// Fetch total value locked in a DeFi protocol.
+    #[cfg(feature = "defi")]
+    async fn fetch_protocol_tvl(
+        &self,
+        _protocol: &str,
+    ) -> Result<crate::models::crypto::defi::ProtocolTvl> {
+        Err(self.not_supported(Operation::ProtocolTvl))
+    }
+
+    /// Fetch a DeFi protocol's TVL history, oldest first.
+    #[cfg(feature = "defi")]
+    async fn fetch_protocol_tvl_history(
+        &self,
+        _protocol: &str,
+    ) -> Result<Vec<crate::models::crypto::defi::TvlPoint>> {
+        Err(self.not_supported(Operation::ProtocolTvlHistory))
+    }
 }
 
 /// [`Capability::ECONOMIC`] — macro-economic data series.
-#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fiscaldata",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 #[async_trait::async_trait]
 pub(crate) trait EconomicProvider: ProviderCore {
     async fn fetch_economic_series(
@@ -296,7 +320,12 @@ pub(crate) trait EconomicProvider: ProviderCore {
 }
 
 /// [`Capability::FOREX`] — currency-pair quotes.
-#[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 #[async_trait::async_trait]
 pub(crate) trait ForexProvider: ProviderCore {
     async fn fetch_forex_quote(
@@ -392,19 +421,34 @@ pub(crate) trait ProviderAdapter: ProviderCore {
         None
     }
     #[cfg(any(
-        feature = "crypto",
         feature = "alphavantage",
+        feature = "binance",
+        feature = "crypto",
+        feature = "defi",
         feature = "fmp",
+        feature = "kraken",
         feature = "polygon"
     ))]
     fn as_crypto(&self) -> Option<&dyn CryptoProvider> {
         None
     }
-    #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+    #[cfg(any(
+        feature = "alphavantage",
+        feature = "bls",
+        feature = "fiscaldata",
+        feature = "fred",
+        feature = "polygon",
+        feature = "worldbank"
+    ))]
     fn as_economic(&self) -> Option<&dyn EconomicProvider> {
         None
     }
-    #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+    #[cfg(any(
+        feature = "alphavantage",
+        feature = "fmp",
+        feature = "frankfurter",
+        feature = "polygon"
+    ))]
     fn as_forex(&self) -> Option<&dyn ForexProvider> {
         None
     }
@@ -456,19 +500,34 @@ pub(crate) trait ProviderAdapter: ProviderCore {
             }
         }
         #[cfg(any(
-            feature = "crypto",
             feature = "alphavantage",
+            feature = "binance",
+            feature = "crypto",
+            feature = "defi",
             feature = "fmp",
+            feature = "kraken",
             feature = "polygon"
         ))]
         if self.as_crypto().is_some() {
             caps = caps | Capability::CRYPTO;
         }
-        #[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+        #[cfg(any(
+            feature = "alphavantage",
+            feature = "bls",
+            feature = "fiscaldata",
+            feature = "fred",
+            feature = "polygon",
+            feature = "worldbank"
+        ))]
         if self.as_economic().is_some() {
             caps = caps | Capability::ECONOMIC;
         }
-        #[cfg(any(feature = "polygon", feature = "fmp", feature = "alphavantage"))]
+        #[cfg(any(
+            feature = "alphavantage",
+            feature = "fmp",
+            feature = "frankfurter",
+            feature = "polygon"
+        ))]
         if self.as_forex().is_some() {
             caps = caps | Capability::FOREX;
         }

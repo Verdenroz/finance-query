@@ -2,6 +2,10 @@
 //!
 //! Canonical public types for cryptocurrency quotes from multiple providers.
 
+/// DeFi protocol and chain models — DefiLlama.
+#[cfg(feature = "defi")]
+pub mod defi;
+
 use serde::{Deserialize, Serialize};
 
 /// A provider-agnostic cryptocurrency quote.
@@ -38,6 +42,7 @@ pub struct CryptoQuote {
 /// A cryptocurrency quote from CoinGecko.
 ///
 /// Obtain via [`crypto::coins`](crate::crypto::coins) or [`crypto::coin`](crate::crypto::coin).
+#[cfg(feature = "crypto")]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[non_exhaustive]
 pub struct CoinQuote {

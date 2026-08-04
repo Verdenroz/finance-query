@@ -99,6 +99,116 @@ pub mod crypto {
     pub use crate::adapters::coingecko::{CoinQuote, coin, coins};
 }
 
+#[cfg(feature = "openfigi")]
+pub mod openfigi {
+    //! Security-identifier resolution via OpenFIGI (requires `openfigi`
+    //! feature, keyless).
+    //!
+    //! Resolves a CUSIP, ISIN, SEDOL, or FIGI to the instruments carrying it —
+    //! the missing step for any dataset that identifies holdings by CUSIP
+    //! rather than ticker, such as 13F filings.
+    //!
+    //! Lives here rather than behind the Providers API because resolution is
+    //! not tied to a symbol handle and maps onto no
+    //! [`Capability`](crate::Capability), the same reasoning that puts
+    //! [`edgar`](crate::edgar) and [`fred`](crate::fred) at the crate root.
+    //!
+    //! No API key is required; `OPENFIGI_API_KEY` is optional and only raises
+    //! the quota.
+    //!
+    //! ```no_run
+    //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    //! use finance_query::openfigi;
+    //!
+    //! // One CUSIP maps to every venue listing of the security.
+    //! for listing in openfigi::resolve_cusip("037833100").await? {
+    //!     println!("{:?} on {:?}", listing.ticker, listing.exchange_code);
+    //! }
+    //! # Ok(())
+    //! # }
+    //! ```
+
+    use crate::error::Result;
+    pub use crate::models::discovery::figi::{SecurityIdKind, SecurityMapping};
+
+    /// Resolve a CUSIP to every instrument carrying it.
+    ///
+    /// Returns an empty list when the identifier is well-formed but matches
+    /// nothing; a malformed identifier is an error.
+    pub async fn resolve_cusip(cusip: &str) -> Result<Vec<SecurityMapping>> {
+        crate::adapters::openfigi::resolve(SecurityIdKind::Cusip, cusip).await
+    }
+
+    /// Resolve an ISIN to every instrument carrying it.
+    pub async fn resolve_isin(isin: &str) -> Result<Vec<SecurityMapping>> {
+        crate::adapters::openfigi::resolve(SecurityIdKind::Isin, isin).await
+    }
+
+    /// Resolve a SEDOL to every instrument carrying it.
+    pub async fn resolve_sedol(sedol: &str) -> Result<Vec<SecurityMapping>> {
+        crate::adapters::openfigi::resolve(SecurityIdKind::Sedol, sedol).await
+    }
+
+    /// Resolve an identifier of any supported [`SecurityIdKind`].
+    pub async fn resolve(kind: SecurityIdKind, id: &str) -> Result<Vec<SecurityMapping>> {
+        crate::adapters::openfigi::resolve(kind, id).await
+    }
+
+    /// Resolve many identifiers of the same kind in as few requests as
+    /// possible (OpenFIGI accepts 10 per request without a key).
+    ///
+    /// The result is positional: element `i` answers `ids[i]`, with an empty
+    /// list where nothing matched.
+    pub async fn resolve_many(
+        kind: SecurityIdKind,
+        ids: &[&str],
+    ) -> Result<Vec<Vec<SecurityMapping>>> {
+        crate::adapters::openfigi::resolve_many(kind, ids).await
+    }
+}
+
+#[cfg(feature = "defi")]
+pub mod defi {
+    //! Market-wide DeFi data via DefiLlama (requires `defi` feature, keyless).
+    //!
+    //! Chain rankings and stablecoin supplies describe the market as a whole,
+    //! not one asset, so there is no symbol handle to hang them off — they sit
+    //! at the crate root the way [`edgar`](crate::edgar) and
+    //! [`fred`](crate::fred) do.
+    //!
+    //! Protocol-shaped data *is* symbol-shaped and lives on
+    //! [`CryptoCoin::tvl`](crate::CryptoCoin::tvl) instead.
+    //!
+    //! ```no_run
+    //! # async fn example() -> Result<(), Box<dyn std::error::Error>> {
+    //! use finance_query::defi;
+    //!
+    //! for chain in defi::chains().await?.into_iter().take(5) {
+    //!     println!("{}: ${:?}", chain.name, chain.tvl);
+    //! }
+    //! # Ok(())
+    //! # }
+    //! ```
+
+    use crate::error::Result;
+    pub use crate::models::crypto::defi::{
+        ChainAllocation, ChainTvl, ProtocolTvl, StablecoinSupply, TvlPoint,
+    };
+
+    /// Fetch aggregate total value locked for every chain, largest first.
+    pub async fn chains() -> Result<Vec<ChainTvl>> {
+        crate::adapters::defillama::chains().await
+    }
+
+    /// Fetch circulating supply for every tracked stablecoin, largest first.
+    ///
+    /// Supplies are denominated in the coin's pegged asset — read `peg_type`
+    /// before summing across coins pegged to different currencies.
+    pub async fn stablecoins() -> Result<Vec<StablecoinSupply>> {
+        crate::adapters::defillama::stablecoins().await
+    }
+}
+
 pub mod feeds;
 
 #[cfg(feature = "risk")]
@@ -118,14 +228,29 @@ pub use ticker::{ClientHandle, Ticker, TickerBuilder};
 // Domain-specific query handles — constructable via Providers factory methods.
 #[cfg(any(
     feature = "alphavantage",
+    feature = "binance",
     feature = "crypto",
+    feature = "defi",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 pub use domains::CryptoCoin;
-#[cfg(any(feature = "alphavantage", feature = "polygon", feature = "fred"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fiscaldata",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 pub use domains::EconomicIndicator;
-#[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 pub use domains::ForexPair;
 
 // Remaining Capability handles — indices, futures, commodities, filings, discovery
@@ -230,15 +355,30 @@ pub use models::sentiment::{Sentiment, SentimentLabel, analyze as analyze_sentim
 #[cfg(any(feature = "fmp", feature = "alphavantage"))]
 pub use models::commodities::CommodityQuote;
 #[cfg(any(
-    feature = "crypto",
     feature = "alphavantage",
+    feature = "binance",
+    feature = "crypto",
+    feature = "defi",
     feature = "fmp",
+    feature = "kraken",
     feature = "polygon"
 ))]
 pub use models::crypto::CryptoQuote;
-#[cfg(any(feature = "fred", feature = "alphavantage", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "bls",
+    feature = "fiscaldata",
+    feature = "fred",
+    feature = "polygon",
+    feature = "worldbank"
+))]
 pub use models::economic::EconomicSeries;
-#[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
+#[cfg(any(
+    feature = "alphavantage",
+    feature = "fmp",
+    feature = "frankfurter",
+    feature = "polygon"
+))]
 pub use models::forex::ForexQuote;
 #[cfg(feature = "polygon")]
 pub use models::futures::FuturesQuote;

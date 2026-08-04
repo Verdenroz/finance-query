@@ -42,6 +42,81 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **World Bank Open Data** (`worldbank` feature, keyless) — `Provider::WorldBank`
+  serves `Capability::ECONOMIC` with roughly 1,600 global development and macro
+  indicators across 200+ economies, closing the gap left by FRED's US focus.
+  Series are addressed as `"<COUNTRY>/<INDICATOR>"`
+  (`providers.economic("USA/NY.GDP.MKTP.CD")`); a bare indicator resolves
+  against the world aggregate `WLD`. Annual/quarterly/monthly period labels are
+  normalised to the `YYYY-MM-DD` start of the period and observations are
+  returned oldest-first, matching every other `ECONOMIC` provider.
+- **US Treasury FiscalData** (`fiscaldata` feature, keyless) —
+  `Provider::FiscalData` serves `Capability::ECONOMIC` from the Treasury's own
+  publishing platform: federal debt (`"DEBT_TO_PENNY"`), average interest rates,
+  and Daily Treasury Statement cash balances. Six curated series ids cover the
+  common cases; any other dataset is reachable through the passthrough form
+  `"<dataset path>:<value column>"`. FiscalData encodes numbers as strings and
+  marks missing figures with the literal string `"null"` — both are normalised.
+- **BLS** (`bls` feature) — `Provider::Bls` serves `Capability::ECONOMIC` with
+  CPI, unemployment, payrolls, wages, and PPI from the primary source, using
+  native BLS series ids (`providers.economic("CUUR0000SA0")`). The first
+  provider with a **keyless/keyed dual mode**: without `BLS_API_KEY` it uses
+  the keyless v1 route (25 queries/day, ~3 years); with a key it uses v2 (500
+  queries/day, 20 years, plus catalog series titles). BLS's `"-"`
+  unpublished-value marker becomes `None`, and annual-aggregate rows (`M13` /
+  `Q05` / `S03`) are dropped so a monthly series stays strictly monthly.
+- **Frankfurter / ECB reference rates** (`frankfurter` feature, keyless) —
+  `Provider::Frankfurter` serves `Capability::FOREX`, the first keyless route
+  for that capability: `providers.forex("USD", "EUR").quote()` now works with
+  nothing configured, where previously every forex route needed an API key.
+  ECB rates are a daily reference fix, so quotes carry a price and a change
+  against the previous *published* day but no bid/ask. A pair of identical
+  currencies is answered locally with `1.0` rather than Frankfurter's HTTP 422.
+- **Binance public market data** (`binance` feature, keyless) —
+  `Provider::Binance` serves `Capability::CRYPTO` (rolling 24-hour quotes) and
+  `Capability::CHART` (arbitrary-interval OHLCV), the first keyless source of
+  exchange-grade crypto data. Symbols normalise across every spelling the
+  library uses (`bitcoin`, `BTC`, `BTC-USD`, `BTCUSDT`); note that Binance
+  lists no USD spot markets, so `"usd"` maps to the USDT stablecoin. Windows
+  longer than Binance's 1000-candle page cap are walked automatically (up to
+  10,000 candles). A geo-block (HTTP 451) is reported as such and names Kraken
+  as the alternative.
+- **Kraken public market data** (`kraken` feature, keyless) —
+  `Provider::Kraken` serves `Capability::CRYPTO` and `Capability::CHART` from
+  endpoints that are keyless *and* reachable from the US, unlike Binance. With
+  both providers, `CRYPTO` finally has a real `Fetch::Sequential` fallback
+  chain. Kraken's own conventions (`XBT` for Bitcoin, `XDG` for Dogecoin, the
+  legacy `X`/`Z` pair prefixes) are translated in both directions, so callers
+  pass normal tickers. Kraken caps `/OHLC` at ~720 candles ending at the
+  present with no way to page further back — deep history needs Binance or a
+  keyed provider.
+- **FINRA short-sale volume** (`finra` feature, keyless) — `Provider::Finra`
+  serves the short-volume slice of `Capability::FUNDAMENTALS`, giving
+  `Ticker::short_volume()` a keyless provider reading from the primary source
+  rather than requiring Polygon. FINRA reports each symbol once per reporting
+  facility per day (Nasdaq / NYSE / OTC); the adapter sums them into one figure
+  per date, matching FINRA's own consolidated daily file. A symbol with no
+  reportable short volume returns an empty series rather than an error. Free
+  for non-commercial use — see the provider docs.
+- **OpenFIGI identifier mapping** (`openfigi` feature, keyless) — new
+  crate-level `openfigi` module resolving a CUSIP, ISIN, SEDOL, or FIGI to the
+  instruments carrying it: `openfigi::resolve_cusip("037833100")`,
+  `resolve_isin`, `resolve_sedol`, and a positional batch `resolve_many` that
+  chunks to OpenFIGI's 10-per-request limit. New public types
+  `SecurityMapping` and `SecurityIdKind`. It sits beside `edgar` and `fred`
+  rather than behind the Providers API because resolution is not tied to a
+  symbol handle and maps onto no `Capability`. `OPENFIGI_API_KEY` is optional
+  and only raises the quota.
+- **DefiLlama** (`defi` feature, keyless) — the library's first on-chain data.
+  `Provider::DefiLlama` adds `CryptoCoin::tvl()` and `.tvl_history()` under
+  `Capability::CRYPTO` (protocol TVL, per-chain split, 1d/7d change, market
+  cap), and a new crate-level `defi` module carries the market-wide views:
+  `defi::chains()` and `defi::stablecoins()`, both ranked largest-first. New
+  public models `ProtocolTvl`, `ChainAllocation`, `TvlPoint`, `ChainTvl`, and
+  `StablecoinSupply`. Per-chain allocations exclude DefiLlama's breakdown keys
+  (`-borrowed`, `pool2`, `staking`), which describe the same capital and would
+  double-count. DefiLlama serves no prices, so `quote()` falls through to
+  another routed provider.
 - Index constituents: `providers.index("^GSPC").constituents()` and
   `.constituent_changes()` list the current members and membership history of
   the S&P 500, Nasdaq 100, and Dow Jones (FMP; changes are S&P 500 only).

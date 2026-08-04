@@ -109,6 +109,15 @@ full = [
     "risk",
     "translation",
     "sentiment",
+    "worldbank",
+    "fiscaldata",
+    "bls",
+    "frankfurter",
+    "binance",
+    "kraken",
+    "finra",
+    "openfigi",
+    "defi",
 ]
 # Enable DataFrame conversions with polars
 dataframe = ["dep:polars"]
@@ -120,6 +129,24 @@ backtesting = ["indicators", "dep:rayon"]
 fred = ["dep:csv"]
 # Enable CoinGecko cryptocurrency data
 crypto = []
+# Enable World Bank Open Data global macro indicators (keyless)
+worldbank = []
+# Enable US Treasury FiscalData federal debt/interest statistics (keyless)
+fiscaldata = []
+# Enable BLS labor/inflation statistics (keyless v1; BLS_API_KEY upgrades to v2)
+bls = []
+# Enable Frankfurter ECB reference exchange rates (keyless forex)
+frankfurter = []
+# Enable Binance public market data (keyless crypto quotes + OHLCV)
+binance = []
+# Enable Kraken public market data (keyless crypto, US-accessible)
+kraken = []
+# Enable FINRA daily short-sale volume (free, non-commercial use)
+finra = []
+# Enable OpenFIGI CUSIP/ISIN/SEDOL to ticker mapping (keyless)
+openfigi = []
+# Enable DefiLlama DeFi TVL, chain rankings, and stablecoin supplies (keyless)
+defi = []
 # Enable offline VADER lexicon-based news/transcript sentiment scoring
 sentiment = ["dep:vader_sentiment"]
 # Enable Alpha Vantage financial data API
@@ -160,6 +187,15 @@ features = [
     "risk",
     "translation",
     "sentiment",
+    "worldbank",
+    "fiscaldata",
+    "bls",
+    "frankfurter",
+    "binance",
+    "kraken",
+    "finra",
+    "openfigi",
+    "defi",
 ]
 rustdoc-args = ["--cfg", "docsrs"]
 

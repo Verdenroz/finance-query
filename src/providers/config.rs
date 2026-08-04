@@ -86,8 +86,11 @@ impl Providers {
     /// Create a [`CryptoCoin`](crate::CryptoCoin) handle backed by this provider set.
     #[cfg(any(
         feature = "alphavantage",
+        feature = "binance",
         feature = "crypto",
+        feature = "defi",
         feature = "fmp",
+        feature = "kraken",
         feature = "polygon"
     ))]
     pub fn crypto(&self, id: impl Into<String>) -> crate::domains::CryptoCoin {
@@ -95,7 +98,12 @@ impl Providers {
     }
 
     /// Create a [`ForexPair`](crate::ForexPair) handle backed by this provider set.
-    #[cfg(any(feature = "alphavantage", feature = "fmp", feature = "polygon"))]
+    #[cfg(any(
+        feature = "alphavantage",
+        feature = "fmp",
+        feature = "frankfurter",
+        feature = "polygon"
+    ))]
     pub fn forex(
         &self,
         from: impl Into<String>,
@@ -109,7 +117,14 @@ impl Providers {
     }
 
     /// Create an [`EconomicIndicator`](crate::EconomicIndicator) handle backed by this provider set.
-    #[cfg(any(feature = "alphavantage", feature = "polygon", feature = "fred"))]
+    #[cfg(any(
+        feature = "alphavantage",
+        feature = "bls",
+        feature = "fiscaldata",
+        feature = "fred",
+        feature = "polygon",
+        feature = "worldbank"
+    ))]
     pub fn economic(&self, series_id: impl Into<String>) -> crate::domains::EconomicIndicator {
         crate::domains::EconomicIndicator::with_providers(
             series_id.into().into(),

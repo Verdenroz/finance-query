@@ -8,16 +8,32 @@ pub(crate) mod mock;
 
 #[cfg(feature = "alphavantage")]
 pub(crate) mod alphavantage;
+#[cfg(feature = "binance")]
+pub(crate) mod binance;
+#[cfg(feature = "bls")]
+pub(crate) mod bls;
 #[cfg(feature = "crypto")]
 pub(crate) mod coingecko;
+#[cfg(feature = "defi")]
+pub(crate) mod defillama;
 pub(crate) mod edgar;
+#[cfg(feature = "finra")]
+pub(crate) mod finra;
+#[cfg(feature = "fiscaldata")]
+pub(crate) mod fiscaldata;
 #[cfg(feature = "fmp")]
 pub(crate) mod fmp;
+#[cfg(feature = "frankfurter")]
+pub(crate) mod frankfurter;
 #[cfg(feature = "fred")]
 pub(crate) mod fred;
+#[cfg(feature = "kraken")]
+pub(crate) mod kraken;
 #[cfg(feature = "polygon")]
 pub(crate) mod polygon;
 pub(crate) mod types;
+#[cfg(feature = "worldbank")]
+pub(crate) mod worldbank;
 pub(crate) mod yahoo;
 
 use crate::adapters::yahoo::client::{ClientConfig, YahooClient};
@@ -52,6 +68,31 @@ pub enum Provider {
     /// FRED economic data (requires `fred` feature).
     #[cfg(feature = "fred")]
     Fred,
+    /// World Bank Open Data global macro indicators (requires `worldbank` feature, keyless).
+    #[cfg(feature = "worldbank")]
+    WorldBank,
+    /// US Treasury FiscalData (requires `fiscaldata` feature, keyless).
+    #[cfg(feature = "fiscaldata")]
+    FiscalData,
+    /// US Bureau of Labor Statistics (requires `bls` feature; keyless v1,
+    /// keyed v2 when `BLS_API_KEY` is set).
+    #[cfg(feature = "bls")]
+    Bls,
+    /// Frankfurter ECB reference exchange rates (requires `frankfurter` feature, keyless).
+    #[cfg(feature = "frankfurter")]
+    Frankfurter,
+    /// Binance public market data (requires `binance` feature, keyless).
+    #[cfg(feature = "binance")]
+    Binance,
+    /// Kraken public market data (requires `kraken` feature, keyless).
+    #[cfg(feature = "kraken")]
+    Kraken,
+    /// FINRA daily short-sale volume (requires `finra` feature, keyless).
+    #[cfg(feature = "finra")]
+    Finra,
+    /// DefiLlama DeFi TVL data (requires `defi` feature, keyless).
+    #[cfg(feature = "defi")]
+    DefiLlama,
     /// SEC EDGAR filings (always available, keyless).
     Edgar,
 }
@@ -73,6 +114,22 @@ impl Provider {
             "coingecko" => Some(Self::CoinGecko),
             #[cfg(feature = "fred")]
             "fred" => Some(Self::Fred),
+            #[cfg(feature = "worldbank")]
+            "worldbank" => Some(Self::WorldBank),
+            #[cfg(feature = "fiscaldata")]
+            "fiscaldata" => Some(Self::FiscalData),
+            #[cfg(feature = "bls")]
+            "bls" => Some(Self::Bls),
+            #[cfg(feature = "frankfurter")]
+            "frankfurter" => Some(Self::Frankfurter),
+            #[cfg(feature = "binance")]
+            "binance" => Some(Self::Binance),
+            #[cfg(feature = "kraken")]
+            "kraken" => Some(Self::Kraken),
+            #[cfg(feature = "finra")]
+            "finra" => Some(Self::Finra),
+            #[cfg(feature = "defi")]
+            "defillama" => Some(Self::DefiLlama),
             "edgar" => Some(Self::Edgar),
             _ => None,
         }
@@ -92,6 +149,22 @@ impl Provider {
             Self::CoinGecko => "coingecko",
             #[cfg(feature = "fred")]
             Self::Fred => "fred",
+            #[cfg(feature = "worldbank")]
+            Self::WorldBank => "worldbank",
+            #[cfg(feature = "fiscaldata")]
+            Self::FiscalData => "fiscaldata",
+            #[cfg(feature = "bls")]
+            Self::Bls => "bls",
+            #[cfg(feature = "frankfurter")]
+            Self::Frankfurter => "frankfurter",
+            #[cfg(feature = "binance")]
+            Self::Binance => "binance",
+            #[cfg(feature = "kraken")]
+            Self::Kraken => "kraken",
+            #[cfg(feature = "finra")]
+            Self::Finra => "finra",
+            #[cfg(feature = "defi")]
+            Self::DefiLlama => "defillama",
             Self::Edgar => "edgar",
         }
     }
@@ -112,6 +185,22 @@ impl Provider {
         v.push(Self::CoinGecko);
         #[cfg(feature = "fred")]
         v.push(Self::Fred);
+        #[cfg(feature = "worldbank")]
+        v.push(Self::WorldBank);
+        #[cfg(feature = "fiscaldata")]
+        v.push(Self::FiscalData);
+        #[cfg(feature = "bls")]
+        v.push(Self::Bls);
+        #[cfg(feature = "frankfurter")]
+        v.push(Self::Frankfurter);
+        #[cfg(feature = "binance")]
+        v.push(Self::Binance);
+        #[cfg(feature = "kraken")]
+        v.push(Self::Kraken);
+        #[cfg(feature = "finra")]
+        v.push(Self::Finra);
+        #[cfg(feature = "defi")]
+        v.push(Self::DefiLlama);
         v.push(Self::Edgar);
         v
     }
@@ -136,6 +225,22 @@ impl Provider {
             Self::CoinGecko => ProviderAdapter::capabilities(&coingecko::CoinGeckoProvider),
             #[cfg(feature = "fred")]
             Self::Fred => ProviderAdapter::capabilities(&fred::FredProvider),
+            #[cfg(feature = "worldbank")]
+            Self::WorldBank => ProviderAdapter::capabilities(&worldbank::WorldBankProvider),
+            #[cfg(feature = "fiscaldata")]
+            Self::FiscalData => ProviderAdapter::capabilities(&fiscaldata::FiscalDataProvider),
+            #[cfg(feature = "bls")]
+            Self::Bls => ProviderAdapter::capabilities(&bls::BlsProvider),
+            #[cfg(feature = "frankfurter")]
+            Self::Frankfurter => ProviderAdapter::capabilities(&frankfurter::FrankfurterProvider),
+            #[cfg(feature = "binance")]
+            Self::Binance => ProviderAdapter::capabilities(&binance::BinanceProvider),
+            #[cfg(feature = "kraken")]
+            Self::Kraken => ProviderAdapter::capabilities(&kraken::KrakenProvider),
+            #[cfg(feature = "finra")]
+            Self::Finra => ProviderAdapter::capabilities(&finra::FinraProvider),
+            #[cfg(feature = "defi")]
+            Self::DefiLlama => ProviderAdapter::capabilities(&defillama::DefiLlamaProvider),
             Self::Edgar => ProviderAdapter::capabilities(&edgar::EdgarProvider),
         }
     }
@@ -381,6 +486,12 @@ pub enum Operation {
     RiskFactors,
     /// Company press releases.
     PressReleases,
+    /// Total value locked in a DeFi protocol.
+    #[cfg(feature = "defi")]
+    ProtocolTvl,
+    /// Historical total value locked in a DeFi protocol.
+    #[cfg(feature = "defi")]
+    ProtocolTvlHistory,
 }
 
 impl Operation {
@@ -425,6 +536,10 @@ impl Operation {
             Self::FilingSections => "filing_sections",
             Self::RiskFactors => "risk_factors",
             Self::PressReleases => "press_releases",
+            #[cfg(feature = "defi")]
+            Self::ProtocolTvl => "protocol_tvl",
+            #[cfg(feature = "defi")]
+            Self::ProtocolTvlHistory => "protocol_tvl_history",
         }
     }
 
@@ -441,6 +556,8 @@ impl Operation {
             }
             Self::Options => Capability::OPTIONS,
             Self::CryptoQuote => Capability::CRYPTO,
+            #[cfg(feature = "defi")]
+            Self::ProtocolTvl | Self::ProtocolTvlHistory => Capability::CRYPTO,
             Self::EconomicSeries => Capability::ECONOMIC,
             Self::ForexQuote => Capability::FOREX,
             Self::IndicesQuote | Self::IndexConstituents | Self::IndexConstituentChanges => {
@@ -461,6 +578,19 @@ impl Operation {
             Self::SectorPerformance | Self::MarketMovers | Self::SectorPerformanceHistory => {
                 Capability::MARKET
             }
+        }
+    }
+
+    /// The error reported when `provider` does not serve this operation.
+    ///
+    /// Adapters reach for this when they detect the gap before dispatch has a
+    /// `&dyn ProviderAdapter` to hand (e.g. a symbol an exchange cannot name);
+    /// `ProviderCore::not_supported` is the same error built from an instance.
+    pub(crate) fn not_supported(self, provider: Provider) -> FinanceError {
+        FinanceError::NotSupported {
+            provider,
+            operation: self,
+            candidates: self.capability().candidate_providers(),
         }
     }
 }
@@ -824,6 +954,22 @@ pub(crate) async fn build_providers(
             Provider::CoinGecko => Arc::new(coingecko::CoinGeckoProvider),
             #[cfg(feature = "fred")]
             Provider::Fred => Arc::new(fred::FredProvider),
+            #[cfg(feature = "worldbank")]
+            Provider::WorldBank => Arc::new(worldbank::WorldBankProvider),
+            #[cfg(feature = "fiscaldata")]
+            Provider::FiscalData => Arc::new(fiscaldata::FiscalDataProvider),
+            #[cfg(feature = "bls")]
+            Provider::Bls => Arc::new(bls::BlsProvider),
+            #[cfg(feature = "frankfurter")]
+            Provider::Frankfurter => Arc::new(frankfurter::FrankfurterProvider),
+            #[cfg(feature = "binance")]
+            Provider::Binance => Arc::new(binance::BinanceProvider),
+            #[cfg(feature = "kraken")]
+            Provider::Kraken => Arc::new(kraken::KrakenProvider),
+            #[cfg(feature = "finra")]
+            Provider::Finra => Arc::new(finra::FinraProvider),
+            #[cfg(feature = "defi")]
+            Provider::DefiLlama => Arc::new(defillama::DefiLlamaProvider),
             Provider::Edgar => Arc::new(edgar::EdgarProvider),
         };
         adapter.initialize().await?;

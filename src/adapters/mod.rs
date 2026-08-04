@@ -17,6 +17,15 @@
 //! | `fmp` | [Financial Modeling Prep](https://financialmodelingprep.com/) | 250 req/day | ~100 | Fundamentals, DCF/ratings, insider trading, institutional holdings, screener, 60+ exchanges |
 //! | `crypto` | [CoinGecko](https://www.coingecko.com/) | 30 req/min | 2 | Top coins by market cap, single coin quotes (keyless) |
 //! | `fred` | [FRED](https://fred.stlouisfed.org/) | 120 req/min | 2+ | 800k+ macro time series, US Treasury yield curve |
+//! | `worldbank` | [World Bank Open Data](https://data.worldbank.org/) | Keyless | 1 | ~1,600 global development/macro indicators across 200+ economies |
+//! | `fiscaldata` | [US Treasury FiscalData](https://fiscaldata.treasury.gov/) | Keyless | 50+ datasets | Federal debt, average interest rates, daily Treasury statements |
+//! | `bls` | [BLS Public Data](https://www.bls.gov/developers/) | Keyless (25/day) or keyed (500/day) | 1 | CPI, unemployment, payrolls, wages, PPI from the primary source |
+//! | `frankfurter` | [Frankfurter](https://frankfurter.dev/) | Keyless | 1 | ECB daily reference exchange rates — the only keyless forex route |
+//! | `binance` | [Binance public data](https://data-api.binance.vision/) | Keyless | 2 | Exchange-grade crypto quotes and arbitrary-interval OHLCV (geo-blocked in some regions) |
+//! | `kraken` | [Kraken public data](https://api.kraken.com/) | Keyless | 2 | Crypto quotes and OHLC candles; US-accessible complement to Binance |
+//! | `finra` | [FINRA Query API](https://developer.finra.org/) | Keyless (non-commercial) | 1 | Daily short-sale volume by security, from the primary source |
+//! | `openfigi` | [OpenFIGI](https://www.openfigi.com/api) | Keyless (25 req/min) | 1 | CUSIP/ISIN/SEDOL/FIGI to ticker resolution |
+//! | `defi` | [DefiLlama](https://defillama.com/docs/api) | Keyless | 3 | Protocol TVL (current + history), chain rankings, stablecoin supplies |
 //! | *(always)* | [SEC EDGAR](https://www.sec.gov/edgar) | 10 req/sec | 5+ | Filing history, XBRL financials, full-text search (keyless, requires contact email) |
 //!
 //! # Quick comparison
@@ -55,6 +64,42 @@ pub(crate) mod coingecko;
 /// FRED economic data API (requires `fred` feature).
 #[cfg(feature = "fred")]
 pub(crate) mod fred;
+
+/// World Bank Open Data global macro indicators (keyless, requires `worldbank` feature).
+#[cfg(feature = "worldbank")]
+pub(crate) mod worldbank;
+
+/// US Treasury FiscalData federal fiscal statistics (keyless, requires `fiscaldata` feature).
+#[cfg(feature = "fiscaldata")]
+pub(crate) mod fiscaldata;
+
+/// BLS labor and inflation statistics (keyless v1 / keyed v2, requires `bls` feature).
+#[cfg(feature = "bls")]
+pub(crate) mod bls;
+
+/// Frankfurter ECB reference exchange rates (keyless, requires `frankfurter` feature).
+#[cfg(feature = "frankfurter")]
+pub(crate) mod frankfurter;
+
+/// Binance public market data (keyless, requires `binance` feature).
+#[cfg(feature = "binance")]
+pub(crate) mod binance;
+
+/// Kraken public market data (keyless, requires `kraken` feature).
+#[cfg(feature = "kraken")]
+pub(crate) mod kraken;
+
+/// FINRA daily short-sale volume (keyless, requires `finra` feature).
+#[cfg(feature = "finra")]
+pub(crate) mod finra;
+
+/// OpenFIGI security-identifier mapping (keyless, requires `openfigi` feature).
+#[cfg(feature = "openfigi")]
+pub(crate) mod openfigi;
+
+/// DefiLlama DeFi TVL and stablecoin data (keyless, requires `defi` feature).
+#[cfg(feature = "defi")]
+pub(crate) mod defillama;
 
 /// SEC EDGAR API client (always available, requires init with contact email).
 pub(crate) mod edgar;
